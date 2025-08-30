@@ -8,6 +8,8 @@
 		<ApplicationVersion>748</ApplicationVersion>
 		<ApplicationDisplayVersion>7.3.748</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+		<RuntimeIdentifiers>android-arm64;android-x64;android-arm;android-x86;</RuntimeIdentifiers>
+
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">

@@ -21,11 +21,21 @@ public class AndroidUiProvider : IAppUiProvider
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
     private static bool IsTv => AndroidUtil.IsTv();
 
-    public bool IsQuickLaunchSupported => OperatingSystem.IsAndroidVersionAtLeast(24);
-
-    public bool IsRequestQuickLaunchSupported  =>
-        OperatingSystem.IsAndroidVersionAtLeast(33) && 
-        !IsTv;
+    public bool IsQuickLaunchSupported => 
+        OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;
+    public bool IsRequestQuickLaunchSupported => 
+        OperatingSystem.IsAndroidVersionAtLeast(33) && !IsTv;
+    public bool IsSystemPrivateDnsSettingsSupported =>
+        OperatingSystem.IsAndroidVersionAtLeast(28) && !IsTv;
+    public bool IsSystemKillSwitchSettingsSupported =>
+        OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;
+    public bool IsSystemAlwaysOnSettingsSupported =>
+        OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;
+    public bool IsRequestNotificationSupported =>
+        OperatingSystem.IsAndroidVersionAtLeast(33) && !IsTv;
+    public bool IsAppSystemNotificationSettingsSupported => !IsTv;
+    public bool IsSystemSettingsSupported => !IsTv;
+    public bool IsAppSystemSettingsSupported => !IsTv;
 
     public async Task<bool> RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
     {
@@ -48,10 +58,6 @@ public class AndroidUiProvider : IAppUiProvider
 
         return res > 0;
     }
-
-    public bool IsRequestNotificationSupported => 
-        OperatingSystem.IsAndroidVersionAtLeast(33) &&
-        !IsTv;
 
     public bool? IsNotificationEnabled {
         get {
@@ -83,21 +89,13 @@ public class AndroidUiProvider : IAppUiProvider
             var res = await _requestPostNotificationsCompletionTask.Task
                 .WaitAsync(cancellationToken)
                 .Vhc();
-            
+
             return res == Permission.Granted;
         }
         finally {
             appUiContext.ActivityEvent.RequestPermissionsResultEvent -= OnRequestPermissionsResult;
         }
     }
-
-    public bool IsSystemPrivateDnsSettingsSupported => 
-        OperatingSystem.IsAndroidVersionAtLeast(28) &&
-        !IsTv;
-
-    public bool IsSystemKillSwitchSettingsSupported => 
-        OperatingSystem.IsAndroidVersionAtLeast(24) &&
-        !IsTv;
 
     public void OpenSystemKillSwitchSettings(IUiContext context)
     {
@@ -109,9 +107,6 @@ public class AndroidUiProvider : IAppUiProvider
         appUiContext.Activity.StartActivity(intent);
     }
 
-    public bool IsSystemAlwaysOnSettingsSupported => 
-        OperatingSystem.IsAndroidVersionAtLeast(24);
-
     public void OpenSystemAlwaysOnSettings(IUiContext context)
     {
         if (!IsSystemAlwaysOnSettingsSupported)
@@ -122,8 +117,6 @@ public class AndroidUiProvider : IAppUiProvider
         appUiContext.Activity.StartActivity(intent);
     }
 
-    public bool IsSystemSettingsSupported => true;
-
     public void OpenSystemSettings(IUiContext context)
     {
         if (!IsSystemSettingsSupported)
@@ -133,8 +126,6 @@ public class AndroidUiProvider : IAppUiProvider
         var intent = new Intent(Android.Provider.Settings.ActionSettings);
         appUiContext.Activity.StartActivity(intent);
     }
-
-    public bool IsAppSystemSettingsSupported => true;
 
     public void OpenAppSystemSettings(IUiContext context)
     {
@@ -147,7 +138,6 @@ public class AndroidUiProvider : IAppUiProvider
         appUiContext.Activity.StartActivity(intent);
     }
 
-    public bool IsAppSystemNotificationSettingsSupported => true;
     public void OpenAppSystemNotificationSettings(IUiContext context)
     {
         if (!IsAppSystemNotificationSettingsSupported)
@@ -223,6 +213,5 @@ public class AndroidUiProvider : IAppUiProvider
         if (postNotificationsIndex != -1 && _requestPostNotificationsCompletionTask != null)
             _requestPostNotificationsCompletionTask.TrySetResult(e.GrantResults[postNotificationsIndex]);
     }
-
 
 }

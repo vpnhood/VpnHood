@@ -26,7 +26,7 @@ public class AndroidUiProvider : IAppUiProvider
         OperatingSystem.IsAndroidVersionAtLeast(33) &&
         Application.Context.PackageManager?.HasSystemFeature(PackageManager.FeatureLeanback) is false;
 
-    public async Task RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
+    public async Task<bool> RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)context;
 
@@ -44,6 +44,8 @@ public class AndroidUiProvider : IAppUiProvider
         if (res <= 0 && DateTime.Now - resuestTime < TimeSpan.FromMilliseconds(1000))
             throw new RequestQuickLaunchException(
                 "Unable to add the Quick Launch. Try again later or add it manually.");
+
+        return res > 0;
     }
 
     public bool IsRequestNotificationSupported => OperatingSystem.IsAndroidVersionAtLeast(33);
@@ -56,7 +58,7 @@ public class AndroidUiProvider : IAppUiProvider
         }
     }
 
-    public async Task RequestNotification(IUiContext context, CancellationToken cancellationToken)
+    public async Task<bool> RequestNotification(IUiContext context, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)context;
 
@@ -66,7 +68,7 @@ public class AndroidUiProvider : IAppUiProvider
 
         // check is already granted
         if (appUiContext.Activity.CheckSelfPermission(Manifest.Permission.PostNotifications) == Permission.Granted)
-            return;
+            return true;
 
         try {
             appUiContext.ActivityEvent.RequestPermissionsResultEvent += OnRequestPermissionsResult;
@@ -75,11 +77,11 @@ public class AndroidUiProvider : IAppUiProvider
             _requestPostNotificationsCompletionTask = new TaskCompletionSource<Permission>();
             appUiContext.Activity.RequestPermissions([Manifest.Permission.PostNotifications],
                 RequestPostNotificationId);
-            await _requestPostNotificationsCompletionTask.Task
+            var res = await _requestPostNotificationsCompletionTask.Task
                 .WaitAsync(cancellationToken)
                 .Vhc();
             
-            //res == Permission.Granted;
+            return res == Permission.Granted;
         }
         finally {
             appUiContext.ActivityEvent.RequestPermissionsResultEvent -= OnRequestPermissionsResult;

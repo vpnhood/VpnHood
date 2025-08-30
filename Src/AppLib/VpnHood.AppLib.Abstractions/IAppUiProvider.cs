@@ -6,11 +6,11 @@ public interface IAppUiProvider
 {
     bool IsQuickLaunchSupported { get; }
     bool IsRequestQuickLaunchSupported { get; }
-    Task RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken);
+    Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken);
 
     bool? IsNotificationEnabled { get; }
     bool IsRequestNotificationSupported { get; }
-    Task RequestNotification(IUiContext uiContext, CancellationToken cancellationToken);
+    Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken);
 
     bool IsSystemPrivateDnsSettingsSupported { get; }
 

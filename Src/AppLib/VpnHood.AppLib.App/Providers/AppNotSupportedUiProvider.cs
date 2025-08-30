@@ -12,14 +12,14 @@ internal class AppNotSupportedUiProvider
     public bool IsQuickLaunchSupported => false;
     public bool IsRequestQuickLaunchSupported => false;
 
-    public Task RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken) =>
+    public Task<bool> RequestQuickLaunch(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
     public bool? IsNotificationEnabled => false;
 
     public bool IsRequestNotificationSupported => false;
 
-    public Task RequestNotification(IUiContext uiContext, CancellationToken cancellationToken) =>
+    public Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
     public bool IsSystemPrivateDnsSettingsSupported => false;

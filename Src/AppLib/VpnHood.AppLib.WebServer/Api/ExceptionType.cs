@@ -75,5 +75,9 @@ public enum ExceptionType
     PremiumOnly,
 
     [EnumMember(Value = nameof(AdBlockerException))]
-    AdBlocker
+    AdBlocker,
+
+    [EnumMember(Value = nameof(RequestQuickLaunchException))]
+    RequestQuickLaunch
+
 }

@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.ClientProxies;
+using VpnHood.Core.Client.ProxyServers;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;

@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
 
-namespace VpnHood.Core.Client.ClientProxies;
+namespace VpnHood.Core.Client.ProxyServers;
 
 public class ProxyServerManager
 {

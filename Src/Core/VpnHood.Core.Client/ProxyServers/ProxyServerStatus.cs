@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Client.ClientProxies;
+﻿namespace VpnHood.Core.Client.ProxyServers;
 
 public class ProxyServerStatus
 {

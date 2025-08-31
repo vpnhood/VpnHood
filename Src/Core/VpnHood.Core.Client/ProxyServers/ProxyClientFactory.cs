@@ -6,7 +6,7 @@ using VpnHood.Core.Proxies.Socks4ProxyClients;
 using VpnHood.Core.Proxies.Socks5ProxyClients;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Client.ClientProxies;
+namespace VpnHood.Core.Client.ProxyServers;
 
 public static class ProxyClientFactory
 {
@@ -40,7 +40,7 @@ public static class ProxyClientFactory
                 ProxyEndPoint = serverEp,
                 UserName = proxyEndPoint.Username
             }),
-            ProxyServerType.Https or ProxyServerType.Http => new HttpProxyClient(new HttpProxyOptions {
+            ProxyServerType.Https or ProxyServerType.Http => new HttpProxyClient(new HttpProxyClientOptions {
                 ProxyEndPoint = serverEp,
                 Username = proxyEndPoint.Username,
                 Password = proxyEndPoint.Password,

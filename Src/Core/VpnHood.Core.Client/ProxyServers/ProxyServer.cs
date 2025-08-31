@@ -3,7 +3,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 
-namespace VpnHood.Core.Client.ClientProxies;
+namespace VpnHood.Core.Client.ProxyServers;
 
 internal class ProxyServer
 {

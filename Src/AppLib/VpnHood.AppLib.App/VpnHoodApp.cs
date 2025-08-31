@@ -385,6 +385,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     : SystemBarsInfo.Default,
             };
 
+            
+            Console.WriteLine("----------");
+            var ss = connectionInfo?.SessionStatus?.ProxyServerStatuses ?? [];
+            foreach (var proxyServer in ss) {
+                Console.WriteLine(JsonSerializer.Serialize(proxyServer));
+            }
+            Console.WriteLine(connectionInfo?.SessionStatus?.ProxyServerStatuses[0]);
+
             return appState;
         }
     }

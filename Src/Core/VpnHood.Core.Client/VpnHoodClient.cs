@@ -1205,5 +1205,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;
         public bool IsDnsOverTlsDetected => client._isDnsOverTlsDetected;
+        public ProxyServerStatus[] ProxyServerStatuses => client._proxyServerManager.ProxyServerStatuses;
     }
 }

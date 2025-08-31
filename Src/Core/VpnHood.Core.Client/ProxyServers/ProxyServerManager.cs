@@ -13,19 +13,35 @@ namespace VpnHood.Core.Client.ProxyServers;
 public class ProxyServerManager
 {
     private readonly ISocketFactory _socketFactory;
-    public ProxyServerStatus[] ProxyServerStatuses => ProxyServers.Select(x => x.Status).ToArray();
-    private ProxyServer[] ProxyServers { get; }
-    public bool IsEnabled => ProxyServers.Any();
+    public ProxyServerStatus[] ProxyServerStatuses => _proxyServers.Select(x => x.Status).ToArray();
+    private ProxyServer[] _proxyServers;
+    public bool IsEnabled => _proxyServers.Any();
 
     public ProxyServerManager(ProxyServerEndPoint[] proxyServerEndPoints,
         ISocketFactory socketFactory)
     {
-        ProxyServers = proxyServerEndPoints.Select(x => new ProxyServer {
-            EndPoint = x,
-            Status = new ProxyServerStatus()
-        }).ToArray();
-
+        _proxyServers = proxyServerEndPoints.Select(x => new ProxyServer(x)).ToArray();
         _socketFactory = socketFactory;
+    }
+
+    public ProxyServerEndPoint[] ProxyServerEndPoints {
+        get {
+            return _proxyServers.Select(x => x.EndPoint).ToArray();
+        }
+        set {
+            // remove old servers and add new servers
+            _proxyServers = _proxyServers
+                .Where(x => value.Any(y => y.GetId() == x.EndPoint.GetId()))
+                .ToArray();
+            
+            // add new servers
+            foreach (var newEndPoint in value) {
+                if (_proxyServers.All(x => x.EndPoint.GetId() != newEndPoint.GetId())) {
+                    var newServer = new ProxyServer(newEndPoint);
+                    _proxyServers = _proxyServers.Concat([newServer]).ToArray();
+                }
+            }
+        }
     }
 
     private static async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient, TcpClient tcpClient,
@@ -35,21 +51,14 @@ public class ProxyServerManager
         await proxyClient.CheckConnectionAsync(tcpClient, cancellationToken).Vhc();
         return TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
     }
-    
+
     public async Task RemoveBadServers(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Essential, "Checking proxy servers for reachability...");
 
         // connect to each proxy server and check if it is reachable
         List<(ProxyServer, TcpClient, Task<TimeSpan>)> testTasks = [];
-        foreach (var proxyServer in ProxyServers) {
-            if (proxyServer.EndPoint.Type != ProxyServerType.Socks5) {
-                VhLogger.Instance.LogWarning("Skipping unsupported proxy type {ProxyType} for server {ProxyServer}",
-                    proxyServer.EndPoint.Type, VhLogger.FormatHostName(proxyServer.EndPoint.Host));
-                proxyServer.Status.IsActive = false;
-                continue;
-            }
-
+        foreach (var proxyServer in _proxyServers) {
             var proxyClient = await ProxyClientFactory.CreateProxyClient(proxyServer.EndPoint);
             var tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
             var checkTask = CheckConnectionAsync(proxyClient, tcpClient, cancellationToken);
@@ -75,7 +84,7 @@ public class ProxyServerManager
 
             // set failed
             if (!task.IsCompletedSuccessfully) {
-                proxyServer.RecordFailed(_requestCount);
+                proxyServer.RecordFailed(task.Exception, _requestCount);
                 proxyServer.Status.IsActive = false;
                 continue;
             }
@@ -92,9 +101,10 @@ public class ProxyServerManager
         _requestCount++;
 
         // order by active state then Last response duration
-        var proxyServers = ProxyServers
+        var proxyServers = _proxyServers
             .Where(x => x.Status.IsActive)
             .OrderBy(x => x.GetSortValue(_requestCount))
+            .ThenBy(x=>x.Status.LastUsedTime)
             .ToArray();
 
         // try to connect to a proxy server
@@ -126,7 +136,7 @@ public class ProxyServerManager
                     "Failed to connect to {ProxyType} proxy server {ProxyServer}.",
                     proxyServer.EndPoint.Type, VhLogger.FormatHostName(proxyServer.EndPoint.Host));
 
-                proxyServer.RecordFailed(_requestCount);
+                proxyServer.RecordFailed(ex, _requestCount);
                 tcpClient?.Dispose();
             }
         }

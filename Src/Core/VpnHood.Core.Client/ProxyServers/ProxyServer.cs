@@ -5,12 +5,16 @@ using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Core.Client.ProxyServers;
 
-internal class ProxyServer
+internal class ProxyServer(ProxyServerEndPoint endPoint)
 {
     private readonly object _lock = new();
     private int _requestPosition;
-    public required ProxyServerEndPoint EndPoint { get; init; }
-    public ProxyServerStatus Status = new();
+    public ProxyServerEndPoint EndPoint => endPoint;
+    public ProxyServerStatus Status = new() {
+        IsActive = true, 
+        Id = endPoint.GetId()
+    };
+
     public int GetSortValue(int currentRequestCount)
     {
         lock (_lock) {
@@ -28,12 +32,11 @@ internal class ProxyServer
         lock (_lock) {
             Status.SucceededCount++;
             Status.Latency = latency;
-            Status.ConnectionTime = DateTime.Now;
-            
+            Status.LastUsedTime = DateTime.Now;
+
             var isSlow = fastestLatency != null && latency > GetSlowThreshold(fastestLatency.Value);
             if (isSlow) {
                 Status.Penalty++;
-                _requestPosition = currentRequestPos + Status.Penalty * 3;
 
                 VhLogger.Instance.LogDebug(GeneralEventId.Essential,
                     "Proxy server responded slowly. {ProxyServer}, ResponseTime: {ResponseTime}, PenaltyRate: {Penalty}",
@@ -43,16 +46,23 @@ internal class ProxyServer
                 if (Status.Penalty > 0)
                     Status.Penalty--;
             }
+            UpdatePosition(currentRequestPos);
         }
     }
 
-    public void RecordFailed(int currentRequestPos)
+    private void UpdatePosition(int currentRequestPos)
+    {
+        _requestPosition = currentRequestPos + Status.Penalty * 3 + 1;
+    }
+
+    public void RecordFailed(Exception? exception, int currentRequestPos)
     {
         lock (_lock) {
             Status.Penalty++;
             Status.Penalty++;
             Status.FailedCount++;
-            _requestPosition = currentRequestPos + Status.Penalty * 3;
+            Status.ErrorMessage = exception?.Message;
+            UpdatePosition(currentRequestPos);
 
             VhLogger.Instance.LogDebug(GeneralEventId.Essential,
                 "Failed to connect to proxy server. {ProxyServer}, FailedCount: {FailedCount}, Penalty: {Penalty}",

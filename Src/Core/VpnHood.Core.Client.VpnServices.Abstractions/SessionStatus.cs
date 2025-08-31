@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
@@ -23,4 +24,5 @@ public class SessionStatus
     public required int UserReviewRecommended { get; init; }
     public required bool IsDnsOverTlsDetected { get; init; }
     public required bool IsTcpProxy { get; init; }
+    public required ProxyServerStatus[] ProxyServerStatuses { get; init; }
 }

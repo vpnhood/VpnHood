@@ -2,8 +2,8 @@
 
 public class ProxyServerEndPoint
 {
-    public ProxyServerType ProxyServerType { get; init; }
-    public string? Address { get; init; }
+    public required ProxyServerType Type { get; init; }
+    public required string Host { get; init; }
     public int Port { get; init; }
     public string? Username { get; set; }
     public string? Password { get; set; }

@@ -28,6 +28,7 @@ public class AppAdManager(
     public AppAdService AdService => adService;
     public bool IsWaitingForPostDelay { get; private set; }
     public bool IsPreloadAdEnabled => isPreloadAdEnabled;
+    public bool IsAdSupported => adService.CanShowInterstitial || adService.CanShowRewarded;
 
     public async Task ShowAd(
         string sessionId,
@@ -53,14 +54,16 @@ public class AppAdManager(
 
         try {
             IsShowing = true;
+            if (!IsAdSupported)
+                throw new AdException("This app does not support servers that require ads.");
 
             // flexible ad
             var adResult = adRequirement switch {
-                AdRequirement.Flexible =>
+                AdRequirement.Flexible when adService.CanShowInterstitial =>
                     await adService.ShowInterstitial(uiContext, sessionId, cancellationToken).Vhc(),
-                AdRequirement.Rewarded =>
+                AdRequirement.Rewarded when adService.CanShowRewarded =>
                     await adService.ShowRewarded(uiContext, sessionId, cancellationToken).Vhc(),
-                _ => throw new AdException("Unsupported ad requirement.")
+                _ => throw new AdException("The requested ad is not supported in this app.")
             };
 
             // rewarded ad
@@ -79,6 +82,10 @@ public class AppAdManager(
             await vpnServiceManager.SetAdOk(adResult,
                 isRewarded: adRequirement == AdRequirement.Rewarded,
                 cancellationToken).Vhc();
+        }
+        catch (Exception ex) when (!IsAdSupported) {
+            await vpnServiceManager.SetAdFailed(ex, cancellationToken).Vhc();
+            throw;
         }
         catch (ShowAdNoUiException) {
             // if ad is not shown because of no UI context just throw exception and let core

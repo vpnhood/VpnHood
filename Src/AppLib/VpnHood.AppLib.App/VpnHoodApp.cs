@@ -179,6 +179,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsDebugMode = options.IsDebugMode,
             CustomData = options.CustomData,
             PremiumFeatures = options.PremiumFeatures,
+            IsAdSupported = options.AdProviderItems.Length > 0
         };
 
         // create tracker

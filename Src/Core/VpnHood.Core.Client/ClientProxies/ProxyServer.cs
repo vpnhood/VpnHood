@@ -37,7 +37,7 @@ internal class ProxyServer
 
                 VhLogger.Instance.LogDebug(GeneralEventId.Essential,
                     "Proxy server responded slowly. {ProxyServer}, ResponseTime: {ResponseTime}, PenaltyRate: {Penalty}",
-                    VhLogger.FormatHostName(EndPoint.Address), latency, Status.Penalty);
+                    VhLogger.FormatHostName(EndPoint.Host), latency, Status.Penalty);
             }
             else {
                 if (Status.Penalty > 0)
@@ -56,7 +56,7 @@ internal class ProxyServer
 
             VhLogger.Instance.LogDebug(GeneralEventId.Essential,
                 "Failed to connect to proxy server. {ProxyServer}, FailedCount: {FailedCount}, Penalty: {Penalty}",
-                VhLogger.FormatHostName(EndPoint.Address), Status.FailedCount, Status.Penalty);
+                VhLogger.FormatHostName(EndPoint.Host), Status.FailedCount, Status.Penalty);
         }
     }
 }

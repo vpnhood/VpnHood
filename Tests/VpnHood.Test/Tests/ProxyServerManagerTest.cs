@@ -23,7 +23,7 @@ public class ProxyServerManagerTest
     {
         var socketFactory = new TestSocketFactory();
         var mgr = new ProxyServerManager(
-            proxyServerEndPoints: [new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Socks5, Address = "127.0.0.1", Port = 1080 }],
+            proxyServerEndPoints: [new ProxyServerEndPoint { Type = ProxyServerType.Socks5, Host = "127.0.0.1", Port = 1080 }],
             socketFactory: socketFactory);
         Assert.IsTrue(mgr.IsEnabled);
     }
@@ -46,10 +46,10 @@ public class ProxyServerManagerTest
         var socketFactory = new TestSocketFactory();
         var proxyEndPoints = new[]
         {
-            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Socks5, Address = "127.0.0.1", Port = 1080 },
-            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Socks4, Address = "127.0.0.1", Port = 1081 },
-            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Http, Address = "127.0.0.1", Port = 8080 },
-            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Https, Address = "127.0.0.1", Port = 8443 }
+            new ProxyServerEndPoint { Type = ProxyServerType.Socks5, Host = "127.0.0.1", Port = 1080 },
+            new ProxyServerEndPoint { Type = ProxyServerType.Socks4, Host = "127.0.0.1", Port = 1081 },
+            new ProxyServerEndPoint { Type = ProxyServerType.Http, Host = "127.0.0.1", Port = 8080 },
+            new ProxyServerEndPoint { Type = ProxyServerType.Https, Host = "127.0.0.1", Port = 8443 }
         };
 
         var mgr = new ProxyServerManager(proxyServerEndPoints: proxyEndPoints, socketFactory: socketFactory);
@@ -63,8 +63,8 @@ public class ProxyServerManagerTest
         var socketFactory = new TestSocketFactory();
         var proxyEndPoints = new[]
         {
-            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Socks4, Address = "127.0.0.1", Port = 1081 },
-            new ProxyServerEndPoint { ProxyServerType = ProxyServerType.Http, Address = "127.0.0.1", Port = 8080 }
+            new ProxyServerEndPoint { Type = ProxyServerType.Socks4, Host = "127.0.0.1", Port = 1081 },
+            new ProxyServerEndPoint { Type = ProxyServerType.Http, Host = "127.0.0.1", Port = 8080 }
         };
 
         var mgr = new ProxyServerManager(proxyServerEndPoints: proxyEndPoints, socketFactory: socketFactory);

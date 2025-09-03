@@ -34,7 +34,7 @@ public class Tunnel : PassthroughPacketTransport
 
     public Traffic Speed {
         get {
-            if (IsDisposed) 
+            if (IsDisposed)
                 return new Traffic();
 
             if (_speedometerJob == null)

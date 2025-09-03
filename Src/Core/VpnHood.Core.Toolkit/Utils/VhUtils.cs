@@ -277,30 +277,42 @@ public static class VhUtils
         return round ? Math.Round(value) : value;
     }
 
+    // Pseudocode:
+    // - Input: size (long), use1024 (bool), round (bool)
+    // - Define unit sizes (KB, MB, GB, TB) based on use1024
+    // - Compute sign (negative or not) and absolute value using double to avoid long.MinValue overflow
+    // - Compare absolute value with thresholds to pick unit
+    // - Format value with existing Round() helper and original numeric formats
+    // - Prefix sign and append unit
+    // - Preserve original behavior for zero (return "0")
     public static string FormatBytes(long size, bool use1024 = true, bool round = false)
     {
-        var kb = use1024 ? (double)1024 : 1000;
+        var kb = use1024 ? 1024d : 1000d;
         var mb = kb * kb;
         var gb = mb * kb;
         var tb = gb * kb;
 
-        if (size >= tb) // Terabyte
-            return Round(size / tb, round).ToString("0.## ") + "TB";
+        var negative = size < 0;
+        var abs = Math.Abs((double)size);
+        var sign = negative ? "-" : "";
 
-        if (size >= gb) // Gigabyte
-            return Round(size / gb, round).ToString("0.# ") + "GB";
+        if (abs >= tb) // Terabyte
+            return sign + Round(abs / tb, round).ToString("0.## ") + "TB";
 
-        if (size >= mb) // Megabyte
-            return Round(size / mb, round).ToString("0 ") + "MB";
+        if (abs >= gb) // Gigabyte
+            return sign + Round(abs / gb, round).ToString("0.# ") + "GB";
 
-        if (size >= kb) // Kilobyte
-            return Round(size / kb, round).ToString("0 ") + "KB";
+        if (abs >= mb) // Megabyte
+            return sign + Round(abs / mb, round).ToString("0 ") + "MB";
 
-        if (size > 0) // Kilobyte
-            return size.ToString("0 ") + "B";
+        if (abs >= kb) // Kilobyte
+            return sign + Round(abs / kb, round).ToString("0 ") + "KB";
 
-        // Byte
-        return size.ToString("0");
+        if (abs > 0) // Byte
+            return sign + abs.ToString("0 ") + "B";
+
+        // Zero bytes
+        return "0";
     }
 
     public static string FormatBits(long bytes)

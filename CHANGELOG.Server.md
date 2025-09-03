@@ -1,3 +1,6 @@
+# v7.3.751
+* Fix: Negative speed issue
+
 # v7.3.742
 * Feature: Extract Client IP from reserve proxies
 * Feature: Add AllowTcpProxy option

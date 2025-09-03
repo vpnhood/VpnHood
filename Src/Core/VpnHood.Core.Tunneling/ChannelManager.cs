@@ -38,6 +38,10 @@ internal class ChannelManager : IDisposable
                 sent += _packetChannels.Sum(x => x.Traffic.Sent);
                 received += _packetChannels.Sum(x => x.Traffic.Received);
 
+                // Include disposing channels to keep totals monotonic while channels are transitioning
+                sent += _disposingChannels.Sum(x => x.Traffic.Sent);
+                received += _disposingChannels.Sum(x => x.Traffic.Received);
+
                 return new Traffic { Sent = sent, Received = received };
             }
         }

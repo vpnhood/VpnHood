@@ -11,7 +11,7 @@ public class InternalInAdProvider : IAppAdProvider
     public TimeSpan AdLifeSpan => TimeSpan.FromMinutes(5);
     public string NetworkName => "InternalAd";
     public AppAdType AdType => AppAdType.InterstitialAd;
-    public bool IsWaitingForAd => _showAdTask?.Task.IsCompleted != true;
+    public bool IsWaitingForAd => _showAdTask?.Task.IsCompleted is false;
 
     private TaskCompletionSource? _showAdTask;
     public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)

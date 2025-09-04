@@ -27,7 +27,7 @@ public class AppAdService(
         .FirstOrDefault(x => x.AdProvider is InternalInAdProvider { IsWaitingForAd: true })?
         .AdProvider;
 
-    public bool IsWaitingForInternalAd => ActiveInternalInAdProvider?.IsWaitingForAd == true;
+    public bool IsWaitingForInternalAd => ActiveInternalInAdProvider != null;
     public void DismissInternalAd(string result) => ActiveInternalInAdProvider?.Dismiss();
 
     public void EnableAdProvider(string providerName, bool value)

@@ -183,8 +183,6 @@ internal class AppController : WebApiController, IAppController
         return Task.CompletedTask;
     }
 
-
-
     [Route(HttpVerbs.Get, "/countries")]
     public Task<CountryInfo[]> GetCountries()
     {

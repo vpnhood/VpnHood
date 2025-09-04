@@ -367,8 +367,47 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task Internal_Ad_provider()
+    public async Task Internal_Ad_provider_with_fallback()
     {
-        throw new NotImplementedException();
+        // create server
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // create access item
+        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
+        var token = accessManager.GetToken(accessToken);
+
+        // configure client app for ad
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AdOptions.PreloadAd = false;
+        appOptions.AdOptions.LoadAdPostDelay = TimeSpan.Zero;
+        var testAdProvider =  new TestAdProvider(accessManager, AppAdType.InterstitialAd) {
+            FailLoad = true
+        };
+        appOptions.AdProviderItems = 
+        [
+            new AppAdProviderItem {
+                AdProvider = testAdProvider
+            },
+            new AppAdProviderItem {
+                AdProvider = new InternalInAdProvider(),
+                IsFallback = true,
+                ProviderName = "TestInternalAdProvider"
+            }
+        ];
+
+        // create client app
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        // connect
+        _ = app.Connect(clientProfile.ClientProfileId); // don't await as it will wait for ad to load
+        await app.WaitForState(AppConnectionState.WaitingForAd);
+        await VhTestUtil.AssertEqualsWait(true, () => app.State.IsWaitingForInternalAd);
+        await VhTestUtil.AssertEqualsWait(2, () => testAdProvider.LoadAdCount, 
+            "two times must be tried to reach fallback.");
+        
+        app.AdManager.AdService.DismissInternalAd("ok");
+        await app.WaitForState(AppConnectionState.Connected);
     }
 }

@@ -2,6 +2,7 @@
 * Fix: Unable to close the Quick Launch pop-up on Android
 * Fix: False positive ad blocker detection on some devices
 * Fix: Negative speed issue
+* Fix: Restoring the notification icon on Windows after restarting Windows Explorer
 * Feature: Internal Ad Provider
 
 # v7.3.748

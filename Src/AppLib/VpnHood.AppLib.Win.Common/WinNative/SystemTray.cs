@@ -76,10 +76,16 @@ public class SystemTray : IDisposable
         Tip = 0x04
     }
 
+    private static readonly int WmTaskbarCreated = 
+        Window.RegisterWindowMessage("TaskbarCreated");
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
-        if (msg == Message && (int)wParam == SystemTrayId) {
+        if (msg == WmTaskbarCreated) {
+            // Recreate your NotifyIcon on explorer restart
+            Shell_NotifyIcon((uint)NotifyIconMessage.NimAdd, ref _notificationData);
+        }
+        else if (msg == Message && (int)wParam == SystemTrayId) {
             switch ((int)lParam) {
                 case (int)ContextMenuEvent.LeftButtonUp:
                     Clicked?.Invoke(this, EventArgs.Empty);

@@ -28,6 +28,9 @@ public class Window : IDisposable
     }
 
     [DllImport("user32.dll")]
+    public static extern int RegisterWindowMessage(string lpString);
+
+    [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.U2)]
     private static extern short RegisterClassEx([In] ref WndClassEx wndClassEx);
 

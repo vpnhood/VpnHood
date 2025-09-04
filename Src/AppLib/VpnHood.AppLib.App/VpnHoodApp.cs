@@ -381,6 +381,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanChangeTcpProxy = StateHelper.CanChangeTcpProxy(Features, connectionInfo?.SessionInfo),
                 IsNotificationEnabled = Services.UiProvider.IsNotificationEnabled,
                 SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.UiProvider.GetSystemPrivateDns()),
+                StateProgress = StateHelper.GetProgress(connectionInfo),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.UiProvider.GetSystemBarsInfo(uiContext)
                     : SystemBarsInfo.Default,
@@ -416,6 +417,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             if (clientState is ClientState.WaitingForAd or ClientState.WaitingForAdEx)
                 return AdManager.IsWaitingForPostDelay ? AppConnectionState.Connected : AppConnectionState.WaitingForAd;
+
+            if (clientState == ClientState.FindingBestServer)
+                return AppConnectionState.FindingBestServer;
+
+            if (clientState == ClientState.FindingReachableServer)
+                return AppConnectionState.FindingReachableServer;
 
             if (clientState == ClientState.Connected)
                 return AppConnectionState.Connected;

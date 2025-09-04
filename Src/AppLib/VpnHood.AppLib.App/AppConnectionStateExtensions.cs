@@ -19,8 +19,10 @@ public static class AppConnectionStateExtensions
             return false;
 
         return connectionState is
-            AppConnectionState.Connected or
+            AppConnectionState.FindingReachableServer or
+            AppConnectionState.FindingBestServer or
             AppConnectionState.Connecting or
+            AppConnectionState.Connected or
             AppConnectionState.Unstable or
             AppConnectionState.None;
     }

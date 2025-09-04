@@ -2,6 +2,7 @@
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Services.Updaters;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib;
@@ -36,4 +37,5 @@ public class AppState
     public required bool? IsNotificationEnabled { get; init; }
     public required PrivateDns? SystemPrivateDns { get; init; }
     public required bool? IsWaitingForInternalAd { get; set; }
+    public required int? StateProgress { get; init; }
 }

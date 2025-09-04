@@ -10,10 +10,11 @@ public class ConnectionInfo
 {
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint? ApiEndPoint { get; init; }
-
     public required DateTime? CreatedTime { get; init; }
     public string? SessionName { get; init; }
     public required ClientState ClientState { get; init; }
+    public required ClientStateProgress? ClientStateProgress { get; init; }
+    public required DateTime? ClientStateChangedTime { get; init; }
     public required ApiError? Error { get; init; }
     public required SessionInfo? SessionInfo { get; init; }
     public required SessionStatus? SessionStatus { get; init; }

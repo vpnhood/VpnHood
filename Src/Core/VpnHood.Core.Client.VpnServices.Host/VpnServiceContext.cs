@@ -17,6 +17,8 @@ internal class VpnServiceContext(string configFolder)
         ApiEndPoint = null,
         ApiKey = null,
         ClientState = ClientState.Initializing,
+        ClientStateProgress = null,
+        ClientStateChangedTime = null,
         CreatedTime = FastDateTime.Now,
         Error = null,
         SessionInfo = null,

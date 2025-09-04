@@ -208,6 +208,8 @@ public class VpnServiceHost : IDisposable
             SessionInfo = client.SessionInfo,
             SessionStatus = client.SessionStatus?.ToDto(),
             ClientState = client.State,
+            ClientStateProgress = client.StateProgress,
+            ClientStateChangedTime = client.StateChangedTime,
             Error = client.LastException?.ToApiError(),
             ApiEndPoint = _apiController.ApiEndPoint,
             ApiKey = _apiController.ApiKey
@@ -226,6 +228,8 @@ public class VpnServiceHost : IDisposable
             SessionStatus = null,
             CreatedTime = DateTime.Now,
             ClientState = clientState,
+            ClientStateProgress = null,
+            ClientStateChangedTime = null,
             Error = exception?.ToApiError(),
             SessionName = sessionName
         };

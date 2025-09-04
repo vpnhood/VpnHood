@@ -4,6 +4,7 @@
 * Fix: Negative speed issue
 * Fix: Restoring the notification icon on Windows after restarting Windows Explorer
 * Feature: Internal Ad Provider
+* Feature: Show more details in connection progress
 
 # v7.3.748
 * Fix: Minor UI issues and translations

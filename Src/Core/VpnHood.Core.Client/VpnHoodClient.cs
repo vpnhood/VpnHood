@@ -85,6 +85,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     public SessionInfo? SessionInfo { get; private set; }
     public Exception? LastException { get; private set; }
+    public DateTime StateChangedTime { get; private set; } = DateTime.Now;
+
+    public ClientStateProgress? StateProgress =>
+        State is ClientState.FindingReachableServer or ClientState.FindingBestServer
+            ? new ClientStateProgress(_serverFinder.ProgressDone, _serverFinder.ProgressTotal)
+            : null;
 
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
@@ -225,6 +231,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (_lastState == State)
                 return;
             _lastState = State;
+            StateChangedTime = FastDateTime.Now;
         }
 
         VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);
@@ -337,6 +344,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             }
 
             // Establish first connection and create a session
+            State = ClientState.FindingReachableServer;
             var hostEndPoint = await _serverFinder.FindReachableServerAsync(linkedCts.Token).Vhc();
             var allowRedirect = !_serverFinder.CustomServerEndpoints.Any();
             await ConnectInternal(hostEndPoint, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
@@ -853,6 +861,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // init new connector
             _connectorService?.Dispose();
+            State = ClientState.FindingBestServer;
             var redirectedEndPoint = await _serverFinder.FindBestRedirectedServerAsync(ex.RedirectHostEndPoints.ToArray(), cancellationToken);
             await ConnectInternal(redirectedEndPoint, false, cancellationToken).Vhc();
         }

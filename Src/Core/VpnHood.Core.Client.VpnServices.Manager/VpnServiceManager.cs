@@ -68,6 +68,8 @@ public class VpnServiceManager : IDisposable
             ApiEndPoint = null,
             ApiKey = null,
             ClientState = clientState,
+            ClientStateChangedTime = null,
+            ClientStateProgress = null,
             Error = ex?.ToApiError()
         };
     }

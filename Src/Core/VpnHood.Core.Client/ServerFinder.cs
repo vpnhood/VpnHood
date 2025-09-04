@@ -36,6 +36,13 @@ public class ServerFinder(
     }
 
     private HostStatus[] _hostEndPointStatuses = [];
+
+    // progress tracking
+    private volatile int _progressTotal;
+    private volatile int _progressDone;
+    public int ProgressTotal => _progressTotal;
+    public int ProgressDone => _progressDone;
+
     public bool IncludeIpV6 { get; set; } = true;
     public string? ServerLocation => serverLocation;
     public EndPointStrategy EndPointStrategy => endPointStrategy;
@@ -166,6 +173,10 @@ public class ServerFinder(
             .Select(x => new HostStatus { TcpEndPoint = x })
             .ToArray();
 
+        // initialize progress for this run
+        _progressTotal = hostStatuses.Length;
+        _progressDone = 0;
+
         using var searchingCts = new CancellationTokenSource(); // this will be canceled when a server is found
         using var parallelCts = CancellationTokenSource.CreateLinkedTokenSource(searchingCts.Token, cancellationToken);
         try {
@@ -175,26 +186,31 @@ public class ServerFinder(
                 MaxDegreeOfParallelism = maxDegreeOfParallelism
             };
             await Parallel.ForEachAsync(hostStatuses, parallelOptions, async (hostStatus, ct) => {
-                using var connector = CreateConnector(hostStatus.TcpEndPoint);
-                hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, ct).Vhc();
+                try {
+                    using var connector = CreateConnector(hostStatus.TcpEndPoint);
+                    hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, ct).Vhc();
 
-                // ReSharper disable once AccessToDisposedClosure
-                if (hostStatus.Available == true && !byOrder)
-                    await searchingCts.CancelAsync().Vhc(); // no need to continue, we find a server
+                    // ReSharper disable once AccessToDisposedClosure
+                    if (hostStatus.Available == true && !byOrder)
+                        await searchingCts.CancelAsync().Vhc(); // no need to continue, we find a server
 
-                // search by order
-                if (byOrder) {
-                    // ReSharper disable once LoopCanBeConvertedToQuery (It can not! [false, false, null, true] is not accepted )
-                    foreach (var item in hostStatuses) {
-                        if (item.Available == null)
-                            break; // wait to get the result in order
+                    // search by order
+                    if (byOrder) {
+                        // ReSharper disable once LoopCanBeConvertedToQuery (It can not! [false, false, null, true] is not accepted )
+                        foreach (var item in hostStatuses) {
+                            if (item.Available == null)
+                                break; // wait to get the result in order
 
-                        if (item.Available.Value) {
-                            // ReSharper disable once AccessToDisposedClosure
-                            await searchingCts.CancelAsync().Vhc();
-                            break;
+                            if (item.Available.Value) {
+                                // ReSharper disable once AccessToDisposedClosure
+                                await searchingCts.CancelAsync().Vhc();
+                                break;
+                            }
                         }
                     }
+                }
+                finally {
+                    Interlocked.Increment(ref _progressDone);
                 }
             }).Vhc();
         }
@@ -202,7 +218,7 @@ public class ServerFinder(
             // it means a server has been found
         }
 
-
+        _progressDone = _progressTotal;
         return hostStatuses;
     }
 

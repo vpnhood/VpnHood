@@ -114,6 +114,7 @@ public class AndroidAppWebViewMainActivityHandler(
             WebView = new WebView(ActivityEvent.Activity);
             WebView.Settings.JavaScriptEnabled = true;
             WebView.Settings.DomStorageEnabled = true;
+            WebView.Settings.MediaPlaybackRequiresUserGesture = false;
             WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
             WebView.Settings.SetSupportMultipleWindows(true);
             // WebView.SetLayerType(LayerType.Hardware, null); // it may cause poor performance if forced

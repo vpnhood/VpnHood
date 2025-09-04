@@ -35,5 +35,5 @@ public class AppState
     public required SystemBarsInfo SystemBarsInfo { get; init; }
     public required bool? IsNotificationEnabled { get; init; }
     public required PrivateDns? SystemPrivateDns { get; init; }
-
+    public required bool? IsWaitingForInternalAd { get; set; }
 }

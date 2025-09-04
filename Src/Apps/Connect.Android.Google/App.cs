@@ -89,6 +89,13 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             ProviderName = "AdMob-Rewarded"
         });
 
+        items.Add(new AppAdProviderItem {
+            AdProvider = new InternalInAdProvider(),
+            ProviderName = "InternalAdProvider",
+            IsFallback = true
+        });
+
+
         /*var initializeTimeout = TimeSpan.FromSeconds(5);
         if (InMobiAdProvider.IsAndroidVersionSupported)
             items.Add(new AppAdProviderItem {

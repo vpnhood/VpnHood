@@ -314,7 +314,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var uiContext = AppUiContext.Context;
         if (IsIdle && AdManager.IsPreloadAdEnabled && uiContext != null) {
             _ = VhUtils.TryInvokeAsync("PreloadAd",
-                () => AdManager.AdService.LoadInterstitialAd(uiContext, CancellationToken.None));
+                () => AdManager.AdService.LoadInterstitialAd(uiContext, useFallback: false, CancellationToken.None));
         }
 
         // try update the app
@@ -362,6 +362,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
                 CanDisconnect = connectionState.CanDisconnect(),
                 UserReviewRecommended = _userReviewRecommended,
+                IsWaitingForInternalAd = AdManager.AdService.IsWaitingForInternalAd,
                 IsQuickLaunchRecommended = _quickLaunchRecommended && !Settings.UserSettings.IsQuickLaunchPrompted,
                 IsIdle = IsIdle,
                 PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
@@ -1016,7 +1017,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _showAdCts = new CancellationTokenSource();
 
             _connectTimeoutCts.CancelAfter(TimeSpan.FromMinutes(15));
-            await AdManager.ShowAd(ConnectionInfo.SessionInfo.SessionId, ConnectionInfo.SessionInfo.AdRequirement, _showAdCts.Token);
+            var connectionInfo = ConnectionInfo;
+            var useFallback = connectionInfo.ClientState is ClientState.WaitingForAdEx;
+            await AdManager.ShowAd(
+                connectionInfo.SessionInfo.SessionId, connectionInfo.SessionInfo.AdRequirement, 
+                useFallback: useFallback, _showAdCts.Token);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not show ad.");

@@ -304,16 +304,18 @@ public class AdTest : TestAppBase
 
         // all included ips should be split now
         await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, null, TestConstants.HttpsExternalUri1);
-        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1, null); // all dns should be included
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1,
+            null); // all dns should be included
 
         // finish showing ad
         showAdCompletionSource.SetResult();
         await app.WaitForState(AppConnectionState.Connected);
         await Task.Delay(appOptions.AdOptions.ShowAdPostDelay); // make sure ad post delay is finished
-        await Task.Delay(200);// make sure ad post delay is finished
+        await Task.Delay(200); // make sure ad post delay is finished
 
         // all included ips should be split now
-        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1,
+            TestConstants.HttpsExternalUri1);
     }
 
     [TestMethod]
@@ -362,5 +364,11 @@ public class AdTest : TestAppBase
         // wait for AdBlockerException
         await VhTestUtil.AssertEqualsWait(AppConnectionState.None, () => app.State.ConnectionState);
         Assert.AreEqual(nameof(AdBlockerException), app.State.LastError?.TypeName);
+    }
+
+    [TestMethod]
+    public async Task Internal_Ad_provider()
+    {
+        throw new NotImplementedException();
     }
 }

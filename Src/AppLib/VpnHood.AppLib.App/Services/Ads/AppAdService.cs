@@ -23,6 +23,20 @@ public class AppAdService(
         adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd).ToArray(),
         tracker);
 
+    private InternalInAdProvider? ActiveInternalInAdProvider => (InternalInAdProvider?)adProviderItems
+        .FirstOrDefault(x => x.AdProvider is InternalInAdProvider { IsWaitingForAd: true })?
+        .AdProvider;
+
+    public bool IsWaitingForInternalAd => ActiveInternalInAdProvider?.IsWaitingForAd == true;
+    public void DismissInternalAd(string result) => ActiveInternalInAdProvider?.Dismiss();
+
+    public void EnableAdProvider(string providerName, bool value)
+    {
+        var item = adProviderItems.FirstOrDefault(x => string.Equals(x.ProviderName, providerName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.AdProvider.NetworkName, providerName, StringComparison.OrdinalIgnoreCase));
+        if (item != null)
+            item.IsEnabled = value;
+    }
+
     //private readonly AppCompositeAdService _compositeInterstitialAdOverVpnService = new(
     //    adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.InterstitialAd }).ToArray(), 
     //    tracker);
@@ -46,48 +60,55 @@ public class AppAdService(
     public bool CanShowInterstitial => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.InterstitialAd);
     public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.RewardedAd);
 
-    public async Task LoadInterstitialAd(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task LoadInterstitialAd(IUiContext uiContext, bool useFallback, CancellationToken cancellationToken)
     {
         // don't use VPN for loading ad
         var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
-        await LoadAd(_compositeInterstitialAdService, uiContext, isPreload: true, countryCode: countryCode, cancellationToken).Vhc();
+        await LoadAd(_compositeInterstitialAdService, uiContext, isPreload: true,
+            countryCode: countryCode, useFallback: useFallback,
+            cancellationToken: cancellationToken).Vhc();
     }
 
     public Task<AdResult> ShowInterstitial(IUiContext uiContext, string sessionId,
-        CancellationToken cancellationToken)
+        bool useFallback, CancellationToken cancellationToken)
     {
-        return ShowAd(_compositeInterstitialAdService, uiContext, sessionId, cancellationToken);
+        return ShowAd(_compositeInterstitialAdService,
+            uiContext, sessionId, useFallback: useFallback, cancellationToken);
     }
 
     public Task<AdResult> ShowRewarded(IUiContext uiContext, string sessionId,
-        CancellationToken cancellationToken)
+        bool useFallback, CancellationToken cancellationToken)
     {
         if (!CanShowRewarded)
             throw new InvalidOperationException("Rewarded ad is not supported in this app.");
 
-        return ShowAd(_compositeRewardedAdService, uiContext, sessionId, cancellationToken);
+        return ShowAd(_compositeRewardedAdService,
+            uiContext, sessionId, useFallback: useFallback, cancellationToken);
     }
 
     private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext,
-        bool isPreload, string countryCode, CancellationToken cancellationToken)
+        bool isPreload, string countryCode, bool useFallback, CancellationToken cancellationToken)
     {
         await appCompositeAdService.LoadAd(uiContext, isPreload: isPreload,
-            countryCode: countryCode, forceReload: false, loadAdTimeout: loadAdTimeout,
-            cancellationToken).Vhc();
+            countryCode: countryCode, loadAdTimeout: loadAdTimeout, useFallback: useFallback,
+            forceReload: false,
+            cancellationToken: cancellationToken).Vhc();
 
         // apply delay to prevent showing ads immediately after loading
         await Task.Delay(loadAdPostDelay, cancellationToken).Vhc();
     }
 
     private async Task<AdResult> ShowAd(AppCompositeAdService appCompositeAdService,
-        IUiContext uiContext, string sessionId, CancellationToken cancellationToken)
+        IUiContext uiContext, string sessionId, bool useFallback, CancellationToken cancellationToken)
     {
         string? countryCode = null;
         try {
             countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
 
             // Load and sw ad
-            var result = await LoadAndShowAd(appCompositeAdService, uiContext, sessionId, countryCode, cancellationToken).Vhc();
+            var result = await LoadAndShowAd(appCompositeAdService, uiContext, sessionId, countryCode,
+                useFallback: useFallback,
+                cancellationToken: cancellationToken).Vhc();
 
             // enforce active UI context
             await AppAdUtils.VerifyActiveUi(uiContext, immediately: false).Vhc();
@@ -120,13 +141,12 @@ public class AppAdService(
     }
 
     private async Task<AdResult> LoadAndShowAd(AppCompositeAdService appCompositeAdService,
-        IUiContext uiContext, string sessionId, string countryCode, CancellationToken cancellationToken)
+        IUiContext uiContext, string sessionId, string countryCode, bool useFallback, CancellationToken cancellationToken)
     {
 
         // load ad if not loaded
-        await LoadAd(appCompositeAdService, uiContext,
-            countryCode: countryCode, isPreload: false,
-            cancellationToken: cancellationToken).Vhc();
+        await LoadAd(appCompositeAdService, uiContext, isPreload: false,
+            countryCode: countryCode, useFallback: useFallback, cancellationToken: cancellationToken).Vhc();
 
         // show ad
         try {

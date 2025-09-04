@@ -163,7 +163,7 @@ internal class AppController : WebApiController, IAppController
         return Task.FromResult(App.InstalledApps);
     }
 
- [Route(HttpVerbs.Post, "/process-types")]
+    [Route(HttpVerbs.Post, "/process-types")]
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode)
     {
         throw new NotSupportedException("This method exists just to let swagger generate types.");
@@ -175,6 +175,15 @@ internal class AppController : WebApiController, IAppController
         userReview = await HttpContext.GetRequestDataAsync<AppUserReview>().Vhc();
         App.SetUserReview(userReview.Rating, userReview.ReviewText);
     }
+
+    [Route(HttpVerbs.Post, "/dismiss-internal-ad")]
+    public Task DismissInternalAd(string result)
+    {
+        App.AdManager.AdService.DismissInternalAd(result);
+        return Task.CompletedTask;
+    }
+
+
 
     [Route(HttpVerbs.Get, "/countries")]
     public Task<CountryInfo[]> GetCountries()

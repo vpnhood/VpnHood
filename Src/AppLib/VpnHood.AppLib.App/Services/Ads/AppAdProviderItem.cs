@@ -10,4 +10,6 @@ public class AppAdProviderItem
     public bool CanShowOverVpn { get; init; }
     public string[] IncludeCountryCodes { get; init; } = [];
     public string[] ExcludeCountryCodes { get; init; } = [];
+    public bool IsEnabled { get; set; } = true;
+    public bool IsFallback { get; set; }
 }

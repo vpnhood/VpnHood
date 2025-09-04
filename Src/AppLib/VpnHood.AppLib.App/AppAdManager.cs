@@ -33,6 +33,7 @@ public class AppAdManager(
     public async Task ShowAd(
         string sessionId,
         AdRequirement adRequirement,
+        bool useFallback,
         CancellationToken cancellationToken)
     {
         if (adRequirement == AdRequirement.None)
@@ -60,9 +61,9 @@ public class AppAdManager(
             // flexible ad
             var adResult = adRequirement switch {
                 AdRequirement.Flexible when adService.CanShowInterstitial =>
-                    await adService.ShowInterstitial(uiContext, sessionId, cancellationToken).Vhc(),
+                    await adService.ShowInterstitial(uiContext, sessionId, useFallback, cancellationToken).Vhc(),
                 AdRequirement.Rewarded when adService.CanShowRewarded =>
-                    await adService.ShowRewarded(uiContext, sessionId, cancellationToken).Vhc(),
+                    await adService.ShowRewarded(uiContext, sessionId, useFallback, cancellationToken).Vhc(),
                 _ => throw new AdException("The requested ad is not supported in this app.")
             };
 
@@ -134,7 +135,7 @@ public class AppAdManager(
             throw new InvalidOperationException("Could not extend this session by a rewarded ad at this time.");
 
         // set wait for ad state
-        await ShowAd(connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, 
+        await ShowAd(connectionInfo.SessionInfo.SessionId, AdRequirement.Rewarded, useFallback: false,
             cancellationToken: cancellationToken).Vhc();
     }
 

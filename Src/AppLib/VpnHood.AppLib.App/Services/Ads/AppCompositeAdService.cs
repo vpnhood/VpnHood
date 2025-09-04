@@ -50,8 +50,10 @@ internal class AppCompositeAdService
 
     private readonly AsyncLock _loadAdLock = new();
 
-    public async Task LoadAd(IUiContext uiContext, bool isPreload, string? countryCode, bool forceReload,
-        TimeSpan loadAdTimeout, CancellationToken cancellationToken)
+    public async Task LoadAd(IUiContext uiContext,
+        bool isPreload, string? countryCode, bool forceReload,
+        TimeSpan loadAdTimeout, bool useFallback, 
+        CancellationToken cancellationToken)
     {
         if (_adProviderItems.Length == 0)
             throw new Exception("There is no AdService registered in this app.");
@@ -66,11 +68,15 @@ internal class AppCompositeAdService
 
         // filter ad services by country code
         var filteredAdProviderItems = _adProviderItems
+            .Where(x => x.IsEnabled)
             .Where(x => countryCode is null || IsCountrySupported(x, countryCode))
             .ToArray();
 
         foreach (var adProviderItem in filteredAdProviderItems) {
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (!useFallback && adProviderItem.IsFallback)
+                continue;
 
             // find first successful ad network
             try {
@@ -95,7 +101,7 @@ internal class AppCompositeAdService
                 // track the error
                 if (_tracker != null)
                     await _tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildLoadAdFailed(
-                        adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode, isPreload: isPreload), 
+                        adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode, isPreload: isPreload),
                         cancellationToken);
 
                 providerExceptions.Add((adProviderItem.Name, ex));

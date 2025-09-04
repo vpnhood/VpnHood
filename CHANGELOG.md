@@ -1,5 +1,5 @@
 # Upcoming 
-* Fix: Unable to close Quick Launch popup on android
+* Fix: Unable to close the Quick Launch pop-up on Android
 * Fix: False positive ad blocker detection on some devices
 * Fix: Negative speed issue
 * Feature: Internal Ad Provider

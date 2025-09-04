@@ -2,6 +2,7 @@
 * Fix: Unable to close Quick Launch popup on android
 * Fix: False positive ad blocker detection on some devices
 * Fix: Negative speed issue
+* Feature: Internal Ad Provider
 
 # v7.3.748
 * Fix: Minor UI issues and translations

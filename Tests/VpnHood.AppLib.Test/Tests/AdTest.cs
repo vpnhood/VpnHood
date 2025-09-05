@@ -407,7 +407,7 @@ public class AdTest : TestAppBase
         await VhTestUtil.AssertEqualsWait(2, () => testAdProvider.LoadAdCount, 
             "two times must be tried to reach fallback.");
         
-        app.AdManager.AdService.DismissInternalAd("ok");
+        app.AdManager.AdService.InternalAdDismiss("ok");
         await app.WaitForState(AppConnectionState.Connected);
     }
 }

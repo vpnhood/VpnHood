@@ -26,6 +26,11 @@ public class InternalInAdProvider : IAppAdProvider
         return _showAdTask.Task.WaitAsync(cancellationToken);   
     }
 
+    public void SetException(Exception ex)
+    {
+        _showAdTask?.TrySetException(ex);
+    }
+
     public void Dismiss()
     {
         _showAdTask?.TrySetResult();

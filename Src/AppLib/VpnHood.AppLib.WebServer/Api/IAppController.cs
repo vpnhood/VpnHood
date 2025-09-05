@@ -25,5 +25,6 @@ public interface IAppController
     Task ExtendByRewardedAd();
     Task SetUserReview(AppUserReview userReview);
     Task<CountryInfo[]> GetCountries();
-    Task DismissInternalAd(string result);
+    Task InternalAdDismiss(string result);
+    Task InternalAdError(string errorMessage);
 }

@@ -176,12 +176,20 @@ internal class AppController : WebApiController, IAppController
         App.SetUserReview(userReview.Rating, userReview.ReviewText);
     }
 
-    [Route(HttpVerbs.Post, "/dismiss-internal-ad")]
-    public Task DismissInternalAd(string result)
+    [Route(HttpVerbs.Post, "/internal-ad/dismiss")]
+    public Task InternalAdDismiss([QueryField] string result)
     {
-        App.AdManager.AdService.DismissInternalAd(result);
+        App.AdManager.AdService.InternalAdDismiss(result);
         return Task.CompletedTask;
     }
+
+    [Route(HttpVerbs.Post, "/internal-ad/error")]
+    public Task InternalAdError([QueryField] string errorMessage)
+    {
+        App.AdManager.AdService.InternalAdError(new Exception(errorMessage));
+        return Task.CompletedTask;
+    }
+
 
     [Route(HttpVerbs.Get, "/countries")]
     public Task<CountryInfo[]> GetCountries()

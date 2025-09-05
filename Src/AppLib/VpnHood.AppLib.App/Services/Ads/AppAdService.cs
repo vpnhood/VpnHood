@@ -28,7 +28,8 @@ public class AppAdService(
         .AdProvider;
 
     public bool IsWaitingForInternalAd => ActiveInternalInAdProvider != null;
-    public void DismissInternalAd(string result) => ActiveInternalInAdProvider?.Dismiss();
+    public void InternalAdDismiss(string result) => ActiveInternalInAdProvider?.Dismiss(); 
+    public void InternalAdError(Exception exception) => ActiveInternalInAdProvider?.SetException(exception);
 
     public void EnableAdProvider(string providerName, bool value)
     {
@@ -36,14 +37,6 @@ public class AppAdService(
         if (item != null)
             item.IsEnabled = value;
     }
-
-    //private readonly AppCompositeAdService _compositeInterstitialAdOverVpnService = new(
-    //    adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.InterstitialAd }).ToArray(), 
-    //    tracker);
-
-    //private readonly AppCompositeAdService _compositeRewardedAdOverVpnService = new(
-    //    adProviderItems.Where(x => x is { CanShowOverVpn: true, AdProvider.AdType: AppAdType.RewardedAd }).ToArray(), 
-    //    tracker);
 
     private bool CanShowOverVpn(AppAdType adType) =>
         adProviderItems.Any(x => x.AdProvider.AdType == adType && x.CanShowOverVpn);

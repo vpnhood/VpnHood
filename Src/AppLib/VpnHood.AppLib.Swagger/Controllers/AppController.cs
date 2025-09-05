@@ -124,8 +124,14 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("dismiss-internal-ad")]
-    public Task DismissInternalAd(string result)
+    [HttpPost("internal-ad/dismiss")]
+    public Task InternalAdDismiss(string result)
+    {
+        throw new SwaggerOnlyException();
+    }
+    
+    [HttpPost("internal-ad/error")]
+    public Task InternalAdError(string errorMessage)
     {
         throw new SwaggerOnlyException();
     }

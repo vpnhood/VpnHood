@@ -23,13 +23,13 @@ public class AppAdService(
         adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd).ToArray(),
         tracker);
 
-    private InternalInAdProvider? ActiveInternalInAdProvider => (InternalInAdProvider?)adProviderItems
+    private InternalInAdProvider? ActiveInternalAdProvider => (InternalInAdProvider?)adProviderItems
         .FirstOrDefault(x => x.AdProvider is InternalInAdProvider { IsWaitingForAd: true })?
         .AdProvider;
 
-    public bool IsWaitingForInternalAd => ActiveInternalInAdProvider != null;
-    public void InternalAdDismiss(ShowAdResult showAdResult) => ActiveInternalInAdProvider?.Dismiss(showAdResult); 
-    public void InternalAdError(Exception exception) => ActiveInternalInAdProvider?.SetException(exception);
+    public bool IsWaitingForInternalAd => ActiveInternalAdProvider != null;
+    public void InternalAdDismiss(ShowAdResult showAdResult) => ActiveInternalAdProvider?.Dismiss(showAdResult); 
+    public void InternalAdError(Exception exception) => ActiveInternalAdProvider?.SetException(exception);
 
     public void EnableAdProvider(string providerName, bool value)
     {

@@ -419,10 +419,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return AdManager.IsWaitingForPostDelay ? AppConnectionState.Connected : AppConnectionState.WaitingForAd;
 
             if (clientState == ClientState.FindingBestServer)
-                return AppConnectionState.FindingBestServer;
+                //return AppConnectionState.FindingBestServer;
+                return AppConnectionState.Connecting;
 
             if (clientState == ClientState.FindingReachableServer)
-                return AppConnectionState.FindingReachableServer;
+                //return AppConnectionState.FindingReachableServer;
+                return AppConnectionState.Connecting;
 
             if (clientState == ClientState.Connected)
                 return AppConnectionState.Connected;

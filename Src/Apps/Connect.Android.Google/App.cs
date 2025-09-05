@@ -91,7 +91,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         items.Add(new AppAdProviderItem {
             AdProvider = new InternalInAdProvider(),
-            ProviderName = "InternalAdProvider",
+            ProviderName = "InternalAd",
             IsFallback = true
         });
 

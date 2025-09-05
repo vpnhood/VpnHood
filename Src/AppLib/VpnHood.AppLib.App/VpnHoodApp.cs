@@ -227,6 +227,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             allowedPrivateDnsProviders: options.AdOptions.AllowedPrivateDnsProviders,
             uiProvider: uiProvider);
 
+        // temporary, enable internal ad provider if exists and setting is enabled
+        if (options.AdProviderItems.Any(x=>x.Name == "InternalAd"))
+            AdManager.AdService.EnableAdProvider("InternalAd", SettingsService.RemoteSettings?.ShowInternalAd == true);
+
         // Apply settings but no error on startup
         ApplySettings();
 

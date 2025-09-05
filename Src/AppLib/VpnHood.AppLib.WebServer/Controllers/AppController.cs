@@ -2,6 +2,7 @@
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
@@ -177,7 +178,7 @@ internal class AppController : WebApiController, IAppController
     }
 
     [Route(HttpVerbs.Post, "/internal-ad/dismiss")]
-    public Task InternalAdDismiss([QueryField] string result)
+    public Task InternalAdDismiss([QueryField] ShowAdResult result)
     {
         App.AdManager.AdService.InternalAdDismiss(result);
         return Task.CompletedTask;

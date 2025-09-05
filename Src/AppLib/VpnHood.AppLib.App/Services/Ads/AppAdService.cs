@@ -28,7 +28,7 @@ public class AppAdService(
         .AdProvider;
 
     public bool IsWaitingForInternalAd => ActiveInternalInAdProvider != null;
-    public void InternalAdDismiss(string result) => ActiveInternalInAdProvider?.Dismiss(); 
+    public void InternalAdDismiss(ShowAdResult showAdResult) => ActiveInternalInAdProvider?.Dismiss(showAdResult); 
     public void InternalAdError(Exception exception) => ActiveInternalInAdProvider?.SetException(exception);
 
     public void EnableAdProvider(string providerName, bool value)
@@ -109,7 +109,9 @@ public class AppAdService(
             // track ad show success
             await tracker.TryTrackWithCancellation(
                 AppTrackerBuilder.BuildShowAdOk(adNetwork: result.NetworkName,
-                    countryCode: countryCode, isPreload: appCompositeAdService.IsPreload),
+                    countryCode: countryCode, 
+                    isPreload: appCompositeAdService.IsPreload,
+                    showAdResult: result.IsClicked ? ShowAdResult.Clicked : ShowAdResult.Closed),
                 cancellationToken).Vhc();
 
             return result;
@@ -144,13 +146,14 @@ public class AppAdService(
         // show ad
         try {
             var adData = $"sid:{sessionId};ad:{Guid.NewGuid()}";
-            var networkName = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken).Vhc();
+            var result = await appCompositeAdService.ShowLoadedAd(uiContext, adData, cancellationToken).Vhc();
 
-            var showAdResult = new AdResult {
+            var addResult = new AdResult {
                 AdData = adData,
-                NetworkName = networkName
+                IsClicked = result.ShowAdResult == ShowAdResult.Clicked,
+                NetworkName = result.NetworkName
             };
-            return showAdResult;
+            return addResult;
         }
         catch (Exception ex) {
             // track failed ad show

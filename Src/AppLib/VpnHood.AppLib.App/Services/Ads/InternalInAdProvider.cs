@@ -1,5 +1,4 @@
 ﻿using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -13,16 +12,16 @@ public class InternalInAdProvider : IAppAdProvider
     public AppAdType AdType => AppAdType.InterstitialAd;
     public bool IsWaitingForAd => _showAdTask?.Task.IsCompleted is false;
 
-    private TaskCompletionSource? _showAdTask;
+    private TaskCompletionSource<ShowAdResult>? _showAdTask;
     public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
         AdLoadedTime = FastDateTime.Now;
         return Task.CompletedTask;
     }
 
-    public Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
+    public Task<ShowAdResult> ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
-        _showAdTask = new TaskCompletionSource();
+        _showAdTask = new TaskCompletionSource<ShowAdResult>();
         return _showAdTask.Task.WaitAsync(cancellationToken);   
     }
 
@@ -31,9 +30,9 @@ public class InternalInAdProvider : IAppAdProvider
         _showAdTask?.TrySetException(ex);
     }
 
-    public void Dismiss()
+    public void Dismiss(ShowAdResult result)
     {
-        _showAdTask?.TrySetResult();
+        _showAdTask?.TrySetResult(result);
     }
 
     public void Dispose()

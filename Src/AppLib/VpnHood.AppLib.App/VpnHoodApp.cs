@@ -252,6 +252,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
         }
 
+        //var a = await Dns.GetHostEntryAsync("googleads.g.doubleclick.net");
+
+
     }
 
     private Task? _reconfigurationTask;

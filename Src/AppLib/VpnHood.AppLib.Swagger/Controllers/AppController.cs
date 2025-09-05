@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
@@ -125,7 +126,7 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("internal-ad/dismiss")]
-    public Task InternalAdDismiss(string result)
+    public Task InternalAdDismiss(ShowAdResult result)
     {
         throw new SwaggerOnlyException();
     }

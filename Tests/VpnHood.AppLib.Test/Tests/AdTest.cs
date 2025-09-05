@@ -276,7 +276,7 @@ public class AdTest : TestAppBase
         customIps.Add(new IpRange(TestConstants.NsEndPoint1.Address));
 
         // add provider
-        var showAdCompletionSource = new TaskCompletionSource();
+        var showAdCompletionSource = new TaskCompletionSource<ShowAdResult>();
         var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
         adProvider.ShowAdCompletionSource = showAdCompletionSource;
         adProvider.LoadAdCallback = () => {
@@ -308,7 +308,7 @@ public class AdTest : TestAppBase
             null); // all dns should be included
 
         // finish showing ad
-        showAdCompletionSource.SetResult();
+        showAdCompletionSource.SetResult(ShowAdResult.Closed);
         await app.WaitForState(AppConnectionState.Connected);
         await Task.Delay(appOptions.AdOptions.ShowAdPostDelay); // make sure ad post delay is finished
         await Task.Delay(200); // make sure ad post delay is finished
@@ -407,7 +407,7 @@ public class AdTest : TestAppBase
         await VhTestUtil.AssertEqualsWait(2, () => testAdProvider.LoadAdCount, 
             "two times must be tried to reach fallback.");
         
-        app.AdManager.AdService.InternalAdDismiss("ok");
+        app.AdManager.AdService.InternalAdDismiss(ShowAdResult.Clicked);
         await app.WaitForState(AppConnectionState.Connected);
     }
 }

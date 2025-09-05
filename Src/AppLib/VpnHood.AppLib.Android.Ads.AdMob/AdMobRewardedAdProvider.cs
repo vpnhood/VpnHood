@@ -50,7 +50,7 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
         AdLoadedTime = DateTime.Now;
     }
 
-    public async Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
+    public async Task<ShowAdResult> ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
@@ -66,7 +66,7 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
                 .SetCustomData(customData ?? "")
                 .Build();
 
-            var fullScreenContentCallback = new MyFullScreenContentCallback();
+            var fullScreenContentCallback = new AdMobFullScreenContentCallback();
             var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
 
             await AndroidUtil
@@ -79,7 +79,7 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
                 .ConfigureAwait(false);
 
 
-            await fullScreenContentCallback.DismissedTask
+            var result = await fullScreenContentCallback.DismissedTask
                 .WaitAsync(cancellationToken)
                 .ConfigureAwait(false);
 
@@ -91,6 +91,8 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
                 throw new RewardNotEarnedException(
                     $"Could not receive user reward in {AdEarnedTimeout.TotalSeconds} seconds after closing the ad.");
             }
+
+            return result;
         }
         finally {
             _loadedAd = null;
@@ -115,23 +117,6 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
                 addError.Message.Contains("No fill.", StringComparison.OrdinalIgnoreCase)
                     ? new NoFillAdException(addError.Message)
                     : new LoadAdException(addError.Message));
-        }
-    }
-
-    private class MyFullScreenContentCallback : FullScreenContentCallback
-    {
-        private readonly TaskCompletionSource _dismissedCompletionSource = new();
-
-        public Task DismissedTask => _dismissedCompletionSource.Task;
-
-        public override void OnAdDismissedFullScreenContent()
-        {
-            _dismissedCompletionSource.TrySetResult();
-        }
-
-        public override void OnAdFailedToShowFullScreenContent(AdError adError)
-        {
-            _dismissedCompletionSource.TrySetException(new ShowAdException(adError.Message));
         }
     }
 

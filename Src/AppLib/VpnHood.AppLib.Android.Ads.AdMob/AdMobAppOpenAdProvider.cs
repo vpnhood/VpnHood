@@ -52,7 +52,7 @@ public class AdMobAppOpenAdProvider(string adUnitId) : IAppAdProvider
         AdLoadedTime = DateTime.Now;
     }
 
-    public async Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
+    public async Task<ShowAdResult> ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
@@ -63,7 +63,7 @@ public class AdMobAppOpenAdProvider(string adUnitId) : IAppAdProvider
             throw new ShowAdException($"The {AdType} has not been loaded.");
 
         try {
-            var fullScreenContentCallback = new MyFullScreenContentCallback();
+            var fullScreenContentCallback = new AdMobFullScreenContentCallback();
             await AndroidUtil
                 .RunOnUiThread(activity, () => {
                     _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
@@ -73,29 +73,15 @@ public class AdMobAppOpenAdProvider(string adUnitId) : IAppAdProvider
                 .ConfigureAwait(false);
 
             // wait for show or dismiss
-            await fullScreenContentCallback.DismissedTask
+            var result = await fullScreenContentCallback.DismissedTask
                 .WaitAsync(cancellationToken)
                 .ConfigureAwait(false);
+
+            return result;
         }
         finally {
             _loadedAd = null;
             AdLoadedTime = null;
-        }
-    }
-
-    private class MyFullScreenContentCallback : FullScreenContentCallback
-    {
-        private readonly TaskCompletionSource _dismissedCompletionSource = new();
-        public Task DismissedTask => _dismissedCompletionSource.Task;
-
-        public override void OnAdDismissedFullScreenContent()
-        {
-            _dismissedCompletionSource.TrySetResult();
-        }
-
-        public override void OnAdFailedToShowFullScreenContent(AdError adError)
-        {
-            _dismissedCompletionSource.TrySetException(new ShowAdException(adError.Message));
         }
     }
 

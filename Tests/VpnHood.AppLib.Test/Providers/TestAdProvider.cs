@@ -5,7 +5,8 @@ using VpnHood.Test.AccessManagers;
 
 namespace VpnHood.AppLib.Test.Providers;
 
-public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = AppAdType.RewardedAd) : IAppAdProvider
+public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = AppAdType.RewardedAd) 
+    : IAppAdProvider
 {
     public bool FailShow { get; set; }
     public bool FailLoad { get; set; }
@@ -13,7 +14,7 @@ public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = 
     public AppAdType AdType => adType;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan { get; } = TimeSpan.FromMinutes(60);
-    public TaskCompletionSource? ShowAdCompletionSource { get; set; }
+    public TaskCompletionSource<ShowAdResult>? ShowAdCompletionSource { get; set; }
     public TaskCompletionSource? LoadAdCompletionSource { get; set; }
     public int LoadAdCount { get; private set; }
     public Func<Task> LoadAdCallback { get; set; } = () => Task.CompletedTask;
@@ -32,7 +33,9 @@ public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = 
             await LoadAdCompletionSource.Task;
     }
 
-    public Task ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
+    public Task<ShowAdResult> ShowAd(IUiContext uiContext, 
+        string? customData, 
+        CancellationToken cancellationToken)
     {
         if (AdLoadedTime == null)
             throw new ShowAdException("Not Ad has been loaded.");
@@ -44,7 +47,7 @@ public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = 
             if (!string.IsNullOrEmpty(customData))
                 accessManager.AddAdData(customData);
 
-            return ShowAdCompletionSource?.Task ?? Task.CompletedTask;
+            return ShowAdCompletionSource?.Task ?? Task.FromResult(ShowAdResult.Closed);
         }
         finally {
             AdLoadedTime = null;

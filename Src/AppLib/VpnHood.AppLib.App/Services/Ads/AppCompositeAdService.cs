@@ -1,5 +1,6 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
@@ -8,12 +9,14 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Ads;
 
+
 internal class AppCompositeAdService
 {
     private AppAdProviderItem? _loadedAdProviderItem;
     private readonly AppAdProviderItem[] _adProviderItems;
     private readonly ITracker? _tracker;
     public bool IsPreload { get; private set; }
+    public readonly record struct ShowLoadedAdResult(string NetworkName, ShowAdResult ShowAdResult);
 
     public AppCompositeAdService(AppAdProviderItem[] adProviderItems, ITracker? tracker)
     {
@@ -120,18 +123,17 @@ internal class AppCompositeAdService
             $"Cancelled: {cancellationToken.IsCancellationRequested}.");
     }
 
-    public async Task<string> ShowLoadedAd(IUiContext uiContext, string? customData,
+    public async Task<ShowLoadedAdResult> ShowLoadedAd(IUiContext uiContext, string? customData,
         CancellationToken cancellationToken)
     {
         if (_loadedAdProviderItem == null)
             throw new LoadAdException("There is no loaded ad.");
 
         // show the ad
-        try {
-            VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
-            await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).Vhc();
+        try { VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
+            var showAdResult = await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).Vhc();
             VhLogger.Instance.LogDebug("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
-            return _loadedAdProviderItem.Name;
+            return new ShowLoadedAdResult(_loadedAdProviderItem.Name, showAdResult);
         }
         catch (UiContextNotAvailableException) {
             throw new ShowAdNoUiException {

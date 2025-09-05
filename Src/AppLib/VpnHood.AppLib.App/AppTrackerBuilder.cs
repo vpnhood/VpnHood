@@ -1,4 +1,5 @@
 ﻿using Ga4.Trackers;
+using VpnHood.AppLib.Abstractions;
 
 namespace VpnHood.AppLib;
 
@@ -41,7 +42,8 @@ public static class AppTrackerBuilder
             errorMessage: errorMessage, countryCode: countryCode, isPreload: isPreload);
     }
 
-    public static TrackEvent BuildShowAdOk(string adNetwork, string? countryCode, bool isPreload)
+    public static TrackEvent BuildShowAdOk(string adNetwork, string? countryCode, bool isPreload, 
+        ShowAdResult showAdResult)
     {
         if (countryCode?.Trim() is null or "") countryCode = "(vh_unknown)";
 
@@ -50,7 +52,8 @@ public static class AppTrackerBuilder
             Parameters = new Dictionary<string, object?> {
                 { "ad_network", adNetwork },
                 { "country", countryCode },
-                { "is_preload", isPreload }
+                { "is_preload", isPreload },
+                { "action", showAdResult },
             }
         };
     }

@@ -1,4 +1,5 @@
-﻿using VpnHood.AppLib.Settings;
+﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
@@ -25,6 +26,6 @@ public interface IAppController
     Task ExtendByRewardedAd();
     Task SetUserReview(AppUserReview userReview);
     Task<CountryInfo[]> GetCountries();
-    Task InternalAdDismiss(string result);
+    Task InternalAdDismiss(ShowAdResult result);
     Task InternalAdError(string errorMessage);
 }

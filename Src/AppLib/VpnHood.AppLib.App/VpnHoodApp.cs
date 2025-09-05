@@ -286,6 +286,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UserSettings.IncludeLocalNetwork != _oldUserSettings.IncludeLocalNetwork ||
                     UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode ||
                     !UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters) ||
+                    !UserSettings.UseDnsServers != _oldUserSettings.UseDnsServers ||
                     !VhUtils.SequenceEquals(UserSettings.DnsServers, _oldUserSettings.DnsServers);
             }
 
@@ -658,7 +659,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // use default DNS servers if not premium account
-            var dnsServers = !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) && CheckPremiumFeature(AppFeature.CustomDns)
+            var dnsServers =
+                UserSettings.UseDnsServers &&
+                !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) && 
+                CheckPremiumFeature(AppFeature.CustomDns)
                 ? UserSettings.DnsServers : null;
 
             // create clientOptions

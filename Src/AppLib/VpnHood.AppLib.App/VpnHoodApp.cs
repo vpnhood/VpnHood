@@ -226,7 +226,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             uiProvider: uiProvider);
 
         // temporary, enable internal ad provider if exists and setting is enabled
-        if (options.AdProviderItems.Any(x=>x.Name == "InternalAd"))
+        if (options.AdProviderItems.Any(x => x.Name == "InternalAd"))
             AdManager.AdService.EnableAdProvider("InternalAd", SettingsService.RemoteSettings?.ShowInternalAd == true);
 
         // Apply settings but no error on startup
@@ -364,7 +364,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var connectionState = ConnectionState;
             var connectionInfo = connectionState.IsIdle() ? null : ConnectionInfo;
             var isReconfiguring = _reconfigurationTask is null || _reconfigurationTask.IsCompleted;
-            
+
             var uiContext = AppUiContext.Context;
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
@@ -665,7 +665,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // use default DNS servers if not premium account
             var dnsServers =
                 UserSettings.DnsMode is DnsMode.AdapterDns &&
-                !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) && 
+                !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) &&
                 CheckPremiumFeature(AppFeature.CustomDns)
                 ? UserSettings.DnsServers : null;
 
@@ -1044,7 +1044,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var connectionInfo = ConnectionInfo;
             var useFallback = connectionInfo.ClientState is ClientState.WaitingForAdEx;
             await AdManager.ShowAd(
-                connectionInfo.SessionInfo.SessionId, connectionInfo.SessionInfo.AdRequirement, 
+                connectionInfo.SessionInfo.SessionId, connectionInfo.SessionInfo.AdRequirement,
                 useFallback: useFallback, _showAdCts.Token);
         }
         catch (Exception ex) {

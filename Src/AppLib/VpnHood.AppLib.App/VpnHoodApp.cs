@@ -546,7 +546,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-
     private async Task ConnectInternal1(ConnectOptions connectOptions, CancellationToken cancellationToken)
     {
         // set use default clientProfile and serverLocation

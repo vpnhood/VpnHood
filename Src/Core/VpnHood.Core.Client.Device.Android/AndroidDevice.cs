@@ -1,5 +1,4 @@
 ﻿using Android.Content;
-using Android.Content.Res;
 using Android.Net;
 using Android.OS;
 using Microsoft.Extensions.Logging;

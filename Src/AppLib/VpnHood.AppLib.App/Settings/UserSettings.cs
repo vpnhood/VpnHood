@@ -31,8 +31,15 @@ public class UserSettings
     public bool UseVpnAdapterIpFilter { get; set; }
     public EndPointStrategy EndPointStrategy { get; set; }
     public bool UseDnsServers { get; set; }
-    [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
-    public IPAddress[]? DnsServers { get; set; } = [];
     public bool UseProxyServer { get; set; }
     public ProxyServerEndPoint[] ProxyServers { get; set; } = [];
+
+    // for compatibility convert old nullable to empty array
+    private IPAddress[] _dnsServers = [];
+    [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
+    public IPAddress[] DnsServers {
+        get => _dnsServers;
+        // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
+        set => _dnsServers = value ?? [];
+    }
 }

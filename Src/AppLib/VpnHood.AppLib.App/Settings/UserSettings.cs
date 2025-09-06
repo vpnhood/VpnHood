@@ -30,9 +30,9 @@ public class UserSettings
     public bool UseAppIpFilter { get; set; }
     public bool UseVpnAdapterIpFilter { get; set; }
     public EndPointStrategy EndPointStrategy { get; set; }
-    public bool UseDnsServers { get; set; }
     public bool UseProxyServer { get; set; }
     public ProxyServerEndPoint[] ProxyServers { get; set; } = [];
+    public DnsMode DnsMode { get; set; }
 
     // for compatibility convert old nullable to empty array
     private IPAddress[] _dnsServers = [];

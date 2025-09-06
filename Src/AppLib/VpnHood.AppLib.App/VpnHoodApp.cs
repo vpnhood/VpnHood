@@ -75,7 +75,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CancellationTokenSource _showAdCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
     private CultureInfo? _systemUiCulture;
-    private UserSettings _oldUserSettings;
     private bool _isConnecting;
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
@@ -87,7 +86,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public bool IsIdle => ConnectionState.IsIdle();
     public string StorageFolderPath { get; }
     public AppSettings Settings => SettingsService.Settings;
-    public UserSettings UserSettings => SettingsService.Settings.UserSettings;
+    public UserSettings UserSettings => SettingsService.UserSettings;
     public AppFeatures Features { get; }
     public ClientProfileService ClientProfileService { get; }
     public Diagnoser Diagnoser { get; } = new();
@@ -107,7 +106,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         SettingsService = settingsService;
         SettingsService.BeforeSave += SettingsBeforeSave;
         _device = device;
-        _oldUserSettings = JsonUtils.JsonClone(UserSettings);
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
         _useInternalLocationService = options.UseInternalLocationService;
         _useExternalLocationService = options.UseExternalLocationService;
@@ -265,6 +263,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private void ApplySettings()
     {
         try {
+            var oldUserSettings = SettingsService.OldUserSettings;
+
+            // set dns to default if no dns server is set
+            if (UserSettings.DnsMode is DnsMode.AdapterDns && UserSettings.DnsServers.Length is 0) {
+                UserSettings.DnsMode = DnsMode.Default;
+            }
+
+            // reconfigure if connected
             var state = State;
             var disconnectRequired = false;
             if (ConnectionInfo.IsStarted()) {
@@ -279,15 +285,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
                 // check is disconnect required
                 disconnectRequired =
-                    UserSettings.UseVpnAdapterIpFilter != _oldUserSettings.UseVpnAdapterIpFilter ||
-                    UserSettings.UseAppIpFilter != _oldUserSettings.UseAppIpFilter ||
-                    UserSettings.TunnelClientCountry != _oldUserSettings.TunnelClientCountry ||
-                    UserSettings.ClientProfileId != _oldUserSettings.ClientProfileId ||
-                    UserSettings.IncludeLocalNetwork != _oldUserSettings.IncludeLocalNetwork ||
-                    UserSettings.AppFiltersMode != _oldUserSettings.AppFiltersMode ||
-                    !UserSettings.AppFilters.SequenceEqual(_oldUserSettings.AppFilters) ||
-                    !UserSettings.UseDnsServers != _oldUserSettings.UseDnsServers ||
-                    !VhUtils.SequenceEquals(UserSettings.DnsServers, _oldUserSettings.DnsServers);
+                    UserSettings.UseVpnAdapterIpFilter != oldUserSettings.UseVpnAdapterIpFilter ||
+                    UserSettings.UseAppIpFilter != oldUserSettings.UseAppIpFilter ||
+                    UserSettings.TunnelClientCountry != oldUserSettings.TunnelClientCountry ||
+                    UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
+                    UserSettings.IncludeLocalNetwork != oldUserSettings.IncludeLocalNetwork ||
+                    UserSettings.AppFiltersMode != oldUserSettings.AppFiltersMode ||
+                    !UserSettings.AppFilters.SequenceEqual(oldUserSettings.AppFilters) ||
+                    UserSettings.DnsMode != oldUserSettings.DnsMode ||
+                    !VhUtils.SequenceEquals(UserSettings.DnsServers, oldUserSettings.DnsServers);
             }
 
             // set default ContinueOnCapturedContext
@@ -304,7 +310,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
 
             InitCulture();
-            _oldUserSettings = JsonUtils.JsonClone(UserSettings);
 
             // disconnect
             if (state.CanDisconnect && disconnectRequired) {
@@ -359,7 +364,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var connectionState = ConnectionState;
             var connectionInfo = connectionState.IsIdle() ? null : ConnectionInfo;
             var isReconfiguring = _reconfigurationTask is null || _reconfigurationTask.IsCompleted;
-
+            
             var uiContext = AppUiContext.Context;
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
@@ -659,7 +664,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // use default DNS servers if not premium account
             var dnsServers =
-                UserSettings.UseDnsServers &&
+                UserSettings.DnsMode is DnsMode.AdapterDns &&
                 !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) && 
                 CheckPremiumFeature(AppFeature.CustomDns)
                 ? UserSettings.DnsServers : null;

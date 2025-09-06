@@ -2,6 +2,7 @@
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Services.Updaters;
+using VpnHood.AppLib.Settings;
 using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib;

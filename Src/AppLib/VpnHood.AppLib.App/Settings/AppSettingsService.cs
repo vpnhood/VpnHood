@@ -15,6 +15,8 @@ public class AppSettingsService
 
     public event EventHandler? BeforeSave;
     public AppSettings Settings { get; }
+    public UserSettings UserSettings => Settings.UserSettings;
+    public UserSettings OldUserSettings { get; private set; }
     public RemoteSettings? RemoteSettings { get; private set; }
     public IpFilterSettings IpFilterSettings { get; }
 
@@ -24,6 +26,7 @@ public class AppSettingsService
         Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? new AppSettings();
         Settings.AppSettingsService = this;
         IpFilterSettings = new IpFilterSettings(Path.Combine(storagePath, "ip_filters"));
+        OldUserSettings = Settings.UserSettings;
 
         // load remote settings
         if (remoteSettingsUrl != null) {
@@ -35,6 +38,7 @@ public class AppSettingsService
     public void Save()
     {
         BeforeSave?.Invoke(this, EventArgs.Empty);
+        OldUserSettings = JsonUtils.JsonClone(UserSettings);
         lock (_saveLock) {
             Settings.ConfigTime = DateTime.Now;
             var json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });

@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Access to local network when IncludeLocalNetwork is enabled
+
 # v7.3.751
 * Fix: Negative speed issue
 

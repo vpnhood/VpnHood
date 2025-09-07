@@ -369,8 +369,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
         // exclude local networks
+        if (!Config.IncludeLocalNetwork)
+            includeIpRanges = includeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
+
+        // exclude multicast and broadcast
         includeIpRanges = includeIpRanges
-            .Exclude(IpNetwork.LocalNetworks.ToIpRanges())
             .Exclude(IpNetwork.MulticastNetworks.ToIpRanges())
             .Exclude(IPAddress.Broadcast);
 

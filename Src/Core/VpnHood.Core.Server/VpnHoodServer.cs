@@ -359,7 +359,9 @@ public class VpnHoodServer : IAsyncDisposable
 
         // exclude listening ip
         if (!netFilterOptions.IncludeLocalNetworkValue)
-            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges.Union(privateAddresses.Select(x => new IpRange(x)));
+            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges
+                .Union(privateAddresses.Select(x => new IpRange(x)))
+                .Union(IpNetwork.LocalNetworks.ToIpRanges());
 
         // log blocked ranges
         VhLogger.Instance.LogDebug("BlockedIpRanges: {BlockedIpRanges}",

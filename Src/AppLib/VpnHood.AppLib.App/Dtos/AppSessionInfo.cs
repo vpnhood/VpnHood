@@ -11,6 +11,7 @@ public class AppSessionInfo
     public required AccessInfo? AccessInfo { get; init; }
     public required bool IsUdpChannelSupported { get; init; }
     public required bool IsDnsServersAccepted { get; init; }
+    public required bool IsLocalNetworkAllowed { get; set; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsPremiumSession { get; init; }
     public required SessionSuppressType SuppressedTo { get; init; }

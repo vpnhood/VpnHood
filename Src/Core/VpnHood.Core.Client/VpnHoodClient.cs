@@ -654,14 +654,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (helloResponse.ClientPublicAddress is null)
                 throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
 
+            // sort out server IncludeIpRanges
+            var serverIncludeIpRanges = helloResponse.IncludeIpRanges?.ToOrderedList();
+            var serverVpnAdapterIncludeIpRanges = helloResponse.VpnAdapterIncludeIpRanges?.ToOrderedList();
 
-            // initialize the connector
-            _connectorService.Init(
-                helloResponse.ProtocolVersion,
-                requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),
-                tcpReuseTimeout: helloResponse.TcpReuseTimeout,
-                serverSecret: helloResponse.ServerSecret,
-                useWebSocket: true);
+            // build allowed local networks
+            var allowedLocalNetworks = IpNetwork.LocalNetworks.ToIpRanges();
+            if (serverIncludeIpRanges != null) 
+                allowedLocalNetworks = allowedLocalNetworks.Intersect(serverIncludeIpRanges);
+            if (serverVpnAdapterIncludeIpRanges != null) 
+                allowedLocalNetworks = allowedLocalNetworks.Intersect(serverVpnAdapterIncludeIpRanges);
 
             // log response
             VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -673,9 +675,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}, " +
                 $"IsTcpPacketSupported: {helloResponse.IsTcpPacketSupported}, " +
                 $"IsTcpProxySupported: {helloResponse.IsTcpProxySupported}, " +
+                $"IsLocalNetworkAllowed: {allowedLocalNetworks.Any()}, " +
                 $"NetworkV4: {helloResponse.VirtualIpNetworkV4}, " +
                 $"NetworkV6: {helloResponse.VirtualIpNetworkV6}, " +
                 $"ClientCountry: {helloResponse.ClientCountry}");
+
+            // initialize the connector
+            _connectorService.Init(
+                helloResponse.ProtocolVersion,
+                requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),
+                tcpReuseTimeout: helloResponse.TcpReuseTimeout,
+                serverSecret: helloResponse.ServerSecret,
+                useWebSocket: true);
 
             // get session id
             _sessionId = helloResponse.SessionId;
@@ -684,18 +695,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
             if (helloResponse.UdpPort > 0)
-                HostUdpEndPoint = new IPEndPoint(_connectorService.EndPointInfo.TcpEndPoint.Address,
-                    helloResponse.UdpPort.Value);
+                HostUdpEndPoint = new IPEndPoint(_connectorService.EndPointInfo.TcpEndPoint.Address, helloResponse.UdpPort.Value);
 
             // VpnAdapterIpRanges
-            if (!VhUtils.IsNullOrEmpty(helloResponse.VpnAdapterIncludeIpRanges))
-                VpnAdapterIncludeIpRanges =
-                    VpnAdapterIncludeIpRanges.Intersect(helloResponse.VpnAdapterIncludeIpRanges);
+            if (!VhUtils.IsNullOrEmpty(serverVpnAdapterIncludeIpRanges))
+                VpnAdapterIncludeIpRanges = VpnAdapterIncludeIpRanges.Intersect(serverVpnAdapterIncludeIpRanges);
 
             // IncludeIpRanges
-            if (!VhUtils.IsNullOrEmpty(helloResponse.IncludeIpRanges) &&
-                !helloResponse.IncludeIpRanges.ToOrderedList().IsAll())
-                IncludeIpRanges = IncludeIpRanges.Intersect(helloResponse.IncludeIpRanges);
+            if (serverIncludeIpRanges?.IsAll() is false)
+                IncludeIpRanges = IncludeIpRanges.Intersect(serverIncludeIpRanges);
 
             // set DNS after setting IpFilters
             VhLogger.Instance.LogInformation("Configuring Client DNS servers... DnsServers: {DnsServers}",
@@ -750,6 +758,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ClientCountry = helloResponse.ClientCountry,
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
                 IsDnsServersAccepted = _isDnsServersAccepted,
+                IsLocalNetworkAllowed = allowedLocalNetworks.Any(),
                 DnsServers = _dnsServers,
                 IsPremiumSession = helloResponse.AccessUsage?.IsPremium ?? false,
                 IsUdpChannelSupported = HostUdpEndPoint != null,

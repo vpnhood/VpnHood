@@ -25,6 +25,7 @@ public static class AppDtoConverterExtensions
             AccessInfo = sessionInfo.AccessInfo,
             IsUdpChannelSupported = sessionInfo.IsUdpChannelSupported,
             IsDnsServersAccepted = sessionInfo.IsDnsServersAccepted,
+            IsLocalNetworkAllowed = sessionInfo.IsLocalNetworkAllowed,
             ServerLocationInfo = sessionInfo.ServerLocationInfo,
             ServerVersion = sessionInfo.ServerVersion,
             IsPremiumSession = sessionInfo.IsPremiumSession,

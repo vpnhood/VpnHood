@@ -1,4 +1,5 @@
 ﻿using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.ApiClients;
 
@@ -23,6 +24,9 @@ public static class ClientExceptionConverter
         // service
         if (apiError.Is<AlwaysOnNotAllowedException>())
             exception = new AlwaysOnNotAllowedException(apiError.Message);
+
+        if (apiError.Is<VpnServiceRevokedException>())
+            exception = new VpnServiceRevokedException(apiError.Message);
 
         // client
         if (apiError.Is<ConnectionTimeoutException>())

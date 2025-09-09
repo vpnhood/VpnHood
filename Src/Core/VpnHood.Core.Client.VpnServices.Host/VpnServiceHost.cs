@@ -138,7 +138,7 @@ public class VpnServiceHost : IDisposable
             _logService?.Start(clientOptions.LogServiceOptions, deleteOldReport: false);
 
             // check if auto start is allowed
-            if (isAlwaysOn && !clientOptions.AllowAlwaysOn) 
+            if (isAlwaysOn && !clientOptions.AllowAlwaysOn)
                 throw new AlwaysOnNotAllowedException("Auto start is only available for premium accounts.");
 
             // restart the log service
@@ -257,7 +257,7 @@ public class VpnServiceHost : IDisposable
         }
     }
 
-    public async Task TryDisconnect()
+    public async Task TryDisconnect(Exception? exception = null)
     {
         if (_isDisposed == 1)
             return;
@@ -269,6 +269,10 @@ public class VpnServiceHost : IDisposable
             var client = Client;
             if (client != null)
                 await client.DisposeAsync();
+
+            // overwrite last exception if exists
+            if (exception != null)
+                await UpdateConnectionInfo(ClientState.Disposed, null, exception, CancellationToken.None);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not disconnect the client.");

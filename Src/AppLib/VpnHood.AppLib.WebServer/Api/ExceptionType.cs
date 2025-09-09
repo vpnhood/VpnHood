@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Manager.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 
@@ -78,6 +79,10 @@ public enum ExceptionType
     AdBlocker,
 
     [EnumMember(Value = nameof(RequestQuickLaunchException))]
-    RequestQuickLaunch
+    RequestQuickLaunch,
+
+    [EnumMember(Value = nameof(VpnServiceRevokedException))]
+    VpnServiceRevoked
+
 
 }

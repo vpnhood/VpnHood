@@ -8,16 +8,20 @@ $nswagFile = "$curDir/Api/Api.nswag";
 $outBaseFile = "VpnHood.Client.Api";
 $noBuild = $false;
 
+# calculated
+$outputFile = "$curDir/Api/$outBaseFile.ts";
+
 # run
 $nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net90/dotnet-nswag.exe";
 $variables="/variables:namespace=$namespace,apiBaseFile=$outBaseFile,projectFile=$projectFile,nobuid=$noBuild";
 & "$nswagExe" run $nswagFile $variables;
+# "/* eslint-disable */" + [Environment]::NewLine + (Get-Content $outputFile -Raw) | Set-Content $outputFile;
 
 #copy to UI project if exists
 $vhFolder = Split-Path -parent $SolutionDir;
 $uiProjectTarget = "$vhFolder\VpnHood.Client.WebUI\src\services\VpnHood.Client.Api.ts";
 if (Test-Path $uiProjectTarget) {
-	copy-item "$curDir/Api/$outBaseFile.ts" $uiProjectTarget -Force;
+	copy-item $outputFile $uiProjectTarget -Force;
     Write-Host "Output has been copied to UI project. $uiProjectTarget";
 } 
 else{

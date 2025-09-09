@@ -6,6 +6,7 @@ using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Sockets;
@@ -145,7 +146,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     {
         if (_vpnServiceHost != null) {
             VhLogger.Instance.LogDebug("VpnService is revoked, disconnecting.");
-            _ = _vpnServiceHost.TryDisconnect();
+            _ = _vpnServiceHost.TryDisconnect(new VpnServiceRevokedException());
             return;
         }
 

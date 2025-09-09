@@ -1,12 +1,16 @@
 ﻿using Android.Content;
 using Android.Content.Res;
+using Android.Graphics;
 using Android.Runtime;
 using Android.Views;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
 
@@ -42,31 +46,10 @@ public class AndroidAppMainActivityHandler
         AppUiContext.Context = new AndroidUiContext(ActivityEvent);
 
         // initialize the window
-        InitWindow();
+        WindowInsetUtils.Configure(ActivityEvent.Activity.Window, false, false, false);
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);
-    }
-
-    private void InitWindow()
-    {
-        // set window colors such as status bar and navigation bar
-        var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor?.ToAndroidColor();
-        if (backgroundColor != null) {
-            VhUtils.TryInvoke("SetStatusBarColor", () =>
-                ActivityEvent.Activity.Window?.SetStatusBarColor(backgroundColor.Value));
-            
-            VhUtils.TryInvoke("SetNavigationBarColor", () =>
-                ActivityEvent.Activity.Window?.SetNavigationBarColor(backgroundColor.Value));
-        }
-
-
-        // set window insets listener
-        if (OperatingSystem.IsAndroidVersionAtLeast(30)) {
-            var contentRoot = ActivityEvent.Activity.Window?.DecorView;
-            contentRoot?.SetOnApplyWindowInsetsListener(new WebViewWindowInsetsListener());
-            contentRoot?.RequestApplyInsets();
-        }
     }
 
     protected virtual bool OnNewIntent(Intent? intent)

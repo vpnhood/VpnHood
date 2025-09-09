@@ -144,9 +144,13 @@ public class AndroidAppWebViewMainActivityHandler(
         ActivityEvent.Activity.SetContentView(WebView);
         _isWeViewVisible = true;
 
-        if (VpnHoodApp.Instance.Resources.Colors.NavigationBarColor != null)
-            ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors.NavigationBarColor
-                .Value.ToAndroidColor());
+        // compatibility for Android 9 and below to set navigation bar color
+        if (!OperatingSystem.IsAndroidVersionAtLeast(29)) {
+            if (VpnHoodApp.Instance.Resources.Colors.NavigationBarColor != null)
+                ActivityEvent.Activity.Window?.SetNavigationBarColor(VpnHoodApp.Instance.Resources.Colors
+                    .NavigationBarColor
+                    .Value.ToAndroidColor());
+        }
     }
 
     protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)

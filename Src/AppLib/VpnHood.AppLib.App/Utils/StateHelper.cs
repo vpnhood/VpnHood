@@ -1,4 +1,5 @@
-﻿using VpnHood.AppLib.Settings;
+﻿using System.Diagnostics.CodeAnalysis;
+using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Toolkit.Utils;
@@ -32,12 +33,18 @@ public static class StateHelper
         return sessionInfo is { IsTcpProxySupported: true, IsTcpPacketSupported: true };
     }
 
+    public static bool IsLongRunningState([NotNullWhen(true)] ConnectionInfo? connectionInfo)
+    {
+        return FastDateTime.Now - connectionInfo?.ClientStateChangedTime > TimeSpan.FromMilliseconds(2000);
+    }
+
     public static int? GetProgress(ConnectionInfo? connectionInfo)
     {
-        var progress = connectionInfo?.ClientStateProgress;
-        if (progress == null ||
-            progress.Value.Total < 3 ||
-            FastDateTime.Now - connectionInfo?.ClientStateChangedTime < TimeSpan.FromSeconds(3))
+        if (!IsLongRunningState(connectionInfo))
+            return null;
+
+        var progress = connectionInfo.ClientStateProgress;
+        if (progress == null || progress.Value.Total < 3)
             return null;
 
         return (int)(progress.Value.Done * 100L / progress.Value.Total);

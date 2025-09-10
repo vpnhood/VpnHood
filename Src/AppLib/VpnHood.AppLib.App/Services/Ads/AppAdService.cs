@@ -31,12 +31,13 @@ public class AppAdService(
     public int? LoadAdProgress {
         get {
             var maxWaitDateTime = _currentCompositeAdService?.LoadingAdMaxTime;
-            if (maxWaitDateTime is null)
+            var startedTime = _currentCompositeAdService?.LoadingAdStartTime;
+            if (maxWaitDateTime is null || startedTime is null || FastDateTime.Now > maxWaitDateTime)
                 return null;
-            
-            var value = 100 - (FastDateTime.Now - maxWaitDateTime.Value).TotalMilliseconds / 
-                loadAdTimeout.TotalMilliseconds * 100;
-            return (int?)value;
+
+            var remainTime = maxWaitDateTime - FastDateTime.Now;
+            var totalTime = maxWaitDateTime - startedTime;
+            return (int)(remainTime.Value.TotalMilliseconds * 100 / totalTime.Value.TotalMilliseconds);
         }
     }
 

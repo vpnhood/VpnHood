@@ -19,6 +19,7 @@ internal class AppCompositeAdService
     public bool IsPreload { get; private set; }
     public readonly record struct ShowLoadedAdResult(string NetworkName, ShowAdResult ShowAdResult);
 
+    public DateTime? LoadingAdStartTime { get; private set; }
     public DateTime? LoadingAdMaxTime => _loadingAdMaxTime is null || FastDateTime.Now > _loadingAdMaxTime
         ? null : _loadingAdMaxTime;
 
@@ -71,6 +72,7 @@ internal class AppCompositeAdService
 
         IsPreload = isPreload;
         _loadedAdProviderItem = null;
+        LoadingAdStartTime = FastDateTime.Now;
         var providerExceptions = new List<(string, Exception)>();
 
         // filter ad services by country code

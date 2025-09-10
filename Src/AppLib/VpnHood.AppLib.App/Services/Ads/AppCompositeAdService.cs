@@ -15,13 +15,11 @@ internal class AppCompositeAdService
     private AppAdProviderItem? _loadedAdProviderItem;
     private readonly AppAdProviderItem[] _adProviderItems;
     private readonly ITracker? _tracker;
-    private DateTime? _loadingAdMaxTime;
     public bool IsPreload { get; private set; }
     public readonly record struct ShowLoadedAdResult(string NetworkName, ShowAdResult ShowAdResult);
 
-    public DateTime? LoadingAdStartTime { get; private set; }
-    public DateTime? LoadingAdMaxTime => _loadingAdMaxTime is null || FastDateTime.Now > _loadingAdMaxTime
-        ? null : _loadingAdMaxTime;
+    public DateTime? LoadingAdStartedTime { get; private set; }
+    public DateTime? LoadingAdEndTime { get; private set; }
 
     public AppCompositeAdService(AppAdProviderItem[] adProviderItems, ITracker? tracker)
     {
@@ -72,7 +70,7 @@ internal class AppCompositeAdService
 
         IsPreload = isPreload;
         _loadedAdProviderItem = null;
-        LoadingAdStartTime = FastDateTime.Now;
+        LoadingAdStartedTime = FastDateTime.Now;
         var providerExceptions = new List<(string, Exception)>();
 
         // filter ad services by country code
@@ -88,7 +86,7 @@ internal class AppCompositeAdService
 
             // recalculate time for remaining ads
             var nonFallbackAdCount = filteredAdProviderItems.Count(x => !x.IsFallback) - i;
-            _loadingAdMaxTime = DateTime.Now + loadAdTimeout * nonFallbackAdCount;
+            LoadingAdEndTime = FastDateTime.Now + loadAdTimeout * nonFallbackAdCount;
 
             // find first successful ad network
             try {
@@ -121,6 +119,10 @@ internal class AppCompositeAdService
                 providerExceptions.Add((adProviderItem.Name, ex));
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
                     adProviderItem.Name);
+            }
+            finally {
+                LoadingAdEndTime = null;
+                LoadingAdStartedTime = null;
             }
         }
 

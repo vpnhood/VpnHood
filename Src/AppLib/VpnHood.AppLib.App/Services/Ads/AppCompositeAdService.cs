@@ -15,8 +15,12 @@ internal class AppCompositeAdService
     private AppAdProviderItem? _loadedAdProviderItem;
     private readonly AppAdProviderItem[] _adProviderItems;
     private readonly ITracker? _tracker;
+    private DateTime? _loadingAdMaxTime;
     public bool IsPreload { get; private set; }
     public readonly record struct ShowLoadedAdResult(string NetworkName, ShowAdResult ShowAdResult);
+
+    public DateTime? LoadingAdMaxTime => _loadingAdMaxTime is null || FastDateTime.Now > _loadingAdMaxTime
+        ? null : _loadingAdMaxTime;
 
     public AppCompositeAdService(AppAdProviderItem[] adProviderItems, ITracker? tracker)
     {
@@ -55,7 +59,7 @@ internal class AppCompositeAdService
 
     public async Task LoadAd(IUiContext uiContext,
         bool isPreload, string? countryCode, bool forceReload,
-        TimeSpan loadAdTimeout, bool useFallback, 
+        TimeSpan loadAdTimeout, bool useFallback,
         CancellationToken cancellationToken)
     {
         if (_adProviderItems.Length == 0)
@@ -73,19 +77,23 @@ internal class AppCompositeAdService
         var filteredAdProviderItems = _adProviderItems
             .Where(x => x.IsEnabled)
             .Where(x => countryCode is null || IsCountrySupported(x, countryCode))
+            .Where(x => useFallback || !x.IsFallback)
             .ToArray();
 
-        foreach (var adProviderItem in filteredAdProviderItems) {
+        for (var i = 0; i < filteredAdProviderItems.Length; i++) {
+            var adProviderItem = filteredAdProviderItems[i];
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!useFallback && adProviderItem.IsFallback)
-                continue;
+            // recalculate time for remaining ads
+            var nonFallbackAdCount = filteredAdProviderItems.Count(x => !x.IsFallback) - i;
+            _loadingAdMaxTime = DateTime.Now + loadAdTimeout * nonFallbackAdCount;
 
             // find first successful ad network
             try {
                 VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
                 using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                using var linkedCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                 await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
                 _loadedAdProviderItem = adProviderItem;
                 return;
@@ -104,7 +112,8 @@ internal class AppCompositeAdService
                 // track the error
                 if (_tracker != null)
                     await _tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildLoadAdFailed(
-                        adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode, isPreload: isPreload),
+                            adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode,
+                            isPreload: isPreload),
                         cancellationToken);
 
                 providerExceptions.Add((adProviderItem.Name, ex));
@@ -130,7 +139,8 @@ internal class AppCompositeAdService
             throw new LoadAdException("There is no loaded ad.");
 
         // show the ad
-        try { VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
+        try {
+            VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
             var showAdResult = await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).Vhc();
             VhLogger.Instance.LogDebug("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
             return new ShowLoadedAdResult(_loadedAdProviderItem.Name, showAdResult);

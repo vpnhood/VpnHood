@@ -50,7 +50,7 @@ public class AppAdManager(
         if (uiContext == null)
             throw new ShowAdNoUiException();
 
-        // set wait for ad state
+        // set wait for ad state 
         await vpnServiceManager.SetWaitForAd(cancellationToken).Vhc();
 
         try {

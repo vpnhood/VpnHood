@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -38,11 +39,16 @@ public static class StateHelper
         return FastDateTime.Now - connectionInfo?.ClientStateChangedTime > TimeSpan.FromMilliseconds(2000);
     }
 
-    public static int? GetProgress(ConnectionInfo? connectionInfo)
+    public static int? GetProgress(ConnectionInfo? connectionInfo, AppAdService adService)
     {
         if (!IsLongRunningState(connectionInfo))
             return null;
 
+        // show ad progress if waiting for ad
+        if (connectionInfo.ClientState is ClientState.WaitingForAd or ClientState.WaitingForAdEx)
+            return adService.LoadAdProgress;
+
+        // show progress only if total is at least 3 to avoid showing 0% and 100% too early
         var progress = connectionInfo.ClientStateProgress;
         if (progress == null || progress.Value.Total < 3)
             return null;

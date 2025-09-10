@@ -78,7 +78,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool _isConnecting;
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
-
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
@@ -395,7 +394,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CanChangeTcpProxy = StateHelper.CanChangeTcpProxy(Features, connectionInfo?.SessionInfo),
                 IsNotificationEnabled = Services.UiProvider.IsNotificationEnabled,
                 SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.UiProvider.GetSystemPrivateDns()),
-                StateProgress = StateHelper.GetProgress(connectionInfo),
+                StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.UiProvider.GetSystemBarsInfo(uiContext)
                     : SystemBarsInfo.Default,

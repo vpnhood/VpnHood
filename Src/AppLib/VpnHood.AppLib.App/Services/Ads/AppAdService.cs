@@ -15,6 +15,7 @@ public class AppAdService(
     TimeSpan loadAdPostDelay,
     ITracker tracker)
 {
+    private AppCompositeAdService? _currentCompositeAdService;
     private readonly AppCompositeAdService _compositeInterstitialAdService = new(
         adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd).ToArray(),
         tracker);
@@ -26,6 +27,18 @@ public class AppAdService(
     private InternalInAdProvider? ActiveInternalAdProvider => (InternalInAdProvider?)adProviderItems
         .FirstOrDefault(x => x.AdProvider is InternalInAdProvider { IsWaitingForAd: true })?
         .AdProvider;
+
+    public int? LoadAdProgress {
+        get {
+            var maxWaitDateTime = _currentCompositeAdService?.LoadingAdMaxTime;
+            if (maxWaitDateTime is null)
+                return null;
+            
+            var value = 100 - (FastDateTime.Now - maxWaitDateTime.Value).TotalMilliseconds / 
+                loadAdTimeout.TotalMilliseconds * 100;
+            return (int?)value;
+        }
+    }
 
     public bool IsWaitingForInternalAd => ActiveInternalAdProvider != null;
     public void InternalAdDismiss(ShowAdResult showAdResult) => ActiveInternalAdProvider?.Dismiss(showAdResult); 
@@ -82,6 +95,7 @@ public class AppAdService(
     private async Task LoadAd(AppCompositeAdService appCompositeAdService, IUiContext uiContext,
         bool isPreload, string countryCode, bool useFallback, CancellationToken cancellationToken)
     {
+        _currentCompositeAdService = appCompositeAdService;
         await appCompositeAdService.LoadAd(uiContext, isPreload: isPreload,
             countryCode: countryCode, loadAdTimeout: loadAdTimeout, useFallback: useFallback,
             forceReload: false,

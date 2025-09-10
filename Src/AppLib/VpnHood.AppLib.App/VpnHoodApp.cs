@@ -380,6 +380,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IsIdle = IsIdle,
                 PromptForLog = IsIdle && _appPersistState.HasDiagnoseRequested && _logService.Exists,
                 LogExists = _logService.Exists,
+                IsDiagnosing = _appPersistState.HasDiagnoseRequested && !IsIdle,
                 HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
                 ClientCountryCode = GetClientCountryCode(false), // split country don't follow server location
                 ClientCountryName = VhUtils.TryGetCountryName(GetClientCountryCode(false)), // split country don't follow server location

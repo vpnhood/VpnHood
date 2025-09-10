@@ -38,4 +38,5 @@ public class AppState
     public required PrivateDns? SystemPrivateDns { get; init; }
     public required bool? IsWaitingForInternalAd { get; set; }
     public required int? StateProgress { get; init; }
+    public required bool IsDiagnosing { get; set; }
 }

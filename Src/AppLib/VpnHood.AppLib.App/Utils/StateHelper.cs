@@ -50,7 +50,7 @@ public static class StateHelper
 
         // show progress only if total is at least 3 to avoid showing 0% and 100% too early
         var progress = connectionInfo.ClientStateProgress;
-        if (progress?.Total > 2)
+        if (progress?.Total > 2) 
             return progress.Value.Percentage;
 
         return null;

@@ -45,7 +45,7 @@ public class ProgressTracker(
 
                 // Method 2: Overall time-based progress
                 var completedTime =
-                    CurrentBatchIndex * maxDegreeOfParallelism * taskTimeout + (FastDateTime.Now - _currentBatchStartTime);
+                    CurrentBatchIndex * taskTimeout + (FastDateTime.Now - _currentBatchStartTime);
                 var timeProgress = (completedTime / MaxDuration) * 100.0;
 
                 // Use the maximum of all three methods to ensure smooth progress that never goes backward

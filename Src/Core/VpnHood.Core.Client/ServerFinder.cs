@@ -179,52 +179,46 @@ public class ServerFinder(
 
         using var searchingCts = new CancellationTokenSource(); // this will be canceled when a server is found
         using var parallelCts = CancellationTokenSource.CreateLinkedTokenSource(searchingCts.Token, cancellationToken);
-        try {
-            // check all servers
-            var parallelOptions = new ParallelOptions {
-                CancellationToken = parallelCts.Token,
-                MaxDegreeOfParallelism = maxDegreeOfParallelism
-            };
-            await Parallel.ForEachAsync(hostStatuses, parallelOptions, async (hostStatus, ct) => {
-                try {
-                    using var connector = CreateConnector(hostStatus.TcpEndPoint);
-                    hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, ct).Vhc();
+        // check all servers
+        var parallelOptions = new ParallelOptions {
+            CancellationToken = parallelCts.Token,
+            MaxDegreeOfParallelism = maxDegreeOfParallelism
+        };
+        await Parallel.ForEachAsync(hostStatuses, parallelOptions, async (hostStatus, ct) => {
+            try {
+                using var connector = CreateConnector(hostStatus.TcpEndPoint);
+                hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, ct).Vhc();
 
-                    // ReSharper disable once AccessToDisposedClosure
-                    if (hostStatus.Available == true && !byOrder)
-                        await searchingCts.CancelAsync().Vhc(); // no need to continue, we find a server
+                // ReSharper disable once AccessToDisposedClosure
+                if (hostStatus.Available == true && !byOrder)
+                    await searchingCts.CancelAsync().Vhc(); // no need to continue, we find a server
 
-                    // search by order
-                    if (byOrder) {
-                        // ReSharper disable once LoopCanBeConvertedToQuery (It can not! [false, false, null, true] is not accepted )
-                        foreach (var item in hostStatuses) {
-                            if (item.Available == null)
-                                break; // wait to get the result in order
+                // search by order
+                if (byOrder) {
+                    // ReSharper disable once LoopCanBeConvertedToQuery (It can not! [false, false, null, true] is not accepted )
+                    foreach (var item in hostStatuses) {
+                        if (item.Available == null)
+                            break; // wait to get the result in order
 
-                            if (item.Available.Value) {
-                                // ReSharper disable once AccessToDisposedClosure
-                                await searchingCts.CancelAsync().Vhc();
-                                break;
-                            }
+                        if (item.Available.Value) {
+                            // ReSharper disable once AccessToDisposedClosure
+                            await searchingCts.CancelAsync().Vhc();
+                            break;
                         }
                     }
                 }
-                finally {
-                    _progressTracker.IncrementCompleted();
-                }
-            }).Vhc();
-        }
-        catch (OperationCanceledException) when (searchingCts.IsCancellationRequested) {
-            // it means a server has been found
-            _progressTracker.Finish();
-        }
+            }
+            finally {
+                _progressTracker.IncrementCompleted();
+            }
+        }).Vhc();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Server verification completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
             FastDateTime.Now - _progressTracker.Progress.StartedTime, _progressTracker.Progress.Completed, _progressTracker.Progress.Total);
 
         // Ensure progress is complete at the end of the operation
-        _progressTracker.Finish();
+        _progressTracker = null;
 
         return hostStatuses;
     }
@@ -233,8 +227,10 @@ public class ServerFinder(
         CancellationToken cancellationToken)
     {
         try {
+
             using var queryTimeoutCts = new CancellationTokenSource(queryTimeout); // timeout for each server query
             using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(queryTimeoutCts.Token, cancellationToken);
+
             var requestResult = await connector
                 .SendRequest<SessionResponse>(new ServerCheckRequest { RequestId = UniqueIdFactory.Create() }, requestCts.Token)
                 .Vhc();

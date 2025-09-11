@@ -3,10 +3,11 @@
 * Fix: False positive ad blocker detection on some devices
 * Fix: Negative speed issue
 * Fix: Restoring the notification icon on Windows after restarting Windows Explorer
-* Fix: Access to local network when IncludeLocalNetwork is enabled
+* Fix: Access to the local network when IncludeLocalNetwork is enabled
+* Feature: Show more progress details while connecting
 * Feature: Internal Ad Provider
 * Feature: Show more details in connection progress
-* Feature: Allow set custom DNS servers
+* Feature: Allow setting custom DNS servers
 
 # v7.3.748
 * Fix: Minor UI issues and translations

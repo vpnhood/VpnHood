@@ -35,18 +35,15 @@ public class ServerFinder(
         public bool? Available { get; set; }
     }
 
+    private ProgressTracker? _progressTracker;
     private HostStatus[] _hostEndPointStatuses = [];
 
-    // progress tracking
-    private volatile int _progressTotal;
-    private volatile int _progressDone;
-    public int ProgressTotal => _progressTotal;
-    public int ProgressDone => _progressDone;
-
+    // Progress properties
     public bool IncludeIpV6 { get; set; } = true;
     public string? ServerLocation => serverLocation;
     public EndPointStrategy EndPointStrategy => endPointStrategy;
     public IPEndPoint[] CustomServerEndpoints => customServerEndpoints;
+    public ProgressStatus? Progress => _progressTracker?.Progress;
 
     // There is much work to be done here
     public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
@@ -173,9 +170,12 @@ public class ServerFinder(
             .Select(x => new HostStatus { TcpEndPoint = x })
             .ToArray();
 
-        // initialize progress for this run
-        _progressTotal = hostStatuses.Length;
-        _progressDone = 0;
+        // Initialize time-based progress tracking
+        _progressTracker = new ProgressTracker(hostStatuses.Length, serverQueryTimeout, maxDegreeOfParallelism);
+
+        VhLogger.Instance.LogInformation(GeneralEventId.Request,
+            "Starting server verification. Endpoints: {EndpointCount}, MaxParallelism: {MaxParallelism}",
+            hostStatuses.Length, maxDegreeOfParallelism);
 
         using var searchingCts = new CancellationTokenSource(); // this will be canceled when a server is found
         using var parallelCts = CancellationTokenSource.CreateLinkedTokenSource(searchingCts.Token, cancellationToken);
@@ -210,15 +210,22 @@ public class ServerFinder(
                     }
                 }
                 finally {
-                    Interlocked.Increment(ref _progressDone);
+                    _progressTracker.IncrementCompleted();
                 }
             }).Vhc();
         }
         catch (OperationCanceledException) when (searchingCts.IsCancellationRequested) {
             // it means a server has been found
+            _progressTracker.Finish();
         }
 
-        _progressDone = _progressTotal;
+        VhLogger.Instance.LogInformation(GeneralEventId.Request,
+            "Server verification completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
+            FastDateTime.Now - _progressTracker.Progress.StartedTime, _progressTracker.Progress.Completed, _progressTracker.Progress.Total);
+
+        // Ensure progress is complete at the end of the operation
+        _progressTracker.Finish();
+
         return hostStatuses;
     }
 

@@ -87,9 +87,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Exception? LastException { get; private set; }
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
 
-    public ClientStateProgress? StateProgress =>
+    public ProgressStatus? StateProgress =>
         State is ClientState.FindingReachableServer or ClientState.FindingBestServer
-            ? new ClientStateProgress(_serverFinder.ProgressDone, _serverFinder.ProgressTotal)
+            ? _serverFinder.Progress
             : null;
 
     public VpnHoodClient(

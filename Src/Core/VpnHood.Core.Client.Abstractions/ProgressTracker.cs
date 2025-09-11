@@ -36,6 +36,7 @@ public class ProgressTracker(
         lock (_incrementLock)
             _completedTaskCount = totalTaskCount;
     }
+
     private int ProgressPercentage {
         get {
             lock (_incrementLock) {

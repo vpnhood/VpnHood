@@ -179,43 +179,49 @@ public class ServerFinder(
 
         using var searchingCts = new CancellationTokenSource(); // this will be canceled when a server is found
         using var parallelCts = CancellationTokenSource.CreateLinkedTokenSource(searchingCts.Token, cancellationToken);
-        // check all servers
-        var parallelOptions = new ParallelOptions {
-            CancellationToken = parallelCts.Token,
-            MaxDegreeOfParallelism = maxDegreeOfParallelism
-        };
-        await Parallel.ForEachAsync(hostStatuses, parallelOptions, async (hostStatus, ct) => {
-            try {
-                using var connector = CreateConnector(hostStatus.TcpEndPoint);
-                hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, ct).Vhc();
 
-                // ReSharper disable once AccessToDisposedClosure
-                if (hostStatus.Available == true && !byOrder)
-                    await searchingCts.CancelAsync().Vhc(); // no need to continue, we find a server
+        try {
+            // check all servers
+            var parallelOptions = new ParallelOptions {
+                CancellationToken = parallelCts.Token,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism
+            };
+            await Parallel.ForEachAsync(hostStatuses, parallelOptions, async (hostStatus, ct) => {
+                try {
+                    using var connector = CreateConnector(hostStatus.TcpEndPoint);
+                    hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, ct).Vhc();
 
-                // search by order
-                if (byOrder) {
-                    // ReSharper disable once LoopCanBeConvertedToQuery (It can not! [false, false, null, true] is not accepted )
-                    foreach (var item in hostStatuses) {
-                        if (item.Available == null)
-                            break; // wait to get the result in order
+                    // ReSharper disable once AccessToDisposedClosure
+                    if (hostStatus.Available == true && !byOrder)
+                        await searchingCts.CancelAsync().Vhc(); // no need to continue, we find a server
 
-                        if (item.Available.Value) {
-                            // ReSharper disable once AccessToDisposedClosure
-                            await searchingCts.CancelAsync().Vhc();
-                            break;
+                    // search by order
+                    if (byOrder) {
+                        // ReSharper disable once LoopCanBeConvertedToQuery (It can not! [false, false, null, true] is not accepted )
+                        foreach (var item in hostStatuses) {
+                            if (item.Available == null)
+                                break; // wait to get the result in order
+
+                            if (item.Available.Value) {
+                                // ReSharper disable once AccessToDisposedClosure
+                                await searchingCts.CancelAsync().Vhc();
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            finally {
-                _progressTracker.IncrementCompleted();
-            }
-        }).Vhc();
+                finally {
+                    _progressTracker.IncrementCompleted();
+                }
+            }).Vhc();
+        }
+        catch (OperationCanceledException) when (searchingCts.IsCancellationRequested) {
+            // it means a server has been found
+        }
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
-            "Server verification completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
-            FastDateTime.Now - _progressTracker.Progress.StartedTime, _progressTracker.Progress.Completed, _progressTracker.Progress.Total);
+                "Server verification completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
+                FastDateTime.Now - _progressTracker.Progress.StartedTime, _progressTracker.Progress.Completed, _progressTracker.Progress.Total);
 
         // Ensure progress is complete at the end of the operation
         _progressTracker = null;

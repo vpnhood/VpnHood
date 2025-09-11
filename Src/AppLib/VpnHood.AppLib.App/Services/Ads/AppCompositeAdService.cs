@@ -94,7 +94,7 @@ internal class AppCompositeAdService
                 if (adProviderItem.IsFallback) _progressTracker = null; // do not track fallback ads
                 await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
                 _loadedAdProviderItem = adProviderItem;
-                _progressTracker?.IncrementCompleted();
+                _progressTracker = null;
                 return;
             }
             catch (UiContextNotAvailableException) {

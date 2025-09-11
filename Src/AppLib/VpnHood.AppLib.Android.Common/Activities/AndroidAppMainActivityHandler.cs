@@ -1,17 +1,12 @@
 ﻿using Android.Content;
 using Android.Content.Res;
-using Android.Graphics;
 using Android.Runtime;
 using Android.Views;
-using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
-using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;

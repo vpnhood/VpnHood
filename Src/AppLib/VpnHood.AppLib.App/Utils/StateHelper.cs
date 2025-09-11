@@ -45,11 +45,11 @@ public static class StateHelper
             return null;
 
         // show ad progress if waiting for ad
-        if (connectionInfo.ClientState is ClientState.WaitingForAd or ClientState.WaitingForAdEx)
+        if (connectionInfo.ClientState is ClientState.WaitingForAd or ClientState.WaitingForAdEx) 
             return adService.LoadAdProgress;
 
         // todo: fix later
-        return null;//
+        return null;
 
         // show progress only if total is at least 3 to avoid showing 0% and 100% too early
         var progress = connectionInfo.ClientStateProgress;

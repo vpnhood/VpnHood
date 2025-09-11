@@ -125,7 +125,7 @@ public class AppAdManager(
         // save variable to prevent null reference exception
         var connectionInfo = vpnServiceManager.ConnectionInfo;
 
-        if (AdService.CanShowRewarded != true)
+        if (!AdService.CanShowRewarded)
             throw new InvalidOperationException("Rewarded ad is not supported in this app.");
 
         if (connectionInfo.SessionInfo == null || connectionInfo is not { ClientState: ClientState.Connected })

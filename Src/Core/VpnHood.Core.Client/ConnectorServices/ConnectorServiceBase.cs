@@ -280,7 +280,7 @@ internal class ConnectorServiceBase : IDisposable
     public bool AllowTcpReuse {
         get => _allowTcpReuse;
         set {
-            if (value == false)
+            if (!value)
                 PreventReuseSharedClients();
             _allowTcpReuse = value;
         }

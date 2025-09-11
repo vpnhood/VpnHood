@@ -52,7 +52,7 @@ public static class HttpUtils
         var firstLine = await reader.ReadLineAsync(cancellationToken) ?? string.Empty; // it may return null
 
         // Check if the first line starts with "HTTP/" (basic HTTP format validation).
-        if (firstLine.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase) != true)
+        if (!firstLine.StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase))
             throw new Exception("Invalid HTTP response format. Make sure you have the latest version.");
 
         var parts = firstLine.Split(' ');

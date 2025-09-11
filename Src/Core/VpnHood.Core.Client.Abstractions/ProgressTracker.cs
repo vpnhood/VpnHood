@@ -5,7 +5,7 @@ namespace VpnHood.Core.Client.Abstractions;
 public class ProgressTracker(
     int totalTaskCount,
     TimeSpan taskTimeout,
-    int maxDegreeOfParallelism)
+    int maxDegreeOfParallelism = 1)
 {
     private readonly DateTime _startTime = FastDateTime.Now;
     private DateTime _currentBatchStartTime = FastDateTime.Now;

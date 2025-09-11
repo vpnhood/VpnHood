@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
@@ -15,11 +16,10 @@ internal class AppCompositeAdService
     private AppAdProviderItem? _loadedAdProviderItem;
     private readonly AppAdProviderItem[] _adProviderItems;
     private readonly ITracker? _tracker;
+    private ProgressTracker? _progressTracker;
     public bool IsPreload { get; private set; }
     public readonly record struct ShowLoadedAdResult(string NetworkName, ShowAdResult ShowAdResult);
-
-    public DateTime? LoadingAdStartedTime { get; private set; }
-    public DateTime? LoadingAdEndTime { get; private set; }
+    public ProgressStatus? LoadAdProgress => _progressTracker?.Progress;
 
     public AppCompositeAdService(AppAdProviderItem[] adProviderItems, ITracker? tracker)
     {
@@ -70,7 +70,6 @@ internal class AppCompositeAdService
 
         IsPreload = isPreload;
         _loadedAdProviderItem = null;
-        LoadingAdStartedTime = FastDateTime.Now;
         var providerExceptions = new List<(string, Exception)>();
 
         // filter ad services by country code
@@ -80,31 +79,34 @@ internal class AppCompositeAdService
             .Where(x => useFallback || !x.IsFallback)
             .ToArray();
 
-        for (var i = 0; i < filteredAdProviderItems.Length; i++) {
-            var adProviderItem = filteredAdProviderItems[i];
-            cancellationToken.ThrowIfCancellationRequested();
+        _progressTracker = new ProgressTracker(
+            totalTaskCount: filteredAdProviderItems.Count(x => !x.IsFallback),
+            taskTimeout: loadAdTimeout);
 
-            // recalculate time for remaining ads
-            var nonFallbackAdCount = filteredAdProviderItems.Count(x => !x.IsFallback) - i;
-            LoadingAdEndTime = FastDateTime.Now + loadAdTimeout * nonFallbackAdCount;
+        foreach (var adProviderItem in filteredAdProviderItems) {
+            cancellationToken.ThrowIfCancellationRequested();
 
             // find first successful ad network
             try {
                 VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
                 using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
-                using var linkedCts =
-                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                if (adProviderItem.IsFallback) _progressTracker = null; // do not track fallback ads
                 await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
                 _loadedAdProviderItem = adProviderItem;
+                _progressTracker?.IncrementCompleted();
                 return;
             }
             catch (UiContextNotAvailableException) {
+                _progressTracker = null;
                 throw new ShowAdNoUiException();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                _progressTracker = null;
                 throw; // do not report cancellation
             }
             catch (Exception ex) {
+                _progressTracker?.IncrementCompleted();
                 var message = string.IsNullOrWhiteSpace(ex.Message)
                     ? $"Empty message. Provider: {adProviderItem.Name}, IsPreload: {isPreload}"
                     : ex.Message;
@@ -119,10 +121,6 @@ internal class AppCompositeAdService
                 providerExceptions.Add((adProviderItem.Name, ex));
                 VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
                     adProviderItem.Name);
-            }
-            finally {
-                LoadingAdEndTime = null;
-                LoadingAdStartedTime = null;
             }
         }
 

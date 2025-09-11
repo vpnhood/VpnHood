@@ -28,18 +28,7 @@ public class AppAdService(
         .FirstOrDefault(x => x.AdProvider is InternalInAdProvider { IsWaitingForAd: true })?
         .AdProvider;
 
-    public int? LoadAdProgress {
-        get {
-            var endTime = _currentCompositeAdService?.LoadingAdEndTime;
-            var startedTime = _currentCompositeAdService?.LoadingAdStartedTime;
-            if (endTime is null || startedTime is null || FastDateTime.Now > endTime)
-                return null;
-
-            var pastTime = FastDateTime.Now - startedTime;
-            var totalTime = endTime - startedTime;
-            return (int)(pastTime.Value.TotalMilliseconds * 100 / totalTime.Value.TotalMilliseconds);
-        }
-    }
+    public ProgressStatus? LoadAdProgress => _currentCompositeAdService?.LoadAdProgress;
 
     public bool IsWaitingForInternalAd => ActiveInternalAdProvider != null;
     public void InternalAdDismiss(ShowAdResult showAdResult) => ActiveInternalAdProvider?.Dismiss(showAdResult); 

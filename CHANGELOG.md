@@ -4,6 +4,7 @@
 * Fix: Negative speed issue
 * Fix: Restoring the notification icon on Windows after restarting Windows Explorer
 * Fix: Access to the local network when IncludeLocalNetwork is enabled
+* Fix: Freeze on loading Ad on some devices
 * Feature: Show more progress details while connecting
 * Feature: Internal Ad Provider
 * Feature: Show more details in connection progress

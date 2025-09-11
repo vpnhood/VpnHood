@@ -83,45 +83,47 @@ internal class AppCompositeAdService
             totalTaskCount: filteredAdProviderItems.Count(x => !x.IsFallback),
             taskTimeout: loadAdTimeout);
 
-        foreach (var adProviderItem in filteredAdProviderItems) {
-            cancellationToken.ThrowIfCancellationRequested();
+        try {
+            foreach (var adProviderItem in filteredAdProviderItems) {
+                cancellationToken.ThrowIfCancellationRequested();
 
-            // find first successful ad network
-            try {
-                VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
-                using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-                if (adProviderItem.IsFallback) _progressTracker = null; // do not track fallback ads
-                await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
-                _loadedAdProviderItem = adProviderItem;
-                _progressTracker = null;
-                return;
-            }
-            catch (UiContextNotAvailableException) {
-                _progressTracker = null;
-                throw new ShowAdNoUiException();
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
-                _progressTracker = null;
-                throw; // do not report cancellation
-            }
-            catch (Exception ex) {
-                _progressTracker?.IncrementCompleted();
-                var message = string.IsNullOrWhiteSpace(ex.Message)
-                    ? $"Empty message. Provider: {adProviderItem.Name}, IsPreload: {isPreload}"
-                    : ex.Message;
+                // find first successful ad network
+                try {
+                    VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
+                    using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
+                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                    if (adProviderItem.IsFallback) _progressTracker = null; // do not track fallback ads
+                    await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
+                    _loadedAdProviderItem = adProviderItem;
+                    return;
+                }
+                catch (UiContextNotAvailableException) {
+                    throw new ShowAdNoUiException();
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                    throw; // do not report cancellation
+                }
+                catch (Exception ex) {
+                    _progressTracker?.IncrementCompleted();
+                    var message = string.IsNullOrWhiteSpace(ex.Message)
+                        ? $"Empty message. Provider: {adProviderItem.Name}, IsPreload: {isPreload}"
+                        : ex.Message;
 
-                // track the error
-                if (_tracker != null)
-                    await _tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildLoadAdFailed(
-                            adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode,
-                            isPreload: isPreload),
-                        cancellationToken);
+                    // track the error
+                    if (_tracker != null)
+                        await _tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildLoadAdFailed(
+                                adNetwork: adProviderItem.Name, errorMessage: message, countryCode: countryCode,
+                                isPreload: isPreload),
+                            cancellationToken);
 
-                providerExceptions.Add((adProviderItem.Name, ex));
-                VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
-                    adProviderItem.Name);
+                    providerExceptions.Add((adProviderItem.Name, ex));
+                    VhLogger.Instance.LogWarning(ex, "Could not load any ad. ProviderName: {ProviderName}.",
+                        adProviderItem.Name);
+                }
             }
+        }
+        finally {
+            _progressTracker = null;
         }
 
         var providerMessages = filteredAdProviderItems.Any()

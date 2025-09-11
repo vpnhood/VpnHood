@@ -33,7 +33,7 @@ public static class AdMobUtil
         {
             // no adapter
             if (initializationStatus.AdapterStatusMap.Keys.Count == 0)
-                throw new AdException("Could not find any ad adapter.");
+                _loadedCompletionSource.TrySetException(new AdException("Could not find any ad adapter."));
 
             // at-least one ok
             if (initializationStatus.AdapterStatusMap.Values.Any(value =>

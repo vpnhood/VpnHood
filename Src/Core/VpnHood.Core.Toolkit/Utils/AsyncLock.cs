@@ -73,7 +73,11 @@ public sealed class AsyncLock
             return new SemaphoreLock(semaphoreSlim, succeeded, name);
         }
         catch {
-            semaphoreSlim.ReferenceCount--;
+            lock (SemaphoreSlims) {
+                semaphoreSlim.ReferenceCount--;
+                if (semaphoreSlim.ReferenceCount == 0)
+                    SemaphoreSlims.TryRemove(name, out _);
+            }
             throw;
         }
     }

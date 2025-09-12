@@ -579,6 +579,10 @@ public class SessionManager : IAsyncDisposable, IDisposable
         _heartbeatJob.Dispose();
         _sessionLocalService.Dispose();
 
+        // Unsubscribe from VpnAdapter events to prevent memory leak
+        if (_vpnAdapter != null)
+            _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;
+
         // dispose all sessions
         VhLogger.Instance.LogDebug("Disposing all sessions...");
         foreach (var session in Sessions.Values)

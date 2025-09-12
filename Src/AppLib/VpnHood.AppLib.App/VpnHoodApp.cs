@@ -808,15 +808,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // remove the access code if it is rejected
             case SessionErrorCode.AccessCodeRejected when Features.AutoRemoveExpiredPremium:
                 VhLogger.Instance.LogWarning("Access code rejected. Removing the access code from profile.");
-                ClientProfileService.Update(profileInfo.ClientProfileId,
-                    new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
+                RemovePremium(profileInfo.ClientProfileId);
                 break;
 
             // remove the client profile if access expired
             case SessionErrorCode.AccessExpired when Features.AutoRemoveExpiredPremium && profileInfo.IsForAccount:
                 VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
-                ClientProfileService.Delete(profileInfo.ClientProfileId);
-                _ = Services.AccountService?.Refresh(true);
+                RemovePremium(profileInfo.ClientProfileId);
                 break;
         }
     }
@@ -1288,6 +1286,24 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // convert to Guid for compatibility
         var guid = new Guid(hashBytes);
         return guid.ToString();
+    }
+
+    public void RemovePremium(Guid profileId)
+    {
+        var profileInfo = ClientProfileService.GetInfo(profileId);
+        if (profileInfo.AccessCode != null) {
+            VhLogger.Instance.LogWarning("Access code is removed from the profile.");
+            ClientProfileService.Update(profileInfo.ClientProfileId,
+                new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
+        }
+
+        // remove the client profile if access expired
+        if (profileInfo.IsForAccount) {
+            VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
+            ClientProfileService.Delete(profileInfo.ClientProfileId);
+            if (Services.AccountService != null)
+                _ = VhUtils.TryInvokeAsync("Refresh Account", () => Services.AccountService.Refresh(true) );
+        }
     }
 
     public bool IsPremiumFeatureAllowed(AppFeature feature)

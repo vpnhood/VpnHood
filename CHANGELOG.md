@@ -1,4 +1,4 @@
-# Upcoming 
+# v7.3.752
 * Fix: Unable to close the Quick Launch pop-up on Android
 * Fix: False positive ad blocker detection on some devices
 * Fix: Negative speed issue

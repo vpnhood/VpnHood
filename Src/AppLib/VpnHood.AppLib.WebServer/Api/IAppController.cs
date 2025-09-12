@@ -28,4 +28,5 @@ public interface IAppController
     Task<CountryInfo[]> GetCountries();
     Task InternalAdDismiss(ShowAdResult result);
     Task InternalAdError(string errorMessage);
+    Task RemovePremium(Guid profileId);
 }

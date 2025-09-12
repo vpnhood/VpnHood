@@ -136,4 +136,10 @@ public class AppController : ControllerBase, IAppController
     {
         throw new SwaggerOnlyException();
     }
+
+    [HttpPost("remove-premium")]
+    public Task RemovePremium(Guid profileId)
+    {
+        throw new SwaggerOnlyException();
+    }
 }

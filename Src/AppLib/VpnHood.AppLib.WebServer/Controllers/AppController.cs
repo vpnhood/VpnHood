@@ -191,6 +191,12 @@ internal class AppController : WebApiController, IAppController
         return Task.CompletedTask;
     }
 
+    [Route(HttpVerbs.Post, "/remove-premium")]
+    public Task RemovePremium([QueryField] Guid profileId)
+    {
+        App.RemovePremium(profileId);
+        return Task.CompletedTask;
+    }
 
     [Route(HttpVerbs.Get, "/countries")]
     public Task<CountryInfo[]> GetCountries()

@@ -196,7 +196,7 @@ public class IpV4Packet : IpPacket
         if (_disposed)
             return;
 
-        // I intentionally dispose the memory owner as unmanaged
+        // We intentionally dispose the memory owner as unmanaged
         // because the memory owner does have finalizer
         _memoryOwner?.Dispose();
         base.Dispose(disposing);

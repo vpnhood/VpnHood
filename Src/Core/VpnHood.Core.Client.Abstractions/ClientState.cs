@@ -6,6 +6,7 @@ public enum ClientState
 {
     None,
     Initializing,
+    ValidatingProxies,
     FindingReachableServer,
     FindingBestServer,
     Connecting,

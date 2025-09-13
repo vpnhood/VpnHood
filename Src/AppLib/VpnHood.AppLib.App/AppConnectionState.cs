@@ -10,6 +10,7 @@ public enum AppConnectionState
     Waiting,
     WaitingForAd,
     Diagnosing,
+    ValidatingProxies,
     FindingReachableServer,
     FindingBestServer,
     Connecting,

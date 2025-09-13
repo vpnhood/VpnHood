@@ -19,6 +19,7 @@ public static class AppConnectionStateExtensions
             return false;
 
         return connectionState is
+            AppConnectionState.ValidatingProxies or
             AppConnectionState.FindingReachableServer or
             AppConnectionState.FindingBestServer or
             AppConnectionState.Connecting or

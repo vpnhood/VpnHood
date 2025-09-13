@@ -431,6 +431,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (clientState is ClientState.WaitingForAd or ClientState.WaitingForAdEx)
                 return AdManager.IsWaitingForPostDelay ? AppConnectionState.Connected : AppConnectionState.WaitingForAd;
 
+            if (clientState == ClientState.ValidatingProxies)
+                return AppConnectionState.ValidatingProxies;
+
             if (clientState == ClientState.FindingReachableServer)
                 return StateHelper.IsLongRunningState(connectionInfo)
                     ? AppConnectionState.FindingReachableServer

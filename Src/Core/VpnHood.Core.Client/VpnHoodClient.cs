@@ -87,11 +87,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Exception? LastException { get; private set; }
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
 
-    public ProgressStatus? StateProgress =>
-        State is ClientState.FindingReachableServer or ClientState.FindingBestServer
-            ? _serverFinder.Progress
-            : null;
-
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
         ISocketFactory socketFactory,
@@ -142,7 +137,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _dnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
         _useUdpChannel = options.UseUdpChannel;
-        _proxyServerManager = new ProxyServerManager(options.ProxyServers ?? [], socketFactory);
+        _proxyServerManager = new ProxyServerManager(options.ProxyServers ?? [],
+            socketFactory,
+            serverCheckTimeout: options.ServerQueryTimeout);
 
         _serverFinder = new ServerFinder(socketFactory, Token.ServerToken,
             serverLocation: options.ServerLocation,
@@ -224,6 +221,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             FireStateChanged();
         }
     }
+
+    public ProgressStatus? StateProgress =>
+        State switch {
+            ClientState.FindingReachableServer or ClientState.FindingBestServer => _serverFinder.Progress,
+            ClientState.ValidatingProxies => _proxyServerManager.Progress,
+            _ => null
+        };
 
     private void FireStateChanged()
     {
@@ -338,6 +342,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // validate proxy servers
             if (_proxyServerManager.IsEnabled) {
+                State = ClientState.ValidatingProxies;
                 await _proxyServerManager.RemoveBadServers(linkedCts.Token).Vhc();
                 VhLogger.Instance.LogInformation("Proxy servers: {Count}",
                     _proxyServerManager.ProxyServerStatuses.Length);
@@ -660,9 +665,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // build allowed local networks
             var allowedLocalNetworks = IpNetwork.LocalNetworks.ToIpRanges();
-            if (serverIncludeIpRanges != null) 
+            if (serverIncludeIpRanges != null)
                 allowedLocalNetworks = allowedLocalNetworks.Intersect(serverIncludeIpRanges);
-            if (serverVpnAdapterIncludeIpRanges != null) 
+            if (serverVpnAdapterIncludeIpRanges != null)
                 allowedLocalNetworks = allowedLocalNetworks.Intersect(serverVpnAdapterIncludeIpRanges);
 
             // log response

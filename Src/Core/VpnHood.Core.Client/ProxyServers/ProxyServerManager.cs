@@ -12,14 +12,21 @@ namespace VpnHood.Core.Client.ProxyServers;
 
 public class ProxyServerManager
 {
+    private readonly TimeSpan _serverCheckTimeout;
     private readonly ISocketFactory _socketFactory;
     public ProxyServerStatus[] ProxyServerStatuses => _proxyServers.Select(x => x.Status).ToArray();
     private ProxyServer[] _proxyServers;
-    public bool IsEnabled => _proxyServers.Any();
+    private ProgressTracker? _progressTracker;
 
-    public ProxyServerManager(ProxyServerEndPoint[] proxyServerEndPoints,
-        ISocketFactory socketFactory)
+    public bool IsEnabled => _proxyServers.Any();
+    public ProgressStatus? Progress => _progressTracker?.Progress;
+
+    public ProxyServerManager(
+        ProxyServerEndPoint[] proxyServerEndPoints,
+        ISocketFactory socketFactory,
+        TimeSpan? serverCheckTimeout)
     {
+        _serverCheckTimeout = serverCheckTimeout ?? TimeSpan.FromSeconds(7);
         _proxyServers = proxyServerEndPoints.Select(x => new ProxyServer(x)).ToArray();
         _socketFactory = socketFactory;
     }
@@ -44,53 +51,72 @@ public class ProxyServerManager
         }
     }
 
-    private static async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient, TcpClient tcpClient,
+    private async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient, 
+        TcpClient tcpClient, ProgressTracker progressTracker, 
         CancellationToken cancellationToken)
     {
-        var tickCount = Environment.TickCount64;
-        await proxyClient.CheckConnectionAsync(tcpClient, cancellationToken).Vhc();
-        return TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
+        try {
+            var tickCount = Environment.TickCount64;
+            using var serverCheckCts = new CancellationTokenSource(_serverCheckTimeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
+            await proxyClient.CheckConnectionAsync(tcpClient, linkedCts.Token).Vhc();
+            return TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
+        }
+        finally{
+            progressTracker.IncrementCompleted();
+        }
     }
 
     public async Task RemoveBadServers(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Essential, "Checking proxy servers for reachability...");
 
-        // connect to each proxy server and check if it is reachable
-        List<(ProxyServer, TcpClient, Task<TimeSpan>)> testTasks = [];
-        foreach (var proxyServer in _proxyServers) {
-            var proxyClient = await ProxyClientFactory.CreateProxyClient(proxyServer.EndPoint);
-            var tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
-            var checkTask = CheckConnectionAsync(proxyClient, tcpClient, cancellationToken);
-            testTasks.Add((proxyServer, tcpClient, checkTask));
-        }
+        // initialize progress tracker
+        _progressTracker = new ProgressTracker(
+            totalTaskCount: _proxyServers.Length,
+            taskTimeout: _serverCheckTimeout,
+            maxDegreeOfParallelism: _proxyServers.Length);
 
-        // wait for all tasks to complete even if some fail
-        while (testTasks.Any(x => !x.Item3.IsCompleted))
-            await Task.WhenAny(testTasks.Select(x => x.Item3)).Vhc();
-
-        // find the fastest server and set threshold
-        var succeededTasks = testTasks
-            .Where(x => x.Item3.IsCompletedSuccessfully && x.Item1.Status.IsActive)
-            .OrderBy(x => x.Item3.Result)
-            .ToArray();
-
-        // set fastest server
-        TimeSpan? fastestLatency = succeededTasks.Any() ? succeededTasks.First().Item3.Result : null;
-
-        // update server statuses
-        foreach (var (proxyServer, tcpClient, task) in testTasks) {
-            tcpClient.Dispose();
-
-            // set failed
-            if (!task.IsCompletedSuccessfully) {
-                proxyServer.RecordFailed(task.Exception, _requestCount);
-                proxyServer.Status.IsActive = false;
-                continue;
+        try {
+            // connect to each proxy server and check if it is reachable
+            List<(ProxyServer, TcpClient, Task<TimeSpan>)> testTasks = [];
+            foreach (var proxyServer in _proxyServers) {
+                var proxyClient = await ProxyClientFactory.CreateProxyClient(proxyServer.EndPoint);
+                var tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
+                var checkTask = CheckConnectionAsync(proxyClient, tcpClient, _progressTracker, cancellationToken);
+                testTasks.Add((proxyServer, tcpClient, checkTask));
             }
 
-            // set active or poor active
-            proxyServer.RecordSuccess(latency: task.Result, fastestLatency: fastestLatency, _requestCount);
+            // wait for all tasks to complete even if some fail
+            while (testTasks.Any(x => !x.Item3.IsCompleted))
+                await Task.WhenAny(testTasks.Select(x => x.Item3)).Vhc();
+
+            // find the fastest server and set threshold
+            var succeededTasks = testTasks
+                .Where(x => x.Item3.IsCompletedSuccessfully && x.Item1.Status.IsActive)
+                .OrderBy(x => x.Item3.Result)
+                .ToArray();
+
+            // set fastest server
+            TimeSpan? fastestLatency = succeededTasks.Any() ? succeededTasks.First().Item3.Result : null;
+
+            // update server statuses
+            foreach (var (proxyServer, tcpClient, task) in testTasks) {
+                tcpClient.Dispose();
+
+                // set failed
+                if (!task.IsCompletedSuccessfully) {
+                    proxyServer.RecordFailed(task.Exception, _requestCount);
+                    proxyServer.Status.IsActive = false;
+                    continue;
+                }
+
+                // set active or poor active
+                proxyServer.RecordSuccess(latency: task.Result, fastestLatency: fastestLatency, _requestCount);
+            }
+        }
+        finally {
+            _progressTracker = null;
         }
     }
 

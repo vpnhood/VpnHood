@@ -719,7 +719,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview,
-                ProxyNodes = UserSettings.Proxy.Mode ? UserSettings.Proxy.Nodes : [],
+                ProxyNodes = ProxyNodeResolver.Resolve(UserSettings.Proxy)
             };
 
             VhLogger.Instance.LogDebug(

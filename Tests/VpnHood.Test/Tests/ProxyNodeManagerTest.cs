@@ -1,19 +1,19 @@
 using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.ProxyServers;
+using VpnHood.Core.Client.ProxyNodes;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ProxyServerManagerTest
+public class ProxyNodeManagerTest
 {
     [TestMethod]
     public void IsEnabled_False_When_No_Servers()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ProxyServerManager(proxyServerEndPoints: [], socketFactory: socketFactory);
+        var mgr = new ProxyNodeManager(proxyServerEndPoints: [], socketFactory: socketFactory);
         Assert.IsFalse(mgr.IsEnabled);
     }
 
@@ -21,8 +21,8 @@ public class ProxyServerManagerTest
     public void IsEnabled_True_When_Servers_Exist()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ProxyServerManager(
-            proxyServerEndPoints: [new ProxyServerEndPoint { Type = ProxyServerType.Socks5, Host = "127.0.0.1", Port = 1080 }],
+        var mgr = new ProxyNodeManager(
+            proxyServerEndPoints: [new ProxyNode { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 }],
             socketFactory: socketFactory);
         Assert.IsTrue(mgr.IsEnabled);
     }
@@ -31,7 +31,7 @@ public class ProxyServerManagerTest
     public async Task ConnectAsync_With_No_Servers_Throws_NetworkUnreachable()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ProxyServerManager(proxyServerEndPoints: [], socketFactory: socketFactory);
+        var mgr = new ProxyNodeManager(proxyServerEndPoints: [], socketFactory: socketFactory);
         var target = new IPEndPoint(IPAddress.Loopback, 443);
 
         var ex = await Assert.ThrowsExactlyAsync<SocketException>(
@@ -45,15 +45,15 @@ public class ProxyServerManagerTest
         var socketFactory = new TestSocketFactory();
         var proxyEndPoints = new[]
         {
-            new ProxyServerEndPoint { Type = ProxyServerType.Socks5, Host = "127.0.0.1", Port = 1080 },
-            new ProxyServerEndPoint { Type = ProxyServerType.Socks4, Host = "127.0.0.1", Port = 1081 },
-            new ProxyServerEndPoint { Type = ProxyServerType.Http, Host = "127.0.0.1", Port = 8080 },
-            new ProxyServerEndPoint { Type = ProxyServerType.Https, Host = "127.0.0.1", Port = 8443 }
+            new ProxyNode { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 },
+            new ProxyNode { Protocol = ProxyProtocol.Socks4, Host = "127.0.0.1", Port = 1081 },
+            new ProxyNode { Protocol = ProxyProtocol.Http, Host = "127.0.0.1", Port = 8080 },
+            new ProxyNode { Protocol = ProxyProtocol.Https, Host = "127.0.0.1", Port = 8443 }
         };
 
-        var mgr = new ProxyServerManager(proxyServerEndPoints: proxyEndPoints, socketFactory: socketFactory);
+        var mgr = new ProxyNodeManager(proxyServerEndPoints: proxyEndPoints, socketFactory: socketFactory);
         Assert.IsTrue(mgr.IsEnabled);
-        Assert.AreEqual(4, mgr.ProxyServerStatuses.Length);
+        Assert.AreEqual(4, mgr.ProxyNodeStatuses.Length);
     }
 
     [TestMethod]
@@ -62,14 +62,14 @@ public class ProxyServerManagerTest
         var socketFactory = new TestSocketFactory();
         var proxyEndPoints = new[]
         {
-            new ProxyServerEndPoint { Type = ProxyServerType.Socks4, Host = "127.0.0.1", Port = 1081 },
-            new ProxyServerEndPoint { Type = ProxyServerType.Http, Host = "127.0.0.1", Port = 8080 }
+            new ProxyNode { Protocol = ProxyProtocol.Socks4, Host = "127.0.0.1", Port = 1081 },
+            new ProxyNode { Protocol = ProxyProtocol.Http, Host = "127.0.0.1", Port = 8080 }
         };
 
-        var mgr = new ProxyServerManager(proxyServerEndPoints: proxyEndPoints, socketFactory: socketFactory);
+        var mgr = new ProxyNodeManager(proxyServerEndPoints: proxyEndPoints, socketFactory: socketFactory);
         await mgr.RemoveBadServers(CancellationToken.None);
 
         // All non-SOCKS5 servers should be marked as inactive
-        Assert.IsTrue(mgr.ProxyServerStatuses.All(status => !status.IsActive));
+        Assert.IsTrue(mgr.ProxyNodeStatuses.All(status => !status.IsActive));
     }
 }

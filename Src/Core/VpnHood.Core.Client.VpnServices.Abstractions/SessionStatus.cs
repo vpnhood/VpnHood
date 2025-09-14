@@ -24,5 +24,5 @@ public class SessionStatus
     public required int UserReviewRecommended { get; init; }
     public required bool IsDnsOverTlsDetected { get; init; }
     public required bool IsTcpProxy { get; init; }
-    public required ProxyServerStatus[] ProxyServerStatuses { get; init; }
+    public required ProxyNodeStatus[] ProxyNodeStatuses { get; init; }
 }

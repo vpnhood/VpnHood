@@ -4,10 +4,10 @@ namespace VpnHood.Core.Client.Abstractions;
 
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum ProxyServerType
+public enum ProxyProtocol
 {
-    Socks5 = 0,
     Socks4 = 1,
-    Http = 2,
-    Https = 3
+    Socks5 = 2,
+    Http = 3,
+    Https = 4
 }

@@ -277,7 +277,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UseTcpProxy = UserSettings.UseTcpProxy && Features.IsTcpProxySupported,
                     UseUdpChannel = UserSettings.UseUdpChannel,
                     DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                    DropQuic = UserSettings.DropQuic
+                    DropQuic = UserSettings.DropQuic,
+                    ProxyNodes = ProxyNodeResolver.Resolve(UserSettings.Proxy)
                 };
                 // it is not important to take effect immediately
                 _reconfigurationTask = _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None);
@@ -718,7 +719,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview,
-                ProxyServers = UserSettings.UseProxyServer ? UserSettings.ProxyServers : [],
+                ProxyNodes = UserSettings.Proxy.Mode ? UserSettings.Proxy.Nodes : [],
             };
 
             VhLogger.Instance.LogDebug(

@@ -3,16 +3,15 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 
-namespace VpnHood.Core.Client.ProxyServers;
+namespace VpnHood.Core.Client.ProxyNodes;
 
-internal class ProxyServer(ProxyServerEndPoint endPoint)
+internal class ProxyNodeItem(ProxyNode node)
 {
     private readonly object _lock = new();
     private int _requestPosition;
-    public ProxyServerEndPoint EndPoint => endPoint;
-    public ProxyServerStatus Status = new() {
-        IsActive = true, 
-        Id = endPoint.GetId()
+    public ProxyNode Node => node;
+    public ProxyNodeStatus Status = new(node.Host, node.Port) {
+        IsActive = true
     };
 
     public int GetSortValue(int currentRequestCount)
@@ -40,7 +39,7 @@ internal class ProxyServer(ProxyServerEndPoint endPoint)
 
                 VhLogger.Instance.LogDebug(GeneralEventId.Essential,
                     "Proxy server responded slowly. {ProxyServer}, ResponseTime: {ResponseTime}, PenaltyRate: {Penalty}",
-                    VhLogger.FormatHostName(EndPoint.Host), latency, Status.Penalty);
+                    VhLogger.FormatHostName(Node.Host), latency, Status.Penalty);
             }
             else {
                 if (Status.Penalty > 0)
@@ -66,7 +65,7 @@ internal class ProxyServer(ProxyServerEndPoint endPoint)
 
             VhLogger.Instance.LogDebug(GeneralEventId.Essential,
                 "Failed to connect to proxy server. {ProxyServer}, FailedCount: {FailedCount}, Penalty: {Penalty}",
-                VhLogger.FormatHostName(EndPoint.Host), Status.FailedCount, Status.Penalty);
+                VhLogger.FormatHostName(Node.Host), Status.FailedCount, Status.Penalty);
         }
     }
 }

@@ -6,7 +6,7 @@ using VpnHood.Core.Proxies.Socks4ProxyClients;
 using VpnHood.Core.Proxies.Socks5ProxyClients;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Client.ProxyServers;
+namespace VpnHood.Core.Client.ProxyNodes;
 
 public static class ProxyClientFactory
 {
@@ -25,30 +25,30 @@ public static class ProxyClientFactory
         return ipAddress;
     }
 
-    public static async Task<IProxyClient> CreateProxyClient(ProxyServerEndPoint proxyEndPoint)
+    public static async Task<IProxyClient> CreateProxyClient(ProxyNode proxyNode)
     {
-        var serverIp = await GetIpAddress(proxyEndPoint.Host).Vhc();
-        var serverEp = new IPEndPoint(serverIp, proxyEndPoint.Port);
+        var serverIp = await GetIpAddress(proxyNode.Host).Vhc();
+        var serverEp = new IPEndPoint(serverIp, proxyNode.Port);
 
-        return proxyEndPoint.Type switch {
-            ProxyServerType.Socks5 => new Socks5ProxyClient(new Socks5ProxyClientOptions {
+        return proxyNode.Protocol switch {
+            ProxyProtocol.Socks5 => new Socks5ProxyClient(new Socks5ProxyClientOptions {
                 ProxyEndPoint = serverEp,
-                Password = proxyEndPoint.Password,
-                Username = proxyEndPoint.Username
+                Password = proxyNode.Password,
+                Username = proxyNode.Username
             }),
-            ProxyServerType.Socks4 => new Socks4ProxyClient(new Socks4ProxyClientOptions {
+            ProxyProtocol.Socks4 => new Socks4ProxyClient(new Socks4ProxyClientOptions {
                 ProxyEndPoint = serverEp,
-                UserName = proxyEndPoint.Username
+                UserName = proxyNode.Username
             }),
-            ProxyServerType.Https or ProxyServerType.Http => new HttpProxyClient(new HttpProxyClientOptions {
+            ProxyProtocol.Https or ProxyProtocol.Http => new HttpProxyClient(new HttpProxyClientOptions {
                 ProxyEndPoint = serverEp,
-                Username = proxyEndPoint.Username,
-                Password = proxyEndPoint.Password,
+                Username = proxyNode.Username,
+                Password = proxyNode.Password,
                 AllowInvalidCertificates = true,
-                ProxyHost = proxyEndPoint.Host,
-                UseTls = proxyEndPoint.Type == ProxyServerType.Https
+                ProxyHost = proxyNode.Host,
+                UseTls = proxyNode.Protocol == ProxyProtocol.Https
             }),
-            _ => throw new NotSupportedException($"Proxy type {proxyEndPoint.Type} is not supported.")
+            _ => throw new NotSupportedException($"Proxy type {proxyNode.Protocol} is not supported.")
         };
     }
 }

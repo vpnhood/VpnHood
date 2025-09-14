@@ -97,7 +97,7 @@ public class ClientOptions
     public UserReview? UserReview { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public ProxyServerEndPoint[]? ProxyServers { get; set; }
+    public ProxyNode[]? ProxyNodes { get; set; }
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

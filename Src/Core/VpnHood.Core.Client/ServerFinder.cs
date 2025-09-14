@@ -4,7 +4,7 @@ using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Client.ProxyServers;
+using VpnHood.Core.Client.ProxyNodes;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
@@ -26,7 +26,7 @@ public class ServerFinder(
     EndPointStrategy endPointStrategy,
     IPEndPoint[] customServerEndpoints,
     ITracker? tracker,
-    ProxyServerManager proxyServerManager,
+    ProxyNodeManager proxyNodeManager,
     int maxDegreeOfParallelism = 10)
 {
     private class HostStatus
@@ -264,7 +264,7 @@ public class ServerFinder(
     private ConnectorService CreateConnector(IPEndPoint tcpEndPoint)
     {
         var endPointInfo = new ConnectorEndPointInfo {
-            ProxyServerManager = proxyServerManager,
+            ProxyNodeManager = proxyNodeManager,
             CertificateHash = serverToken.CertificateHash,
             HostName = serverToken.HostName,
             TcpEndPoint = tcpEndPoint

@@ -8,7 +8,7 @@ using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;
-using VpnHood.Core.Client.ProxyServers;
+using VpnHood.Core.Client.ProxyNodes;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
@@ -63,7 +63,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private TaskCompletionSource? _waitForAdCts;
     private bool _isPassthroughForAd;
     private bool _isDnsOverTlsDetected;
-    private readonly ProxyServerManager _proxyServerManager;
 
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
 
@@ -71,6 +70,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Token Token { get; }
     public VpnHoodClientConfig Config { get; }
     public DomainFilterService DomainFilterService { get; }
+    public ProxyNodeManager ProxyNodeManager { get; }
     public ISocketFactory SocketFactory { get; }
     public ISessionStatus? SessionStatus => _sessionStatus;
     public ITracker? Tracker { get; }
@@ -137,7 +137,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _dnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
         _useUdpChannel = options.UseUdpChannel;
-        _proxyServerManager = new ProxyServerManager(options.ProxyServers ?? [],
+        ProxyNodeManager = new ProxyNodeManager(options.ProxyNodes ?? [],
             socketFactory,
             serverCheckTimeout: options.ServerQueryTimeout);
 
@@ -148,7 +148,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ? options.EndPointStrategy : Token.ServerToken.EndPointsStrategy,
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null,
-            proxyServerManager: _proxyServerManager);
+            proxyNodeManager: ProxyNodeManager);
 
         _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
             IsPingSupported = false,
@@ -225,7 +225,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ProgressStatus? StateProgress =>
         State switch {
             ClientState.FindingReachableServer or ClientState.FindingBestServer => _serverFinder.Progress,
-            ClientState.ValidatingProxies => _proxyServerManager.Progress,
+            ClientState.ValidatingProxies => ProxyNodeManager.Progress,
             _ => null
         };
 
@@ -341,11 +341,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 Config.Version, Config.MinProtocolVersion, Config.MaxProtocolVersion, VhLogger.FormatId(Config.ClientId));
 
             // validate proxy servers
-            if (_proxyServerManager.IsEnabled) {
+            if (ProxyNodeManager.IsEnabled) {
                 State = ClientState.ValidatingProxies;
-                await _proxyServerManager.RemoveBadServers(linkedCts.Token).Vhc();
+                await ProxyNodeManager.RemoveBadServers(linkedCts.Token).Vhc();
                 VhLogger.Instance.LogInformation("Proxy servers: {Count}",
-                    _proxyServerManager.ProxyServerStatuses.Length);
+                    ProxyNodeManager.ProxyNodeStatuses.Length);
             }
 
             // Establish first connection and create a session
@@ -620,7 +620,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // create connector service
             _connectorService = new ConnectorService(
                 new ConnectorEndPointInfo {
-                    ProxyServerManager = _proxyServerManager,
+                    ProxyNodeManager = ProxyNodeManager,
                     HostName = Token.ServerToken.HostName,
                     TcpEndPoint = hostEndPoint,
                     CertificateHash = Token.ServerToken.CertificateHash
@@ -1231,6 +1231,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;
         public bool IsDnsOverTlsDetected => client._isDnsOverTlsDetected;
-        public ProxyServerStatus[] ProxyServerStatuses => client._proxyServerManager.ProxyServerStatuses;
+        public ProxyNodeStatus[] ProxyNodeStatuses => client.ProxyNodeManager.ProxyNodeStatuses;
     }
 }

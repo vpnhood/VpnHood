@@ -26,5 +26,5 @@ public interface ISessionStatus
     DateTime? SessionExpirationTime { get; }
     int? ActiveClientCount { get; }
     bool IsDnsOverTlsDetected { get; }
-    ProxyServerStatus[] ProxyServerStatuses { get; }
+    ProxyNodeStatus[] ProxyNodeStatuses { get; }
 }

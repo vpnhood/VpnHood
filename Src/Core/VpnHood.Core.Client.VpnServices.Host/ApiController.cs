@@ -190,6 +190,7 @@ internal class ApiController : IDisposable
         VpnHoodClient.Config.DropQuic = request.Params.DropQuic;
         VpnHoodClient.Config.UseTcpProxy = request.Params.UseTcpProxy;
         VpnHoodClient.UseUdpChannel = request.Params.UseUdpChannel;
+        VpnHoodClient.ProxyNodeManager.ProxyNodes = request.Params.ProxyNodes;
 
         return Task.CompletedTask;
     }

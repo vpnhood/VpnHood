@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Core.Client.VpnServices.Abstractions;
+﻿using VpnHood.Core.Client.Abstractions;
+
+namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 public class ClientReconfigureParams
 {
@@ -6,4 +8,5 @@ public class ClientReconfigureParams
     public bool UseUdpChannel { get; set; }
     public bool DropUdp { get; set; }
     public bool DropQuic { get; set; }
+    public ProxyNode[] ProxyNodes { get; set; } = [];
 }

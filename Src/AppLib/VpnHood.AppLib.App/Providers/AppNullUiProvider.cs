@@ -3,7 +3,7 @@ using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.Providers;
 
-internal class AppNotSupportedUiProvider
+internal class AppNullUiProvider
     : IAppUiProvider
 {
     public PrivateDns? GetSystemPrivateDns() => null;

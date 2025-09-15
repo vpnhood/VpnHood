@@ -44,7 +44,7 @@ public class LocalIpLocationProvider : IIpLocationProvider
         // binary search
         var itemToSearch = new IpRangeInfo {
             CountryCode = "?",
-            IpRanges = new IpRange(ipAddress, ipAddress)
+            IpRanges = new IpRange(ipAddress)
         };
         var res = _ipRangeInfoList.BinarySearch(itemToSearch, new IpRangeSearchComparer());
         if (res < 0)

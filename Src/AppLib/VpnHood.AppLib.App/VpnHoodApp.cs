@@ -148,7 +148,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId;
 
         // set the default server location if not set
-        var uiProvider = options.UiProvider ?? new AppNotSupportedUiProvider();
+        var uiProvider = options.UiProvider ?? new AppNullUiProvider();
 
         // initialize features
         Features = new AppFeatures {

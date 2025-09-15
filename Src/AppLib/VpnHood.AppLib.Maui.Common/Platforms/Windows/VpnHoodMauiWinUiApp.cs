@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Windows.UI.Notifications;
+using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
 using VpnHood.AppLib.Win.Common;
@@ -17,7 +18,7 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
     
     protected AppWindow? AppWindow;
     
-    public VpnHoodApp Init(AppOptions appOptions)
+    public void Init(AppOptions appOptions)
     {
         // initialize Win App
         VpnHoodWinApp.Init(appId: appOptions.AppId, storageFolder: appOptions.StorageFolderPath, 
@@ -25,8 +26,8 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
 
         // initialize VpnHoodApp
         var device = new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode);
-        var vpnHoodApp = VpnHoodApp.Init(device, appOptions);
-        vpnHoodApp.ConnectionStateChanged += ConnectionStateChanged;
+        VpnHoodApp.Init(device, appOptions);
+        VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
 
         VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
         VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
@@ -34,30 +35,26 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
         VpnHoodWinApp.Instance.Start();
         UpdateIcon();
 
+        WindowHandler.Mapper.AppendToMapping(nameof(IWindow), MappingMethod);
+    }
 
-        Microsoft.Maui.Handlers.WindowHandler.Mapper.AppendToMapping(nameof(IWindow), (handler, _) =>
-        {
-            AppWindow = handler.PlatformView.GetAppWindow();
+    private void MappingMethod(IWindowHandler handler, IWindow _)
+    {
+        AppWindow = handler.PlatformView.GetAppWindow();
 
-            //customize WinUI main window
-            if (AppWindow != null)
-            {
-                AppWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
-                AppWindow.Closing += AppWindow_Closing;
+        //customize WinUI main window
+        if (AppWindow != null) {
+            AppWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
+            AppWindow.Closing += AppWindow_Closing;
 
-                var bgColorResource = vpnHoodApp.Resources.Colors.WindowBackgroundColor;
-                if (bgColorResource != null)
-                {
-                    var bgColor = Windows.UI.Color.FromArgb(bgColorResource.Value.A, bgColorResource.Value.R,
-                        bgColorResource.Value.G, bgColorResource.Value.B);
-                    AppWindow.TitleBar.ButtonBackgroundColor = bgColor;
-                    AppWindow.TitleBar.BackgroundColor = bgColor;
-                    AppWindow.TitleBar.ForegroundColor = bgColor;
-                }
+            var bgColorResource = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
+            if (bgColorResource != null) {
+                var bgColor = Windows.UI.Color.FromArgb(bgColorResource.Value.A, bgColorResource.Value.R, bgColorResource.Value.G, bgColorResource.Value.B);
+                AppWindow.TitleBar.ButtonBackgroundColor = bgColor;
+                AppWindow.TitleBar.BackgroundColor = bgColor;
+                AppWindow.TitleBar.ForegroundColor = bgColor;
             }
-        });
-
-        return vpnHoodApp;
+        }
     }
 
     protected virtual void OpenMainWindowRequested(object? sender, EventArgs e)

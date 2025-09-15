@@ -470,14 +470,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));
     }
 
-    public static VpnHoodApp Init(IDevice device, AppOptions options)
+    public static void Init(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
         var settingsService = new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl);
         var logService = new LogService(Path.Combine(options.StorageFolderPath, FileNameLog));
         logService.Start(GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
             deleteOldReport: false);
-        return new VpnHoodApp(device, settingsService, logService, options);
+
+        // initialize the singleton instance
+        _ = new VpnHoodApp(device, settingsService, logService, options);
     }
 
     public void ClearLastError()

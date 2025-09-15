@@ -27,6 +27,10 @@ public class AndroidDevice : IDevice
 
     public static AndroidDevice Create()
     {
+        if (IsVpnServiceProcess)
+            throw new InvalidOperationException(
+                "Cannot create AndroidDevice in the VPN service process.");
+
         return new AndroidDevice();
     }
 

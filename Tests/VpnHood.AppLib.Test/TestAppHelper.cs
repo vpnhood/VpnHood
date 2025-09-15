@@ -58,7 +58,8 @@ public class TestAppHelper : TestHelper
         device ??= new TestDevice(this, _ => new TestNullVpnAdapter());
 
         //create app
-        var clientApp = VpnHoodApp.Init(device, appOptions);
+        VpnHoodApp.Init(device, appOptions);
+        var clientApp = VpnHoodApp.Instance;
         clientApp.Diagnoser.HttpTimeout = TimeSpan.FromSeconds(2);
         clientApp.Diagnoser.NsTimeout = TimeSpan.FromSeconds(2);
         clientApp.UserSettings.UseVpnAdapterIpFilter = true;

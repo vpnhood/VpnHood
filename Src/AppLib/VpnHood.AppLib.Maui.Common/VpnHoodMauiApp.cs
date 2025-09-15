@@ -4,10 +4,10 @@ namespace VpnHood.AppLib.Maui.Common;
 
 public class VpnHoodMauiApp : Singleton<VpnHoodMauiApp>
 {
-    public static VpnHoodApp Init(AppOptions options)
+    public static void Init(AppOptions options)
     {
         var app = CreateApp();
-        return app.Init(options);
+        app.Init(options);
     }
 
     private static IVpnHoodMauiApp CreateApp()

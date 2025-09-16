@@ -4,7 +4,6 @@ using System.Drawing;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Device.Win;
 using VpnHood.Core.Common;
 using VpnHood.Core.Toolkit.Logging;

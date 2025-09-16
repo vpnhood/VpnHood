@@ -1,40 +1,47 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Windows.UI.Notifications;
+using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
 using VpnHood.AppLib.Win.Common;
-using VpnHood.Core.Client.Device.Win;
+using VpnHood.Core.Toolkit.Utils;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppLib.Maui.Common;
 
-internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
+internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
 {
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
     
     protected AppWindow? AppWindow;
-    
-    public void Init(AppOptions appOptions)
+
+    private VpnHoodAppMauiWin(AppOptions appOptions)
     {
         // initialize Win App
+        appOptions.DisconnectOnDispose = true;
         VpnHoodAppWin.Init(appOptions, args: Environment.GetCommandLineArgs());
-
-        // initialize VpnHoodApp
-        var device = new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode);
-        VpnHoodApp.Init(device, appOptions);
-        VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
-
         VpnHoodAppWin.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
         VpnHoodAppWin.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
         VpnHoodAppWin.Instance.ExitRequested += ExitRequested;
         VpnHoodAppWin.Instance.Start();
-        UpdateIcon();
 
+        // initialize VpnHoodApp
+        VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
+
+        // customize main window
         WindowHandler.Mapper.AppendToMapping(nameof(IWindow), MappingMethod);
+
+    }
+
+    public static VpnHoodAppMauiWin Init(AppOptions appOptions)
+    {
+        var app = new VpnHoodAppMauiWin(appOptions);
+        app.UpdateIcon();
+        return app;
     }
 
     private void MappingMethod(IWindowHandler handler, IWindow _)
@@ -108,5 +115,15 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
         var badgeNotification = new BadgeNotification(badgeXml);
         var badgeUpdater = BadgeUpdateManager.CreateBadgeUpdaterForApplication();
         badgeUpdater.Update(badgeNotification);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) {
+            if (VpnHoodAppWin.IsInit)
+                VpnHoodAppWin.Instance.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 }

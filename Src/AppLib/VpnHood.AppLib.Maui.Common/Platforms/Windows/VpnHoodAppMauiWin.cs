@@ -37,8 +37,9 @@ internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
 
     }
 
-    public static VpnHoodAppMauiWin Init(AppOptions appOptions)
+    public static VpnHoodAppMauiWin Init(Func<AppOptions> optionsFactory)
     {
+        var appOptions = optionsFactory();
         var app = new VpnHoodAppMauiWin(appOptions);
         app.UpdateIcon();
         return app;

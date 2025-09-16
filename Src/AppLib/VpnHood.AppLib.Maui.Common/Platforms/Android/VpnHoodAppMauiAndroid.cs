@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.Maui.Common;
 
 internal class VpnHoodAppMauiAndroid : Singleton<VpnHoodAppMauiAndroid>, IVpnHoodAppMaui
 {
-    public static VpnHoodAppMauiAndroid Init(AppOptions options)
+    public static VpnHoodAppMauiAndroid Init(Func<AppOptions> optionsFactory)
     {
         if (AndroidDevice.IsVpnServiceProcess) {
             VhLogger.Instance.LogInformation(
@@ -17,6 +17,7 @@ internal class VpnHoodAppMauiAndroid : Singleton<VpnHoodAppMauiAndroid>, IVpnHoo
             return new VpnHoodAppMauiAndroid();
         }
 
+        var options = optionsFactory();
         var device = AndroidDevice.Create();
         options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
         VpnHoodApp.Init(device, options);

@@ -1,4 +1,5 @@
-﻿using VpnHood.App.Client;
+﻿using System.Windows;
+using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Win.Common;
@@ -6,22 +7,10 @@ using VpnHood.AppLib.Win.Common.WpfSpa;
 
 namespace VpnHood.App.Connect.Win.Web;
 
-public class App : VpnHoodWpfSpaApp
+public class App : Application
 {
-    [STAThread]
-    public static void Main()
+    private static AppOptions CreateAppOptions(AppConfigs appConfigs)
     {
-        var app = new App();
-        app.Run();
-    }
-
-    public override bool SpaListenToAllIps => AppConfigs.Instance.SpaListenToAllIps;
-    public override int? SpaDefaultPort => AppConfigs.Instance.SpaDefaultPort;
-
-    protected override AppOptions CreateAppOptions()
-    {
-        var appConfigs = AppConfigs.Load();
-
         // load app settings and resources
         var resources = ConnectAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
@@ -46,5 +35,25 @@ public class App : VpnHoodWpfSpaApp
             }
 
         };
+    }
+
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        // call base first to init app resources
+        base.OnStartup(e);
+
+        // load app configs
+        var appConfigs = AppConfigs.Load();
+        VpnHoodAppWpfSpa.Init(() => CreateAppOptions(appConfigs),
+            spaListenToAllIps: appConfigs.SpaListenToAllIps,
+            spaDefaultPort: appConfigs.SpaDefaultPort,
+            args: Environment.GetCommandLineArgs());
+    }
+
+    [STAThread]
+    public static void Main(string[] args)
+    {
+        var app = new App();
+        app.Run();
     }
 }

@@ -25,7 +25,7 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         if (backgroundColor != null)
             Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R,
                 backgroundColor.Value.G, backgroundColor.Value.B));
-        Visibility = VpnHoodWinApp.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
+        Visibility = VpnHoodAppWin.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
         Width = VpnHoodApp.Instance.Resources.WindowSize.Width;
         Height = VpnHoodApp.Instance.Resources.WindowSize.Height;
         ResizeMode = ResizeMode.CanMinimize;
@@ -35,7 +35,7 @@ public partial class VpnHoodWpfSpaMainWindow : Window
 
         // set window title bar color
         var hWnd = new WindowInteropHelper(this).EnsureHandle();
-        if (backgroundColor != null) VpnHoodWinApp.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
+        if (backgroundColor != null) VpnHoodAppWin.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
         // initialize MainWebView
         MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
@@ -55,7 +55,7 @@ public partial class VpnHoodWpfSpaMainWindow : Window
 
     private static void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
     {
-        VpnHoodWinApp.OpenUrlInExternalBrowser(new Uri(e.Uri));
+        VpnHoodAppWin.OpenUrlInExternalBrowser(new Uri(e.Uri));
         e.Handled = true;
     }
 
@@ -70,11 +70,11 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         // hide window if edge is not installed and open browser instead
         lock (MainWebView) {
             // MainWebView_CoreWebView2InitializationCompleted is called many times
-            if (VpnHoodWinApp.Instance.EnableOpenMainWindow) {
+            if (VpnHoodAppWin.Instance.EnableOpenMainWindow) {
                 Visibility = Visibility.Hidden; // Hide() does not work properly in this state on sandbox
-                VpnHoodWinApp.Instance.EnableOpenMainWindow = false;
-                if (VpnHoodWinApp.Instance.ShowWindowAfterStart)
-                    VpnHoodWinApp.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
+                VpnHoodAppWin.Instance.EnableOpenMainWindow = false;
+                if (VpnHoodAppWin.Instance.ShowWindowAfterStart)
+                    VpnHoodAppWin.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             }
         }
     }

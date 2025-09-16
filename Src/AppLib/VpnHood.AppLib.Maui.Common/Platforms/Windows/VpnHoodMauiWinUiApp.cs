@@ -21,18 +21,17 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
     public void Init(AppOptions appOptions)
     {
         // initialize Win App
-        VpnHoodWinApp.Init(appId: appOptions.AppId, storageFolder: appOptions.StorageFolderPath, 
-            args: Environment.GetCommandLineArgs());
+        VpnHoodAppWin.Init(appOptions, args: Environment.GetCommandLineArgs());
 
         // initialize VpnHoodApp
         var device = new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode);
         VpnHoodApp.Init(device, appOptions);
         VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
 
-        VpnHoodWinApp.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
-        VpnHoodWinApp.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
-        VpnHoodWinApp.Instance.ExitRequested += ExitRequested;
-        VpnHoodWinApp.Instance.Start();
+        VpnHoodAppWin.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
+        VpnHoodAppWin.Instance.OpenMainWindowInBrowserRequested += OpenMainWindowInBrowserRequested;
+        VpnHoodAppWin.Instance.ExitRequested += ExitRequested;
+        VpnHoodAppWin.Instance.Start();
         UpdateIcon();
 
         WindowHandler.Mapper.AppendToMapping(nameof(IWindow), MappingMethod);
@@ -74,7 +73,7 @@ internal class VpnHoodMauiWinUiApp : IVpnHoodMauiApp
 
     protected virtual void ExitRequested(object? sender, EventArgs e)
     {
-        VpnHoodWinApp.Instance.Dispose();
+        VpnHoodAppWin.Instance.Dispose();
         MauiWinUIApplication.Current.Exit();
     }
 

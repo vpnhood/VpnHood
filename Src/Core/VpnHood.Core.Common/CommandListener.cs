@@ -13,7 +13,7 @@ public class CommandListener(string commandFilePath) : IDisposable
     public void Start()
     {
         if (IsStarted)
-            throw new Exception($"{nameof(CommandListener)} is already started!");
+            throw new Exception("CommandListener is already started!");
 
         try {
             // delete old command
@@ -38,8 +38,7 @@ public class CommandListener(string commandFilePath) : IDisposable
             };
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(
-                $"Could not start CommandListener! Message: {ex.Message}");
+            VhLogger.Instance.LogWarning(ex, "Could not start CommandListener! ");
         }
     }
 

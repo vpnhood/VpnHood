@@ -26,14 +26,10 @@ namespace VpnHood.App.Connect.Droid.Google;
     AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppConfigs.AdMobApplicationId)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : VpnHoodAndroidApp(javaReference, transfer)
+    : Application(javaReference, transfer)
 {
-    protected override AppOptions CreateAppOptions()
+    private AppOptions CreateAppOptions()
     {
-        // lets init firebase analytics as single tone as soon as possible
-        if (!FirebaseAnalyticsTracker.IsInit && !AppConfigs.IsDebug)
-            FirebaseAnalyticsTracker.Init();
-
         // load app configs
         var appConfigs = AppConfigs.Load();
         var storageFolderPath = AppOptions.BuildStorageFolderPath("VpnHoodConnect");
@@ -68,6 +64,23 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 UpdaterProvider = new GooglePlayAppUpdaterProvider()
             },
         };
+    }
+
+    public override void OnCreate()
+    {
+        // lets init firebase analytics as single tone as soon as possible
+        if (!FirebaseAnalyticsTracker.IsInit && !AppConfigs.IsDebug)
+            FirebaseAnalyticsTracker.Init();
+
+        // init app
+        VpnHoodAndroidApp.Init(CreateAppOptions);
+        base.OnCreate();
+    }
+
+    public override void OnTerminate()
+    {
+        if (VpnHoodAndroidApp.IsInit)
+            VpnHoodAndroidApp.Instance.Dispose();
     }
 
     private static AppAdProviderItem[] CreateAppAdProviderItems(AppConfigs appConfigs)
@@ -124,9 +137,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 new Uri(appConfigs.StoreBaseUri),
                 appConfigs.StoreAppId, authenticationExternalProvider,
                 ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
+
             var googlePlayBillingProvider = TryCreateBillingClient(authenticationProvider);
             var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider,
                 appConfigs.StoreAppId);
+
             return accountProvider;
         }
         catch (Exception ex) {

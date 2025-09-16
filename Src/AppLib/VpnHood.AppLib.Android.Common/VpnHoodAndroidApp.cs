@@ -1,34 +1,32 @@
-﻿using Android.Runtime;
-using VpnHood.Core.Client.Device.Droid;
+﻿using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.Utils;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Droid.Common;
 
-public abstract class VpnHoodAndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
-    : Application(javaReference, transfer)
+public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
 {
-    protected abstract AppOptions CreateAppOptions();
-    
-    public override void OnCreate()
+    public static VpnHoodAndroidApp Init(Func<AppOptions> optionsFactory)
     {
-        base.OnCreate();
+        // do not init again or in the vpn service process
+        if (VpnHoodApp.IsInit || AndroidDevice.IsVpnServiceProcess) 
+            return new VpnHoodAndroidApp();
 
         //app init
-        if (!VpnHoodApp.IsInit && !AndroidDevice.IsVpnServiceProcess) {
-            var options = CreateAppOptions();
-            options.UiProvider ??= new AndroidUiProvider();
-            options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
-            options.DeviceId ??= AndroidUtil.GetDeviceId(this); //this will be hashed using AppId
+        var options = optionsFactory();
+        options.UiProvider ??= new AndroidUiProvider();
+        options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
+        options.DeviceId ??= AndroidUtil.GetDeviceId(Application.Context); //this will be hashed using AppId
 
-            var vpnHoodDevice = AndroidDevice.Create();
-            VpnHoodApp.Init(vpnHoodDevice, options);
-        }
+        var vpnHoodDevice = AndroidDevice.Create();
+        VpnHoodApp.Init(vpnHoodDevice, options);
+        return new VpnHoodAndroidApp();
     }
 
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            if (VpnHoodApp.IsInit) 
+            if (VpnHoodApp.IsInit)
                 VpnHoodApp.Instance.Dispose();
         }
 

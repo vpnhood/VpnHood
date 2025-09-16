@@ -1,9 +1,11 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Drawing;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Services.Ads;
+using VpnHood.Core.Client.Device.Win;
 using VpnHood.Core.Common;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -11,7 +13,7 @@ using WinNative;
 
 namespace VpnHood.AppLib.Win.Common;
 
-public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
+public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
 {
     private readonly string _appId;
     private const string FileNameAppCommand = "appcommand";
@@ -38,25 +40,31 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
     [DllImport("DwmApi")]
     private static extern int DwmSetWindowAttribute(IntPtr hWnd, int attr, int[] attrValue, int attrSize);
 
-
-    private VpnHoodWinApp(string appId, string storageFolder)
+    private VpnHoodAppWin(string appId, string storageFolder)
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
         _appId = appId;
         _storageFolder = storageFolder;
-        _appIcon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly()?.Location ??
-                                              throw new Exception("Could not get the location of Assembly."))
-                   ?? throw new Exception("Could not get the icon of the executing assembly.");
+
+        // get app icon
+        var assemblyLocation = Assembly.GetEntryAssembly()?.Location ?? throw new Exception("Could not get the location of Assembly.");
+        _appIcon = Icon.ExtractAssociatedIcon(assemblyLocation) ?? 
+                   throw new Exception("Could not get the icon of the executing assembly.");
 
         //create command Listener
-        _commandListener = new CommandListener(Path.Combine(_storageFolder, FileNameAppCommand));
+        _commandListener = new CommandListener(Path.Combine(storageFolder, FileNameAppCommand));
         _commandListener.CommandReceived += CommandListener_CommandReceived;
     }
 
-    public static VpnHoodWinApp Init(string appId, string storageFolder, string[] args)
+    public static VpnHoodAppWin Init(AppOptions appOptions, string[] args)
     {
-        var ret = new VpnHoodWinApp(appId, storageFolder);
+        // create app
+        var ret = new VpnHoodAppWin(appOptions.AppId, appOptions.StorageFolderPath);
         ret.PreStart(args);
+
+        // initialize VpnHoodApp
+        var device = new WinDevice(appOptions.StorageFolderPath, appOptions.IsDebugMode);
+        VpnHoodApp.Init(device, appOptions);
         return ret;
     }
 
@@ -94,8 +102,7 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
     private void PreStart(string[] args)
     {
         ConnectAfterStart = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
-        ShowWindowAfterStart = !ConnectAfterStart &&
-                               !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
+        ShowWindowAfterStart = !ConnectAfterStart && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
 
         // Make single instance
         // if you like to wait a few seconds in case that the instance is just shutting down
@@ -324,6 +331,12 @@ public class VpnHoodWinApp : Singleton<VpnHoodWinApp>, IDisposable
             _commandListener.Dispose();
             _instanceMutex?.Dispose();
             _sysTray?.Dispose();
+
+            // disconnect and dispose app
+            if (VpnHoodApp.IsInit) {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                VpnHoodApp.Instance.DisposeAsync().AsTask().Wait(cts.Token);
+            }
         }
     }
 }

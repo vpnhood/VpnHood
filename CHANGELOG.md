@@ -1,3 +1,7 @@
+# Upcoming
+* Fix: Linux: Client stops after 60 minutes
+* Fix: Linux: Prevent multiple instances
+
 # v7.3.752
 * Fix: Unable to close the Quick Launch pop-up on Android
 * Fix: False positive ad blocker detection on some devices

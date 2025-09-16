@@ -14,15 +14,13 @@ namespace VpnHood.App.Client.Droid.Web;
     SupportsRtl = AndroidAppConstants.SupportsRtl,
     AllowBackup = AndroidAppConstants.AllowBackup)]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : VpnHoodAndroidApp(javaReference, transfer)
+    : Application(javaReference, transfer)
 {
-    protected override AppOptions CreateAppOptions()
+    private AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
-
         var resources = ClientAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
-
         return new AppOptions(PackageName!, "VpnHood", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             Resources = resources,
@@ -37,5 +35,17 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 PromptDelay = TimeSpan.FromDays(1)
             },
         };
+    }
+
+    public override void OnCreate()
+    {
+        VpnHoodAndroidApp.Init(CreateAppOptions);
+        base.OnCreate();
+    }
+
+    public override void OnTerminate()
+    {
+        if (VpnHoodAndroidApp.IsInit)
+            VpnHoodAndroidApp.Instance.Dispose();
     }
 }

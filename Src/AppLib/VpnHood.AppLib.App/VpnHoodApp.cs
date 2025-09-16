@@ -1346,7 +1346,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async ValueTask DisposeAsync()
     {
         if (_disconnectOnDispose && ConnectionState.CanDisconnect())
-            await Disconnect().Vhc();
+            await TryDisconnect().Vhc();
 
         Dispose();
     }

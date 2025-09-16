@@ -1,14 +1,10 @@
 ﻿using Android.Runtime;
-using Com.Appsflyer;
-using Microsoft.Extensions.Logging;
-using System.Globalization;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Device.Droid.Utils;
-using VpnHood.Core.Toolkit.Logging;
 
 
 namespace VpnHood.App.Connect.Droid.Web;
@@ -22,16 +18,10 @@ namespace VpnHood.App.Connect.Droid.Web;
     AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("CHANNEL", Value = "GitHub")]
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : VpnHoodAndroidApp(javaReference, transfer)
+    : Application(javaReference, transfer)
 {
-    protected override AppOptions CreateAppOptions()
+    private AppOptions CreateAppOptions(AppConfigs appConfigs)
     {
-        var appConfigs = AppConfigs.Load();
-
-        // initialize the app flyer
-        if (!string.IsNullOrEmpty(appConfigs.AppsFlyerDevKey))
-            InitAppsFlyer(appConfigs.AppsFlyerDevKey, useRegionPolicy: !AppConfigs.IsDebugMode);
-
         // load app settings and resources
         var resources = ConnectAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
@@ -55,24 +45,23 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         };
     }
 
-    private void InitAppsFlyer(string appsFlyerDevKey, bool useRegionPolicy)
+    public override void OnCreate()
     {
-        try {
-            // Start AppsFlyer if the user's country is China
-            if (useRegionPolicy && !RegionInfo.CurrentRegion.Name.Equals("CN", StringComparison.OrdinalIgnoreCase)) {
-                VhLogger.Instance.LogInformation("Bypassing AppsFlyer due to regional policy. {DeviceRegion}", RegionInfo.CurrentRegion.Name);
-                return;
-            }
+        var appConfigs = AppConfigs.Load();
 
-            VhLogger.Instance.LogInformation("Initialize AppsFlyer. DeviceRegion: {DeviceRegion}", RegionInfo.CurrentRegion.Name);
-            AppsFlyerLib.Instance.SetDebugLog(AppConfigs.IsDebugMode);
-            AppsFlyerLib.Instance.SetDisableAdvertisingIdentifiers(true);
-            AppsFlyerLib.Instance.Init(appsFlyerDevKey, null, this);
-            AppsFlyerLib.Instance.Start(this);
+        // initialize the app flyer
+        if (!string.IsNullOrEmpty(appConfigs.AppsFlyerDevKey))
+            AppFlyerUtils.InitAppsFlyer(this, appConfigs.AppsFlyerDevKey, useRegionPolicy: !AppConfigs.IsDebugMode);
 
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "AppsFlyer initialization failed.");
-        }
+        // initialize the app
+        VpnHoodAndroidApp.Init(() => CreateAppOptions(appConfigs));
+
+        base.OnCreate();
+    }
+
+    public override void OnTerminate()
+    {
+        if (VpnHoodAndroidApp.IsInit)
+            VpnHoodAndroidApp.Instance.Dispose();
     }
 }

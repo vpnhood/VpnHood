@@ -1,22 +1,23 @@
-﻿using System.IO.Compression;
+﻿using EmbedIO;
+using EmbedIO.Files;
+using EmbedIO.WebApi;
+using Microsoft.Extensions.Logging;
+using Swan.Logging;
+using System.IO.Compression;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using EmbedIO;
-using EmbedIO.Files;
-using EmbedIO.WebApi;
-using Swan.Logging;
 using VpnHood.AppLib.WebServer.Controllers;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.WebServer;
 
 public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 {
-    private readonly Stream _spaZipStream;
     private string? _indexHtml;
     private EmbedIO.WebServer? _server;
     private string? _spaHash;
@@ -24,7 +25,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private VpnHoodAppWebServer(WebServerOptions options)
     {
-        _spaZipStream = options.SpaZipStream;
         Url = options.Url ??
               new Uri($"http://{VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, options.DefaultPort ?? 9090)}");
         _listenOnAllIps = options.ListenOnAllIps;
@@ -55,15 +55,13 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         if (_server != null)
             return;
 
+        // create the web server
         _server = CreateWebServer();
-        try {
-            Logger.UnregisterLogger<ConsoleLogger>();
-        }
-        catch {
-            // ignored
-        }
+        VhUtils.TryInvoke("Unregister EmbedIO Logger", Logger.UnregisterLogger<ConsoleLogger>);
 
+        // start the server
         _server.RunAsync();
+        VhLogger.Instance.LogDebug("Web server started. Navigate to {0}", Url);
     }
 
     public void Stop()
@@ -79,10 +77,11 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         if (_spaPath != null)
             return _spaPath; // do not extract in same instance
 
-        using var memZipStream = new MemoryStream();
-        _spaZipStream.CopyTo(memZipStream);
+        if (VpnHoodApp.Instance.Resources.SpaZipData is null)
+            throw new InvalidOperationException("SpaZipData resource is required to run web server for SPA.");
 
         // extract the resource
+        using var memZipStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
         memZipStream.Seek(0, SeekOrigin.Begin);
         using var md5 = MD5.Create();
         var hash = md5.ComputeHash(memZipStream);
@@ -104,7 +103,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             zipArchive.ExtractToDirectory(spaPath, true);
         }
 
-        _spaZipStream.Dispose();
         _spaPath = spaPath;
         return spaPath;
     }
@@ -175,8 +173,11 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     // manage SPA fallback
     private Task HandleMappingFailed(IHttpContext context, MappedResourceInfo? info)
     {
-        if (context.IsHandled) return Task.CompletedTask;
-        if (_indexHtml == null) throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
+        if (context.IsHandled) 
+            return Task.CompletedTask;
+
+        if (_indexHtml == null) 
+            throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
 
         if (string.IsNullOrEmpty(Path.GetExtension(context.Request.Url.LocalPath)))
             return context.SendStringAsync(_indexHtml, "text/html", Encoding.UTF8);

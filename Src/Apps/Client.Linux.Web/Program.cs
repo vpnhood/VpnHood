@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.WebServer;
-using VpnHood.Core.Proxies;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Client.Linux.Web;

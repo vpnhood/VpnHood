@@ -27,7 +27,7 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
             appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
 
             // initialize VpnHoodWinApp
-            VpnHoodAppWin.Init(appOptions, args: args ?? []);
+            VpnHoodAppWin.Init(appOptions, args: args);
 
             // register local domain & initialize SPA
             var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)

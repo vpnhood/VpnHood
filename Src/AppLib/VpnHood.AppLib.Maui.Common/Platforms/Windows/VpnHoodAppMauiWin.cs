@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Windows.UI.Notifications;
-using Microsoft.Maui.Controls.PlatformConfiguration;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;
 using Microsoft.UI.Windowing;
@@ -81,8 +80,9 @@ internal class VpnHoodAppMauiWin : Singleton<VpnHoodAppMauiWin>, IVpnHoodAppMaui
 
     protected virtual void ExitRequested(object? sender, EventArgs e)
     {
-        VpnHoodAppWin.Instance.Dispose();
         MauiWinUIApplication.Current.Exit();
+        if (VpnHoodAppWin.IsInit)
+            VpnHoodAppWin.Instance.Dispose();
     }
 
     protected virtual void ConnectionStateChanged(object? sender, EventArgs e)

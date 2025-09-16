@@ -332,10 +332,8 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
             _sysTray?.Dispose();
 
             // disconnect and dispose app
-            if (VpnHoodApp.IsInit) {
-                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                VpnHoodApp.Instance.DisposeAsync().AsTask().Wait(cts.Token);
-            }
+            if (VpnHoodApp.IsInit) 
+                VpnHoodApp.Instance.Dispose();
         }
     }
 }

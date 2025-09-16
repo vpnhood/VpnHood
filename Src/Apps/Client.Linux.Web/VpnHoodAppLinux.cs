@@ -102,9 +102,8 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             if (VpnHoodAppWebServer.IsInit) VpnHoodAppWebServer.Instance.Dispose();
-            if (VpnHoodApp.IsInit) VpnHoodApp.Instance.DisposeAsync().AsTask().Wait(cts.Token);
+            if (VpnHoodApp.IsInit) VpnHoodApp.Instance.Dispose();
         }
 
         base.Dispose(disposing);

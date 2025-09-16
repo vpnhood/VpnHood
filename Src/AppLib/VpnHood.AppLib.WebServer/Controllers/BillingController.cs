@@ -1,32 +1,26 @@
-﻿using EmbedIO;
-using EmbedIO.Routing;
-using EmbedIO.WebApi;
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class BillingController : WebApiController, IBillingController
+internal class BillingController : IBillingController
 {
-    private static AppBillingService BillingService => VpnHoodApp.Instance.Services.AccountService?.BillingService
-                                                       ?? throw new Exception(
-                                                           "Billing service is not available at this moment.");
+    private static AppBillingService BillingService => 
+        VpnHoodApp.Instance.Services.AccountService?.BillingService ?? 
+        throw new Exception("Billing service is not available at this moment.");
 
-    [Route(HttpVerbs.Get, "/subscription-plans")]
     public Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
         return BillingService.GetSubscriptionPlans();
     }
 
-    [Route(HttpVerbs.Post, "/purchase")]
-    public Task<string> Purchase([QueryField] string planId)
+    public Task<string> Purchase(string planId)
     {
         return BillingService.Purchase(AppUiContext.RequiredContext, planId);
     }
 
-    [Route(HttpVerbs.Get, "/purchase-options")]
     public Task<AppPurchaseOptions> GetPurchaseOptions()
     {
         return VpnHoodApp.Instance.GetPurchaseOptions();

@@ -1,45 +1,36 @@
-﻿using EmbedIO;
-using EmbedIO.Routing;
-using EmbedIO.WebApi;
-using VpnHood.AppLib.ClientProfiles;
+﻿using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class ClientProfileController : WebApiController, IClientProfileController
+internal class ClientProfileController : IClientProfileController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
 
-    [Route(HttpVerbs.Put, "/access-keys")]
-    public Task<ClientProfileInfo> AddByAccessKey([QueryField] string accessKey)
+    public Task<ClientProfileInfo> AddByAccessKey(string accessKey)
     {
         var clientProfile = App.ClientProfileService.ImportAccessKey(accessKey);
         return Task.FromResult(clientProfile.ToInfo());
     }
 
-    [Route(HttpVerbs.Get, "/{clientProfileId}")]
     public Task<ClientProfileInfo> Get(Guid clientProfileId)
     {
         var clientProfile = App.ClientProfileService.Get(clientProfileId);
         return Task.FromResult(clientProfile.ToInfo());
     }
 
-    [Route(HttpVerbs.Patch, "/{clientProfileId}")]
-    public async Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
-        _ = updateParams;
-        updateParams = await HttpContext.GetRequestDataAsync<ClientProfileUpdateParams>().Vhc();
         var clientProfile = App.ClientProfileService.Update(clientProfileId, updateParams);
-        return clientProfile.ToInfo();
+        return Task.FromResult(clientProfile.ToInfo());
     }
 
-    [Route(HttpVerbs.Delete, "/{clientProfileId}")]
-    public async Task Delete(Guid clientProfileId)
+    public Task Delete(Guid clientProfileId)
     {
         if (clientProfileId == App.CurrentClientProfileInfo?.ClientProfileId)
-            await App.Disconnect().Vhc();
+            return App.Disconnect();
 
         App.ClientProfileService.Delete(clientProfileId);
+        return Task.CompletedTask;
     }
 }

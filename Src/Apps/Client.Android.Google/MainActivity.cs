@@ -33,7 +33,6 @@ public class MainActivity : AndroidAppMainActivity
     {
         return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions {
             SpaDefaultPort = AppConfigs.Instance.SpaDefaultPort,
-            SpaListenToAllIps = AppConfigs.Instance.SpaListenToAllIps,
             AccessKeySchemes = [AccessKeyScheme1, AccessKeyScheme2],
             AccessKeyMimes = [AccessKeyMime1, AccessKeyMime2, AccessKeyMime3]
         });

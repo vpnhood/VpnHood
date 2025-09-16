@@ -32,6 +32,7 @@ public class UserSettings
     public EndPointStrategy EndPointStrategy { get; set; }
     public DnsMode DnsMode { get; set; }
     public ProxySettings Proxy { get; set; } = new();
+    public bool AllowRemoteAccess { get; set; }
 
     // for compatibility convert old nullable to empty array
     private IPAddress[] _dnsServers = [];

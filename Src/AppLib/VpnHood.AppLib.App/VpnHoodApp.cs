@@ -269,6 +269,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UserSettings.DnsMode = DnsMode.Default;
             }
 
+            // todo: temporary override remote access
+            UserSettings.AllowRemoteAccess =
+                HasDebugCommand(DebugCommands.RemoteAccess) || Features.IsDebugMode;
+
             // reconfigure if connected
             var state = State;
             var disconnectRequired = false;
@@ -473,7 +477,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public static void Init(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
-        var settingsService = new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl);
+        var settingsService = new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl, options.IsDebugMode);
         var logService = new LogService(Path.Combine(options.StorageFolderPath, FileNameLog));
         logService.Start(GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
             deleteOldReport: false);

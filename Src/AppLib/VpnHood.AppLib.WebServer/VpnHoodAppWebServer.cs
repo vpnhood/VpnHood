@@ -21,13 +21,22 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private string? _indexHtml;
     private EmbedIO.WebServer? _server;
     private string? _spaHash;
-    private readonly bool _listenOnAllIps;
 
     private VpnHoodAppWebServer(WebServerOptions options)
     {
         Url = options.Url ??
               new Uri($"http://{VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, options.DefaultPort ?? 9090)}");
-        _listenOnAllIps = options.ListenOnAllIps;
+
+        VpnHoodApp.Instance.SettingsService.BeforeSave += SettingsServiceOnBeforeSave;
+    }
+
+    private void SettingsServiceOnBeforeSave(object? sender, EventArgs e)
+    {
+        if (VpnHoodApp.Instance.SettingsService.UserSettings.AllowRemoteAccess !=
+            VpnHoodApp.Instance.SettingsService.OldUserSettings.AllowRemoteAccess) {
+            Stop();
+            Start();
+        }
     }
 
     public Uri Url { get; }
@@ -113,7 +122,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var spaPath = GetSpaPath();
         _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
         var urlPrefixes = new List<string> { Url.AbsoluteUri };
-        if (_listenOnAllIps)
+        if (VpnHoodApp.Instance.UserSettings.AllowRemoteAccess)
             urlPrefixes.AddRange(GetAllPublicIp4().Select(x => $"http://{x}:{Url.Port}"));
 
         // cors
@@ -152,7 +161,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private static async Task ResponseSerializerCallback(IHttpContext context, object? data)
     {
-        if (context.IsHandled) 
+        if (context.IsHandled)
             return;
 
         if (data is null) {
@@ -173,10 +182,10 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     // manage SPA fallback
     private Task HandleMappingFailed(IHttpContext context, MappedResourceInfo? info)
     {
-        if (context.IsHandled) 
+        if (context.IsHandled)
             return Task.CompletedTask;
 
-        if (_indexHtml == null) 
+        if (_indexHtml == null)
             throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
 
         if (string.IsNullOrEmpty(Path.GetExtension(context.Request.Url.LocalPath)))

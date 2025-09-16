@@ -20,11 +20,10 @@ public class AppSettingsService
     public RemoteSettings? RemoteSettings { get; private set; }
     public IpFilterSettings IpFilterSettings { get; }
 
-    public AppSettingsService(string storagePath, Uri? remoteSettingsUrl)
+    public AppSettingsService(string storagePath, Uri? remoteSettingsUrl, bool debugMode)
     {
         _storagePath = storagePath;
-        Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? new AppSettings();
-        Settings.AppSettingsService = this;
+        Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? GetDefaultSettings(debugMode);
         IpFilterSettings = new IpFilterSettings(Path.Combine(storagePath, "ip_filters"));
         OldUserSettings = Settings.UserSettings;
 
@@ -33,6 +32,15 @@ public class AppSettingsService
             RemoteSettings = JsonUtils.TryDeserializeFile<RemoteSettings>(RemoteSettingsFilePath);
             Task.Run(() => TryUpdateRemoteSettings(remoteSettingsUrl));
         }
+    }
+
+    private static AppSettings GetDefaultSettings(bool debugMode)
+    {
+        return new AppSettings {
+            UserSettings = {
+                AllowRemoteAccess = debugMode // the default value of AllowRemoteAccess is true in debug mode 
+            }
+        };
     }
 
     public void Save()

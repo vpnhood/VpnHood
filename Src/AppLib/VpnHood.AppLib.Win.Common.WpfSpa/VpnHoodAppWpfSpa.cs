@@ -36,7 +36,6 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
 
             VpnHoodAppWebServer.Init(new WebServerOptions {
                 DefaultPort = spaDefaultPort,
-                ListenOnAllIps = spaListenToAllIps,
                 Url = localSpaUrl
             });
 

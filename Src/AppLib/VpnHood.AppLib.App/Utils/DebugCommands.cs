@@ -11,6 +11,7 @@ public static class DebugCommands
     public const string NoTcpReuse = "/no-tcp-reuse";
     public const string WinDivert = "/windivert";
     public const string UserReview = "/user-review";
+    public const string RemoteAccess = "/remote-access";
 
     public static string[] All => [
         CaptureContext,
@@ -21,6 +22,7 @@ public static class DebugCommands
         NoTcpReuse,
         NullCapture,
         UserReview,
-        WinDivert
+        WinDivert,
+        RemoteAccess
     ];
 }

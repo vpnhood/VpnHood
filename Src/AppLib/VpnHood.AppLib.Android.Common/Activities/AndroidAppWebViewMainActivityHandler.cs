@@ -37,8 +37,7 @@ public class AndroidAppWebViewMainActivityHandler(
         try {
             if (!VpnHoodAppWebServer.IsInit) {
                 VpnHoodAppWebServer.Init(new WebServerOptions {
-                    DefaultPort = options.SpaDefaultPort,
-                    ListenOnAllIps = options.SpaListenToAllIps
+                    DefaultPort = options.SpaDefaultPort
                 });
             }
         }

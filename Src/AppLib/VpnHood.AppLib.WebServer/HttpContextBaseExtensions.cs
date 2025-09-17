@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using WatsonWebserver.Core;
 
@@ -8,38 +9,6 @@ namespace VpnHood.AppLib.WebServer;
 internal static class HttpContextBaseExtensions
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-
-    // Query parameter extensions
-    public static string? GetQueryParameterString(this HttpContextBase ctx, string key, string? defaultValue = null)
-    {
-        return ctx.Request.QuerystringExists(key) ? ctx.Request.RetrieveQueryValue(key) : defaultValue;
-    }
-
-    public static int? GetQueryParameterInt(this HttpContextBase ctx, string key, int? defaultValue = null)
-    {
-        var valueString = ctx.GetQueryParameterString(key);
-        return string.IsNullOrWhiteSpace(valueString) ? defaultValue : int.Parse(valueString);
-    }
-
-    public static Guid GetQueryParameterGuid(this HttpContextBase ctx, string key)
-    {
-        return ctx.GetQueryParameterGuid(key, null)
-               ?? throw new ArgumentException($"Query parameter '{key}' is required.");
-    }
-
-    public static Guid? GetQueryParameterGuid(this HttpContextBase ctx, string key, Guid? defaultValue)
-    {
-        var valueString = ctx.GetQueryParameterString(key);
-        return string.IsNullOrWhiteSpace(valueString) ? defaultValue : Guid.Parse(valueString);
-    }
-
-    public static T GetQueryParameterEnum<T>(this HttpContextBase ctx, string key, T defaultValue = default) where T : struct
-    {
-        var valueString = ctx.GetQueryParameterString(key);
-        return string.IsNullOrWhiteSpace(valueString)
-            ? defaultValue
-            : Enum.Parse<T>(valueString, true);
-    }
 
     public static T? GetQueryParameter<T>(this HttpContextBase ctx, string key, T? defaultValue)
     {
@@ -94,7 +63,7 @@ internal static class HttpContextBaseExtensions
             return (T)(object)Guid.Parse(value);
 
         if (underlyingType.IsEnum)
-            return (T)(object)Enum.Parse(underlyingType, value, true);
+            return (T)Enum.Parse(underlyingType, value, true);
 
         if (underlyingType == typeof(bool))
             return (T)(object)bool.Parse(value);
@@ -111,9 +80,15 @@ internal static class HttpContextBaseExtensions
         // Use TypeConverter for complex conversions
         var converter = TypeDescriptor.GetConverter(underlyingType);
         if (converter.CanConvertFrom(typeof(string)))
-            return (T?)(object?)converter.ConvertFromString(value);
+            return (T?)converter.ConvertFromString(value);
 
-        return (T)(object)(Convert.ChangeType(value, underlyingType));
+        return (T)Convert.ChangeType(value, underlyingType);
+    }
+
+    public static async Task SendNoContent(this HttpContextBase ctx)
+    {
+        ctx.Response.StatusCode = (int)HttpStatusCode.NoContent;
+        await ctx.Response.Send();
     }
 
     public static async Task SendJson(this HttpContextBase ctx, object? data, int statusCode = 200)
@@ -138,7 +113,7 @@ internal static class HttpContextBaseExtensions
                 throw new InvalidOperationException($"Request body is empty for {typeof(T).Name}");
 
             // Determine encoding from Content-Type if available
-            var encoding = System.Text.Encoding.UTF8;
+            var encoding = Encoding.UTF8;
             var ct = ctx.Request.ContentType;
             if (!string.IsNullOrWhiteSpace(ct))
                 try {
@@ -146,7 +121,7 @@ internal static class HttpContextBaseExtensions
                     var charsetPart = parts.FirstOrDefault(p => p.StartsWith("charset=", StringComparison.OrdinalIgnoreCase));
                     if (charsetPart != null) {
                         var charset = charsetPart["charset=".Length..];
-                        encoding = System.Text.Encoding.GetEncoding(charset);
+                        encoding = Encoding.GetEncoding(charset);
                     }
                 }
                 catch {

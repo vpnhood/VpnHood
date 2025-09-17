@@ -2,14 +2,49 @@
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device.UiContexts;
+using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class AccountController : IAccountController
+internal class AccountController : ControllerBase, IAccountController
 {
     private static AppAccountService AccountService =>
         VpnHoodApp.Instance.Services.AccountService ??
         throw new Exception("Account service is not available at this moment.");
+
+    public override void AddRoutes(IRouteMapper mapper)
+    {
+        mapper.AddStatic(HttpMethod.GET, "/api/account", async ctx => {
+            var res = await Get();
+            await SendJson(ctx, res);
+        });
+
+        mapper.AddStatic(HttpMethod.POST, "/api/account/refresh", async ctx => {
+            await Refresh();
+            await SendJson(ctx, new { ok = true });
+        });
+
+        mapper.AddStatic(HttpMethod.GET, "/api/account/is-signin-with-google-supported", async ctx => {
+            var res = IsSigninWithGoogleSupported();
+            await SendJson(ctx, res);
+        });
+
+        mapper.AddStatic(HttpMethod.POST, "/api/account/signin-with-google", async ctx => {
+            await SignInWithGoogle();
+            await SendJson(ctx, new { ok = true });
+        });
+
+        mapper.AddStatic(HttpMethod.POST, "/api/account/sign-out", async ctx => {
+            await SignOut();
+            await SendJson(ctx, new { ok = true });
+        });
+
+        mapper.AddParam(HttpMethod.GET, "/api/account/subscriptions/{subId}/access-keys", async ctx => {
+            var subId = ctx.Request.Url.Parameters["subId"] ?? string.Empty;
+            var res = await ListAccessKeys(subId);
+            await SendJson(ctx, res);
+        });
+    }
 
     public Task<AppAccount?> Get()
     {

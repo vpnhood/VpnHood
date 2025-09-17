@@ -4,7 +4,6 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -128,8 +127,10 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var settings = new WebserverSettings(Url.Host, Url.Port);
         var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath));
 
+        // Initialize API routes through controllers
         _ = new WatsonApiRouteMapper(server);
 
+        // Add static routes for SPA
         server.Routes.PreAuthentication.Static.Add(HttpMethod.GET, "/", ctx => ServeFile(ctx, Path.Combine(spaPath, "index.html")));
         server.Routes.PreAuthentication.Parameter.Add(HttpMethod.GET, "/static/{path}", ctx => ServeStatic(ctx, spaPath));
         return server;

@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using WatsonWebserver.Core;
 
-namespace VpnHood.AppLib.WebServer;
+namespace VpnHood.AppLib.WebServer.Extensions;
 
 internal static class HttpContextBaseExtensions
 {
@@ -13,7 +13,7 @@ internal static class HttpContextBaseExtensions
     public static T? GetQueryParameter<T>(this HttpContextBase ctx, string key, T? defaultValue)
     {
         return ctx.Request.QuerystringExists(key)
-            ? GetQueryParameter<T>(ctx, key)
+            ? ctx.GetQueryParameter<T>(key)
             : defaultValue;
     }
 
@@ -37,7 +37,7 @@ internal static class HttpContextBaseExtensions
         var value = ctx.Request.Url.Parameters.Get(key);
         return value is null 
             ? defaultValue 
-            : GetRouteParameter<T>(ctx, key);
+            : ctx.GetRouteParameter<T>(key);
     }
 
     public static T GetRouteParameter<T>(this HttpContextBase ctx, string key)

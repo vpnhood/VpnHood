@@ -1,9 +1,10 @@
-﻿using System.IO.Compression;
+﻿using Microsoft.Extensions.Logging;
+using System.IO.Compression;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
-using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.WebServer.Controllers;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -31,7 +32,9 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private void SettingsServiceOnBeforeSave(object? sender, EventArgs e)
     {
-        Restart();
+        if (VpnHoodApp.Instance.SettingsService.OldUserSettings.AllowRemoteAccess!= 
+            VpnHoodApp.Instance.SettingsService.UserSettings.AllowRemoteAccess)
+            Restart();
     }
 
     public Uri Url { get; }
@@ -128,7 +131,14 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath));
 
         // Initialize API routes through controllers - CORS is handled centrally in the route mapper
-        _ = new WatsonApiRouteMapper(server);
+        var mapper = new WatsonApiRouteMapper(server);
+        mapper
+            .AddController(new AppController())
+            .AddController(new ClientProfileController())
+            .AddController(new AccountController())
+            .AddController(new BillingController())
+            .AddController(new IntentsController());
+
 
         // Add static routes for SPA with centralized CORS
         server.Routes.PreAuthentication.Static.Add(HttpMethod.GET, "/", ctx => {

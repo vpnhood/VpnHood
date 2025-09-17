@@ -1,7 +1,10 @@
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer.Controllers;
+using VpnHood.AppLib.WebServer.Extensions;
+using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
@@ -9,18 +12,12 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer;
 
-internal class WatsonApiRouteMapper : IRouteMapper
+internal class WatsonApiRouteMapper(WebserverLite server) 
+    : IRouteMapper
 {
-    private readonly WebserverLite _server;
     private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    public WatsonApiRouteMapper(WebserverLite server)
-    {
-        _server = server;
-        MapRoutes();
-    }
-
-    private Task Options(HttpContextBase ctx)
+    private static Task Options(HttpContextBase ctx)
     {
         CorsMiddleware.AddCors(ctx);
         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -29,7 +26,7 @@ internal class WatsonApiRouteMapper : IRouteMapper
 
     public void AddStatic(HttpMethod method, string path, Func<HttpContextBase, Task> handler)
     {
-        _server.Routes.PreAuthentication.Static.Add(method, path, async ctx => {
+        server.Routes.PreAuthentication.Static.Add(method, path, async ctx => {
             try {
                 // Add CORS to all requests centrally
                 CorsMiddleware.AddCors(ctx);
@@ -43,7 +40,7 @@ internal class WatsonApiRouteMapper : IRouteMapper
 
     public void AddParam(HttpMethod method, string path, Func<HttpContextBase, Task> handler)
     {
-        _server.Routes.PreAuthentication.Parameter.Add(method, path, async ctx => {
+        server.Routes.PreAuthentication.Parameter.Add(method, path, async ctx => {
             try {
                 // Add CORS to all requests centrally
                 CorsMiddleware.AddCors(ctx);
@@ -53,51 +50,32 @@ internal class WatsonApiRouteMapper : IRouteMapper
                 await HandleException(ctx, ex);
             }
         });
-        _server.Routes.PreAuthentication.Parameter.Add(HttpMethod.OPTIONS, path, Options);
+        server.Routes.PreAuthentication.Parameter.Add(HttpMethod.OPTIONS, path, Options);
     }
 
-    private async Task HandleException(HttpContextBase ctx, Exception ex)
+    private static async Task HandleException(HttpContextBase context, Exception ex)
     {
         // Log the exception
         VhLogger.Instance.LogError(ex, "Unhandled exception occurred while processing API request.");
 
         // CORS is already added in the wrapper, no need to add it again
-        ctx.Response.ContentType = "application/json";
 
-        // Handle different exception types
-        if (ex is ArgumentException)
-        {
-            ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-            var badRequestResponse = JsonSerializer.Serialize(new {
-                error = ex.Message,
-                type = ex.GetType().Name
-            }, _jsonOptions);
-            await ctx.Response.Send(badRequestResponse);
-            return;
-        }
+        // set correct https status code depends on exception
+        if (NotExistsException.Is(ex)) context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+        else if (AlreadyExistsException.Is(ex)) context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+        else if (ex is ArgumentException or InvalidOperationException) context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+        else if (ex is UnauthorizedAccessException) context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+        else context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
         // Default to 500 for other exceptions
-        ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-        var errorResponse = JsonSerializer.Serialize(new {
-            error = ex.Message,
-            type = ex.GetType().Name
-        }, _jsonOptions);
-
-        await ctx.Response.Send(errorResponse);
+        context.Response.ContentType = "application/json";
+        var errorResponse = ex.ToApiError();
+        await context.SendJson(errorResponse);
     }
 
-    private void MapRoutes()
+    public WatsonApiRouteMapper AddController(ControllerBase controller)
     {
-        var appController = new AppController();
-        var clientProfileController = new ClientProfileController();
-        var accountController = new AccountController();
-        var billingController = new BillingController();
-        var intentsController = new IntentsController();
-
-        appController.AddRoutes(this);
-        clientProfileController.AddRoutes(this);
-        accountController.AddRoutes(this);
-        billingController.AddRoutes(this);
-        intentsController.AddRoutes(this);
+        controller.AddRoutes(this);
+        return this;
     }
 }

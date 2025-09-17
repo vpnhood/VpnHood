@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.WebServer.Api;
+using VpnHood.AppLib.WebServer.Extensions;
 using VpnHood.Core.Client.Device.UiContexts;
 using WatsonWebserver.Core;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;

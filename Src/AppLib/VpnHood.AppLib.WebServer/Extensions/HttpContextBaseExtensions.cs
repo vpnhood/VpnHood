@@ -91,6 +91,12 @@ internal static class HttpContextBaseExtensions
         await ctx.Response.Send();
     }
 
+    public static Task SendNotFound(HttpContextBase context)
+    {
+        context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+        return context.Response.Send();
+    }
+
     public static async Task SendJson(this HttpContextBase ctx, object? data, int statusCode = 200)
     {
         if (data is null) {

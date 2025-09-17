@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
-using VpnHood.AppLib.WebServer.Controllers;
 using VpnHood.AppLib.WebServer.Extensions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -12,7 +11,7 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer;
 
-internal class WatsonApiRouteMapper(WebserverLite server) 
+internal class ApiRouteMapper(WebserverLite server) 
     : IRouteMapper
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -73,7 +72,7 @@ internal class WatsonApiRouteMapper(WebserverLite server)
         await context.SendJson(errorResponse);
     }
 
-    public WatsonApiRouteMapper AddController(ControllerBase controller)
+    public ApiRouteMapper AddController(ControllerBase controller)
     {
         controller.AddRoutes(this);
         return this;

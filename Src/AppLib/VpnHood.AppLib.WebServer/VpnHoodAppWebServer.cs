@@ -10,7 +10,6 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
-using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer;
 
@@ -19,6 +18,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private string? _indexHtml;
     private WebserverLite? _server;
     private string? _spaHash;
+    public Uri Url { get; }
+    public string SpaHash => _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
 
     private VpnHoodAppWebServer(WebServerOptions options)
     {
@@ -32,15 +33,10 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private void SettingsServiceOnBeforeSave(object? sender, EventArgs e)
     {
-        if (VpnHoodApp.Instance.SettingsService.OldUserSettings.AllowRemoteAccess!= 
+        if (VpnHoodApp.Instance.SettingsService.OldUserSettings.AllowRemoteAccess !=
             VpnHoodApp.Instance.SettingsService.UserSettings.AllowRemoteAccess)
             Restart();
     }
-
-    public Uri Url { get; }
-
-    public string SpaHash =>
-        _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
 
     protected override void Dispose(bool disposing)
     {
@@ -127,11 +123,13 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var spaPath = GetSpaPath();
         _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
 
-        var settings = new WebserverSettings(Url.Host, Url.Port);
+
+        var host = VpnHoodApp.Instance.UserSettings.AllowRemoteAccess ? IPAddress.Any.ToString() : Url.Host;
+        var settings = new WebserverSettings(host, Url.Port);
         var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath));
 
         // Initialize API routes through controllers - CORS is handled centrally in the route mapper
-        var mapper = new WatsonApiRouteMapper(server);
+        var mapper = new ApiRouteMapper(server);
         mapper
             .AddController(new AppController())
             .AddController(new ClientProfileController())
@@ -139,32 +137,10 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             .AddController(new BillingController())
             .AddController(new IntentsController());
 
-
-        // Add static routes for SPA with centralized CORS
-        server.Routes.PreAuthentication.Static.Add(HttpMethod.GET, "/", ctx => {
-            CorsMiddleware.AddCors(ctx);
-            return ServeFile(ctx, Path.Combine(spaPath, "index.html"));
-        });
-        
-        server.Routes.PreAuthentication.Parameter.Add(HttpMethod.GET, "/static/{path}", ctx => {
-            CorsMiddleware.AddCors(ctx);
-            return ServeStatic(ctx, spaPath);
-        });
-        
         return server;
     }
 
-    private Task ServeStatic(HttpContextBase context, string root)
-    {
-        var rel = string.Join('/', context.Request.Url.Elements.Skip(1)); // skip leading 'static'
-        var full = Path.Combine(root, rel);
-        if (!File.Exists(full)) return NotFound(context);
-        var contentType = MimeTypeHelper.GetContentType(full);
-        context.Response.ContentType = contentType;
-        return context.Response.Send(File.ReadAllBytes(full));
-    }
-
-    private Task ServeFile(HttpContextBase context, string fullPath)
+    private static Task ServeFile(HttpContextBase context, string fullPath)
     {
         var contentType = MimeTypeHelper.GetContentType(fullPath);
         context.Response.ContentType = contentType;
@@ -185,25 +161,18 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             return;
         }
 
-        var localPath = context.Request.Url.RawWithoutQuery.TrimStart('/');
-        if (Path.HasExtension(localPath)) {
-            var full = Path.Combine(spaPath, localPath.Replace('/', Path.DirectorySeparatorChar));
-            if (File.Exists(full)) {
-                await ServeFile(context, full);
-                return;
-            }
+        // use LocalPath for security reasons (Url.PathAndQuery can contain double dots)
+        var localPath = context.Request.Url.Uri.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.Combine(spaPath, localPath);
+        if (File.Exists(fullPath)) {
+            await ServeFile(context, fullPath);
+            return;
         }
 
         context.Response.ContentType = "text/html";
         await context.Response.Send(_indexHtml);
     }
-
-    private static Task NotFound(HttpContextBase context)
-    {
-        context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-        return context.Response.Send();
-    }
-
+    
     private static IEnumerable<IPAddress> GetAllPublicIp4()
     {
         var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()

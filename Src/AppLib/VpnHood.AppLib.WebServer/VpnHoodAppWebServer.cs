@@ -123,7 +123,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var spaPath = GetSpaPath();
         _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
 
-
         var host = VpnHoodApp.Instance.UserSettings.AllowRemoteAccess ? IPAddress.Any.ToString() : Url.Host;
         var settings = new WebserverSettings(host, Url.Port);
         var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath));

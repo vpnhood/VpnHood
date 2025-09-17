@@ -4,6 +4,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using VpnHood.AppLib.WebServer.Api;
+using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using WatsonWebserver.Core;
@@ -17,8 +18,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private string? _indexHtml;
     private WebserverLite? _server;
     private string? _spaHash;
-    public Uri Url { get; }
-    public string SpaHash => _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
 
     private VpnHoodAppWebServer(WebServerOptions options)
     {
@@ -32,12 +31,14 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private void SettingsServiceOnBeforeSave(object? sender, EventArgs e)
     {
-        if (VpnHoodApp.Instance.SettingsService.UserSettings.AllowRemoteAccess !=
-            VpnHoodApp.Instance.SettingsService.OldUserSettings.AllowRemoteAccess) {
-            Stop();
-            Start();
-        }
+        //Stop();
+        //Start();
     }
+
+    public Uri Url { get; }
+
+    public string SpaHash =>
+        _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
 
     protected override void Dispose(bool disposing)
     {
@@ -122,7 +123,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var rel = string.Join('/', context.Request.Url.Elements.Skip(1)); // skip leading 'static'
         var full = Path.Combine(root, rel);
         if (!File.Exists(full)) return NotFound(context);
-        var contentType = GetContentType(full);
+        var contentType = MimeTypeHelper.GetContentType(full);
         context.Response.ContentType = contentType;
         return context.Response.Send(File.ReadAllBytes(full));
     }
@@ -130,7 +131,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private Task ServeFile(HttpContextBase context, string fullPath)
     {
         AddCors(context);
-        var contentType = GetContentType(fullPath);
+        var contentType = MimeTypeHelper.GetContentType(fullPath);
         context.Response.ContentType = contentType;
         return context.Response.Send(File.ReadAllBytes(fullPath));
     }
@@ -142,16 +143,19 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
         AddCors(context);
 
-        if (context.Request.Url.RawWithoutQuery.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)) {
+        if (context.Request.Url.RawWithoutQuery.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        {
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
             await context.Response.Send();
             return;
         }
 
         var localPath = context.Request.Url.RawWithoutQuery.TrimStart('/');
-        if (Path.HasExtension(localPath)) {
+        if (Path.HasExtension(localPath))
+        {
             var full = Path.Combine(spaPath, localPath.Replace('/', Path.DirectorySeparatorChar));
-            if (File.Exists(full)) {
+            if (File.Exists(full))
+            {
                 await ServeFile(context, full);
                 return;
             }
@@ -168,23 +172,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         context.Response.Headers.Add("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
         context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
         context.Response.Headers.Add("Access-Control-Allow-Credentials", "true");
-    }
-
-    private static string GetContentType(string path)
-    {
-        var ext = Path.GetExtension(path).ToLowerInvariant();
-        return ext switch {
-            ".html" => "text/html",
-            ".js" => "application/javascript",
-            ".css" => "text/css",
-            ".json" => "application/json",
-            ".png" => "image/png",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".gif" => "image/gif",
-            ".svg" => "image/svg+xml",
-            ".ico" => "image/x-icon",
-            _ => "application/octet-stream"
-        };
     }
 
     private static Task NotFound(HttpContextBase context)

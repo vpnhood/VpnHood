@@ -1,5 +1,3 @@
-using WatsonWebserver.Core;
-
 namespace VpnHood.AppLib.WebServer;
 
 public abstract class ControllerBase

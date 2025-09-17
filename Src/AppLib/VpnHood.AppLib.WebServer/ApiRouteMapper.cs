@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
-using System.Text.Json;
 using VpnHood.AppLib.WebServer.Extensions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -14,8 +13,6 @@ namespace VpnHood.AppLib.WebServer;
 internal class ApiRouteMapper(WebserverLite server) 
     : IRouteMapper
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-
     private static Task Options(HttpContextBase ctx)
     {
         CorsMiddleware.AddCors(ctx);
@@ -35,6 +32,8 @@ internal class ApiRouteMapper(WebserverLite server)
                 await HandleException(ctx, ex);
             }
         });
+        // Ensure preflight requests succeed for static routes
+        server.Routes.PreAuthentication.Static.Add(HttpMethod.OPTIONS, path, Options);
     }
 
     public void AddParam(HttpMethod method, string path, Func<HttpContextBase, Task> handler)
@@ -69,6 +68,7 @@ internal class ApiRouteMapper(WebserverLite server)
         // Default to 500 for other exceptions
         context.Response.ContentType = "application/json";
         var errorResponse = ex.ToApiError();
+        errorResponse.Data.TryAdd("HttpStatusCode", context.Response.StatusCode.ToString());
         await context.SendJson(errorResponse);
     }
 

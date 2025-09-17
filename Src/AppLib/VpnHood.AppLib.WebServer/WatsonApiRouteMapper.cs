@@ -90,41 +90,6 @@ internal class WatsonApiRouteMapper
         }
     }
 
-    public static string? GetQueryValueString(HttpContextBase ctx, string key, string? defaultValue = null)
-    {
-        return ctx.Request.QuerystringExists(key) ? ctx.Request.RetrieveQueryValue(key) : defaultValue;
-    }
-
-    public static int? GetQueryValueInt(HttpContextBase ctx, string key, int? defaultValue = null)
-    {
-        var valueString = GetQueryValueString(ctx, key);
-        return string.IsNullOrWhiteSpace(valueString) 
-            ? defaultValue : 
-            int.Parse(valueString);
-    }
-
-    public static Guid GetQueryValueGuid(HttpContextBase ctx, string key)
-    {
-        return GetQueryValueGuid(ctx, key, null)
-               ?? throw new ArgumentException($"Query parameter '{key}' is required.");
-    }
-
-    public static Guid? GetQueryValueGuid(HttpContextBase ctx, string key, Guid? defaultValue)
-    {
-        var valueString = GetQueryValueString(ctx, key);
-        return string.IsNullOrWhiteSpace(valueString) 
-            ? defaultValue : 
-            Guid.Parse(valueString);
-    }
-
-    public static T GetQueryValueEnum<T>(HttpContextBase ctx, string key, T defaultValue = default) where T : struct
-    {
-        var valueString = GetQueryValueString(ctx, key);
-        return string.IsNullOrWhiteSpace(valueString) 
-            ? defaultValue 
-            : Enum.Parse<T>(valueString, true);
-    }
-
     private void AddStatic(HttpMethod method, string path, Func<HttpContextBase, Task> handler)
     {
         _server.Routes.PreAuthentication.Static.Add(method, path, async ctx => {
@@ -208,12 +173,12 @@ internal class WatsonApiRouteMapper
         });
 
         AddStatic(HttpMethod.POST, "/api/app/connect", async ctx => {
-            await app.Connect(GetQueryValueGuid(ctx, "clientProfileId"), GetQueryValueString(ctx, "serverLocation"), GetQueryValueEnum(ctx, "planId", Core.Common.Tokens.ConnectPlanId.Normal));
+            await app.Connect(ctx.GetQueryValueGuid("clientProfileId"), ctx.GetQueryValueString("serverLocation"), ctx.GetQueryValueEnum("planId", Core.Common.Tokens.ConnectPlanId.Normal));
             await SendJson(ctx, new { ok = true });
         });
 
         AddStatic(HttpMethod.POST, "/api/app/diagnose", async ctx => {
-            await app.Diagnose(GetQueryValueGuid(ctx, "clientProfileId"), GetQueryValueString(ctx, "serverLocation"), GetQueryValueEnum(ctx, "planId", Core.Common.Tokens.ConnectPlanId.Normal));
+            await app.Diagnose(ctx.GetQueryValueGuid("clientProfileId"), ctx.GetQueryValueString("serverLocation"), ctx.GetQueryValueEnum("planId", Core.Common.Tokens.ConnectPlanId.Normal));
             await SendJson(ctx, new { ok = true });
         });
 
@@ -268,19 +233,19 @@ internal class WatsonApiRouteMapper
         });
 
         AddStatic(HttpMethod.POST, "/api/app/internal-ad/dismiss", async ctx => {
-            var s = GetQueryValueString(ctx, "result");
+            var s = ctx.GetQueryValueString("result");
             var ok = Enum.TryParse<Abstractions.ShowAdResult>(s, true, out var result);
             await app.InternalAdDismiss(ok ? result : default);
             await SendJson(ctx, new { ok = true });
         });
 
         AddStatic(HttpMethod.POST, "/api/app/internal-ad/error", async ctx => {
-            await app.InternalAdError(GetQueryValueString(ctx, "errorMessage") ?? "Unknown");
+            await app.InternalAdError(ctx.GetQueryValueString("errorMessage") ?? "Unknown");
             await SendJson(ctx, new { ok = true });
         });
 
         AddStatic(HttpMethod.POST, "/api/app/remove-premium", async ctx => {
-            var id = GetQueryValueGuid(ctx, "profileId");
+            var id = ctx.GetQueryValueGuid("profileId");
             await app.RemovePremium(id);
             await SendJson(ctx, new { ok = true });
         });
@@ -296,7 +261,7 @@ internal class WatsonApiRouteMapper
         var ctrl = new ClientProfileController();
 
         AddStatic(HttpMethod.PUT, "/api/client-profiles/access-keys", async ctx => {
-            var accessKey = GetQueryValueString(ctx, "accessKey") ?? string.Empty;
+            var accessKey = ctx.GetQueryValueString("accessKey") ?? string.Empty;
             var res = await ctrl.AddByAccessKey(accessKey);
             await SendJson(ctx, res);
         });
@@ -367,7 +332,7 @@ internal class WatsonApiRouteMapper
         });
 
         AddStatic(HttpMethod.POST, "/api/billing/purchase", async ctx => {
-            var planId = GetQueryValueString(ctx, "planId") ?? string.Empty;
+            var planId = ctx.GetQueryValueString("planId") ?? string.Empty;
             var res = await ctrl.Purchase(planId);
             await SendJson(ctx, res);
         });

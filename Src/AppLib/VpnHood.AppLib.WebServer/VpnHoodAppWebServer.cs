@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Toolkit.Logging;
@@ -31,8 +32,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private void SettingsServiceOnBeforeSave(object? sender, EventArgs e)
     {
-        //Stop();
-        //Start();
+        Restart();
     }
 
     public Uri Url { get; }
@@ -57,18 +57,36 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     public void Start()
     {
-        if (_server != null)
+        VhLogger.Instance.LogInformation("Starting web server...");
+
+        if (_server != null) {
+            _server.Start();
             return;
+        }
 
         _server = CreateWebServer();
         _server.Start();
-        // Log: Web server started. Navigate to Url
+        VhLogger.Instance.LogInformation("Web server has been started on {Url}", Url);
     }
 
     public void Stop()
     {
-        _server?.Dispose();
+        var oldServer = _server;
+        if (oldServer == null)
+            return;
+
+        VhLogger.Instance.LogInformation("Stopping web server...");
+        oldServer.Stop();
         _server = null;
+
+        // give some time for old server to dispose to prevent crash if there are active connections
+        _ = Task.Delay(5000).ContinueWith(_ => oldServer.Dispose());
+    }
+
+    public void Restart()
+    {
+        Stop();
+        Start();
     }
 
     private string? _spaPath;
@@ -143,19 +161,16 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
         AddCors(context);
 
-        if (context.Request.Url.RawWithoutQuery.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-        {
+        if (context.Request.Url.RawWithoutQuery.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)) {
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
             await context.Response.Send();
             return;
         }
 
         var localPath = context.Request.Url.RawWithoutQuery.TrimStart('/');
-        if (Path.HasExtension(localPath))
-        {
+        if (Path.HasExtension(localPath)) {
             var full = Path.Combine(spaPath, localPath.Replace('/', Path.DirectorySeparatorChar));
-            if (File.Exists(full))
-            {
+            if (File.Exists(full)) {
                 await ServeFile(context, full);
                 return;
             }

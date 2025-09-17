@@ -150,13 +150,13 @@ public static class MvcRouter
         }
 
         // Try route parameters first
-        var routeValue = ctx.GetRouteParameter(paramName);
+        var routeValue = ctx.GetRouteParameter<string?>(paramName, null);
         if (routeValue != null) {
             return ConvertValue(routeValue, paramType, param);
         }
 
         // Try query parameters
-        var queryValue = ctx.GetQueryParameter(paramName);
+        var queryValue = ctx.GetRouteParameter<string?>(paramName, null);
         if (queryValue != null) {
             return ConvertValue(queryValue, paramType, param);
         }
@@ -279,4 +279,4 @@ public static class MvcRouter
 public struct Unit
 {
     public static readonly Unit Value = new();
-}}
+}

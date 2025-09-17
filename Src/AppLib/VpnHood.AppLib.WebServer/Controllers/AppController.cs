@@ -18,110 +18,112 @@ internal class AppController : ControllerBase, IAppController
 
     public override void AddRoutes(IRouteMapper mapper)
     {
-        mapper.AddStatic(HttpMethod.PATCH, "/api/app/configure", async ctx => {
+        const string baseUrl = "/api/app/";
+
+        mapper.AddStatic(HttpMethod.PATCH, baseUrl + "configure", async ctx => {
             var body = ctx.ReadJson<ConfigParams>();
             var res = await Configure(body);
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.GET, "/api/app/config", async ctx => {
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "config", async ctx => {
             var res = await GetConfig();
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.GET, "/api/app/ip-filters", async ctx => {
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "ip-filters", async ctx => {
             var res = await GetIpFilters();
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.PUT, "/api/app/ip-filters", async ctx => {
+        mapper.AddStatic(HttpMethod.PUT, baseUrl + "ip-filters", async ctx => {
             var body = ctx.ReadJson<IpFilters>();
             await SetIpFilters(body);
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.GET, "/api/app/state", async ctx => {
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "state", async ctx => {
             var res = await GetState();
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/connect", async ctx => {
-            await Connect(ctx.GetQueryParameterGuid("clientProfileId"), ctx.GetQueryParameterString("serverLocation"), ctx.GetQueryParameterEnum("planId", ConnectPlanId.Normal));
-            await ctx.SendJson(new { ok = true });
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "connect", async ctx => {
+            await Connect(ctx.GetQueryParameter<Guid?>("clientProfileId"), ctx.GetQueryParameter<string?>("serverLocation"), ctx.GetQueryParameter<ConnectPlanId>("planId"));
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/diagnose", async ctx => {
-            await Diagnose(ctx.GetQueryParameterGuid("clientProfileId"), ctx.GetQueryParameterString("serverLocation"), ctx.GetQueryParameterEnum("planId", ConnectPlanId.Normal));
-            await ctx.SendJson(new { ok = true });
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "diagnose", async ctx => {
+            await Diagnose(ctx.GetQueryParameter<Guid?>("clientProfileId"), ctx.GetQueryParameter<string?>("serverLocation"), ctx.GetQueryParameter<ConnectPlanId>("planId"));
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/disconnect", async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "disconnect", async ctx => {
             await Disconnect();
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/version-check", async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "version-check", async ctx => {
             await VersionCheck();
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/version-check-postpone", async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "version-check-postpone", async ctx => {
             await VersionCheckPostpone();
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/clear-last-error", async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "clear-last-error", async ctx => {
             await ClearLastError();
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/extend-by-rewarded-ad", async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "extend-by-rewarded-ad", async ctx => {
             await ExtendByRewardedAd();
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.PUT, "/api/app/user-settings", async ctx => {
+        mapper.AddStatic(HttpMethod.PUT, baseUrl + "user-settings", async ctx => {
             var body = ctx.ReadJson<UserSettings>();
             await SetUserSettings(body);
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.GET, "/api/app/log.txt", async ctx => {
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "log.txt", async ctx => {
             var text = await Log();
             ctx.Response.ContentType = "text/plain";
             await ctx.Response.Send(text);
         });
 
-        mapper.AddStatic(HttpMethod.GET, "/api/app/installed-apps", async ctx => {
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "installed-apps", async ctx => {
             var res = await GetInstalledApps();
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/user-review", async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "user-review", async ctx => {
             var body = ctx.ReadJson<AppUserReview>();
             await SetUserReview(body);
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/internal-ad/dismiss", async ctx => {
-            var s = ctx.GetQueryParameterString("result");
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "internal-ad/dismiss", async ctx => {
+            var s = ctx.GetQueryParameter<string?>("result");
             var ok = Enum.TryParse<ShowAdResult>(s, true, out var result);
             await InternalAdDismiss(ok ? result : default);
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/internal-ad/error", async ctx => {
-            await InternalAdError(ctx.GetQueryParameterString("errorMessage") ?? "Unknown");
-            await ctx.SendJson(new { ok = true });
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "internal-ad/error", async ctx => {
+            await InternalAdError(ctx.GetQueryParameter<string>("errorMessage"));
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/app/remove-premium", async ctx => {
-            var id = ctx.GetQueryParameterGuid("profileId");
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "remove-premium", async ctx => {
+            var id = ctx.GetQueryParameter<Guid>("profileId");
             await RemovePremium(id);
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.GET, "/api/app/countries", async ctx => {
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "countries", async ctx => {
             var res = await GetCountries();
             await ctx.SendJson(res);
         });

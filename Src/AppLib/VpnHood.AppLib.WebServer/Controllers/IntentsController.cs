@@ -1,11 +1,58 @@
 ﻿using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device.UiContexts;
+using WatsonWebserver.Core;
+using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class IntentsController : IIntentController
+internal class IntentsController : ControllerBase, IIntentController
 {
     private static VpnHoodApp App => VpnHoodApp.Instance;
+
+    public override void AddRoutes(IRouteMapper mapper)
+    {
+        const string baseUrl = "/api/intents/";
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "request-quick-launch", async ctx => {
+            var res = await RequestQuickLaunch();
+            await ctx.SendJson(res);
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "request-user-review", async ctx => {
+            await RequestUserReview();
+            await ctx.SendNoContent();
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "request-notification", async ctx => {
+            var res = await RequestNotification();
+            await ctx.SendJson(res);
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-system-kill-switch-settings", async ctx => {
+            await OpenSystemKillSwitchSettings();
+            await ctx.SendNoContent();
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-system-always-on-settings", async ctx => {
+            await OpenSystemAlwaysOnSettings();
+            await ctx.SendNoContent();
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-system-settings", async ctx => {
+            await OpenSystemSettings();
+            await ctx.SendNoContent();
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-app-system-settings", async ctx => {
+            await OpenAppSystemSettings();
+            await ctx.SendNoContent();
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-app-system-notification-settings", async ctx => {
+            await OpenAppSystemNotificationSettings();
+            await ctx.SendNoContent();
+        });
+    }
 
     public Task<bool> RequestQuickLaunch()
     {

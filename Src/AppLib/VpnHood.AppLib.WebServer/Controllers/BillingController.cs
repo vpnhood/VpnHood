@@ -15,18 +15,20 @@ internal class BillingController : ControllerBase, IBillingController
 
     public override void AddRoutes(IRouteMapper mapper)
     {
-        mapper.AddStatic(HttpMethod.GET, "/api/billing/subscription-plans", async ctx => {
+        const string baseUrl = "/api/billing/";
+
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "subscription-plans", async ctx => {
             var res = await GetSubscriptionPlans();
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/billing/purchase", async ctx => {
-            var planId = ctx.GetQueryParameterString("planId") ?? string.Empty;
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "purchase", async ctx => {
+            var planId = ctx.GetQueryParameter<string>("planId");
             var res = await Purchase(planId);
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.GET, "/api/billing/purchase-options", async ctx => {
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "purchase-options", async ctx => {
             var res = await GetPurchaseOptions();
             await ctx.SendJson(res);
         });

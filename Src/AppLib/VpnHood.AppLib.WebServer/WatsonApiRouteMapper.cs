@@ -62,9 +62,22 @@ internal class WatsonApiRouteMapper : IRouteMapper
         VhLogger.Instance.LogError(ex, "Unhandled exception occurred while processing API request.");
 
         // CORS is already added in the wrapper, no need to add it again
-        ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
         ctx.Response.ContentType = "application/json";
 
+        // Handle different exception types
+        if (ex is ArgumentException)
+        {
+            ctx.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            var badRequestResponse = JsonSerializer.Serialize(new {
+                error = ex.Message,
+                type = ex.GetType().Name
+            }, _jsonOptions);
+            await ctx.Response.Send(badRequestResponse);
+            return;
+        }
+
+        // Default to 500 for other exceptions
+        ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
         var errorResponse = JsonSerializer.Serialize(new {
             error = ex.Message,
             type = ex.GetType().Name
@@ -79,10 +92,12 @@ internal class WatsonApiRouteMapper : IRouteMapper
         var clientProfileController = new ClientProfileController();
         var accountController = new AccountController();
         var billingController = new BillingController();
+        var intentsController = new IntentsController();
 
         appController.AddRoutes(this);
         clientProfileController.AddRoutes(this);
         accountController.AddRoutes(this);
         billingController.AddRoutes(this);
+        intentsController.AddRoutes(this);
     }
 }

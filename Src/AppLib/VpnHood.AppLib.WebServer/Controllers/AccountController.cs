@@ -23,7 +23,7 @@ internal class AccountController : ControllerBase, IAccountController
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "refresh", async ctx => {
             await Refresh();
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "is-signin-with-google-supported", async ctx => {
@@ -33,16 +33,16 @@ internal class AccountController : ControllerBase, IAccountController
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "signin-with-google", async ctx => {
             await SignInWithGoogle();
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "sign-out", async ctx => {
             await SignOut();
-            await ctx.SendJson(new { ok = true });
+            await ctx.SendNoContent();
         });
 
         mapper.AddParam(HttpMethod.GET, baseUrl + "subscriptions/{subId}/access-keys", async ctx => {
-            var subId = ctx.Request.Url.Parameters["subId"] ?? string.Empty;
+            var subId = ctx.GetRouteParameter<string>("subId");
             var res = await ListAccessKeys(subId);
             await ctx.SendJson(res);
         });

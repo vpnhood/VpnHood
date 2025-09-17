@@ -3,7 +3,6 @@ using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Extensions;
 using VpnHood.Core.Client.Device.UiContexts;
-using WatsonWebserver.Core;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;

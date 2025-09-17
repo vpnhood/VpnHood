@@ -61,14 +61,10 @@ public abstract class BaseController
         try
         {
             if (typeof(T) == typeof(Guid) || typeof(T) == typeof(Guid?))
-            {
                 return (T)(object)Guid.Parse(value);
-            }
             
             if (typeof(T).IsEnum)
-            {
                 return (T)Enum.Parse(typeof(T), value, true);
-            }
 
             return (T)Convert.ChangeType(value, typeof(T));
         }

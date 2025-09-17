@@ -1,5 +1,6 @@
 ﻿using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.WebServer.Api;
+using WatsonWebserver.Core;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
@@ -13,7 +14,7 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
         mapper.AddStatic(HttpMethod.PUT, "/api/client-profiles/access-keys", async ctx => {
             var accessKey = ctx.GetQueryValueString("accessKey") ?? string.Empty;
             var res = await AddByAccessKey(accessKey);
-            await SendJson(ctx, res);
+            await ctx.SendJson(res);
         });
 
         mapper.AddParam(HttpMethod.GET, "/api/client-profiles/{id}", async ctx => {
@@ -23,7 +24,7 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
                 return; 
             }
             var res = await Get(id);
-            await SendJson(ctx, res);
+            await ctx.SendJson(res);
         });
 
         mapper.AddParam(HttpMethod.PATCH, "/api/client-profiles/{id}", async ctx => {
@@ -32,9 +33,9 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
                 await ctx.Response.Send(); 
                 return; 
             }
-            var body = ReadJson<ClientProfileUpdateParams>(ctx);
+            var body = ctx.ReadJson<ClientProfileUpdateParams>();
             var res = await Update(id, body);
-            await SendJson(ctx, res);
+            await ctx.SendJson(res);
         });
 
         mapper.AddParam(HttpMethod.DELETE, "/api/client-profiles/{id}", async ctx => {
@@ -44,7 +45,7 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
                 return; 
             }
             await Delete(id);
-            await SendJson(ctx, new { ok = true });
+            await ctx.SendJson(new { ok = true });
         });
     }
 

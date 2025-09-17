@@ -22,24 +22,17 @@ internal class WatsonApiRouteMapper : IRouteMapper
 
     private Task Options(HttpContextBase ctx)
     {
-        AddCors(ctx);
+        CorsMiddleware.AddCors(ctx);
         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
         return ctx.Response.Send();
-    }
-
-    private void AddCors(HttpContextBase ctx)
-    {
-        var cors = VpnHoodApp.Instance.Features.IsDebugMode ? "*" : "https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080";
-        ctx.Response.Headers.Add("Access-Control-Allow-Origin", cors);
-        ctx.Response.Headers.Add("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-        ctx.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        ctx.Response.Headers.Add("Access-Control-Allow-Credentials", "true");
     }
 
     public void AddStatic(HttpMethod method, string path, Func<HttpContextBase, Task> handler)
     {
         _server.Routes.PreAuthentication.Static.Add(method, path, async ctx => {
             try {
+                // Add CORS to all requests centrally
+                CorsMiddleware.AddCors(ctx);
                 await handler(ctx);
             }
             catch (Exception ex) {
@@ -52,6 +45,8 @@ internal class WatsonApiRouteMapper : IRouteMapper
     {
         _server.Routes.PreAuthentication.Parameter.Add(method, path, async ctx => {
             try {
+                // Add CORS to all requests centrally
+                CorsMiddleware.AddCors(ctx);
                 await handler(ctx);
             }
             catch (Exception ex) {
@@ -63,10 +58,10 @@ internal class WatsonApiRouteMapper : IRouteMapper
 
     private async Task HandleException(HttpContextBase ctx, Exception ex)
     {
-        // Log the exception (you might want to use your logging framework here)
+        // Log the exception
         VhLogger.Instance.LogError(ex, "Unhandled exception occurred while processing API request.");
 
-        AddCors(ctx);
+        // CORS is already added in the wrapper, no need to add it again
         ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
         ctx.Response.ContentType = "application/json";
 

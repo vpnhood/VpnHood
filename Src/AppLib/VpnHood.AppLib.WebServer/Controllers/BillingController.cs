@@ -2,6 +2,7 @@
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Client.Device.UiContexts;
+using WatsonWebserver.Core;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
@@ -16,18 +17,18 @@ internal class BillingController : ControllerBase, IBillingController
     {
         mapper.AddStatic(HttpMethod.GET, "/api/billing/subscription-plans", async ctx => {
             var res = await GetSubscriptionPlans();
-            await SendJson(ctx, res);
+            await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/billing/purchase", async ctx => {
             var planId = ctx.GetQueryValueString("planId") ?? string.Empty;
             var res = await Purchase(planId);
-            await SendJson(ctx, res);
+            await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.GET, "/api/billing/purchase-options", async ctx => {
             var res = await GetPurchaseOptions();
-            await SendJson(ctx, res);
+            await ctx.SendJson(res);
         });
     }
 

@@ -127,18 +127,25 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var settings = new WebserverSettings(Url.Host, Url.Port);
         var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath));
 
-        // Initialize API routes through controllers
+        // Initialize API routes through controllers - CORS is handled centrally in the route mapper
         _ = new WatsonApiRouteMapper(server);
 
-        // Add static routes for SPA
-        server.Routes.PreAuthentication.Static.Add(HttpMethod.GET, "/", ctx => ServeFile(ctx, Path.Combine(spaPath, "index.html")));
-        server.Routes.PreAuthentication.Parameter.Add(HttpMethod.GET, "/static/{path}", ctx => ServeStatic(ctx, spaPath));
+        // Add static routes for SPA with centralized CORS
+        server.Routes.PreAuthentication.Static.Add(HttpMethod.GET, "/", ctx => {
+            CorsMiddleware.AddCors(ctx);
+            return ServeFile(ctx, Path.Combine(spaPath, "index.html"));
+        });
+        
+        server.Routes.PreAuthentication.Parameter.Add(HttpMethod.GET, "/static/{path}", ctx => {
+            CorsMiddleware.AddCors(ctx);
+            return ServeStatic(ctx, spaPath);
+        });
+        
         return server;
     }
 
     private Task ServeStatic(HttpContextBase context, string root)
     {
-        AddCors(context);
         var rel = string.Join('/', context.Request.Url.Elements.Skip(1)); // skip leading 'static'
         var full = Path.Combine(root, rel);
         if (!File.Exists(full)) return NotFound(context);
@@ -149,7 +156,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private Task ServeFile(HttpContextBase context, string fullPath)
     {
-        AddCors(context);
         var contentType = MimeTypeHelper.GetContentType(fullPath);
         context.Response.ContentType = contentType;
         return context.Response.Send(File.ReadAllBytes(fullPath));
@@ -160,7 +166,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         if (_indexHtml == null)
             throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
 
-        AddCors(context);
+        // Add CORS centrally for default route
+        CorsMiddleware.AddCors(context);
 
         if (context.Request.Url.RawWithoutQuery.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)) {
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -179,15 +186,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
         context.Response.ContentType = "text/html";
         await context.Response.Send(_indexHtml);
-    }
-
-    private static void AddCors(HttpContextBase context)
-    {
-        var cors = VpnHoodApp.Instance.Features.IsDebugMode ? "*" : "https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081, http://localhost:30080";
-        context.Response.Headers.Add("Access-Control-Allow-Origin", cors);
-        context.Response.Headers.Add("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-        context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        context.Response.Headers.Add("Access-Control-Allow-Credentials", "true");
     }
 
     private static Task NotFound(HttpContextBase context)

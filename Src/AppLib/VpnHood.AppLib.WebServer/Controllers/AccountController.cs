@@ -16,33 +16,33 @@ internal class AccountController : ControllerBase, IAccountController
     {
         mapper.AddStatic(HttpMethod.GET, "/api/account", async ctx => {
             var res = await Get();
-            await SendJson(ctx, res);
+            await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/account/refresh", async ctx => {
             await Refresh();
-            await SendJson(ctx, new { ok = true });
+            await ctx.SendJson(new { ok = true });
         });
 
         mapper.AddStatic(HttpMethod.GET, "/api/account/is-signin-with-google-supported", async ctx => {
             var res = IsSigninWithGoogleSupported();
-            await SendJson(ctx, res);
+            await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/account/signin-with-google", async ctx => {
             await SignInWithGoogle();
-            await SendJson(ctx, new { ok = true });
+            await ctx.SendJson(new { ok = true });
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/account/sign-out", async ctx => {
             await SignOut();
-            await SendJson(ctx, new { ok = true });
+            await ctx.SendJson(new { ok = true });
         });
 
         mapper.AddParam(HttpMethod.GET, "/api/account/subscriptions/{subId}/access-keys", async ctx => {
             var subId = ctx.Request.Url.Parameters["subId"] ?? string.Empty;
             var res = await ListAccessKeys(subId);
-            await SendJson(ctx, res);
+            await ctx.SendJson(res);
         });
     }
 

@@ -14,32 +14,34 @@ internal class AccountController : ControllerBase, IAccountController
 
     public override void AddRoutes(IRouteMapper mapper)
     {
-        mapper.AddStatic(HttpMethod.GET, "/api/account", async ctx => {
+        const string baseUrl = "/api/account/";
+
+        mapper.AddStatic(HttpMethod.GET, baseUrl, async ctx => {
             var res = await Get();
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/account/refresh", async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "refresh", async ctx => {
             await Refresh();
             await ctx.SendJson(new { ok = true });
         });
 
-        mapper.AddStatic(HttpMethod.GET, "/api/account/is-signin-with-google-supported", async ctx => {
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "is-signin-with-google-supported", async ctx => {
             var res = IsSigninWithGoogleSupported();
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/account/signin-with-google", async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "signin-with-google", async ctx => {
             await SignInWithGoogle();
             await ctx.SendJson(new { ok = true });
         });
 
-        mapper.AddStatic(HttpMethod.POST, "/api/account/sign-out", async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "sign-out", async ctx => {
             await SignOut();
             await ctx.SendJson(new { ok = true });
         });
 
-        mapper.AddParam(HttpMethod.GET, "/api/account/subscriptions/{subId}/access-keys", async ctx => {
+        mapper.AddParam(HttpMethod.GET, baseUrl + "subscriptions/{subId}/access-keys", async ctx => {
             var subId = ctx.Request.Url.Parameters["subId"] ?? string.Empty;
             var res = await ListAccessKeys(subId);
             await ctx.SendJson(res);

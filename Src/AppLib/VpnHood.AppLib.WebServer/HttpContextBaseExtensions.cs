@@ -41,31 +41,48 @@ internal static class HttpContextBaseExtensions
             : Enum.Parse<T>(valueString, true);
     }
 
-    public static T? GetRouteParameter<T>(this HttpContextBase ctx, string key, T? defaultValue = default)
+    public static T? GetQueryParameter<T>(this HttpContextBase ctx, string key, T? defaultValue)
+    {
+        return ctx.Request.QuerystringExists(key)
+            ? GetQueryParameter<T>(ctx, key)
+            : defaultValue;
+    }
+
+    public static T GetQueryParameter<T>(this HttpContextBase ctx, string key)
     {
         if (!ctx.Request.QuerystringExists(key))
-            return defaultValue;
+            throw new ArgumentException($"Route parameter '{key}' is required.");
 
         var value = ctx.Request.RetrieveQueryValue(key);
         try {
-            return ConvertString<T>(value);
+            return ConvertString<T>(value) ?? 
+                   throw new Exception($"The value of {key} should not be null.");
         }
         catch (Exception ex) {
             throw new ArgumentException($"Cannot convert '{value}' to {typeof(T)} for parameter '{key}'", ex);
         }
     }
-    
-    public static T? GetQueryParameter<T>(this HttpContextBase ctx, string key, T? defaultValue = default)
+
+    public static T? GetRouteParameter<T>(this HttpContextBase ctx, string key, T? defaultValue)
     {
-        var stringValue = ctx.Request.Url.Parameters.Get(key);
-        if (stringValue is null)
-            return defaultValue;
+        var value = ctx.Request.Url.Parameters.Get(key);
+        return value is null 
+            ? defaultValue 
+            : GetRouteParameter<T>(ctx, key);
+    }
+
+    public static T GetRouteParameter<T>(this HttpContextBase ctx, string key)
+    {
+        var value = ctx.Request.Url.Parameters.Get(key);
+        if (value is null)
+            throw new ArgumentException($"Route parameter '{key}' is required.");
 
         try {
-            return ConvertString<T>(stringValue);
+            return ConvertString<T>(value) ??
+                   throw new Exception($"The value of {key} should not be null.");
         }
         catch (Exception ex) {
-            throw new ArgumentException($"Cannot convert '{stringValue}' to {typeof(T)} for parameter '{key}'", ex);
+            throw new ArgumentException($"Cannot convert '{value}' to {typeof(T)} for parameter '{key}'", ex);
         }
     }
 
@@ -99,8 +116,6 @@ internal static class HttpContextBaseExtensions
         return (T)(object)(Convert.ChangeType(value, underlyingType));
     }
 
-
-    // JSON handling extensions
     public static async Task SendJson(this HttpContextBase ctx, object? data, int statusCode = 200)
     {
         if (data is null) {

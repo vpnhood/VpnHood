@@ -21,7 +21,7 @@ internal class BillingController : ControllerBase, IBillingController
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/billing/purchase", async ctx => {
-            var planId = ctx.GetQueryValueString("planId") ?? string.Empty;
+            var planId = ctx.GetQueryParameterString("planId") ?? string.Empty;
             var res = await Purchase(planId);
             await ctx.SendJson(res);
         });

@@ -9,32 +9,32 @@ internal static class HttpContextBaseExtensions
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     // Query parameter extensions
-    public static string? GetQueryValueString(this HttpContextBase ctx, string key, string? defaultValue = null)
+    public static string? GetQueryParameterString(this HttpContextBase ctx, string key, string? defaultValue = null)
     {
         return ctx.Request.QuerystringExists(key) ? ctx.Request.RetrieveQueryValue(key) : defaultValue;
     }
 
-    public static int? GetQueryValueInt(this HttpContextBase ctx, string key, int? defaultValue = null)
+    public static int? GetQueryParameterInt(this HttpContextBase ctx, string key, int? defaultValue = null)
     {
-        var valueString = ctx.GetQueryValueString(key);
+        var valueString = ctx.GetQueryParameterString(key);
         return string.IsNullOrWhiteSpace(valueString) ? defaultValue : int.Parse(valueString);
     }
 
-    public static Guid GetQueryValueGuid(this HttpContextBase ctx, string key)
+    public static Guid GetQueryParameterGuid(this HttpContextBase ctx, string key)
     {
-        return ctx.GetQueryValueGuid(key, null)
+        return ctx.GetQueryParameterGuid(key, null)
                ?? throw new ArgumentException($"Query parameter '{key}' is required.");
     }
 
-    public static Guid? GetQueryValueGuid(this HttpContextBase ctx, string key, Guid? defaultValue)
+    public static Guid? GetQueryParameterGuid(this HttpContextBase ctx, string key, Guid? defaultValue)
     {
-        var valueString = ctx.GetQueryValueString(key);
+        var valueString = ctx.GetQueryParameterString(key);
         return string.IsNullOrWhiteSpace(valueString) ? defaultValue : Guid.Parse(valueString);
     }
 
-    public static T GetQueryValueEnum<T>(this HttpContextBase ctx, string key, T defaultValue = default) where T : struct
+    public static T GetQueryParameterEnum<T>(this HttpContextBase ctx, string key, T defaultValue = default) where T : struct
     {
-        var valueString = ctx.GetQueryValueString(key);
+        var valueString = ctx.GetQueryParameterString(key);
         return string.IsNullOrWhiteSpace(valueString)
             ? defaultValue
             : Enum.Parse<T>(valueString, true);
@@ -44,11 +44,6 @@ internal static class HttpContextBaseExtensions
     public static string? GetRouteParameter(this HttpContextBase ctx, string key)
     {
         return ctx.Request.Url.Parameters[key];
-    }
-
-    public static string? GetQueryParameter(this HttpContextBase ctx, string key)
-    {
-        return ctx.Request.QuerystringExists(key) ? ctx.Request.RetrieveQueryValue(key) : null;
     }
 
     // JSON handling extensions

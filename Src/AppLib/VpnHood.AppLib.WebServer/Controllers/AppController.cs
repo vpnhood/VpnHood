@@ -46,12 +46,12 @@ internal class AppController : ControllerBase, IAppController
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/app/connect", async ctx => {
-            await Connect(ctx.GetQueryValueGuid("clientProfileId"), ctx.GetQueryValueString("serverLocation"), ctx.GetQueryValueEnum("planId", ConnectPlanId.Normal));
+            await Connect(ctx.GetQueryParameterGuid("clientProfileId"), ctx.GetQueryParameterString("serverLocation"), ctx.GetQueryParameterEnum("planId", ConnectPlanId.Normal));
             await ctx.SendJson(new { ok = true });
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/app/diagnose", async ctx => {
-            await Diagnose(ctx.GetQueryValueGuid("clientProfileId"), ctx.GetQueryValueString("serverLocation"), ctx.GetQueryValueEnum("planId", ConnectPlanId.Normal));
+            await Diagnose(ctx.GetQueryParameterGuid("clientProfileId"), ctx.GetQueryParameterString("serverLocation"), ctx.GetQueryParameterEnum("planId", ConnectPlanId.Normal));
             await ctx.SendJson(new { ok = true });
         });
 
@@ -104,19 +104,19 @@ internal class AppController : ControllerBase, IAppController
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/app/internal-ad/dismiss", async ctx => {
-            var s = ctx.GetQueryValueString("result");
+            var s = ctx.GetQueryParameterString("result");
             var ok = Enum.TryParse<ShowAdResult>(s, true, out var result);
             await InternalAdDismiss(ok ? result : default);
             await ctx.SendJson(new { ok = true });
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/app/internal-ad/error", async ctx => {
-            await InternalAdError(ctx.GetQueryValueString("errorMessage") ?? "Unknown");
+            await InternalAdError(ctx.GetQueryParameterString("errorMessage") ?? "Unknown");
             await ctx.SendJson(new { ok = true });
         });
 
         mapper.AddStatic(HttpMethod.POST, "/api/app/remove-premium", async ctx => {
-            var id = ctx.GetQueryValueGuid("profileId");
+            var id = ctx.GetQueryParameterGuid("profileId");
             await RemovePremium(id);
             await ctx.SendJson(new { ok = true });
         });

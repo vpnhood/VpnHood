@@ -12,13 +12,13 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
     public override void AddRoutes(IRouteMapper mapper)
     {
         mapper.AddStatic(HttpMethod.PUT, "/api/client-profiles/access-keys", async ctx => {
-            var accessKey = ctx.GetQueryValueString("accessKey") ?? string.Empty;
+            var accessKey = ctx.GetQueryParameterString("accessKey") ?? string.Empty;
             var res = await AddByAccessKey(accessKey);
             await ctx.SendJson(res);
         });
 
         mapper.AddParam(HttpMethod.GET, "/api/client-profiles/{id}", async ctx => {
-            if (!Guid.TryParse(ctx.Request.Url.Parameters["id"], out var id)) { 
+            if (!Guid.TryParse(ctx.GetRouteParameter("id"), out var id)) { 
                 ctx.Response.StatusCode = 400; 
                 await ctx.Response.Send(); 
                 return; 

@@ -15,29 +15,33 @@ public class LocalIpRangeLocationProvider(
     Func<string?> currentCountryCodeFunc)
     : IIpLocationProvider
 {
+    private readonly AsyncLock _lock = new();
     private string? _lasCurrentCountryCode;
     private string[]? _countryCodes;
     private readonly Dictionary<string, IpRangeOrderedList> _countryIpRanges = new();
     private readonly Lazy<ZipArchive> _zipArchive = new(zipArchiveFactory);
     private string? CurrentCountryCode => currentCountryCodeFunc() ?? _lasCurrentCountryCode;
 
-    public Task<string[]> GetCountryCodes()
+    public async Task<string[]> GetCountryCodes()
     {
+        using var _ = await _lock.LockAsync();
         _countryCodes ??= _zipArchive.Value.Entries
             .Where(x => Path.GetExtension(x.Name) == ".ips")
             .Select(x => Path.GetFileNameWithoutExtension(x.Name).ToUpper())
             .ToArray();
 
-        return Task.FromResult(_countryCodes);
+        return _countryCodes;
     }
 
     public async Task<IpRangeOrderedList> GetIpRanges(string countryCode)
     {
+        using var _ = await _lock.LockAsync();
         var ipRanges = await GetIpRangesInternal(countryCode).Vhc();
         _countryIpRanges.TryAdd(countryCode, ipRanges);
         return ipRanges;
     }
 
+    // must be called within async lock
     private async Task<IpRangeOrderedList> GetIpRangesInternal(string countryCode)
     {
         if (_countryIpRanges.TryGetValue(countryCode, out var countryIpRangeCache))

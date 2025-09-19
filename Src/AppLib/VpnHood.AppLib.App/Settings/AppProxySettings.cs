@@ -4,6 +4,7 @@ namespace VpnHood.AppLib.Settings;
 
 public class AppProxySettings
 {
-    public ProxyMode Mode { get; set; }
+    public AppProxyMode Mode { get; set; }
     public ProxyNode[] Nodes { get; set; } = [];
+    public Uri? RemoteNotesUrl { get; set; }
 }

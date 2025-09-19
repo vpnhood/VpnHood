@@ -5,13 +5,12 @@ namespace VpnHood.AppLib;
 
 public static class ProxyNodeResolver
 {
-    public static ProxyNode[] Resolve(AppProxySettings appProxySettings)
+    public static ProxyNode[] Resolve(AppProxySettings proxySettings)
     {
-        return appProxySettings.Mode switch {
-            ProxyMode.Disabled => [],
-            ProxyMode.System => [],
-            ProxyMode.Remote => [],
-            ProxyMode.Custom => appProxySettings.Nodes,
+        return proxySettings.Mode switch {
+            AppProxyMode.Disabled => [],
+            AppProxyMode.System => [],
+            AppProxyMode.Custom => proxySettings.Nodes,
             _ => []
         };
     }

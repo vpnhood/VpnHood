@@ -1,9 +1,8 @@
 ﻿namespace VpnHood.AppLib.Settings;
 
-public enum ProxyMode
+public enum AppProxyMode
 {
     Disabled,
     System,
-    Remote,
     Custom
 }

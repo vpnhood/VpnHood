@@ -2,5 +2,5 @@
 
 public class ProxyManagerStatus
 {
-    public ProxyNodeInfo[] ProxyNodeInfo { get; init; } = [];
+    public ProxyNodeInfo[] ProxyNodeInfos { get; init; } = [];
 }

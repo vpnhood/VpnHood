@@ -25,7 +25,7 @@ public class ProxyNodeManager
     public bool IsEnabled => _proxyNodeItems.Any();
     public ProgressStatus? Progress => _progressTracker?.Progress;
     public ProxyManagerStatus Status => new() {
-        ProxyNodeInfo = ProxyNodeInfos
+        ProxyNodeInfos = ProxyNodeInfos
     };
 
 

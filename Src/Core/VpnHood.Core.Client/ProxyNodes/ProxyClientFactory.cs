@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Proxies;
 using VpnHood.Core.Proxies.HttpProxyClients;
 using VpnHood.Core.Proxies.Socks4ProxyClients;

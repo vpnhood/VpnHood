@@ -468,7 +468,10 @@ public class TestHelper : IDisposable
         bool autoConnect = true)
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
-        var client = new VpnHoodClient(vpnAdapter, new TestSocketFactory(), new TestTracker(), clientOptions);
+        var client = new VpnHoodClient(vpnAdapter, 
+            storageFolder: Path.Combine(WorkingPath, "ClientCore"),
+            new TestSocketFactory(), 
+            new TestTracker(), clientOptions);
 
         // test starting the client
         if (autoConnect)

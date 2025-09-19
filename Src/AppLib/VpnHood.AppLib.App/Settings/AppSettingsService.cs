@@ -24,6 +24,7 @@ public class AppSettingsService
     {
         _storagePath = storagePath;
         Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? GetDefaultSettings(debugMode);
+        Settings.AppSettingsService = this;
         IpFilterSettings = new IpFilterSettings(Path.Combine(storagePath, "ip_filters"));
         OldUserSettings = Settings.UserSettings;
 

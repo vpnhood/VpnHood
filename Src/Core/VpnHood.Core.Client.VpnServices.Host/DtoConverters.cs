@@ -8,7 +8,7 @@ internal static class DtoConverters
     public static SessionStatus ToDto(this ISessionStatus sessionStatus)
     {
         var ret = new SessionStatus {
-            ConnectorStat = sessionStatus.ConnectorStat.ToDto(),
+            ConnectorStatus = sessionStatus.ConnectorStatus.ToDto(),
             ActiveClientCount = sessionStatus.ActiveClientCount,
             CanExtendByRewardedAd = sessionStatus.CanExtendByRewardedAd,
             CycleTraffic = sessionStatus.CycleTraffic,
@@ -27,20 +27,20 @@ internal static class DtoConverters
             UserReviewRecommended = sessionStatus.UserReviewRecommended,
             IsDnsOverTlsDetected = sessionStatus.IsDnsOverTlsDetected,
             IsTcpProxy = sessionStatus.IsTcpProxy,
-            ProxyNodeStatuses = sessionStatus.ProxyNodeStatuses
+            ProxyManagerStatus = sessionStatus.ProxyManagerStatus
         };
 
         return ret;
     }
 
-    public static ConnectorStat ToDto(this ClientConnectorStat connectorStat)
+    public static ConnectorStatus ToDto(this ClientConnectorStatus connectorStatus)
     {
-        var dto = new ConnectorStat {
-            CreatedConnectionCount = connectorStat.CreatedConnectionCount,
-            FreeConnectionCount = connectorStat.FreeConnectionCount,
-            RequestCount = connectorStat.RequestCount,
-            ReusedConnectionFailedCount = connectorStat.ReusedConnectionFailedCount,
-            ReusedConnectionSucceededCount = connectorStat.ReusedConnectionSucceededCount
+        var dto = new ConnectorStatus {
+            CreatedConnectionCount = connectorStatus.CreatedConnectionCount,
+            FreeConnectionCount = connectorStatus.FreeConnectionCount,
+            RequestCount = connectorStatus.RequestCount,
+            ReusedConnectionFailedCount = connectorStatus.ReusedConnectionFailedCount,
+            ReusedConnectionSucceededCount = connectorStatus.ReusedConnectionSucceededCount
         };
 
         return dto;

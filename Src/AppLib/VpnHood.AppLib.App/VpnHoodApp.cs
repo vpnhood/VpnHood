@@ -20,6 +20,7 @@ using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -282,7 +283,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UseUdpChannel = UserSettings.UseUdpChannel,
                     DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
                     DropQuic = UserSettings.DropQuic,
-                    ProxyNodes = ProxyNodeResolver.Resolve(UserSettings.Proxy)
+                    ProxyNodes = ProxyNodeResolver.Resolve(UserSettings.AppProxy)
                 };
                 // it is not important to take effect immediately
                 _reconfigurationTask = _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None);
@@ -725,7 +726,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview,
-                ProxyNodes = ProxyNodeResolver.Resolve(UserSettings.Proxy)
+                ProxyOptions = new ProxyOptions{
+                    ProxyNodes = ProxyNodeResolver.Resolve(UserSettings.AppProxy)
+                }
             };
 
             VhLogger.Instance.LogDebug(

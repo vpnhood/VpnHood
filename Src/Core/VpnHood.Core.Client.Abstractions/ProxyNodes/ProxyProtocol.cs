@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.Core.Client.Abstractions;
+namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
 
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

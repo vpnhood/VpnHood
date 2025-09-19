@@ -29,7 +29,7 @@ internal class ConnectorServiceBase : IDisposable
     private bool _useWebSocket;
 
     public ConnectorEndPointInfo EndPointInfo { get; }
-    public ClientConnectorStat Stat { get; }
+    public ClientConnectorStatus Status { get; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ProtocolVersion { get; private set; } = 8;
 
@@ -37,7 +37,7 @@ internal class ConnectorServiceBase : IDisposable
     {
         _socketFactory = socketFactory;
         _allowTcpReuse = allowTcpReuse;
-        Stat = new ClientConnectorStatImpl(this);
+        Status = new ClientConnectorStatusImpl(this);
         TcpReuseTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
         EndPointInfo = endPointInfo;
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
@@ -202,7 +202,7 @@ internal class ConnectorServiceBase : IDisposable
                 .Vhc();
 
             var clientStream = await CreateClientStream(streamId, tcpClient, sslStream, contentLength, cancellationToken).Vhc();
-            lock (Stat) Stat.CreatedConnectionCount++;
+            lock (Status) Status.CreatedConnectionCount++;
             return clientStream;
         }
         catch {
@@ -334,8 +334,8 @@ internal class ConnectorServiceBase : IDisposable
         public DateTime EnqueueTime { get; } = FastDateTime.Now;
     }
 
-    internal class ClientConnectorStatImpl(ConnectorServiceBase connectorServiceBase)
-        : ClientConnectorStat
+    internal class ClientConnectorStatusImpl(ConnectorServiceBase connectorServiceBase)
+        : ClientConnectorStatus
     {
         // Note: Count is an approximate snapshot; not synchronized with actual queue operations.
         public override int FreeConnectionCount => connectorServiceBase._freeClientStreams.Count;

@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Client.Abstractions;
+﻿using VpnHood.Core.Client.Abstractions.ProxyNodes;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 

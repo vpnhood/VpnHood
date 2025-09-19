@@ -8,14 +8,14 @@ namespace VpnHood.AppLib.DtoConverters;
 
 public static class AppDtoConverterExtensions
 {
-    public static AppConnectorStat ToAppDto(this ConnectorStat connectorStat)
+    public static AppConnectorStat ToAppDto(this ConnectorStatus connectorStatus)
     {
         return new AppConnectorStat {
-            FreeConnectionCount = connectorStat.FreeConnectionCount,
-            ReusedConnectionFailedCount = connectorStat.ReusedConnectionFailedCount,
-            ReusedConnectionSucceededCount = connectorStat.ReusedConnectionSucceededCount,
-            CreatedConnectionCount = connectorStat.CreatedConnectionCount,
-            RequestCount = connectorStat.RequestCount
+            FreeConnectionCount = connectorStatus.FreeConnectionCount,
+            ReusedConnectionFailedCount = connectorStatus.ReusedConnectionFailedCount,
+            ReusedConnectionSucceededCount = connectorStatus.ReusedConnectionSucceededCount,
+            CreatedConnectionCount = connectorStatus.CreatedConnectionCount,
+            RequestCount = connectorStatus.RequestCount
         };
     }
 
@@ -41,7 +41,7 @@ public static class AppDtoConverterExtensions
     public static AppSessionStatus ToAppDto(this SessionStatus sessionStatus, bool canExtendByRewardedAd)
     {
         return new AppSessionStatus {
-            ConnectorStat = sessionStatus.ConnectorStat.ToAppDto(),
+            ConnectorStat = sessionStatus.ConnectorStatus.ToAppDto(),
             Speed = sessionStatus.Speed,
             SessionTraffic = sessionStatus.SessionTraffic,
             SessionSplitTraffic = sessionStatus.SessionSplitTraffic,

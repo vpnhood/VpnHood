@@ -1,10 +1,7 @@
-﻿namespace VpnHood.Core.Client.Abstractions;
+﻿namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
 
-public class ProxyNodeStatus(string host, int port)
+public class ProxyNodeStatus
 {
-    public string Host { get; } = host;
-    public int Port { get; } = port;
-    public bool IsActive { get; set; }
     public int Penalty { get; set; }
     public int SucceededCount { get; set; }
     public int FailedCount { get; set; }

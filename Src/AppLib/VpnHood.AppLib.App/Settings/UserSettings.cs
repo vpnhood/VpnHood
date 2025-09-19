@@ -31,7 +31,7 @@ public class UserSettings
     public bool UseVpnAdapterIpFilter { get; set; }
     public EndPointStrategy EndPointStrategy { get; set; }
     public DnsMode DnsMode { get; set; }
-    public ProxySettings Proxy { get; set; } = new();
+    public AppProxySettings AppProxy { get; set; } = new();
     public bool AllowRemoteAccess { get; set; }
 
     // for compatibility convert old nullable to empty array

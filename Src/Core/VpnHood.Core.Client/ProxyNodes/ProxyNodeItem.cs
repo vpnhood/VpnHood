@@ -1,18 +1,17 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Core.Client.ProxyNodes;
 
-internal class ProxyNodeItem(ProxyNode node)
+internal class ProxyNodeItem(ProxyNodeInfo nodeInfo) 
 {
     private readonly object _lock = new();
     private int _requestPosition;
-    public ProxyNode Node => node;
-    public ProxyNodeStatus Status = new(node.Host, node.Port) {
-        IsActive = true
-    };
+    public ProxyNodeInfo Info => nodeInfo;
+    public ProxyNodeStatus Status => nodeInfo.Status;
+    public ProxyNode Node => nodeInfo.Node;
 
     public int GetSortValue(int currentRequestCount)
     {

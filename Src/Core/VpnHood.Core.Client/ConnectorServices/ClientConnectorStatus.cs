@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Client.ConnectorServices;
 
-public abstract class ClientConnectorStat
+public abstract class ClientConnectorStatus
 {
     public abstract int FreeConnectionCount { get; }
     public int ReusedConnectionFailedCount { get; internal set; }

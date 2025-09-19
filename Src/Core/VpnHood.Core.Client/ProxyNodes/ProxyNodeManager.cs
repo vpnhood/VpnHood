@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Proxies;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -18,43 +19,58 @@ public class ProxyNodeManager
     private readonly ISocketFactory _socketFactory;
     private ProxyNodeItem[] _proxyNodeItems;
     private ProgressTracker? _progressTracker;
-    
-    public ProxyNodeStatus[] ProxyNodeStatuses => _proxyNodeItems.Select(x => x.Status).ToArray();
+    private readonly string _proxyNodeInfosFile;
+
+    public ProxyNodeInfo[] ProxyNodeInfos => _proxyNodeItems.Select(x => x.Info).ToArray();
     public bool IsEnabled => _proxyNodeItems.Any();
     public ProgressStatus? Progress => _progressTracker?.Progress;
+    public ProxyManagerStatus Status => new() {
+        ProxyNodeInfo = ProxyNodeInfos
+    };
+
 
     public ProxyNodeManager(
-        ProxyNode[] proxyServerEndPoints,
+        ProxyOptions proxyOptions,
+        string storagePath,
         ISocketFactory socketFactory,
         TimeSpan? serverCheckTimeout = null)
     {
         _serverCheckTimeout = serverCheckTimeout ?? TimeSpan.FromSeconds(7);
-        _proxyNodeItems = proxyServerEndPoints.Select(x => new ProxyNodeItem(x)).ToArray();
         _socketFactory = socketFactory;
+        _proxyNodeInfosFile = Path.Combine(storagePath, "proxies.json");
+
+        // load last NodeInfos
+        var proxyInfos = JsonUtils.TryDeserializeFile<ProxyNodeInfo[]>(_proxyNodeInfosFile) ?? [];
+        var proxyNodeItems = proxyInfos.Select(x => new ProxyNodeItem(x)).ToArray();
+        _proxyNodeItems = UpdateProxyItems(proxyNodeItems, proxyOptions.ProxyNodes).ToArray();
     }
 
-    public ProxyNode[] ProxyNodes {
-        get {
-            return _proxyNodeItems.Select(x => x.Node).ToArray();
-        }
-        set {
-            // remove old servers and add new servers
-            _proxyNodeItems = _proxyNodeItems
-                .Where(x => value.Any(y => y.GetId() == x.Node.GetId()))
-                .ToArray();
-            
-            // add new servers
-            foreach (var newEndPoint in value) {
-                if (_proxyNodeItems.All(x => x.Node.GetId() != newEndPoint.GetId())) {
-                    var newServer = new ProxyNodeItem(newEndPoint);
-                    _proxyNodeItems = _proxyNodeItems.Concat([newServer]).ToArray();
-                }
+    public void UpdateProxyNodes(ProxyNode[] proxyNodes)
+    {
+        _proxyNodeItems = UpdateProxyItems(_proxyNodeItems, proxyNodes).ToArray();
+    }
+
+    private static IEnumerable<ProxyNodeItem> UpdateProxyItems(
+        IEnumerable<ProxyNodeItem> proxyItems, ProxyNode[] proxyNodes)
+    {
+        // remove old nodes
+        proxyItems = proxyItems
+            .Where(x => proxyNodes.Any(y => y.GetId() == x.Node.GetId()))
+            .ToArray();
+
+        // add new nodes
+        foreach (var proxyNode in proxyNodes) {
+            if (proxyItems.All(x => x.Node.GetId() != proxyNode.GetId())) {
+                var newNode = new ProxyNodeItem(new ProxyNodeInfo(proxyNode));
+                proxyItems = proxyItems.Concat([newNode]).ToArray();
             }
         }
+
+        return proxyItems;
     }
 
-    private async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient, 
-        TcpClient tcpClient, ProgressTracker progressTracker, 
+    private async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient,
+        TcpClient tcpClient, ProgressTracker progressTracker,
         CancellationToken cancellationToken)
     {
         try {
@@ -64,7 +80,7 @@ public class ProxyNodeManager
             await proxyClient.CheckConnectionAsync(tcpClient, linkedCts.Token).Vhc();
             return TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
         }
-        finally{
+        finally {
             progressTracker.IncrementCompleted();
         }
     }
@@ -82,11 +98,11 @@ public class ProxyNodeManager
         try {
             // connect to each proxy server and check if it is reachable
             List<(ProxyNodeItem, TcpClient, Task<TimeSpan>)> testTasks = [];
-            foreach (var proxyServer in _proxyNodeItems) {
-                var proxyClient = await ProxyClientFactory.CreateProxyClient(proxyServer.Node);
+            foreach (var proxyNodeItem in _proxyNodeItems) {
+                var proxyClient = await ProxyClientFactory.CreateProxyClient(proxyNodeItem.Node);
                 var tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
                 var checkTask = CheckConnectionAsync(proxyClient, tcpClient, _progressTracker, cancellationToken);
-                testTasks.Add((proxyServer, tcpClient, checkTask));
+                testTasks.Add((proxyNodeItem, tcpClient, checkTask));
             }
 
             // wait for all tasks to complete even if some fail
@@ -95,7 +111,7 @@ public class ProxyNodeManager
 
             // find the fastest server and set threshold
             var succeededTasks = testTasks
-                .Where(x => x.Item3.IsCompletedSuccessfully && x.Item1.Status.IsActive)
+                .Where(x => x.Item3.IsCompletedSuccessfully && x.Item1.Node.IsEnabled)
                 .OrderBy(x => x.Item3.Result)
                 .ToArray();
 
@@ -103,18 +119,18 @@ public class ProxyNodeManager
             TimeSpan? fastestLatency = succeededTasks.Any() ? succeededTasks.First().Item3.Result : null;
 
             // update server statuses
-            foreach (var (proxyServer, tcpClient, task) in testTasks) {
+            foreach (var (proxyNodeItem, tcpClient, task) in testTasks) {
                 tcpClient.Dispose();
 
                 // set failed
                 if (!task.IsCompletedSuccessfully) {
-                    proxyServer.RecordFailed(task.Exception, _requestCount);
-                    proxyServer.Status.IsActive = false;
+                    proxyNodeItem.RecordFailed(task.Exception, _requestCount);
+                    proxyNodeItem.Node.IsEnabled = false;
                     continue;
                 }
 
                 // set active or poor active
-                proxyServer.RecordSuccess(latency: task.Result, fastestLatency: fastestLatency, _requestCount);
+                proxyNodeItem.RecordSuccess(latency: task.Result, fastestLatency: fastestLatency, _requestCount);
             }
         }
         finally {
@@ -128,22 +144,22 @@ public class ProxyNodeManager
 
         // order by active state then Last response duration
         var proxyServers = _proxyNodeItems
-            .Where(x => x.Status.IsActive)
+            .Where(x => x.Node.IsEnabled)
             .OrderBy(x => x.GetSortValue(_requestCount))
-            .ThenBy(x=>x.Status.LastUsedTime)
+            .ThenBy(x => x.Status.LastUsedTime)
             .ToArray();
 
         // try to connect to a proxy server
         TcpClient? tcpClientOk = null;
-        foreach (var proxyServer in proxyServers) {
+        foreach (var proxyNodeItem in proxyServers) {
             var tickCount = Environment.TickCount64;
             TcpClient? tcpClient = null;
             try {
                 VhLogger.Instance.LogDebug(GeneralEventId.Essential,
                     "Connecting via a {ProxyType} proxy server {ProxyServer}...",
-                    proxyServer.Node.Protocol, VhLogger.FormatHostName(proxyServer.Node.Host));
+                    proxyNodeItem.Node.Protocol, VhLogger.FormatHostName(proxyNodeItem.Node.Host));
 
-                var proxyClient = await ProxyClientFactory.CreateProxyClient(proxyServer.Node);
+                var proxyClient = await ProxyClientFactory.CreateProxyClient(proxyNodeItem.Node);
                 tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
                 await proxyClient.ConnectAsync(tcpClient, ipEndPoint, cancellationToken).Vhc();
                 tcpClientOk = tcpClient;
@@ -152,17 +168,17 @@ public class ProxyNodeManager
                 var latency = TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
                 if (!proxyServers.Contains(_fastestNode) ||
                     latency < _fastestNode?.Status.Latency)
-                    _fastestNode = proxyServer;
+                    _fastestNode = proxyNodeItem;
 
-                proxyServer.RecordSuccess(latency, fastestLatency: _fastestNode?.Status.Latency, _requestCount);
+                proxyNodeItem.RecordSuccess(latency, fastestLatency: _fastestNode?.Status.Latency, _requestCount);
                 break;
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(GeneralEventId.Essential, ex,
                     "Failed to connect to {ProxyType} proxy server {ProxyServer}.",
-                    proxyServer.Node.Protocol, VhLogger.FormatHostName(proxyServer.Node.Host));
+                    proxyNodeItem.Node.Protocol, VhLogger.FormatHostName(proxyNodeItem.Node.Host));
 
-                proxyServer.RecordFailed(ex, _requestCount);
+                proxyNodeItem.RecordFailed(ex, _requestCount);
                 tcpClient?.Dispose();
             }
         }

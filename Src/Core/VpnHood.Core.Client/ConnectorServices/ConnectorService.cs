@@ -54,7 +54,7 @@ internal class ConnectorService(
             // log the response
             VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
 
-            lock (Stat) Stat.RequestCount++;
+            lock (Status) Status.RequestCount++;
             return ret;
         }
         catch (Exception) when (timeoutCts.IsCancellationRequested) {
@@ -77,7 +77,7 @@ internal class ConnectorService(
                 // send the request
                 await clientStream.Stream.WriteAsync(request, cancellationToken).Vhc();
                 var response = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).Vhc();
-                lock (Stat) Stat.ReusedConnectionSucceededCount++;
+                lock (Status) Status.ReusedConnectionSucceededCount++;
                 return new ConnectorRequestResult<T> {
                     Response = response,
                     ClientStream = clientStream
@@ -90,7 +90,7 @@ internal class ConnectorService(
             }
             catch (Exception ex) {
                 // dispose the connection and retry with new connection
-                lock (Stat) Stat.ReusedConnectionFailedCount++;
+                lock (Status) Status.ReusedConnectionFailedCount++;
                 clientStream.DisposeWithoutReuse();
                 VhLogger.Instance.LogError(GeneralEventId.Stream, ex,
                     "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",

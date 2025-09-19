@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;
@@ -87,8 +88,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Exception? LastException { get; private set; }
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
 
-    public VpnHoodClient(
-        IVpnAdapter vpnAdapter,
+    public VpnHoodClient(IVpnAdapter vpnAdapter,
+        string storageFolder,
         ISocketFactory socketFactory,
         ITracker? tracker,
         ClientOptions options)
@@ -137,8 +138,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _dnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
         _useUdpChannel = options.UseUdpChannel;
-        ProxyNodeManager = new ProxyNodeManager(options.ProxyNodes ?? [],
-            socketFactory,
+        ProxyNodeManager = new ProxyNodeManager(
+            proxyOptions: options.ProxyOptions ?? new ProxyOptions(),
+            storagePath: Path.Combine(storageFolder, "proxies"),
+            socketFactory: socketFactory,
             serverCheckTimeout: options.ServerQueryTimeout);
 
         _serverFinder = new ServerFinder(socketFactory, Token.ServerToken,
@@ -345,7 +348,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 State = ClientState.ValidatingProxies;
                 await ProxyNodeManager.RemoveBadServers(linkedCts.Token).Vhc();
                 VhLogger.Instance.LogInformation("Proxy servers: {Count}",
-                    ProxyNodeManager.ProxyNodeStatuses.Length);
+                    ProxyNodeManager.ProxyNodeInfos.Length);
             }
 
             // Establish first connection and create a session
@@ -1211,7 +1214,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         private readonly Traffic _totalTraffic = accessUsage.TotalTraffic;
         internal void Update(AccessUsage? value) => _accessUsage = value ?? _accessUsage;
 
-        public ClientConnectorStat ConnectorStat => client.ConnectorService.Stat;
+        public ClientConnectorStatus ConnectorStatus => client.ConnectorService.Status;
+        public ProxyManagerStatus ProxyManagerStatus => client.ProxyNodeManager.Status;
         public Traffic Speed => client._tunnel.Speed;
         public Traffic SessionTraffic => client._tunnel.Traffic;
         public Traffic SessionSplitTraffic => client._proxyManager.Traffic;
@@ -1231,6 +1235,5 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;
         public bool IsDnsOverTlsDetected => client._isDnsOverTlsDetected;
-        public ProxyNodeStatus[] ProxyNodeStatuses => client.ProxyNodeManager.ProxyNodeStatuses;
     }
 }

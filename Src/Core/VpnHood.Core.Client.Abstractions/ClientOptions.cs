@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
@@ -95,9 +96,9 @@ public class ClientOptions
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public UserReview? UserReview { get; set; }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public ProxyNode[]? ProxyNodes { get; set; }
+    public ProxyOptions? ProxyOptions { get; set; } 
 
     // ReSharper disable StringLiteralTypo
     public const string SampleAccessKey =

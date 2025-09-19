@@ -36,8 +36,8 @@ internal class ClientUsageTracker : IDisposable
 
         var traffic = _sessionStatus.SessionTraffic;
         var usage = traffic - _lastTraffic;
-        var requestCount = _sessionStatus.ConnectorStat.RequestCount;
-        var connectionCount = _sessionStatus.ConnectorStat.CreatedConnectionCount;
+        var requestCount = _sessionStatus.ConnectorStatus.RequestCount;
+        var connectionCount = _sessionStatus.ConnectorStatus.CreatedConnectionCount;
 
         var trackEvent = ClientTrackerBuilder.BuildUsage(usage, requestCount - _lastRequestCount,
             connectionCount - _lastConnectionCount);

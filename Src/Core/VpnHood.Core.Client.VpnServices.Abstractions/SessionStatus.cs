@@ -1,11 +1,12 @@
-﻿using VpnHood.Core.Client.Abstractions;
+﻿using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 public class SessionStatus
 {
-    public required ConnectorStat ConnectorStat { get; init; }
+    public required ConnectorStatus ConnectorStatus { get; init; }
+    public required ProxyManagerStatus ProxyManagerStatus { get; init; }
     public required Traffic Speed { get; init; }
     public required Traffic SessionTraffic { get; init; }
     public required Traffic SessionSplitTraffic { get; init; }
@@ -24,5 +25,4 @@ public class SessionStatus
     public required int UserReviewRecommended { get; init; }
     public required bool IsDnsOverTlsDetected { get; init; }
     public required bool IsTcpProxy { get; init; }
-    public required ProxyNodeStatus[] ProxyNodeStatuses { get; init; }
 }

@@ -1,10 +1,7 @@
-﻿using System.Net;
-
-namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
+﻿namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
 
 public class ProxyNodeStatus
 {
-    public IPAddress? IpAddress { get; set; }
     public int Penalty { get; set; }
     public int SucceededCount { get; set; }
     public int FailedCount { get; set; }

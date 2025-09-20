@@ -15,6 +15,7 @@ using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Services.Proxies;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
@@ -188,6 +189,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UserAgent = null //not set yet
         });
 
+        // initialize client manager
+        _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);
+        _vpnServiceManager.StateChanged += VpnService_StateChanged;
+
         // initialize services
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new AppCultureProvider(this),
@@ -200,12 +205,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 new AppUpdaterService(
                     storageFolderPath: options.StorageFolderPath,
                     appVersion: Features.Version,
-                    updateOptions: options.UpdaterOptions)
+                    updateOptions: options.UpdaterOptions),
+            ProxyNodeService = new AppProxyNodeService(
+                storageFolder: Path.Combine(StorageFolderPath, "proxy_nodes"),
+                ipLocationProvider: _ipRangeLocationProvider,
+                vpnServiceManager: _vpnServiceManager,
+                settingsService: settingsService)
         };
-
-        // initialize client manager
-        _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);
-        _vpnServiceManager.StateChanged += VpnService_StateChanged;
 
         // create ad service
         var adService = new AppAdService(
@@ -726,7 +732,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview,
-                ProxyOptions = new ProxyOptions{
+                ProxyOptions = new ProxyOptions {
                     ProxyNodes = ProxyNodeResolver.Resolve(UserSettings.ProxySettings)
                 }
             };
@@ -1315,7 +1321,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
             ClientProfileService.Delete(profileInfo.ClientProfileId);
             if (Services.AccountService != null)
-                _ = VhUtils.TryInvokeAsync("Refresh Account", () => Services.AccountService.Refresh(true) );
+                _ = VhUtils.TryInvokeAsync("Refresh Account", () => Services.AccountService.Refresh(true));
         }
     }
 

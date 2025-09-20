@@ -37,7 +37,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _disposedInternal;
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource;
-    private readonly ProxyManager _proxyManager;
+    private readonly ProxyNodeService _proxyNodeService;
     private readonly Dictionary<IPAddress, bool> _includeIps = new();
     private readonly IVpnAdapter _vpnAdapter;
     private readonly ClientHost _clientHost;
@@ -153,7 +153,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             tracker: options.AllowEndPointTracker ? tracker : null,
             proxyNodeManager: ProxyNodeManager);
 
-        _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
+        _proxyNodeService = new ProxyNodeService(socketFactory, new ProxyManagerOptions {
             IsPingSupported = false,
             PacketProxyCallbacks = null,
             UdpTimeout = TunnelDefaults.UdpTimeout,
@@ -167,7 +167,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             AutoDisposePackets = true,
         });
 
-        _proxyManager.PacketReceived += Proxy_PacketReceived;
+        _proxyNodeService.PacketReceived += Proxy_PacketReceived;
 
         var dnsRange = options.DnsServers?.Select(x => new IpRange(x)).ToArray() ?? [];
         VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.ToOrderedList().Union(dnsRange);
@@ -293,7 +293,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         await tcpClient.GetStream().WriteAsync(initBuffer, connectCts.Token);
 
         try {
-            _proxyManager.AddChannel(channel);
+            _proxyNodeService.AddChannel(channel);
         }
         catch {
             channel.Dispose();
@@ -325,7 +325,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // report config
             IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
-            _proxyManager.IsIpV6Supported = IsIpV6SupportedByClient;
+            _proxyNodeService.IsIpV6Supported = IsIpV6SupportedByClient;
             _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             VhLogger.Instance.LogInformation(
@@ -467,7 +467,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // use local proxy if the packet is not in the range and not ICMP.
         // ICMP is not supported by the local proxy for split tunnel
         if (!IsInEpRange(ipPacket) && !ipPacket.IsIcmpEcho()) {
-            _proxyManager.SendPacketQueued(ipPacket);
+            _proxyNodeService.SendPacketQueued(ipPacket);
             return;
         }
 
@@ -1159,7 +1159,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;
         _tunnel.PacketReceived -= Tunnel_PacketReceived;
         _clientHost.PacketReceived -= ClientHost_PacketReceived;
-        _proxyManager.PacketReceived -= Proxy_PacketReceived;
+        _proxyNodeService.PacketReceived -= Proxy_PacketReceived;
 
         VhLogger.Instance.LogDebug("Disposing ClientHost...");
         _clientHost.Dispose();
@@ -1169,7 +1169,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _tunnel.Dispose();
 
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
-        _proxyManager.Dispose();
+        _proxyNodeService.Dispose();
 
         // Make sure async resources are disposed
         _clientUsageTracker?.Dispose();
@@ -1218,7 +1218,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public ProxyManagerStatus ProxyManagerStatus => client.ProxyNodeManager.Status;
         public Traffic Speed => client._tunnel.Speed;
         public Traffic SessionTraffic => client._tunnel.Traffic;
-        public Traffic SessionSplitTraffic => client._proxyManager.Traffic;
+        public Traffic SessionSplitTraffic => client._proxyNodeService.Traffic;
         public Traffic CycleTraffic => _cycleTraffic + client._tunnel.Traffic;
         public Traffic TotalTraffic => _totalTraffic + client._tunnel.Traffic;
         public int SessionPacketChannelCount => client._sessionPacketChannelCount;

@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Net;
+using System.Net.Sockets;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.VpnServices.Manager;
@@ -9,15 +11,17 @@ namespace VpnHood.AppLib.Services.Proxies;
 
 public class AppProxyNodeService(
     string storageFolder,
-    IIpLocationProvider ipLocationProvider,
+    IIpLocationProvider? ipLocationProvider,
     VpnServiceManager vpnServiceManager,
     AppSettingsService settingsService)
 {
     private readonly string _infoFilePath = Path.Combine(storageFolder, "proxy_infos.json");
     private AppProxyNodeInfo[]? _proxyNodeInfos;
     private AppProxySettings ProxySettings => settingsService.UserSettings.ProxySettings;
+    private HostCountryResolver? _hostCountryResolver = 
+        ipLocationProvider!=null ? new HostCountryResolver(ipLocationProvider) : null;
 
-    public Task<AppProxyNodeInfo[]> GetProxyNodeInfos(CancellationToken cancellationToken)
+    public Task<AppProxyNodeInfo[]> GetNodeInfos(CancellationToken cancellationToken)
     {
         Update();
         //UpdateCountryCode(_proxyNodeInfos!, cancellationToken); //may be too slow
@@ -46,30 +50,20 @@ public class AppProxyNodeService(
     }
 
     // ReSharper disable once UnusedMember.Local
-    private Task UpdateCountryCode(IEnumerable<AppProxyNodeInfo> proxyNodeInfos, CancellationToken cancellationToken)
+    private async Task UpdateCountryCode(IEnumerable<AppProxyNodeInfo> proxyNodeInfos, CancellationToken cancellationToken)
     {
-        var tasks = proxyNodeInfos
-            .Where(x => x.CountryCode == null)
-            .Select(async info => {
-                try {
-                    var ipAddress = info.Status.IpAddress;
-                    if (ipAddress is null && IPAddress.TryParse(info.Node.Host, out var hostIpAddress))
-                        info.Status.IpAddress = hostIpAddress;
+        if (_hostCountryResolver is null) 
+            return;
 
-                    if (ipAddress is not null) {
-                        var location = await ipLocationProvider
-                            .GetLocation(ipAddress, cancellationToken)
-                            .Vhc();
-                        info.CountryCode = location.CountryCode;
-                    }
-                }
-                catch {
-                    info.CountryCode = null;
-                }
-            });
+        // resolve all host with domain name 
+        proxyNodeInfos = proxyNodeInfos.Where(x => x.CountryCode is null).ToArray();
+        var hostCountries = await _hostCountryResolver
+            .GetHostCountries(proxyNodeInfos.Select(x=>x.Node.Host), cancellationToken);
 
-        return Task.WhenAll(tasks);
+        foreach (var proxyNodeInfo in proxyNodeInfos)
+            proxyNodeInfo.CountryCode = hostCountries.GetValueOrDefault(proxyNodeInfo.Node.Host);
     }
+
 
     private static IEnumerable<AppProxyNodeInfo> SyncNodeInfosWithNodes(
         IEnumerable<AppProxyNodeInfo> nodeInfos, ProxyNode[] nodes)

@@ -32,7 +32,7 @@ public class Session : IDisposable
     private readonly IAccessManager _accessManager;
     private readonly IVpnAdapter? _vpnAdapter;
     private readonly ISocketFactory _socketFactory;
-    private readonly ProxyNodeService _proxyNodeService;
+    private readonly ProxyManager _proxyManager;
     private readonly object _verifyRequestLock = new();
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
@@ -67,7 +67,7 @@ public class Session : IDisposable
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (_udpChannel != null ? 0 : Tunnel.PacketChannelCount);
-    public int UdpConnectionCount => _proxyNodeService.UdpClientCount;
+    public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
     public VirtualIpBundle VirtualIps { get; }
     public bool AllowTcpPacket { get; }
@@ -90,7 +90,7 @@ public class Session : IDisposable
         _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
         _vpnAdapter = vpnAdapter;
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-        _proxyNodeService = new ProxyNodeService(socketFactory, new ProxyManagerOptions {
+        _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
             UdpTimeout = options.UdpTimeoutValue,
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
@@ -103,7 +103,7 @@ public class Session : IDisposable
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
             UseUdpProxy2 = options.UseUdpProxy2Value
         });
-        _proxyNodeService.PacketReceived += Proxy_PacketsReceived;
+        _proxyManager.PacketReceived += Proxy_PacketsReceived;
         _trackingOptions = trackingOptions;
         _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
@@ -268,7 +268,7 @@ public class Session : IDisposable
         if (_vpnAdapter?.IsIpVersionSupported(ipPacket2.Version) == true)
             _vpnAdapter.SendPacketQueued(ipPacket2);
         else
-            _proxyNodeService.SendPacketQueued(ipPacket2);
+            _proxyManager.SendPacketQueued(ipPacket2);
     }
 
     public void LogTrack(IpProtocol protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint,
@@ -308,7 +308,7 @@ public class Session : IDisposable
             "{Proto,-4}\tSessionId {SessionId}\t{Mode,-2}\tTcpCount {TcpCount,4}\tUdpCount {UdpCount,4}\tTcpWait {TcpConnectWaitCount,3}\tNetScan {NetScan,3}\t" +
             "SrcPort {SrcPort,-5}\tDstIp {DstIp,-15}\tDstPort {DstPort,-5}\t{Success,-10}",
             protocol, SessionId, mode,
-            TcpChannelCount, _proxyNodeService.UdpClientCount, _tcpConnectWaitCount, netScanCount,
+            TcpChannelCount, _proxyManager.UdpClientCount, _tcpConnectWaitCount, netScanCount,
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
@@ -496,8 +496,8 @@ public class Session : IDisposable
     {
         if (IsDisposed) return;
 
-        _proxyNodeService.PacketReceived -= Proxy_PacketsReceived;
-        _proxyNodeService.Dispose();
+        _proxyManager.PacketReceived -= Proxy_PacketsReceived;
+        _proxyManager.Dispose();
         Tunnel.PacketReceived -= Tunnel_PacketReceived;
         Tunnel.Dispose();
         _netScanExceptionReporter.Dispose();

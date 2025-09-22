@@ -194,7 +194,7 @@ public class VpnServiceManager : IDisposable
         VhLogger.Instance.LogDebug("The VpnService has established a connection.");
     }
 
-    public Task RefreshState(CancellationToken cancellationToken) => 
+    public Task RefreshState(CancellationToken cancellationToken) =>
         TryRefreshConnectionInfo(true, cancellationToken);
 
     private async Task<ConnectionInfo> TryRefreshConnectionInfo(bool force, CancellationToken cancellationToken)
@@ -417,11 +417,17 @@ public class VpnServiceManager : IDisposable
         _lastConnectionInfo = connectionInfo;
     }
 
-    public Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
+    public bool IsReconfiguring { get; private set; }
+    public async Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
     {
-        return IsStarted
-            ? SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken)
-            : Task.CompletedTask;
+        IsReconfiguring = true;
+        try {
+            if (IsStarted)
+                await SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken);
+        }
+        finally {
+            IsReconfiguring = false;
+        }
     }
 
     public Task SetWaitForAd(CancellationToken cancellationToken)

@@ -8,5 +8,5 @@ public class ClientReconfigureParams
     public bool UseUdpChannel { get; set; }
     public bool DropUdp { get; set; }
     public bool DropQuic { get; set; }
-    public ProxyNode[] ProxyNodes { get; set; } = [];
+    public ProxyOptions ProxyNodes { get; set; } = new();
 }

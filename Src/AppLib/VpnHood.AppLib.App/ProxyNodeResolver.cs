@@ -3,6 +3,7 @@ using VpnHood.Core.Client.Abstractions.ProxyNodes;
 
 namespace VpnHood.AppLib;
 
+//todo: what is the usage?
 public static class ProxyNodeResolver
 {
     public static ProxyNode[] Resolve(AppProxySettings proxySettings)

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.ProxyNodes;
@@ -11,7 +12,7 @@ using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Client.ProxyNodes;
 
-public class ProxyNodeManager
+public class ProxyNodeManager : IDisposable
 {
     private ProxyNodeItem? _fastestNode;
     private int _requestCount;
@@ -41,13 +42,24 @@ public class ProxyNodeManager
 
         // load last NodeInfos
         var proxyInfos = JsonUtils.TryDeserializeFile<ProxyNodeInfo[]>(_proxyNodeInfosFile) ?? [];
-        var proxyNodeItems = proxyInfos.Select(x => new ProxyNodeItem(x)).ToArray();
-        _proxyNodeItems = UpdateProxyItems(proxyNodeItems, proxyOptions.ProxyNodes).ToArray();
+        _proxyNodeItems = UpdateItemsByOptions(proxyInfos.Select(x => new ProxyNodeItem(x)), proxyOptions)
+            .ToArray();
     }
 
-    public void UpdateProxyNodes(ProxyNode[] proxyNodes)
+    public void UpdateOptions(ProxyOptions options)
     {
-        _proxyNodeItems = UpdateProxyItems(_proxyNodeItems, proxyNodes).ToArray();
+        _proxyNodeItems = UpdateItemsByOptions(_proxyNodeItems, options)
+            .ToArray();
+    }
+
+    private static IEnumerable<ProxyNodeItem> UpdateItemsByOptions(IEnumerable<ProxyNodeItem> items, ProxyOptions options)
+    {
+        items = UpdateProxyItems(items, options.ProxyNodes).ToArray();
+        if (options.ResetStates)
+            foreach (var item in items)
+                item.Info.Status = new ProxyNodeStatus();
+
+        return items;
     }
 
     private static IEnumerable<ProxyNodeItem> UpdateProxyItems(
@@ -188,5 +200,17 @@ public class ProxyNodeManager
             throw new SocketException((int)SocketError.NetworkUnreachable);
 
         return tcpClientOk;
+    }
+
+    private void SaveNodeInfos()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_proxyNodeInfosFile)!);
+        File.WriteAllText(_proxyNodeInfosFile, JsonSerializer.Serialize(ProxyNodeInfos));
+    }
+
+    public void Dispose()
+    {
+        // save current NodeInfos
+        VhUtils.TryInvoke("Save ProxyNodes status", SaveNodeInfos);
     }
 }

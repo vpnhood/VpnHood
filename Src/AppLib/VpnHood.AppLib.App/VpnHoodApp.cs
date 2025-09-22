@@ -21,7 +21,6 @@ using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
-using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -61,7 +60,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _connectTimeout;
     private readonly TimeSpan _sessionTimeout;
     private readonly TimeSpan _tcpTimeout;
-
     private readonly LogService _logService;
     private readonly LogServiceOptions _logServiceOptions;
     private readonly AppPersistState _appPersistState;
@@ -261,11 +259,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         //var a = await Dns.GetHostEntryAsync("googleads.g.doubleclick.net");
-
-
     }
 
-    private Task? _reconfigurationTask;
     private void ApplySettings()
     {
         try {
@@ -289,10 +284,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UseUdpChannel = UserSettings.UseUdpChannel,
                     DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
                     DropQuic = UserSettings.DropQuic,
-                    ProxyNodes = ProxyNodeResolver.Resolve(UserSettings.ProxySettings)
+                    ProxyNodes = Services.ProxyNodeService.GetProxyOptions()
                 };
+
                 // it is not important to take effect immediately
-                _reconfigurationTask = _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None);
+                _ = _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None);
 
                 // check is disconnect required
                 disconnectRequired =
@@ -374,7 +370,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var clientProfileInfo = CurrentClientProfileInfo;
             var connectionState = ConnectionState;
             var connectionInfo = connectionState.IsIdle() ? null : ConnectionInfo;
-            var isReconfiguring = _reconfigurationTask is null || _reconfigurationTask.IsCompleted;
 
             var uiContext = AppUiContext.Context;
             var appState = new AppState {
@@ -402,7 +397,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UpdaterStatus = Services.UpdaterService?.Status,
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 LastError = LastError?.ToAppDto(),
-                IsTcpProxy = StateHelper.IsTcpProxy(Features, UserSettings, connectionInfo, isReconfiguring),
+                IsTcpProxy = StateHelper.IsTcpProxy(Features, UserSettings, connectionInfo, _vpnServiceManager.IsReconfiguring),
                 CanChangeTcpProxy = StateHelper.CanChangeTcpProxy(Features, connectionInfo?.SessionInfo),
                 IsNotificationEnabled = Services.UiProvider.IsNotificationEnabled,
                 SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.UiProvider.GetSystemPrivateDns()),
@@ -732,9 +727,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview,
-                ProxyOptions = new ProxyOptions {
-                    ProxyNodes = ProxyNodeResolver.Resolve(UserSettings.ProxySettings)
-                }
+                ProxyOptions = Services.ProxyNodeService.GetProxyOptions()
             };
 
             VhLogger.Instance.LogDebug(

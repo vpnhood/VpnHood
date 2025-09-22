@@ -8,7 +8,7 @@ using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class ProxyNodeService : PassthroughPacketTransport
+public class ProxyManager : PassthroughPacketTransport
 {
     private readonly List<ProxyChannel> _streamProxyChannels = [];
     private readonly IPacketProxyPool? _pingProxyPool;
@@ -39,7 +39,7 @@ public class ProxyNodeService : PassthroughPacketTransport
     }
 
 
-    public ProxyNodeService(ISocketFactory socketFactory, ProxyManagerOptions options)
+    public ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
     {
         var udpProxyPoolOptions = new UdpProxyPoolOptions {
             PacketProxyCallbacks = options.PacketProxyCallbacks,
@@ -101,7 +101,7 @@ public class ProxyNodeService : PassthroughPacketTransport
     public void AddChannel(ProxyChannel channel)
     {
         if (IsDisposed)
-            throw new ObjectDisposedException(nameof(ProxyNodeService));
+            throw new ObjectDisposedException(nameof(ProxyManager));
 
         lock (_streamProxyChannels)
             _streamProxyChannels.Add(channel);

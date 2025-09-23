@@ -59,17 +59,16 @@ internal class ApiRouteMapper(WebserverLite server)
         // CORS is already added in the wrapper, no need to add it again
 
         // set correct https status code depends on exception
-        if (NotExistsException.Is(ex)) context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-        else if (AlreadyExistsException.Is(ex)) context.Response.StatusCode = (int)HttpStatusCode.Conflict;
-        else if (ex is ArgumentException or InvalidOperationException) context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-        else if (ex is UnauthorizedAccessException) context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-        else context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        var statusCode = HttpStatusCode.InternalServerError;
+        if (NotExistsException.Is(ex)) statusCode = HttpStatusCode.NotFound;
+        else if (AlreadyExistsException.Is(ex)) statusCode = HttpStatusCode.Conflict;
+        else if (ex is ArgumentException or InvalidOperationException) statusCode = HttpStatusCode.BadRequest;
+        else if (ex is UnauthorizedAccessException) statusCode = HttpStatusCode.Forbidden;
 
         // Default to 500 for other exceptions
-        context.Response.ContentType = "application/json";
-        var errorResponse = ex.ToApiError();
-        errorResponse.Data.TryAdd("HttpStatusCode", context.Response.StatusCode.ToString());
-        await context.SendJson(errorResponse);
+        var apiError = ex.ToApiError();
+        apiError.Data.TryAdd("HttpStatusCode", context.Response.StatusCode.ToString());
+        await context.SendJson(apiError, (int)statusCode);
     }
 
     public ApiRouteMapper AddController(ControllerBase controller)

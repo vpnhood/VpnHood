@@ -48,12 +48,18 @@ internal class AppController : ControllerBase, IAppController
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "connect", async ctx => {
-            await Connect(ctx.GetQueryParameter<Guid?>("clientProfileId"), ctx.GetQueryParameter<string?>("serverLocation"), ctx.GetQueryParameter<ConnectPlanId>("planId"));
+            await Connect(
+                ctx.GetQueryParameter<Guid?>("clientProfileId", null),
+                ctx.GetQueryParameter<string?>("serverLocation", null),
+                ctx.GetQueryParameter("planId", ConnectPlanId.Normal));
             await ctx.SendNoContent();
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "diagnose", async ctx => {
-            await Diagnose(ctx.GetQueryParameter<Guid?>("clientProfileId"), ctx.GetQueryParameter<string?>("serverLocation"), ctx.GetQueryParameter<ConnectPlanId>("planId"));
+            await Diagnose(
+                ctx.GetQueryParameter<Guid?>("clientProfileId", null),
+                ctx.GetQueryParameter<string?>("serverLocation", null),
+                ctx.GetQueryParameter("planId", ConnectPlanId.Normal));
             await ctx.SendNoContent();
         });
 
@@ -181,7 +187,8 @@ internal class AppController : ControllerBase, IAppController
         return Task.FromResult(App.State);
     }
 
-    public Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId)
+    public Task Connect(Guid? clientProfileId,
+        string? serverLocation, ConnectPlanId planId = ConnectPlanId.Normal)
     {
         return App.Connect(
             new ConnectOptions {
@@ -191,7 +198,8 @@ internal class AppController : ControllerBase, IAppController
             });
     }
 
-    public Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId)
+    public Task Diagnose(Guid? clientProfileId, string? serverLocation,
+        ConnectPlanId planId = ConnectPlanId.Normal)
     {
         return App.Connect(
             new ConnectOptions {

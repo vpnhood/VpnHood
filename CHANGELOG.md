@@ -1,7 +1,8 @@
 # Upcoming
 * Fix: Linux: Client stops after 60 minutes
 * Fix: Linux: Prevent multiple instances
-* Feature: Add remote-access to VpnHood Client by debug commands
+* Feature: Add remote access to the VpnHood Client by debug commands
+* Feature: Add French & Italian languages
 
 # v7.3.752
 * Fix: Unable to close the Quick Launch pop-up on Android

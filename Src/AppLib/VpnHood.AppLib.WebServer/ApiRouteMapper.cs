@@ -67,7 +67,7 @@ internal class ApiRouteMapper(WebserverLite server)
 
         // Default to 500 for other exceptions
         var apiError = ex.ToApiError();
-        apiError.Data.TryAdd("HttpStatusCode", context.Response.StatusCode.ToString());
+        apiError.Data.TryAdd("HttpStatusCode", statusCode.ToString());
         await context.SendJson(apiError, (int)statusCode);
     }
 

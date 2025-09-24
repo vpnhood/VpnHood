@@ -1072,14 +1072,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         return default;
     }
 
-    private async ValueTask DisposeAsync(Exception ex)
+    private ValueTask DisposeAsync(Exception ex)
     {
         // DisposeAsync will try SendByte, and it may cause calling this dispose method again and go to deadlock
         if (_disposed || _disposeLock.IsLocked) // IsLocked means that DisposeAsync is already running
-            return;
+            return ValueTask.CompletedTask;
 
+        VhLogger.Instance.LogDebug(ex, "Client is disposing due an error.");
         LastException = ex;
-        await DisposeAsync().Vhc();
+        return DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

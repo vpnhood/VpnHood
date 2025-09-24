@@ -265,6 +265,11 @@ public class VpnServiceHost : IDisposable
 
         try {
             _disconnectRequested = true;
+            if (exception!=null)
+                VhLogger.Instance.LogError(exception, "VpnServiceHost is disconnecting due to an error...");
+            else
+                VhLogger.Instance.LogDebug(exception, "VpnServiceHost is disconnecting...");
+
 
             // let dispose in the background
             var client = Client;

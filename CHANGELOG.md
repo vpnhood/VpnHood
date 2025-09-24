@@ -1,4 +1,4 @@
-# Upcoming
+# v7.3.759
 * Fix: Linux: Client stops after 60 minutes
 * Fix: Linux: Prevent multiple instances
 * Feature: Add French & Italian languages

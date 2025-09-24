@@ -9,16 +9,19 @@ It is available for Windows and Android. The iOS client still needs to be ready!
 
 <a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="200"></a>
 <a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.msi"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="200"></a>
-
 <a href="https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client">Use Alternative Download links.</a>
 
 ## Client Features
 * Easy Installation: Install and press connect
+* Fast & Secure
 * Undetectable on private IPs
-* Fast
+* Protocol: UDP, TCP, Cloaked and Combination
 * Split Tunneling by Apps & Countries
+* Custom DNS
 * Windows (x64) 10, 11 
 * Android, Android TV
+* Linux
+* Multilanguage
 * IPv4/IPv6
 
 ## Server Features
@@ -28,6 +31,7 @@ It is available for Windows and Android. The iOS client still needs to be ready!
 * Built-In User Management 
 * Built-in NAT with zero configuration
 * NetScan Protector
+* Compatible with Reserved Proxies
 * Windows (x64) 10, 11, or Windows Server
 * Linux
 
@@ -35,7 +39,7 @@ It is available for Windows and Android. The iOS client still needs to be ready!
 * Open source (LGPL License)
 * Completely in .NET
 * MAUI Support 
-* Ads interface. AdMob and Chartboost have been integrated
+* Ads interface. AdMob, InMobi and Chartboost have been integrated
 * Billing Interface
 * Highly Customizable
 * Easily embed into your .NET app

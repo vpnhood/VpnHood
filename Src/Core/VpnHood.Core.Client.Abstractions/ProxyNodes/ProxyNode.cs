@@ -8,6 +8,15 @@ public class ProxyNode
     public required int Port { get; init; }
     public string? Username { get; set; }
     public string? Password { get; set; }
-    
+    public Uri Url =>
+        new UriBuilder {
+            Scheme = Protocol.ToString().ToLowerInvariant(),
+            Host = Host,
+            Port = Port,
+            UserName = Username,
+            Password = Password,
+            Query = IsEnabled ? "enabled=1" : null
+        }.Uri;
+
     public string GetId() => $"{Protocol}:{Host}:{Port}";
 }

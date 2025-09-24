@@ -1,8 +1,8 @@
 # Upcoming
 * Fix: Linux: Client stops after 60 minutes
 * Fix: Linux: Prevent multiple instances
-* Feature: Add remote access to the VpnHood Client by debug commands
 * Feature: Add French & Italian languages
+* Feature: Android: Detect when the VPN is disconnected by another VPN app
 * Update: Add Badge Information Page on home screen
 * Update: Improve pages & UI
 
@@ -17,6 +17,7 @@
 * Feature: Internal Ad Provider
 * Feature: Show more details in connection progress
 * Feature: Allow setting custom DNS servers
+* Feature: Add remote access to the VpnHood Client by debug commands
 
 # v7.3.748
 * Fix: Minor UI issues and translations

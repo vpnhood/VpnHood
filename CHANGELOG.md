@@ -3,6 +3,7 @@
 * Fix: Linux: Prevent multiple instances
 * Feature: Add remote access to the VpnHood Client by debug commands
 * Feature: Add French & Italian languages
+* Update: Add Badge Information Page on home screen
 * Update: Improve pages & UI
 
 # v7.3.752

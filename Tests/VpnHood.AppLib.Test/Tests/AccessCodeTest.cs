@@ -1,7 +1,5 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Text;
-using System.Text.Json;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -19,6 +17,12 @@ public class AccessCodeTest : TestAppBase
         var tcpClient = new TcpClient();
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);
+
+        
+        //Uri.TryCreate("http://wwww.zz.omc", new UriCreationOptions {
+        //}, out var aa);
+        
+        //Console.WriteLine(aa.Port);
         await Task.CompletedTask;
     }
 

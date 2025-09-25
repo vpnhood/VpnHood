@@ -23,7 +23,6 @@ public static class AppDtoConverterExtensions
     {
         return new AppSessionInfo {
             AccessInfo = sessionInfo.AccessInfo,
-            IsUdpChannelSupported = sessionInfo.IsUdpChannelSupported,
             IsDnsServersAccepted = sessionInfo.IsDnsServersAccepted,
             IsLocalNetworkAllowed = sessionInfo.IsLocalNetworkAllowed,
             ServerLocationInfo = sessionInfo.ServerLocationInfo,
@@ -33,8 +32,7 @@ public static class AppDtoConverterExtensions
             DnsServers = sessionInfo.DnsServers,
             ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress,
             CreatedTime = sessionInfo.CreatedTime,
-            IsTcpPacketSupported = sessionInfo.IsTcpPacketSupported,
-            IsTcpProxySupported = sessionInfo.IsTcpProxySupported,
+            ChannelProtocols = sessionInfo.ChannelProtocols
         };
     }
 

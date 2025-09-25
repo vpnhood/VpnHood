@@ -8,11 +8,6 @@ namespace VpnHood.AppLib.Utils;
 
 public static class StateHelper
 {
-    public static ChannelProtocol[] GetServerChannelProtocols(AppFeatures features, SessionInfo? sessionInfo)
-    {
-        return sessionInfo?.ChannelProtocols.Intersect(features.ChannelProtocols).ToArray() ?? [];
-    }
-
     public static bool IsLongRunningState([NotNullWhen(true)] ConnectionInfo? connectionInfo)
     {
         return FastDateTime.Now - connectionInfo?.ClientStateChangedTime > TimeSpan.FromMilliseconds(2000);

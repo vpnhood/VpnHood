@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Tokens;
@@ -43,28 +42,28 @@ public class UserSettings
     }
 
     [Obsolete("Compatibility for version <= 759; Use VpnProtocol.")]
-    public bool? DropQuic {
+    public bool DropQuic {
         // ReSharper disable once ValueParameterNotUsed
         init {
-            if (value == true)
+            if (value)
                 ChannelProtocol = ChannelProtocol.TcpProxyAndDropQuic;
         }
     }
 
     [Obsolete("Compatibility for version <= 759; Use VpnProtocol.")]
-    public bool? UseUdpChannel {
+    public bool UseUdpChannel {
         // ReSharper disable once ValueParameterNotUsed
         init {
-            if (value == true)
+            if (value)
                 ChannelProtocol = ChannelProtocol.Udp;
         }
     }
 
     [Obsolete("Compatibility for version <= 759; Use VpnProtocol.")]
-    public bool? UseTcpProxy {
+    public bool UseTcpProxy {
         // ReSharper disable once ValueParameterNotUsed
         init {
-            if (value == true)
+            if (value)
                 ChannelProtocol = ChannelProtocol.TcpProxy;
         }
     }

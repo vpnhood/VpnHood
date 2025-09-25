@@ -3791,9 +3791,9 @@ export class UserSettings implements IUserSettings {
     proxySettings!: AppProxySettings;
     allowRemoteAccess!: boolean;
     dnsServers!: string[];
-    dropQuic?: boolean | null;
-    useUdpChannel?: boolean | null;
-    useTcpProxy?: boolean | null;
+    dropQuic!: boolean;
+    useUdpChannel!: boolean;
+    useTcpProxy!: boolean;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -3850,9 +3850,9 @@ export class UserSettings implements IUserSettings {
             else {
                 this.dnsServers = <any>null;
             }
-            this.dropQuic = _data["DropQuic"] !== undefined ? _data["DropQuic"] : <any>null;
-            this.useUdpChannel = _data["UseUdpChannel"] !== undefined ? _data["UseUdpChannel"] : <any>null;
-            this.useTcpProxy = _data["UseTcpProxy"] !== undefined ? _data["UseTcpProxy"] : <any>null;
+            this.dropQuic = _data["dropQuic"] !== undefined ? _data["dropQuic"] : <any>null;
+            this.useUdpChannel = _data["useUdpChannel"] !== undefined ? _data["useUdpChannel"] : <any>null;
+            this.useTcpProxy = _data["useTcpProxy"] !== undefined ? _data["useTcpProxy"] : <any>null;
         }
     }
 
@@ -3897,9 +3897,9 @@ export class UserSettings implements IUserSettings {
             for (let item of this.dnsServers)
                 data["dnsServers"].push(item);
         }
-        data["DropQuic"] = this.dropQuic !== undefined ? this.dropQuic : <any>null;
-        data["UseUdpChannel"] = this.useUdpChannel !== undefined ? this.useUdpChannel : <any>null;
-        data["UseTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : <any>null;
+        data["dropQuic"] = this.dropQuic !== undefined ? this.dropQuic : <any>null;
+        data["useUdpChannel"] = this.useUdpChannel !== undefined ? this.useUdpChannel : <any>null;
+        data["useTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : <any>null;
         return data;
     }
 }
@@ -3929,9 +3929,9 @@ export interface IUserSettings {
     proxySettings: AppProxySettings;
     allowRemoteAccess: boolean;
     dnsServers: string[];
-    dropQuic?: boolean | null;
-    useUdpChannel?: boolean | null;
-    useTcpProxy?: boolean | null;
+    dropQuic: boolean;
+    useUdpChannel: boolean;
+    useTcpProxy: boolean;
 }
 
 export enum FilterMode {

@@ -8,24 +8,37 @@ namespace VpnHood.AppLib.Utils;
 
 public static class StateHelper
 {
-    public static ServerChannelProtocols GetServerChannelProtocols(AppFeatures features, SessionInfo? sessionInfo)
+    public static ChannelProtocol[] GetServerChannelProtocols(AppFeatures features, SessionInfo? sessionInfo)
     {
-        if (sessionInfo == null)
-            return new ServerChannelProtocols {
-                Udp = true,
-                Tcp = true,
-                TcpProxyAndUdp = features.IsTcpProxySupported,
-                TcpProxy = features.IsTcpProxySupported,
-                TcpProxyAndDropQuick = features.IsTcpProxySupported,
-            };
+        var channels = new List<ChannelProtocol>();
+        if (sessionInfo == null) {
+            channels.Add(ChannelProtocol.Udp);
+            channels.Add(ChannelProtocol.Tcp);
+            if (features.IsTcpProxySupported) {
+                channels.Add(ChannelProtocol.TcpProxyAndUdp);
+                channels.Add(ChannelProtocol.TcpProxy);
+                channels.Add(ChannelProtocol.TcpProxyAndDropQuic);
+            }
 
-        return new ServerChannelProtocols {
-            Udp = sessionInfo is { IsUdpChannelSupported: true, IsTcpPacketSupported: true },
-            Tcp = sessionInfo.IsTcpPacketSupported,
-            TcpProxyAndUdp = sessionInfo is { IsUdpChannelSupported: true, IsTcpProxySupported: true } && features.IsTcpProxySupported,
-            TcpProxy = sessionInfo.IsTcpProxySupported && features.IsTcpProxySupported,
-            TcpProxyAndDropQuick = sessionInfo.IsTcpProxySupported && features.IsTcpProxySupported
-        };
+            return channels.ToArray();
+        }
+
+        // if the server does support tcp packet (adapter on server)
+        if (sessionInfo.IsTcpPacketSupported) {
+            if (sessionInfo.IsUdpChannelSupported)
+                channels.Add(ChannelProtocol.Udp);
+            channels.Add(ChannelProtocol.Tcp);
+        }
+
+        // if server does support tcp proxy (disabled on server for performance)
+        if (features.IsTcpProxySupported && sessionInfo.IsTcpProxySupported) {
+            if (sessionInfo.IsUdpChannelSupported)
+                channels.Add(ChannelProtocol.TcpProxyAndUdp);
+            channels.Add(ChannelProtocol.TcpProxy);
+            channels.Add(ChannelProtocol.TcpProxyAndDropQuic);
+        }
+
+        return channels.ToArray();
     }
 
     public static bool IsLongRunningState([NotNullWhen(true)] ConnectionInfo? connectionInfo)

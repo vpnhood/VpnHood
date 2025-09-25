@@ -37,6 +37,6 @@ public class AppState
     public required bool? IsWaitingForInternalAd { get; set; }
     public required int? StateProgress { get; init; }
     public required bool IsDiagnosing { get; set; }
-    public required ServerChannelProtocols ServerChannelProtocols { get; init; }
-    public ChannelProtocol ChannelProtocol { get; set; }
+    public required ChannelProtocol[] ServerChannelProtocols { get; init; }
+    public required ChannelProtocol ChannelProtocol { get; set; }
 }

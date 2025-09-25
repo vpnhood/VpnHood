@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.AppLib.Dtos;
 
@@ -15,10 +16,9 @@ public class AppSessionStatus
     public required int PacketChannelCount { get; init; }
     public required int UnstableCount { get; set; }
     public required int WaitingCount { get; set; }
-    public required bool IsUdpMode { get; init; }
     public required bool CanExtendByRewardedAd { get; init; }
     public required long SessionMaxTraffic { get; init; }
     public required DateTime? SessionExpirationTime { get; init; }
     public required int? ActiveClientCount { get; init; }
-    public required bool IsTcpProxy { get; set; }
+    public required ChannelProtocol ChannelProtocol { get; init; }
 }

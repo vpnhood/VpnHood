@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Client.Abstractions.ProxyNodes;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
 
@@ -19,8 +20,7 @@ public interface ISessionStatus
     int WaitingCount { get; }
     int SessionPacketChannelCount { get; }
     int ActivePacketChannelCount { get; }
-    bool IsUdpMode { get; }
-    bool IsTcpProxy { get; }
+    ChannelProtocol ChannelProtocol { get; }
     bool CanExtendByRewardedAd { get; }
     int UserReviewRecommended { get; }
     long SessionMaxTraffic { get; }

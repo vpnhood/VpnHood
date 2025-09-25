@@ -3,7 +3,7 @@
 * Fix: Linux: Prevent multiple instances
 * Feature: Add French & Italian languages
 * Feature: Android: Detect when the VPN is disconnected by another VPN app
-* Update: Add Badge Information Page on home screen
+* Feature: Add Badge Information Page on home screen
 * Update: Improve pages & UI
 
 # v7.3.752
@@ -13,7 +13,6 @@
 * Fix: Restoring the notification icon on Windows after restarting Windows Explorer
 * Fix: Access to the local network when IncludeLocalNetwork is enabled
 * Fix: Freeze on loading Ad on some devices
-* Feature: Show more progress details while connecting
 * Feature: Internal Ad Provider
 * Feature: Show more details in connection progress
 * Feature: Allow setting custom DNS servers

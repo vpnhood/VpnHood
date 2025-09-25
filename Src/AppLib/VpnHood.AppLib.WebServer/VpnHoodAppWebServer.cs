@@ -172,6 +172,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         await context.Response.Send(_indexHtml);
     }
     
+    // ReSharper disable once UnusedMember.Local
     private static IEnumerable<IPAddress> GetAllPublicIp4()
     {
         var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()

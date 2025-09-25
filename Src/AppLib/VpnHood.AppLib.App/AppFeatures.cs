@@ -28,7 +28,6 @@ public class AppFeatures
     public required bool AutoRemoveExpiredPremium { get; set; }
     public required bool IsAdSupported { get; set; }
     public required AppFeature[] PremiumFeatures { get; init; }
-
     public required object? CustomData { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]

@@ -280,10 +280,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var disconnectRequired = false;
             if (ConnectionInfo.IsStarted()) {
                 var reconfigureParams = new ClientReconfigureParams {
-                    UseTcpProxy = UserSettings.UseTcpProxy && Features.IsTcpProxySupported,
-                    UseUdpChannel = UserSettings.UseUdpChannel,
+                    ChannelProtocol = UserSettings.ChannelProtocol,
                     DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                    DropQuic = UserSettings.DropQuic,
                     ProxyNodes = Services.ProxyNodeService.GetProxyOptions()
                 };
 
@@ -397,11 +395,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UpdaterStatus = Services.UpdaterService?.Status,
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 LastError = LastError?.ToAppDto(),
-                IsTcpProxy = StateHelper.IsTcpProxy(Features, UserSettings, connectionInfo, _vpnServiceManager.IsReconfiguring),
-                CanChangeTcpProxy = StateHelper.CanChangeTcpProxy(Features, connectionInfo?.SessionInfo),
+                ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol ?? UserSettings.ChannelProtocol,
                 IsNotificationEnabled = Services.UiProvider.IsNotificationEnabled,
                 SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.UiProvider.GetSystemPrivateDns()),
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
+                ServerChannelProtocols = StateHelper.GetServerChannelProtocols(Features, connectionInfo?.SessionInfo),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.UiProvider.GetSystemBarsInfo(uiContext)
                     : SystemBarsInfo.Default,
@@ -699,13 +697,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ServerQueryTimeout = _serverQueryTimeout,
                 UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
                 DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                DropQuic = UserSettings.DropQuic,
+                ChannelProtocol = UserSettings.ChannelProtocol,
                 ServerLocation = ServerLocationInfo.IsAutoLocation(serverLocation) ? null : serverLocation,
                 PlanId = planId,
                 AccessCode = accessCode,
-                UseTcpProxy = UserSettings.UseTcpProxy && Features.IsTcpProxySupported,
                 IsTcpProxySupported = Features.IsTcpProxySupported,
-                UseUdpChannel = UserSettings.UseUdpChannel,
                 DomainFilter = UserSettings.DomainFilter,
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
                 AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,

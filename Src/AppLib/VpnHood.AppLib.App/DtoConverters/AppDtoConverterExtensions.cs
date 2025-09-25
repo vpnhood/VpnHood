@@ -52,12 +52,11 @@ public static class AppDtoConverterExtensions
             PacketChannelCount = sessionStatus.PacketChannelCount,
             UnstableCount = sessionStatus.UnstableCount,
             WaitingCount = sessionStatus.WaitingCount,
-            IsUdpMode = sessionStatus.IsUdpMode,
-            IsTcpProxy = sessionStatus.IsTcpProxy,
             CanExtendByRewardedAd = canExtendByRewardedAd,
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
-            ActiveClientCount = sessionStatus.ActiveClientCount
+            ActiveClientCount = sessionStatus.ActiveClientCount,
+            ChannelProtocol = sessionStatus.ChannelProtocol
         };
     }
 

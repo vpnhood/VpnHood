@@ -13,7 +13,6 @@ internal static class DtoConverters
             CanExtendByRewardedAd = sessionStatus.CanExtendByRewardedAd,
             CycleTraffic = sessionStatus.CycleTraffic,
             PacketChannelCount = sessionStatus.ActivePacketChannelCount,
-            IsUdpMode = sessionStatus.IsUdpMode,
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,
             SessionTraffic = sessionStatus.SessionTraffic,
@@ -26,8 +25,8 @@ internal static class DtoConverters
             WaitingCount = sessionStatus.WaitingCount,
             UserReviewRecommended = sessionStatus.UserReviewRecommended,
             IsDnsOverTlsDetected = sessionStatus.IsDnsOverTlsDetected,
-            IsTcpProxy = sessionStatus.IsTcpProxy,
-            ProxyManagerStatus = sessionStatus.ProxyManagerStatus
+            ProxyManagerStatus = sessionStatus.ProxyManagerStatus,
+            ChannelProtocol = sessionStatus.ChannelProtocol
         };
 
         return ret;

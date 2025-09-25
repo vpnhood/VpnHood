@@ -1,7 +1,5 @@
 using System.Net;
 using System.Net.Sockets;
-using Swan;
-using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.ProxyNodes;
 using VpnHood.Core.Proxies.HttpProxyServers;

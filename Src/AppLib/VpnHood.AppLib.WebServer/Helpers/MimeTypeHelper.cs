@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+// ReSharper disable StringLiteralTypo
 
 namespace VpnHood.AppLib.WebServer.Helpers;
 

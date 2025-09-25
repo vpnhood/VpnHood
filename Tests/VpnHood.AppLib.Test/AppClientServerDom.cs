@@ -1,8 +1,6 @@
 ﻿using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Client.Device;
-using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
-using VpnHood.Test;
 using VpnHood.Test.Device;
 
 namespace VpnHood.AppLib.Test;

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.AppLib;
@@ -28,6 +29,21 @@ public class AppFeatures
     public required bool AutoRemoveExpiredPremium { get; set; }
     public required bool IsAdSupported { get; set; }
     public required AppFeature[] PremiumFeatures { get; init; }
+    public ChannelProtocol[] ChannelProtocols {
+        get {
+            var channels = new List<ChannelProtocol> {
+                ChannelProtocol.Udp,
+                ChannelProtocol.Tcp
+            };
+            if (IsTcpProxySupported) {
+                channels.Add(ChannelProtocol.TcpProxyAndUdp);
+                channels.Add(ChannelProtocol.TcpProxy);
+                channels.Add(ChannelProtocol.TcpProxyAndDropQuic);
+            }
+            return channels.ToArray();
+        }
+    }
+
     public required object? CustomData { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]

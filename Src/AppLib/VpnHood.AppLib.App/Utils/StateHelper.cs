@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -10,35 +11,7 @@ public static class StateHelper
 {
     public static ChannelProtocol[] GetServerChannelProtocols(AppFeatures features, SessionInfo? sessionInfo)
     {
-        var channels = new List<ChannelProtocol>();
-        if (sessionInfo == null) {
-            channels.Add(ChannelProtocol.Udp);
-            channels.Add(ChannelProtocol.Tcp);
-            if (features.IsTcpProxySupported) {
-                channels.Add(ChannelProtocol.TcpProxyAndUdp);
-                channels.Add(ChannelProtocol.TcpProxy);
-                channels.Add(ChannelProtocol.TcpProxyAndDropQuic);
-            }
-
-            return channels.ToArray();
-        }
-
-        // if the server does support tcp packet (adapter on server)
-        if (sessionInfo.IsTcpPacketSupported) {
-            if (sessionInfo.IsUdpChannelSupported)
-                channels.Add(ChannelProtocol.Udp);
-            channels.Add(ChannelProtocol.Tcp);
-        }
-
-        // if server does support tcp proxy (disabled on server for performance)
-        if (features.IsTcpProxySupported && sessionInfo.IsTcpProxySupported) {
-            if (sessionInfo.IsUdpChannelSupported)
-                channels.Add(ChannelProtocol.TcpProxyAndUdp);
-            channels.Add(ChannelProtocol.TcpProxy);
-            channels.Add(ChannelProtocol.TcpProxyAndDropQuic);
-        }
-
-        return channels.ToArray();
+        return features.ChannelProtocols.Except(sessionInfo?.ChannelProtocols ?? []).ToArray();
     }
 
     public static bool IsLongRunningState([NotNullWhen(true)] ConnectionInfo? connectionInfo)

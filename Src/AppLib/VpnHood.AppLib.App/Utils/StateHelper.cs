@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -11,7 +10,7 @@ public static class StateHelper
 {
     public static ChannelProtocol[] GetServerChannelProtocols(AppFeatures features, SessionInfo? sessionInfo)
     {
-        return features.ChannelProtocols.Except(sessionInfo?.ChannelProtocols ?? []).ToArray();
+        return sessionInfo?.ChannelProtocols.Intersect(features.ChannelProtocols).ToArray() ?? [];
     }
 
     public static bool IsLongRunningState([NotNullWhen(true)] ConnectionInfo? connectionInfo)

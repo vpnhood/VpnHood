@@ -1295,6 +1295,54 @@ export class AppClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    removePremium(profileId: string, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/remove-premium?";
+        if (profileId === undefined || profileId === null)
+            throw new Error("The parameter 'profileId' must be defined and cannot be null.");
+        else
+            url_ += "profileId=" + encodeURIComponent("" + profileId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRemovePremium(_response);
+        });
+    }
+
+    protected processRemovePremium(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class BillingClient {
@@ -2064,16 +2112,16 @@ export class IntentsClient {
 
 export class AppAccount implements IAppAccount {
     userId!: string;
-    name!: string | null;
-    email!: string | null;
-    subscriptionId!: string | null;
-    providerPlanId!: string | null;
-    createdTime!: Date | null;
-    expirationTime!: Date | null;
-    priceAmount!: number | null;
-    priceCurrency!: string | null;
-    isAutoRenew!: boolean | null;
-    providerSubscriptionId!: string | null;
+    name?: string | null;
+    email?: string | null;
+    subscriptionId?: string | null;
+    providerPlanId?: string | null;
+    createdTime?: Date | null;
+    expirationTime?: Date | null;
+    priceAmount?: number | null;
+    priceCurrency?: string | null;
+    isAutoRenew?: boolean | null;
+    providerSubscriptionId?: string | null;
 
     constructor(data?: IAppAccount) {
         if (data) {
@@ -2126,16 +2174,16 @@ export class AppAccount implements IAppAccount {
 
 export interface IAppAccount {
     userId: string;
-    name: string | null;
-    email: string | null;
-    subscriptionId: string | null;
-    providerPlanId: string | null;
-    createdTime: Date | null;
-    expirationTime: Date | null;
-    priceAmount: number | null;
-    priceCurrency: string | null;
-    isAutoRenew: boolean | null;
-    providerSubscriptionId: string | null;
+    name?: string | null;
+    email?: string | null;
+    subscriptionId?: string | null;
+    providerPlanId?: string | null;
+    createdTime?: Date | null;
+    expirationTime?: Date | null;
+    priceAmount?: number | null;
+    priceCurrency?: string | null;
+    isAutoRenew?: boolean | null;
+    providerSubscriptionId?: string | null;
 }
 
 export class AppData implements IAppData {
@@ -2229,16 +2277,16 @@ export class AppFeatures implements IAppFeatures {
     appName!: string;
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
-    uiName!: string | null;
+    uiName?: string | null;
     isPremiumFlagSupported!: boolean;
     isAddAccessKeySupported!: boolean;
-    builtInClientProfileId!: string | null;
+    builtInClientProfileId?: string | null;
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
     isTcpProxySupported!: boolean;
     isUserReviewSupported!: boolean;
     isTv!: boolean;
-    gaMeasurementId!: string | null;
+    gaMeasurementId?: string | null;
     clientId!: string;
     isDebugMode!: boolean;
     debugCommands!: string[];
@@ -2248,7 +2296,8 @@ export class AppFeatures implements IAppFeatures {
     autoRemoveExpiredPremium!: boolean;
     isAdSupported!: boolean;
     premiumFeatures!: AppFeature[];
-    customData!: any | null;
+    channelProtocols!: ChannelProtocol[];
+    customData?: any | null;
     version!: string;
 
     constructor(data?: IAppFeatures) {
@@ -2261,6 +2310,7 @@ export class AppFeatures implements IAppFeatures {
         if (!data) {
             this.debugCommands = [];
             this.premiumFeatures = [];
+            this.channelProtocols = [];
         }
     }
 
@@ -2302,6 +2352,14 @@ export class AppFeatures implements IAppFeatures {
             }
             else {
                 this.premiumFeatures = <any>null;
+            }
+            if (Array.isArray(_data["channelProtocols"])) {
+                this.channelProtocols = [] as any;
+                for (let item of _data["channelProtocols"])
+                    this.channelProtocols!.push(item);
+            }
+            else {
+                this.channelProtocols = <any>null;
             }
             this.customData = _data["customData"] !== undefined ? _data["customData"] : <any>null;
             this.version = _data["version"] !== undefined ? _data["version"] : <any>null;
@@ -2348,6 +2406,11 @@ export class AppFeatures implements IAppFeatures {
             for (let item of this.premiumFeatures)
                 data["premiumFeatures"].push(item);
         }
+        if (Array.isArray(this.channelProtocols)) {
+            data["channelProtocols"] = [];
+            for (let item of this.channelProtocols)
+                data["channelProtocols"].push(item);
+        }
         data["customData"] = this.customData !== undefined ? this.customData : <any>null;
         data["version"] = this.version !== undefined ? this.version : <any>null;
         return data;
@@ -2359,16 +2422,16 @@ export interface IAppFeatures {
     appName: string;
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
-    uiName: string | null;
+    uiName?: string | null;
     isPremiumFlagSupported: boolean;
     isAddAccessKeySupported: boolean;
-    builtInClientProfileId: string | null;
+    builtInClientProfileId?: string | null;
     isAccountSupported: boolean;
     isBillingSupported: boolean;
     isTcpProxySupported: boolean;
     isUserReviewSupported: boolean;
     isTv: boolean;
-    gaMeasurementId: string | null;
+    gaMeasurementId?: string | null;
     clientId: string;
     isDebugMode: boolean;
     debugCommands: string[];
@@ -2378,7 +2441,8 @@ export interface IAppFeatures {
     autoRemoveExpiredPremium: boolean;
     isAdSupported: boolean;
     premiumFeatures: AppFeature[];
-    customData: any | null;
+    channelProtocols: ChannelProtocol[];
+    customData?: any | null;
     version: string;
 }
 
@@ -2388,6 +2452,14 @@ export enum AppFeature {
     CustomDns = "CustomDns",
     AppIpFilter = "AppIpFilter",
     AdapterIpFilter = "AdapterIpFilter",
+}
+
+export enum ChannelProtocol {
+    Udp = "Udp",
+    Tcp = "Tcp",
+    TcpProxyAndUdp = "TcpProxyAndUdp",
+    TcpProxy = "TcpProxy",
+    TcpProxyAndDropQuic = "TcpProxyAndDropQuic",
 }
 
 export class AppIntentFeatures implements IAppIntentFeatures {
@@ -2465,34 +2537,34 @@ export interface IAppIntentFeatures {
 export class AppState implements IAppState {
     configTime!: Date;
     connectionState!: AppConnectionState;
-    sessionInfo!: AppSessionInfo | null;
-    sessionStatus!: AppSessionStatus | null;
-    connectRequestTime!: Date | null;
-    lastError!: ApiError | null;
-    clientProfile!: ClientProfileBaseInfo | null;
+    sessionInfo?: AppSessionInfo | null;
+    sessionStatus?: AppSessionStatus | null;
+    connectRequestTime?: Date | null;
+    lastError?: ApiError | null;
+    clientProfile?: ClientProfileBaseInfo | null;
     isIdle!: boolean;
     promptForLog!: boolean;
     logExists!: boolean;
     hasDiagnoseRequested!: boolean;
-    clientCountryCode!: string | null;
-    clientCountryName!: string | null;
-    updaterStatus!: AppUpdaterStatus | null;
+    clientCountryCode?: string | null;
+    clientCountryName?: string | null;
+    updaterStatus?: AppUpdaterStatus | null;
     canDisconnect!: boolean;
     canConnect!: boolean;
     canDiagnose!: boolean;
-    canChangeTcpProxy!: boolean;
-    isTcpProxy!: boolean;
     userReviewRecommended!: number;
     isQuickLaunchRecommended!: boolean;
     currentUiCultureInfo!: UiCultureInfo;
     systemUiCultureInfo!: UiCultureInfo;
-    purchaseState!: BillingPurchaseState | null;
+    purchaseState?: BillingPurchaseState | null;
     systemBarsInfo!: SystemBarsInfo;
-    isNotificationEnabled!: boolean | null;
-    systemPrivateDns!: PrivateDns | null;
-    isWaitingForInternalAd!: boolean | null;
-    stateProgress!: number | null;
+    isNotificationEnabled?: boolean | null;
+    systemPrivateDns?: PrivateDns | null;
+    isWaitingForInternalAd?: boolean | null;
+    stateProgress?: number | null;
     isDiagnosing!: boolean;
+    serverChannelProtocols!: ChannelProtocol[];
+    channelProtocol!: ChannelProtocol;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -2505,6 +2577,7 @@ export class AppState implements IAppState {
             this.currentUiCultureInfo = new UiCultureInfo();
             this.systemUiCultureInfo = new UiCultureInfo();
             this.systemBarsInfo = new SystemBarsInfo();
+            this.serverChannelProtocols = [];
         }
     }
 
@@ -2527,8 +2600,6 @@ export class AppState implements IAppState {
             this.canDisconnect = _data["canDisconnect"] !== undefined ? _data["canDisconnect"] : <any>null;
             this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : <any>null;
             this.canDiagnose = _data["canDiagnose"] !== undefined ? _data["canDiagnose"] : <any>null;
-            this.canChangeTcpProxy = _data["canChangeTcpProxy"] !== undefined ? _data["canChangeTcpProxy"] : <any>null;
-            this.isTcpProxy = _data["isTcpProxy"] !== undefined ? _data["isTcpProxy"] : <any>null;
             this.userReviewRecommended = _data["userReviewRecommended"] !== undefined ? _data["userReviewRecommended"] : <any>null;
             this.isQuickLaunchRecommended = _data["isQuickLaunchRecommended"] !== undefined ? _data["isQuickLaunchRecommended"] : <any>null;
             this.currentUiCultureInfo = _data["currentUiCultureInfo"] ? UiCultureInfo.fromJS(_data["currentUiCultureInfo"]) : new UiCultureInfo();
@@ -2540,6 +2611,15 @@ export class AppState implements IAppState {
             this.isWaitingForInternalAd = _data["isWaitingForInternalAd"] !== undefined ? _data["isWaitingForInternalAd"] : <any>null;
             this.stateProgress = _data["stateProgress"] !== undefined ? _data["stateProgress"] : <any>null;
             this.isDiagnosing = _data["isDiagnosing"] !== undefined ? _data["isDiagnosing"] : <any>null;
+            if (Array.isArray(_data["serverChannelProtocols"])) {
+                this.serverChannelProtocols = [] as any;
+                for (let item of _data["serverChannelProtocols"])
+                    this.serverChannelProtocols!.push(item);
+            }
+            else {
+                this.serverChannelProtocols = <any>null;
+            }
+            this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : <any>null;
         }
     }
 
@@ -2569,8 +2649,6 @@ export class AppState implements IAppState {
         data["canDisconnect"] = this.canDisconnect !== undefined ? this.canDisconnect : <any>null;
         data["canConnect"] = this.canConnect !== undefined ? this.canConnect : <any>null;
         data["canDiagnose"] = this.canDiagnose !== undefined ? this.canDiagnose : <any>null;
-        data["canChangeTcpProxy"] = this.canChangeTcpProxy !== undefined ? this.canChangeTcpProxy : <any>null;
-        data["isTcpProxy"] = this.isTcpProxy !== undefined ? this.isTcpProxy : <any>null;
         data["userReviewRecommended"] = this.userReviewRecommended !== undefined ? this.userReviewRecommended : <any>null;
         data["isQuickLaunchRecommended"] = this.isQuickLaunchRecommended !== undefined ? this.isQuickLaunchRecommended : <any>null;
         data["currentUiCultureInfo"] = this.currentUiCultureInfo ? this.currentUiCultureInfo.toJSON() : <any>null;
@@ -2582,6 +2660,12 @@ export class AppState implements IAppState {
         data["isWaitingForInternalAd"] = this.isWaitingForInternalAd !== undefined ? this.isWaitingForInternalAd : <any>null;
         data["stateProgress"] = this.stateProgress !== undefined ? this.stateProgress : <any>null;
         data["isDiagnosing"] = this.isDiagnosing !== undefined ? this.isDiagnosing : <any>null;
+        if (Array.isArray(this.serverChannelProtocols)) {
+            data["serverChannelProtocols"] = [];
+            for (let item of this.serverChannelProtocols)
+                data["serverChannelProtocols"].push(item);
+        }
+        data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : <any>null;
         return data;
     }
 }
@@ -2589,34 +2673,34 @@ export class AppState implements IAppState {
 export interface IAppState {
     configTime: Date;
     connectionState: AppConnectionState;
-    sessionInfo: AppSessionInfo | null;
-    sessionStatus: AppSessionStatus | null;
-    connectRequestTime: Date | null;
-    lastError: ApiError | null;
-    clientProfile: ClientProfileBaseInfo | null;
+    sessionInfo?: AppSessionInfo | null;
+    sessionStatus?: AppSessionStatus | null;
+    connectRequestTime?: Date | null;
+    lastError?: ApiError | null;
+    clientProfile?: ClientProfileBaseInfo | null;
     isIdle: boolean;
     promptForLog: boolean;
     logExists: boolean;
     hasDiagnoseRequested: boolean;
-    clientCountryCode: string | null;
-    clientCountryName: string | null;
-    updaterStatus: AppUpdaterStatus | null;
+    clientCountryCode?: string | null;
+    clientCountryName?: string | null;
+    updaterStatus?: AppUpdaterStatus | null;
     canDisconnect: boolean;
     canConnect: boolean;
     canDiagnose: boolean;
-    canChangeTcpProxy: boolean;
-    isTcpProxy: boolean;
     userReviewRecommended: number;
     isQuickLaunchRecommended: boolean;
     currentUiCultureInfo: UiCultureInfo;
     systemUiCultureInfo: UiCultureInfo;
-    purchaseState: BillingPurchaseState | null;
+    purchaseState?: BillingPurchaseState | null;
     systemBarsInfo: SystemBarsInfo;
-    isNotificationEnabled: boolean | null;
-    systemPrivateDns: PrivateDns | null;
-    isWaitingForInternalAd: boolean | null;
-    stateProgress: number | null;
+    isNotificationEnabled?: boolean | null;
+    systemPrivateDns?: PrivateDns | null;
+    isWaitingForInternalAd?: boolean | null;
+    stateProgress?: number | null;
     isDiagnosing: boolean;
+    serverChannelProtocols: ChannelProtocol[];
+    channelProtocol: ChannelProtocol;
 }
 
 export enum AppConnectionState {
@@ -2625,6 +2709,7 @@ export enum AppConnectionState {
     Waiting = "Waiting",
     WaitingForAd = "WaitingForAd",
     Diagnosing = "Diagnosing",
+    ValidatingProxies = "ValidatingProxies",
     FindingReachableServer = "FindingReachableServer",
     FindingBestServer = "FindingBestServer",
     Connecting = "Connecting",
@@ -2634,17 +2719,17 @@ export enum AppConnectionState {
 }
 
 export class AppSessionInfo implements IAppSessionInfo {
-    accessInfo!: AccessInfo | null;
-    isUdpChannelSupported!: boolean;
+    accessInfo?: AccessInfo | null;
     isDnsServersAccepted!: boolean;
     isLocalNetworkAllowed!: boolean;
-    serverLocationInfo!: ServerLocationInfo | null;
+    serverLocationInfo?: ServerLocationInfo | null;
     isPremiumSession!: boolean;
     suppressedTo!: SessionSuppressType;
     dnsServers!: string[];
     serverVersion!: string;
     clientPublicIpAddress!: string;
     createdTime!: Date;
+    isUdpChannelSupported!: boolean;
     isTcpPacketSupported!: boolean;
     isTcpProxySupported!: boolean;
 
@@ -2663,7 +2748,6 @@ export class AppSessionInfo implements IAppSessionInfo {
     init(_data?: any) {
         if (_data) {
             this.accessInfo = _data["accessInfo"] ? AccessInfo.fromJS(_data["accessInfo"]) : <any>null;
-            this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
             this.isDnsServersAccepted = _data["isDnsServersAccepted"] !== undefined ? _data["isDnsServersAccepted"] : <any>null;
             this.isLocalNetworkAllowed = _data["isLocalNetworkAllowed"] !== undefined ? _data["isLocalNetworkAllowed"] : <any>null;
             this.serverLocationInfo = _data["serverLocationInfo"] ? ServerLocationInfo.fromJS(_data["serverLocationInfo"]) : <any>null;
@@ -2680,6 +2764,7 @@ export class AppSessionInfo implements IAppSessionInfo {
             this.serverVersion = _data["serverVersion"] !== undefined ? _data["serverVersion"] : <any>null;
             this.clientPublicIpAddress = _data["clientPublicIpAddress"] !== undefined ? _data["clientPublicIpAddress"] : <any>null;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : <any>null;
+            this.isUdpChannelSupported = _data["isUdpChannelSupported"] !== undefined ? _data["isUdpChannelSupported"] : <any>null;
             this.isTcpPacketSupported = _data["isTcpPacketSupported"] !== undefined ? _data["isTcpPacketSupported"] : <any>null;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : <any>null;
         }
@@ -2695,7 +2780,6 @@ export class AppSessionInfo implements IAppSessionInfo {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["accessInfo"] = this.accessInfo ? this.accessInfo.toJSON() : <any>null;
-        data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
         data["isDnsServersAccepted"] = this.isDnsServersAccepted !== undefined ? this.isDnsServersAccepted : <any>null;
         data["isLocalNetworkAllowed"] = this.isLocalNetworkAllowed !== undefined ? this.isLocalNetworkAllowed : <any>null;
         data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : <any>null;
@@ -2709,6 +2793,7 @@ export class AppSessionInfo implements IAppSessionInfo {
         data["serverVersion"] = this.serverVersion !== undefined ? this.serverVersion : <any>null;
         data["clientPublicIpAddress"] = this.clientPublicIpAddress !== undefined ? this.clientPublicIpAddress : <any>null;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : <any>null;
+        data["isUdpChannelSupported"] = this.isUdpChannelSupported !== undefined ? this.isUdpChannelSupported : <any>null;
         data["isTcpPacketSupported"] = this.isTcpPacketSupported !== undefined ? this.isTcpPacketSupported : <any>null;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : <any>null;
         return data;
@@ -2716,17 +2801,17 @@ export class AppSessionInfo implements IAppSessionInfo {
 }
 
 export interface IAppSessionInfo {
-    accessInfo: AccessInfo | null;
-    isUdpChannelSupported: boolean;
+    accessInfo?: AccessInfo | null;
     isDnsServersAccepted: boolean;
     isLocalNetworkAllowed: boolean;
-    serverLocationInfo: ServerLocationInfo | null;
+    serverLocationInfo?: ServerLocationInfo | null;
     isPremiumSession: boolean;
     suppressedTo: SessionSuppressType;
     dnsServers: string[];
     serverVersion: string;
     clientPublicIpAddress: string;
     createdTime: Date;
+    isUdpChannelSupported: boolean;
     isTcpPacketSupported: boolean;
     isTcpProxySupported: boolean;
 }
@@ -2735,13 +2820,13 @@ export class AccessInfo implements IAccessInfo {
     isNew!: boolean;
     createdTime!: Date;
     lastUsedTime!: Date;
-    expirationTime!: Date | null;
+    expirationTime?: Date | null;
     isPremium!: boolean;
     maxCycleTraffic!: number;
     maxTotalTraffic!: number;
     maxDeviceCount!: number;
     deviceLifeSpan!: number;
-    devicesSummary!: AccessDevicesSummary | null;
+    devicesSummary?: AccessDevicesSummary | null;
 
     constructor(data?: IAccessInfo) {
         if (data) {
@@ -2794,19 +2879,19 @@ export interface IAccessInfo {
     isNew: boolean;
     createdTime: Date;
     lastUsedTime: Date;
-    expirationTime: Date | null;
+    expirationTime?: Date | null;
     isPremium: boolean;
     maxCycleTraffic: number;
     maxTotalTraffic: number;
     maxDeviceCount: number;
     deviceLifeSpan: number;
-    devicesSummary: AccessDevicesSummary | null;
+    devicesSummary?: AccessDevicesSummary | null;
 }
 
 export class AccessDevicesSummary implements IAccessDevicesSummary {
     deviceCount!: number;
     hasMoreDevices!: boolean;
-    devices!: AccessDevice[] | null;
+    devices?: AccessDevice[] | null;
 
     constructor(data?: IAccessDevicesSummary) {
         if (data) {
@@ -2855,13 +2940,13 @@ export class AccessDevicesSummary implements IAccessDevicesSummary {
 export interface IAccessDevicesSummary {
     deviceCount: number;
     hasMoreDevices: boolean;
-    devices: AccessDevice[] | null;
+    devices?: AccessDevice[] | null;
 }
 
 export class AccessDevice implements IAccessDevice {
     lastUsedTime!: Date;
-    operatingSystem!: string | null;
-    ipAddress!: string | null;
+    operatingSystem?: string | null;
+    ipAddress?: string | null;
 
     constructor(data?: IAccessDevice) {
         if (data) {
@@ -2898,14 +2983,14 @@ export class AccessDevice implements IAccessDevice {
 
 export interface IAccessDevice {
     lastUsedTime: Date;
-    operatingSystem: string | null;
-    ipAddress: string | null;
+    operatingSystem?: string | null;
+    ipAddress?: string | null;
 }
 
 export class ServerLocationInfo implements IServerLocationInfo {
     countryCode!: string;
     regionName!: string;
-    tags!: string[] | null;
+    tags?: string[] | null;
     serverLocation!: string;
     countryName!: string;
     isAuto!: boolean;
@@ -2963,7 +3048,7 @@ export class ServerLocationInfo implements IServerLocationInfo {
 export interface IServerLocationInfo {
     countryCode: string;
     regionName: string;
-    tags: string[] | null;
+    tags?: string[] | null;
     serverLocation: string;
     countryName: string;
     isAuto: boolean;
@@ -2987,12 +3072,11 @@ export class AppSessionStatus implements IAppSessionStatus {
     packetChannelCount!: number;
     unstableCount!: number;
     waitingCount!: number;
-    isUdpMode!: boolean;
     canExtendByRewardedAd!: boolean;
     sessionMaxTraffic!: number;
-    sessionExpirationTime!: Date | null;
-    activeClientCount!: number | null;
-    isTcpProxy!: boolean;
+    sessionExpirationTime?: Date | null;
+    activeClientCount?: number | null;
+    channelProtocol!: ChannelProtocol;
 
     constructor(data?: IAppSessionStatus) {
         if (data) {
@@ -3024,12 +3108,11 @@ export class AppSessionStatus implements IAppSessionStatus {
             this.packetChannelCount = _data["packetChannelCount"] !== undefined ? _data["packetChannelCount"] : <any>null;
             this.unstableCount = _data["unstableCount"] !== undefined ? _data["unstableCount"] : <any>null;
             this.waitingCount = _data["waitingCount"] !== undefined ? _data["waitingCount"] : <any>null;
-            this.isUdpMode = _data["isUdpMode"] !== undefined ? _data["isUdpMode"] : <any>null;
             this.canExtendByRewardedAd = _data["canExtendByRewardedAd"] !== undefined ? _data["canExtendByRewardedAd"] : <any>null;
             this.sessionMaxTraffic = _data["sessionMaxTraffic"] !== undefined ? _data["sessionMaxTraffic"] : <any>null;
             this.sessionExpirationTime = _data["sessionExpirationTime"] ? new Date(_data["sessionExpirationTime"].toString()) : <any>null;
             this.activeClientCount = _data["activeClientCount"] !== undefined ? _data["activeClientCount"] : <any>null;
-            this.isTcpProxy = _data["isTcpProxy"] !== undefined ? _data["isTcpProxy"] : <any>null;
+            this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : <any>null;
         }
     }
 
@@ -3053,12 +3136,11 @@ export class AppSessionStatus implements IAppSessionStatus {
         data["packetChannelCount"] = this.packetChannelCount !== undefined ? this.packetChannelCount : <any>null;
         data["unstableCount"] = this.unstableCount !== undefined ? this.unstableCount : <any>null;
         data["waitingCount"] = this.waitingCount !== undefined ? this.waitingCount : <any>null;
-        data["isUdpMode"] = this.isUdpMode !== undefined ? this.isUdpMode : <any>null;
         data["canExtendByRewardedAd"] = this.canExtendByRewardedAd !== undefined ? this.canExtendByRewardedAd : <any>null;
         data["sessionMaxTraffic"] = this.sessionMaxTraffic !== undefined ? this.sessionMaxTraffic : <any>null;
         data["sessionExpirationTime"] = this.sessionExpirationTime ? this.sessionExpirationTime.toISOString() : <any>null;
         data["activeClientCount"] = this.activeClientCount !== undefined ? this.activeClientCount : <any>null;
-        data["isTcpProxy"] = this.isTcpProxy !== undefined ? this.isTcpProxy : <any>null;
+        data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : <any>null;
         return data;
     }
 }
@@ -3075,12 +3157,11 @@ export interface IAppSessionStatus {
     packetChannelCount: number;
     unstableCount: number;
     waitingCount: number;
-    isUdpMode: boolean;
     canExtendByRewardedAd: boolean;
     sessionMaxTraffic: number;
-    sessionExpirationTime: Date | null;
-    activeClientCount: number | null;
-    isTcpProxy: boolean;
+    sessionExpirationTime?: Date | null;
+    activeClientCount?: number | null;
+    channelProtocol: ChannelProtocol;
 }
 
 export class AppConnectorStat implements IAppConnectorStat {
@@ -3177,10 +3258,10 @@ export interface ITraffic {
 
 export class ApiError implements IApiError {
     typeName!: string;
-    typeFullName!: string | null;
+    typeFullName?: string | null;
     message!: string;
     data!: { [key: string]: string; };
-    innerMessage!: string | null;
+    innerMessage?: string | null;
 
     constructor(data?: IApiError) {
         if (data) {
@@ -3239,22 +3320,22 @@ export class ApiError implements IApiError {
 
 export interface IApiError {
     typeName: string;
-    typeFullName: string | null;
+    typeFullName?: string | null;
     message: string;
     data: { [key: string]: string; };
-    innerMessage: string | null;
+    innerMessage?: string | null;
 }
 
 export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
     clientProfileId!: string;
     clientProfileName!: string;
-    supportId!: string | null;
-    customData!: string | null;
+    supportId?: string | null;
+    customData?: string | null;
     isPremiumLocationSelected!: boolean;
     isPremiumAccount!: boolean;
-    selectedLocationInfo!: ClientServerLocationInfo | null;
+    selectedLocationInfo?: ClientServerLocationInfo | null;
     hasAccessCode!: boolean;
-    customServerEndpoints!: string[] | null;
+    customServerEndpoints?: string[] | null;
 
     constructor(data?: IClientProfileBaseInfo) {
         if (data) {
@@ -3315,13 +3396,13 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
 export interface IClientProfileBaseInfo {
     clientProfileId: string;
     clientProfileName: string;
-    supportId: string | null;
-    customData: string | null;
+    supportId?: string | null;
+    customData?: string | null;
     isPremiumLocationSelected: boolean;
     isPremiumAccount: boolean;
-    selectedLocationInfo: ClientServerLocationInfo | null;
+    selectedLocationInfo?: ClientServerLocationInfo | null;
     hasAccessCode: boolean;
-    customServerEndpoints: string[] | null;
+    customServerEndpoints?: string[] | null;
 }
 
 export class ClientServerLocationInfo extends ServerLocationInfo implements IClientServerLocationInfo {
@@ -3369,9 +3450,9 @@ export interface IClientServerLocationInfo extends IServerLocationInfo {
 }
 
 export class ServerLocationOptions implements IServerLocationOptions {
-    normal!: number | null;
-    premiumByTrial!: number | null;
-    premiumByRewardedAd!: number | null;
+    normal?: number | null;
+    premiumByTrial?: number | null;
+    premiumByRewardedAd?: number | null;
     premiumByPurchase!: boolean;
     premiumByCode!: boolean;
     canGoPremium!: boolean;
@@ -3428,9 +3509,9 @@ export class ServerLocationOptions implements IServerLocationOptions {
 }
 
 export interface IServerLocationOptions {
-    normal: number | null;
-    premiumByTrial: number | null;
-    premiumByRewardedAd: number | null;
+    normal?: number | null;
+    premiumByTrial?: number | null;
+    premiumByRewardedAd?: number | null;
     premiumByPurchase: boolean;
     premiumByCode: boolean;
     canGoPremium: boolean;
@@ -3441,9 +3522,9 @@ export interface IServerLocationOptions {
 }
 
 export class AppUpdaterStatus implements IAppUpdaterStatus {
-    checkedTime!: Date | null;
+    checkedTime?: Date | null;
     versionStatus!: VersionStatus;
-    publishInfo!: PublishInfo | null;
+    publishInfo?: PublishInfo | null;
     prompt!: boolean;
 
     constructor(data?: IAppUpdaterStatus) {
@@ -3482,9 +3563,9 @@ export class AppUpdaterStatus implements IAppUpdaterStatus {
 }
 
 export interface IAppUpdaterStatus {
-    checkedTime: Date | null;
+    checkedTime?: Date | null;
     versionStatus: VersionStatus;
-    publishInfo: PublishInfo | null;
+    publishInfo?: PublishInfo | null;
     prompt: boolean;
 }
 
@@ -3499,7 +3580,7 @@ export class PublishInfo implements IPublishInfo {
     version!: string;
     updateInfoUrl!: string;
     packageUrl!: string;
-    googlePlayUrl!: string | null;
+    googlePlayUrl?: string | null;
     installationPageUrl!: string;
     releaseDate!: Date;
     deprecatedVersion!: string;
@@ -3552,7 +3633,7 @@ export interface IPublishInfo {
     version: string;
     updateInfoUrl: string;
     packageUrl: string;
-    googlePlayUrl: string | null;
+    googlePlayUrl?: string | null;
     installationPageUrl: string;
     releaseDate: Date;
     deprecatedVersion: string;
@@ -3647,7 +3728,7 @@ export interface ISystemBarsInfo {
 
 export class PrivateDns implements IPrivateDns {
     isActive!: boolean;
-    provider!: string | null;
+    provider?: string | null;
 
     constructor(data?: IPrivateDns) {
         if (data) {
@@ -3682,36 +3763,37 @@ export class PrivateDns implements IPrivateDns {
 
 export interface IPrivateDns {
     isActive: boolean;
-    provider: string | null;
+    provider?: string | null;
 }
 
 export class UserSettings implements IUserSettings {
     isLicenseAccepted!: boolean;
     isTcpProxyPrompted!: boolean;
     isQuickLaunchPrompted!: boolean;
-    cultureCode!: string | null;
-    clientProfileId!: string | null;
+    cultureCode?: string | null;
+    clientProfileId?: string | null;
     maxPacketChannelCount!: number;
     tunnelClientCountry!: boolean;
     appFilters!: string[];
     appFiltersMode!: FilterMode;
-    useTcpProxy!: boolean;
-    useUdpChannel!: boolean;
+    channelProtocol!: ChannelProtocol;
     dropUdp!: boolean;
-    dropQuic!: boolean;
     allowAnonymousTracker!: boolean;
     domainFilter!: DomainFilter;
-    debugData1!: string | null;
-    debugData2!: string | null;
+    debugData1?: string | null;
+    debugData2?: string | null;
     logAnonymous!: boolean;
     includeLocalNetwork!: boolean;
     useAppIpFilter!: boolean;
     useVpnAdapterIpFilter!: boolean;
     endPointStrategy!: EndPointStrategy;
-    useProxyServer!: boolean;
-    proxyServers!: ProxyServerEndPoint[];
     dnsMode!: DnsMode;
+    proxySettings!: AppProxySettings;
+    allowRemoteAccess!: boolean;
     dnsServers!: string[];
+    dropQuic?: boolean | null;
+    useUdpChannel?: boolean | null;
+    useTcpProxy?: boolean | null;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -3723,7 +3805,7 @@ export class UserSettings implements IUserSettings {
         if (!data) {
             this.appFilters = [];
             this.domainFilter = new DomainFilter();
-            this.proxyServers = [];
+            this.proxySettings = new AppProxySettings();
             this.dnsServers = [];
         }
     }
@@ -3746,10 +3828,8 @@ export class UserSettings implements IUserSettings {
                 this.appFilters = <any>null;
             }
             this.appFiltersMode = _data["appFiltersMode"] !== undefined ? _data["appFiltersMode"] : <any>null;
-            this.useTcpProxy = _data["useTcpProxy"] !== undefined ? _data["useTcpProxy"] : <any>null;
-            this.useUdpChannel = _data["useUdpChannel"] !== undefined ? _data["useUdpChannel"] : <any>null;
+            this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : <any>null;
             this.dropUdp = _data["dropUdp"] !== undefined ? _data["dropUdp"] : <any>null;
-            this.dropQuic = _data["dropQuic"] !== undefined ? _data["dropQuic"] : <any>null;
             this.allowAnonymousTracker = _data["allowAnonymousTracker"] !== undefined ? _data["allowAnonymousTracker"] : <any>null;
             this.domainFilter = _data["domainFilter"] ? DomainFilter.fromJS(_data["domainFilter"]) : new DomainFilter();
             this.debugData1 = _data["debugData1"] !== undefined ? _data["debugData1"] : <any>null;
@@ -3759,16 +3839,9 @@ export class UserSettings implements IUserSettings {
             this.useAppIpFilter = _data["useAppIpFilter"] !== undefined ? _data["useAppIpFilter"] : <any>null;
             this.useVpnAdapterIpFilter = _data["useVpnAdapterIpFilter"] !== undefined ? _data["useVpnAdapterIpFilter"] : <any>null;
             this.endPointStrategy = _data["endPointStrategy"] !== undefined ? _data["endPointStrategy"] : <any>null;
-            this.useProxyServer = _data["useProxyServer"] !== undefined ? _data["useProxyServer"] : <any>null;
-            if (Array.isArray(_data["proxyServers"])) {
-                this.proxyServers = [] as any;
-                for (let item of _data["proxyServers"])
-                    this.proxyServers!.push(ProxyServerEndPoint.fromJS(item));
-            }
-            else {
-                this.proxyServers = <any>null;
-            }
             this.dnsMode = _data["dnsMode"] !== undefined ? _data["dnsMode"] : <any>null;
+            this.proxySettings = _data["proxySettings"] ? AppProxySettings.fromJS(_data["proxySettings"]) : new AppProxySettings();
+            this.allowRemoteAccess = _data["allowRemoteAccess"] !== undefined ? _data["allowRemoteAccess"] : <any>null;
             if (Array.isArray(_data["dnsServers"])) {
                 this.dnsServers = [] as any;
                 for (let item of _data["dnsServers"])
@@ -3777,6 +3850,9 @@ export class UserSettings implements IUserSettings {
             else {
                 this.dnsServers = <any>null;
             }
+            this.dropQuic = _data["DropQuic"] !== undefined ? _data["DropQuic"] : <any>null;
+            this.useUdpChannel = _data["UseUdpChannel"] !== undefined ? _data["UseUdpChannel"] : <any>null;
+            this.useTcpProxy = _data["UseTcpProxy"] !== undefined ? _data["UseTcpProxy"] : <any>null;
         }
     }
 
@@ -3802,10 +3878,8 @@ export class UserSettings implements IUserSettings {
                 data["appFilters"].push(item);
         }
         data["appFiltersMode"] = this.appFiltersMode !== undefined ? this.appFiltersMode : <any>null;
-        data["useTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : <any>null;
-        data["useUdpChannel"] = this.useUdpChannel !== undefined ? this.useUdpChannel : <any>null;
+        data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : <any>null;
         data["dropUdp"] = this.dropUdp !== undefined ? this.dropUdp : <any>null;
-        data["dropQuic"] = this.dropQuic !== undefined ? this.dropQuic : <any>null;
         data["allowAnonymousTracker"] = this.allowAnonymousTracker !== undefined ? this.allowAnonymousTracker : <any>null;
         data["domainFilter"] = this.domainFilter ? this.domainFilter.toJSON() : <any>null;
         data["debugData1"] = this.debugData1 !== undefined ? this.debugData1 : <any>null;
@@ -3815,18 +3889,17 @@ export class UserSettings implements IUserSettings {
         data["useAppIpFilter"] = this.useAppIpFilter !== undefined ? this.useAppIpFilter : <any>null;
         data["useVpnAdapterIpFilter"] = this.useVpnAdapterIpFilter !== undefined ? this.useVpnAdapterIpFilter : <any>null;
         data["endPointStrategy"] = this.endPointStrategy !== undefined ? this.endPointStrategy : <any>null;
-        data["useProxyServer"] = this.useProxyServer !== undefined ? this.useProxyServer : <any>null;
-        if (Array.isArray(this.proxyServers)) {
-            data["proxyServers"] = [];
-            for (let item of this.proxyServers)
-                data["proxyServers"].push(item.toJSON());
-        }
         data["dnsMode"] = this.dnsMode !== undefined ? this.dnsMode : <any>null;
+        data["proxySettings"] = this.proxySettings ? this.proxySettings.toJSON() : <any>null;
+        data["allowRemoteAccess"] = this.allowRemoteAccess !== undefined ? this.allowRemoteAccess : <any>null;
         if (Array.isArray(this.dnsServers)) {
             data["dnsServers"] = [];
             for (let item of this.dnsServers)
                 data["dnsServers"].push(item);
         }
+        data["DropQuic"] = this.dropQuic !== undefined ? this.dropQuic : <any>null;
+        data["UseUdpChannel"] = this.useUdpChannel !== undefined ? this.useUdpChannel : <any>null;
+        data["UseTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : <any>null;
         return data;
     }
 }
@@ -3835,29 +3908,30 @@ export interface IUserSettings {
     isLicenseAccepted: boolean;
     isTcpProxyPrompted: boolean;
     isQuickLaunchPrompted: boolean;
-    cultureCode: string | null;
-    clientProfileId: string | null;
+    cultureCode?: string | null;
+    clientProfileId?: string | null;
     maxPacketChannelCount: number;
     tunnelClientCountry: boolean;
     appFilters: string[];
     appFiltersMode: FilterMode;
-    useTcpProxy: boolean;
-    useUdpChannel: boolean;
+    channelProtocol: ChannelProtocol;
     dropUdp: boolean;
-    dropQuic: boolean;
     allowAnonymousTracker: boolean;
     domainFilter: DomainFilter;
-    debugData1: string | null;
-    debugData2: string | null;
+    debugData1?: string | null;
+    debugData2?: string | null;
     logAnonymous: boolean;
     includeLocalNetwork: boolean;
     useAppIpFilter: boolean;
     useVpnAdapterIpFilter: boolean;
     endPointStrategy: EndPointStrategy;
-    useProxyServer: boolean;
-    proxyServers: ProxyServerEndPoint[];
     dnsMode: DnsMode;
+    proxySettings: AppProxySettings;
+    allowRemoteAccess: boolean;
     dnsServers: string[];
+    dropQuic?: boolean | null;
+    useUdpChannel?: boolean | null;
+    useTcpProxy?: boolean | null;
 }
 
 export enum FilterMode {
@@ -3956,14 +4030,85 @@ export enum EndPointStrategy {
     TokenOnly = "TokenOnly",
 }
 
-export class ProxyServerEndPoint implements IProxyServerEndPoint {
-    type!: ProxyServerType;
+export enum DnsMode {
+    Default = "Default",
+    AdapterDns = "AdapterDns",
+}
+
+export class AppProxySettings implements IAppProxySettings {
+    mode!: AppProxyMode;
+    nodes!: ProxyNode[];
+    remoteNotesUrl?: string | null;
+
+    constructor(data?: IAppProxySettings) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+        if (!data) {
+            this.nodes = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.mode = _data["mode"] !== undefined ? _data["mode"] : <any>null;
+            if (Array.isArray(_data["nodes"])) {
+                this.nodes = [] as any;
+                for (let item of _data["nodes"])
+                    this.nodes!.push(ProxyNode.fromJS(item));
+            }
+            else {
+                this.nodes = <any>null;
+            }
+            this.remoteNotesUrl = _data["remoteNotesUrl"] !== undefined ? _data["remoteNotesUrl"] : <any>null;
+        }
+    }
+
+    static fromJS(data: any): AppProxySettings {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppProxySettings();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["mode"] = this.mode !== undefined ? this.mode : <any>null;
+        if (Array.isArray(this.nodes)) {
+            data["nodes"] = [];
+            for (let item of this.nodes)
+                data["nodes"].push(item.toJSON());
+        }
+        data["remoteNotesUrl"] = this.remoteNotesUrl !== undefined ? this.remoteNotesUrl : <any>null;
+        return data;
+    }
+}
+
+export interface IAppProxySettings {
+    mode: AppProxyMode;
+    nodes: ProxyNode[];
+    remoteNotesUrl?: string | null;
+}
+
+export enum AppProxyMode {
+    Disabled = 0,
+    System = 1,
+    Custom = 2,
+}
+
+export class ProxyNode implements IProxyNode {
+    isEnabled!: boolean;
+    protocol!: ProxyProtocol;
     host!: string;
     port!: number;
-    username!: string | null;
-    password!: string | null;
+    username?: string | null;
+    password?: string | null;
+    url!: string;
 
-    constructor(data?: IProxyServerEndPoint) {
+    constructor(data?: IProxyNode) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -3974,57 +4119,58 @@ export class ProxyServerEndPoint implements IProxyServerEndPoint {
 
     init(_data?: any) {
         if (_data) {
-            this.type = _data["type"] !== undefined ? _data["type"] : <any>null;
+            this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : <any>null;
+            this.protocol = _data["protocol"] !== undefined ? _data["protocol"] : <any>null;
             this.host = _data["host"] !== undefined ? _data["host"] : <any>null;
             this.port = _data["port"] !== undefined ? _data["port"] : <any>null;
             this.username = _data["username"] !== undefined ? _data["username"] : <any>null;
             this.password = _data["password"] !== undefined ? _data["password"] : <any>null;
+            this.url = _data["url"] !== undefined ? _data["url"] : <any>null;
         }
     }
 
-    static fromJS(data: any): ProxyServerEndPoint {
+    static fromJS(data: any): ProxyNode {
         data = typeof data === 'object' ? data : {};
-        let result = new ProxyServerEndPoint();
+        let result = new ProxyNode();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["type"] = this.type !== undefined ? this.type : <any>null;
+        data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : <any>null;
+        data["protocol"] = this.protocol !== undefined ? this.protocol : <any>null;
         data["host"] = this.host !== undefined ? this.host : <any>null;
         data["port"] = this.port !== undefined ? this.port : <any>null;
         data["username"] = this.username !== undefined ? this.username : <any>null;
         data["password"] = this.password !== undefined ? this.password : <any>null;
+        data["url"] = this.url !== undefined ? this.url : <any>null;
         return data;
     }
 }
 
-export interface IProxyServerEndPoint {
-    type: ProxyServerType;
+export interface IProxyNode {
+    isEnabled: boolean;
+    protocol: ProxyProtocol;
     host: string;
     port: number;
-    username: string | null;
-    password: string | null;
+    username?: string | null;
+    password?: string | null;
+    url: string;
 }
 
-export enum ProxyServerType {
-    Socks5 = "Socks5",
+export enum ProxyProtocol {
     Socks4 = "Socks4",
+    Socks5 = "Socks5",
     Http = "Http",
     Https = "Https",
-}
-
-export enum DnsMode {
-    Default = "Default",
-    AdapterDns = "AdapterDns",
 }
 
 export class ClientProfileInfo implements IClientProfileInfo {
     clientProfileId!: string;
     clientProfileName!: string;
-    supportId!: string | null;
-    customData!: string | null;
+    supportId?: string | null;
+    customData?: string | null;
     isPremiumLocationSelected!: boolean;
     isPremiumAccount!: boolean;
     tokenId!: string;
@@ -4032,12 +4178,12 @@ export class ClientProfileInfo implements IClientProfileInfo {
     isValidHostName!: boolean;
     isBuiltIn!: boolean;
     isForAccount!: boolean;
-    accessCode!: string | null;
+    accessCode?: string | null;
     locationInfos!: ClientServerLocationInfo[];
-    purchaseUrl!: string | null;
+    purchaseUrl?: string | null;
     purchaseUrlMode!: PurchaseUrlMode;
-    customServerEndpoints!: string[] | null;
-    selectedLocationInfo!: ClientServerLocationInfo | null;
+    customServerEndpoints?: string[] | null;
+    selectedLocationInfo?: ClientServerLocationInfo | null;
 
     constructor(data?: IClientProfileInfo) {
         if (data) {
@@ -4140,8 +4286,8 @@ export class ClientProfileInfo implements IClientProfileInfo {
 export interface IClientProfileInfo {
     clientProfileId: string;
     clientProfileName: string;
-    supportId: string | null;
-    customData: string | null;
+    supportId?: string | null;
+    customData?: string | null;
     isPremiumLocationSelected: boolean;
     isPremiumAccount: boolean;
     tokenId: string;
@@ -4149,12 +4295,12 @@ export interface IClientProfileInfo {
     isValidHostName: boolean;
     isBuiltIn: boolean;
     isForAccount: boolean;
-    accessCode: string | null;
+    accessCode?: string | null;
     locationInfos: ClientServerLocationInfo[];
-    purchaseUrl: string | null;
+    purchaseUrl?: string | null;
     purchaseUrlMode: PurchaseUrlMode;
-    customServerEndpoints: string[] | null;
-    selectedLocationInfo: ClientServerLocationInfo | null;
+    customServerEndpoints?: string[] | null;
+    selectedLocationInfo?: ClientServerLocationInfo | null;
 }
 
 export enum PurchaseUrlMode {
@@ -4165,7 +4311,7 @@ export enum PurchaseUrlMode {
 
 export class ConfigParams implements IConfigParams {
     availableCultures!: string[];
-    strings!: AppStrings | null;
+    strings?: AppStrings | null;
 
     constructor(data?: IConfigParams) {
         if (data) {
@@ -4214,7 +4360,7 @@ export class ConfigParams implements IConfigParams {
 
 export interface IConfigParams {
     availableCultures: string[];
-    strings: AppStrings | null;
+    strings?: AppStrings | null;
 }
 
 export class AppStrings implements IAppStrings {
@@ -4573,10 +4719,10 @@ export interface ISubscriptionPlan {
 }
 
 export class AppPurchaseOptions implements IAppPurchaseOptions {
-    storeName!: string | null;
-    storeError!: ApiError | null;
+    storeName?: string | null;
+    storeError?: ApiError | null;
     subscriptionPlans!: SubscriptionPlan[];
-    purchaseUrl!: string | null;
+    purchaseUrl?: string | null;
 
     constructor(data?: IAppPurchaseOptions) {
         if (data) {
@@ -4628,20 +4774,20 @@ export class AppPurchaseOptions implements IAppPurchaseOptions {
 }
 
 export interface IAppPurchaseOptions {
-    storeName: string | null;
-    storeError: ApiError | null;
+    storeName?: string | null;
+    storeError?: ApiError | null;
     subscriptionPlans: SubscriptionPlan[];
-    purchaseUrl: string | null;
+    purchaseUrl?: string | null;
 }
 
 export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
-    clientProfileName!: PatchOfString | null;
-    isFavorite!: PatchOfBoolean | null;
-    selectedLocation!: PatchOfString | null;
-    customData!: PatchOfString | null;
-    isPremiumLocationSelected!: PatchOfBoolean | null;
-    accessCode!: PatchOfString | null;
-    customServerEndpoints!: PatchOfStringOf | null;
+    clientProfileName?: PatchOfString | null;
+    isFavorite?: PatchOfBoolean | null;
+    selectedLocation?: PatchOfString | null;
+    customData?: PatchOfString | null;
+    isPremiumLocationSelected?: PatchOfBoolean | null;
+    accessCode?: PatchOfString | null;
+    customServerEndpoints?: PatchOfStringOf | null;
 
     constructor(data?: IClientProfileUpdateParams) {
         if (data) {
@@ -4685,17 +4831,17 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
 }
 
 export interface IClientProfileUpdateParams {
-    clientProfileName: PatchOfString | null;
-    isFavorite: PatchOfBoolean | null;
-    selectedLocation: PatchOfString | null;
-    customData: PatchOfString | null;
-    isPremiumLocationSelected: PatchOfBoolean | null;
-    accessCode: PatchOfString | null;
-    customServerEndpoints: PatchOfStringOf | null;
+    clientProfileName?: PatchOfString | null;
+    isFavorite?: PatchOfBoolean | null;
+    selectedLocation?: PatchOfString | null;
+    customData?: PatchOfString | null;
+    isPremiumLocationSelected?: PatchOfBoolean | null;
+    accessCode?: PatchOfString | null;
+    customServerEndpoints?: PatchOfStringOf | null;
 }
 
 export class PatchOfString implements IPatchOfString {
-    value!: string | null;
+    value?: string | null;
 
     constructor(data?: IPatchOfString) {
         if (data) {
@@ -4727,7 +4873,7 @@ export class PatchOfString implements IPatchOfString {
 }
 
 export interface IPatchOfString {
-    value: string | null;
+    value?: string | null;
 }
 
 export class PatchOfBoolean implements IPatchOfBoolean {
@@ -4767,7 +4913,7 @@ export interface IPatchOfBoolean {
 }
 
 export class PatchOfStringOf implements IPatchOfStringOf {
-    value!: string[] | null;
+    value?: string[] | null;
 
     constructor(data?: IPatchOfStringOf) {
         if (data) {
@@ -4810,7 +4956,7 @@ export class PatchOfStringOf implements IPatchOfStringOf {
 }
 
 export interface IPatchOfStringOf {
-    value: string[] | null;
+    value?: string[] | null;
 }
 
 function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {

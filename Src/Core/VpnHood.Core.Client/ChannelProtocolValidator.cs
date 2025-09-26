@@ -16,8 +16,8 @@ internal static class ChannelProtocolValidator
 
     public static ChannelProtocol Validate(ChannelProtocol value, SessionInfo? sessionInfo)
     {
-        if (value == ChannelProtocol.Quick)
-            throw new NotSupportedException("Quick is not supported");
+        if (value == ChannelProtocol.Quic)
+            throw new NotSupportedException("QUIC is not supported");
 
         if (sessionInfo == null)
             return value;

@@ -44,10 +44,10 @@ public class UserSettings
     }
 
     [Obsolete("Compatibility for version <= 759; Use VpnProtocol.")]
-    public bool UseUdpChannel {
+    public bool? UseUdpChannel {
         // ReSharper disable once ValueParameterNotUsed
         init {
-            if (value)
+            if (value == true)
                 ChannelProtocol = ChannelProtocol.Udp;
         }
     }

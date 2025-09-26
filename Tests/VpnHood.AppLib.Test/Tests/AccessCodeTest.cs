@@ -18,8 +18,10 @@ public class AccessCodeTest : TestAppBase
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);
 
-        
-        //Uri.TryCreate("http://wwww.zz.omc", new UriCreationOptions {
+
+        var url = new Uri("http://localhost/a../../b/../z");
+        Console.WriteLine(url.LocalPath);
+        //var a = Uri.TryCreate("http://wwww.zz.omc", UriKind.Absolute, 
         //}, out var aa);
         
         //Console.WriteLine(aa.Port);

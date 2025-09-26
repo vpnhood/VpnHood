@@ -5,7 +5,7 @@ namespace VpnHood.Core.Client.Abstractions;
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ChannelProtocol
 {
-    Quick,
+    Quic,
     Udp,
     Tcp
 }

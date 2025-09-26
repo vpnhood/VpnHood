@@ -1,6 +1,8 @@
 ﻿using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Settings;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
@@ -23,7 +25,11 @@ public class AccessCodeTest : TestAppBase
         Console.WriteLine(url.LocalPath);
         //var a = Uri.TryCreate("http://wwww.zz.omc", UriKind.Absolute, 
         //}, out var aa);
-        
+        var a = """
+                {"isLicenseAccepted":true,"isTcpProxyPrompted":false,"isQuickLaunchPrompted":false,"cultureCode":null,"clientProfileId":"f4d05cae-7848-46c0-8d07-932cfe207cd5","maxPacketChannelCount":4,"tunnelClientCountry":true,"appFilters":[],"appFiltersMode":"All","channelProtocol":"Tcp","dropUdp":false,"useTcpProxy":false,"dropQuic":false,"allowAnonymousTracker":true,"domainFilter":{"blocks":[],"excludes":[],"includes":[]},"debugData1":null,"debugData2":null,"logAnonymous":true,"includeLocalNetwork":false,"useAppIpFilter":false,"useVpnAdapterIpFilter":false,"endPointStrategy":"Auto","dnsMode":"Default","proxySettings":{"mode":0,"nodes":[],"remoteNotesUrl":null},"allowRemoteAccess":true,"dnsServers":[],"useUdpChannel":null}
+                """;
+        var z = JsonSerializer.Deserialize<UserSettings>(a);
+
         //Console.WriteLine(aa.Port);
         await Task.CompletedTask;
     }

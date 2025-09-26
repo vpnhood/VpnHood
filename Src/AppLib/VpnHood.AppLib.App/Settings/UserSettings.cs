@@ -43,7 +43,7 @@ public class UserSettings
         set => _dnsServers = value ?? [];
     }
 
-    [Obsolete("Compatibility for version <= 759; Use VpnProtocol.")]
+    [Obsolete("Compatibility for version <= 759; Use ChannelProtocol.")]
     public bool? UseUdpChannel {
         // ReSharper disable once ValueParameterNotUsed
         init {

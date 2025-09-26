@@ -2455,7 +2455,7 @@ export enum AppFeature {
 }
 
 export enum ChannelProtocol {
-    Quick = "Quick",
+    Quic = "Quic",
     Udp = "Udp",
     Tcp = "Tcp",
 }
@@ -3795,7 +3795,7 @@ export class UserSettings implements IUserSettings {
     proxySettings!: AppProxySettings;
     allowRemoteAccess!: boolean;
     dnsServers!: string[];
-    useUdpChannel!: boolean;
+    useUdpChannel?: boolean | null;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -3933,7 +3933,7 @@ export interface IUserSettings {
     proxySettings: AppProxySettings;
     allowRemoteAccess: boolean;
     dnsServers: string[];
-    useUdpChannel: boolean;
+    useUdpChannel?: boolean | null;
 }
 
 export enum FilterMode {

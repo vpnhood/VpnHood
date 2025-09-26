@@ -435,7 +435,10 @@ public class TestHelper : IDisposable
 
 
 
-    public ClientOptions CreateClientOptions(Token? token = null, ChannelProtocol channelProtocol = ChannelProtocol.TcpProxy, string? clientId = null)
+    public ClientOptions CreateClientOptions(Token? token = null, 
+        ChannelProtocol channelProtocol = ChannelProtocol.Tcp, 
+        string? clientId = null,
+        bool useTcpProxy = true)
     {
         return new ClientOptions {
             AppName = "VpnHoodTester",
@@ -448,6 +451,7 @@ public class TestHelper : IDisposable
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
             ChannelProtocol = channelProtocol,
+            UseTcpProxy = useTcpProxy,
             AccessKey = token?.ToAccessKey() ?? "" // set it later
         };
     }

@@ -29,21 +29,7 @@ public class AppFeatures
     public required bool AutoRemoveExpiredPremium { get; set; }
     public required bool IsAdSupported { get; set; }
     public required AppFeature[] PremiumFeatures { get; init; }
-    public ChannelProtocol[] ChannelProtocols {
-        get {
-            var channels = new List<ChannelProtocol> {
-                ChannelProtocol.Udp,
-                ChannelProtocol.Tcp
-            };
-            if (IsTcpProxySupported) {
-                channels.Add(ChannelProtocol.TcpProxyAndUdp);
-                channels.Add(ChannelProtocol.TcpProxy);
-                channels.Add(ChannelProtocol.TcpProxyAndDropQuic);
-            }
-            return channels.ToArray();
-        }
-    }
-
+    public ChannelProtocol[] ChannelProtocols { get; } = [ChannelProtocol.Udp, ChannelProtocol.Tcp];
     public required object? CustomData { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]

@@ -124,8 +124,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ClientId = options.ClientId,
             SessionTimeout = options.SessionTimeout,
             IncludeLocalNetwork = options.IncludeLocalNetwork,
-            DropUdp = options.DropUdp,
             IsTcpProxySupported = options.IsTcpProxySupported,
+            UseTcpProxy = options.UseTcpProxy,
+            DropUdp = options.DropUdp,
+            DropQuic = options.DropQuic,
             UserReview = options.UserReview,
         };
 
@@ -205,24 +207,27 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ChannelProtocol ChannelProtocol {
         get => _channelProtocol;
         set {
+            value = ChannelProtocolValidator.Validate(value, SessionInfo);
             if (_channelProtocol == value) return;
-            ApplyProtocol(value);
-        }
-    }
+           
+            // check is udp changed
+            var isUdpChanged = _channelProtocol == ChannelProtocol.Udp && value != ChannelProtocol.Udp;
+            _channelProtocol = value;
 
-    private void ApplyProtocol(ChannelProtocol value)
-    {
-        var oldValue = _channelProtocol;
-        _channelProtocol = ChannelProtocolValidator.Validate(value, SessionInfo, Config.IsTcpProxySupported);
-
-        // refresh tunnel packet channels if udp is changed
-        if (_channelProtocol.HasUdp() != oldValue.HasUdp()) {
+            // reload if udp changed
             VhLogger.Instance.LogInformation("VpnProtocol is changed to {VpnProtocol}.", _channelProtocol);
-            _tunnel.MaxPacketChannelCount = value.HasUdp() ? 1 : Config.MaxPacketChannelCount;
-            _tunnel.RemoveAllPacketChannels();
-            Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
+            if (isUdpChanged) {
+                _tunnel.MaxPacketChannelCount =
+                    _channelProtocol == ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;
+                _tunnel.RemoveAllPacketChannels();
+                Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
+            }
         }
     }
+
+    public bool IsTcpProxy => 
+        Config is { UseTcpProxy: true, IsTcpProxySupported: true } &&
+        (SessionInfo is null || SessionInfo.IsTcpProxySupported);
 
     public ClientState State {
         get {
@@ -453,7 +458,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (ipPacket.Protocol == IpProtocol.Tcp) {
             var tcpPacket = ipPacket.ExtractTcp();
             _isDnsOverTlsDetected |= tcpPacket.DestinationPort == 853;
-            if (ChannelProtocol.HasTcpProxy() || !IsInEpRange(ipPacket))
+            if (IsTcpProxy || !IsInEpRange(ipPacket))
                 _clientHost.ProcessOutgoingPacket(ipPacket);
             else
                 _tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
@@ -493,7 +498,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (Config.DropUdp)
             return false;
 
-        if (udpPacket.DestinationPort is 80 or 443 && ChannelProtocol is ChannelProtocol.TcpProxyAndDropQuic)
+        if (udpPacket.DestinationPort is 80 or 443 && Config.DropQuic)
             return false;
 
         return true;
@@ -564,7 +569,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 return;
 
             // make sure only one UdpChannel exists for PacketChannels if UseUdpChannel is on
-            if (ChannelProtocol.HasUdp())
+            if (ChannelProtocol == ChannelProtocol.Udp)
                 AddUdpChannel();
             else
                 await AddTcpPacketChannel(cancellationToken).Vhc();
@@ -735,7 +740,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             else if (helloResponse.SuppressedTo == SessionSuppressType.Other)
                 VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
-            // disable UdpChannel if not supported
+            // validate channel protocols
             if (HostUdpEndPoint is null)
                 VhLogger.Instance.LogWarning("The server does not support UDP channel.");
 
@@ -743,11 +748,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 throw new NotSupportedException(
                     "The server does not support any protocol to support TCP. Please contact support.");
 
-            if (!helloResponse.IsTcpPacketSupported && !_channelProtocol.HasTcpProxy())
+            if (!helloResponse.IsTcpPacketSupported && !Config.IsTcpProxySupported)
+                throw new NotSupportedException(
+                    "The server does not support any protocol to support your client.");
+
+            if (!helloResponse.IsTcpPacketSupported && !Config.UseTcpProxy)
                 VhLogger.Instance.LogWarning("TCP Proxy enabled because the server does not support TCP packets.");
 
-            if (!helloResponse.IsTcpProxySupported && _channelProtocol.HasTcpProxy())
-                VhLogger.Instance.LogWarning("TCP Proxy disabled because the server does not support TCP packets.");
+            if (!helloResponse.IsTcpProxySupported && Config.UseTcpProxy)
+                VhLogger.Instance.LogWarning("TCP Proxy disabled because the server does not support it.");
+
 
             // set the session info
             SessionInfo = new SessionInfo {
@@ -767,7 +777,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 CreatedTime = DateTime.UtcNow,
                 IsTcpPacketSupported = helloResponse.IsTcpPacketSupported,
                 IsTcpProxySupported = helloResponse.IsTcpProxySupported,
-                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse, Config.IsTcpProxySupported),
+                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse),
                 ServerLocationInfo = helloResponse.ServerLocation != null
                     ? ServerLocationInfo.Parse(helloResponse.ServerLocation)
                     : null
@@ -775,8 +785,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // set session status
             _sessionStatus = new ClientSessionStatus(this, helloResponse.AccessUsage ?? new AccessUsage());
-            ApplyProtocol(_channelProtocol);
-
+            _channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, SessionInfo);
+            
             // usage trackers
             if (Config.AllowAnonymousTracker) {
                 // Anonymous server usage tracker
@@ -1220,10 +1230,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public int SessionPacketChannelCount => client._sessionPacketChannelCount;
         public int TcpTunnelledCount => client._clientHost.Stat.TcpTunnelledCount;
         public int TcpPassthruCount => client._clientHost.Stat.TcpPassthruCount;
+        public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
+        public bool DropQuic => client.Config.DropQuic;
+        public bool IsTcpProxy => client.IsTcpProxy;
+        public ChannelProtocol ChannelProtocol => client.ChannelProtocol;
         public int UnstableCount { get; set; }
         public int WaitingCount { get; set; }
-        public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
-        public ChannelProtocol ChannelProtocol => client.ChannelProtocol;
         public bool CanExtendByRewardedAd => _accessUsage.CanExtendByRewardedAd;
         public int UserReviewRecommended => _accessUsage.UserReviewRecommended;
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;

@@ -26,7 +26,8 @@ internal static class DtoConverters
             UserReviewRecommended = sessionStatus.UserReviewRecommended,
             IsDnsOverTlsDetected = sessionStatus.IsDnsOverTlsDetected,
             ProxyManagerStatus = sessionStatus.ProxyManagerStatus,
-            ChannelProtocol = sessionStatus.ChannelProtocol
+            ChannelProtocol = sessionStatus.ChannelProtocol,
+            IsTcpProxy = sessionStatus.IsTcpProxy
         };
 
         return ret;

@@ -21,6 +21,8 @@ public interface ISessionStatus
     int SessionPacketChannelCount { get; }
     int ActivePacketChannelCount { get; }
     ChannelProtocol ChannelProtocol { get; }
+    bool DropQuic { get; }
+    bool IsTcpProxy { get; }
     bool CanExtendByRewardedAd { get; }
     int UserReviewRecommended { get; }
     long SessionMaxTraffic { get; }

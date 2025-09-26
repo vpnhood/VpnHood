@@ -69,7 +69,7 @@ public class ServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         await using var client =
             await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, 
-                channelProtocol: ChannelProtocol.TcpProxyAndUdp));
+                channelProtocol: ChannelProtocol.Udp));
 
         // check usage when usage should be 0
         var sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);

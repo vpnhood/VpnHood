@@ -17,8 +17,10 @@ public class UserSettings
     public bool TunnelClientCountry { get; set; } = true;
     public string[] AppFilters { get; set; } = [];
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
-    public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.TcpProxy;
+    public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;
+    public bool UseTcpProxy { get; set; }
+    public bool DropQuic { get; set; }
     public bool AllowAnonymousTracker { get; set; } = ClientOptions.Default.AllowAnonymousTracker;
     public DomainFilter DomainFilter { get; set; } = new();
     public string? DebugData1 { get; set; }
@@ -42,15 +44,6 @@ public class UserSettings
     }
 
     [Obsolete("Compatibility for version <= 759; Use VpnProtocol.")]
-    public bool DropQuic {
-        // ReSharper disable once ValueParameterNotUsed
-        init {
-            if (value)
-                ChannelProtocol = ChannelProtocol.TcpProxyAndDropQuic;
-        }
-    }
-
-    [Obsolete("Compatibility for version <= 759; Use VpnProtocol.")]
     public bool UseUdpChannel {
         // ReSharper disable once ValueParameterNotUsed
         init {
@@ -59,12 +52,4 @@ public class UserSettings
         }
     }
 
-    [Obsolete("Compatibility for version <= 759; Use VpnProtocol.")]
-    public bool UseTcpProxy {
-        // ReSharper disable once ValueParameterNotUsed
-        init {
-            if (value)
-                ChannelProtocol = ChannelProtocol.TcpProxy;
-        }
-    }
 }

@@ -20,5 +20,6 @@ public class AppSessionStatus
     public required long SessionMaxTraffic { get; init; }
     public required DateTime? SessionExpirationTime { get; init; }
     public required int? ActiveClientCount { get; init; }
+    public required bool IsTcpProxy { get; init; }
     public required ChannelProtocol ChannelProtocol { get; init; }
 }

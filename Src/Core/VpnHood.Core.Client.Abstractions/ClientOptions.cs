@@ -13,8 +13,9 @@ namespace VpnHood.Core.Client.Abstractions;
 public class ClientOptions
 {
     public static ClientOptions Default { get; } = new() {
-        ChannelProtocol = ChannelProtocol.TcpProxy,
+        ChannelProtocol = ChannelProtocol.Tcp,
         ClientId = string.Empty, 
+        UseTcpProxy = true,
         AccessKey = SampleAccessKey, 
         AppName = "VpnHoodEngine"
     };
@@ -42,6 +43,9 @@ public class ClientOptions
     public required string AppName { get; set; }
     public required string AccessKey { get; set; }
     public required string ClientId { get; set; }
+    public bool UseTcpProxy { get; set; }
+    public bool DropQuic { get; set; }
+    public bool DropUdp { get; set; }
     public bool AutoDisposeVpnAdapter { get; set; } = true;
     public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromDays(3);
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
@@ -56,7 +60,6 @@ public class ClientOptions
     public bool AllowEndPointTracker { get; set; }
     public bool AllowTcpReuse { get; set; } = true;
     public bool IsTcpProxySupported { get; set; } = true;
-    public bool DropUdp { get; set; }
     public string? ServerLocation { get; set; }
     public ConnectPlanId PlanId { get; set; }
     public DomainFilter DomainFilter { get; set; } = new();

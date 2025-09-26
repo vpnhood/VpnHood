@@ -22,11 +22,11 @@ public class ClientTunnelTest : TestBase
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
-        var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.TcpProxyAndUdp);
+        var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Udp);
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
-        Assert.AreEqual(ChannelProtocol.TcpProxyAndUdp, clientServerDom.Client.ChannelProtocol);
+        Assert.AreEqual(ChannelProtocol.Udp, clientServerDom.Client.ChannelProtocol);
         await AssertTunnel(clientServerDom);
     }
 
@@ -36,28 +36,30 @@ public class ClientTunnelTest : TestBase
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
-        var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.TcpProxyAndUdp);
+        var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Udp);
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
-        Assert.AreEqual(ChannelProtocol.TcpProxyAndUdp, clientServerDom.Client.ChannelProtocol);
+        Assert.AreEqual(ChannelProtocol.Udp, clientServerDom.Client.ChannelProtocol);
         await AssertTunnel(clientServerDom);
 
         // switch to tcp
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch to PacketChannel.");
-        clientServerDom.Client.ChannelProtocol = ChannelProtocol.TcpProxy;
+        clientServerDom.Client.ChannelProtocol = ChannelProtocol.Tcp;
         await VhTestUtil.AssertEqualsWait(true, () => clientServerDom.Client.SessionStatus?.ActivePacketChannelCount > 0);
         await AssertTunnel(clientServerDom);
-        await VhTestUtil.AssertEqualsWait(ChannelProtocol.TcpProxy, () => clientServerDom.Client.GetSessionStatus().ChannelProtocol);
-        Assert.AreEqual(ChannelProtocol.TcpProxy, clientServerDom.Client.ChannelProtocol);
+        await VhTestUtil.AssertEqualsWait(ChannelProtocol.Tcp, () => clientServerDom.Client.GetSessionStatus().ChannelProtocol);
+        Assert.AreEqual(ChannelProtocol.Tcp, clientServerDom.Client.ChannelProtocol);
+        Assert.IsTrue(clientServerDom.Client.SessionStatus?.IsTcpProxy);
 
         // switch back to udp
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
-        clientServerDom.Client.ChannelProtocol = ChannelProtocol.TcpProxyAndUdp;
+        clientServerDom.Client.ChannelProtocol = ChannelProtocol.Udp;
         await VhTestUtil.AssertEqualsWait(true, () => clientServerDom.Client.SessionStatus?.ActivePacketChannelCount > 0);
         await AssertTunnel(clientServerDom);
-        await VhTestUtil.AssertEqualsWait(ChannelProtocol.TcpProxyAndUdp, () => clientServerDom.Client.GetSessionStatus().ChannelProtocol);
-        Assert.AreEqual(ChannelProtocol.TcpProxyAndUdp, clientServerDom.Client.ChannelProtocol);
+        await VhTestUtil.AssertEqualsWait(ChannelProtocol.Udp, () => clientServerDom.Client.GetSessionStatus().ChannelProtocol);
+        Assert.AreEqual(ChannelProtocol.Udp, clientServerDom.Client.ChannelProtocol);
+        Assert.IsTrue(clientServerDom.Client.SessionStatus?.IsTcpProxy);
     }
 
     [TestMethod]

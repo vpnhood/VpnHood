@@ -124,7 +124,7 @@ public class ClientServerTest : TestBase
         // Check: Client MaxPacketChannelCount larger than server
         // --------
         var clientOptions = TestHelper.CreateClientOptions(token);
-        clientOptions.ChannelProtocol = ChannelProtocol.TcpProxy;
+        clientOptions.ChannelProtocol = ChannelProtocol.Tcp;
         clientOptions.MaxPacketChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: TestHelper.CreateTestVpnAdapter());
@@ -143,7 +143,7 @@ public class ClientServerTest : TestBase
         // Check: Client MaxPacketChannelCount smaller than server
         // --------
         clientOptions = TestHelper.CreateClientOptions(token);
-        clientOptions.ChannelProtocol = ChannelProtocol.TcpProxy;
+        clientOptions.ChannelProtocol = ChannelProtocol.Tcp;
         clientOptions.MaxPacketChannelCount = 1;
         await using var client2 = await TestHelper.CreateClient(clientOptions: clientOptions);
 
@@ -190,7 +190,7 @@ public class ClientServerTest : TestBase
         // Create Client
         await using var client = await TestHelper.CreateClient(
             vpnAdapter: TestHelper.CreateTestVpnAdapter(),
-            clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.TcpProxyAndUdp));
+            clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
 
         var tasks = new List<Task>();
         for (var i = 0; i < 50; i++)
@@ -215,7 +215,7 @@ public class ClientServerTest : TestBase
         // Create Client
         await using var client = await TestHelper.CreateClient(
             vpnAdapter: new TestNullVpnAdapter(),
-            clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.TcpProxyAndUdp));
+            clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
 
         Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.HostUdpEndPoint?.Port));
     }
@@ -515,7 +515,7 @@ public class ClientServerTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        await using var client = await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.TcpProxyAndUdp));
+        await using var client = await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
         Assert.AreEqual(1, client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount);
         Assert.AreEqual(0, client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount);
         var lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount;
@@ -594,7 +594,7 @@ public class ClientServerTest : TestBase
         // Create Client
         await using var client = await TestHelper.CreateClient(
             vpnAdapter: new TestNullVpnAdapter(),
-            clientOptions: TestHelper.CreateClientOptions(token: token, channelProtocol: ChannelProtocol.TcpProxyAndUdp));
+            clientOptions: TestHelper.CreateClientOptions(token: token, channelProtocol: ChannelProtocol.Udp));
 
         Assert.IsFalse(client.SessionInfo?.IsUdpChannelSupported);
     }

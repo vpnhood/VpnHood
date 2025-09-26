@@ -32,7 +32,9 @@ public static class AppDtoConverterExtensions
             DnsServers = sessionInfo.DnsServers,
             ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress,
             CreatedTime = sessionInfo.CreatedTime,
-            ChannelProtocols = sessionInfo.ChannelProtocols
+            ChannelProtocols = sessionInfo.ChannelProtocols,
+            IsTcpProxySupported = sessionInfo.IsTcpProxySupported,
+            IsTcpPacketSupported = sessionInfo.IsTcpPacketSupported
         };
     }
 
@@ -54,7 +56,8 @@ public static class AppDtoConverterExtensions
             SessionMaxTraffic = sessionStatus.SessionMaxTraffic,
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
             ActiveClientCount = sessionStatus.ActiveClientCount,
-            ChannelProtocol = sessionStatus.ChannelProtocol
+            ChannelProtocol = sessionStatus.ChannelProtocol,
+            IsTcpProxy = sessionStatus.IsTcpProxy
         };
     }
 

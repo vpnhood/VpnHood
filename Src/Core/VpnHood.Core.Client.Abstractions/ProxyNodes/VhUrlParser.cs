@@ -25,7 +25,7 @@ public static class VhUrlParser
             return false;
 
         var parts = ExtractParts(parsed);
-        if (defaultProtocol!=null) parts.Scheme ??= ProtocolToScheme(defaultProtocol.Value);
+        if (defaultProtocol != null) parts.Scheme ??= ProtocolToScheme(defaultProtocol.Value);
         if (defaultUsername != null) parts.User ??= defaultUsername;
         if (defaultPassword != null) parts.Password ??= defaultPassword;
         if (defaultPort != null) parts.Port ??= defaultPort;
@@ -49,7 +49,7 @@ public static class VhUrlParser
         if (!string.IsNullOrEmpty(parts.User)) uriBuilder.UserName = parts.User;
         if (!string.IsNullOrEmpty(parts.Password)) uriBuilder.Password = parts.Password;
 
-        
+
         // Only add enabled=false if explicitly requested and not already present
         var valueCollection = HttpUtility.ParseQueryString(parsed.Query);
         if (defaultEnabled == false && valueCollection["enabled"] == null) {

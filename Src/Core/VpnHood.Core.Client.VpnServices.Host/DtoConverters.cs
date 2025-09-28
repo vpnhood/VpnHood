@@ -27,7 +27,8 @@ internal static class DtoConverters
             IsDnsOverTlsDetected = sessionStatus.IsDnsOverTlsDetected,
             ProxyManagerStatus = sessionStatus.ProxyManagerStatus,
             ChannelProtocol = sessionStatus.ChannelProtocol,
-            IsTcpProxy = sessionStatus.IsTcpProxy
+            IsTcpProxy = sessionStatus.IsTcpProxy,
+            IsDropQuic = sessionStatus.IsDropQuic
         };
 
         return ret;

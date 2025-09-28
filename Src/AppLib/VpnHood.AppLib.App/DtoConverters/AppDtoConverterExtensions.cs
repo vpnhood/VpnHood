@@ -57,7 +57,8 @@ public static class AppDtoConverterExtensions
             SessionExpirationTime = sessionStatus.SessionExpirationTime,
             ActiveClientCount = sessionStatus.ActiveClientCount,
             ChannelProtocol = sessionStatus.ChannelProtocol,
-            IsTcpProxy = sessionStatus.IsTcpProxy
+            IsTcpProxy = sessionStatus.IsTcpProxy,
+            IsDropQuic = sessionStatus.IsDropQuic
         };
     }
 

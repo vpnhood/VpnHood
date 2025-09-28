@@ -25,5 +25,6 @@ public class SessionStatus
     public required int UserReviewRecommended { get; init; }
     public required bool IsDnsOverTlsDetected { get; init; }
     public required bool IsTcpProxy { get; init; }
+    public required bool IsDropQuic { get; set; }
     public required ChannelProtocol ChannelProtocol { get; init; }
 }

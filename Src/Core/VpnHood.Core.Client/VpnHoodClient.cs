@@ -225,9 +225,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    public bool IsTcpProxy => 
+    private bool IsTcpProxy => 
         Config is { UseTcpProxy: true, IsTcpProxySupported: true } &&
         (SessionInfo is null || SessionInfo.IsTcpProxySupported);
+
+    // DropQUIC is useless if not tcp proxy
+    private bool IsDropQuic => Config.DropQuic && IsTcpProxy;
+
 
     public ClientState State {
         get {
@@ -498,7 +502,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (Config.DropUdp)
             return false;
 
-        if (udpPacket.DestinationPort is 80 or 443 && Config.DropQuic)
+        if (udpPacket.DestinationPort is 80 or 443 && IsDropQuic)
             return false;
 
         return true;
@@ -1231,7 +1235,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public int TcpTunnelledCount => client._clientHost.Stat.TcpTunnelledCount;
         public int TcpPassthruCount => client._clientHost.Stat.TcpPassthruCount;
         public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
-        public bool DropQuic => client.Config.DropQuic;
+        public bool IsDropQuic => client.IsDropQuic;
         public bool IsTcpProxy => client.IsTcpProxy;
         public ChannelProtocol ChannelProtocol => client.ChannelProtocol;
         public int UnstableCount { get; set; }

@@ -126,7 +126,7 @@ public class UtilTest : TestBase
         // Test case-insensitive schemes
         Assert.IsTrue(VhUrlParser.TryParse("SOCKS5://PROXY.EXAMPLE.COM:1080",
             null, null, null, null, null, out url));
-        Assert.AreEqual("SOCKS5", url.Scheme);
+        Assert.AreEqual("socks5", url.Scheme); // UriBuilder normalizes schemes to lowercase
         Assert.AreEqual("proxy.example.com", url.Host);
 
         // Test alternative SOCKS5 schemes

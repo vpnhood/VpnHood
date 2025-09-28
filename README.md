@@ -6,12 +6,11 @@ Undetectable VPN for ordinary users and experts. VpnHood! is a solution to bypas
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Page-blue?logo=linkedin)](https://www.linkedin.com/company/vpnhood)
 [![Docs](https://img.shields.io/badge/Docs-Wiki-blue?logo=github)](https://github.com/vpnhood/vpnhood/wiki)
 [![Download](https://img.shields.io/github/v/release/vpnhood/vpnhood?label=Download)](https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client)
+[![Changelog](https://img.shields.io/badge/Changelog-Read-blue?logo=github)](https://github.com/vpnhood/vpnhood/blob/main/CHANGELOG.md)
 [![NuGet](https://img.shields.io/badge/NuGet-Packages-blue?logo=nuget)](https://www.nuget.org/profiles/VpnHood)
 
-
-
-## Get VpnHood!
-It is available for Windows and Android. The iOS client still needs to be ready!
+## Get VpnHood
+Available for Windows, Linux and Android. (iOS client is under development.)
 
 <a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="200"></a>
 <a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.msi"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="200"></a>
@@ -22,43 +21,38 @@ It is available for Windows and Android. The iOS client still needs to be ready!
 
 
 ## Client Features
-* Easy Installation: Install and press connect
-* Fast & Secure
+* One-click connect
+* Fast & secure tunneling
 * Undetectable on private IPs
-* Protocol: UDP, TCP, Cloaked, and Combination
-* Split Tunneling by Apps & Countries
+* Protocols: UDP, TCP, Cloaked, Combination
+* Split tunneling (Apps & Countries)
 * Custom DNS
-* Windows (x64) 10, 11 
-* Android, Android TV
-* Linux
-* Multilanguage
-* IPv4/IPv6
+* Platforms: Windows (10/11 x64), Android (Phone / TV), Linux
+* Multi-language
+* IPv4 / IPv6
 
 ## Server Features
-* No Network configuration or knowledge is required
-* No Admin privilege is required
-* Hot Restart (User sessions will not close on restart)
-* Built-In User Management 
-* Built-in NAT with zero configuration
+* Zero network configuration required
+* No admin privilege required
+* Hot restart (sessions persist)
+* Built-in user management
 * NetScan Protector
-* Compatible with Reserved Proxies
-* Windows (x64) 10, 11, or Windows Server
-* Linux
+* Works with reserved proxies
+* Platforms: Windows 10/11/Server, Linux
 
 ## Developer Features
-* Open source (LGPL License)
-* Completely in .NET
-* MAUI Support 
-* Ads interface. AdMob, InMobi and Chartboost have been integrated
-* Billing Interface
-* Highly Customizable
-* Easily embed into your .NET app
-* Extendable User Management via REST API
-* Component-based via Nuget packages
-* Open the solution with Visual Studio and build
+* Open source (LGPL) – fully in .NET
+* MAUI support
+* Ads interface (AdMob, InMobi, Chartboost integrated)
+* Billing interface
+* Highly customizable & component based
+* Extendable user management (REST API)
+* Distributed as modular NuGet packages
+* Simple Visual Studio build experience
 
 ### Security Audit
-We are excited to announce that VpnHood has undergone a comprehensive security audit by the Open Tech Fund. The audit results are now available for public review. This audit reaffirms our commitment to providing a secure and reliable VPN service for our users. You can read the full report [here](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/).
+VpnHood underwent a comprehensive security audit by the Open Tech Fund. Read the full report
+[here](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/).
 
 ## FAQ & Documents
 Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) for the VpnHood documents.
@@ -68,11 +62,11 @@ Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) for the VpnHood
 * [Changelog](https://github.com/vpnhood/VpnHood/blob/development/CHANGELOG.md)
 * [More...](https://github.com/vpnhood/VpnHood/wiki)
 
-## Support
+## Support & Community
 You are always welcome!
-* Report bugs or request features in [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
-* Feel free to start a new discussion [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
-* Stay updated and follow us on [LinkedIn](https://www.linkedin.com/company/vpnhood).
+* Issues & feature requests: [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
+* Discussions & Q&A: [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
+* Stay updated and follow us: [LinkedIn](https://www.linkedin.com/company/vpnhood).
 
 ## Supported Server
 <a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-win.png"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>
@@ -82,3 +76,6 @@ Windows|Linux
 ## Special Thanks
 * [Advanced Installer](https://www.advancedinstaller.com): Installer tools for Windows.
 * [ReSharper](https://www.jetbrains.com/resharper/): Write, improve, and maintain C# code.
+
+---
+Enjoy VpnHood! Contributions, feedback and stars are welcome.

@@ -1,8 +1,10 @@
-
 # <img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-vpnhood.png" width="32"> VpnHood
 An alternative way for circumvention and privacy!
+Undetectable VPN for ordinary users and experts. VpnHood! is a solution to bypass Advanced Firewalls and circumvent deep packet inspection. VpnHood has been created entirely from scratch in C#.
 
-Undetectable VPN for ordinary users and experts. VpnHood is a solution to bypass Advanced Firewalls and circumvent deep packet inspection. VpnHood has been created entirely from scratch in C#.
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Page-blue?logo=linkedin)](https://www.linkedin.com/company/vpnhood)
+[![NuGet](https://img.shields.io/nuget/v/VpnHood.AppLib.App?label=NuGet)](https://www.nuget.org/packages/VpnHood.AppLib.App/)
+
 
 ## Get VpnHood!
 It is available for Windows and Android. The iOS client still needs to be ready!
@@ -16,7 +18,7 @@ It is available for Windows and Android. The iOS client still needs to be ready!
 * Easy Installation: Install and press connect
 * Fast & Secure
 * Undetectable on private IPs
-* Protocol: UDP, TCP, Cloaked and Combination
+* Protocol: UDP, TCP, Cloaked, and Combination
 * Split Tunneling by Apps & Countries
 * Custom DNS
 * Windows (x64) 10, 11 

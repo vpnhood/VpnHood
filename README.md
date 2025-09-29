@@ -50,7 +50,7 @@ Available for Windows, Linux and Android. (iOS client is under development.)
 * Distributed as modular NuGet packages
 * Simple Visual Studio build experience
 
-### Security Audit
+## Security Audit
 VpnHood underwent a comprehensive security audit by the Open Tech Fund. Read the full report
 [here](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/).
 
@@ -78,4 +78,4 @@ Windows|Linux
 * [ReSharper](https://www.jetbrains.com/resharper/): Write, improve, and maintain C# code.
 
 ---
-Enjoy VpnHood! Contributions, feedback and stars are welcome.
+Enjoy VpnHood! Contributions, feedback and, stars are welcome.

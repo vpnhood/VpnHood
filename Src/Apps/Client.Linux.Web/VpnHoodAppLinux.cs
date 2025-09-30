@@ -31,6 +31,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
         var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
         var showWindowAfterStart = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
         var appOptions = optionsFactory();
+        Directory.CreateDirectory(appOptions.StorageFolderPath);
 
         // make sure only single instance is running
         // it must run before VpnHoodApp.Init to prevent internal system conflicts with previous instances
@@ -81,12 +82,13 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
         throw new Exception("VpnHood client is already running.");
     }
 
+    private static Stream? _singleInstanceFileStream;
     private static bool IsAnotherInstanceRunning(AppOptions appOptions)
     {
         var lockFilePath = Path.Combine(Path.Combine(appOptions.StorageFolderPath, $"{appOptions.AppId}.lock"));
 
         try {
-            _ = new FileStream(
+            _singleInstanceFileStream = new FileStream(
                 lockFilePath,
                 FileMode.OpenOrCreate,
                 FileAccess.ReadWrite,
@@ -104,6 +106,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
         if (disposing) {
             if (VpnHoodAppWebServer.IsInit) VpnHoodAppWebServer.Instance.Dispose();
             if (VpnHoodApp.IsInit) VpnHoodApp.Instance.Dispose();
+            _singleInstanceFileStream?.Dispose();
         }
 
         base.Dispose(disposing);

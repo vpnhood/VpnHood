@@ -10,8 +10,19 @@ namespace VpnHood.AppLib;
 
 public class AppOptions(string appId, string storageFolderName, bool isDebugMode)
 {
-    public static string BuildStorageFolderPath(string subFolder) =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), subFolder);
+    public static string BuildStorageFolderPath(string subFolder)
+    {
+        // default
+        var baseFolder = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        
+        if (OperatingSystem.IsLinux()) {
+            // get current executable folder
+            baseFolder = Path.GetDirectoryName(Environment.ProcessPath!)!;
+        }
+
+        return Path.Combine(baseFolder, subFolder);
+    }
+
     public string AppId => appId;
     public bool IsDebugMode => isDebugMode;
     public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);

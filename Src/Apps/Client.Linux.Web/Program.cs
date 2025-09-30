@@ -14,7 +14,7 @@ internal class Program
         var appConfigs = AppConfigs.Load();
         var resources = ClientAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
-        var appOptions = new AppOptions(appConfigs.AppId, AppConfigs.AppName, AppConfigs.IsDebugMode) {
+        var appOptions = new AppOptions(appConfigs.AppId, "storage", AppConfigs.IsDebugMode) {
             Resources = resources,
             AccessKeys = AppConfigs.IsDebug ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,

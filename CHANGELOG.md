@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Linux: Could not start on some linux distributions
+
 # v7.3.759
 * Fix: Linux: Client stops after 60 minutes
 * Fix: Linux: Prevent multiple instances

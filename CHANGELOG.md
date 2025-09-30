@@ -1,5 +1,7 @@
-# Upcoming
+# v7.3.761
 * Fix: Linux: Could not start on some linux distributions
+* Update: Protocol Page
+* Update: Improve pages & UI
 
 # v7.3.759
 * Fix: Linux: Client stops after 60 minutes

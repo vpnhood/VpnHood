@@ -12,9 +12,14 @@ Undetectable VPN for ordinary users and experts. VpnHood! is a solution to bypas
 ## Get VpnHood
 Available for Windows, Linux and Android. (iOS client is under development.)
 
-<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="200"></a>
-<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.msi"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="200"></a>
-<img width="200" alt="download-linux" src="https://github.com/user-attachments/assets/2820a32f-b426-4689-8a28-ad6f8f1ab7ee" />
+<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android">
+	<img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" alt="Download for Google Play" width="200"/>
+</a>
+<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.msi">
+	<img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" alt="Download for Windows" width="200"/>
+</a>
+<a href="https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client-for-Linux">
+	<img src="https://github.com/vpnhood/VpnHood/wiki/images/get-it-on-linux.png" width="200" alt="Download for Linux"/>
 </a>
 <br/>
 <a href="https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client">Use Alternative Download links.</a>

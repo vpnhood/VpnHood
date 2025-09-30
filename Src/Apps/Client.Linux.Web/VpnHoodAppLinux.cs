@@ -2,6 +2,7 @@
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device.Linux;
 using VpnHood.Core.Common;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.App.Client.Linux.Web;
@@ -54,7 +55,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
             OpenMainWindowRequested?.Invoke(this, EventArgs.Empty);
 
         // wait until app is closed
-        while (VpnHoodApp.IsInit) 
+        while (VpnHoodApp.IsInit)
             await Task.Delay(1000);
     }
 
@@ -76,10 +77,10 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
         // open main window if app is already running and user run the app again
         if (showWindow) {
             var commandListener = new CommandListener(Path.Combine(appOptions.StorageFolderPath, FileNameAppCommand));
-            commandListener.SendCommand("/openWindow");
+            VhUtils.TryInvoke(null, () => commandListener.SendCommand("/openWindow"));
         }
 
-        throw new Exception("VpnHood client is already running.");
+        throw new AnotherInstanceIsRunning();
     }
 
     private static Stream? _singleInstanceFileStream;
@@ -95,6 +96,9 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
                 FileShare.None
             );
             return false; // got the lock
+        }
+        catch (UnauthorizedAccessException) {
+            return true; // someone else holds it
         }
         catch (IOException) {
             return true; // someone else holds it

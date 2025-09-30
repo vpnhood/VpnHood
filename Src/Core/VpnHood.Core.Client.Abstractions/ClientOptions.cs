@@ -13,7 +13,6 @@ namespace VpnHood.Core.Client.Abstractions;
 public class ClientOptions
 {
     public static ClientOptions Default { get; } = new() {
-        ChannelProtocol = ChannelProtocol.Tcp,
         ClientId = string.Empty, 
         UseTcpProxy = true,
         AccessKey = SampleAccessKey, 
@@ -39,10 +38,11 @@ public class ClientOptions
 
     [JsonConverter(typeof(VersionConverter))]
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version ?? new Version();
-    public required ChannelProtocol ChannelProtocol { get; set; }
+
     public required string AppName { get; set; }
     public required string AccessKey { get; set; }
     public required string ClientId { get; set; }
+    public  ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool UseTcpProxy { get; set; }
     public bool DropQuic { get; set; }
     public bool DropUdp { get; set; }

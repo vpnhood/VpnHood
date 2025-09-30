@@ -65,10 +65,15 @@ public class CommandListener(string commandFilePath) : IDisposable
 
     public void SendCommand(string command)
     {
+        VhLogger.Instance.LogInformation("Broadcasting a command. Command: {Command}", command);
+        Directory.CreateDirectory(Path.GetDirectoryName(commandFilePath)!);
+        File.WriteAllText(commandFilePath, command);
+    }
+
+    public void TrySendCommand(string command)
+    {
         try {
-            VhLogger.Instance.LogInformation("Broadcasting a command. Command: {Command}", command);
-            Directory.CreateDirectory(Path.GetDirectoryName(commandFilePath)!);
-            File.WriteAllText(commandFilePath, command);
+            SendCommand(command);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send command.");

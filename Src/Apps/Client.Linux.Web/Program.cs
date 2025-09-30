@@ -3,12 +3,16 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.WebServer;
+using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Client.Linux.Web;
 
 internal class Program
 {
+    public static string StoragePath => Path.Combine(
+        Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath)!)!, "storage");
+
     private static AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
@@ -28,7 +32,8 @@ internal class Program
             },
             LogServiceOptions = {
                 SingleLineConsole = false
-            }
+            },
+            StorageFolderPath = StoragePath
         };
 
         return appOptions;
@@ -38,35 +43,46 @@ internal class Program
     {
         Console.WriteLine("Starting VpnHood Client for linux (Beta).");
         Console.WriteLine("Only WebUI supported at this time.");
+        var serviceUrlPath = Path.Combine(StoragePath, "service_url.txt");
 
         // init VpnHood app
-        VpnHoodAppLinux.Init(CreateAppOptions, args);
+        try {
+            VpnHoodAppLinux.Init(CreateAppOptions, args);
+        }
+        catch (AnotherInstanceIsRunning) {
+            VhLogger.Instance.LogInformation("Another instance is running.");
+
+            // load existing url
+            if (File.Exists(serviceUrlPath)) {
+                var url = File.ReadAllText(serviceUrlPath);
+                if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                    OpenMainWindow(uri);
+            }
+
+            VhLogger.Instance.LogInformation("Another instance is running");
+            return Task.CompletedTask;
+        }
 
         // init webserver
         VpnHoodAppWebServer.Init(new WebServerOptions());
-        VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow();
+        VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow(VpnHoodAppWebServer.Instance.Url);
+
+        // write service url
+        File.WriteAllText(serviceUrlPath, VpnHoodAppWebServer.Instance.Url.ToString());
 
         // run app
         return VpnHoodAppLinux.Instance.Run();
     }
 
-    private static void OpenMainWindow()
+    private static void OpenMainWindow(Uri url)
     {
-        if (!VpnHoodAppWebServer.IsInit) {
-            VhLogger.Instance.LogWarning("VpnHood Web server is not initialized to show its web UI.");
-            return;
-        }
-
         VhLogger.Instance.LogInformation("Running the default browser...");
         Process.Start(new ProcessStartInfo {
-            FileName = "xdg-open",
-            ArgumentList = { VpnHoodAppWebServer.Instance.Url.AbsoluteUri },
-            UseShellExecute = false,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true
+            FileName = url.AbsoluteUri,
+            UseShellExecute = true,
         });
 
-        VhLogger.Instance.LogInformation("To open VpnHood UI navigate to {0}", 
-            VpnHoodAppWebServer.Instance.Url);
+        VhLogger.Instance.LogInformation("To open VpnHood UI navigate to {0}",
+            url);
     }
 }

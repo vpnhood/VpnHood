@@ -207,7 +207,7 @@ public class ServerApp : IDisposable
         cmdApp.Description = "Run Garbage Collector for debugging purpose.";
         cmdApp.OnExecute(() => {
             VhLogger.Instance.LogInformation("Sending GC request...");
-            _commandListener.SendCommand("gc");
+            _commandListener.TrySendCommand("gc");
         });
     }
 
@@ -216,7 +216,7 @@ public class ServerApp : IDisposable
         cmdApp.Description = "Stop all instances of VpnHoodServer that running from this folder";
         cmdApp.OnExecute(() => {
             VhLogger.Instance.LogInformation("Sending stop server request...");
-            _commandListener.SendCommand("stop");
+            _commandListener.TrySendCommand("stop");
         });
     }
 

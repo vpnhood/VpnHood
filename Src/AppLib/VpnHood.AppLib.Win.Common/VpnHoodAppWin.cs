@@ -108,7 +108,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         if (IsAnotherInstanceRunning()) {
             // open main window if app is already running and user run the app again
             if (ShowWindowAfterStart)
-                _commandListener.SendCommand("/openWindow");
+                _commandListener.TrySendCommand("/openWindow");
             throw new Exception("VpnHood client is already running.");
         }
 

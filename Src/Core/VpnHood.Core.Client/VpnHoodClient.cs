@@ -89,8 +89,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ChannelProtocol _channelProtocol;
 
     public VpnHoodClient(IVpnAdapter vpnAdapter,
-        string storageFolder,
         ISocketFactory socketFactory,
+        string? storageFolder,
         ITracker? tracker,
         ClientOptions options)
     {
@@ -103,6 +103,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (!VhUtils.IsInfinite(options.MaxPacketChannelTimespan) && options.MaxPacketChannelTimespan < options.MinPacketChannelTimespan)
             throw new ArgumentNullException(nameof(options.MaxPacketChannelTimespan),
                 $"{nameof(options.MaxPacketChannelTimespan)} must be bigger or equal than {nameof(options.MinPacketChannelTimespan)}.");
+
+        if (string.IsNullOrEmpty(storageFolder))
+            storageFolder = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath!)!, "vpn-service");
 
         Config = new VpnHoodClientConfig {
             AllowAnonymousTracker = options.AllowAnonymousTracker,

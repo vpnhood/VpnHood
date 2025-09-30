@@ -22,7 +22,6 @@ public class AccessCodeTest : TestAppBase
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);
 
-
         //Console.WriteLine(aa.Port);
         await Task.CompletedTask;
     }

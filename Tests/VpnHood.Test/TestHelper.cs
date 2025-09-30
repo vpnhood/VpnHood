@@ -472,8 +472,8 @@ public class TestHelper : IDisposable
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter, 
-            storageFolder: Path.Combine(WorkingPath, "ClientCore"),
             new TestSocketFactory(), 
+            storageFolder: Path.Combine(WorkingPath, "ClientCore"),
             new TestTracker(), clientOptions);
 
         // test starting the client

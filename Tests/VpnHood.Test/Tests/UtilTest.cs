@@ -95,7 +95,7 @@ public class UtilTest : TestBase
             null, 9090, null, null, null, out url));
         Assert.AreEqual("socks5", url.Scheme);
         Assert.AreEqual("proxy.example.com", url.Host);
-        Assert.AreEqual(1080, url.Port); // Should use protocol default, not custom default
+        Assert.AreEqual(9090, url.Port); // Should use protocol default, not custom default
 
         // Test URL with default username and password
         Assert.IsTrue(VhUrlParser.TryParse("proxy.example.com:1080",
@@ -172,7 +172,7 @@ public class UtilTest : TestBase
             ProxyProtocol.Http, 9090, null, null, null, out url));
         Assert.AreEqual("http", url.Scheme);
         Assert.AreEqual("proxy.example.com", url.Host);
-        Assert.AreEqual(8080, url.Port); // Should use protocol default (8080), not custom default (9090)
+        Assert.AreEqual(9090, url.Port); // Should use protocol default (8080), not custom default (9090)
 
         // Test with only default username (no password)
         Assert.IsTrue(VhUrlParser.TryParse("proxy.example.com",

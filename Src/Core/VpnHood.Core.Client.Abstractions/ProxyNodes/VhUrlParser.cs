@@ -26,23 +26,19 @@ public static class VhUrlParser
 
         var parts = ExtractParts(parsed);
         if (defaultProtocol!=null) parts.Scheme ??= ProtocolToScheme(defaultProtocol.Value);
-        if (defaultUsername != null) parts.User ??= defaultUsername;
-        if (defaultPassword != null) parts.Password ??= defaultPassword;
+        parts.User ??= defaultUsername;
+        parts.Password ??= defaultPassword;
+        parts.Port ??= defaultPort;
+        
         // IMPORTANT: Do NOT apply defaultPort here; tests expect protocol default to win over passed defaultPort.
         // If we applied defaultPort here it would override the protocol's intrinsic default ports (e.g., 8080 / 1080 / 443).
         if (string.IsNullOrWhiteSpace(parts.Scheme) || string.IsNullOrWhiteSpace(parts.Host))
             return false;
 
+        // apply protocol default port if still missing
         if (parts.Port is null) {
-            // Determine protocol default first. Only if protocol is unknown OR parsing fails we fallback to provided defaultPort.
-            try {
-                var proto = ParseProtocolLenient(parts.Scheme!);
-                parts.Port = GetDefaultPort(proto);
-            }
-            catch {
-                if (defaultPort != null)
-                    parts.Port = defaultPort;
-            }
+            var proto = ParseProtocolLenient(parts.Scheme);
+            parts.Port = GetDefaultPort(proto);
         }
 
         // create UriBuilder to validate parts
@@ -57,7 +53,7 @@ public static class VhUrlParser
         if (!string.IsNullOrEmpty(parts.User)) uriBuilder.UserName = parts.User;
         if (!string.IsNullOrEmpty(parts.Password)) uriBuilder.Password = parts.Password;
 
-        
+
         // Only add enabled=false if explicitly requested and not already present
         var valueCollection = HttpUtility.ParseQueryString(parsed.Query);
         if (defaultEnabled == false && valueCollection["enabled"] == null) {
@@ -77,43 +73,11 @@ public static class VhUrlParser
     private static bool TryCreateUri(string input, [NotNullWhen(true)] out Uri? uri)
     {
         uri = null;
-        
-        // First try to parse as absolute URI
-        if (Uri.TryCreate(input, UriKind.Absolute, out uri))
-        {
-            // Check if this is a valid scheme or if Uri.TryCreate incorrectly parsed host:port as scheme:path
-            // Uri.TryCreate("www.example.com:8080") incorrectly creates scheme="www.example.com", path="8080"
-            if (uri.Scheme.Contains('.') || uri.Scheme.Contains('-'))
-            {
-                // This is likely a host name that was misinterpreted as a scheme
-                uri = null;
-            }
-            else
-            {
-                // Additional validation: check if port is valid
-                if (uri.Port < -1 || uri.Port > 65535)
-                {
-                    uri = null;
-                    return false;
-                }
-                return true;
-            }
-        }
+        var schemaIndex = input.IndexOf("://", StringComparison.Ordinal);
+        if (schemaIndex == -1 || input[..schemaIndex].Contains("."))
+            input = $"{PseudoScheme}://{input}";
 
-        // Try with pseudo scheme for host:port or plain host patterns
-        var candidate = $"{PseudoScheme}://{input}";
-        if (Uri.TryCreate(candidate, UriKind.Absolute, out uri))
-        {
-            // Additional validation for pseudo scheme case
-            if (uri.Port < -1 || uri.Port > 65535)
-            {
-                uri = null;
-                return false;
-            }
-            return true;
-        }
-            
-        return false;
+        return Uri.TryCreate(input, UriKind.Absolute, out uri);
     }
 
     private sealed class UrlParts
@@ -138,7 +102,7 @@ public static class VhUrlParser
             parts.Host = url.Host;
 
         // Extract port (only if it's valid and not the default port for the scheme)
-        if (url.Port > 0 && !url.IsDefaultPort)
+        if (url is { Port: > 0, IsDefaultPort: false })
             parts.Port = url.Port;
 
         // Extract user info
@@ -160,12 +124,12 @@ public static class VhUrlParser
         _ => throw new ArgumentException($"Unknown protocol: {scheme}")
     };
 
-    private static string ProtocolToScheme(ProxyProtocol protocol) => protocol switch {
+    private static string? ProtocolToScheme(ProxyProtocol protocol) => protocol switch {
         ProxyProtocol.Socks4 => "socks4",
         ProxyProtocol.Socks5 => "socks5",
         ProxyProtocol.Http => "http",
         ProxyProtocol.Https => "https",
-        _ => "http"
+        _ => null
     };
 
     private static int GetDefaultPort(ProxyProtocol protocol) => protocol switch {

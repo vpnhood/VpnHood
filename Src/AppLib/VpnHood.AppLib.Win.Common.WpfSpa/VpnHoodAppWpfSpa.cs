@@ -19,7 +19,7 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
         try {
             // create instance
             var app = new VpnHoodAppWpfSpa();
-            Application.Current.Exit += (_, _) => app.Dispose(false);
+            Application.Current.Exit += (_, _) => Exit();
 
             // initialize Win App
             var appOptions = optionsFactory();
@@ -40,7 +40,7 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
             });
 
             // initialize Win
-            VpnHoodAppWin.Instance.ExitRequested += (_, _) => Application.Current.Shutdown();
+            VpnHoodAppWin.Instance.ExitRequested += (_, _) => Exit();
             VpnHoodAppWin.Instance.OpenMainWindowInBrowserRequested += (_, _) =>
                 VpnHoodAppWin.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             VpnHoodAppWin.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
@@ -74,14 +74,21 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
         });
     }
 
+    private static void Exit()
+    {
+        if (VpnHoodAppWpfSpa.IsInit)
+            VpnHoodAppWpfSpa.Instance.Dispose();
+        Application.Current.Shutdown();
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            if (VpnHoodAppWin.IsInit)
-                VpnHoodAppWin.Instance.Dispose();
-
             if (VpnHoodAppWebServer.IsInit)
                 VpnHoodAppWebServer.Instance.Dispose();
+
+            if (VpnHoodAppWin.IsInit)
+                VpnHoodAppWin.Instance.Dispose();
         }
 
         base.Dispose(disposing);

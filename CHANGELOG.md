@@ -1,4 +1,5 @@
 # Upcoming
+* Fix for Windows: Clean up and disconnect on pressing the exit menu.
 
 # v7.3.761
 * Fix: Linux: Could not start on some linux distributions

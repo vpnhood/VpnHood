@@ -281,8 +281,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (ConnectionInfo.IsStarted()) {
                 var reconfigureParams = new ClientReconfigureParams {
                     ChannelProtocol = UserSettings.ChannelProtocol,
+                    DropQuic = UserSettings.DropQuic,
+                    UseTcpProxy = UserSettings.UseTcpProxy,
                     DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                    ProxyNodes = Services.ProxyNodeService.GetProxyOptions()
+                    ProxyNodes = Services.ProxyNodeService.GetProxyOptions(),
                 };
 
                 // it is not important to take effect immediately

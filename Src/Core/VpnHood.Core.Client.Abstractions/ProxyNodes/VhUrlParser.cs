@@ -9,11 +9,7 @@ public static class VhUrlParser
 
     public static bool TryParse(
         string value,
-        ProxyProtocol? defaultProtocol,
-        int? defaultPort,
-        string? defaultUsername,
-        string? defaultPassword,
-        bool? defaultEnabled,
+        ProxyNodeDefaults? defaults,
         [NotNullWhen(true)] out Uri? url)
     {
         url = null;
@@ -25,13 +21,13 @@ public static class VhUrlParser
             return false;
 
         var parts = ExtractParts(parsed);
-        if (defaultProtocol!=null) parts.Scheme ??= ProtocolToScheme(defaultProtocol.Value);
-        parts.User ??= defaultUsername;
-        parts.Password ??= defaultPassword;
-        parts.Port ??= defaultPort;
-        
-        // IMPORTANT: Do NOT apply defaultPort here; tests expect protocol default to win over passed defaultPort.
-        // If we applied defaultPort here it would override the protocol's intrinsic default ports (e.g., 8080 / 1080 / 443).
+        // Apply defaults (preserving original precedence & behavior)
+        if (defaults?.Protocol != null)
+            parts.Scheme ??= ProtocolToScheme(defaults.Protocol.Value);
+        parts.User ??= defaults?.Username;
+        parts.Password ??= defaults?.Password;
+        parts.Port ??= defaults?.Port; // keep same timing as before (assigned before protocol default logic)
+
         if (string.IsNullOrWhiteSpace(parts.Scheme) || string.IsNullOrWhiteSpace(parts.Host))
             return false;
 
@@ -41,7 +37,6 @@ public static class VhUrlParser
             parts.Port = GetDefaultPort(proto);
         }
 
-        // create UriBuilder to validate parts
         var uriBuilder = new UriBuilder {
             Scheme = parts.Scheme,
             Host = parts.Host,
@@ -49,17 +44,14 @@ public static class VhUrlParser
             Path = string.Empty
         };
 
-        // add user info if any
         if (!string.IsNullOrEmpty(parts.User)) uriBuilder.UserName = parts.User;
         if (!string.IsNullOrEmpty(parts.Password)) uriBuilder.Password = parts.Password;
 
-
-        // Only add enabled=false if explicitly requested and not already present
         var valueCollection = HttpUtility.ParseQueryString(parsed.Query);
-        if (defaultEnabled == false && valueCollection["enabled"] == null) {
+        if (defaults?.IsEnabled == false && valueCollection["enabled"] == null) {
             valueCollection["enabled"] = "false";
         }
-        uriBuilder.Query = valueCollection.ToString(); // serializes back to key=value&key2=value2
+        uriBuilder.Query = valueCollection.ToString();
 
         try {
             url = uriBuilder.Uri;
@@ -74,7 +66,7 @@ public static class VhUrlParser
     {
         uri = null;
         var schemaIndex = input.IndexOf("://", StringComparison.Ordinal);
-        if (schemaIndex == -1 || input[..schemaIndex].Contains("."))
+        if (schemaIndex == -1 || input[..schemaIndex].Contains('.'))
             input = $"{PseudoScheme}://{input}";
 
         return Uri.TryCreate(input, UriKind.Absolute, out uri);
@@ -93,19 +85,15 @@ public static class VhUrlParser
     {
         var parts = new UrlParts();
 
-        // Extract scheme (but not the pseudo scheme)
         if (!string.Equals(url.Scheme, PseudoScheme, StringComparison.OrdinalIgnoreCase))
             parts.Scheme = url.Scheme;
 
-        // Extract host
         if (!string.IsNullOrEmpty(url.Host))
             parts.Host = url.Host;
 
-        // Extract port (only if it's valid and not the default port for the scheme)
         if (url is { Port: > 0, IsDefaultPort: false })
             parts.Port = url.Port;
 
-        // Extract user info
         if (!string.IsNullOrEmpty(url.UserInfo)) {
             var userParts = url.UserInfo.Split(':', 2);
             parts.User = Uri.UnescapeDataString(userParts[0]);

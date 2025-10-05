@@ -161,6 +161,20 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Linux", "Linux", "{175BA44C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AppLib.Linux.Common", "Src\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj", "{EEF29272-EAA1-4ACA-9556-AF3860863D7D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "vh_installer", "vh_installer", "{846B0CEE-3364-4A90-B090-052677DE5E8D}"
+	ProjectSection(SolutionItems) = preProject
+		Pub\Core\vh_installer\publish.ps1 = Pub\Core\vh_installer\publish.ps1
+		Pub\Core\vh_installer\publish_impl.ps1 = Pub\Core\vh_installer\publish_impl.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux", "linux", "{ECE7A698-8394-4574-8E78-CDBCA9A9F3F4}"
+	ProjectSection(SolutionItems) = preProject
+		Pub\Core\vh_installer\linux\install-any.sh = Pub\Core\vh_installer\linux\install-any.sh
+		Pub\Core\vh_installer\linux\install.sh = Pub\Core\vh_installer\linux\install.sh
+		Pub\Core\vh_installer\linux\updater.sh = Pub\Core\vh_installer\linux\updater.sh
+		Pub\Core\vh_installer\linux\vhlauncher.sh = Pub\Core\vh_installer\linux\vhlauncher.sh
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1239,6 +1253,8 @@ Global
 		{29A79E51-CB06-F313-377E-1CC66FDEA8FA} = {3DEEAA54-6191-41E5-AEE2-0B715D2D3F29}
 		{175BA44C-77B0-433F-BAD0-CCD83DDACA83} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{EEF29272-EAA1-4ACA-9556-AF3860863D7D} = {175BA44C-77B0-433F-BAD0-CCD83DDACA83}
+		{846B0CEE-3364-4A90-B090-052677DE5E8D} = {18FA0808-ABCC-481B-A596-F9304363675A}
+		{ECE7A698-8394-4574-8E78-CDBCA9A9F3F4} = {846B0CEE-3364-4A90-B090-052677DE5E8D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

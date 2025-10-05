@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
 	<PropertyGroup>
+		<Product>VpnHood! SERVER</Product>
 		<Description>VpnHood Server App</Description>
 		<RootNamespace>VpnHood.App.Server</RootNamespace>
 		<OutputType>Exe</OutputType>

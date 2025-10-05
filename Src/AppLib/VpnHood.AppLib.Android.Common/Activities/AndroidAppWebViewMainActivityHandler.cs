@@ -35,16 +35,13 @@ public class AndroidAppWebViewMainActivityHandler(
     private Task InitTask()
     {
         try {
-            if (!VpnHoodAppWebServer.IsInit) {
-                VpnHoodAppWebServer.Init(new WebServerOptions {
-                    DefaultPort = options.SpaDefaultPort
-                });
-            }
+            if (!VpnHoodAppWebServer.IsInit)
+                VpnHoodAppWebServer.Init();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to initialize web server.");
             WebViewCreateException = ex;
-            AndroidUtil.RunOnUiThread(ActivityEvent.Activity, 
+            AndroidUtil.RunOnUiThread(ActivityEvent.Activity,
                 () => WebViewUpdaterPage.ShowWebViewExceptionPage(ActivityEvent.Activity, ex));
             return Task.CompletedTask;
         }
@@ -52,7 +49,7 @@ public class AndroidAppWebViewMainActivityHandler(
         AndroidUtil.RunOnUiThread(ActivityEvent.Activity, InitWebUi);
         return Task.CompletedTask;
     }
-  
+
 
     private static string GetChromeVersionFromUserAgent(string? userAgent)
     {

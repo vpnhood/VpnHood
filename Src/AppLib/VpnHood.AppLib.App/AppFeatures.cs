@@ -28,6 +28,7 @@ public class AppFeatures
     public required bool AllowEndPointStrategy { get; init; }
     public required bool AutoRemoveExpiredPremium { get; set; }
     public required bool IsAdSupported { get; set; }
+    public required int? WebUiPort { get; set; }
     public required AppFeature[] PremiumFeatures { get; init; }
     public ChannelProtocol[] ChannelProtocols { get; } = [ChannelProtocol.Udp, ChannelProtocol.Tcp];
     public required object? CustomData { get; init; }

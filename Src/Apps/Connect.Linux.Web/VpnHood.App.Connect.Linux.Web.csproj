@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Product>VpnHood! CLIENT</Product>
-		<Description>VpnHood Linux Client App</Description>
-		<OutputType>Exe</OutputType>
+		<Product>VpnHood! CONNECT</Product>
+		<Description>VpnHood Linux Connect App</Description>
+		<OutputType>WinExe</OutputType>
 		<TargetFramework>net9.0</TargetFramework>
-		<AssemblyName>VpnHoodClient</AssemblyName>
+		<UseWindowsForms>False</UseWindowsForms>
+		<AssemblyName>VpnHoodConnect</AssemblyName>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -18,7 +19,7 @@
 	<PropertyGroup Condition="'$(Configuration)'=='Release'">
 		<PublishTrimmed>False</PublishTrimmed>
 		<RunAOTCompilation>False</RunAOTCompilation>
-		<!--<PathMap>$(SolutionDir)=.</PathMap>-->
+		<PathMap>$(SolutionDir)=.</PathMap>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -30,26 +31,30 @@
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
 		<Version>7.3.761</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-		<AssemblyVersion></AssemblyVersion>
+		<StartupObject></StartupObject>
 	</PropertyGroup>
 
-	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json')">
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.json')">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>AppSettings</_Parameter1>
-			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json"))</_Parameter2>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.json"))</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 
-	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json')">
+	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.$(Configuration).json')">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>AppSettings_Environment</_Parameter1>
-			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json"))</_Parameter2>
+			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.$(Configuration).json"))</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.702" />
 	</ItemGroup>
 
 </Project>

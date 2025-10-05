@@ -32,17 +32,18 @@
 		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.702" />
 	</ItemGroup>
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==false">
-		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="6.0.746" />
+		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="6.0.748" />
 	</ItemGroup>
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==true">
 		<Reference Include="VpnHood.AppLib.Assets.ClassicSpa">
 			<HintPath>..\..\..\..\VpnHood.AppLib.Assets.ClassicSpa\VpnHood.AppLib.Assets.ClassicSpa\bin\Release\netstandard2.1\VpnHood.AppLib.Assets.ClassicSpa.dll</HintPath>
 		</Reference>	
 	</ItemGroup>
+	
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
 	</ItemGroup>
-
 
 
 </Project>

@@ -55,7 +55,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public AppAdOptions AdOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }
     public string? DeviceId { get; set; }
-    public string? LocalSpaHostName { get; set; }
     public TimeSpan? EventWatcherInterval { get; set; } // set if you don't call State periodically
     public bool DisconnectOnDispose { get; set; }
     public LogServiceOptions LogServiceOptions { get; set; } = new();
@@ -66,4 +65,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public AppFeature[] PremiumFeatures { get; init; } = [];
     public bool AllowRecommendUserReviewByServer { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
+    public int? WebUiPort { get; set; }
+    public string? WebUiHostName { get; set; }
 }

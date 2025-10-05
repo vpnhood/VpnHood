@@ -21,7 +21,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var appConfigs = AppConfigs.Load();
         var resources = ClientAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
-        return new AppOptions(PackageName!, "VpnHood", AppConfigs.IsDebugMode) {
+        return new AppOptions(appId: appConfigs.AppId, storageFolderName: "VpnHood", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
@@ -30,6 +30,9 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdjustForSystemBars = false,
             AllowEndPointStrategy = true,
             AllowRecommendUserReviewByServer = false,
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
+            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 PromptDelay = TimeSpan.FromDays(1)

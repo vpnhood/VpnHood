@@ -2,7 +2,6 @@
 	<PropertyGroup>
 		<Description>Shared library for VpnHood Windows WPF Clients using SPA</Description>
 		<TargetFramework>net8.0-windows</TargetFramework>
-		<RootNamespace>VpnHood.AppLib.Win.Common.WpfSpa</RootNamespace>
 		<UseWPF>true</UseWPF>
 	</PropertyGroup>
 

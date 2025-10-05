@@ -1,17 +1,16 @@
-﻿using VpnHood.AppLib;
-using VpnHood.AppLib.WebServer;
-using VpnHood.Core.Client.Device.Linux;
+﻿using VpnHood.Core.Client.Device.Linux;
 using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.App.Client.Linux.Web;
+namespace VpnHood.AppLib.Linux.Common;
 
 public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
 {
     private readonly CommandListener _commandListener;
     private const string FileNameAppCommand = "appcommand";
     private readonly bool _showWindowAfterStart;
+    public event EventHandler? Exiting;
 
     public VpnHoodAppLinux(AppOptions appOptions, bool showWindowAfterStart)
     {
@@ -19,7 +18,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
 
         // init app
         VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath), appOptions);
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => Dispose();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => Exit();
 
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(appOptions.StorageFolderPath, FileNameAppCommand));
@@ -48,7 +47,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
     {
         // try to remove the old adapter, as previous route may till be active
         await VhUtils.TryInvokeAsync(null, () =>
-            ExecuteCommandAsync($"ip link delete {AppConfigs.AppName}", CancellationToken.None));
+            ExecuteCommandAsync($"ip link delete {VpnHoodApp.Instance.Features.AppName}", CancellationToken.None));
 
         // show main window if requested
         if (_showWindowAfterStart)
@@ -105,10 +104,15 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
         }
     }
 
+    public void Exit()
+    {
+        Exiting?.Invoke(this, EventArgs.Empty);
+        Dispose();
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
-            if (VpnHoodAppWebServer.IsInit) VpnHoodAppWebServer.Instance.Dispose();
             if (VpnHoodApp.IsInit) VpnHoodApp.Instance.Dispose();
             _singleInstanceFileStream?.Dispose();
         }

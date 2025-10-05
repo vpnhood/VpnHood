@@ -18,16 +18,18 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private string? _indexHtml;
     private WebserverLite? _server;
     private string? _spaHash;
+    private string? _spaPath;
     public Uri Url { get; }
+
     public string SpaHash => _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
+    public bool UseHostName { get; set; }
 
     private VpnHoodAppWebServer(WebServerOptions options)
     {
-        var defaultPort = options.DefaultPort ?? 9090;
+        var defaultPort = VpnHoodApp.Instance.Features.WebUiPort ?? 9090;
         var host = IPAddress.Loopback; // fallback safe default; adjust if you have AllowRemoteAccess
         var endPoint = VhUtils.GetFreeTcpEndPoint(host, defaultPort);
         Url = options.Url ?? new Uri($"http://{endPoint}");
-
         VpnHoodApp.Instance.SettingsService.BeforeSave += SettingsServiceOnBeforeSave;
     }
 
@@ -46,9 +48,9 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         base.Dispose(disposing);
     }
 
-    public static VpnHoodAppWebServer Init(WebServerOptions options)
+    public static VpnHoodAppWebServer Init(WebServerOptions? options = null)
     {
-        var ret = new VpnHoodAppWebServer(options);
+        var ret = new VpnHoodAppWebServer(options ?? new WebServerOptions());
         ret.Start();
         return ret;
     }
@@ -86,8 +88,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         Stop();
         Start();
     }
-
-    private string? _spaPath;
 
     private string GetSpaPath()
     {

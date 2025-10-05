@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
+using VpnHood.AppLib.Linux.Common;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Common.Exceptions;
@@ -8,7 +9,7 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Client.Linux.Web;
 
-internal class Program
+internal class App
 {
     public static string StoragePath => Path.Combine(
         Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath)!)!, "storage");
@@ -20,11 +21,16 @@ internal class Program
         resources.Strings.AppName = AppConfigs.AppName;
         var appOptions = new AppOptions(appConfigs.AppId, "storage", AppConfigs.IsDebugMode) {
             Resources = resources,
-            AccessKeys = AppConfigs.IsDebug ? [appConfigs.DefaultAccessKey] : [],
+            AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
             AllowEndPointStrategy = true,
             DisconnectOnDispose = true,
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
+            CustomData = appConfigs.CustomData,
+            WebUiPort = appConfigs.WebUiPort,
+            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AllowRecommendUserReviewByServer = false,
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
@@ -48,6 +54,7 @@ internal class Program
         // init VpnHood app
         try {
             VpnHoodAppLinux.Init(CreateAppOptions, args);
+            VpnHoodAppLinux.Instance.Exiting += InstanceOnExiting;
         }
         catch (AnotherInstanceIsRunning) {
             VhLogger.Instance.LogInformation("Another instance is running.");
@@ -84,5 +91,11 @@ internal class Program
 
         VhLogger.Instance.LogInformation("To open VpnHood UI navigate to {0}",
             url);
+    }
+
+    private static void InstanceOnExiting(object? sender, EventArgs e)
+    {
+        if (VpnHoodAppWebServer.IsInit)
+            VpnHoodAppWebServer.Instance.Dispose();
     }
 }

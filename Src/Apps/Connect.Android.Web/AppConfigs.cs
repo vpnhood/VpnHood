@@ -1,4 +1,5 @@
 using System.Text.Json;
+using VpnHood.App.Client;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 
@@ -7,23 +8,19 @@ using VpnHood.Core.Client.Abstractions;
 // ReSharper disable HeuristicUnreachableCode
 namespace VpnHood.App.Connect.Droid.Web;
 
-internal class AppConfigs : AppConfigsBase<AppConfigs>
+internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-
-    public Uri? UpdateInfoUrl { get; set; } =
-        new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android-web.json");
-
-    public int? SpaDefaultPort { get; set; } = IsDebugMode ? 9571 : 9570;
-    public bool SpaListenToAllIps { get; set; } = IsDebugMode;
-    public bool AllowEndPointTracker { get; set; } = true;
+    public string AppId { get; set; } = Application.Context.PackageName!;
+    public Uri? UpdateInfoUrl { get; set; } = new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android-web.json");
+    public int? WebUiPort { get; set; } = IsDebugMode ? 9571 : 9570;
+    public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
     public string? Ga4MeasurementId { get; set; }
-    public string? AppsFlyerDevKey { get; set; }
-
-    // SampleAccessKey is a test access key, you should replace it with your own access key.
-    // It is limited and can not be used in production.
-    public string DefaultAccessKey { get; set; } = ClientOptions.SampleAccessKey;
+    public Uri? RemoteSettingsUrl { get; set; }
+    public bool AllowEndPointTracker { get; set; }
     public JsonElement? CustomData { get; set; }
+    
+    public string? AppsFlyerDevKey { get; set; }
 
     public static AppConfigs Load()
     {

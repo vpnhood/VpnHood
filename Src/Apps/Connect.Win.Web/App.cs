@@ -14,15 +14,16 @@ public class App : Application
         // load app settings and resources
         var resources = ConnectAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
-        return new AppOptions("com.vpnhood.connect.windows", "VpnHoodConnect", AppConfigs.IsDebugMode) {
+        return new AppOptions(appId: appConfigs.AppId, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             UiName = "VpnHoodConnect",
             Resources = resources,
-            AccessKeys = [appConfigs.DefaultAccessKey],
+            AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = false,
-            LocalSpaHostName = "my-vpnhood-connect",
+            WebUiHostName = "my-vpnhood-connect",
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
             AllowRecommendUserReviewByServer = true,
             LogServiceOptions = {
@@ -33,7 +34,6 @@ public class App : Application
                 UpdaterProvider = new AdvancedInstallerUpdaterProvider(),
                 PromptDelay = TimeSpan.FromDays(1)
             }
-
         };
     }
 
@@ -45,8 +45,7 @@ public class App : Application
         // load app configs
         var appConfigs = AppConfigs.Load();
         VpnHoodAppWpfSpa.Init(() => CreateAppOptions(appConfigs),
-            spaListenToAllIps: appConfigs.SpaListenToAllIps,
-            spaDefaultPort: appConfigs.SpaDefaultPort,
+            spaDefaultPort: appConfigs.WebUiPort,
             args: Environment.GetCommandLineArgs());
     }
 

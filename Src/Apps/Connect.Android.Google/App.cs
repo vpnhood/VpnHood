@@ -38,10 +38,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var resources = ConnectAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
 
-        return new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
+        return new AppOptions(appId: appConfigs.AppId, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             StorageFolderPath = storageFolderPath,
-            AccessKeys = [appConfigs.DefaultAccessKey],
+            AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             Resources = resources,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             UiName = "VpnHoodConnect",
@@ -53,6 +53,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdjustForSystemBars = false,
             TrackerFactory = AppConfigs.IsDebug ? new NullTrackerFactory() : new FirebaseAnalyticsTrackerFactory(),
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
             AllowRecommendUserReviewByServer = true,
             AdOptions = new AppAdOptions {
                 PreloadAd = true,

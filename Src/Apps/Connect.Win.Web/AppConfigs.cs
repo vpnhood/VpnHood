@@ -1,4 +1,5 @@
 using System.Text.Json;
+using VpnHood.App.Client;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 
@@ -7,22 +8,16 @@ using VpnHood.Core.Client.Abstractions;
 // ReSharper disable CommentTypo
 namespace VpnHood.App.Connect.Win.Web;
 
-internal class AppConfigs : AppConfigsBase<AppConfigs>
+internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-
-    public Uri? UpdateInfoUrl { get; set; } =
-        new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.json");
-
-    public int? SpaDefaultPort { get; set; } = IsDebugMode ? 9571 : 80;
-    public bool SpaListenToAllIps { get; set; } = IsDebugMode;
-
-    // SampleAccessKey is a test access key, you should replace it with your own access key.
-    // It is limited and can not be used in production.
-    public string DefaultAccessKey { get; set; } = ClientOptions.SampleAccessKey;
-    public bool AllowEndPointTracker { get; set; } = true;
+    public string AppId { get; set; } = IsDebugMode ? "com.vpnhood.connect.windows.debug" : "com.vpnhood.connect.windows";
+    public Uri? UpdateInfoUrl { get; set; } = new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.json");
+    public int? WebUiPort { get; set; } = IsDebugMode ? 9571 : 80;
+    public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
     public string? Ga4MeasurementId { get; set; }
-
+    public Uri? RemoteSettingsUrl { get; set; }
+    public bool AllowEndPointTracker { get; set; }
     public JsonElement? CustomData { get; set; }
 
     public static AppConfigs Load()

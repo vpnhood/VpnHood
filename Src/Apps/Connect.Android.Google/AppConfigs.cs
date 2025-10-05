@@ -1,4 +1,5 @@
 using System.Text.Json;
+using VpnHood.App.Client;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 
@@ -7,33 +8,27 @@ using VpnHood.Core.Client.Abstractions;
 // ReSharper disable HeuristicUnreachableCode
 namespace VpnHood.App.Connect.Droid.Google;
 
-internal class AppConfigs : AppConfigsBase<AppConfigs>
+internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-
-    public Uri? UpdateInfoUrl { get; set; } = 
-        new ("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
-
+    public string AppId { get; set; } = Application.Context.PackageName!;
+    public Uri? UpdateInfoUrl { get; set; } = new ("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
+    public int? WebUiPort { get; set; } = IsDebugMode ? 9571 : 9570;
+    public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
+    public string? Ga4MeasurementId { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
-
-    public int? SpaDefaultPort { get; set; } = IsDebugMode ? 9571 : 9570;
-    public bool SpaListenToAllIps { get; set; } = IsDebugMode;
     public bool AllowEndPointTracker { get; set; }
+    public JsonElement? CustomData { get; set; }
 
     // This is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.
-    public string DefaultAccessKey { get; set; } = ClientOptions.SampleAccessKey;
 
     // Google sign-in (It is created through Firebase)
-    public string GoogleSignInClientId { get; set; } =
-        "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
+    public string GoogleSignInClientId { get; set; } = "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
 
     // VpnHood Store server
     public string StoreBaseUri { get; set; } = new("https://store-api.vpnhood.com");
-
-    public Guid StoreAppId { get; set; } =
-        Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
-
+    public Guid StoreAppId { get; set; } = Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
     public bool StoreIgnoreSslVerification { get; set; } = IsDebugMode;
 
     // AdMob
@@ -46,17 +41,13 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>
 
     // Chartboost
     public string ChartboostAppId { get; set; } = "000000000000000000000000"; //YOUR_CHATBOOST_APP_ID
-
-    public string ChartboostAppSignature { get; set; } =
-        "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
-
+    public string ChartboostAppSignature { get; set; } = "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
     public string ChartboostAdLocation { get; set; } = "YOUR_CHARTBOOST_AD_LOCATION";
 
     // Inmobi
     public string InmobiAccountId { get; set; } = "000000000000000000000000"; //YOUR_INMMOBI_ACCOUNT_ID
     public string InmobiPlacementId { get; set; } = "000000000000"; //YOUR_INMOBI_PLACEMENT_ID
     public bool InmobiIsDebugMode { get; set; } = IsDebugMode;
-    public JsonElement? CustomData { get; set; }
 
     public string[]? AllowedPrivateDnsProviders = [
         "one.one.one.one",

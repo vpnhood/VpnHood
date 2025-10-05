@@ -7,19 +7,16 @@ using VpnHood.Core.Client.Abstractions;
 // ReSharper disable HeuristicUnreachableCode
 namespace VpnHood.App.Client.Droid.Web;
 
-internal class AppConfigs : AppConfigsBase<AppConfigs>
+internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
-
-    public Uri? UpdateInfoUrl { get; set; } =
-        new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web.json");
-
-    public int? SpaDefaultPort { get; set; } = IsDebugMode ? 9581 : 9580;
-    public bool SpaListenToAllIps { get; set; } = IsDebugMode;
-
-    // SampleAccessKey is a test access key, you should replace it with your own access key.
-    // It is limited and can not be used in production.
+    public string AppId { get; set; } = Application.Context.PackageName!;
+    public Uri? UpdateInfoUrl { get; set; } = new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-android-web.json");
+    public int? WebUiPort { get; set; } = IsDebugMode ? 9581 : 9580;
     public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
+    public string? Ga4MeasurementId { get; set; }
+    public Uri? RemoteSettingsUrl { get; set; }
+    public bool AllowEndPointTracker { get; set; }
     public JsonElement? CustomData { get; set; }
 
     public static AppConfigs Load()

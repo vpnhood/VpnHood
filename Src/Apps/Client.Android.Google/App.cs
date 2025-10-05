@@ -23,7 +23,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var resources = ClientAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
 
-        return new AppOptions(PackageName!, "VpnHood", AppConfigs.IsDebugMode) {
+        return new AppOptions(appId: appConfigs.AppId, "VpnHood", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],

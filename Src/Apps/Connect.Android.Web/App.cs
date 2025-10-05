@@ -29,7 +29,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
-            AccessKeys = [appConfigs.DefaultAccessKey],
+            AccessKeys = appConfigs.DefaultAccessKey !=null ? [appConfigs.DefaultAccessKey] : [],
             Resources = resources,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
@@ -38,6 +38,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdjustForSystemBars = false,
             AllowRecommendUserReviewByServer = true,
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
+            WebUiPort = appConfigs.WebUiPort,
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 PromptDelay = TimeSpan.FromDays(1)

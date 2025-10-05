@@ -2,17 +2,20 @@
 
 public static class FileUtils
 {
-    public static async Task WriteAllTextRetryAsync(string filePath, string content, TimeSpan timeout, CancellationToken cancellationToken = default)
+    public static async Task WriteAllTextRetryAsync(string filePath, string content, TimeSpan timeout,
+        CancellationToken cancellationToken = default)
     {
         // don't use fast date time, it's not accurate enough
         var startTime = DateTime.Now;
-        while (true) try {
+        while (true) {
+            try {
                 await File.WriteAllTextAsync(filePath, content, cancellationToken);
                 return;
             }
             catch (IOException) when (DateTime.Now - startTime < timeout) {
                 await Task.Delay(100, cancellationToken);
             }
+        }
     }
 
     public static async Task<string> ReadAllTextAsync(string filePath, TimeSpan timeout, CancellationToken cancellationToken = default)

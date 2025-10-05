@@ -12,7 +12,6 @@ namespace VpnHood.AppLib.Win.Common.WpfSpa;
 public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
 {
     public static VpnHoodAppWpfSpa Init(Func<AppOptions> optionsFactory,
-        bool spaListenToAllIps,
         int? spaDefaultPort,
         string[] args)
     {
@@ -26,18 +25,13 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
             appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
             appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
 
+            // register local domain if needed
+            var alternativeUrl = string.IsNullOrEmpty(appOptions.WebUiHostName)
+                ? null : VpnHoodAppWin.RegisterLocalDomain(IPEndPoint.Parse("127.10.10.10:80"), appOptions.WebUiHostName);
+
             // initialize VpnHoodWinApp
             VpnHoodAppWin.Init(appOptions, args: args);
-
-            // register local domain & initialize SPA
-            var localSpaUrl = !string.IsNullOrEmpty(appOptions.LocalSpaHostName)
-                ? VpnHoodAppWin.RegisterLocalDomain(new IPEndPoint(IPAddress.Parse("127.10.10.10"), spaDefaultPort ?? 80), appOptions.LocalSpaHostName)
-                : null;
-
-            VpnHoodAppWebServer.Init(new WebServerOptions {
-                DefaultPort = spaDefaultPort,
-                Url = localSpaUrl
-            });
+            VpnHoodAppWebServer.Init(new WebServerOptions { Url = alternativeUrl });
 
             // initialize Win
             VpnHoodAppWin.Instance.ExitRequested += (_, _) => Exit();
@@ -51,8 +45,6 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
             mainWindow.Show();
 
             return app;
-
-
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not run the app.");

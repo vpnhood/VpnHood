@@ -15,13 +15,15 @@ public class App : Application
         resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(appConfigs.AppId, appConfigs.StorageFolderName, AppConfigs.IsDebugMode) {
-            CustomData = appConfigs.CustomData,
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resources = resources,
-            AccessKeys = AppConfigs.IsDebug ? [appConfigs.DefaultAccessKey] : [],
+            CustomData = appConfigs.CustomData,
+            AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
-            LocalSpaHostName = "my-vpnhood",
+            RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
+            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
             AllowRecommendUserReviewByServer = false,
             LogServiceOptions = {
                 SingleLineConsole = false
@@ -42,8 +44,7 @@ public class App : Application
         // load app configs
         var appConfigs = AppConfigs.Load();
         VpnHoodAppWpfSpa.Init(() => CreateAppOptions(appConfigs),
-            spaListenToAllIps: appConfigs.SpaListenToAllIps,
-            spaDefaultPort: appConfigs.SpaDefaultPort,
+            spaDefaultPort: appConfigs.WebUiPort,
             args: Environment.GetCommandLineArgs());
     }
 

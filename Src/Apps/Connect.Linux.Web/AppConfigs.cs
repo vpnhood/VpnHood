@@ -1,20 +1,21 @@
-﻿using System.Text.Json;
+using System.Text.Json;
+using VpnHood.App.Client;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 
+// ReSharper disable HeuristicUnreachableCode
 // ReSharper disable StringLiteralTypo
 // ReSharper disable CommentTypo
-// ReSharper disable HeuristicUnreachableCode
-namespace VpnHood.App.Client.Linux.Web;
+namespace VpnHood.App.Connect.Linux.Web;
 
 internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
-    // public const string AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
+    // public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
     // currently can not have space or more than 20 characters in linux app name as it used for adapter name
-    public const string AppName = IsDebugMode ? "VpnHOODClient_dbg" : "VpnHoodClient";
-    public string AppId { get; set; } = IsDebugMode ? "com.vpnhood.client.linux.debug" : "com.vpnhood.client.linux";
+    public const string AppName = IsDebugMode ? "VpnHOODConnect_dbg" : "VpnHoodConnect";
+    public string AppId { get; set; } = IsDebugMode ? "com.vpnhood.connect.linux.debug" : "com.vpnhood.connect.linux";
     public Uri? UpdateInfoUrl { get; set; } = null;
-    public int? WebUiPort { get; set; } = IsDebugMode ? 9571 : 9570;
+    public int? WebUiPort { get; set; } = IsDebugMode ? 9571 : 80;
     public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
     public string? Ga4MeasurementId { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
@@ -29,11 +30,11 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
         return appConfigs;
     }
 
+
 #if DEBUG
     public const bool IsDebugMode = true;
 #else
     public const bool IsDebugMode = false;
 #endif
     public static bool IsDebug => IsDebugMode;
-
 }

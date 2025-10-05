@@ -20,8 +20,6 @@ public class MainActivity : AndroidAppMainActivity
 {
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {
-        return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions {
-            SpaDefaultPort = AppConfigs.Instance.SpaDefaultPort
-        });
+        return new AndroidAppWebViewMainActivityHandler(this, new AndroidMainActivityWebViewOptions());
     }
 }

@@ -12,9 +12,7 @@ $docker = $docker -eq "1";
 # remove old release note
 Remove-Item "$packagesRootDir/$packageServerDirName/ReleaseNote.txt" -ErrorAction Ignore;
 
-& "$solutionDir/Src/Apps/Server.Net/Pub/publish_win.ps1";
-& "$solutionDir/Src/Apps/Server.Net/Pub/publish_linux_x64.ps1";
-& "$solutionDir/Src/Apps/Server.Net/Pub/publish_linux_arm64.ps1";
+& "$solutionDir/Src/Apps/Server.Net/_publish.ps1";
 
 if ($docker) {
 	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_docker.ps1" -distribute $distribute;

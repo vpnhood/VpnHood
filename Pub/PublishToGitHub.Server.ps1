@@ -47,6 +47,7 @@ gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 	-F $releaseRootDir/$changeLogReleaseFileName `
+	$releaseRootDir/$packageServerDirName/linux-any/VpnHoodServer-linux.sh `
 	$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.json `
 	$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.sh `
 	$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.tar.gz `

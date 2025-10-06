@@ -1,4 +1,4 @@
-# Upcoming
+# v7.3.762
 * Fix: Access to local network when IncludeLocalNetwork is enabled
 
 # v7.3.751

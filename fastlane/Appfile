@@ -4,5 +4,5 @@
 
 # For more information about the Appfile, see:
 #     https://docs.fastlane.tools/advanced/#appfile
-json_key_file("../.user/VpnHoodClient/vpnhood-client-2d02aa4c0435.json")
+json_key_file("../.user/VpnHoodClient/googleplay-fastlane-api-key.json")
 package_name("com.vpnhood.client.android")

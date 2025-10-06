@@ -32,7 +32,7 @@ PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 # extensions
 $shellExt = if ($os -ieq "linux") { "sh" } else { "ps1" };
-$packageFileExt = if ($os -ieq "linux") { "tar.gz" } else { ".zip" };
+$packageFileExt = if ($os -ieq "linux") { "tar.gz" } else { "zip" };
 
 # Creating package
 $templateDir = "$PSScriptRoot/$os";

@@ -18,38 +18,34 @@ internal class App
     private static AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
-        var resources = ClientAppResources.Resources;
+        var resources = ConnectAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
-        var appOptions = new AppOptions(appConfigs.AppId, "storage", AppConfigs.IsDebugMode) {
+        return new AppOptions(appId: appConfigs.AppId, Path.GetDirectoryName(StoragePath)!, AppConfigs.IsDebugMode) {
+            CustomData = appConfigs.CustomData,
+            UiName = "VpnHoodConnect",
+            WebUiPort = appConfigs.WebUiPort,
             Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
-            IsAddAccessKeySupported = true,
-            IsLocalNetworkSupported = true,
-            AllowEndPointStrategy = true,
-            DisconnectOnDispose = true,
-            WebUiPort = appConfigs.WebUiPort,
-            PremiumFeatures = ConnectAppResources.PremiumFeatures,
-            AllowRecommendUserReviewByServer = false,
+            IsAddAccessKeySupported = false,
+            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
-            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
-            CustomData = appConfigs.CustomData,
-            UpdaterOptions = new AppUpdaterOptions {
-                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
-                PromptDelay = TimeSpan.Zero,
-            },
+            PremiumFeatures = ConnectAppResources.PremiumFeatures,
+            AllowRecommendUserReviewByServer = true,
             LogServiceOptions = {
                 SingleLineConsole = false
             },
+            UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+                PromptDelay = TimeSpan.FromDays(1)
+            },
             StorageFolderPath = StoragePath
         };
-
-        return appOptions;
     }
 
     private static Task Main(string[] args)
     {
-        Console.WriteLine("Starting VpnHood Client for linux (Beta).");
+        Console.WriteLine($"Starting {AppConfigs.AppTitle} for linux (Beta).");
         Console.WriteLine("Only WebUI supported at this time.");
         var serviceUrlPath = Path.Combine(StoragePath, "service_url.txt");
 
@@ -59,7 +55,7 @@ internal class App
             VpnHoodAppLinux.Instance.Exiting += InstanceOnExiting;
         }
         catch (AnotherInstanceIsRunning) {
-            VhLogger.Instance.LogInformation("Another instance is running.");
+            Console.WriteLine($"An instance of {AppConfigs.AppTitle} is running.");
 
             // load existing url
             if (File.Exists(serviceUrlPath)) {
@@ -68,7 +64,6 @@ internal class App
                     OpenMainWindow(uri);
             }
 
-            VhLogger.Instance.LogInformation("Another instance is running");
             return Task.CompletedTask;
         }
 

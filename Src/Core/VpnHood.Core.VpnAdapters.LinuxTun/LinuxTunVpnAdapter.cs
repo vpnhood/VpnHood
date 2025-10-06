@@ -208,12 +208,43 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         await ExecuteCommandAsync(command, cancellationToken).Vhc();
     }
 
-    protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    private async Task SetDnsServersByResolvectl(IPAddress[] dnsServers, CancellationToken cancellationToken)
     {
         var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
         var command = $"resolvectl dns {AdapterName} {allDns}";
         await ExecuteCommandAsync(command, cancellationToken).Vhc();
         await ExecuteCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).Vhc();
+    }
+
+    private async Task SetDnsServersByResolvconf(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    {
+        var dnsPayload = string.Join("\n", dnsServers.Select(x => $"nameserver {x}")) + "\n";
+        var command = $"echo \"{dnsPayload}\" | resolvconf -a {AdapterName}";
+        await ExecuteCommandAsync(command, cancellationToken).Vhc();
+    }
+
+    protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    {
+        if (!dnsServers.Any())
+            return;
+
+        try {
+            // --- Try systemd-resolved ---
+            await SetDnsServersByResolvectl(dnsServers, cancellationToken);
+        }
+        catch (Exception ex) {
+            // --- Fallback: use resolvconf ---
+            VhLogger.Instance.LogWarning(ex, "Failed to set DNS using resolvectl. Trying fallback to resolvconf...");
+            try {
+                await SetDnsServersByResolvconf(dnsServers, cancellationToken);
+            }
+            catch (Exception fallbackEx) {
+                throw new Exception(
+                    $"Failed to set DNS using both resolvectl and resolvconf.\n" +
+                    $"resolvectl error: {ex.Message}\n" +
+                    $"resolvconf error: {fallbackEx.Message}", fallbackEx);
+            }
+        }
     }
 
     protected override void WaitForTunRead()

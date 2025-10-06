@@ -5,4 +5,5 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-publishDirName "VpnHoodConnect" `
 	-appName "VpnHoodConnect" `
 	-os "linux" `
-	-launcherName "vhconnect";
+	-launcherName "vhconnect" `
+	-autoLaunch $true;

@@ -4,13 +4,14 @@ param(
     [Parameter(Mandatory = $true)] [string]$publishDirName,
     [Parameter(Mandatory = $true)] [string]$appName,
     [Parameter(Mandatory = $true)] [string]$launcherName,
-    [Parameter(Mandatory = $true)] [string]$os
+    [Parameter(Mandatory = $true)] [string]$os,
+    [Parameter(Mandatory = $true)] [boolean]$autoLaunch
 )
 
 # Build x64
 . "$PSScriptRoot/publish_impl.ps1" `
     -projectDir $projectDir -repoBaseUrl $repoBaseUrl -os $os `
-    -publishDirName $publishDirName -launcherName $launcherName `
+    -publishDirName $publishDirName -launcherName $launcherName -autoLaunch $autoLaunch `
     -cpu "x64";
 
 $installerUrl_x64 = $module_installerUrl;
@@ -18,7 +19,7 @@ $installerUrl_x64 = $module_installerUrl;
 # Build arm64
 . "$PSScriptRoot/publish_impl.ps1" `
     -projectDir $projectDir -repoBaseUrl $repoBaseUrl -os $os `
-    -publishDirName $publishDirName -launcherName $launcherName `
+    -publishDirName $publishDirName -launcherName $launcherName -autoLaunch $autoLaunch `
     -cpu "arm64";
 
 $installerUrl_arm64 = $module_installerUrl;

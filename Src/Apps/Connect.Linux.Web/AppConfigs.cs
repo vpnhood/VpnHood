@@ -10,12 +10,12 @@ namespace VpnHood.App.Connect.Linux.Web;
 
 internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
-    // public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
+    public const string AppTitle = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
     // currently can not have space or more than 20 characters in linux app name as it used for adapter name
     public const string AppName = IsDebugMode ? "VpnHOODConnect_dbg" : "VpnHoodConnect";
     public string AppId { get; set; } = IsDebugMode ? "com.vpnhood.connect.linux.debug" : "com.vpnhood.connect.linux";
     public Uri? UpdateInfoUrl { get; set; } = null;
-    public int? WebUiPort { get; set; } = IsDebugMode ? 9571 : 80;
+    public int? WebUiPort { get; set; } = IsDebugMode ? 9571 : 7070;
     public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
     public string? Ga4MeasurementId { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }

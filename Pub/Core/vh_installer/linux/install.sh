@@ -6,7 +6,8 @@ packageUrl="$(packageUrlParam)";
 versionTag="$(versionTagParam)";
 assemblyName="$(assemblyName)";
 productName="$(productNameParam)";
-launhcer="$(appLauncherParam)";
+launcher="$(appLauncherParam)";
+autoLaunch="$(autoLaunch)";
 
 # Calculated path
 destinationPath="/opt/$assemblyName";
@@ -18,7 +19,8 @@ do
 arg=$i;
 if [ "$arg" = "-autostart" ]; then
 	autostart="y";
-	lastArg=""; continue;
+	lastArg=""; 
+	continue;
 
 elif [ "$arg" = "-q" ]; then
 	quiet="y";
@@ -26,15 +28,18 @@ elif [ "$arg" = "-q" ]; then
 
 elif [ "$lastArg" = "-packageUrl" ]; then
 	packageUrl=$arg;
-	lastArg=""; continue;
+	lastArg=""; 
+	continue;
 
 elif [ "$lastArg" = "-packageFile" ]; then
 	packageFile=$arg;
-	lastArg=""; continue;
+	lastArg=""; 
+	continue;
 
 elif [ "$lastArg" = "-versionTag" ]; then
 	versionTag=$arg;
-	lastArg=""; continue;
+	lastArg=""; 
+	continue;
 
 
 elif [ "$lastArg" != "" ]; then
@@ -82,10 +87,10 @@ fi
 echo "Updating shared files...";
 infoDir="$binDir/publish_info";
 cp "$infoDir/vhupdate" "$destinationPath/" -f;
-cp "$infoDir/$launhcer" "$destinationPath/" -f;
+cp "$infoDir/$launcher" "$destinationPath/" -f;
 cp "$infoDir/publish.json" "$destinationPath/" -f;
 chmod +x "$binDir/$assemblyName";
-chmod +x "$destinationPath/$launhcer";
+chmod +x "$destinationPath/$launcher";
 chmod +x "$destinationPath/vhupdate";
 
 # init service
@@ -98,7 +103,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart="$destinationPath/$launhcer"
+ExecStart="$destinationPath/$launcher"
 TimeoutStartSec=0
 Restart=always
 RestartSec=10
@@ -138,3 +143,7 @@ WantedBy=default.target
 	systemctl enable ${assemblyName}Updater.service;
 	systemctl restart ${assemblyName}Updater.service;
 fi
+
+# Case-insensitive match for autoLaunch (e.g., true, TRUE, True)
+echo "$productName has been installed. Run the following command:";
+echo "$destinationPath/$launcher";

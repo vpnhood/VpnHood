@@ -9,8 +9,9 @@ namespace VpnHood.App.Client.Win.Web;
 
 public class App : Application
 {
-    private static AppOptions CreateAppOptions(AppConfigs appConfigs)
+    private static AppOptions CreateAppOptions()
     {
+        var appConfigs = AppConfigs.Load();
         var resources = ClientAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
 
@@ -18,6 +19,7 @@ public class App : Application
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resources = resources,
             CustomData = appConfigs.CustomData,
+            WebUiPort = appConfigs.WebUiPort,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
@@ -42,10 +44,7 @@ public class App : Application
         base.OnStartup(e);
 
         // load app configs
-        var appConfigs = AppConfigs.Load();
-        VpnHoodAppWpfSpa.Init(() => CreateAppOptions(appConfigs),
-            spaDefaultPort: appConfigs.WebUiPort,
-            args: Environment.GetCommandLineArgs());
+        VpnHoodAppWpfSpa.Init(CreateAppOptions, args: Environment.GetCommandLineArgs());
     }
 
     [STAThread]

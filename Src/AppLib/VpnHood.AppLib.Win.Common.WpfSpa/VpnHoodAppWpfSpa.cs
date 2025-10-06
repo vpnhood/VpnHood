@@ -11,9 +11,7 @@ namespace VpnHood.AppLib.Win.Common.WpfSpa;
 // ReSharper disable once RedundantExtendsListEntry
 public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
 {
-    public static VpnHoodAppWpfSpa Init(Func<AppOptions> optionsFactory,
-        int? spaDefaultPort,
-        string[] args)
+    public static VpnHoodAppWpfSpa Init(Func<AppOptions> optionsFactory, string[] args)
     {
         try {
             // create instance

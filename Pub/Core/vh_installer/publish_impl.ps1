@@ -4,7 +4,8 @@ param(
     [Parameter(Mandatory = $true)] [string]$publishDirName,
     [Parameter(Mandatory = $true)] [string]$os,
     [Parameter(Mandatory = $true)] [string]$cpu,
-    [Parameter(Mandatory = $true)] [string]$launcherName
+    [Parameter(Mandatory = $true)] [string]$launcherName,
+    [Parameter(Mandatory = $true)] [boolean]$autoLaunch
 )
  
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
@@ -89,6 +90,7 @@ $installScript = $installScript.Replace('$(versionTagParam)', "$versionTag");
 $installScript = $installScript.Replace('$(productNameParam)', "$productName");
 $installScript = $installScript.Replace('$(assemblyName)', "$assemblyName");
 $installScript = $installScript.Replace('$(appLauncherParam)', "$launcherName");
+$installScript = $installScript.Replace('$(autoLaunch)', "$autoLaunch");
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
 

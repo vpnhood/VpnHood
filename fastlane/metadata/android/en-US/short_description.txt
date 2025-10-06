@@ -1,1 +1,1 @@
-Undetectable Fast VPN
+Free self-hosted, secure, and open-source VPN client (require server key)

@@ -175,6 +175,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux", "linux", "{ECE7A698
 		Pub\Core\vh_installer\linux\vhlauncher.sh = Pub\Core\vh_installer\linux\vhlauncher.sh
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "win", "win", "{D9CFFFC6-FDCF-48DC-8952-1B61F4F93086}"
+	ProjectSection(SolutionItems) = preProject
+		Pub\Core\vh_installer\win\install.ps1 = Pub\Core\vh_installer\win\install.ps1
+		Pub\Core\vh_installer\win\updater.ps1 = Pub\Core\vh_installer\win\updater.ps1
+		Pub\Core\vh_installer\win\vhlauncher.ps1 = Pub\Core\vh_installer\win\vhlauncher.ps1
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1255,6 +1262,7 @@ Global
 		{EEF29272-EAA1-4ACA-9556-AF3860863D7D} = {175BA44C-77B0-433F-BAD0-CCD83DDACA83}
 		{846B0CEE-3364-4A90-B090-052677DE5E8D} = {18FA0808-ABCC-481B-A596-F9304363675A}
 		{ECE7A698-8394-4574-8E78-CDBCA9A9F3F4} = {846B0CEE-3364-4A90-B090-052677DE5E8D}
+		{D9CFFFC6-FDCF-48DC-8952-1B61F4F93086} = {846B0CEE-3364-4A90-B090-052677DE5E8D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

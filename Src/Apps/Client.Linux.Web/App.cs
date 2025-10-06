@@ -56,7 +56,11 @@ internal class App
             VpnHoodAppLinux.Init(CreateAppOptions, args);
             VpnHoodAppLinux.Instance.Exiting += InstanceOnExiting;
         }
-        catch (AnotherInstanceIsRunning) {
+        catch (GracefullyShutdownException) {
+            VhLogger.Instance.LogInformation("Exit due to stop command.");
+            return Task.CompletedTask;
+        }
+        catch (AnotherInstanceIsRunningException) {
             VhLogger.Instance.LogInformation("Another instance is running.");
 
             // load existing url

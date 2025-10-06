@@ -25,6 +25,18 @@ elif [ "$arg" = "-q" ]; then
 	quiet="y";
 	lastArg=""; continue;
 
+elif [ "$lastArg" = "-httpBaseUrl" ]; then
+	httpBaseUrl=$arg;
+	lastArg=""; continue;
+
+elif [ "$lastArg" = "-httpAuthorization" ]; then
+	httpAuthorization=$arg;
+	lastArg=""; continue;
+
+elif [ "$lastArg" = "-managementSecret" ]; then
+	managementSecret=$arg;
+	lastArg=""; continue;
+
 elif [ "$lastArg" = "-packageUrl" ]; then
 	packageUrl=$arg;
 	lastArg=""; 
@@ -92,6 +104,20 @@ chmod +x "$binDir/$assemblyName";
 chmod +x "$destinationPath/$launcher";
 chmod +x "$destinationPath/vhupdate";
 
+# Write AppSettingss
+if [ "$httpBaseUrl" != "" ]; then
+	appSettings="{
+  \"HttpAccessManager\": {
+    \"BaseUrl\": \"$httpBaseUrl\",
+    \"Authorization\": \"$httpAuthorization\"
+  },
+  \"ManagementSecret\": \"$managementSecret\"
+}
+";
+	mkdir -p "$destinationPath/storage";
+	echo "$appSettings" > "$destinationPath/storage/appsettings.json"
+fi
+
 # init service
 if [ "$autostart" = "y" ]; then
 	echo "creating autostart service... Name: $assemblyName";
@@ -103,6 +129,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart="$destinationPath/$launcher"
+ExecStop="$destinationPath/$launcher" stop
 TimeoutStartSec=0
 Restart=always
 RestartSec=10

@@ -244,7 +244,7 @@ public class ServerApp : IDisposable
 
             // find listener port
             if (IsAnotherInstanceRunning())
-                throw new AnotherInstanceIsRunning();
+                throw new AnotherInstanceIsRunningException();
 
             // initialize logger
             InitFileLogger(StoragePath);

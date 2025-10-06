@@ -1,6 +1,9 @@
-﻿using VpnHood.Core.Client.Device.Linux;
+﻿using Microsoft.Extensions.Logging;
+using System.Net.Sockets;
+using VpnHood.Core.Client.Device.Linux;
 using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Linux.Common;
@@ -30,12 +33,17 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
     {
         var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
         var showWindowAfterStart = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
+        var stop = args.Length > 0 && args[0].Equals("stop", StringComparison.OrdinalIgnoreCase);
         var appOptions = optionsFactory();
         Directory.CreateDirectory(appOptions.StorageFolderPath);
 
         // make sure only single instance is running
         // it must run before VpnHoodApp.Init to prevent internal system conflicts with previous instances
-        VerifySingleInstance(appOptions, showWindowAfterStart);
+        VerifySingleInstance(appOptions, showWindowAfterStart, stop);
+
+        // if stop was requested, just throw exception to stop the app
+        if (stop)
+            throw new GracefullyShutdownException();
 
         // create linux app
         var app = new VpnHoodAppLinux(appOptions, showWindowAfterStart);
@@ -62,45 +70,54 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
 
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
     {
+        // if stop command received, exit the app
+        if (e.Arguments.Any(x => x.Equals("/stop", StringComparison.OrdinalIgnoreCase))) {
+            VhLogger.Instance.LogInformation("Stop command has been received.");
+            Exit();
+            return;
+        }
+
         if (e.Arguments.Any(x => x.Equals("/openwindow", StringComparison.OrdinalIgnoreCase)))
             OpenMainWindowRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    private static void VerifySingleInstance(AppOptions appOptions, bool showWindow)
+    private static void VerifySingleInstance(AppOptions appOptions, bool showWindow, bool stop)
     {
         if (!IsAnotherInstanceRunning(appOptions))
             return;
 
+        var command = "";
+        if (stop) command += "/stop ";
+        else if (showWindow) command += "/openWindow ";
+
         // Make single instance
         // if you like to wait a few seconds in case that the instance is just shutting down
         // open main window if app is already running and user run the app again
-        if (showWindow) {
+        if (!string.IsNullOrWhiteSpace(command)) {
             var commandListener = new CommandListener(Path.Combine(appOptions.StorageFolderPath, FileNameAppCommand));
-            VhUtils.TryInvoke(null, () => commandListener.SendCommand("/openWindow"));
+            VhUtils.TryInvoke(null, () => commandListener.SendCommand(command));
         }
 
-        throw new AnotherInstanceIsRunning();
+        throw stop
+            ? new GracefullyShutdownException()
+            : new AnotherInstanceIsRunningException();
     }
 
-    private static Stream? _singleInstanceFileStream;
+    private static Socket? _singleInstanceSocket;
     private static bool IsAnotherInstanceRunning(AppOptions appOptions)
     {
-        var lockFilePath = Path.Combine(Path.Combine(appOptions.StorageFolderPath, $"{appOptions.AppId}.lock"));
+        // Linux-only: abstract UDS address starts with '\0'
+        _singleInstanceSocket = new Socket(AddressFamily.Unix, SocketType.Stream, 0);
 
         try {
-            _singleInstanceFileStream = new FileStream(
-                lockFilePath,
-                FileMode.OpenOrCreate,
-                FileAccess.ReadWrite,
-                FileShare.None
-            );
-            return false; // got the lock
+            var abstractName = "\0singleton-" + appOptions.AppId;
+            _singleInstanceSocket.Bind(new UnixDomainSocketEndPoint(abstractName));
+            _singleInstanceSocket.Listen(1);
+            return false; // No other instance running
         }
-        catch (UnauthorizedAccessException) {
-            return true; // someone else holds it
-        }
-        catch (IOException) {
-            return true; // someone else holds it
+        catch {
+            _singleInstanceSocket.Dispose();
+            return true; // Fallback: treat any unexpected error as "already running"
         }
     }
 
@@ -114,7 +131,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
     {
         if (disposing) {
             if (VpnHoodApp.IsInit) VpnHoodApp.Instance.Dispose();
-            _singleInstanceFileStream?.Dispose();
+            _singleInstanceSocket?.Dispose();
         }
 
         base.Dispose(disposing);

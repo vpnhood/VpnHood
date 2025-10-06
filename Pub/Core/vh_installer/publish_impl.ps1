@@ -11,7 +11,7 @@ param(
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
 $runtime = "$os-$cpu";
 
-# Validate parameters
+# Get project infomration
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName[0];
 $productName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Product[0];

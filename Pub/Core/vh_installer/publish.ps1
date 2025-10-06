@@ -2,7 +2,6 @@ param(
     [Parameter(Mandatory = $true)] [string]$projectDir,
     [Parameter(Mandatory = $true)] [string]$repoBaseUrl,
     [Parameter(Mandatory = $true)] [string]$publishDirName,
-    [Parameter(Mandatory = $true)] [string]$appName,
     [Parameter(Mandatory = $true)] [string]$launcherName,
     [Parameter(Mandatory = $true)] [string]$os,
     [Parameter(Mandatory = $true)] [boolean]$autoLaunch
@@ -32,7 +31,7 @@ $installerUrl_arm64 = $module_installerUrl;
 # Prepare module folders
 $moduleDir = "$packagesRootDir/$publishDirName/$os-any";
 $moduleDirLatest = "$packagesRootDirLatest/$publishDirName/$os-any";
-$module_installScriptFile = "$moduleDir/$appName-$os.$shellExt";
+$module_installScriptFile = "$moduleDir/$assemblyName-$os.$shellExt";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 # load install-any shell file and replace installerUrls

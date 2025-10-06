@@ -3,7 +3,6 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-projectDir $PSScriptRoot `
 	-repoBaseUrl "https://github.com/vpnhood/VpnHood.App.Connect" `
 	-publishDirName "VpnHoodConnect" `
-	-appName "VpnHoodConnect" `
 	-os "linux" `
-	-launcherName "vhconnect" `
+	-launcherName "vhconnect"
 	-autoLaunch $true;

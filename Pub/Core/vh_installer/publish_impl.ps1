@@ -4,8 +4,7 @@ param(
     [Parameter(Mandatory = $true)] [string]$publishDirName,
     [Parameter(Mandatory = $true)] [string]$os,
     [Parameter(Mandatory = $true)] [string]$cpu,
-    [Parameter(Mandatory = $true)] [string]$launcherName,
-    [Parameter(Mandatory = $true)] [boolean]$autoLaunch
+    [Parameter(Mandatory = $true)] [string]$launcherName
 )
  
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
@@ -88,9 +87,8 @@ $installScript = Get-Content -Path "$template_installScriptFile" -Raw;
 $installScript = $installScript.Replace('$(packageUrlParam)', "$repoBaseUrl/releases/download/$versionTag/$module_packageFileName");
 $installScript = $installScript.Replace('$(versionTagParam)', "$versionTag");
 $installScript = $installScript.Replace('$(productNameParam)', "$productName");
-$installScript = $installScript.Replace('$(assemblyName)', "$assemblyName");
-$installScript = $installScript.Replace('$(appLauncherParam)', "$launcherName");
-$installScript = $installScript.Replace('$(autoLaunch)', "$autoLaunch");
+$installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName");
+$installScript = $installScript.Replace('$(launcherNameParam)', "$launcherName");
 $installScript = $installScript -replace "`r`n", $lineEnding;
 $installScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
 

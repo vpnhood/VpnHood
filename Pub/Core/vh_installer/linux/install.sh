@@ -4,10 +4,9 @@ echo "$productNameParam Installation for linux";
 # Default arguments
 packageUrl="$(packageUrlParam)";
 versionTag="$(versionTagParam)";
-assemblyName="$(assemblyName)";
+assemblyName="$(assemblyNameParam)";
 productName="$(productNameParam)";
-launcher="$(appLauncherParam)";
-autoLaunch="$(autoLaunch)";
+launcher="$(launcherNameParam)";
 
 # Calculated path
 destinationPath="/opt/$assemblyName";
@@ -144,6 +143,6 @@ WantedBy=default.target
 	systemctl restart ${assemblyName}Updater.service;
 fi
 
-# Case-insensitive match for autoLaunch (e.g., true, TRUE, True)
+# show final message
 echo "$productName has been installed. Run the following command:";
 echo "$destinationPath/$launcher";

@@ -1,1 +1,63 @@
-<p><i>VpnHood</i> is an open-source VPN on GitHub that focus on circumventing severe internet censorship. Our goal is to create a VPN that no Firewall can detect.</p><ul><li>Easy Installation; Just install and press connect</li><li>Undetectable on private IP</li><li>Split Tunneling by Apps &amp; Countries</li><li>No ADS</li></ul><p><i>VpnHood</i> offers a few free public servers that change the IPs from time to time. You can create or order a private server to ensure the IP is never revealed and never block. You can also host your own VpnHood server if you prefer.</p>
+NOTE: This app REQUIRES A SERVER KEY.
+
+VpnHood! CLIENT is a fast, secure, and reliable VPN solution powered by the ★★VpnHood! ENGINE★★, which is open-source and the first VPN developed fully with the .NET platform.
+
+It is a client application that establishes encrypted, secure tunnels to a VPN server using the VpnHood protocol to VpnHood servers. The VpnHood protocol has no fingerprint and can not be detected by censorship filtering.
+
+
+To use this app, a ServerKey is required. You can acquire one through the following methods: 
+
+▶ Get server keys from friends or communities that distribute them.
+
+▶ Purchase server keys for yourself or your friends through VpnHood! STORE or other sellers.
+
+▶ Set up your own VpnHood server on a server hosting and create server keys yourself.
+
+
+Key Features:
+
+★ Free with No Ads: This is an open-source app that does not show Ads and is completely free.
+
+★ Easy to Use: You can connect to our VPN with a simple click of the connect button.
+
+★ Fast and Secure (The speed may be different for users according to the server providers and your Internet providers)
+
+★ Open Source: Built on the open-source VpnHood engine (on GitHub), our app is transparent and trustworthy.
+
+★ First VPN in .NET: We’re proud to be the first VPN app in the world to be developed with the .NET platform. This showcases our innovative approach and could attract tech-savvy users or those interested in unique tech solutions.
+
+★ Broad Compatibility: Our app supports Android 6 and above, including Android TV and Windows
+
+★ IPv4 & IPv6 Support: We support IPv4 and IPv6, ensuring maximum compatibility and performance.
+
+
+Customizable Options:
+
+✔ App Filtering: Choose which apps use the VPN with our filter options. You can exclude, include, or select all apps.
+
+✔ Country Exclusion: This allows you to exclude your own country, ensuring that traffic to servers within your country does not pass through the VPN tunnel. This eliminates the necessity of disconnecting your VPN when accessing services in your country that do not accept connections from foreign IPs and increase your connections to servers in your country.
+
+✔ Local Network Exclusion: Exclude your local network to maintain access to local resources while using the VPN.
+
+✔ UDP / TCP Protocol: Choose whether to turn the UDP protocol on or off based on your needs.
+
+
+Why Choose Us?
+
+▶ Undetectable: The VpnHood protocol is designed to bypass censorship filters. It is a secure protocol without any fingerprint. Its traffic and protocol patterns look exactly like regular HTTPS websites, making it virtually indistinguishable.
+
+▶ Innovative Technology: As the first VPN app developed with .NET, we’re at the forefront of technological innovation.
+
+▶ Powered by VpnHood Engine: Our app is powered by our own open-source VPN engine, VpnHood, ensuring transparency and reliability.
+
+▶ User-Friendly: Our app is designed with simplicity in mind. Connect to our VPN with just a simple click.
+
+▶ Customizable: With options to filter apps, exclude your country, exclude local networks, and toggle UDP protocol, you have full control over your VPN usage.
+
+▶ Constantly Evolving: We are dedicated to developing a VPN solution that remains undetectable by any censorship filters. Our commitment to continuous improvement and innovation ensures that you can experience the full freedom of the internet. Try our VPN app today and explore without limits!
+
+We’re Here for You Around the Clock!
+
+Our dedicated customer support team is available 24/7 to assist you. If you have any questions or concerns, please don’t hesitate to contact us at support@vpnhood.com. We’re always here to help!
+
+Contribute: https://github.com/vpnhood/VpnHood

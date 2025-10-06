@@ -1,4 +1,4 @@
-Write-Output "VpnHood Server Installation for Windows";
+Write-Output "$productName Installation for Windows";
 $ErrorActionPreference = "Stop";
 
 # Default arguments
@@ -96,7 +96,7 @@ Expand-Archive "$packageFile" -DestinationPath "$destinationPath" -Force -ErrorA
 Write-Output "Updating shared files...";
 $infoDir = "$binDir/publish_info";
 Copy-Item -path "$infoDir/vhupdate.ps1" -Destination "$destinationPath/" -Force;
-Copy-Item -path "$infoDir/vhserver.ps1" -Destination "$destinationPath/" -Force;
+Copy-Item -path "$infoDir/$launcher.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/publish.json" -Destination "$destinationPath/" -Force;
 
 # Write AppSettings

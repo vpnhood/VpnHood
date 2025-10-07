@@ -18,7 +18,7 @@
 #   $latest = GetLastLog $content @("internal", "[skip-ci]")
 #   Write-Host $latest
 
-function GetLastLog([string]$fullContent, [string[]]$excludeLines)
+function Changelog_GetRecentSecion([string]$fullContent, [string[]]$excludeLines)
 {
     if ([string]::IsNullOrWhiteSpace($fullContent)) {
         return ""
@@ -99,3 +99,63 @@ function GetLastLog([string]$fullContent, [string[]]$excludeLines)
     return ($collected -join "`n")
 }
 
+# Replace the first header (h1) of the content only if it was "Upcoming" or "Upcomming"
+# Add header if it does not exist at the start of the file
+# 
+# Parameters:
+#   fullContent : Full changelog file content as a single string.
+#   header      : The new header text to set (without the # prefix).
+#
+# Returns:
+#   A string containing the updated changelog content with the new header.
+#
+# Example:
+#   $content = Get-Content CHANGELOG.md -Raw
+#   $updated = Changelog_UpdateHeader $content "v7.3.762"
+#   Set-Content CHANGELOG.md $updated
+
+function Changelog_UpdateHeader([string]$fullContent, [string]$header)
+{
+    if ([string]::IsNullOrWhiteSpace($header)) {
+        return $fullContent
+    }
+
+    if ([string]::IsNullOrWhiteSpace($fullContent)) {
+        return "# $header`n"
+    }
+
+    # Split lines properly handling different line endings
+    $lines = $fullContent -split "`r`n|`n|`r"
+    
+    $firstLineIndex = -1
+    $firstH1Header = ""
+
+    # Find first non-empty line and check if it's an H1 header
+    for ($i = 0; $i -lt $lines.Length; $i++) {
+        $line = $lines[$i].TrimEnd()
+        if (-not [string]::IsNullOrWhiteSpace($line)) {
+            $firstLineIndex = $i
+            if ($line -match '^#\s+(.+)$') {
+                $firstH1Header = $matches[1].Trim()
+            }
+            break
+        }
+    }
+
+    # Check if we need to replace or add the header
+    if ($firstLineIndex -ge 0 -and $lines[$firstLineIndex] -match '^#\s+') {
+        # First non-empty line is an H1 header
+        # Replace if it's "Upcoming" or "Upcomming" (case-insensitive)
+        if ($firstH1Header -match '^(Upcoming|Upcomming)$') {
+            $lines[$firstLineIndex] = "# $header"
+        }
+        # If it's any other H1 header, leave it unchanged
+    }
+    else {
+        # No H1 header at the start, add one at the beginning
+        $newLines = @("# $header") + $lines
+        $lines = $newLines
+    }
+
+    return ($lines -join "`n")
+}

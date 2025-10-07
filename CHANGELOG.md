@@ -1,4 +1,4 @@
-# Upcoming
+# Upcomming
 * Fix: Windows: Clean up and disconnect on pressing the exit menu
 * Fix: Linux: Adapter issue on EndeavourOS
 * Fix: Linux: Could not start on some linux distributions

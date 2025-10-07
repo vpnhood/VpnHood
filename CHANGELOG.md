@@ -1,8 +1,6 @@
-#  v7.3.762
+# Upcoming
 * Fix: Windows: Clean up and disconnect on pressing the exit menu
 * Fix: Linux: Adapter issue on EndeavourOS
-
-# v7.3.761
 * Fix: Linux: Could not start on some linux distributions
 * Update: Protocol Page
 * Update: Improve pages & UI
@@ -84,7 +82,7 @@
 * Update: User WinTun as the default tun driver for Windows
 
 # v6.0.702
-* Fix: Update url for VpnHoodConnect app
+* Fix: Update url for VpnHoodConnect app #connect
 
 # v6.0.701
 * Fix: Windows: Add Firewall rules on startup

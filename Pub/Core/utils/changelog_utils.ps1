@@ -72,7 +72,19 @@ function GetLastLog([string]$fullContent, [string[]]$excludeLines)
         }
 
         if (-not $exclude) {
-            $collected.Add($current)
+            # Clean the line: remove hashtags at end and normalize spaces
+            $cleanedLine = $current
+            
+            # Remove hashtags at the end of the line (e.g., "text #aaa" -> "text")
+            $cleanedLine = $cleanedLine -replace '\s*#\w*\s*$', ''
+            
+            # Replace multiple spaces with single space (including tabs)
+            $cleanedLine = $cleanedLine -replace '\s+', ' '
+            
+            # Trim leading and trailing spaces
+            $cleanedLine = $cleanedLine.Trim()
+            
+            $collected.Add($cleanedLine)
         }
     }
 

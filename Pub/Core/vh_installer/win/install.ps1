@@ -1,4 +1,4 @@
-Write-Output "$productName Installation for Windows";
+Write-Output "$(productNameParam) Installation for Windows";
 $ErrorActionPreference = "Stop";
 
 # Default arguments
@@ -75,7 +75,7 @@ if ( "$packageFile" -eq "" ) {
 	[Net.ServicePointManager]::SecurityProtocol = "Tls, Tls11, Tls12";
 	$oldProgressPreference = $ProgressPreference;
 	try {
-		$ProgressPreference = 'SilentlyContinue';
+		$ProgressPreference = "SilentlyContinue";
 		Invoke-RestMethod -ContentType "application/octet-stream" "$packageUrl" -OutFile "$packageFile";
 	}
 	finally {
@@ -123,13 +123,13 @@ if ($autostart -eq "y") {
 	$trigger2 = New-ScheduledTaskTrigger -once -RepetitionInterval "00:01:00" -At (Get-Date);
 	$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Seconds 0);
 	$task = New-ScheduledTask -Action $action -Trigger @($trigger1, $trigger2) -Settings $settings;
-	Register-ScheduledTask -User "System" -TaskName '$jobName' -InputObject $task -Force -AsJob | Out-Null;
+	Register-ScheduledTask -User "System" -TaskName "$jobName" -InputObject $task -Force -AsJob | Out-Null;
 
 	Write-Output "creating auto update service... Name: ${jobName}Updater";
 	$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NonInteractive -NoLogo -NoProfile -File `"$destinationPath/vhupdate.ps1`" -q";
 	$trigger = New-ScheduledTaskTrigger -Daily -At 3am;
 	$task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings;
-	Register-ScheduledTask -User "System" -TaskName '${jobName}Updater' -InputObject $task -Force | Out-Null;
+	Register-ScheduledTask -User "System" -TaskName "${jobName}Updater" -InputObject $task -Force | Out-Null;
 
 	Start-Process "schtasks" "/run /tn $jobName";
 }

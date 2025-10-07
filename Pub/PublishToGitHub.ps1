@@ -18,7 +18,7 @@ $topVersion = $text.SubString($vStart, $vEnd - $vStart);
 
 # change top version
 $changeLog = $text -replace $topVersion, "# v$versionParam";
-$changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force -NoNewline;
+$changeLog | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force -NoNewline;
 
 # create release note
 $releaseNote = $changeLog;

@@ -21,8 +21,9 @@ $moduleDirLatest = "$packagesRootDirLatest/$packageFileTitle/android-$distributi
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 $packageExt = if ($apk) { "apk" } else { "aab" };
-$module_infoFile = "$moduleDir/$packageFileTitle-android-$distribution.json";
-$module_packageFile = "$moduleDir/$packageFileTitle-android-$distribution.$packageExt";
+$module_baseFileName = "$packageFileTitle-android-$distribution";
+$module_infoFile = "$moduleDir/$module_baseFileName.json";
+$module_packageFile = "$moduleDir/$module_baseFileName.$packageExt";
 
 # Calcualted Path
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
@@ -60,12 +61,13 @@ if ($apk)
 		;
 	
 	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
-	 
+
 	# publish info
 	$json = @{
 		Version = $versionParam; 
 		UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
 		PackageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
+		PackageId = "$packageId";
 		InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
 		ReleaseDate = "$releaseDate";
 		DeprecatedVersion = "$deprecatedVersion";
@@ -89,17 +91,31 @@ if ($aab)
 	$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
     dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
-    /p:SolutionDir=$solutionDir `
-    /p:Configuration=Release `
-    /p:ApplicationId=$packageId `
-    /p:Version=$versionParam `
-    /p:OutputPath=$outputPath `
-    /p:ArchiveOnBuild=true `
-    /p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-    /p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
-    ;
+		/p:SolutionDir=$solutionDir `
+		/p:Configuration=Release `
+		/p:ApplicationId=$packageId `
+		/p:Version=$versionParam `
+		/p:OutputPath=$outputPath `
+		/p:ArchiveOnBuild=true `
+		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
+		;
 
 	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
+
+	# publish info
+	$json = @{
+		Version = $versionParam; 
+		UpdateInfoUrl = "$repoUrl/releases/latest/download/$packageFileTitle-android.json";
+		PackageUrl = "$repoUrl/releases/download/$versionTag/$packageFileTitle-android.apk";
+		PackageId = "$packageId";
+		InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$packageFileTitle-android.apk";
+		ReleaseDate = "$releaseDate";
+		DeprecatedVersion = "$deprecatedVersion";
+		NotificationDelay = "$versionNotificationDelay";
+	};
+
+	$json | ConvertTo-Json | Out-File "$module_packageFile.json" -Encoding ASCII;
 }
 
 # copy to module

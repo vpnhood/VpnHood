@@ -66,6 +66,7 @@ if ($nugets) {
 # publish win client
 if ($connectWin) {
 	& "$solutionDir/Src/Apps/Connect.Win.Web/_publish.ps1";
+	& "$solutionDir/Src/Apps/Connect.Linux.Web/_publish.ps1";
 }
 
 # publish win client

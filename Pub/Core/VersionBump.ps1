@@ -17,11 +17,14 @@ if ( $bump -gt 0 )
 }
 
 $prerelease = $versionJson.Prerelease;
+$versionCode = $version.Build;
 $isLatest = $versionJson.Prerelease -eq $false; 
 $versionParam = $version.ToString(3);
 $versionTag = "v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
-$releaseDate = Get-Date -asUTC -Format "s";
+$releaseDate = (Get-Date).ToUniversalTime().ToString("s");
+$releaseFlag = if ($prerelease) { "--prerelease" } else { "--latest" };
 $deprecatedVersion = $versionJson.DeprecatedVersion;
+$versionNotificationDelay = $versionJson.NotificationDelay;
 
 if ( $bump -gt 0 )
 {

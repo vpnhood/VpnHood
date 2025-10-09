@@ -38,6 +38,9 @@ Write-Host "*** Publish VpnHood! SERVER releases" -BackgroundColor Blue;
 
 # set Connect Variables
 $serverRepoDir = Join-Path $vhDir "VpnHood.App.Server";
+
+# determine release flag once
+$releaseFlag = if ($prerelease) { "--prerelease" } else { "--latest" };
 	
 # Publishing to GitHub
 Push-Location -Path $serverRepoDir;
@@ -45,7 +48,7 @@ Push-Location -Path $serverRepoDir;
 gh release delete "$versionTag" --cleanup-tag --yes;
 gh release create "$versionTag" `
 	--title "$versionTag" `
-	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
+	$releaseFlag `
 	-F $releaseRootDir/$changeLogReleaseFileName `
 	$releaseRootDir/$packageServerDirName/linux-any/VpnHoodServer-linux.sh `
 	$releaseRootDir/$packageServerDirName/linux-x64/VpnHoodServer-linux-x64.json `

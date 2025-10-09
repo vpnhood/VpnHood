@@ -4,7 +4,8 @@ param(
 	[Parameter(Mandatory=$true)] [String]$aipFileR,
 	[Parameter(Mandatory=$true)] [String]$distribution,
 	[Parameter(Mandatory=$true)] [String]$repoUrl,
-	[Parameter(Mandatory=$true)] [String]$installationPageUrl)
+	[Parameter(Mandatory=$true)] [String]$installationPageUrl
+)
 
 . "$PSScriptRoot/Common.ps1"
 

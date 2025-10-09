@@ -12,6 +12,9 @@ $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullNa
 Write-Host "";
 Write-Host "*** Publishing $projectFile ..." -BackgroundColor Blue -ForegroundColor White;
 
+# set default Rollout to 100 if not set
+if ($rollout -le 0 -or $rollout -gt 100) { $rollout = 100; }
+
 #update project version
 UpdateProjectVersion $projectFile;
 
@@ -103,6 +106,9 @@ if ($aab)
 
 	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 
+	# rollout fraction 0.00 - 1.00 with two decimals
+	$rolloutRatio = "{0:F2}" -f ([double]$rollout / 100);
+
 	# publish info
 	$json = @{
 		Version = $versionParam; 
@@ -112,7 +118,9 @@ if ($aab)
 		InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$packageFileTitle-android.apk";
 		ReleaseDate = "$releaseDate";
 		DeprecatedVersion = "$deprecatedVersion";
-		NotificationDelay = "$versionNotificationDelay";
+		NotificationDelay = "7.00:00:00";
+		Rollout = $rolloutRatio;
+		GooglePlayUrl = "https://play.google.com/store/apps/details?id=$packageId";
 	};
 
 	$json | ConvertTo-Json | Out-File "$module_packageFile.json" -Encoding ASCII;

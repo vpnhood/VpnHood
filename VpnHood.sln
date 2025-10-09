@@ -187,6 +187,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "utils", "utils", "{7CF1CCF6
 		Pub\Core\utils\changelog_utils.ps1 = Pub\Core\utils\changelog_utils.ps1
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Connect", "Connect", "{42F08BA1-C4AB-40E8-B364-B3BC0CB480C2}"
+	ProjectSection(SolutionItems) = preProject
+		Pub\Connect\Publish.ps1 = Pub\Connect\Publish.ps1
+		Pub\Connect\PublishToGithub.ps1 = Pub\Connect\PublishToGithub.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Client", "Client", "{055DCA0A-637D-4C8B-898A-238E4821281E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1269,6 +1277,8 @@ Global
 		{ECE7A698-8394-4574-8E78-CDBCA9A9F3F4} = {846B0CEE-3364-4A90-B090-052677DE5E8D}
 		{D9CFFFC6-FDCF-48DC-8952-1B61F4F93086} = {846B0CEE-3364-4A90-B090-052677DE5E8D}
 		{7CF1CCF6-236A-438D-8DE5-1D58E83E939A} = {18FA0808-ABCC-481B-A596-F9304363675A}
+		{42F08BA1-C4AB-40E8-B364-B3BC0CB480C2} = {AD60711B-C6DD-442E-B434-2C44B6A717B1}
+		{055DCA0A-637D-4C8B-898A-238E4821281E} = {AD60711B-C6DD-442E-B434-2C44B6A717B1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

@@ -7,7 +7,8 @@ $solutionDir = Split-Path -parent (Split-Path -parent $PSScriptRoot);
 $vhDir = Split-Path -parent $solutionDir;
 $pubDir = "$solutionDir/Pub";
 $msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
-$credentials = (Get-Content "$solutionDir/../.user/credentials.json" | Out-String | ConvertFrom-Json);
+$userDir = "$solutionDir/../.user";
+$credentials = (Get-Content "$userDir/credentials.json" | Out-String | ConvertFrom-Json);
 $nugetApiKey = $credentials.NugetApiKey;
 $msverbosity = "minimal";
 
@@ -22,7 +23,6 @@ $packageConnectDirName = "VpnHoodConnect";
 
 # Prepare the latest folder
 $packagesRootDirLatest = "$pubDir/bin/latest";
-$moduleGooglePlayLastestDir = "$solutionDir/pub/Android.GooglePlay/apk/latest";
 
 # Release root such as latet or pre-release folder
 $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
@@ -80,4 +80,36 @@ function PushMainRepo()
 	}
 
 	Pop-Location	
+}
+
+# push to repo using gh api.
+# Do not show any message except error
+function PushTextToRepo {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$repoName,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$path,
+        
+        [Parameter(Mandatory=$true)]
+        [string]$content
+    )
+
+    $base64Content = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content));
+    $sha = $(gh api "/repos/$repoName/contents/$path" --jq '.sha' 2>$null);
+        
+    $fields = @(
+        "--field", "message=Update version to $versionParam",
+        "--field", "content=$base64Content"
+    );
+        
+    if ($sha -ne $null -and $sha -ne "") {
+        $fields += "--field", "sha=$sha";
+    }
+        
+	$result = gh api --method PUT "/repos/$repoName/contents/$path" @fields --silent 2>&1
+	if ($LASTEXITCODE) { 
+		throw "PushTextToRepo failed: $result"
+	}
 }

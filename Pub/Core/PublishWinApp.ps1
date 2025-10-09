@@ -14,7 +14,7 @@ $productName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Product[
 $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName[0];
 
 Write-Host;
-Write-Host "*** Building $packageFileTitle ..." -BackgroundColor Blue -ForegroundColor White;
+Write-Host "*** Building $packageFileTitle for Windows ..." -BackgroundColor Blue -ForegroundColor White;
 
 # Init script
 $advinstallerFile = (Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Caphyon\Advanced Installer" -Name "InstallRoot").InstallRoot;

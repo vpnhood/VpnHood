@@ -1,27 +1,34 @@
 param( 
 	[Parameter(Mandatory=$true)][object]$bump,
 	[Parameter(Mandatory=$true)][object]$nugets,
-	[Parameter(Mandatory=$true)][object]$android,
-	[Parameter(Mandatory=$true)][object]$linux,
 	[Parameter(Mandatory=$true)][object]$windows,
+	[Parameter(Mandatory=$true)][object]$linux,
+	[Parameter(Mandatory=$true)][object]$android,
 	[Parameter(Mandatory=$true)][object]$distribute,
 	[Parameter(Mandatory=$true)][object]$samples,
-	[int]$rollout
+	[int]$rollout,
+	[switch]$cleanall
 );
 
 . "$PSScriptRoot/../Core/Common.ps1" -bump $bump
 
+$windows = $windows -eq "1";
+$linux = $linux -eq "1";
+$android = $android -eq "1";
 $distribute = $distribute -eq "1";
 $rollout = Get-RolloutPercentage -distribute $distribute -rollout $rollout
 
 # clean all
-& $msbuild $solutionDir /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
+if ($cleanall) {
+	& $msbuild $solutionDir /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
+}
 
 # clean old release notes
 Remove-Item "$packagesRootDir/$packageClientDirName/ReleaseNote.txt" -ErrorAction Ignore;
 
 # rebuild libraries
 if ($nugets) {
+	# generic
 	& "$solutionDir/Src/Core/VpnHood.Core.Toolkit/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Packets/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.PacketTransports/_publish.ps1";
@@ -30,6 +37,8 @@ if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.WinTun/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.LinuxTun/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.WinDivert/_publish.ps1";
+
+	# core
 	& "$solutionDir/Src/Core/VpnHood.Core.Common/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Tunneling/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Abstractions/_publish.ps1";
@@ -45,6 +54,7 @@ if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access.FileAccessManager/_publish.ps1";
 
+	# applib
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.App/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.WebServer/_publish.ps1";
@@ -58,7 +68,7 @@ if ($nugets) {
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Maui.Common/_publish.ps1";
 }
 
-if ($connectWin) {
+if ($windows) {
 	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
 }
 

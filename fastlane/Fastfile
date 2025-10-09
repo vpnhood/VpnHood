@@ -16,19 +16,116 @@
 default_platform(:android)
 
 platform :android do
-  desc "Upload AAB, sync metadata, and download universal APK"
-  lane :playstore do
-    # add actions here: https://docs.fastlane.tools/actions
-    skip_docs
-    upload_to_play_store(
-        skip_upload_apk: 'true',
+  desc "Upload AAB to Google Play"
+  lane :playstore do |options|
+    upload_params = {
+        aab: options[:aab],
+        package_name: ENV['SUPPLY_PACKAGE_NAME'],
+        json_key_data: ENV['PLAY_JSON_KEY'],
+        track: options[:track] || 'alpha',
+        version_name: options[:version_name],
+        version_code: options[:version_code],
+        skip_upload_apk: true,
+        skip_upload_screenshots: false,
+        skip_upload_images: false,
+        skip_upload_metadata: false,
+        skip_upload_changelogs: false,
+        sync_image_upload: true,
         release_status: 'completed'
-        track: 'production'
-        rollout:'0.2'
-        sync_image_upload: 'true'
+    }
+    
+    # Only add rollout if it has a valid value
+    if options[:rollout] && !options[:rollout].to_s.empty?
+      upload_params[:rollout] = options[:rollout]
+    end
+    
+    begin
+      UI.message("🚀 Uploading AAB with changelog...")
+      UI.message("   versionCode=#{options[:version_code]} track=#{upload_params[:track]} rollout=#{upload_params[:rollout] || 'none'}")
+      upload_to_play_store(upload_params)
+      UI.success("✅ Upload of AAB and changelog succeeded")
+    rescue => e
+      # ONLY handle version conflict errors - let ALL other errors fail naturally
+      if /Version code .* has already been used/i.match?(e.message) || 
+         /already been uploaded/i.match?(e.message) || 
+         /apkUpgradeVersionConflict/i.match?(e.message) ||
+         /apkNoUpgradePath/i.match?(e.message)
+        
+        UI.important("⚠️  Version code #{options[:version_code]} already exists on Google Play")
+        UI.important("🔄 Updating changelog only...")
+        
+        # Update only changelog for existing version
+        supply(
+          package_name: ENV['SUPPLY_PACKAGE_NAME'],
+          json_key_data: ENV['PLAY_JSON_KEY'],
+          track: upload_params[:track],
+          version_code: options[:version_code],
+          skip_upload_aab: true,
+          skip_upload_apk: true,
+          skip_upload_screenshots: false,
+          skip_upload_images: false,
+          skip_upload_metadata: false,
+          skip_upload_changelogs: false,
+          sync_image_upload: true
         )
-    download_universal_apk_from_google_play(
-        destination: './Pub/Android.GooglePlay/apk/VpnHoodClient-android.apk'
+        UI.success("✅ Changelog updated for existing versionCode #{options[:version_code]}")
+      else
+        # For ALL other errors, re-raise to fail the lane immediately
+        raise e
+      end
+    end
+  end
+
+  desc "Publish store contents (metadata, images, screenshots) to Google Play - shared across all tracks"
+  lane :publish_contents do |options|
+    UI.message("🚀 Finding the latest version code on the production track...")
+
+    # Step 1: Fetch all active version codes from the production track
+    production_versions = google_play_track_version_codes(
+      package_name: ENV['SUPPLY_PACKAGE_NAME'],
+      json_key_data: ENV['PLAY_JSON_KEY'],
+      track: 'production'
     )
+
+    # Step 2: Find the highest (latest) version code from the array
+    latest_version_code = production_versions.max
+    
+    if latest_version_code.nil?
+      UI.user_error!("Could not find any active version on the production track.")
+    end
+
+    UI.message("✅ Found latest version code: #{latest_version_code}")
+    UI.message("🚀 Publishing store contents (metadata, images, screenshots)...")
+    UI.message("   Note: Store contents are shared across all tracks")
+    
+    supply(
+      package_name: ENV['SUPPLY_PACKAGE_NAME'],
+      json_key_data: ENV['PLAY_JSON_KEY'],
+      version_code: latest_version_code,
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_screenshots: false,
+      skip_upload_images: false,
+      skip_upload_metadata: false,
+      skip_upload_changelogs: true,
+      sync_image_upload: true
+    )
+    
+    UI.success("✅ Store contents published successfully")
+  end
+
+  desc "Download universal Play-signed APK"
+  lane :download_signed do |options|
+    # Ensure version_code provided (Play API requires specifying to fetch generated universal apk)
+    unless options[:version_code]
+      UI.user_error!("version_code is required. Pass via 'fastlane android download_signed version_code:123'.")
+    end
+    download_universal_apk_from_google_play(
+        package_name: ENV['SUPPLY_PACKAGE_NAME'],
+        json_key_data: ENV['PLAY_JSON_KEY'],
+        version_code: options[:version_code],
+        destination: './fastlane/downloaded.apk'
+    )
+    UI.success("Downloaded universal APK for version code #{options[:version_code]}")
   end
 end

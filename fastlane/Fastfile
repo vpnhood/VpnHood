@@ -28,7 +28,7 @@ platform :android do
         sync_image_upload: 'true'
         )
     download_universal_apk_from_google_play(
-        destination: './Pub/Android.GooglePlay/VpnHoodClient-android.apk'
+        destination: './Pub/Android.GooglePlay/apk/VpnHoodClient-android.apk'
     )
   end
 end

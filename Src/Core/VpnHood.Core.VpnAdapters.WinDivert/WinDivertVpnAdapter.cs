@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using SharpPcap;
 using SharpPcap.WinDivert;
+using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
 
 namespace VpnHood.Core.VpnAdapters.WinDivert;
 

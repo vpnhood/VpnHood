@@ -1,0 +1,201 @@
+name: Publish AAB to Google Play & Replace Release Asset with Play-Signed APK
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required for gh release upload/delete-asset
+
+    env:
+      AAB_PATTERN: "*.aab"
+      AAB_META_PATTERN: "*.aab.json"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare GH token
+        run: echo "GH_TOKEN=${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Resolve release tag and track
+        env:
+          GH_TOKEN: ${{ env.GH_TOKEN }}
+        run: |
+          set -e
+          
+          # Use event context if triggered by release event, otherwise find latest
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+            IS_PRERELEASE="${{ github.event.release.prerelease }}"
+            echo "📦 Using release from event: $TAG (prerelease=$IS_PRERELEASE)"
+          else
+            echo "Finding the absolute latest release (prerelease or stable)..."
+            RELEASE_INFO=$(gh api repos/${{ github.repository }}/releases --paginate --jq '[ .[] | select(.draft==false) ][0]')
+            TAG=$(echo "$RELEASE_INFO" | jq -r '.tag_name')
+            IS_PRERELEASE=$(echo "$RELEASE_INFO" | jq -r '.prerelease')
+          fi
+
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "❌ No release found"; exit 1
+          fi
+
+          # Determine track based on release type
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            TRACK=alpha
+            echo "📦 Release is a prerelease -> alpha track (closed testing)"
+          else
+            TRACK=production
+            echo "📦 Release is stable -> production track"
+          fi
+
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "TRACK=$TRACK" >> $GITHUB_ENV
+          echo "✅ Using TAG=$TAG TRACK=$TRACK"
+
+      # --- Download AAB and its metadata JSON ---
+      - name: Download AAB + JSON from GitHub Release
+        env:
+          GH_TOKEN: ${{ env.GH_TOKEN }}
+        run: |
+          mkdir -p artifacts
+          gh release download "$TAG" --pattern "$AAB_PATTERN" --dir artifacts || true
+          gh release download "$TAG" --pattern "$AAB_META_PATTERN" --dir artifacts || true
+
+          AAB_FILE=$(ls artifacts/*.aab 2>/dev/null | head -n1 || true)
+          META_FILE=$(ls artifacts/*.aab.json 2>/dev/null | head -n1 || true)
+
+          if [ -z "$AAB_FILE" ]; then
+            echo "❌ No .aab found matching pattern '$AAB_PATTERN' in release '$TAG'"; exit 1
+          fi
+          if [ -z "$META_FILE" ]; then
+            echo "❌ No .aab.json metadata file found for $AAB_FILE"; exit 1
+          fi
+
+          echo "AAB_PATH=$AAB_FILE" >> $GITHUB_ENV
+          echo "META_PATH=$META_FILE" >> $GITHUB_ENV
+          echo "Downloaded: $AAB_FILE and $META_FILE"
+
+      # --- Extract version info from JSON ---
+      - name: Read version info from JSON metadata
+        run: |
+          VERSION_NAME=$(jq -r '.Version' "$META_PATH")
+          if [ -z "$VERSION_NAME" ] || [ "$VERSION_NAME" = "null" ]; then
+            echo "❌ Could not read Version field from $META_PATH"; exit 1
+          fi
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          
+          # Read PackageId from JSON
+          PACKAGE_ID=$(jq -r '.PackageId' "$META_PATH")
+          if [ -z "$PACKAGE_ID" ] || [ "$PACKAGE_ID" = "null" ]; then
+            echo "❌ Could not read PackageId field from $META_PATH"; exit 1
+          fi
+          echo "PACKAGE_ID=$PACKAGE_ID" >> $GITHUB_ENV
+          
+          # Derive VersionCode: for pattern X.Y.Z use Z (third component)
+          RAW_VERSION_CODE=$(jq -r '(.VersionCode // .Build // .BuildNumber // "")' "$META_PATH")
+          if [ -n "$RAW_VERSION_CODE" ] && [ "$RAW_VERSION_CODE" != "null" ]; then
+            VERSION_CODE=$RAW_VERSION_CODE
+          elif echo "$VERSION_NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            VERSION_CODE=$(echo "$VERSION_NAME" | awk -F'.' '{print $3}')
+          else
+            # Fallback: digits only last up to 9 digits
+            VERSION_CODE=$(echo "$VERSION_NAME" | tr -cd '0-9' | tail -c 9)
+          fi
+
+          if [ -z "$VERSION_CODE" ]; then
+            echo "❌ Unable to determine VERSION_CODE"; exit 1
+          fi
+
+          # Read Rollout from JSON (optional field)
+          ROLLOUT=$(jq -r '(.Rollout // "")' "$META_PATH")
+          if [ "$ROLLOUT" = "null" ]; then
+            ROLLOUT=""
+          fi
+
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "ROLLOUT=$ROLLOUT" >> $GITHUB_ENV
+          echo "✅ Using VersionName=$VERSION_NAME, VersionCode=$VERSION_CODE, PackageId=$PACKAGE_ID, Track=$TRACK, Rollout=$ROLLOUT"
+
+      # --- Setup dependencies ---
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+
+      - name: Install Fastlane
+        run: |
+          gem install fastlane --no-document
+
+      # --- Upload AAB to Google Play (or update metadata if version exists) ---
+      - name: Upload to Google Play via Fastlane
+        env:
+          PLAY_JSON_KEY: ${{ secrets.PLAY_JSON_KEY }}
+          SUPPLY_PACKAGE_NAME: ${{ env.PACKAGE_ID }}
+        run: |
+          echo "Uploading $AAB_PATH (versionCode=$VERSION_CODE rollout='$ROLLOUT') to track $TRACK"
+          fastlane android playstore \
+            version_name:"$VERSION_NAME" \
+            version_code:"$VERSION_CODE" \
+            aab:"$AAB_PATH" \
+            track:"$TRACK" \
+            rollout:"$ROLLOUT"
+
+      # --- Download Google Play–signed APK ---
+      - name: Download Google Play–signed APK via Fastlane
+        env:
+          PLAY_JSON_KEY: ${{ secrets.PLAY_JSON_KEY }}
+          SUPPLY_PACKAGE_NAME: ${{ env.PACKAGE_ID }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+        run: |
+          echo "Attempting to download universal APK for version code $VERSION_CODE (track=$TRACK)"
+          fastlane android download_signed version_code:"$VERSION_CODE"
+
+          # supply downloads APKs typically under fastlane/metadata/android/*/apks/
+          APK_PATH=$(find fastlane -type f -name "*.apk" | head -n1 || true)
+          if [ -z "$APK_PATH" ]; then
+            echo "❌ No APK found after download"
+            echo "Directory structure (fastlane):"
+            find fastlane -maxdepth 6 -type d -name "*apk*" 2>/dev/null || true
+            find fastlane -maxdepth 6 -type f -name "*.apk" 2>/dev/null || true
+            exit 1
+          fi
+          echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
+          echo "✅ Found Play-signed APK: $APK_PATH"
+
+      # --- Add Play-signed APK and product.json (keep AAB and .aab.json) ---
+      - name: Upload Play-signed APK and product.json
+        env:
+          GH_TOKEN: ${{ env.GH_TOKEN }}
+        run: |
+          BASE_NAME=$(basename "$AAB_PATH" .aab)
+          
+          # Upload APK: product.aab -> product.apk
+          APK_NAME="${BASE_NAME}.apk"
+          cp "$APK_PATH" "$APK_NAME"
+          gh release upload "$TAG" "$APK_NAME" --clobber
+          echo "✅ Uploaded Play-signed APK as $APK_NAME (track=$TRACK)"
+          
+          # Upload product.json: product.aab.json -> product.json
+          APK_JSON_NAME="${BASE_NAME}.json"
+          cp "$META_PATH" "$APK_JSON_NAME"
+          gh release upload "$TAG" "$APK_JSON_NAME" --clobber
+          echo "✅ Uploaded metadata as $APK_JSON_NAME"
+
+      - name: List final assets
+        env:
+          GH_TOKEN: ${{ env.GH_TOKEN }}
+        run: |
+          echo "Assets after upload (TAG=$TAG):"
+          gh release view "$TAG" --json assets -q '.assets[].name'

@@ -9,21 +9,16 @@ param(
 	[int]$rollout
 );
 
-$nugets = $nugets -eq "1";
-$connectWin = $connectWin -eq "1";
-$connectAndroid = $connectAndroid -eq "1";
-$clientWinLinux = $clientWinLinux -eq "1";
-$clientAndroid = $clientAndroid -eq "1";
-$distribute = $distribute -eq "1";
-$samples = $samples -eq "1";
+. "$PSScriptRoot/../Core/Common.ps1" -bump $bump
 
-. "$PSScriptRoot/Core/Common.ps1" -bump $bump
+$distribute = $distribute -eq "1";
+$rollout = Get-RolloutPercentage -distribute $distribute -rollout $rollout
 
 # clean all
 & $msbuild $solutionDir /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
-$noPushNuget = !$nugets
 
-Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
+# clean old release notes
+Remove-Item "$packagesRootDir/$packageClientDirName/ReleaseNote.txt" -ErrorAction Ignore;
 
 # rebuild libraries
 if ($nugets) {
@@ -63,40 +58,31 @@ if ($nugets) {
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Maui.Common/_publish.ps1";
 }
 
-# publish win client
 if ($connectWin) {
-	& "$solutionDir/Src/Apps/Connect.Win.Web/_publish.ps1";
-	& "$solutionDir/Src/Apps/Connect.Linux.Web/_publish.ps1";
+	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
 }
 
-# publish win client
-if ($clientWinLinux) {
-	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
+if ($linux) {
 	& "$solutionDir/Src/Apps/Client.Linux.Web/_publish.ps1";
 }
 
-# publish android
-if ($clientAndroid) {	
+if ($android) {
 	& "$solutionDir/Src/Apps/Client.Android.Google/_publish.ps1";
 	& "$solutionDir/Src/Apps/Client.Android.Web/_publish.ps1";
 }
 
-# publish android
-if ($connectAndroid) {	
-	& "$solutionDir/Src/Apps/Connect.Android.Google/_publish.ps1";
-	& "$solutionDir/Src/Apps/Connect.Android.Web/_publish.ps1";
-}
-
-
 # distribute
 if ($distribute) {
-    & "$PSScriptRoot/PublishToGitHub.ps1" `
-		-mainRepo ($clientWinLinux -or $clientAndroid) `
-		-connectRepo ($connectWin -or $connectAndroid);
+    & "$PSScriptRoot/PublishToGitHub.ps1";
 }
-
 
 # update and push samples nugets
 if ($samples) {
 	& "$solutionDir/../VpnHood.App.Samples/UpdateAndPush.ps1";
+}
+
+# commit and push git
+if (!$prerelease) {
+	Write-Host "Pushing to main branch..." -ForegroundColor Magenta;
+	git --git-dir=$gitDir --work-tree=$solutionDir push origin development:main --force;
 }

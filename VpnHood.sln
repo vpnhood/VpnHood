@@ -194,6 +194,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Connect", "Connect", "{42F0
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Client", "Client", "{055DCA0A-637D-4C8B-898A-238E4821281E}"
+	ProjectSection(SolutionItems) = preProject
+		Pub\Client\Publish.ps1 = Pub\Client\Publish.ps1
+		Pub\Client\PublishToGithub.ps1 = Pub\Client\PublishToGithub.ps1
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

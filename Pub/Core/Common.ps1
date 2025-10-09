@@ -82,6 +82,27 @@ function PushMainRepo()
 	Pop-Location	
 }
 
+function Get-RolloutPercentage {
+	param(
+		[Parameter(Mandatory=$true)][bool]$distribute,
+		[Parameter(Mandatory=$true)][int]$rollout
+	)
+	
+	if ($distribute -and ($rollout -le 0 -or $rollout -gt 100)) {
+		[int]$parsedRollout = 0
+		$rolloutInput = Read-Host "Enter rollout percentage (1-100, default 100)";
+		if ([string]::IsNullOrWhiteSpace($rolloutInput)) {
+			return 100;
+		} elseif ([int]::TryParse($rolloutInput, [ref]$parsedRollout) -and $parsedRollout -ge 1 -and $parsedRollout -le 100) {
+			return $parsedRollout;
+		} else {
+			throw "Invalid rollout.";
+		}
+	}
+	
+	return $rollout;
+}
+
 # push to repo using gh api.
 # Do not show any message except error
 function PushTextToRepo {

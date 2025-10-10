@@ -83,6 +83,7 @@ function Get-RolloutPercentage {
 	return $rollout;
 }
 
+
 # push to repo using gh api.
 # Do not show any message except error
 function PushTextToRepo {

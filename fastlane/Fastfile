@@ -20,7 +20,6 @@ platform :android do
   lane :playstore do |options|
     upload_params = {
         aab: options[:aab],
-        package_name: ENV['SUPPLY_PACKAGE_NAME'],
         json_key_data: ENV['PLAY_JSON_KEY'],
         track: options[:track] || 'alpha',
         version_name: options[:version_name],
@@ -56,7 +55,6 @@ platform :android do
         
         # Update only changelog for existing version
         supply(
-          package_name: ENV['SUPPLY_PACKAGE_NAME'],
           json_key_data: ENV['PLAY_JSON_KEY'],
           track: upload_params[:track],
           version_code: options[:version_code],
@@ -82,7 +80,6 @@ platform :android do
 
     # Step 1: Fetch all active version codes from the production track
     production_versions = google_play_track_version_codes(
-      package_name: ENV['SUPPLY_PACKAGE_NAME'],
       json_key_data: ENV['PLAY_JSON_KEY'],
       track: 'production'
     )
@@ -99,7 +96,6 @@ platform :android do
     UI.message("   Note: Store contents are shared across all tracks")
     
     supply(
-      package_name: ENV['SUPPLY_PACKAGE_NAME'],
       json_key_data: ENV['PLAY_JSON_KEY'],
       version_code: latest_version_code,
       skip_upload_aab: true,
@@ -121,7 +117,6 @@ platform :android do
       UI.user_error!("version_code is required. Pass via 'fastlane android download_signed version_code:123'.")
     end
     download_universal_apk_from_google_play(
-        package_name: ENV['SUPPLY_PACKAGE_NAME'],
         json_key_data: ENV['PLAY_JSON_KEY'],
         version_code: options[:version_code],
         destination: './fastlane/downloaded.apk'

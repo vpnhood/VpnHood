@@ -94,5 +94,6 @@ if ($samples) {
 # commit and push git
 if (!$prerelease) {
 	Write-Host "Pushing to main branch..." -ForegroundColor Magenta;
-	git --git-dir=$gitDir --work-tree=$solutionDir push origin development:main --force;
+	git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Release version $versionParam";
+	git --git-dir=$gitDir --work-tree=$solutionDir push origin development:main;
 }

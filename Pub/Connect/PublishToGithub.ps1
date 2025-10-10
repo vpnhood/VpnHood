@@ -1,4 +1,4 @@
-Write-Host "*** Publish VpnHood! CONNECT releases" -BackgroundColor Blue
+Write-Host "*** Publish VpnHood! CONNECT to GitHub" -BackgroundColor Blue
 
 . "$PSScriptRoot/../Core/Common.ps1"
 . "$PSScriptRoot/../Core/utils/changelog_utils.ps1"
@@ -12,8 +12,6 @@ $repoName = "vpnhood/VpnHood.App.Connect";
 
 # update CHANGELOG
 $changeLog = Get-Content "$solutionDir/CHANGELOG.md" -Raw;
-
-# find top version
 $changeLog = (Changelog_UpdateHeader $changeLog "v$versionParam");
 $changeLog | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force -NoNewline;
 

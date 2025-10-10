@@ -7,7 +7,7 @@ param(
 $distribute = $distribute -eq "1";
 $docker = $docker -eq "1";
 
-. "$PSScriptRoot/Core/Common.ps1" -bump $bump
+. "$PSScriptRoot/../Core/Common.ps1" -bump $bump
 
 # remove old release note
 Remove-Item "$packagesRootDir/$packageServerDirName/ReleaseNote.txt" -ErrorAction Ignore;
@@ -20,5 +20,5 @@ if ($docker) {
 
 # distribute
 if ($distribute) {
-    & "$PSScriptRoot/PublishToGitHub.Server.ps1";
+    & "$PSScriptRoot/PublishToGitHub.ps1";
 }

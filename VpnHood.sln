@@ -20,8 +20,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6DD-442E-B434-2C44B6A717B1}"
 	ProjectSection(SolutionItems) = preProject
 		CHANGELOG.md = CHANGELOG.md
-		Pub\PublishApps.ps1 = Pub\PublishApps.ps1
-		Pub\PublishToGitHub.ps1 = Pub\PublishToGitHub.ps1
 		Pub\PubVersion.json = Pub\PubVersion.json
 		README.md = README.md
 	EndProjectSection
@@ -117,8 +115,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{9FC06597-CB38-4914-89CC-B49905B0605A}"
 	ProjectSection(SolutionItems) = preProject
 		CHANGELOG.Server.md = CHANGELOG.Server.md
-		Pub\Publish.App.Server.ps1 = Pub\Publish.App.Server.ps1
-		Pub\PublishToGitHub.Server.ps1 = Pub\PublishToGitHub.Server.ps1
+		Pub\Server\Publish.ps1 = Pub\Server\Publish.ps1
+		Pub\Server\PublishToGitHub.ps1 = Pub\Server\PublishToGitHub.ps1
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Core.Client.Abstractions", "Src\Core\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj", "{2A96E11D-166E-4454-9016-0EB6D7E1D5E3}"

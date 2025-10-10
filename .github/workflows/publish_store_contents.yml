@@ -32,7 +32,6 @@ jobs:
       - name: Publish store metadata, images, and screenshots
         env:
           PLAY_JSON_KEY: ${{ secrets.PLAY_JSON_KEY }}
-          SUPPLY_PACKAGE_NAME: ${{ vars.PLAY_PACKAGE_ID }}
         run: |
           echo "🚀 Publishing store contents (metadata, images, screenshots)"
           fastlane android publish_contents

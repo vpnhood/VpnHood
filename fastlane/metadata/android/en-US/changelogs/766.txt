@@ -1,0 +1,3 @@
+* Fix: Auto Cloak mode when the server enforces it
+* Update: Protocol Page
+* Update: Improve pages & UI

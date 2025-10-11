@@ -1,7 +1,8 @@
-# v7.3.762
+# v7.3.766
 * Fix: Windows: Clean up and disconnect on pressing the exit menu
 * Fix: Linux: Adapter issue on EndeavourOS
 * Fix: Linux: Could not start on some linux distributions
+* Fix: Auto Cloak mode when the server enforces it
 * Update: Protocol Page
 * Update: Improve pages & UI
 

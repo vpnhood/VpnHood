@@ -228,9 +228,25 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private bool IsTcpProxy => 
-        Config is { UseTcpProxy: true, IsTcpProxySupported: true } &&
-        (SessionInfo is null || SessionInfo.IsTcpProxySupported);
+    private bool IsTcpProxy {
+        get {
+            // client does not support tcp proxy
+            if (!Config.IsTcpProxySupported)
+                return false;
+
+            // server does not support tcp proxy
+            // ReSharper disable once ConvertIfStatementToReturnStatement
+            if (SessionInfo is { IsTcpProxySupported: false })
+                return false;
+
+            // server does not support tcp packets so only tcp proxy can work
+            if (SessionInfo is { IsTcpPacketSupported: false })
+                return true;
+
+            // follow config
+            return Config.UseTcpProxy;
+        }
+    }
 
     // DropQUIC is useless if not tcp proxy
     private bool IsDropQuic => Config.DropQuic && IsTcpProxy;

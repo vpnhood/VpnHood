@@ -62,3 +62,10 @@ if ($LASTEXITCODE -ne 0) {
     $code = $LASTEXITCODE
     throw "Failed to create GitHub release. Exit code: $code"
 }
+
+# copy to dl
+if (-not $prerelease)
+{
+	Write-Host "Trigger update to mirror site"
+	PushTextToRepo "vpnhood/dl.github.io" "publish_version.txt" $versionTag
+}

@@ -1,3 +1,6 @@
+# Upcoming
+Fix: Set DNS on some Linux distros
+
 # v7.3.762
 * Fix: Access to local network when IncludeLocalNetwork is enabled
 

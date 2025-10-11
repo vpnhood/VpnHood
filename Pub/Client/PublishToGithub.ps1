@@ -69,6 +69,7 @@ if ($LASTEXITCODE -ne 0) {
 if (-not $prerelease)
 {
 	Write-Host "Commit & push current changes"
+	git add -A
 	git commit -m "Publish $versionTag"
 
 	Write-Host "Push to main"

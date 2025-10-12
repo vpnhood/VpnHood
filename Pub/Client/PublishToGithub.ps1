@@ -73,6 +73,6 @@ if (-not $prerelease)
 	git commit -m "Publish $versionTag"
 
 	Write-Host "Push to main"
-	git push origin dev:main --force
+	git push origin development:main --force 
 }
 

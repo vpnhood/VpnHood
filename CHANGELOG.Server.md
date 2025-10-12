@@ -1,4 +1,4 @@
-# Upcoming
+# v7.3.766
 Fix: Set DNS on some Linux distros
 
 # v7.3.762

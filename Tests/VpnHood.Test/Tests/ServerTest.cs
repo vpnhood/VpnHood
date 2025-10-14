@@ -25,7 +25,7 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         Assert.IsNotNull(accessManager.LastServerInfo);
-        Assert.IsTrue(accessManager.LastServerInfo.FreeUdpPortV4 > 0);
+        Assert.IsGreaterThan(0, accessManager.LastServerInfo.FreeUdpPortV4);
         Assert.IsTrue(
             accessManager.LastServerInfo.PrivateIpAddresses.All(x => x.IsV4()) ||
             accessManager.LastServerInfo?.FreeUdpPortV6 > 0);
@@ -43,14 +43,14 @@ public class ServerTest : TestBase
 
         CollectionAssert.AreEqual(await netConfigurationProvider.GetInterfaceNames(),
             accessManager.LastServerInfo?.NetworkInterfaceNames);
-        Assert.AreEqual(1, netConfigurationProvider.IpAddresses.Count);
+        Assert.HasCount(1, netConfigurationProvider.IpAddresses);
         Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Key,
             accessManager.ServerConfig.TcpEndPointsValue.First().Address);
         Assert.AreEqual(netConfigurationProvider.IpAddresses.Single().Value,
             (await netConfigurationProvider.GetInterfaceNames()).First());
 
         await server.DisposeAsync();
-        Assert.AreEqual(0, netConfigurationProvider.IpAddresses.Count);
+        Assert.IsEmpty(netConfigurationProvider.IpAddresses);
     }
 
 
@@ -73,7 +73,7 @@ public class ServerTest : TestBase
 
         // check usage when usage should be 0
         var sessionResponseEx = await accessManager.Session_Get(client.SessionId, client.HostTcpEndPoint!, null);
-        Assert.IsTrue(sessionResponseEx.AccessUsage!.CycleTraffic.Received == 0);
+        Assert.AreEqual(0, sessionResponseEx.AccessUsage!.CycleTraffic.Received);
 
         // lets do transfer
         await TestHelper.Test_Https();
@@ -258,7 +258,7 @@ public class ServerTest : TestBase
         var url = $"https://{token.ServerToken.HostEndPoints!.First()}";
 
         var ex = await Assert.ThrowsExactlyAsync<HttpRequestException>(() => client.GetStringAsync(url));
-        Assert.AreEqual(ex.StatusCode, HttpStatusCode.Unauthorized);
+        Assert.AreEqual(HttpStatusCode.Unauthorized, ex.StatusCode);
     }
 
     [TestMethod]
@@ -424,9 +424,8 @@ public class ServerTest : TestBase
         swapMemoryProvider.AppUsed = 100 * VhUtils.Megabytes;
         await server.ConfigureAndSendStatus(CancellationToken.None);
         serverStatus = accessManager.LastServerStatus;
-        Assert.AreEqual(swapMemoryProvider.Info.TotalSize, 2500 * VhUtils.Megabytes);
+        Assert.AreEqual(2500 * VhUtils.Megabytes, swapMemoryProvider.Info.TotalSize);
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize, accessManager.LastServerStatus?.TotalSwapMemory);
-        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed,
-            serverStatus?.AvailableSwapMemory);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed, serverStatus?.AvailableSwapMemory);
     }
 }

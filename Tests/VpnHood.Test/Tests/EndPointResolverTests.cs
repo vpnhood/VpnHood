@@ -59,7 +59,7 @@ public class EndPointResolverTests
         var index = results.Length - tokenEndPoints.Length;
         Assert.AreEqual(tokenEndPoints[0], results[index + 0]);
         Assert.AreEqual(tokenEndPoints[1], results[index + 1]);
-        Assert.IsTrue(tokenEndPoints.Length < results.Length, "Resolved endpoints should not be empty.");
+        Assert.IsGreaterThan(tokenEndPoints.Length, results.Length, "Resolved endpoints should not be empty.");
     }
 
     [TestMethod]
@@ -73,7 +73,7 @@ public class EndPointResolverTests
 
         Assert.AreEqual(tokenEndPoints[0], results[0]);
         Assert.AreEqual(tokenEndPoints[1], results[1]);
-        Assert.IsTrue(tokenEndPoints.Length < results.Length, "Resolved endpoints should not be empty.");
+        Assert.IsGreaterThan(tokenEndPoints.Length, results.Length, "Resolved endpoints should not be empty.");
     }
 
     [TestMethod]
@@ -87,6 +87,6 @@ public class EndPointResolverTests
 
         Assert.AreEqual(tokenEndPoints[0], results[0]);
         Assert.AreEqual(tokenEndPoints[1], results[1]);
-        Assert.AreEqual(tokenEndPoints.Length, results.Length);
+        Assert.HasCount(tokenEndPoints.Length, results);
     }
 }

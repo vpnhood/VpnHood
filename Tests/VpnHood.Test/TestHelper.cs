@@ -131,7 +131,7 @@ public class TestHelper : IDisposable
         var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1,
             timeout.Value, cancellationToken);
         Assert.IsNotNull(hostEntry);
-        Assert.IsTrue(hostEntry.AddressList.Length > 0);
+        Assert.IsNotEmpty(hostEntry.AddressList);
     }
 
     public Task Test_Udp(TimeSpan? timeout = null)
@@ -171,7 +171,7 @@ public class TestHelper : IDisposable
     {
         timeout ??= TestConstants.DefaultUdpTimeout;
         var result = await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, CancellationToken.None);
-        Assert.IsTrue(result.AddressList.Length > 0);
+        Assert.IsNotEmpty(result.AddressList);
     }
 
 

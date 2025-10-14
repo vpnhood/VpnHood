@@ -141,15 +141,14 @@ public class AppProxyNodeService(
         Update();
 
         // find current node info
-        var updatedNode = GetNodeInfos().Single(x => x.Node.GetId() == oldNodeId);
+        var newNodeId = proxyNode.GetId();
+        var updatedNode = GetNodeInfos().Single(x => x.Node.GetId() == newNodeId);
 
         // remove the existing state
         updatedNode.Status = new ProxyNodeStatus(); // reset status
 
         return Task.FromResult(updatedNode);
     }
-
-
 
     public ProxyOptions GetProxyOptions()
     {

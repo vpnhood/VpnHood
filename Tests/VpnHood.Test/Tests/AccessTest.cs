@@ -247,7 +247,7 @@ public class AccessTest : TestBase
             Assert.AreEqual(SessionSuppressType.None, client2.SessionInfo?.SuppressedTo);
             Assert.AreEqual(2, accessInfo.MaxDeviceCount);
             Assert.AreEqual(2_000_000, accessInfo.MaxTotalTraffic);
-            Assert.AreEqual(true, accessInfo.IsPremium);
+            Assert.IsTrue(accessInfo.IsPremium);
             Assert.AreEqual(expired, accessInfo.ExpirationTime);
             Assert.IsTrue(accessInfo.CreatedTime <= time);
             Assert.IsTrue(accessInfo.LastUsedTime <= time, $"Diff: {(time - accessInfo.LastUsedTime).TotalSeconds}sec");

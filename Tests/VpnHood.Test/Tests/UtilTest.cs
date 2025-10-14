@@ -105,13 +105,13 @@ public class UtilTest : TestBase
         var d4 = new ProxyNodeDefaults { IsEnabled = false };
         Assert.IsTrue(VhUrlParser.TryParse("http://proxy.example.com", d4, out url));
         Assert.IsNotNull(url);
-        Assert.Contains(url.Query, "enabled=false");
+        Assert.Contains("enabled=false", url.Query);
 
         // enabled already present
         Assert.IsTrue(VhUrlParser.TryParse("http://proxy.example.com?enabled=true", d4, out url));
         Assert.IsNotNull(url);
-        Assert.Contains(url.Query, "enabled=true");
-        Assert.Contains(url.Query, "enabled=false&");
+        Assert.Contains("enabled=true", url.Query);
+        Assert.DoesNotContain("enabled=false", url.Query);
 
         // case insensitive scheme
         Assert.IsTrue(VhUrlParser.TryParse("SOCKS5://PROXY.EXAMPLE.COM:1080", null, out url));
@@ -123,7 +123,7 @@ public class UtilTest : TestBase
         Assert.IsTrue(VhUrlParser.TryParse("socks://proxy.example.com", null, out url));
         Assert.IsNotNull(url);
         Assert.AreEqual(1080, url.Port); // Should get SOCKS5 default port
-        Assert.Contains(url.Scheme, "socks");
+        Assert.Contains("socks", url.Scheme);
 
         Assert.IsTrue(VhUrlParser.TryParse("socks5h://proxy.example.com", null, out url));
         Assert.IsNotNull(url);
@@ -133,7 +133,7 @@ public class UtilTest : TestBase
         Assert.IsTrue(VhUrlParser.TryParse("http://user%40domain:p%40ss@proxy.example.com", null, out url));
         Assert.IsNotNull(url);
         var ui = url.GetComponents(UriComponents.UserInfo, UriFormat.Unescaped);
-        Assert.Contains(ui, "user@domain");
+        Assert.Contains("user@domain", ui);
 
         // invalid inputs
         Assert.IsFalse(VhUrlParser.TryParse("", null, out _));
@@ -170,8 +170,8 @@ public class UtilTest : TestBase
         var d8 = new ProxyNodeDefaults { IsEnabled = false };
         Assert.IsTrue(VhUrlParser.TryParse("http://proxy.example.com?param1=value1&param2=value2", d8, out url));
         Assert.IsNotNull(url);
-        Assert.Contains(url.Query, "param1=value1");
-        Assert.Contains(url.Query, "param2=value2");
-        Assert.Contains(url.Query, "enabled=false");
+        Assert.Contains("param1=value1", url.Query);
+        Assert.Contains("param2=value2", url.Query);
+        Assert.Contains("enabled=false", url.Query);
     }
 }

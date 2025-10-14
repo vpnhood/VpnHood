@@ -48,15 +48,15 @@ public class IpNetworkTest : TestBase
     {
         var ipNetwork = IpNetwork.Parse("192.168.23.23/32");
         var inverted = ipNetwork.Invert().ToArray();
-        Assert.AreEqual(32, inverted.Length);
+        Assert.HasCount(32, inverted);
         CollectionAssert.AreEqual(new[] { ipNetwork },
             inverted.ToIpRanges().Invert(true, false).ToIpNetworks().ToArray());
 
         ipNetwork = IpNetwork.AllV4;
-        Assert.AreEqual(0, ipNetwork.Invert().ToArray().Length);
+        Assert.IsEmpty(ipNetwork.Invert().ToArray());
 
         ipNetwork = IpNetwork.AllV6;
-        Assert.AreEqual(0, ipNetwork.Invert().ToArray().Length);
+        Assert.IsEmpty(ipNetwork.Invert().ToArray());
 
         CollectionAssert.AreEqual(IpNetwork.All,
             Array.Empty<IpNetwork>().ToIpRanges().Invert().ToIpNetworks().ToArray());

@@ -125,6 +125,23 @@ public class AppProxyNodeService(
         public bool ResetStates { get; set; }
     }
 
+    public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)
+    {
+        // update if already exists
+        var existing = ProxyNodes.FirstOrDefault(n => n.GetId() == proxyNode.GetId());
+        if (existing != null)
+            return Update(existing.Url.ToString(), proxyNode, false);
+
+        // add new node
+        ProxyNodes = ProxyNodes.Concat([proxyNode]).ToArray();
+        settingsService.Save();
+        Update();
+
+        // find current node info
+        var newNodeInfo = GetNodeInfos().Single(x => x.Node.GetId() == proxyNode.GetId());
+        return Task.FromResult(newNodeInfo);
+    }
+
     public Task<AppProxyNodeInfo> Update(string url, ProxyNode proxyNode, bool resetState)
     {
         // update latest state

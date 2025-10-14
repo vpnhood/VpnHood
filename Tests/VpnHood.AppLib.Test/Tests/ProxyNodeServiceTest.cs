@@ -176,4 +176,40 @@ public class ProxyNodeServiceTest : TestAppBase
         Assert.HasCount(10, updatedNodes);
         Assert.HasCount(1, updatedNodes.Where(n => n.Node.GetId() == nodes[0].GetId()));
     }
+
+    [TestMethod]
+    public async Task Add_single_proxy_node()
+    {
+        var nodes = new List<ProxyNode>();
+        for (int i = 0; i < 10; i++) {
+            nodes.Add(new ProxyNode {
+                Protocol = ProxyProtocol.Socks5,
+                Host = $"proxy{i}.example.com",
+                Port = 1080 + i
+            });
+        }
+
+        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        dom.App.UserSettings.ProxySettings = new AppProxySettings {
+            Mode = AppProxyMode.Custom,
+            Nodes = nodes.ToArray()
+        };
+
+        // add a new node
+        var newNode = new ProxyNode {
+            Protocol = ProxyProtocol.Http,
+            Host = $"proxy{1000}.example.com",
+            Port = 1080
+        };
+        await dom.App.Services.ProxyNodeService.Add(newNode);
+        var updatedNodes = dom.App.UserSettings.ProxySettings.Nodes;
+        Assert.HasCount(11, updatedNodes);
+        Assert.HasCount(1, updatedNodes.Where(x=>x.GetId()==newNode.GetId()));
+
+        // add same but should be duplicated
+        await dom.App.Services.ProxyNodeService.Add(newNode);
+        updatedNodes = dom.App.UserSettings.ProxySettings.Nodes;
+        Assert.HasCount(11, updatedNodes);
+        Assert.HasCount(1, updatedNodes.Where(x => x.GetId() == newNode.GetId()));
+    }
 }

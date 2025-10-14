@@ -93,7 +93,7 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
 
     public Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode)
     {
-        return ProxyNodeService.Update(proxyNodeId, proxyNode, true);
+        return ProxyNodeService.Update(proxyNodeId, proxyNode);
     }
 
     public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)

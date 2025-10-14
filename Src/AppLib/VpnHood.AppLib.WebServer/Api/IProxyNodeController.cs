@@ -7,8 +7,9 @@ public interface IProxyNodeController
 {
     Task<AppProxyNodeInfo> Parse(string text, ProxyNodeDefaults defaults);
     Task<AppProxyNodeInfo> Add(ProxyNode proxyNode);
-    Task<AppProxyNodeInfo> Update(Uri url, ProxyNode proxyNode);
-    Task Delete(Uri url);
+    Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode);
+    Task Delete(string proxyNodeId);
+    Task ResetState();
     Task<AppProxyNodeInfo[]> List();
     Task Import(string text, bool removeOld);
 }

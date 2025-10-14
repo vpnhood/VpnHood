@@ -10,6 +10,7 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 [Route("api/proxy-nodes")]
 public class ProxyNodeController : ControllerBase, IProxyNodeController
 {
+
     [HttpGet]
     public Task<AppProxyNodeInfo[]> List()
     {
@@ -22,8 +23,8 @@ public class ProxyNodeController : ControllerBase, IProxyNodeController
         throw new SwaggerOnlyException();
     }
 
-    [HttpPut]
-    public Task<AppProxyNodeInfo> Update(Uri url, ProxyNode proxyNode)
+    [HttpPut("{proxyNodeId}")]
+    public Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode)
     {
         throw new SwaggerOnlyException();
     }
@@ -34,13 +35,19 @@ public class ProxyNodeController : ControllerBase, IProxyNodeController
         throw new SwaggerOnlyException();
     }
 
-    [HttpDelete]
-    public Task Delete(Uri url)
+    [HttpDelete("{proxyNodeId}")]
+    public Task Delete(string proxyNodeId)
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("import")]
+    [HttpPost("reset-state")]
+    public Task ResetState()
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpPost("Import")]
     public Task Import(string text, bool removeOld)
     {
         throw new SwaggerOnlyException();

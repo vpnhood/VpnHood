@@ -2,6 +2,7 @@
 
 public class ProxyNode
 {
+    public string Id => $"{Protocol}-{Host}-{Port}";
     public bool IsEnabled { get; set; } = true;
     public required ProxyProtocol Protocol { get; init; }
     public required string Host { get; init; }
@@ -17,6 +18,4 @@ public class ProxyNode
             Password = Password,
             Query = IsEnabled ? "enabled=1" : null
         }.Uri;
-
-    public string GetId() => $"{Protocol}:{Host}:{Port}";
 }

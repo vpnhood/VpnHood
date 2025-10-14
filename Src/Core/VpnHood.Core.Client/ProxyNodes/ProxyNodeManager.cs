@@ -67,12 +67,12 @@ public class ProxyNodeManager : IDisposable
     {
         // remove old nodes
         proxyItems = proxyItems
-            .Where(x => proxyNodes.Any(y => y.GetId() == x.Node.GetId()))
+            .Where(x => proxyNodes.Any(y => y.Id == x.Node.Id))
             .ToArray();
 
         // add new nodes
         foreach (var proxyNode in proxyNodes) {
-            if (proxyItems.All(x => x.Node.GetId() != proxyNode.GetId())) {
+            if (proxyItems.All(x => x.Node.Id != proxyNode.Id)) {
                 var newNode = new ProxyNodeItem(new ProxyNodeInfo(proxyNode));
                 proxyItems = proxyItems.Concat([newNode]).ToArray();
             }

@@ -49,9 +49,9 @@ public class AppProxyNodeService(
                 ProxySettings.Nodes = runtimeNodes.Select(x => x.Node).ToArray();
 
             // update status
-            var nodeDict = _data.NodeInfos.ToDictionary(info => info.Node.GetId(), info => info);
+            var nodeDict = _data.NodeInfos.ToDictionary(info => info.Node.Id, info => info);
             foreach (var runtimeNode in runtimeNodes) {
-                if (nodeDict.TryGetValue(runtimeNode.Node.GetId(), out var existing))
+                if (nodeDict.TryGetValue(runtimeNode.Node.Id, out var existing))
                     existing.Status = runtimeNode.Status;
             }
 
@@ -60,7 +60,7 @@ public class AppProxyNodeService(
         }
 
         // remove any duplicates
-        _data.NodeInfos = _data.NodeInfos.DistinctBy(x => x.Node.GetId()).ToArray();
+        _data.NodeInfos = _data.NodeInfos.DistinctBy(x => x.Node.Id).ToArray();
         return _data;
     }
 
@@ -73,11 +73,11 @@ public class AppProxyNodeService(
         //   - If an info exists, reuse it and update its Node reference to the current node.
         //   - If not, create a new AppProxyNodeInfo with default status and null CountryCode.
         // - Return the list in the same order as 'nodes'. Deleted nodes are naturally excluded.
-        var nodeDict = nodeInfos.ToDictionary(info => info.Node.GetId(), info => info);
+        var nodeDict = nodeInfos.ToDictionary(info => info.Node.Id, info => info);
 
         var orderedInfos = new List<AppProxyNodeInfo>(nodes.Length);
         foreach (var node in nodes) {
-            var id = node.GetId();
+            var id = node.Id;
             if (nodeDict.TryGetValue(id, out var existing)) orderedInfos.Add(new AppProxyNodeInfo(node) {
                 Status = existing.Status,
                 CountryCode = null
@@ -108,9 +108,9 @@ public class AppProxyNodeService(
     public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)
     {
         // update if already exists
-        var existing = ProxyNodes.FirstOrDefault(n => n.GetId() == proxyNode.GetId());
+        var existing = ProxyNodes.FirstOrDefault(n => n.Id == proxyNode.Id);
         if (existing != null)
-            return Update(existing.Url, proxyNode, false);
+            return Update(existing.Id, proxyNode, false);
 
         // add new node
         ProxyNodes = ProxyNodes.Concat([proxyNode]).ToArray();
@@ -118,26 +118,21 @@ public class AppProxyNodeService(
         Update();
 
         // find current node info
-        var newNodeInfo = GetNodeInfos().Single(x => x.Node.GetId() == proxyNode.GetId());
+        var newNodeInfo = GetNodeInfos().Single(x => x.Node.Id == proxyNode.Id);
         return Task.FromResult(newNodeInfo);
     }
 
-    public Task Delete(Uri url)
+    public Task Delete(string proxyNodeId)
     {
-        var oldNodeId = ProxyNodeParser.FromUrl(url).GetId();
-        ProxyNodes = ProxyNodes.Where(x => x.GetId() != oldNodeId).ToArray();
+        ProxyNodes = ProxyNodes.Where(x => x.Id != proxyNodeId).ToArray();
         settingsService.Save();
         return Task.CompletedTask;
     }
 
-    public Task<AppProxyNodeInfo> Update(Uri url, ProxyNode proxyNode, bool resetState)
+    public Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode, bool resetState)
     {
-        // update latest state
-        var oldNode = ProxyNodeParser.FromUrl(url);
-
         // replace the ProxyNode and keep its position. find the node by GetId
-        var oldNodeId = oldNode.GetId();
-        var nodeIndex = Array.FindIndex(ProxyNodes, n => n.GetId() == oldNodeId);
+        var nodeIndex = Array.FindIndex(ProxyNodes, n => n.Id == proxyNodeId);
         if (nodeIndex == -1)
             throw new InvalidOperationException("Could not find the Proxy node.");
 
@@ -148,8 +143,8 @@ public class AppProxyNodeService(
         Update();
 
         // find current node info
-        var newNodeId = proxyNode.GetId();
-        var updatedNode = GetNodeInfos().Single(x => x.Node.GetId() == newNodeId);
+        var newNodeId = proxyNode.Id;
+        var updatedNode = GetNodeInfos().Single(x => x.Node.Id == newNodeId);
 
         // remove the existing state
         updatedNode.Status = new ProxyNodeStatus(); // reset status

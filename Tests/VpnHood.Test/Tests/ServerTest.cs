@@ -181,7 +181,7 @@ public class ServerTest : TestBase
         await client.DisposeAsync();
 
         await client.WaitForState( ClientState.Disposed);
-        await VhTestUtil.AssertEqualsWait(false, () => session.IsAlive);
+        await VhTestUtil.AssertEqualsWait(false, () => session?.IsAlive);
     }
 
     [TestMethod]

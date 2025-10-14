@@ -18,12 +18,18 @@ public class AppProxyNodeService(
     private readonly HostCountryResolver? _hostCountryResolver =
         ipLocationProvider != null ? new HostCountryResolver(ipLocationProvider) : null;
 
+    private ProxyNode[] ProxyNodes {
+        get => settingsService.UserSettings.ProxySettings.Nodes;
+        set => settingsService.UserSettings.ProxySettings.Nodes = value;
+    }
+
     public AppProxyNodeInfo[] GetNodeInfos()
     {
         var data = Update();
         return data.NodeInfos;
     }
 
+    // 
     private ServiceData Update()
     {
         var connectionInfo = vpnServiceManager.ConnectionInfo;
@@ -103,7 +109,7 @@ public class AppProxyNodeService(
     {
         // remove from local state
         var data = Update();
-        foreach (var nodeInfo in data.NodeInfos) 
+        foreach (var nodeInfo in data.NodeInfos)
             nodeInfo.Status = new ProxyNodeStatus();
 
         data.ResetStates = true;
@@ -116,6 +122,34 @@ public class AppProxyNodeService(
         public AppProxyNodeInfo[] NodeInfos { get; set; } = [];
         public bool ResetStates { get; set; }
     }
+
+    public Task<AppProxyNodeInfo> Update(string url, ProxyNode proxyNode, bool resetState)
+    {
+        // update latest state
+        var oldNode = ProxyNodeConverter.FromUrl(url);
+
+        // replace the ProxyNode and keep its position. find the node by GetId
+        var oldNodeId = oldNode.GetId();
+        var nodeIndex = Array.FindIndex(ProxyNodes, n => n.GetId() == oldNodeId);
+        if (nodeIndex == -1)
+            throw new InvalidOperationException("Could not find the Proxy node.");
+
+        ProxyNodes[nodeIndex] = proxyNode;
+        settingsService.Save();
+        if (_data != null) 
+            _data.UpdateTime = DateTime.Now; // make sure to use latest data
+        Update();
+
+        // find current node info
+        var updatedNode = GetNodeInfos().Single(x => x.Node.GetId() == oldNodeId);
+
+        // remove the existing state
+        updatedNode.Status = new ProxyNodeStatus(); // reset status
+
+        return Task.FromResult(updatedNode);
+    }
+
+
 
     public ProxyOptions GetProxyOptions()
     {

@@ -38,7 +38,7 @@ public class ProxyNodeServiceTest : TestAppBase
         await dom.App.WaitForState(AppConnectionState.Connected);
 
         var nodeInfos = dom.App.Services.ProxyNodeService.GetNodeInfos();
-        Assert.AreEqual(1, nodeInfos.Length);
+        Assert.HasCount(1, nodeInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), nodeInfos[0].Node.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, nodeInfos[0].Node.Port);
     }
@@ -76,20 +76,20 @@ public class ProxyNodeServiceTest : TestAppBase
         // make sure new status is fetched from core
         await dom.App.ForceUpdateState();
         var nodeInfos = dom.App.Services.ProxyNodeService.GetNodeInfos();
-        Assert.AreEqual(1, nodeInfos.Length);
+        Assert.HasCount(1, nodeInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), nodeInfos[0].Node.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, nodeInfos[0].Node.Port);
-        Assert.IsTrue(nodeInfos[0].Status.SucceededCount > 0);
+        Assert.IsGreaterThan(0, nodeInfos[0].Status.SucceededCount);
         var lastSucceededCount = nodeInfos[0].Status.SucceededCount;
 
         // disconnect 
         await dom.App.Disconnect();
         await dom.App.ForceUpdateState();
         nodeInfos = dom.App.Services.ProxyNodeService.GetNodeInfos();
-        Assert.AreEqual(1, nodeInfos.Length);
+        Assert.HasCount(1, nodeInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), nodeInfos[0].Node.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, nodeInfos[0].Node.Port);
-        Assert.IsTrue(nodeInfos[0].Status.SucceededCount >= lastSucceededCount);
+        Assert.IsGreaterThanOrEqualTo(lastSucceededCount, nodeInfos[0].Status.SucceededCount);
         lastSucceededCount = nodeInfos[0].Status.SucceededCount;
 
         // reconnect and make sure status is restored
@@ -97,10 +97,10 @@ public class ProxyNodeServiceTest : TestAppBase
         await dom.App.WaitForState(AppConnectionState.Connected);
         await dom.App.ForceUpdateState();
         nodeInfos = dom.App.Services.ProxyNodeService.GetNodeInfos();
-        Assert.AreEqual(1, nodeInfos.Length);
+        Assert.HasCount(1, nodeInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), nodeInfos[0].Node.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, nodeInfos[0].Node.Port);
-        Assert.IsTrue(nodeInfos[0].Status.SucceededCount >= lastSucceededCount);
+        Assert.IsGreaterThanOrEqualTo(lastSucceededCount, nodeInfos[0].Status.SucceededCount);
 
         // use more connection
         await TestAppHelper.Test_Https();
@@ -111,7 +111,7 @@ public class ProxyNodeServiceTest : TestAppBase
         dom.App.Services.ProxyNodeService.ResetStates();
         await dom.App.ForceUpdateState();
         nodeInfos = dom.App.Services.ProxyNodeService.GetNodeInfos();
-        Assert.AreEqual(1, nodeInfos.Length);
+        Assert.HasCount(1, nodeInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), nodeInfos[0].Node.Host);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Port, nodeInfos[0].Node.Port);
         Assert.AreEqual(0, nodeInfos[0].Status.SucceededCount);

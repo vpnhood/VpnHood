@@ -619,8 +619,8 @@ public class ClientAppTest : TestAppBase
         app.SetUserReview(3, "message");
         Assert.AreEqual(0, app.State.UserReviewRecommended, "It must be reset after rating.");
         Assert.IsTrue(app.Settings.UserReview?.Time >= beforeSetRateTime);
-        Assert.AreEqual(3, app.Settings.UserReview.Rating);
-        Assert.AreEqual(app.Features.Version, app.Settings.UserReview.AppVersion);
+        Assert.AreEqual(3, app.Settings.UserReview?.Rating);
+        Assert.AreEqual(app.Features.Version, app.Settings.UserReview?.AppVersion);
 
         // Connect again then access manager should receive result
         Assert.IsNull(accessManager.UserReview);

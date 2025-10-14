@@ -24,15 +24,13 @@ public class ProxyNodeServiceTest : TestAppBase
 
         // set proxy settings to use the local HTTP proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom,
-            Nodes = [
-                new ProxyNode {
-                    Protocol = ProxyProtocol.Http,
-                    Host = httpProxyServer.ListenerEndPoint.Address.ToString(),
-                    Port = httpProxyServer.ListenerEndPoint.Port
-                }
-            ]
+            Mode = AppProxyMode.Custom
         };
+        await dom.App.Services.ProxyNodeService.Add(new ProxyNode {
+            Protocol = ProxyProtocol.Http,
+            Host = httpProxyServer.ListenerEndPoint.Address.ToString(),
+            Port = httpProxyServer.ListenerEndPoint.Port
+        });
 
         await dom.App.Connect();
         await dom.App.WaitForState(AppConnectionState.Connected);
@@ -59,15 +57,13 @@ public class ProxyNodeServiceTest : TestAppBase
 
         // set proxy settings to use the local HTTP proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom,
-            Nodes = [
-                new ProxyNode {
-                    Protocol = ProxyProtocol.Http,
-                    Host = httpProxyServer.ListenerEndPoint.Address.ToString(),
-                    Port = httpProxyServer.ListenerEndPoint.Port
-                }
-            ]
+            Mode = AppProxyMode.Custom
         };
+        await dom.App.Services.ProxyNodeService.Add(new ProxyNode {
+            Protocol = ProxyProtocol.Http,
+            Host = httpProxyServer.ListenerEndPoint.Address.ToString(),
+            Port = httpProxyServer.ListenerEndPoint.Port
+        });
 
         await dom.App.Connect();
         await dom.App.WaitForState(AppConnectionState.Connected);
@@ -132,9 +128,10 @@ public class ProxyNodeServiceTest : TestAppBase
 
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom,
-            Nodes = nodes.ToArray()
+            Mode = AppProxyMode.Custom
         };
+        foreach (var proxyNode in nodes)
+            await dom.App.Services.ProxyNodeService.Add(proxyNode);
 
         // update node[2]
         var newNode = new ProxyNode {
@@ -142,10 +139,10 @@ public class ProxyNodeServiceTest : TestAppBase
             Host = $"proxy{1000}.example.com",
             Port = 1080
         };
-        await dom.App.Services.ProxyNodeService.Update(nodes[2].Id, newNode, true);
-        var updatedNodes = dom.App.UserSettings.ProxySettings.Nodes;
+        await dom.App.Services.ProxyNodeService.Update(nodes[2].Id, newNode);
+        var updatedNodes = dom.App.Services.ProxyNodeService.GetNodeInfos();
         Assert.HasCount(10, updatedNodes);
-        Assert.AreEqual(updatedNodes[2].Url, newNode.Url);
+        Assert.AreEqual(updatedNodes[2].Node.Url, newNode.Url);
     }
 
     [TestMethod]
@@ -168,8 +165,9 @@ public class ProxyNodeServiceTest : TestAppBase
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Custom,
-            Nodes = nodes.ToArray()
         };
+        foreach (var proxyNode in nodes)
+            await dom.App.Services.ProxyNodeService.Add(proxyNode);
 
         // check that duplicate is removed
         var updatedNodes = dom.App.Services.ProxyNodeService.GetNodeInfos();
@@ -191,9 +189,10 @@ public class ProxyNodeServiceTest : TestAppBase
 
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom,
-            Nodes = nodes.ToArray()
+            Mode = AppProxyMode.Custom
         };
+        foreach (var proxyNode in nodes)
+            await dom.App.Services.ProxyNodeService.Add(proxyNode);
 
         // add a new node
         var newNode = new ProxyNode {
@@ -202,15 +201,15 @@ public class ProxyNodeServiceTest : TestAppBase
             Port = 1080
         };
         await dom.App.Services.ProxyNodeService.Add(newNode);
-        var updatedNodes = dom.App.UserSettings.ProxySettings.Nodes;
+        var updatedNodes = dom.App.Services.ProxyNodeService.GetNodeInfos();
         Assert.HasCount(11, updatedNodes);
-        Assert.HasCount(1, updatedNodes.Where(x=>x.Id==newNode.Id).ToArray());
+        Assert.HasCount(1, updatedNodes.Where(x => x.Node.Id == newNode.Id).ToArray());
 
         // add same but should be duplicated
         await dom.App.Services.ProxyNodeService.Add(newNode);
-        updatedNodes = dom.App.UserSettings.ProxySettings.Nodes;
+        updatedNodes = dom.App.Services.ProxyNodeService.GetNodeInfos();
         Assert.HasCount(11, updatedNodes);
-        Assert.HasCount(1, updatedNodes.Where(x => x.Id == newNode.Id).ToArray());
+        Assert.HasCount(1, updatedNodes.Where(x => x.Node.Id == newNode.Id).ToArray());
 
         // update node[2]
         newNode = new ProxyNode {
@@ -218,10 +217,10 @@ public class ProxyNodeServiceTest : TestAppBase
             Host = $"proxy{2000}.example.com",
             Port = 2080
         };
-        await dom.App.Services.ProxyNodeService.Update(nodes[2].Id, newNode, true);
-        updatedNodes = dom.App.UserSettings.ProxySettings.Nodes;
+        await dom.App.Services.ProxyNodeService.Update(nodes[2].Id, newNode);
+        updatedNodes = dom.App.Services.ProxyNodeService.GetNodeInfos();
         Assert.HasCount(11, updatedNodes);
-        Assert.AreEqual(updatedNodes[2].Url, newNode.Url);
+        Assert.AreEqual(updatedNodes[2].Node.Url, newNode.Url);
 
         // check infos
         var updatedAppNodes = dom.App.Services.ProxyNodeService.GetNodeInfos();
@@ -231,9 +230,6 @@ public class ProxyNodeServiceTest : TestAppBase
 
         // delete node[5]
         await dom.App.Services.ProxyNodeService.Delete(nodes[5].Id);
-        updatedNodes = dom.App.UserSettings.ProxySettings.Nodes;
-        Assert.HasCount(10, updatedNodes);
-        Assert.HasCount(0, updatedNodes.Where(x => x.Id == nodes[5].Id));
         updatedAppNodes = dom.App.Services.ProxyNodeService.GetNodeInfos();
         Assert.HasCount(10, updatedAppNodes);
         Assert.HasCount(0, updatedAppNodes.Where(x => x.Node.Id == nodes[5].Id));

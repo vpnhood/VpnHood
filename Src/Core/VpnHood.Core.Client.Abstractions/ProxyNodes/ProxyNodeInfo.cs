@@ -2,6 +2,6 @@
 
 public class ProxyNodeInfo(ProxyNode node)
 {
-    public ProxyNode Node => node;
+    public ProxyNode Node { get; set; } = node;
     public ProxyNodeStatus Status { get; set; } = new();
 }

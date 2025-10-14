@@ -60,6 +60,8 @@ public class AppProxyNodeService(
             _data.UpdateTime = DateTime.Now;
         }
 
+        // remove any duplicates
+        _data.NodeInfos = _data.NodeInfos.DistinctBy(x => x.Node.GetId()).ToArray();
         return _data;
     }
 

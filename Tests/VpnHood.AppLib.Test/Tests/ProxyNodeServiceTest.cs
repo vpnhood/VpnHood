@@ -172,8 +172,8 @@ public class ProxyNodeServiceTest : TestAppBase
         };
 
         // check that duplicate is removed
-        var updatedNodes = dom.App.UserSettings.ProxySettings.Nodes;
+        var updatedNodes = dom.App.Services.ProxyNodeService.GetNodeInfos();
         Assert.HasCount(10, updatedNodes);
-        Assert.HasCount(1, updatedNodes.Where(n => n.GetId() == nodes[0].GetId()));
+        Assert.HasCount(1, updatedNodes.Where(n => n.Node.GetId() == nodes[0].GetId()));
     }
 }

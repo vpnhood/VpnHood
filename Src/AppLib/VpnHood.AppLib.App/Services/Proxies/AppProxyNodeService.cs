@@ -105,25 +105,6 @@ public class AppProxyNodeService(
             proxyNodeInfo.CountryCode = hostCountries.GetValueOrDefault(proxyNodeInfo.Node.Host);
     }
 
-
-    public void ResetStates()
-    {
-        // remove from local state
-        var data = Update();
-        foreach (var nodeInfo in data.NodeInfos)
-            nodeInfo.Status = new ProxyNodeStatus();
-
-        data.ResetStates = true;
-        settingsService.Save();
-    }
-
-    private class ServiceData
-    {
-        public DateTime UpdateTime { get; set; } = DateTime.MinValue;
-        public AppProxyNodeInfo[] NodeInfos { get; set; } = [];
-        public bool ResetStates { get; set; }
-    }
-
     public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)
     {
         // update if already exists
@@ -179,6 +160,24 @@ public class AppProxyNodeService(
     public Task Import(string text, bool resetState)
     {
         throw new NotImplementedException();
+    }
+
+    public void ResetStates()
+    {
+        // remove from local state
+        var data = Update();
+        foreach (var nodeInfo in data.NodeInfos)
+            nodeInfo.Status = new ProxyNodeStatus();
+
+        data.ResetStates = true;
+        settingsService.Save();
+    }
+
+    private class ServiceData
+    {
+        public DateTime UpdateTime { get; set; } = DateTime.MinValue;
+        public AppProxyNodeInfo[] NodeInfos { get; set; } = [];
+        public bool ResetStates { get; set; }
     }
 
     public ProxyOptions GetProxyOptions()

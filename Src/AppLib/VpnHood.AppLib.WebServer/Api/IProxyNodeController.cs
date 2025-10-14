@@ -1,14 +1,15 @@
-﻿using VpnHood.Core.Client.Abstractions.ProxyNodes;
+﻿using VpnHood.AppLib.Services.Proxies;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 
 namespace VpnHood.AppLib.WebServer.Api;
 
 public interface IProxyNodeController
 {
-    Task<ProxyNodeInfo[]> List();
-    Task<ProxyNodeInfo> Parse(string url, ProxyNodeDefaults defaults);
-    Task<ProxyNodeInfo> Update(string url, ProxyNode proxyNode);
-    Task<ProxyNodeInfo> Add(ProxyNode proxyNode);
-    Task<ProxyNodeInfo> Delete(string url);
+    Task<AppProxyNodeInfo> Parse(string text, ProxyNodeDefaults defaults);
+    Task<AppProxyNodeInfo> Add(ProxyNode proxyNode);
+    Task<AppProxyNodeInfo> Update(Uri url, ProxyNode proxyNode);
+    Task Delete(Uri url);
+    Task<AppProxyNodeInfo[]> List();
     Task Import(string text, bool removeOld);
 }
 

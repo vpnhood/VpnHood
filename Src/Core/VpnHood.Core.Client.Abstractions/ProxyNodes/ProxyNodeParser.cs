@@ -3,11 +3,40 @@ using System.Web;
 
 namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
 
-public static class VhUrlParser
+public static class ProxyNodeParser
 {
     private const string PseudoScheme = "unknown";
 
-    public static bool TryParse(
+    public static ProxyNode FromUrl(Uri uri)
+    {
+        if (!Enum.TryParse<ProxyProtocol>(uri.Scheme, ignoreCase: true, out var protocol))
+            throw new NotSupportedException($"Unsupported scheme: {uri.Scheme}");
+
+        if (string.IsNullOrWhiteSpace(uri.Host))
+            throw new ArgumentException("Proxy URL must include a host.", nameof(uri));
+
+        string? username = null;
+        string? password = null;
+        if (!string.IsNullOrEmpty(uri.UserInfo)) {
+            var parts = uri.UserInfo.Split(':', 2);
+            username = Uri.UnescapeDataString(parts[0]);
+            if (parts.Length > 1)
+                password = Uri.UnescapeDataString(parts[1]);
+        }
+
+        var port = uri.Port > 0 ? uri.Port : GetDefaultPort(protocol);
+
+        return new ProxyNode {
+            Protocol = protocol,
+            Host = uri.Host,
+            Port = port,
+            Username = username,
+            Password = password,
+            IsEnabled = true
+        };
+    }
+
+    public static bool TryParseToUrl(
         string value,
         ProxyNodeDefaults? defaults,
         [NotNullWhen(true)] out Uri? url)

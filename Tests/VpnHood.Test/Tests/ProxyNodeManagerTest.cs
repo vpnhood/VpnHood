@@ -63,7 +63,7 @@ public class ProxyNodeManagerTest : TestBase
             socketFactory: socketFactory);
 
         Assert.IsTrue(mgr.IsEnabled);
-        Assert.AreEqual(4, mgr.ProxyNodeInfos.Length);
+        Assert.HasCount(4, mgr.ProxyNodeInfos);
     }
 
     [TestMethod]

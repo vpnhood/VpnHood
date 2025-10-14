@@ -51,7 +51,7 @@ public class FileAccessManagerTest : TestBase
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token1.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
-        Assert.AreEqual(3, accessTokenDatas.Length);
+        Assert.HasCount(3, accessTokenDatas);
 
 
         // ************
@@ -73,9 +73,8 @@ public class FileAccessManagerTest : TestBase
         Assert.IsFalse(accessTokenDatas.Any(x => x.AccessToken.TokenId == token1.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
-        Assert.AreEqual(2, accessTokenDatas.Length);
-        Assert.AreEqual((await accessManager1.Session_Create(sessionRequestEx1)).ErrorCode,
-            SessionErrorCode.AccessError);
+        Assert.HasCount(2, accessTokenDatas);
+        Assert.AreEqual(SessionErrorCode.AccessError, (await accessManager1.Session_Create(sessionRequestEx1)).ErrorCode);
 
         // ************
         // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)
@@ -84,7 +83,7 @@ public class FileAccessManagerTest : TestBase
         accessTokenDatas = await accessManager2.AccessTokenService.List();
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
-        Assert.AreEqual(2, accessTokenDatas.Length);
+        Assert.HasCount(2, accessTokenDatas);
 
         // ************
         // *** TEST ***: token must be retrieved with TokenId
@@ -96,7 +95,7 @@ public class FileAccessManagerTest : TestBase
         accessManager1.CreateToken();
         var accessManager3 = new FileAccessManager(storagePath, fileAccessManagerOptions);
         accessTokenDatas = await accessManager3.AccessTokenService.List();
-        Assert.AreEqual(3, accessTokenDatas.Length);
+        Assert.HasCount(3, accessTokenDatas);
         Assert.AreEqual(SessionErrorCode.Ok, (await accessManager3.Session_Create(sessionRequestEx2)).ErrorCode,
             "access has not been retrieved");
     }

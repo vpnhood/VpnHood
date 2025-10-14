@@ -29,7 +29,6 @@ public class AppProxyNodeService(
         return data.NodeInfos;
     }
 
-    // 
     private ServiceData Update()
     {
         var connectionInfo = vpnServiceManager.ConnectionInfo;
@@ -130,7 +129,7 @@ public class AppProxyNodeService(
         // update if already exists
         var existing = ProxyNodes.FirstOrDefault(n => n.GetId() == proxyNode.GetId());
         if (existing != null)
-            return Update(existing.Url.ToString(), proxyNode, false);
+            return Update(existing.Url, proxyNode, false);
 
         // add new node
         ProxyNodes = ProxyNodes.Concat([proxyNode]).ToArray();
@@ -142,10 +141,18 @@ public class AppProxyNodeService(
         return Task.FromResult(newNodeInfo);
     }
 
-    public Task<AppProxyNodeInfo> Update(string url, ProxyNode proxyNode, bool resetState)
+    public Task Delete(Uri url)
+    {
+        var oldNodeId = ProxyNodeParser.FromUrl(url).GetId();
+        ProxyNodes = ProxyNodes.Where(x => x.GetId() != oldNodeId).ToArray();
+        settingsService.Save();
+        return Task.CompletedTask;
+    }
+
+    public Task<AppProxyNodeInfo> Update(Uri url, ProxyNode proxyNode, bool resetState)
     {
         // update latest state
-        var oldNode = ProxyNodeConverter.FromUrl(url);
+        var oldNode = ProxyNodeParser.FromUrl(url);
 
         // replace the ProxyNode and keep its position. find the node by GetId
         var oldNodeId = oldNode.GetId();
@@ -155,7 +162,7 @@ public class AppProxyNodeService(
 
         ProxyNodes[nodeIndex] = proxyNode;
         settingsService.Save();
-        if (_data != null) 
+        if (_data != null)
             _data.UpdateTime = DateTime.Now; // make sure to use latest data
         Update();
 
@@ -167,6 +174,11 @@ public class AppProxyNodeService(
         updatedNode.Status = new ProxyNodeStatus(); // reset status
 
         return Task.FromResult(updatedNode);
+    }
+
+    public Task Import(string text, bool resetState)
+    {
+        throw new NotImplementedException();
     }
 
     public ProxyOptions GetProxyOptions()

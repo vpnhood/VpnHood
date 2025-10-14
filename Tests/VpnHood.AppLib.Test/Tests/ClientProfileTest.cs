@@ -45,7 +45,7 @@ public class ClientProfileTest : TestAppBase
 
         await using var app1 = TestAppHelper.CreateClientApp(appOptions: appOptions);
         var clientProfiles = app1.ClientProfileService.List();
-        Assert.AreEqual(tokens.Length, clientProfiles.Length);
+        Assert.HasCount(tokens.Length, clientProfiles);
         Assert.AreEqual(tokens[0].TokenId, clientProfiles[0].Token.TokenId);
         Assert.AreEqual(tokens[1].TokenId, clientProfiles[1].Token.TokenId);
         Assert.AreEqual(tokens[0].TokenId,
@@ -76,7 +76,7 @@ public class ClientProfileTest : TestAppBase
         await using var app2 = TestAppHelper.CreateClientApp(appOptions: appOptions);
 
         var clientProfiles = app2.ClientProfileService.List();
-        Assert.AreEqual(tokens2.Length, clientProfiles.Length);
+        Assert.HasCount(tokens2.Length, clientProfiles);
         Assert.AreEqual(tokens2[0].TokenId, clientProfiles[0].Token.TokenId);
         Assert.AreEqual(tokens2[1].TokenId, clientProfiles[1].Token.TokenId);
         foreach (var clientProfile in clientProfiles)
@@ -228,7 +228,7 @@ public class ClientProfileTest : TestAppBase
         token1.Name = "Token 1000";
         app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         Assert.AreEqual(token1.Name, app.ClientProfileService.GetToken(token1.TokenId).Name);
-        Assert.AreEqual(profileCount, app.ClientProfileService.List().Length);
+        Assert.HasCount(profileCount, app.ClientProfileService.List());
 
         // ************
         // *** TEST ***: Update throw NotExistsException exception if tokenId does not exist
@@ -286,8 +286,7 @@ public class ClientProfileTest : TestAppBase
         appOptions.StorageFolderPath = app1.StorageFolderPath;
 
         await using var app2 = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        Assert.AreEqual(clientProfiles.Length, app2.ClientProfileService.List().Length,
-            "ClientProfiles count are not same!");
+        Assert.HasCount(clientProfiles.Length, app2.ClientProfileService.List(), "ClientProfiles count are not same!");
         Assert.IsNotNull(app2.ClientProfileService.FindById(clientProfile1.ClientProfileId));
         Assert.IsNotNull(app2.ClientProfileService.FindById(clientProfile2.ClientProfileId));
         Assert.IsNotNull(app2.ClientProfileService.GetToken(token1.TokenId));

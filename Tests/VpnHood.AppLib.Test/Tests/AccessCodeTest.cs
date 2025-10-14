@@ -1,11 +1,7 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Text;
-using System.Text.Json;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Settings;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.IpLocations.Providers.Onlines;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
@@ -85,8 +81,9 @@ public class AccessCodeTest : TestAppBase
         Assert.IsNull(clientProfile.AccessCode, "Access code must be removed from profile.");
 
         // code should not exist any return objects
-        Assert.IsFalse(ex.Data.Contains("AccessCode"));
-        Assert.IsFalse(app.State.LastError?.Data.ContainsKey("AccessCode") == true);
+        var hasAccessCode = ex.Data.Contains("AccessCode");
+        Assert.IsFalse(hasAccessCode);
+        Assert.AreNotEqual(true, app.State.LastError?.Data.ContainsKey("AccessCode"));
     }
 
     [TestMethod]

@@ -21,7 +21,7 @@ public class NetProtectTest : TestBase
             Assert.Fail("Exception expected!");
         }
         catch (Exception ex) {
-            Assert.AreEqual(ex.GetType().Name, nameof(HttpRequestException));
+            Assert.AreEqual(nameof(HttpRequestException), ex.GetType().Name);
         }
     }
 

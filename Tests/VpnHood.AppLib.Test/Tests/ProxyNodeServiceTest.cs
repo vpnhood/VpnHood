@@ -3,6 +3,7 @@ using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Proxies.HttpProxyServers;
+using VpnHood.Core.Proxies.Socks5ProxyServers;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -234,5 +235,38 @@ public class ProxyNodeServiceTest : TestAppBase
         Assert.HasCount(10, updatedAppNodes);
         Assert.HasCount(0, updatedAppNodes.Where(x => x.Node.Id == nodes[5].Id));
 
+    }
+
+    [TestMethod]
+    public async Task Connect()
+    {
+        // create a local SOCKS5 proxy using Socks5ProxyServer
+        using var socks5ProxyServer = new Socks5ProxyServer(new Socks5ProxyServerOptions {
+            ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
+        });
+        socks5ProxyServer.Start();
+
+        // create app
+        using var dom = await AppClientServerDom.Create(TestAppHelper);
+
+        // add proxy
+        dom.App.UserSettings.ProxySettings = new AppProxySettings {
+            Mode = AppProxyMode.Custom
+        };
+        var proxyNode = new ProxyNode {
+            Port = socks5ProxyServer.ListenerEndPoint.Port,
+            Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
+            Protocol = ProxyProtocol.Socks5
+        };
+        await dom.App.Services.ProxyNodeService.Add(proxyNode);
+
+        // connect
+        await dom.App.Connect();
+        await TestHelper.Test_Https();
+
+        // get info
+        await dom.App.ForceUpdateState();
+        var nodeInfos = dom.App.Services.ProxyNodeService.GetNodeInfos();
+        Assert.IsGreaterThan(0, nodeInfos[0].Status.SucceededCount);
     }
 }

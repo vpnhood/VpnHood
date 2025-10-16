@@ -21,14 +21,14 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
         });
 
         // Add
-        mapper.AddStatic(HttpMethod.PUT, baseUrl, async ctx => {
+        mapper.AddStatic(HttpMethod.POST, baseUrl, async ctx => {
             var body = ctx.ReadJson<ProxyNode>();
             var res = await Add(body);
             await ctx.SendJson(res);
         });
 
         // Update
-        mapper.AddParam(HttpMethod.PATCH, baseUrl + "{proxyNodeId}", async ctx => {
+        mapper.AddParam(HttpMethod.PUT, baseUrl + "{proxyNodeId}", async ctx => {
             var id = ctx.GetRouteParameter<string>("proxyNodeId");
             var body = ctx.ReadJson<ProxyNode>();
             var res = await Update(id, body);
@@ -84,7 +84,8 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
             throw new ArgumentException("Invalid proxy url.");
 
         var node = ProxyNodeParser.FromUrl(parsed);
-        var info = new AppProxyNodeInfo(node) {
+        var info = new AppProxyNodeInfo {
+            Node = node,
             CountryCode = null
         };
 

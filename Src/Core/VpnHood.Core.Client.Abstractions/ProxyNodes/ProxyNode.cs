@@ -1,8 +1,21 @@
-﻿namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
+﻿using System.Security.Cryptography;
+using System.Text;
+
+namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
 
 public class ProxyNode
 {
-    public string Id => $"{Protocol}-{Host}-{Port}";
+    public string Id {
+        get {
+            // it is just hash. ipv6 don't need special handling
+            var id = $"{Protocol}://{Host}:{Port}";
+            var md5 = MD5.Create();
+            var bytes = Encoding.UTF8.GetBytes(id);
+            var hashBytes = md5.ComputeHash(bytes);
+            return Convert.ToHexString(hashBytes); 
+        }
+    }
+
     public bool IsEnabled { get; set; } = true;
     public required ProxyProtocol Protocol { get; init; }
     public required string Host { get; init; }

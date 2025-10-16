@@ -25,6 +25,8 @@ public static class ProxyNodeParser
         }
 
         var port = uri.Port > 0 ? uri.Port : GetDefaultPort(protocol);
+        var valueCollection = HttpUtility.ParseQueryString(uri.Query);
+        var isEnabledValue = valueCollection["enabled"]?.ToLower() ?? "true";
 
         return new ProxyNode {
             Protocol = protocol,
@@ -32,8 +34,27 @@ public static class ProxyNodeParser
             Port = port,
             Username = username,
             Password = password,
-            IsEnabled = true
+            IsEnabled = isEnabledValue is not ("false" or "0")
         };
+    }
+
+    public static ProxyNode Normalize(ProxyNode proxyNode)
+    {
+        var defaults = new ProxyNodeDefaults {
+            IsEnabled = proxyNode.IsEnabled,
+            Password = proxyNode.Password,
+            Port = proxyNode.Port,
+            Protocol = proxyNode.Protocol,
+            Username = proxyNode.Username
+        };
+
+        var ret = TryParseToUrl(proxyNode.Host, defaults, out var uri)
+            ? FromUrl(uri)
+            : throw new ArgumentException("Invalid proxy.");
+
+        ret.Username = proxyNode.Username?.Trim();
+        ret.Password = proxyNode.Password?.Trim();
+        return ret;
     }
 
     public static bool TryParseToUrl(
@@ -102,12 +123,12 @@ public static class ProxyNodeParser
     }
 
     private sealed class UrlParts
-    {
-        public string? Scheme { get; set; }
-        public string? Host { get; set; }
-        public int? Port { get; set; }
-        public string? User { get; set; }
-        public string? Password { get; set; }
+{
+    public string? Scheme { get; set; }
+    public string? Host { get; set; }
+    public int? Port { get; set; }
+    public string? User { get; set; }
+    public string? Password { get; set; }
     }
 
     private static UrlParts ExtractParts(Uri url)

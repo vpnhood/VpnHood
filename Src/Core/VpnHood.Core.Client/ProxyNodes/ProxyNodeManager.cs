@@ -73,7 +73,9 @@ public class ProxyNodeManager : IDisposable
         // add new nodes
         foreach (var proxyNode in proxyNodes) {
             if (proxyItems.All(x => x.Node.Id != proxyNode.Id)) {
-                var newNode = new ProxyNodeItem(new ProxyNodeInfo(proxyNode));
+                var newNode = new ProxyNodeItem(new ProxyNodeInfo {
+                    Node = proxyNode
+                });
                 proxyItems = proxyItems.Concat([newNode]).ToArray();
             }
         }

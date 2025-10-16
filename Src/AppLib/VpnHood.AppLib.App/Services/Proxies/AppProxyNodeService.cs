@@ -55,7 +55,8 @@ public class AppProxyNodeService
                 var existingNodeIds = _data.NodeInfos.Select(n => n.Node.Id);
                 var newNodes = runtimeNodes
                     .Where(n => !existingNodeIds.Contains(n.Node.Id))
-                    .Select(nodeInfo => new AppProxyNodeInfo(nodeInfo.Node) {
+                    .Select(nodeInfo => new AppProxyNodeInfo {
+                        Node = nodeInfo.Node,
                         CountryCode = null,
                         Status = nodeInfo.Status
                     });
@@ -93,13 +94,16 @@ public class AppProxyNodeService
 
     public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)
     {
+        proxyNode = ProxyNodeParser.Normalize(proxyNode);
+
         // update if already exists
         var existing = _data.NodeInfos.FirstOrDefault(n => n.Node.Id == proxyNode.Id);
         if (existing != null)
             return Update(proxyNode.Id, proxyNode);
 
         // add new node
-        var newNodeInfo = new AppProxyNodeInfo(proxyNode) {
+        var newNodeInfo = new AppProxyNodeInfo {
+            Node = proxyNode,
             CountryCode = null,
             Status = new ProxyNodeStatus()
         };
@@ -127,6 +131,8 @@ public class AppProxyNodeService
 
     public Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode)
     {
+        proxyNode = ProxyNodeParser.Normalize(proxyNode);
+
         // replace the ProxyNode and keep its position. find the node by GetId
         var nodeInfo = _data.NodeInfos.Single(x => x.Node.Id == proxyNodeId);
         nodeInfo.Node = proxyNode;

@@ -31,6 +31,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AllowEndPointStrategy = true,
             AllowRecommendUserReviewByServer = false,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            WebUiPort = appConfigs.WebUiPort,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             UpdaterOptions = new AppUpdaterOptions {

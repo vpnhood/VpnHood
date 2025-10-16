@@ -32,6 +32,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AdjustForSystemBars = false,
             UserReviewProvider = new GooglePlayInAppUserReviewProvider(AppConfigs.IsDebugMode),
             AllowEndPointStrategy = true,
+            WebUiPort = appConfigs.WebUiPort,
             AllowRecommendUserReviewByServer = false,
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,

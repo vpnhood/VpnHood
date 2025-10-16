@@ -54,6 +54,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             TrackerFactory = AppConfigs.IsDebug ? new NullTrackerFactory() : new FirebaseAnalyticsTrackerFactory(),
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            WebUiPort = appConfigs.WebUiPort,
             AllowRecommendUserReviewByServer = true,
             AdOptions = new AppAdOptions {
                 PreloadAd = true,

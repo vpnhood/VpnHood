@@ -23,12 +23,12 @@ internal class App
         return new AppOptions(appId: appConfigs.AppId, Path.GetDirectoryName(StoragePath)!, AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             UiName = "VpnHoodConnect",
-            WebUiPort = appConfigs.WebUiPort,
             Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = false,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            WebUiPort = appConfigs.WebUiPort,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
             AllowRecommendUserReviewByServer = true,

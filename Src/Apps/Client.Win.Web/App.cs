@@ -19,13 +19,13 @@ public class App : Application
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resources = resources,
             CustomData = appConfigs.CustomData,
-            WebUiPort = appConfigs.WebUiPort,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
             IsLocalNetworkSupported = true,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            WebUiPort = appConfigs.WebUiPort,
             AllowRecommendUserReviewByServer = false,
             LogServiceOptions = {
                 SingleLineConsole = false

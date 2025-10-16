@@ -27,9 +27,9 @@ internal class App
             AllowEndPointStrategy = true,
             DisconnectOnDispose = true,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            WebUiPort = appConfigs.WebUiPort,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             CustomData = appConfigs.CustomData,
-            WebUiPort = appConfigs.WebUiPort,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AllowRecommendUserReviewByServer = false,
             UpdaterOptions = new AppUpdaterOptions {

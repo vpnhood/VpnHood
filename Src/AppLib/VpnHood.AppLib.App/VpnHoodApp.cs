@@ -168,6 +168,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsTcpProxySupported = device.IsTcpProxySupported,
             IsUserReviewSupported = options.UserReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
+            WebUiPort = options.WebUiPort,
             ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
             AppId = options.AppId,
             AppName = options.Resources.Strings.AppName,
@@ -176,8 +177,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsDebugMode = options.IsDebugMode,
             CustomData = options.CustomData,
             PremiumFeatures = options.PremiumFeatures,
-            IsAdSupported = options.AdProviderItems.Length > 0,
-            WebUiPort = options.WebUiPort
+            IsAdSupported = options.AdProviderItems.Length > 0
         };
 
         // create tracker

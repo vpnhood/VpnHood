@@ -35,10 +35,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             IsAddAccessKeySupported = false,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            WebUiPort = appConfigs.WebUiPort,
             AdjustForSystemBars = false,
             AllowRecommendUserReviewByServer = true,
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
-            WebUiPort = appConfigs.WebUiPort,
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 PromptDelay = TimeSpan.FromDays(1)

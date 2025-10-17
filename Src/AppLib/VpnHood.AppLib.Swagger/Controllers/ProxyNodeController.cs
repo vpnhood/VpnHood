@@ -10,6 +10,11 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 [Route("api/proxy-nodes")]
 public class ProxyNodeController : ControllerBase, IProxyNodeController
 {
+    [HttpGet("device")]
+    public Task<AppProxyNodeInfo?> GetDevice()
+    {
+        throw new SwaggerOnlyException();
+    }
 
     [HttpGet]
     public Task<AppProxyNodeInfo[]> List()

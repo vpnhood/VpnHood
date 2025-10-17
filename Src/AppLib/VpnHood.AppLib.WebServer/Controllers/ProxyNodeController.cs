@@ -14,6 +14,12 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
     {
         const string baseUrl = "/api/proxy-nodes/";
 
+        // Get device proxy
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "device", async ctx => {
+            var res = await GetDevice();
+            await ctx.SendJson(res);
+        });
+
         // List
         mapper.AddStatic(HttpMethod.GET, baseUrl, async ctx => {
             var res = await List();
@@ -72,6 +78,12 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
         return Task.CompletedTask;
     }
 
+    public Task<AppProxyNodeInfo?> GetDevice()
+    {
+        var result = ProxyNodeService.GetDeviceProxy();
+        return Task.FromResult(result);
+    }
+    
     public Task<AppProxyNodeInfo[]> List()
     {
         var result = ProxyNodeService.ListProxies();

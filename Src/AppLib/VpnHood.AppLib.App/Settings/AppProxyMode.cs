@@ -3,6 +3,6 @@
 public enum AppProxyMode
 {
     Disabled,
-    System,
+    Device,
     Custom
 }

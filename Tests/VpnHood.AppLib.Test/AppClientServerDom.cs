@@ -21,7 +21,8 @@ public class AppClientServerDom : IDisposable
         var token = testAppHelper.CreateAccessToken(server);
 
         // create app
-        App = testAppHelper.CreateClientApp(device: device);
+        var options = testAppHelper.CreateAppOptions();
+        App = testAppHelper.CreateClientApp(device: device, appOptions: options);
         ClientProfile = App.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         App.UserSettings.ClientProfileId = ClientProfile.ClientProfileId;
         App.SettingsService.Save();

@@ -1,5 +1,7 @@
 ﻿using System.Net;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Proxies.HttpProxyServers;
@@ -12,7 +14,7 @@ public class ProxyNodeServiceTest : TestAppBase
 {
 
     [TestMethod]
-    public async Task GetNodeInfos()
+    public async Task List()
     {
         // create a local HTTP proxy using HttpProxyServer
         using var httpProxyServer = new HttpProxyServer(new HttpProxyServerOptions {
@@ -238,6 +240,35 @@ public class ProxyNodeServiceTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task Get_device_proxy()
+    {
+        using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
+        var deviceUiProvider = (TestDeviceUiProvider)dom.App.Services.DeviceUiProvider;
+        deviceUiProvider.DeviceProxySettings = new DeviceProxySettings {
+            ProxyUrl = new Uri("http://foo.local"),
+        };
+
+        dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.Disabled;
+        Assert.IsFalse(dom.App.State.IsProxyNodeActive);
+
+        var deviceProxy = dom.App.Services.ProxyNodeService.GetDeviceProxy();
+        Assert.IsNotNull(deviceProxy);
+        Assert.AreEqual(deviceUiProvider.DeviceProxySettings.ProxyUrl.Host, deviceProxy.Node.Url.Host);
+        Assert.IsFalse(dom.App.State.IsProxyNodeActive);
+
+        // set proxy options to use device proxy
+        dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.Device;
+        Assert.IsTrue(dom.App.State.IsProxyNodeActive);
+        Assert.HasCount(1, dom.App.Services.ProxyNodeService.GetProxyOptions().ProxyNodes);
+        Assert.AreEqual(deviceProxy.Node.Id, dom.App.Services.ProxyNodeService.GetProxyOptions().ProxyNodes.First().Id);
+
+        // disable proxy
+        dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.Disabled;
+        Assert.IsFalse(dom.App.State.IsProxyNodeActive);
+        Assert.HasCount(0, dom.App.Services.ProxyNodeService.GetProxyOptions().ProxyNodes);
+    }
+
+    [TestMethod]
     public async Task Connect()
     {
         // create a local SOCKS5 proxy using Socks5ProxyServer
@@ -269,4 +300,5 @@ public class ProxyNodeServiceTest : TestAppBase
         var nodeInfos = dom.App.Services.ProxyNodeService.ListProxies();
         Assert.IsGreaterThan(0, nodeInfos[0].Status.SucceededCount);
     }
+
 }

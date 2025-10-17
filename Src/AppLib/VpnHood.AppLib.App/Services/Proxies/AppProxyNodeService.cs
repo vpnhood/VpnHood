@@ -40,7 +40,7 @@ public class AppProxyNodeService
         get {
             return ProxySettings.Mode switch {
                 AppProxyMode.Disabled => false,
-                AppProxyMode.System =>
+                AppProxyMode.Device =>
                     _deviceUiProvider.IsProxySettingsSupported &&
                     _deviceUiProvider.GetProxySettings() != null,
                 _ => _data.CustomNodeInfos.Any()
@@ -282,7 +282,7 @@ public class AppProxyNodeService
 
         var proxyNodes = ProxySettings.Mode switch {
             AppProxyMode.Disabled => [],
-            AppProxyMode.System => _data.SystemNodeInfo != null ? [_data.SystemNodeInfo.Node] : [],
+            AppProxyMode.Device => _data.SystemNodeInfo != null ? [_data.SystemNodeInfo.Node] : [],
             AppProxyMode.Custom => _data.CustomNodeInfos.Select(x => x.Node).ToArray(),
             _ => []
         };

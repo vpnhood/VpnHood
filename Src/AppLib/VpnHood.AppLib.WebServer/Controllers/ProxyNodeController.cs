@@ -74,7 +74,7 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
 
     public Task<AppProxyNodeInfo[]> List()
     {
-        var result = ProxyNodeService.GetNodeInfos();
+        var result = ProxyNodeService.ListProxies();
         return Task.FromResult(result);
     }
 

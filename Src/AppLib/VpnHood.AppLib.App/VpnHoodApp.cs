@@ -148,7 +148,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId;
 
         // set the default server location if not set
-        var uiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
+        var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
 
         // initialize features
         Features = new AppFeatures {
@@ -196,7 +196,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Services = new AppServices {
             CultureProvider = options.CultureProvider ?? new DefaultAppCultureProvider(this),
             UserReviewProvider = options.UserReviewProvider,
-            UiProvider = uiProvider,
+            DeviceUiProvider = deviceUiProvider,
             Tracker = tracker,
             AccountService = options.AccountProvider is null ? null :
                 new AppAccountService(this, options.AccountProvider),
@@ -209,6 +209,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 storageFolder: Path.Combine(StorageFolderPath, "proxy_nodes"),
                 ipLocationProvider: _ipRangeLocationProvider,
                 vpnServiceManager: _vpnServiceManager,
+                deviceUiProvider: deviceUiProvider,
                 settingsService: settingsService)
         };
 
@@ -228,7 +229,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             isPreloadAdEnabled: options.AdOptions.PreloadAd,
             rejectAdBlocker: options.AdOptions.RejectAdBlocker,
             allowedPrivateDnsProviders: options.AdOptions.AllowedPrivateDnsProviders,
-            uiProvider: uiProvider);
+            uiProvider: deviceUiProvider);
 
         // temporary, enable internal ad provider if exists and setting is enabled
         if (options.AdProviderItems.Any(x => x.Name == "InternalAd"))
@@ -285,10 +286,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     DropQuic = UserSettings.DropQuic,
                     UseTcpProxy = UserSettings.UseTcpProxy,
                     DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                    ProxyNodes = Services.ProxyNodeService.GetProxyOptions(),
+                    ProxyOptions = Services.ProxyNodeService.GetProxyOptions(),
                 };
 
                 // it is not important to take effect immediately
+                // clear all services pending state after reconfigure
                 _ = _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None);
 
                 // check is disconnect required
@@ -399,11 +401,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LastError = LastError?.ToAppDto(),
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol ?? UserSettings.ChannelProtocol,
-                IsNotificationEnabled = Services.UiProvider.IsNotificationEnabled,
-                SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.UiProvider.GetSystemPrivateDns()),
+                IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
+                SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetSystemPrivateDns()),
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
+                IsProxyNodeActive = Services.ProxyNodeService.IsProxyNodeActive,
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
-                    ? Services.UiProvider.GetSystemBarsInfo(uiContext)
+                    ? Services.DeviceUiProvider.GetSystemBarsInfo(uiContext)
                     : SystemBarsInfo.Default,
             };
 
@@ -869,7 +872,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return;
 
         // QuickLaunch
-        if (Services.UiProvider.IsRequestQuickLaunchSupported &&
+        if (Services.DeviceUiProvider.IsRequestQuickLaunchSupported &&
             IsPremiumFeatureAllowed(AppFeature.QuickLaunch) &&
             !_quickLaunchRecommended &&
             !Settings.UserSettings.IsQuickLaunchPrompted &&
@@ -879,11 +882,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         // Notification
-        if (Services.UiProvider.IsRequestNotificationSupported &&
+        if (Services.DeviceUiProvider.IsRequestNotificationSupported &&
             !Settings.IsNotificationRequested) {
             try {
                 VhLogger.Instance.LogInformation("Prompting for notifications...");
-                await Services.UiProvider.RequestNotification(uiContext, cancellationToken).Vhc();
+                await Services.DeviceUiProvider.RequestNotification(uiContext, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 ReportError(ex, "Could not enable Notification.");

@@ -12,6 +12,7 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
+using Uri = System.Uri;
 
 namespace VpnHood.AppLib.Droid.Common;
 
@@ -186,10 +187,9 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
 
             // Get exclusion list
             var exclusionList = httpProxy.GetExclusionList()?.ToArray() ?? [];
-
             return new DeviceProxySettings {
-                Host = httpProxy.Host,
-                Port = httpProxy.Port,
+                ProxyUrl = new UriBuilder(
+                    scheme: "http://", host: httpProxy.Host, portNumber: httpProxy.Port).Uri,
                 PacFileUrl = httpProxy.PacFileUrl?.ToString()?.Trim(),
                 ExcludeDomains = exclusionList
             };

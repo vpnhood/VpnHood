@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Abstractions.ProxyNodes;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.IpLocations;
 using VpnHood.Core.Toolkit.Utils;
@@ -12,70 +14,189 @@ public class AppProxyNodeService
 {
     private readonly ServiceData _data;
     private readonly HostCountryResolver? _hostCountryResolver;
-    private readonly string _infoFilePath;
+    private readonly string _customInfoFilePath;
+    private readonly IDeviceUiProvider _deviceUiProvider;
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly AppSettingsService _settingsService;
     private AppProxySettings ProxySettings => _settingsService.UserSettings.ProxySettings;
 
     public AppProxyNodeService(string storageFolder,
         IIpLocationProvider? ipLocationProvider,
+        IDeviceUiProvider deviceUiProvider,
         VpnServiceManager vpnServiceManager,
         AppSettingsService settingsService)
     {
         Directory.CreateDirectory(storageFolder);
-        _infoFilePath = Path.Combine(storageFolder, "proxy_infos.json");
+        _customInfoFilePath = Path.Combine(storageFolder, "proxy_infos.json");
+        _deviceUiProvider = deviceUiProvider;
         _vpnServiceManager = vpnServiceManager;
         _settingsService = settingsService;
         _hostCountryResolver = ipLocationProvider != null ? new HostCountryResolver(ipLocationProvider) : null;
-        _data = JsonUtils.TryDeserializeFile<ServiceData>(_infoFilePath) ?? new ServiceData();
+        _data = JsonUtils.TryDeserializeFile<ServiceData>(_customInfoFilePath) ?? new ServiceData();
+        vpnServiceManager.Reconfigured += OnVpnServiceManagerOnReconfigured;
     }
 
-    public AppProxyNodeInfo[] GetNodeInfos()
+    public bool IsProxyNodeActive {
+        get {
+            return ProxySettings.Mode switch {
+                AppProxyMode.Disabled => false,
+                AppProxyMode.System =>
+                    _deviceUiProvider.IsProxySettingsSupported &&
+                    _deviceUiProvider.GetProxySettings() != null,
+                _ => _data.CustomNodeInfos.Any()
+            };
+        }
+    }
+
+    public AppProxyNodeInfo? GetDeviceProxy()
     {
-        var data = Update();
-        return data.NodeInfos;
+        UpdateNodesByCore();
+        return _data.SystemNodeInfo;
     }
 
-    private ServiceData Update()
+    public AppProxyNodeInfo[] ListProxies()
+    {
+        UpdateNodesByCore();
+        return _data.CustomNodeInfos;
+    }
+
+    public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)
+    {
+        proxyNode = ProxyNodeParser.Normalize(proxyNode);
+
+        // update if already exists
+        var existing = _data.CustomNodeInfos.FirstOrDefault(n => n.Node.Id == proxyNode.Id);
+        if (existing != null)
+            return Update(proxyNode.Id, proxyNode);
+
+        // add new node
+        var newNodeInfo = new AppProxyNodeInfo {
+            Node = proxyNode,
+            CountryCode = null,
+            Status = new ProxyNodeStatus()
+        };
+        _data.CustomNodeInfos = _data.CustomNodeInfos.Append(newNodeInfo).ToArray();
+
+        Save();
+        return Task.FromResult(newNodeInfo);
+    }
+
+    public Task Delete(string proxyNodeId)
+    {
+        _data.CustomNodeInfos = _data.CustomNodeInfos.Where(x => x.Node.Id != proxyNodeId).ToArray();
+        Save();
+        return Task.CompletedTask;
+    }
+
+    public Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode)
+    {
+        proxyNode = ProxyNodeParser.Normalize(proxyNode);
+
+        // replace the ProxyNode and keep its position. find the node by GetId
+        var nodeInfo = _data.CustomNodeInfos.Single(x => x.Node.Id == proxyNodeId);
+        nodeInfo.Node = proxyNode;
+        Save();
+
+        var updatedNode = ListProxies().Single(x => x.Node.Id == proxyNode.Id);
+        return Task.FromResult(updatedNode);
+    }
+
+    private void UpdateNodesByCore()
+    {
+        UpdateCustomNodes();
+        UpdateSystemNode();
+
+        // save if updated from vpn service
+        if (ShouldUpdateNodesFromVpnService)
+            Save(updateSettings: false);
+    }
+
+
+    private void UpdateSystemNode()
     {
         var connectionInfo = _vpnServiceManager.ConnectionInfo;
         var runtimeNodes = connectionInfo.SessionStatus?.ProxyManagerStatus.ProxyNodeInfos ?? [];
 
-        // update from runtimeNodes
-        if (connectionInfo.CreatedTime > _data.UpdateTime && !_vpnServiceManager.IsReconfiguring) {
+        if (!_deviceUiProvider.IsProxySettingsSupported)
+            return;
 
-            // overwrite Settings node if remote url list exists
-            if (runtimeNodes.Any() &&
-                ProxySettings.Mode is AppProxyMode.Custom &&
-                ProxySettings.RemoteNotesUrl != null) {
-                // remove NodeInfos that are not in runtimeNodes
-                var runtimeNodeIds = runtimeNodes.Select(n => n.Node.Id);
-                _data.NodeInfos = _data.NodeInfos.Where(n => runtimeNodeIds.Contains(n.Node.Id)).ToArray();
+        var oldDeviceNode = _data.SystemNodeInfo?.Node;
 
-                // add NodeInfos that are in runtimeNodes but not in NodeInfos
-                var existingNodeIds = _data.NodeInfos.Select(n => n.Node.Id);
-                var newNodes = runtimeNodes
-                    .Where(n => !existingNodeIds.Contains(n.Node.Id))
-                    .Select(nodeInfo => new AppProxyNodeInfo {
-                        Node = nodeInfo.Node,
-                        CountryCode = null,
-                        Status = nodeInfo.Status
-                    });
-                _data.NodeInfos = _data.NodeInfos.Concat(newNodes).ToArray();
+        try {
+            // update device proxy node 
+            var deviceProxySettings = _deviceUiProvider.GetProxySettings();
+            if (deviceProxySettings?.ProxyUrl is null) {
+                _data.SystemNodeInfo = null;
+                return;
             }
+
+            // parse device proxy url
+            var deviceProxyNode = VhUtils.TryInvoke("Parse device proxy url",
+                () => ProxyNodeParser.FromUrl(deviceProxySettings.ProxyUrl));
+            if (deviceProxyNode is null) {
+                _data.SystemNodeInfo = null;
+                return;
+            }
+
+            // ensure SystemNodeInfo exists
+            _data.SystemNodeInfo ??= new AppProxyNodeInfo {
+                Node = deviceProxyNode,
+                CountryCode = null,
+                Status = new ProxyNodeStatus()
+            };
+
+            // update node info
+            _data.SystemNodeInfo.Node = deviceProxyNode;
 
             // update status
-            var nodeDict = _data.NodeInfos.ToDictionary(info => info.Node.Id, info => info);
-            foreach (var runtimeNode in runtimeNodes) {
-                if (nodeDict.TryGetValue(runtimeNode.Node.Id, out var existing))
-                    existing.Status = runtimeNode.Status;
+            if (ShouldUpdateNodesFromVpnService) {
+                var runtimeNode = runtimeNodes.FirstOrDefault(n => n.Node.Id == deviceProxyNode.Id);
+                if (runtimeNode != null)
+                    _data.SystemNodeInfo.Status = runtimeNode.Status;
             }
+        }
+        finally {
+            if (_data.SystemNodeInfo?.Node.Id != oldDeviceNode?.Id) {
+                Save(updateSettings: true); // fire change if node changed
+            }
+        }
+    }
 
-            _data.ResetStates = false;
-            Save();
+    private void UpdateCustomNodes()
+    {
+        if (!ShouldUpdateNodesFromVpnService ||
+            ProxySettings.Mode is not AppProxyMode.Custom)
+            return;
+
+        var connectionInfo = _vpnServiceManager.ConnectionInfo;
+        var runtimeNodes = connectionInfo.SessionStatus?.ProxyManagerStatus.ProxyNodeInfos ?? [];
+
+        // overwrite Settings node if remote url list exists
+        if (runtimeNodes.Any() &&
+            ProxySettings.Mode is AppProxyMode.Custom &&
+            ProxySettings.RemoteNotesUrl != null) {
+            // remove NodeInfos that are not in runtimeNodes
+            var runtimeNodeIds = runtimeNodes.Select(n => n.Node.Id);
+            _data.CustomNodeInfos = _data.CustomNodeInfos.Where(n => runtimeNodeIds.Contains(n.Node.Id)).ToArray();
+
+            // add NodeInfos that are in runtimeNodes but not in NodeInfos
+            var existingNodeIds = _data.CustomNodeInfos.Select(n => n.Node.Id);
+            var newNodes = runtimeNodes
+                .Where(n => !existingNodeIds.Contains(n.Node.Id))
+                .Select(nodeInfo => new AppProxyNodeInfo {
+                    Node = nodeInfo.Node,
+                    CountryCode = null,
+                    Status = nodeInfo.Status
+                });
+            _data.CustomNodeInfos = _data.CustomNodeInfos.Concat(newNodes).ToArray();
         }
 
-        return _data;
+        // update status
+        var nodeDict = _data.CustomNodeInfos.ToDictionary(info => info.Node.Id, info => info);
+        foreach (var runtimeNode in runtimeNodes) {
+            if (nodeDict.TryGetValue(runtimeNode.Node.Id, out var existing))
+                existing.Status = runtimeNode.Status;
+        }
     }
 
     // ReSharper disable once UnusedMember.Local
@@ -93,31 +214,33 @@ public class AppProxyNodeService
             proxyNodeInfo.CountryCode = hostCountries.GetValueOrDefault(proxyNodeInfo.Node.Host);
     }
 
-    public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)
+    private bool ShouldUpdateNodesFromVpnService =>
+        _vpnServiceManager.ConnectionInfo.CreatedTime > _data.UpdateTime &&
+        !_vpnServiceManager.IsReconfiguring;
+
+    public Task Import(string text, bool resetState)
     {
-        proxyNode = ProxyNodeParser.Normalize(proxyNode);
-
-        // update if already exists
-        var existing = _data.NodeInfos.FirstOrDefault(n => n.Node.Id == proxyNode.Id);
-        if (existing != null)
-            return Update(proxyNode.Id, proxyNode);
-
-        // add new node
-        var newNodeInfo = new AppProxyNodeInfo {
-            Node = proxyNode,
-            CountryCode = null,
-            Status = new ProxyNodeStatus()
-        };
-        _data.NodeInfos = _data.NodeInfos.Append(newNodeInfo).ToArray();
-
-        Save();
-        return Task.FromResult(newNodeInfo);
+        throw new NotImplementedException();
     }
 
-    private void Save()
+    public void ResetStates()
+    {
+        // remove from local state
+        foreach (var nodeInfo in _data.CustomNodeInfos)
+            nodeInfo.Status = new ProxyNodeStatus();
+
+        // reset system proxy node status
+        if (_data.SystemNodeInfo != null)
+            _data.SystemNodeInfo.Status = new ProxyNodeStatus();
+
+        _data.ResetStates = true;
+        Save();
+    }
+
+    private void Save(bool updateSettings = true)
     {
         _data.UpdateTime = DateTime.Now; // make sure to use latest data
-        _data.NodeInfos = _data.NodeInfos.DistinctBy(x => x.Node.Id).ToArray(); // remove duplicates
+        _data.CustomNodeInfos = _data.CustomNodeInfos.DistinctBy(x => x.Node.Id).ToArray(); // remove duplicates
 
         // customize serialization to ignore Url and Id properties
         var resolver = new DefaultJsonTypeInfoResolver();
@@ -140,60 +263,41 @@ public class AppProxyNodeService
             TypeInfoResolver = resolver
         });
 
-        File.WriteAllText(_infoFilePath, json);
-        _settingsService.Save(); // fire changes
+        File.WriteAllText(_customInfoFilePath, json);
+
+        if (updateSettings)
+            _settingsService.Save(); // fire changes
     }
 
-    public Task Delete(string proxyNodeId)
+    private void OnVpnServiceManagerOnReconfigured(object? sender,
+        ClientReconfigureParams clientReconfigureParams)
     {
-        _data.NodeInfos = _data.NodeInfos.Where(x => x.Node.Id != proxyNodeId).ToArray();
-        Save();
-        return Task.CompletedTask;
+        if (clientReconfigureParams.ProxyOptions.ResetStates)
+            _data.ResetStates = false;
     }
 
-    public Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode)
+    public ProxyOptions GetProxyOptions()
     {
-        proxyNode = ProxyNodeParser.Normalize(proxyNode);
+        UpdateNodesByCore();
 
-        // replace the ProxyNode and keep its position. find the node by GetId
-        var nodeInfo = _data.NodeInfos.Single(x => x.Node.Id == proxyNodeId);
-        nodeInfo.Node = proxyNode;
-        Save();
+        var proxyNodes = ProxySettings.Mode switch {
+            AppProxyMode.Disabled => [],
+            AppProxyMode.System => _data.SystemNodeInfo != null ? [_data.SystemNodeInfo.Node] : [],
+            AppProxyMode.Custom => _data.CustomNodeInfos.Select(x => x.Node).ToArray(),
+            _ => []
+        };
 
-        var updatedNode = GetNodeInfos().Single(x => x.Node.Id == proxyNode.Id);
-        return Task.FromResult(updatedNode);
-    }
-
-    public Task Import(string text, bool resetState)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void ResetStates()
-    {
-        // remove from local state
-        foreach (var nodeInfo in _data.NodeInfos)
-            nodeInfo.Status = new ProxyNodeStatus();
-
-        _data.ResetStates = true;
-        Save();
+        return new ProxyOptions {
+            ResetStates = _data.ResetStates,
+            ProxyNodes = proxyNodes
+        };
     }
 
     private class ServiceData
     {
         public DateTime UpdateTime { get; set; } = DateTime.MinValue;
-        public AppProxyNodeInfo[] NodeInfos { get; set; } = [];
+        public AppProxyNodeInfo[] CustomNodeInfos { get; set; } = [];
+        public AppProxyNodeInfo? SystemNodeInfo { get; set; }
         public bool ResetStates { get; set; }
-    }
-
-    public ProxyOptions GetProxyOptions()
-    {
-        var data = Update();
-        return new ProxyOptions {
-            ResetStates = data.ResetStates,
-            ProxyNodes = data.NodeInfos
-                .Select(x => x.Node)
-                .ToArray()
-        };
     }
 }

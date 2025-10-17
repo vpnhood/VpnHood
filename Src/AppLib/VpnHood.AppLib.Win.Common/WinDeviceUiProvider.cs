@@ -14,8 +14,7 @@ public class WinDeviceUiProvider : NullDeviceUiProvider
             return null;
 
         return new DeviceProxySettings {
-            Host = proxyUrl.Host,
-            Port = proxyUrl.Port,
+            ProxyUrl = proxyUrl,
             PacFileUrl = null,
             ExcludeDomains = []
         };

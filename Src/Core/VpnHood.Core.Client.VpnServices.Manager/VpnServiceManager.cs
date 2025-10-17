@@ -37,6 +37,7 @@ public class VpnServiceManager : IDisposable
     private readonly Job _updateConnectionInfoJob;
 
     public event EventHandler? StateChanged;
+    public event EventHandler<ClientReconfigureParams>? Reconfigured;
     public string LogFilePath => Path.Combine(_device.VpnServiceConfigFolder, ClientOptions.VpnLogFileName);
 
     public VpnServiceManager(IDevice device, TimeSpan? eventWatcherInterval)
@@ -422,8 +423,10 @@ public class VpnServiceManager : IDisposable
     {
         IsReconfiguring = true;
         try {
-            if (IsStarted)
+            if (IsStarted) {
                 await SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken);
+                Reconfigured?.Invoke(this, reconfigureParams );
+            }
         }
         finally {
             IsReconfiguring = false;

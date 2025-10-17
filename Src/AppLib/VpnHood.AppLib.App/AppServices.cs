@@ -11,7 +11,7 @@ public class AppServices
     public required AppAccountService? AccountService { get; init; }
     public required AppUpdaterService? UpdaterService { get; init; }
     public required AppProxyNodeService ProxyNodeService { get; init; }
-    public required IDeviceUiProvider UiProvider { get; init; }
+    public required IDeviceUiProvider DeviceUiProvider { get; init; }
     public required IAppCultureProvider CultureProvider { get; init; }
     public required IAppUserReviewProvider? UserReviewProvider { get; init; }
     public required ITracker Tracker { get; set; }

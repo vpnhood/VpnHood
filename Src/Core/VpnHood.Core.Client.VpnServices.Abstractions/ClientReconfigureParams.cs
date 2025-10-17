@@ -9,5 +9,5 @@ public class ClientReconfigureParams
     public required bool DropUdp { get; set; }
     public required bool UseTcpProxy { get; set; }
     public required ChannelProtocol ChannelProtocol { get; set; }
-    public required ProxyOptions ProxyNodes { get; set; } = new();
+    public required ProxyOptions ProxyOptions { get; set; } = new();
 }

@@ -2,8 +2,7 @@
 
 public class DeviceProxySettings
 {
-    public required string Host { get; set; }
-    public required int Port { get; set; }
-    public string[] ExcludeDomains { get; set; } = [];
-    public string? PacFileUrl { get; set; }
+    public required Uri ProxyUrl { get; init; }
+    public string[] ExcludeDomains { get; init; } = [];
+    public string? PacFileUrl { get; init; }
 }

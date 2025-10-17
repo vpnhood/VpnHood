@@ -56,12 +56,12 @@ internal class IntentsController : ControllerBase, IIntentController
 
     public Task<bool> RequestQuickLaunch()
     {
-        return App.Services.UiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.DeviceUiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
     public Task<bool> RequestNotification()
     {
-        return App.Services.UiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.DeviceUiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
     public Task RequestUserReview()
@@ -74,31 +74,31 @@ internal class IntentsController : ControllerBase, IIntentController
 
     public Task OpenSystemKillSwitchSettings()
     {
-        App.Services.UiProvider.OpenSystemKillSwitchSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenSystemKillSwitchSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
     public Task OpenSystemAlwaysOnSettings()
     {
-        App.Services.UiProvider.OpenSystemAlwaysOnSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenSystemAlwaysOnSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
     public Task OpenSystemSettings()
     {
-        App.Services.UiProvider.OpenSystemSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenSystemSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
     public Task OpenAppSystemSettings()
     {
-        App.Services.UiProvider.OpenAppSystemSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenAppSystemSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
     public Task OpenAppSystemNotificationSettings()
     {
-        App.Services.UiProvider.OpenAppSystemNotificationSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenAppSystemNotificationSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 }

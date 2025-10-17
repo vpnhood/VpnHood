@@ -149,7 +149,7 @@ internal class AppController : ControllerBase, IAppController
     {
         var ret = new AppData {
             Features = App.Features,
-            IntentFeatures = new AppIntentFeatures(App.Services.UiProvider, App.Services.UserReviewProvider),
+            IntentFeatures = new AppIntentFeatures(App.Services.DeviceUiProvider, App.Services.UserReviewProvider),
             UserSettings = App.UserSettings,
             ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
             State = App.State,

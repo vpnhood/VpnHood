@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.Win.Common;
 

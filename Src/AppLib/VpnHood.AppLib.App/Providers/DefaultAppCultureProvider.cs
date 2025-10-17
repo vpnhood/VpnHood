@@ -3,7 +3,7 @@ using VpnHood.AppLib.Abstractions;
 
 namespace VpnHood.AppLib.Providers;
 
-internal class AppCultureProvider(VpnHoodApp vpnHoodApp)
+internal class DefaultAppCultureProvider(VpnHoodApp vpnHoodApp)
     : IAppCultureProvider
 {
     public string[] SystemCultures => [CultureInfo.InstalledUICulture.Name];

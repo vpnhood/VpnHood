@@ -194,7 +194,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // initialize services
         Services = new AppServices {
-            CultureProvider = options.CultureProvider ?? new AppCultureProvider(this),
+            CultureProvider = options.CultureProvider ?? new DefaultAppCultureProvider(this),
             UserReviewProvider = options.UserReviewProvider,
             UiProvider = uiProvider,
             Tracker = tracker,

@@ -1,3 +1,7 @@
+# v7.3.767
+* Fix: Remove premium code
+* Fix: The unstable status #
+
 # v7.3.766
 * Fix: Windows: Clean up and disconnect on pressing the exit menu
 * Fix: Linux: Adapter issue on EndeavourOS

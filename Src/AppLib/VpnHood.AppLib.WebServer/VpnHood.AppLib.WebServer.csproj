@@ -36,7 +36,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Watson.Lite" Version="6.3.15" />
+		<PackageReference Include="Watson.Lite" Version="6.3.17" />
 	</ItemGroup>
 
 	<ItemGroup>

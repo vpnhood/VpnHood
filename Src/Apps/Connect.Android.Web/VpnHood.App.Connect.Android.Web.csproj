@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.App.Connect.Droid.Web</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android.web.debug</ApplicationId>
-		<ApplicationVersion>765</ApplicationVersion>
-		<ApplicationDisplayVersion>7.3.765</ApplicationDisplayVersion>
+		<ApplicationVersion>767</ApplicationVersion>
+		<ApplicationDisplayVersion>7.3.767</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
@@ -41,7 +41,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>7.3.765</Version>
+		<Version>7.3.767</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -75,7 +75,7 @@
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 		<PackageReference Include="AppsFlyerXamarinBindingAndroid" Version="6.17.3" />
-		<PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.2.10" />
+		<PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.2.20" />
 	</ItemGroup>
 
 </Project>

@@ -83,6 +83,14 @@ function Get-RolloutPercentage {
 	return $rollout;
 }
 
+function CommitAndPushToMainRepo {
+	Write-Host "Commit & push current changes to the main repo"
+	git add -A
+	git commit -m "Publish $versionTag"
+
+	Write-Host "Push to main"
+	git push origin development:main --force 
+}
 
 # push to repo using gh api.
 # Do not show any message except error

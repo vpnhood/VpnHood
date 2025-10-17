@@ -18,7 +18,7 @@ $changeLog = (Changelog_UpdateHeader $changeLog "v$versionParam");
 $changeLog | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force -NoNewline;
 
 # create release note
-$releaseNote = Changelog_GetRecentSecion $changeLog @("#client");
+$releaseNote = Changelog_GetRecentSecion $changeLog @("#connect");
 $releaseNote | Out-File -FilePath "$packageDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 if ($isLatest) {
 	$releaseNote | Out-File -FilePath "$packageLatestDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;

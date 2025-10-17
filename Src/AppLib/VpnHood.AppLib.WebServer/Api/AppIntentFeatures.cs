@@ -3,7 +3,7 @@
 namespace VpnHood.AppLib.WebServer.Api;
 
 public class AppIntentFeatures(
-    IAppUiProvider? uiProvider,
+    IDeviceUiProvider? uiProvider,
     IAppUserReviewProvider? userReviewProvider)
 {
     public bool IsUserReviewSupported => userReviewProvider != null;

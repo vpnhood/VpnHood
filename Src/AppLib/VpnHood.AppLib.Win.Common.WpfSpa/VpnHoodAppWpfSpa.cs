@@ -21,6 +21,7 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
             // initialize Win App
             var appOptions = optionsFactory();
             appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
+            appOptions.DeviceUiProvider = new WinDeviceUiProvider();
             appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
 
             // register local domain if needed

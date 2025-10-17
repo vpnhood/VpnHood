@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppLib.Abstractions;
 
-public interface IAppUiProvider
+public interface IDeviceUiProvider
 {
     bool IsQuickLaunchSupported { get; }
     bool IsRequestQuickLaunchSupported { get; }
@@ -29,7 +29,9 @@ public interface IAppUiProvider
     bool IsAppSystemNotificationSettingsSupported { get; }
     void OpenAppSystemNotificationSettings(IUiContext uiContext);
 
-    PrivateDns? GetSystemPrivateDns();
+    bool IsProxySettingsSupported { get; }
+    DeviceProxySettings? GetProxySettings();
 
+    PrivateDns? GetSystemPrivateDns();
     SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext);
 }

@@ -340,7 +340,7 @@ public class AdTest : TestAppBase
 
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.UiProvider = new TestUiProvider {
+        appOptions.DeviceUiProvider = new TestDeviceUiProvider {
             SystemPrivateDns = new PrivateDns { IsActive = true }
         };
 

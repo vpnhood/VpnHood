@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AppLib.Abstractions;
+﻿using System.Net;
+
+namespace VpnHood.AppLib.Abstractions;
 
 public class PrivateDns
 {

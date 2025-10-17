@@ -22,7 +22,7 @@ public class TestAppHelper : TestHelper
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             SessionTimeout = TimeSpan.FromSeconds(2),
-            UiProvider = new TestUiProvider(),
+            DeviceUiProvider = new TestDeviceUiProvider(),
             EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no SPA in test, so we need to use event watcher
             Ga4MeasurementId = null,
             TrackerFactory = new TestTrackerFactory(),

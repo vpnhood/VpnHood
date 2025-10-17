@@ -65,14 +65,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Failed to create GitHub release. Exit code: $code"
 }
 
-# copy to dl
-if (-not $prerelease)
-{
-	Write-Host "Commit & push current changes"
-	git add -A
-	git commit -m "Publish $versionTag"
-
-	Write-Host "Push to main"
-	git push origin development:main --force 
+# commit and push to main
+if (-not $prerelease){
+	CommitAndPushToMainRepo
 }
-

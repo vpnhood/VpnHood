@@ -15,7 +15,7 @@ using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.AppLib.Droid.Common;
 
-public class AndroidUiProvider : IAppUiProvider
+public class AndroidDeviceUiProvider : IDeviceUiProvider
 {
     private const int RequestPostNotificationId = 11;
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
@@ -154,6 +154,49 @@ public class AndroidUiProvider : IAppUiProvider
             intent.PutExtra("app_package", appUiContext.Activity.PackageName);
             intent.PutExtra("app_uid", appUiContext.Activity.ApplicationInfo!.Uid);
             appUiContext.Activity.StartActivity(intent);
+        }
+    }
+
+    public bool IsProxySettingsSupported => OperatingSystem.IsAndroidVersionAtLeast(21);
+
+    public DeviceProxySettings? GetProxySettings()
+    {
+        if (!IsProxySettingsSupported)
+            return null;
+
+        try {
+            var connectivityManager = 
+                (ConnectivityManager?)Application.Context.GetSystemService(Context.ConnectivityService) ??
+                throw new Exception("Could not retrieve ConnectivityManager for proxy settings.");
+
+            // Get active network
+            var network = 
+                connectivityManager.ActiveNetwork ??
+                throw new Exception("Could not retrieve active network for proxy settings.");
+
+            var linkProperties = 
+                connectivityManager.GetLinkProperties(network) ??
+                throw new Exception("Could not retrieve LinkProperties for proxy settings.");
+
+            var httpProxy = linkProperties.HttpProxy;
+            if (httpProxy?.Host is null) {
+                VhLogger.Instance.LogDebug("No HTTP proxy configured.");
+                return null;
+            }
+
+            // Get exclusion list
+            var exclusionList = httpProxy.GetExclusionList()?.ToArray() ?? [];
+
+            return new DeviceProxySettings {
+                Host = httpProxy.Host,
+                Port = httpProxy.Port,
+                PacFileUrl = httpProxy.PacFileUrl?.ToString()?.Trim(),
+                ExcludeDomains = exclusionList
+            };
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Error retrieving proxy settings.");
+            return null;
         }
     }
 

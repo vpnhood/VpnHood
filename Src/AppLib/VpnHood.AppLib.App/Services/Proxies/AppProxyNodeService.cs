@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.VpnServices.Manager;
@@ -117,7 +118,28 @@ public class AppProxyNodeService
     {
         _data.UpdateTime = DateTime.Now; // make sure to use latest data
         _data.NodeInfos = _data.NodeInfos.DistinctBy(x => x.Node.Id).ToArray(); // remove duplicates
-        var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions { WriteIndented = true });
+
+        // customize serialization to ignore Url and Id properties
+        var resolver = new DefaultJsonTypeInfoResolver();
+        resolver.Modifiers.Add(typeInfo => {
+            if (typeInfo.Type == typeof(ProxyNode)) {
+                var prop = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(ProxyNode.Url));
+                if (prop is not null)
+                    typeInfo.Properties.Remove(prop);
+
+                prop = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(ProxyNode.Id));
+                if (prop is not null)
+                    typeInfo.Properties.Remove(prop);
+
+            }
+        });
+
+        // serialize to file
+        var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions {
+            WriteIndented = true,
+            TypeInfoResolver = resolver
+        });
+
         File.WriteAllText(_infoFilePath, json);
         _settingsService.Save(); // fire changes
     }

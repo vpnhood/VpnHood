@@ -17,7 +17,7 @@ namespace VpnHood.AppLib;
 public class AppAdManager(
     AppAdService adService,
     VpnServiceManager vpnServiceManager,
-    IAppUiProvider uiProvider,
+    IDeviceUiProvider uiProvider,
     TimeSpan extendByRewardedAdThreshold,
     TimeSpan showAdPostDelay,
     bool isPreloadAdEnabled,

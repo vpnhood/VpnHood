@@ -14,7 +14,7 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
 
         //app init
         var options = optionsFactory();
-        options.UiProvider ??= new AndroidUiProvider();
+        options.DeviceUiProvider ??= new AndroidDeviceUiProvider();
         options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
         options.DeviceId ??= AndroidUtil.GetDeviceId(Application.Context); //this will be hashed using AppId
 

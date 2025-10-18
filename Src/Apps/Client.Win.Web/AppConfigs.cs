@@ -11,7 +11,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
     public string AppId { get; set; } = IsDebugMode ? "com.vpnhood.client.windows.debug" : "com.vpnhood.client.windows";
-    public int? WebUiPort { get; set; } = IsDebugMode ? 9571 : 80;
+    public int? WebUiPort { get; set; } = IsDebugMode ? 4701 : 4700;
     public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
     public string? Ga4MeasurementId { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }

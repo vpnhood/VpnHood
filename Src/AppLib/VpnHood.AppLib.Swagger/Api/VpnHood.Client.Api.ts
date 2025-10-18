@@ -2122,6 +2122,54 @@ export class ProxyNodeClient {
 
     }
 
+    getDevice( cancelToken?: CancelToken): Promise<AppProxyNodeInfo> {
+        let url_ = this.baseUrl + "/api/proxy-nodes/device";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetDevice(_response);
+        });
+    }
+
+    protected processGetDevice(response: AxiosResponse): Promise<AppProxyNodeInfo> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AppProxyNodeInfo.fromJS(resultData200);
+            return Promise.resolve<AppProxyNodeInfo>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AppProxyNodeInfo>(null as any);
+    }
+
     list( cancelToken?: CancelToken): Promise<AppProxyNodeInfo[]> {
         let url_ = this.baseUrl + "/api/proxy-nodes";
         url_ = url_.replace(/[?&]$/, "");
@@ -2940,6 +2988,7 @@ export class AppState implements IAppState {
     stateProgress?: number | null;
     isDiagnosing!: boolean;
     channelProtocol!: ChannelProtocol;
+    isProxyNodeActive!: boolean;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -2986,6 +3035,7 @@ export class AppState implements IAppState {
             this.stateProgress = _data["stateProgress"] !== undefined ? _data["stateProgress"] : null as any;
             this.isDiagnosing = _data["isDiagnosing"] !== undefined ? _data["isDiagnosing"] : null as any;
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
+            this.isProxyNodeActive = _data["isProxyNodeActive"] !== undefined ? _data["isProxyNodeActive"] : null as any;
         }
     }
 
@@ -3027,6 +3077,7 @@ export class AppState implements IAppState {
         data["stateProgress"] = this.stateProgress !== undefined ? this.stateProgress : null as any;
         data["isDiagnosing"] = this.isDiagnosing !== undefined ? this.isDiagnosing : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
+        data["isProxyNodeActive"] = this.isProxyNodeActive !== undefined ? this.isProxyNodeActive : null as any;
         return data;
     }
 }
@@ -3061,6 +3112,7 @@ export interface IAppState {
     stateProgress?: number | null;
     isDiagnosing: boolean;
     channelProtocol: ChannelProtocol;
+    isProxyNodeActive: boolean;
 }
 
 export enum AppConnectionState {
@@ -4461,7 +4513,7 @@ export interface IAppProxySettings {
 
 export enum AppProxyMode {
     Disabled = 0,
-    System = 1,
+    Device = 1,
     Custom = 2,
 }
 

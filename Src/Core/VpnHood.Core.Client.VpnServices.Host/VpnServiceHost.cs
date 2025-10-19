@@ -132,6 +132,7 @@ public class VpnServiceHost : IDisposable
 
     private async Task Connect(bool isAlwaysOn, CancellationToken cancellationToken)
     {
+        VpnHoodClient? client = null;
         try {
             // read client options and start log service
             var clientOptions = Context.ReadClientOptions();
@@ -142,7 +143,8 @@ public class VpnServiceHost : IDisposable
                 throw new AlwaysOnNotAllowedException("Auto start is only available for premium accounts.");
 
             // restart the log service
-            VhLogger.Instance.LogInformation("VpnService is connecting... ProcessId: {ProcessId}", Process.GetCurrentProcess().Id);
+            VhLogger.Instance.LogInformation("VpnService is connecting... ProcessId: {ProcessId}",
+                Process.GetCurrentProcess().Id);
 
             // create a connection info for notification
             await UpdateConnectionInfo(ClientState.Initializing, sessionName: clientOptions.SessionName,
@@ -173,7 +175,7 @@ public class VpnServiceHost : IDisposable
                 AutoDisposePackets = true
             };
 
-            var client = new VpnHoodClient(
+            client = new VpnHoodClient(
                 vpnAdapter: clientOptions.UseNullCapture
                     ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
                     : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1),
@@ -194,24 +196,35 @@ public class VpnServiceHost : IDisposable
             await client.Connect(cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            await UpdateConnectionInfo(ClientState.Disposed, null, ex, _connectCts.Token).Vhc();
+            if (client != null)
+                await UpdateConnectionInfo(client, ex, _connectCts.Token).Vhc();
+            else
+                await UpdateConnectionInfo(ClientState.Disposed, null, ex, _connectCts.Token).Vhc();
+
             _vpnServiceHandler.StopNotification();
             _vpnServiceHandler.StopSelf();
             throw;
         }
+
     }
 
-    public async Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
+    public Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
+    {
+        return UpdateConnectionInfo(client, null, cancellationToken);
+    }
+
+    public async Task UpdateConnectionInfo(VpnHoodClient client, Exception? ex, CancellationToken cancellationToken)
     {
         var connectionInfo = new ConnectionInfo {
             CreatedTime = FastDateTime.Now,
+            ProxyManagerStatus = client.ProxyNodeManager.Status,
             SessionName = client.Config.SessionName,
             SessionInfo = client.SessionInfo,
             SessionStatus = client.SessionStatus?.ToDto(),
             ClientState = client.State,
             ClientStateProgress = client.StateProgress,
             ClientStateChangedTime = client.StateChangedTime,
-            Error = client.LastException?.ToApiError(),
+            Error = ex?.ToApiError() ?? client.LastException?.ToApiError(),
             ApiEndPoint = _apiController.ApiEndPoint,
             ApiKey = _apiController.ApiKey
         };
@@ -223,11 +236,12 @@ public class VpnServiceHost : IDisposable
         CancellationToken cancellationToken)
     {
         var connectionInfo = new ConnectionInfo {
+            CreatedTime = FastDateTime.Now,
             ApiEndPoint = _apiController.ApiEndPoint,
             ApiKey = _apiController.ApiKey,
+            ProxyManagerStatus = null,
             SessionInfo = null,
             SessionStatus = null,
-            CreatedTime = DateTime.Now,
             ClientState = clientState,
             ClientStateProgress = null,
             ClientStateChangedTime = null,
@@ -265,7 +279,7 @@ public class VpnServiceHost : IDisposable
 
         try {
             _disconnectRequested = true;
-            if (exception!=null)
+            if (exception != null)
                 VhLogger.Instance.LogError(exception, "VpnServiceHost is disconnecting due to an error...");
             else
                 VhLogger.Instance.LogDebug(exception, "VpnServiceHost is disconnecting...");

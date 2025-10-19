@@ -25,7 +25,6 @@ internal static class DtoConverters
             WaitingCount = sessionStatus.WaitingCount,
             UserReviewRecommended = sessionStatus.UserReviewRecommended,
             IsDnsOverTlsDetected = sessionStatus.IsDnsOverTlsDetected,
-            ProxyManagerStatus = sessionStatus.ProxyManagerStatus,
             ChannelProtocol = sessionStatus.ChannelProtocol,
             IsTcpProxy = sessionStatus.IsTcpProxy,
             IsDropQuic = sessionStatus.IsDropQuic

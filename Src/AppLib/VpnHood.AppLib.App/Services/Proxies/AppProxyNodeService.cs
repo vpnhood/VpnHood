@@ -115,7 +115,7 @@ public class AppProxyNodeService
     private void UpdateSystemNode()
     {
         var connectionInfo = _vpnServiceManager.ConnectionInfo;
-        var runtimeNodes = connectionInfo.SessionStatus?.ProxyManagerStatus.ProxyNodeInfos ?? [];
+        var runtimeNodes = connectionInfo.ProxyManagerStatus?.ProxyNodeInfos ?? [];
 
         if (!_deviceUiProvider.IsProxySettingsSupported)
             return;
@@ -169,7 +169,7 @@ public class AppProxyNodeService
             return;
 
         var connectionInfo = _vpnServiceManager.ConnectionInfo;
-        var runtimeNodes = connectionInfo.SessionStatus?.ProxyManagerStatus.ProxyNodeInfos ?? [];
+        var runtimeNodes = connectionInfo.ProxyManagerStatus?.ProxyNodeInfos ?? [];
 
         // overwrite Settings node if remote url list exists
         if (runtimeNodes.Any() &&
@@ -188,6 +188,7 @@ public class AppProxyNodeService
                     CountryCode = null,
                     Status = nodeInfo.Status
                 });
+
             _data.CustomNodeInfos = _data.CustomNodeInfos.Concat(newNodes).ToArray();
         }
 

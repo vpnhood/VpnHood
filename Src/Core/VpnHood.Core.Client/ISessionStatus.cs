@@ -7,7 +7,6 @@ namespace VpnHood.Core.Client;
 
 public interface ISessionStatus
 {
-    ProxyManagerStatus ProxyManagerStatus { get; }
     ClientConnectorStatus ConnectorStatus { get; }
     Traffic Speed { get; }
     Traffic SessionTraffic { get; }

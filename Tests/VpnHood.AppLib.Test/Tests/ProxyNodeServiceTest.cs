@@ -3,6 +3,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Utils;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Socks5ProxyServers;
@@ -240,6 +241,15 @@ public class ProxyNodeServiceTest : TestAppBase
     }
 
     [TestMethod]
+    public Task GetNodeInfos()
+    {
+        // dummy test as vs2022 keep showing this test in test view
+        // will clear later
+        return Task.CompletedTask;
+    }
+
+
+    [TestMethod]
     public async Task Get_device_proxy()
     {
         using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
@@ -304,6 +314,27 @@ public class ProxyNodeServiceTest : TestAppBase
     [TestMethod]
     public async Task Expect_UnreachableProxyException()
     {
+        // create app
+        using var dom = await AppClientServerDom.Create(TestAppHelper);
 
+        // add proxy
+        dom.App.UserSettings.ProxySettings = new AppProxySettings {
+            Mode = AppProxyMode.Custom
+        };
+        var proxyNode = new ProxyNode {
+            Port = 900,
+            Host = "localhost",
+            Protocol = ProxyProtocol.Socks5
+        };
+        await dom.App.Services.ProxyNodeService.Add(proxyNode);
+
+        // connect
+        var ex = await Assert.ThrowsAsync<UnreachableProxyServerException>(()=> dom.App.Connect());
+
+        // get info
+        await dom.App.ForceUpdateState();
+        var nodeInfos = dom.App.Services.ProxyNodeService.ListProxies();
+        Assert.AreEqual(0, nodeInfos[0].Status.SucceededCount);
+        Assert.IsGreaterThan(0, nodeInfos[0].Status.FailedCount);
     }
 }

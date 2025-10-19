@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -60,9 +61,12 @@ public class VpnServiceManager : IDisposable
         }
     }
 
-    private static ConnectionInfo BuildConnectionInfo(ClientState clientState, Exception? ex = null)
+    private static ConnectionInfo BuildConnectionInfo(ClientState clientState, 
+        ProxyManagerStatus? proxyManagerStatus = null,
+        Exception? ex = null)
     {
         return new ConnectionInfo {
+            ProxyManagerStatus = proxyManagerStatus,
             CreatedTime = null,
             SessionInfo = null,
             SessionStatus = null,
@@ -77,7 +81,7 @@ public class VpnServiceManager : IDisposable
 
     private ConnectionInfo SetConnectionInfo(ClientState clientState, Exception? ex = null)
     {
-        _connectionInfo = BuildConnectionInfo(clientState, ex);
+        _connectionInfo = BuildConnectionInfo(clientState, ex: ex);
         try {
             File.WriteAllText(_vpnStatusFilePath, JsonSerializer.Serialize(_connectionInfo));
         }

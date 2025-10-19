@@ -86,7 +86,11 @@ public class ServerFinder(
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: false));
 
-        throw new UnreachableServerException(BuildExceptionMessage(ServerLocation));
+        // throw specific exception for proxy server issues
+        if (proxyNodeManager is { IsEnabled: true, Status.IsLastConnectionSuccessful: false })
+            throw new UnreachableProxyServerException();
+
+        throw new UnreachableServerException();
     }
 
     public async Task<IPEndPoint> FindBestRedirectedServerAsync(IPEndPoint[] hostEndPoints,

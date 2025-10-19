@@ -1244,7 +1244,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         internal void Update(AccessUsage? value) => _accessUsage = value ?? _accessUsage;
 
         public ClientConnectorStatus ConnectorStatus => client.ConnectorService.Status;
-        public ProxyManagerStatus ProxyManagerStatus => client.ProxyNodeManager.Status;
         public Traffic Speed => client._tunnel.Speed;
         public Traffic SessionTraffic => client._tunnel.Traffic;
         public Traffic SessionSplitTraffic => client._proxyManager.Traffic;

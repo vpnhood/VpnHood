@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Converters;
 
@@ -10,6 +11,7 @@ public class ConnectionInfo
 {
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint? ApiEndPoint { get; init; }
+    public required ProxyManagerStatus? ProxyManagerStatus { get; init; }
     public required DateTime? CreatedTime { get; init; }
     public string? SessionName { get; init; }
     public required ClientState ClientState { get; init; }

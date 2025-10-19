@@ -16,6 +16,7 @@ internal class VpnServiceContext(string configFolder)
     public static ConnectionInfo DefaultConnectionInfo { get; } = new() {
         ApiEndPoint = null,
         ApiKey = null,
+        ProxyManagerStatus = null,
         ClientState = ClientState.Initializing,
         ClientStateProgress = null,
         ClientStateChangedTime = null,

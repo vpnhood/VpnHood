@@ -301,4 +301,9 @@ public class ProxyNodeServiceTest : TestAppBase
         Assert.IsGreaterThan(0, nodeInfos[0].Status.SucceededCount);
     }
 
+    [TestMethod]
+    public async Task Expect_UnreachableProxyException()
+    {
+
+    }
 }

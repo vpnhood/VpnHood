@@ -63,7 +63,7 @@ public class ProxyNodeManagerTest : TestBase
             socketFactory: socketFactory);
 
         Assert.IsTrue(mgr.IsEnabled);
-        Assert.HasCount(4, mgr.ProxyNodeInfos);
+        Assert.HasCount(4, mgr.Status.ProxyNodeInfos);
     }
 
     [TestMethod]
@@ -81,7 +81,7 @@ public class ProxyNodeManagerTest : TestBase
         await mgr.RemoveBadServers(CancellationToken.None);
 
         // All non-SOCKS5 servers should be marked as inactive
-        Assert.IsTrue(mgr.ProxyNodeInfos.All(status => !status.Node.IsEnabled));
+        Assert.IsTrue(mgr.Status.ProxyNodeInfos.All(status => !status.Node.IsEnabled));
     }
 
     [TestMethod]
@@ -117,7 +117,7 @@ public class ProxyNodeManagerTest : TestBase
 
         await TestHelper.Test_Https();
 
-        var proxyNodeInfos = clientServerDom.Client.ProxyNodeManager.ProxyNodeInfos;
+        var proxyNodeInfos = clientServerDom.Client.ProxyNodeManager.Status.ProxyNodeInfos;
         Assert.IsTrue(proxyNodeInfos.All(x => x.Status.SucceededCount >= 1));
     }
 }

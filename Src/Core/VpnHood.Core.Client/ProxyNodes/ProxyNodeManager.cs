@@ -21,14 +21,14 @@ public class ProxyNodeManager : IDisposable
     private ProxyNodeItem[] _proxyNodeItems;
     private ProgressTracker? _progressTracker;
     private readonly string _proxyNodeInfosFile;
+    private bool _isLastConnectionSuccessful;
 
-    public ProxyNodeInfo[] ProxyNodeInfos => _proxyNodeItems.Select(x => x.Info).ToArray();
-    public bool IsEnabled => _proxyNodeItems.Any();
+    public bool IsEnabled { get; private set; }
     public ProgressStatus? Progress => _progressTracker?.Progress;
     public ProxyManagerStatus Status => new() {
-        ProxyNodeInfos = ProxyNodeInfos
+        ProxyNodeInfos = _proxyNodeItems.Select(x => x.Info).ToArray(),
+        IsLastConnectionSuccessful = _isLastConnectionSuccessful
     };
-
 
     public ProxyNodeManager(
         ProxyOptions proxyOptions,
@@ -39,6 +39,7 @@ public class ProxyNodeManager : IDisposable
         _serverCheckTimeout = serverCheckTimeout ?? TimeSpan.FromSeconds(7);
         _socketFactory = socketFactory;
         _proxyNodeInfosFile = Path.Combine(storagePath, "proxies.json");
+        IsEnabled = proxyOptions.ProxyNodes.Any();
 
         // load last NodeInfos
         var proxyInfos = JsonUtils.TryDeserializeFile<ProxyNodeInfo[]>(_proxyNodeInfosFile) ?? [];
@@ -46,9 +47,10 @@ public class ProxyNodeManager : IDisposable
             .ToArray();
     }
 
-    public void UpdateOptions(ProxyOptions options)
+    public void UpdateOptions(ProxyOptions proxyOptions)
     {
-        _proxyNodeItems = UpdateItemsByOptions(_proxyNodeItems, options)
+        IsEnabled = proxyOptions.ProxyNodes.Any();
+        _proxyNodeItems = UpdateItemsByOptions(_proxyNodeItems, proxyOptions)
             .ToArray();
     }
 
@@ -185,6 +187,7 @@ public class ProxyNodeManager : IDisposable
                     _fastestNode = proxyNodeItem;
 
                 proxyNodeItem.RecordSuccess(latency, fastestLatency: _fastestNode?.Status.Latency, _requestCount);
+                _isLastConnectionSuccessful = true;
                 break;
             }
             catch (Exception ex) {
@@ -192,6 +195,7 @@ public class ProxyNodeManager : IDisposable
                     "Failed to connect to {ProxyType} proxy server {ProxyServer}.",
                     proxyNodeItem.Node.Protocol, VhLogger.FormatHostName(proxyNodeItem.Node.Host));
 
+                _isLastConnectionSuccessful = false;
                 proxyNodeItem.RecordFailed(ex, _requestCount);
                 tcpClient?.Dispose();
             }
@@ -207,7 +211,7 @@ public class ProxyNodeManager : IDisposable
     private void SaveNodeInfos()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_proxyNodeInfosFile)!);
-        File.WriteAllText(_proxyNodeInfosFile, JsonSerializer.Serialize(ProxyNodeInfos));
+        File.WriteAllText(_proxyNodeInfosFile, JsonSerializer.Serialize(Status.ProxyNodeInfos));
     }
 
     public void Dispose()

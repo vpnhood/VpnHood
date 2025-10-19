@@ -3,4 +3,5 @@
 public class ProxyManagerStatus
 {
     public ProxyNodeInfo[] ProxyNodeInfos { get; init; } = [];
+    public bool IsLastConnectionSuccessful { get; init; }
 }

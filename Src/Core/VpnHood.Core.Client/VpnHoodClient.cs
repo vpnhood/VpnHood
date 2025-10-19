@@ -372,7 +372,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 State = ClientState.ValidatingProxies;
                 await ProxyNodeManager.RemoveBadServers(linkedCts.Token).Vhc();
                 VhLogger.Instance.LogInformation("Proxy servers: {Count}",
-                    ProxyNodeManager.ProxyNodeInfos.Length);
+                    ProxyNodeManager.Status.ProxyNodeInfos.Length);
             }
 
             // Establish first connection and create a session

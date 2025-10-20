@@ -2,6 +2,7 @@
 
 namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
 
+// Vibe: Extract a single proxy URI from heterogeneous text.
 internal static partial class ProxyNodeExtractor
 {
     /// <summary>
@@ -39,7 +40,8 @@ internal static partial class ProxyNodeExtractor
         var ipv6Match = Ipv6WithPortRegex().Match(text);
         if (ipv6Match.Success) {
             var host = ipv6Match.Groups["host"].Value;
-            var port = int.Parse(ipv6Match.Groups["port"].Value);
+            if (!int.TryParse(ipv6Match.Groups["port"].Value, out var port) || port < 1 || port > 65535)
+                return null;
             var scheme = DetermineScheme(detectedProtocol, port, defaultScheme, preferHttpsWhenPort443);
             return BuildUri(scheme, host, port);
         }
@@ -49,13 +51,17 @@ internal static partial class ProxyNodeExtractor
         var ipv4Match = Ipv4PortRegex().Match(text);
         if (ipv4Match.Success) {
             var host = ipv4Match.Groups["host"].Value;
-            var port = int.Parse(ipv4Match.Groups["port"].Value);
+            if (!IsValidIpv4(host))
+                return null;
+            if (!int.TryParse(ipv4Match.Groups["port"].Value, out var port) || port < 1 || port > 65535)
+                return null;
             var scheme = DetermineScheme(detectedProtocol, port, defaultScheme, preferHttpsWhenPort443);
             return BuildUri(scheme, host, port);
         }
 
         // Pattern 3: hostname with port (more lenient)
-        // Matches: "proxy.com:1080" or "host 9999"
+        // Must NOT match partial IP addresses like "71.67" - require letters in hostname
+        // Matches: "proxy.com:1080" or "proxy.example.com 9999"
         var hostPortMatch = HostPortRegex().Match(text);
         if (hostPortMatch.Success) {
             var host = hostPortMatch.Groups["host"].Value;
@@ -82,12 +88,33 @@ internal static partial class ProxyNodeExtractor
         var ipv4OnlyMatch = Ipv4OnlyRegex().Match(text);
         if (ipv4OnlyMatch.Success) {
             var host = ipv4OnlyMatch.Groups["host"].Value;
-            var scheme = detectedProtocol ?? defaultScheme;
+            if (!IsValidIpv4(host))
+                return null;
+            
+            // Only return if protocol was explicitly detected
+            if (detectedProtocol == null)
+                return null;
+            
+            var scheme = detectedProtocol;
             var port = GetDefaultPortForScheme(scheme);
             return BuildUri(scheme, host, port);
         }
 
         return null;
+    }
+
+    private static bool IsValidIpv4(string ip)
+    {
+        var parts = ip.Split('.');
+        if (parts.Length != 4)
+            return false;
+
+        foreach (var part in parts) {
+            if (!int.TryParse(part, out var num) || num < 0 || num > 255)
+                return false;
+        }
+
+        return true;
     }
 
     private static string? DetectProtocolFromKeywords(string text)
@@ -194,9 +221,10 @@ internal static partial class ProxyNodeExtractor
     [GeneratedRegex(@"\b(?<host>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})[\s:]+(?<port>\d{1,5})\b")]
     private static partial Regex Ipv4PortRegex();
 
-    // Hostname with port (more lenient, but requires valid hostname format)
+    // Hostname with port (more lenient, but requires valid hostname format with at least one dot)
+    // Must NOT match partial IP addresses like "71.67" - require letters in hostname
     // Matches: "proxy.com:1080" or "proxy.example.com 9999"
-    [GeneratedRegex(@"\b(?<host>[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)+)[\s:]+(?<port>\d{1,5})\b")]
+    [GeneratedRegex(@"\b(?<host>(?=.*[a-zA-Z])[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)+)[\s:]+(?<port>\d{1,5})\b")]
     private static partial Regex HostPortRegex();
 
     // Just IPv6: [2001:db8::1]

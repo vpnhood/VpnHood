@@ -169,6 +169,11 @@ public class ProxyNodeParserTests
             new Uri("http://38.54.71.67:1080/"),
             ProxyNodeParser.ExtractFromText("{ \"http://user:pass@38.54.71.67:1080\", }"));
 
+        Assert.AreEqual(
+            new Uri("socks5://user:pass@mydomain.com:1080/"),
+            ProxyNodeParser.ExtractFromText("something{ \"socks5://user:pass@mydomain.com:1080\", }"));
+
+
         // ReSharper disable once StringLiteralTypo
         Assert.AreEqual(
             new Uri("http://[aabb::ccbb]:1080/"),

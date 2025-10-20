@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Exceptions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
@@ -28,5 +29,26 @@ public class DiagnoserTest : TestAppBase
         clientApp.Diagnoser.TestPingIpAddresses = [TestConstants.InvalidIp];
         await Assert.ThrowsExactlyAsync<NoInternetException>(() =>
             clientApp.Connect(clientProfile.ClientProfileId));
+
+        Assert.AreEqual(nameof(NoInternetException), clientApp.State.LastError?.TypeName);
+
+    }
+
+    [TestMethod]
+    public async Task UnreachableServer()
+    {
+        using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
+        
+        // change access key endpoint
+        var token = dom.ClientProfile.Token;
+        token.ServerToken.HostEndPoints = [TestConstants.InvalidEp];
+        var clientProfile = dom.App.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+
+        // ************
+        // NoInternetException
+        await Assert.ThrowsExactlyAsync<UnreachableServerException>(() =>
+            dom.App.Connect(clientProfile.ClientProfileId, diagnose: true));
+        
+        Assert.AreEqual(nameof(UnreachableServerException), dom.App.State.LastError?.TypeName);
     }
 }

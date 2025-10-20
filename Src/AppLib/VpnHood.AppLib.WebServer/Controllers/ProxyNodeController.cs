@@ -64,8 +64,7 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
 
         // Import (query: removeOld, body raw text list)
         mapper.AddStatic(HttpMethod.POST, baseUrl + "import", async ctx => {
-            var bytes = ctx.Request.DataAsBytes ?? [];
-            var text = System.Text.Encoding.UTF8.GetString(bytes);
+            var text = ctx.ReadJson<string>();
             await Import(text);
             await ctx.SendNoContent();
         });

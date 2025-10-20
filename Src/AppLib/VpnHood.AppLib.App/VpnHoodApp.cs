@@ -356,7 +356,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // Show error if a diagnosis has been requested and there is no error
             if (_appPersistState is { HasDiagnoseRequested: true } &&
-                _appPersistState.LastError?.TypeName != nameof(UserCanceledException))
+                _appPersistState.LastError?.TypeName is null or nameof(UserCanceledException))
                 return new NoErrorFoundException().ToApiError();
 
             // show last error

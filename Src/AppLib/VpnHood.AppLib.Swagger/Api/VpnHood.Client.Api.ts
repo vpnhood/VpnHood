@@ -2524,17 +2524,17 @@ export class ProxyNodeClient {
     }
 
     import(text: string, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/proxy-nodes/import?";
-        if (text === undefined || text === null)
-            throw new globalThis.Error("The parameter 'text' must be defined and cannot be null.");
-        else
-            url_ += "text=" + encodeURIComponent("" + text) + "&";
+        let url_ = this.baseUrl + "/api/proxy-nodes/import";
         url_ = url_.replace(/[?&]$/, "");
 
+        const content_ = JSON.stringify(text);
+
         let options_: AxiosRequestConfig = {
+            data: content_,
             method: "POST",
             url: url_,
             headers: {
+                "Content-Type": "application/json",
             },
             cancelToken
         };

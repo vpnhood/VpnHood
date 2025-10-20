@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Diagnoser shows a wrong NoErrorFoundException
+
 # v7.3.767
 * Fix: Remove premium code
 * Fix: The unstable status #

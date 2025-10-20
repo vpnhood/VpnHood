@@ -112,6 +112,16 @@ public static class ProxyNodeParser
         }
     }
 
+    public static Uri[] ParseText(
+        string text,
+        string defaultScheme = "http",
+        bool preferHttpsWhenPort443 = true)
+    {
+        // Split by new lines
+        var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        return ProxyNodeParserBulk.Parse(lines, defaultScheme, preferHttpsWhenPort443);
+    }
+
     private static bool TryCreateUri(string input, [NotNullWhen(true)] out Uri? uri)
     {
         uri = null;
@@ -123,12 +133,12 @@ public static class ProxyNodeParser
     }
 
     private sealed class UrlParts
-{
-    public string? Scheme { get; set; }
-    public string? Host { get; set; }
-    public int? Port { get; set; }
-    public string? User { get; set; }
-    public string? Password { get; set; }
+    {
+        public string? Scheme { get; set; }
+        public string? Host { get; set; }
+        public int? Port { get; set; }
+        public string? User { get; set; }
+        public string? Password { get; set; }
     }
 
     private static UrlParts ExtractParts(Uri url)

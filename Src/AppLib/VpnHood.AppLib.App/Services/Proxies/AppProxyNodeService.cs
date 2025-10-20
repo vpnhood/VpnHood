@@ -60,7 +60,14 @@ public class AppProxyNodeService
         return _data.CustomNodeInfos;
     }
 
-    public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)
+    public AppProxyNodeInfo Add(ProxyNode proxyNode)
+    {
+        var ret = AddInternal(proxyNode);
+        Save();
+        return ret;
+    }
+
+    private AppProxyNodeInfo AddInternal(ProxyNode proxyNode)
     {
         proxyNode = ProxyNodeParser.Normalize(proxyNode);
 
@@ -76,19 +83,23 @@ public class AppProxyNodeService
             Status = new ProxyNodeStatus()
         };
         _data.CustomNodeInfos = _data.CustomNodeInfos.Append(newNodeInfo).ToArray();
-
-        Save();
-        return Task.FromResult(newNodeInfo);
+        return newNodeInfo;
     }
 
-    public Task Delete(string proxyNodeId)
+
+    public void Delete(string proxyNodeId)
     {
         _data.CustomNodeInfos = _data.CustomNodeInfos.Where(x => x.Node.Id != proxyNodeId).ToArray();
         Save();
-        return Task.CompletedTask;
     }
 
-    public Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode)
+    public void DeleteAll()
+    {
+        _data.CustomNodeInfos = [];
+        Save();
+    }
+
+    public AppProxyNodeInfo Update(string proxyNodeId, ProxyNode proxyNode)
     {
         proxyNode = ProxyNodeParser.Normalize(proxyNode);
 
@@ -98,7 +109,7 @@ public class AppProxyNodeService
         Save();
 
         var updatedNode = ListProxies().Single(x => x.Node.Id == proxyNode.Id);
-        return Task.FromResult(updatedNode);
+        return updatedNode;
     }
 
     private void UpdateNodesByCore()
@@ -219,9 +230,14 @@ public class AppProxyNodeService
         _vpnServiceManager.ConnectionInfo.CreatedTime > _data.UpdateTime &&
         !_vpnServiceManager.IsReconfiguring;
 
-    public Task Import(string text, bool resetState)
+    public void Import(string text)
     {
-        throw new NotImplementedException();
+        var proxyNodeUrls = ProxyNodeParser.ExtractFromContent(text);
+        var proxyNodes = proxyNodeUrls.Select(ProxyNodeParser.FromUrl);
+        foreach (var proxyNode in proxyNodes)
+            Add(proxyNode);
+
+        Save();
     }
 
     public void ResetStates()

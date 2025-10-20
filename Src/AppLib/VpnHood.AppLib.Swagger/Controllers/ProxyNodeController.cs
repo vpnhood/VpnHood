@@ -46,14 +46,20 @@ public class ProxyNodeController : ControllerBase, IProxyNodeController
         throw new SwaggerOnlyException();
     }
 
+    [HttpDelete]
+    public Task DeleteAll()
+    {
+        throw new SwaggerOnlyException();
+    }
+
     [HttpPost("reset-state")]
     public Task ResetState()
     {
         throw new NotImplementedException();
     }
 
-    [HttpPost("Import")]
-    public Task Import(string text, bool removeOld)
+    [HttpPost("import")]
+    public Task Import(string text)
     {
         throw new SwaggerOnlyException();
     }

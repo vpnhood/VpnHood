@@ -48,6 +48,12 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
             await ctx.SendNoContent();
         });
 
+        // Delete all
+        mapper.AddStatic(HttpMethod.DELETE, baseUrl, async ctx => {
+            await DeleteAll();
+            await ctx.SendNoContent();
+        });
+
         // Parse (query: text, body: ProxyNodeDefaults)
         mapper.AddStatic(HttpMethod.POST, baseUrl + "parse", async ctx => {
             var text = ctx.GetQueryParameter<string>("text");
@@ -58,10 +64,9 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
 
         // Import (query: removeOld, body raw text list)
         mapper.AddStatic(HttpMethod.POST, baseUrl + "import", async ctx => {
-            var removeOld = ctx.GetQueryParameter<bool>("removeOld");
             var bytes = ctx.Request.DataAsBytes ?? [];
             var text = System.Text.Encoding.UTF8.GetString(bytes);
-            await Import(text, removeOld);
+            await Import(text);
             await ctx.SendNoContent();
         });
 
@@ -104,21 +109,31 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
 
     public Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode)
     {
-        return ProxyNodeService.Update(proxyNodeId, proxyNode);
+        var res = ProxyNodeService.Update(proxyNodeId, proxyNode);
+        return Task.FromResult(res);
     }
 
     public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)
     {
-        return ProxyNodeService.Add(proxyNode);
+        var res = ProxyNodeService.Add(proxyNode);
+        return Task.FromResult(res);
     }
 
     public Task Delete(string proxyNodeId)
     {
-        return ProxyNodeService.Delete(proxyNodeId);
+        ProxyNodeService.Delete(proxyNodeId);
+        return Task.CompletedTask;
     }
 
-    public Task Import(string text, bool removeOld)
+    public Task DeleteAll()
     {
-        return ProxyNodeService.Import(text, removeOld);
+        ProxyNodeService.DeleteAll();
+        return Task.CompletedTask;
+    }
+
+    public Task Import(string text)
+    {
+        ProxyNodeService.Import(text);
+        return Task.CompletedTask;
     }
 }

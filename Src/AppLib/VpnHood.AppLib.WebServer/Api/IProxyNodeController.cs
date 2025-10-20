@@ -9,9 +9,10 @@ public interface IProxyNodeController
     Task<AppProxyNodeInfo> Add(ProxyNode proxyNode);
     Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode);
     Task Delete(string proxyNodeId);
+    Task DeleteAll();
     Task ResetState();
     Task<AppProxyNodeInfo?> GetDevice();
     Task<AppProxyNodeInfo[]> List();
-    Task Import(string text, bool removeOld);
+    Task Import(string text);
 }
 

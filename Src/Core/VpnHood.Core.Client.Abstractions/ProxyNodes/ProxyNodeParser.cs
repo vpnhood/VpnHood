@@ -48,26 +48,24 @@ public static class ProxyNodeParser
             Username = proxyNode.Username
         };
 
-        var uri = TryParseToUrl(proxyNode.Host, defaults)
-            ?? throw new ArgumentException("Invalid proxy.");
-
+        var uri = ParseHostToUrl(proxyNode.Host, defaults);
         var ret = FromUrl(uri);
         ret.Username = proxyNode.Username?.Trim();
         ret.Password = proxyNode.Password?.Trim();
         return ret;
     }
 
-    public static Uri? TryParseToUrl(string value, ProxyNodeDefaults? defaults)
+    public static Uri? TryParseHostToUrl(string value, ProxyNodeDefaults? defaults)
     {
         try {
-            return ParseToUrl(value, defaults);
+            return ParseHostToUrl(value, defaults);
         }
         catch {
             return null;
         }
     }
 
-    public static Uri ParseToUrl(
+    public static Uri ParseHostToUrl(
         string value,
         ProxyNodeDefaults? defaults)
     {
@@ -113,14 +111,30 @@ public static class ProxyNodeParser
         return uriBuilder.Uri;
     }
 
-    public static Uri[] ParseTextToUrls(
-        string text,
+    public static Uri? ExtractFromText(string text,
+        string defaultScheme = "http",
+        bool preferHttpsWhenPort443 = true)
+    {
+        return ProxyNodeExtractor.Extract(text, defaultScheme, preferHttpsWhenPort443);
+    }
+
+    // Same as ExtractFromText but returns multiple URIs
+    public static Uri[] ExtractFromContent(
+        string content,
         string defaultScheme = "http",
         bool preferHttpsWhenPort443 = true)
     {
         // Split by new lines
-        var lines = text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
-        return ProxyNodeParserBulk.Parse(lines, defaultScheme, preferHttpsWhenPort443);
+        var lines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        var results = new List<Uri>();
+        
+        foreach (var line in lines) {
+            var uri = ProxyNodeExtractor.Extract(line, defaultScheme, preferHttpsWhenPort443);
+            if (uri != null)
+                results.Add(uri);
+        }
+        
+        return results.ToArray();
     }
 
     private static bool TryCreateUri(string input, [NotNullWhen(true)] out Uri? uri)

@@ -92,8 +92,8 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
 
     public Task<AppProxyNodeInfo> Parse(string text, ProxyNodeDefaults defaults)
     {
-        if (!ProxyNodeParser.TryParseToUrl(text, defaults, out var parsed))
-            throw new ArgumentException("Invalid proxy url.");
+        var parsed = ProxyNodeParser.TryParseToUrl(text, defaults)
+            ?? throw new ArgumentException("Invalid proxy url.");
 
         var node = ProxyNodeParser.FromUrl(parsed);
         var info = new AppProxyNodeInfo {

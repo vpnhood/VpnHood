@@ -48,27 +48,35 @@ public static class ProxyNodeParser
             Username = proxyNode.Username
         };
 
-        var ret = TryParseToUrl(proxyNode.Host, defaults, out var uri)
-            ? FromUrl(uri)
-            : throw new ArgumentException("Invalid proxy.");
+        var uri = TryParseToUrl(proxyNode.Host, defaults)
+            ?? throw new ArgumentException("Invalid proxy.");
 
+        var ret = FromUrl(uri);
         ret.Username = proxyNode.Username?.Trim();
         ret.Password = proxyNode.Password?.Trim();
         return ret;
     }
 
-    public static bool TryParseToUrl(
-        string value,
-        ProxyNodeDefaults? defaults,
-        [NotNullWhen(true)] out Uri? url)
+    public static Uri? TryParseToUrl(string value, ProxyNodeDefaults? defaults)
     {
-        url = null;
+        try {
+            return ParseToUrl(value, defaults);
+        }
+        catch {
+            return null;
+        }
+    }
+
+    public static Uri ParseToUrl(
+        string value,
+        ProxyNodeDefaults? defaults)
+    {
         if (string.IsNullOrWhiteSpace(value))
-            return false;
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(value));
         value = value.Trim();
 
         if (!TryCreateUri(value, out var parsed))
-            return false;
+            throw new ArgumentException("Invalid URL format.", nameof(value));
 
         var parts = ExtractParts(parsed);
         // Apply defaults (preserving original precedence & behavior)
@@ -79,7 +87,7 @@ public static class ProxyNodeParser
         parts.Port ??= defaults?.Port; // keep same timing as before (assigned before protocol default logic)
 
         if (string.IsNullOrWhiteSpace(parts.Scheme) || string.IsNullOrWhiteSpace(parts.Host))
-            return false;
+            throw new ArgumentException("URL must include scheme and host.", nameof(value));
 
         // apply protocol default port if still missing
         if (parts.Port is null) {
@@ -102,23 +110,16 @@ public static class ProxyNodeParser
             valueCollection["enabled"] = "false";
         }
         uriBuilder.Query = valueCollection.ToString();
-
-        try {
-            url = uriBuilder.Uri;
-            return true;
-        }
-        catch {
-            return false;
-        }
+        return uriBuilder.Uri;
     }
 
-    public static Uri[] ParseText(
+    public static Uri[] ParseTextToUrls(
         string text,
         string defaultScheme = "http",
         bool preferHttpsWhenPort443 = true)
     {
         // Split by new lines
-        var lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        var lines = text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         return ProxyNodeParserBulk.Parse(lines, defaultScheme, preferHttpsWhenPort443);
     }
 

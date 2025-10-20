@@ -2277,6 +2277,50 @@ export class ProxyNodeClient {
         return Promise.resolve<AppProxyNodeInfo>(null as any);
     }
 
+    deleteAll( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/proxy-nodes";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "DELETE",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDeleteAll(_response);
+        });
+    }
+
+    protected processDeleteAll(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     parse(text: string, defaults: ProxyNodeDefaults, cancelToken?: CancelToken): Promise<AppProxyNodeInfo> {
         let url_ = this.baseUrl + "/api/proxy-nodes/parse?";
         if (text === undefined || text === null)
@@ -2479,16 +2523,12 @@ export class ProxyNodeClient {
         return Promise.resolve<void>(null as any);
     }
 
-    import(text: string, removeOld: boolean, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/proxy-nodes/Import?";
+    import(text: string, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/proxy-nodes/import?";
         if (text === undefined || text === null)
             throw new globalThis.Error("The parameter 'text' must be defined and cannot be null.");
         else
             url_ += "text=" + encodeURIComponent("" + text) + "&";
-        if (removeOld === undefined || removeOld === null)
-            throw new globalThis.Error("The parameter 'removeOld' must be defined and cannot be null.");
-        else
-            url_ += "removeOld=" + encodeURIComponent("" + removeOld) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {

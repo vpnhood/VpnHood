@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Sockets;
@@ -21,6 +22,9 @@ public class ProxyEndPointManager : IDisposable
     private ProgressMonitor? _progressMonitor;
     private readonly string _proxyEndPointInfosFile;
     private bool _isLastConnectionSuccessful;
+    private Job? _autoUpdateJob;
+    private ProxyAutoUpdateOptions _autoUpdateOptions;
+    private bool _disposed;
 
     public bool IsEnabled { get; private set; }
     public ProgressStatus? Progress => _progressMonitor?.Progress;
@@ -38,12 +42,17 @@ public class ProxyEndPointManager : IDisposable
         _serverCheckTimeout = serverCheckTimeout ?? TimeSpan.FromSeconds(7);
         _socketFactory = socketFactory;
         _proxyEndPointInfosFile = Path.Combine(storagePath, "proxies.json");
+        _autoUpdateOptions = proxyOptions.AutoUpdateOptions;
         IsEnabled = proxyOptions.ProxyEndPoints.Any();
 
         // load last NodeInfos
         var proxyInfos = JsonUtils.TryDeserializeFile<ProxyEndPointInfo[]>(_proxyEndPointInfosFile) ?? [];
         _proxyEndPointEntries = UpdateEntriesByOptions(proxyInfos.Select(x => new ProxyEndPointEntry(x)), proxyOptions)
             .ToArray();
+
+        // Start auto-update if configured
+        if (_autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null)
+            StartAutoUpdate(_autoUpdateOptions.Interval.Value);
     }
 
     public void UpdateOptions(ProxyOptions proxyOptions)
@@ -51,6 +60,64 @@ public class ProxyEndPointManager : IDisposable
         IsEnabled = proxyOptions.ProxyEndPoints.Any();
         _proxyEndPointEntries = UpdateEntriesByOptions(_proxyEndPointEntries, proxyOptions)
             .ToArray();
+
+        // start new job if needed
+        _autoUpdateOptions = proxyOptions.AutoUpdateOptions;
+        if (_autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null)
+            StartAutoUpdate(_autoUpdateOptions.Interval.Value);
+    }
+
+    private void StartAutoUpdate(TimeSpan interval)
+    {
+        if (_autoUpdateJob?.Interval != interval)
+            _autoUpdateJob?.Dispose();
+
+        // Create and start the job
+        _autoUpdateJob = new Job(
+            UpdateFromUrlAsync,
+            new JobOptions {
+                Interval = interval,
+                DueTime = TimeSpan.Zero, // Run immediately on start
+                Name = "ProxyEndPointAutoUpdate",
+                AutoStart = true
+            });
+    }
+
+    private async ValueTask UpdateFromUrlAsync(CancellationToken cancellationToken)
+    {
+        if (_autoUpdateOptions.Url == null)
+            return;
+
+        try {
+            VhLogger.Instance.LogInformation("Downloading proxy list from {Url}...", _autoUpdateOptions.Url);
+
+            // memory more efficient to create a new client for infrequent requests
+            using var httpClient = new HttpClient(); 
+            var currentInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray();
+            var mergedEndPoints = await ProxyEndPointUpdater.UpdateFromUrlAsync(
+                httpClient,
+                _autoUpdateOptions.Url,
+                currentInfos,
+                _autoUpdateOptions.MaxItemCount,
+                _autoUpdateOptions.MaxPenalty,
+                cancellationToken);
+
+            if (mergedEndPoints.Length == 0) {
+                VhLogger.Instance.LogWarning("No proxies found in downloaded content from {Url}", _autoUpdateOptions.Url);
+                return;
+            }
+
+            VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}", mergedEndPoints.Length);
+            _proxyEndPointEntries = UpdateEntries(_proxyEndPointEntries, 
+                    mergedEndPoints, _autoUpdateOptions.MaxPenalty).ToArray();
+
+            // Save updated list
+            VhLogger.Instance.LogInformation("Updated proxy list. Total proxies: {Count}", _proxyEndPointEntries.Length);
+            SaveNodeInfos();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Failed to update proxy list from {Url}", _autoUpdateOptions.Url);
+        }
     }
 
     private static IEnumerable<ProxyEndPointEntry> UpdateEntriesByOptions(IEnumerable<ProxyEndPointEntry> items, ProxyOptions options)
@@ -65,15 +132,15 @@ public class ProxyEndPointManager : IDisposable
 
     // this is used to add new endpoints and remove old endpoints from options
     private static IEnumerable<ProxyEndPointEntry> UpdateEntries(
-        IEnumerable<ProxyEndPointEntry> entries, 
+        IEnumerable<ProxyEndPointEntry> entries,
         ProxyEndPoint[] endPoints,
-        int minPenalty = -1)
+        int maxPenalty = int.MaxValue)
     {
         // remove old endpoints
         entries = entries
             .Where(x => endPoints.Any(y =>
-                y.Id == x.EndPoint.Id || 
-                x.Status.Penalty > minPenalty))
+                y.Id == x.EndPoint.Id ||
+                x.Status.Penalty < maxPenalty))
             .ToArray();
 
         // add new endpoints
@@ -220,6 +287,12 @@ public class ProxyEndPointManager : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+
+        _autoUpdateJob?.Dispose();
+        // Dispose HTTP client
+
         // save current NodeInfos
         VhUtils.TryInvoke("Save ProxyEndPoints status", SaveNodeInfos);
     }

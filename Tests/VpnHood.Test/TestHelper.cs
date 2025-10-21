@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
-using VpnHood.Core.Common;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Server;
@@ -70,7 +69,7 @@ public class TestHelper : IDisposable
                 IPEndPoint.Parse("[::1]:0"))
         ]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
-        JobOptions.DefaultPeriod = TimeSpan.FromMilliseconds(1000);
+        JobOptions.DefaultInterval = TimeSpan.FromMilliseconds(1000);
         JobRunner.SlowInstance.Interval = TimeSpan.FromMilliseconds(200);
         JobRunner.FastInstance.Interval = TimeSpan.FromMilliseconds(200);
     }

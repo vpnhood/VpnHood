@@ -23,7 +23,7 @@ public class EventReporter : IDisposable
         _message = message;
         _eventId = eventId;
         LogScope = logScope ?? new LogScope();
-        _reportJob = new Job(ReportJob, period ?? JobOptions.DefaultPeriod, nameof(EventReporter));
+        _reportJob = new Job(ReportJob, period ?? JobOptions.DefaultInterval, nameof(EventReporter));
     }
 
     public void Raise()

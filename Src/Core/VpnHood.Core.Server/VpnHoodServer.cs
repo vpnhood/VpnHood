@@ -202,7 +202,7 @@ public class VpnHoodServer : IAsyncDisposable
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
-            _configureAndSendStatusJob.Period = serverConfig.UpdateStatusIntervalValue < serverConfig.SessionOptions.SyncIntervalValue
+            _configureAndSendStatusJob.Interval = serverConfig.UpdateStatusIntervalValue < serverConfig.SessionOptions.SyncIntervalValue
                 ? serverConfig.UpdateStatusIntervalValue // update status interval must be less than sync interval
                 : serverConfig.SessionOptions.SyncIntervalValue;
 
@@ -267,7 +267,7 @@ public class VpnHoodServer : IAsyncDisposable
             _lastConfigException = ex;
             SessionManager.Tracker?.TryTrackError(ex, "Could not configure server!", "Configure");
             VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
-                _configureAndSendStatusJob.Period.TotalSeconds);
+                _configureAndSendStatusJob.Interval.TotalSeconds);
             await SendStatusToAccessManager(false).Vhc();
         }
     }

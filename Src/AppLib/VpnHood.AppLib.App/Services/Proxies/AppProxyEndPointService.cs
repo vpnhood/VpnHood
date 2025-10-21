@@ -186,7 +186,7 @@ public class AppProxyEndPointService
         // overwrite Settings endpoint if remote url list exists
         if (runtimeNodes.Any() &&
             ProxySettings.Mode is AppProxyMode.Manual &&
-            ProxySettings.AutoUpdateListUrl != null &&
+            ProxySettings.AutoUpdateOptions.Url != null &&
             connectionInfo.ProxyManagerStatus?.AutoUpdate is true) {
             // remove NodeInfos that are not in runtimeEndpoints
             var runtimeNodeIds = runtimeNodes.Select(n => n.EndPoint.Id);
@@ -308,7 +308,8 @@ public class AppProxyEndPointService
 
         return new ProxyOptions {
             ResetStates = _data.ResetStates,
-            ProxyEndPoints = proxyEndPoints
+            ProxyEndPoints = proxyEndPoints,
+            AutoUpdateOptions = ProxySettings.AutoUpdateOptions
         };
     }
 

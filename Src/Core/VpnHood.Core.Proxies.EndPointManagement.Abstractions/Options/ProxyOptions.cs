@@ -4,5 +4,5 @@ public class ProxyOptions
 {
     public ProxyEndPoint[] ProxyEndPoints { get; init; } = [];
     public bool ResetStates { get; set; }
-    public ProxyAutoUpdateOptions EndPointProxyAutoUpdateOptions { get; init; } = new();
+    public ProxyAutoUpdateOptions AutoUpdateOptions { get; init; } = new();
 }

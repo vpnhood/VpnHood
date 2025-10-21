@@ -5,6 +5,6 @@ namespace VpnHood.AppLib.Settings;
 public class AppProxySettings
 {
     public AppProxyMode Mode { get; set; }
-    public ProxyAutoUpdateOptions EndPointProxyAutoUpdateOptions { get; init; } = new();
+    public ProxyAutoUpdateOptions AutoUpdateOptions { get; init; } = new();
 
 }

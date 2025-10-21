@@ -22,7 +22,7 @@ internal class ClientUsageTracker : IDisposable
         _sessionStatus = sessionStatus;
         _tracker = tracker;
         _reportJob = new Job(Report, new JobOptions {
-            Period = _reportInterval,
+            Interval = _reportInterval,
             MaxRetry = 2,
             Name = "ClientReporter"
         });

@@ -14,7 +14,7 @@ public class Job : IDisposable
     private long _currentFailedCount;
     private int _isDisposed;
     private readonly JobRunner _jobRunner;
-    public TimeSpan Period { get; set; }
+    public TimeSpan Interval { get; set; }
     public long SucceededCount { get; private set; }
     public long FailedCount { get; private set; }
     public bool IsStarted => StartedTime != null;
@@ -25,15 +25,15 @@ public class Job : IDisposable
     public Job(Func<CancellationToken, ValueTask> jobFunc, JobOptions options)
     {
         _jobFunc = jobFunc;
-        _dueTime = options.DueTime ?? options.Period;
-        Period = options.Period;
+        _dueTime = options.DueTime ?? options.Interval;
+        Interval = options.Interval;
         _maxRetry = options.MaxRetry;
         Name = options.Name ?? "NoName";
         if (options.AutoStart)
             Start();
 
         // initialize job runner based on the period
-        _jobRunner = options.Period >= JobRunner.SlowInstance.Interval
+        _jobRunner = options.Interval >= JobRunner.SlowInstance.Interval
             ? JobRunner.SlowInstance
             : JobRunner.FastInstance;
 
@@ -42,7 +42,7 @@ public class Job : IDisposable
 
     public Job(Func<CancellationToken, ValueTask> jobFunc, TimeSpan period, string? name = null)
         : this(jobFunc, new JobOptions {
-            Period = period,
+            Interval = period,
             Name = name,
             DueTime = TimeSpan.Zero,
         })
@@ -93,7 +93,7 @@ public class Job : IDisposable
                 return now - StartedTime >= _dueTime;
 
             // interval execution
-            return now - LastExecutedTime >= Period;
+            return now - LastExecutedTime >= Interval;
         }
     }
 

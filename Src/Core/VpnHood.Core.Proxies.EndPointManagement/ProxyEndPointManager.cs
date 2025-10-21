@@ -65,24 +65,28 @@ public class ProxyEndPointManager : IDisposable
 
     // this is used to add new endpoints and remove old endpoints from options
     private static IEnumerable<ProxyEndPointEntry> UpdateEntries(
-        IEnumerable<ProxyEndPointEntry> proxyItems, ProxyEndPoint[] proxyEndPoints)
+        IEnumerable<ProxyEndPointEntry> entries, 
+        ProxyEndPoint[] endPoints,
+        int minPenalty = -1)
     {
         // remove old endpoints
-        proxyItems = proxyItems
-            .Where(x => proxyEndPoints.Any(y => y.Id == x.EndPoint.Id))
+        entries = entries
+            .Where(x => endPoints.Any(y =>
+                y.Id == x.EndPoint.Id || 
+                x.Status.Penalty > minPenalty))
             .ToArray();
 
         // add new endpoints
-        foreach (var proxyEndPoint in proxyEndPoints) {
-            if (proxyItems.All(x => x.EndPoint.Id != proxyEndPoint.Id)) {
+        foreach (var proxyEndPoint in endPoints) {
+            if (entries.All(x => x.EndPoint.Id != proxyEndPoint.Id)) {
                 var newNode = new ProxyEndPointEntry(new ProxyEndPointInfo {
                     EndPoint = proxyEndPoint
                 });
-                proxyItems = proxyItems.Concat([newNode]).ToArray();
+                entries = entries.Concat([newNode]).ToArray();
             }
         }
 
-        return proxyItems;
+        return entries;
     }
 
     private async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient,

@@ -2109,7 +2109,7 @@ export class IntentsClient {
     }
 }
 
-export class ProxyNodeClient {
+export class ProxyEndPointClient {
     protected instance: AxiosInstance;
     protected baseUrl: string;
     protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
@@ -2122,8 +2122,8 @@ export class ProxyNodeClient {
 
     }
 
-    getDevice( cancelToken?: CancelToken): Promise<AppProxyNodeInfo> {
-        let url_ = this.baseUrl + "/api/proxy-nodes/device";
+    getDevice( cancelToken?: CancelToken): Promise<AppProxyEndPointInfo> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints/device";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -2146,7 +2146,7 @@ export class ProxyNodeClient {
         });
     }
 
-    protected processGetDevice(response: AxiosResponse): Promise<AppProxyNodeInfo> {
+    protected processGetDevice(response: AxiosResponse): Promise<AppProxyEndPointInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2160,18 +2160,18 @@ export class ProxyNodeClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppProxyNodeInfo.fromJS(resultData200);
-            return Promise.resolve<AppProxyNodeInfo>(result200);
+            result200 = AppProxyEndPointInfo.fromJS(resultData200);
+            return Promise.resolve<AppProxyEndPointInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppProxyNodeInfo>(null as any);
+        return Promise.resolve<AppProxyEndPointInfo>(null as any);
     }
 
-    list( cancelToken?: CancelToken): Promise<AppProxyNodeInfo[]> {
-        let url_ = this.baseUrl + "/api/proxy-nodes";
+    list( cancelToken?: CancelToken): Promise<AppProxyEndPointInfo[]> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -2194,7 +2194,7 @@ export class ProxyNodeClient {
         });
     }
 
-    protected processList(response: AxiosResponse): Promise<AppProxyNodeInfo[]> {
+    protected processList(response: AxiosResponse): Promise<AppProxyEndPointInfo[]> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2211,25 +2211,25 @@ export class ProxyNodeClient {
             if (Array.isArray(resultData200)) {
                 result200 = [] as any;
                 for (let item of resultData200)
-                    result200!.push(AppProxyNodeInfo.fromJS(item));
+                    result200!.push(AppProxyEndPointInfo.fromJS(item));
             }
             else {
                 result200 = null as any;
             }
-            return Promise.resolve<AppProxyNodeInfo[]>(result200);
+            return Promise.resolve<AppProxyEndPointInfo[]>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppProxyNodeInfo[]>(null as any);
+        return Promise.resolve<AppProxyEndPointInfo[]>(null as any);
     }
 
-    add(proxyNode: ProxyNode, cancelToken?: CancelToken): Promise<AppProxyNodeInfo> {
-        let url_ = this.baseUrl + "/api/proxy-nodes";
+    add(proxyEndPoint: ProxyEndPoint, cancelToken?: CancelToken): Promise<AppProxyEndPointInfo> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(proxyNode);
+        const content_ = JSON.stringify(proxyEndPoint);
 
         let options_: AxiosRequestConfig = {
             data: content_,
@@ -2253,7 +2253,7 @@ export class ProxyNodeClient {
         });
     }
 
-    protected processAdd(response: AxiosResponse): Promise<AppProxyNodeInfo> {
+    protected processAdd(response: AxiosResponse): Promise<AppProxyEndPointInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2267,18 +2267,18 @@ export class ProxyNodeClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppProxyNodeInfo.fromJS(resultData200);
-            return Promise.resolve<AppProxyNodeInfo>(result200);
+            result200 = AppProxyEndPointInfo.fromJS(resultData200);
+            return Promise.resolve<AppProxyEndPointInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppProxyNodeInfo>(null as any);
+        return Promise.resolve<AppProxyEndPointInfo>(null as any);
     }
 
     deleteAll( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/proxy-nodes";
+        let url_ = this.baseUrl + "/api/proxy-endpoints";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -2321,8 +2321,8 @@ export class ProxyNodeClient {
         return Promise.resolve<void>(null as any);
     }
 
-    parse(text: string, defaults: ProxyNodeDefaults, cancelToken?: CancelToken): Promise<AppProxyNodeInfo> {
-        let url_ = this.baseUrl + "/api/proxy-nodes/parse?";
+    parse(text: string, defaults: ProxyEndPointDefaults, cancelToken?: CancelToken): Promise<AppProxyEndPointInfo> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints/parse?";
         if (text === undefined || text === null)
             throw new globalThis.Error("The parameter 'text' must be defined and cannot be null.");
         else
@@ -2353,7 +2353,7 @@ export class ProxyNodeClient {
         });
     }
 
-    protected processParse(response: AxiosResponse): Promise<AppProxyNodeInfo> {
+    protected processParse(response: AxiosResponse): Promise<AppProxyEndPointInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2367,24 +2367,24 @@ export class ProxyNodeClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppProxyNodeInfo.fromJS(resultData200);
-            return Promise.resolve<AppProxyNodeInfo>(result200);
+            result200 = AppProxyEndPointInfo.fromJS(resultData200);
+            return Promise.resolve<AppProxyEndPointInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppProxyNodeInfo>(null as any);
+        return Promise.resolve<AppProxyEndPointInfo>(null as any);
     }
 
-    update(proxyNodeId: string, proxyNode: ProxyNode, cancelToken?: CancelToken): Promise<AppProxyNodeInfo> {
-        let url_ = this.baseUrl + "/api/proxy-nodes/{proxyNodeId}";
-        if (proxyNodeId === undefined || proxyNodeId === null)
-            throw new globalThis.Error("The parameter 'proxyNodeId' must be defined.");
-        url_ = url_.replace("{proxyNodeId}", encodeURIComponent("" + proxyNodeId));
+    update(proxyEndPointId: string, proxyEndPoint: ProxyEndPoint, cancelToken?: CancelToken): Promise<AppProxyEndPointInfo> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints/{proxyEndPointId}";
+        if (proxyEndPointId === undefined || proxyEndPointId === null)
+            throw new globalThis.Error("The parameter 'proxyEndPointId' must be defined.");
+        url_ = url_.replace("{proxyEndPointId}", encodeURIComponent("" + proxyEndPointId));
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(proxyNode);
+        const content_ = JSON.stringify(proxyEndPoint);
 
         let options_: AxiosRequestConfig = {
             data: content_,
@@ -2408,7 +2408,7 @@ export class ProxyNodeClient {
         });
     }
 
-    protected processUpdate(response: AxiosResponse): Promise<AppProxyNodeInfo> {
+    protected processUpdate(response: AxiosResponse): Promise<AppProxyEndPointInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2422,21 +2422,21 @@ export class ProxyNodeClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppProxyNodeInfo.fromJS(resultData200);
-            return Promise.resolve<AppProxyNodeInfo>(result200);
+            result200 = AppProxyEndPointInfo.fromJS(resultData200);
+            return Promise.resolve<AppProxyEndPointInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppProxyNodeInfo>(null as any);
+        return Promise.resolve<AppProxyEndPointInfo>(null as any);
     }
 
-    delete(proxyNodeId: string, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/proxy-nodes/{proxyNodeId}";
-        if (proxyNodeId === undefined || proxyNodeId === null)
-            throw new globalThis.Error("The parameter 'proxyNodeId' must be defined.");
-        url_ = url_.replace("{proxyNodeId}", encodeURIComponent("" + proxyNodeId));
+    delete(proxyEndPointId: string, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints/{proxyEndPointId}";
+        if (proxyEndPointId === undefined || proxyEndPointId === null)
+            throw new globalThis.Error("The parameter 'proxyEndPointId' must be defined.");
+        url_ = url_.replace("{proxyEndPointId}", encodeURIComponent("" + proxyEndPointId));
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -2480,7 +2480,7 @@ export class ProxyNodeClient {
     }
 
     resetState( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/proxy-nodes/reset-state";
+        let url_ = this.baseUrl + "/api/proxy-endpoints/reset-state";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -2524,7 +2524,7 @@ export class ProxyNodeClient {
     }
 
     import(text: string, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/proxy-nodes/import";
+        let url_ = this.baseUrl + "/api/proxy-endpoints/import";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(text);
@@ -3028,7 +3028,7 @@ export class AppState implements IAppState {
     stateProgress?: number | null;
     isDiagnosing!: boolean;
     channelProtocol!: ChannelProtocol;
-    isProxyNodeActive!: boolean;
+    isProxyEndPointActive!: boolean;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -3075,7 +3075,7 @@ export class AppState implements IAppState {
             this.stateProgress = _data["stateProgress"] !== undefined ? _data["stateProgress"] : null as any;
             this.isDiagnosing = _data["isDiagnosing"] !== undefined ? _data["isDiagnosing"] : null as any;
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
-            this.isProxyNodeActive = _data["isProxyNodeActive"] !== undefined ? _data["isProxyNodeActive"] : null as any;
+            this.isProxyEndPointActive = _data["isProxyEndPointActive"] !== undefined ? _data["isProxyEndPointActive"] : null as any;
         }
     }
 
@@ -3117,7 +3117,7 @@ export class AppState implements IAppState {
         data["stateProgress"] = this.stateProgress !== undefined ? this.stateProgress : null as any;
         data["isDiagnosing"] = this.isDiagnosing !== undefined ? this.isDiagnosing : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
-        data["isProxyNodeActive"] = this.isProxyNodeActive !== undefined ? this.isProxyNodeActive : null as any;
+        data["isProxyEndPointActive"] = this.isProxyEndPointActive !== undefined ? this.isProxyEndPointActive : null as any;
         return data;
     }
 }
@@ -3152,7 +3152,7 @@ export interface IAppState {
     stateProgress?: number | null;
     isDiagnosing: boolean;
     channelProtocol: ChannelProtocol;
-    isProxyNodeActive: boolean;
+    isProxyEndPointActive: boolean;
 }
 
 export enum AppConnectionState {
@@ -4513,7 +4513,9 @@ export enum DnsMode {
 
 export class AppProxySettings implements IAppProxySettings {
     mode!: AppProxyMode;
-    remoteNotesUrl?: string | null;
+    autoUpdateListUrl?: string | null;
+    autoUpdateInterval?: string | null;
+    autoUpdateMinPenalty!: number;
 
     constructor(data?: IAppProxySettings) {
         if (data) {
@@ -4527,7 +4529,9 @@ export class AppProxySettings implements IAppProxySettings {
     init(_data?: any) {
         if (_data) {
             this.mode = _data["mode"] !== undefined ? _data["mode"] : null as any;
-            this.remoteNotesUrl = _data["remoteNotesUrl"] !== undefined ? _data["remoteNotesUrl"] : null as any;
+            this.autoUpdateListUrl = _data["autoUpdateListUrl"] !== undefined ? _data["autoUpdateListUrl"] : null as any;
+            this.autoUpdateInterval = _data["autoUpdateInterval"] !== undefined ? _data["autoUpdateInterval"] : null as any;
+            this.autoUpdateMinPenalty = _data["autoUpdateMinPenalty"] !== undefined ? _data["autoUpdateMinPenalty"] : null as any;
         }
     }
 
@@ -4541,20 +4545,24 @@ export class AppProxySettings implements IAppProxySettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["mode"] = this.mode !== undefined ? this.mode : null as any;
-        data["remoteNotesUrl"] = this.remoteNotesUrl !== undefined ? this.remoteNotesUrl : null as any;
+        data["autoUpdateListUrl"] = this.autoUpdateListUrl !== undefined ? this.autoUpdateListUrl : null as any;
+        data["autoUpdateInterval"] = this.autoUpdateInterval !== undefined ? this.autoUpdateInterval : null as any;
+        data["autoUpdateMinPenalty"] = this.autoUpdateMinPenalty !== undefined ? this.autoUpdateMinPenalty : null as any;
         return data;
     }
 }
 
 export interface IAppProxySettings {
     mode: AppProxyMode;
-    remoteNotesUrl?: string | null;
+    autoUpdateListUrl?: string | null;
+    autoUpdateInterval?: string | null;
+    autoUpdateMinPenalty: number;
 }
 
 export enum AppProxyMode {
-    Disabled = 0,
+    NoProxy = 0,
     Device = 1,
-    Custom = 2,
+    Manual = 2,
 }
 
 export class ClientProfileInfo implements IClientProfileInfo {
@@ -5350,11 +5358,11 @@ export interface IPatchOfStringOf {
     value?: string[] | null;
 }
 
-export class ProxyNodeInfo implements IProxyNodeInfo {
-    node!: ProxyNode;
-    status!: ProxyNodeStatus;
+export class ProxyEndPointInfo implements IProxyEndPointInfo {
+    endPoint!: ProxyEndPoint;
+    status!: ProxyEndPointStatus;
 
-    constructor(data?: IProxyNodeInfo) {
+    constructor(data?: IProxyEndPointInfo) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5362,42 +5370,42 @@ export class ProxyNodeInfo implements IProxyNodeInfo {
             }
         }
         if (!data) {
-            this.node = new ProxyNode();
-            this.status = new ProxyNodeStatus();
+            this.endPoint = new ProxyEndPoint();
+            this.status = new ProxyEndPointStatus();
         }
     }
 
     init(_data?: any) {
         if (_data) {
-            this.node = _data["node"] ? ProxyNode.fromJS(_data["node"]) : new ProxyNode();
-            this.status = _data["status"] ? ProxyNodeStatus.fromJS(_data["status"]) : new ProxyNodeStatus();
+            this.endPoint = _data["endPoint"] ? ProxyEndPoint.fromJS(_data["endPoint"]) : new ProxyEndPoint();
+            this.status = _data["status"] ? ProxyEndPointStatus.fromJS(_data["status"]) : new ProxyEndPointStatus();
         }
     }
 
-    static fromJS(data: any): ProxyNodeInfo {
+    static fromJS(data: any): ProxyEndPointInfo {
         data = typeof data === 'object' ? data : {};
-        let result = new ProxyNodeInfo();
+        let result = new ProxyEndPointInfo();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["node"] = this.node ? this.node.toJSON() : null as any;
+        data["endPoint"] = this.endPoint ? this.endPoint.toJSON() : null as any;
         data["status"] = this.status ? this.status.toJSON() : null as any;
         return data;
     }
 }
 
-export interface IProxyNodeInfo {
-    node: ProxyNode;
-    status: ProxyNodeStatus;
+export interface IProxyEndPointInfo {
+    endPoint: ProxyEndPoint;
+    status: ProxyEndPointStatus;
 }
 
-export class AppProxyNodeInfo extends ProxyNodeInfo implements IAppProxyNodeInfo {
+export class AppProxyEndPointInfo extends ProxyEndPointInfo implements IAppProxyEndPointInfo {
     countryCode?: string | null;
 
-    constructor(data?: IAppProxyNodeInfo) {
+    constructor(data?: IAppProxyEndPointInfo) {
         super(data);
     }
 
@@ -5408,9 +5416,9 @@ export class AppProxyNodeInfo extends ProxyNodeInfo implements IAppProxyNodeInfo
         }
     }
 
-    static override fromJS(data: any): AppProxyNodeInfo {
+    static override fromJS(data: any): AppProxyEndPointInfo {
         data = typeof data === 'object' ? data : {};
-        let result = new AppProxyNodeInfo();
+        let result = new AppProxyEndPointInfo();
         result.init(data);
         return result;
     }
@@ -5423,11 +5431,11 @@ export class AppProxyNodeInfo extends ProxyNodeInfo implements IAppProxyNodeInfo
     }
 }
 
-export interface IAppProxyNodeInfo extends IProxyNodeInfo {
+export interface IAppProxyEndPointInfo extends IProxyEndPointInfo {
     countryCode?: string | null;
 }
 
-export class ProxyNode implements IProxyNode {
+export class ProxyEndPoint implements IProxyEndPoint {
     id!: string;
     isEnabled!: boolean;
     protocol!: ProxyProtocol;
@@ -5437,7 +5445,7 @@ export class ProxyNode implements IProxyNode {
     password?: string | null;
     url!: string;
 
-    constructor(data?: IProxyNode) {
+    constructor(data?: IProxyEndPoint) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5459,9 +5467,9 @@ export class ProxyNode implements IProxyNode {
         }
     }
 
-    static fromJS(data: any): ProxyNode {
+    static fromJS(data: any): ProxyEndPoint {
         data = typeof data === 'object' ? data : {};
-        let result = new ProxyNode();
+        let result = new ProxyEndPoint();
         result.init(data);
         return result;
     }
@@ -5480,7 +5488,7 @@ export class ProxyNode implements IProxyNode {
     }
 }
 
-export interface IProxyNode {
+export interface IProxyEndPoint {
     id: string;
     isEnabled: boolean;
     protocol: ProxyProtocol;
@@ -5498,7 +5506,7 @@ export enum ProxyProtocol {
     Https = "Https",
 }
 
-export class ProxyNodeStatus implements IProxyNodeStatus {
+export class ProxyEndPointStatus implements IProxyEndPointStatus {
     penalty!: number;
     succeededCount!: number;
     failedCount!: number;
@@ -5506,7 +5514,7 @@ export class ProxyNodeStatus implements IProxyNodeStatus {
     lastUsedTime?: Date | null;
     errorMessage?: string | null;
 
-    constructor(data?: IProxyNodeStatus) {
+    constructor(data?: IProxyEndPointStatus) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5526,9 +5534,9 @@ export class ProxyNodeStatus implements IProxyNodeStatus {
         }
     }
 
-    static fromJS(data: any): ProxyNodeStatus {
+    static fromJS(data: any): ProxyEndPointStatus {
         data = typeof data === 'object' ? data : {};
-        let result = new ProxyNodeStatus();
+        let result = new ProxyEndPointStatus();
         result.init(data);
         return result;
     }
@@ -5545,7 +5553,7 @@ export class ProxyNodeStatus implements IProxyNodeStatus {
     }
 }
 
-export interface IProxyNodeStatus {
+export interface IProxyEndPointStatus {
     penalty: number;
     succeededCount: number;
     failedCount: number;
@@ -5554,14 +5562,14 @@ export interface IProxyNodeStatus {
     errorMessage?: string | null;
 }
 
-export class ProxyNodeDefaults implements IProxyNodeDefaults {
+export class ProxyEndPointDefaults implements IProxyEndPointDefaults {
     isEnabled?: boolean | null;
     protocol?: ProxyProtocol | null;
     port?: number | null;
     username?: string | null;
     password?: string | null;
 
-    constructor(data?: IProxyNodeDefaults) {
+    constructor(data?: IProxyEndPointDefaults) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5580,9 +5588,9 @@ export class ProxyNodeDefaults implements IProxyNodeDefaults {
         }
     }
 
-    static fromJS(data: any): ProxyNodeDefaults {
+    static fromJS(data: any): ProxyEndPointDefaults {
         data = typeof data === 'object' ? data : {};
-        let result = new ProxyNodeDefaults();
+        let result = new ProxyEndPointDefaults();
         result.init(data);
         return result;
     }
@@ -5598,7 +5606,7 @@ export class ProxyNodeDefaults implements IProxyNodeDefaults {
     }
 }
 
-export interface IProxyNodeDefaults {
+export interface IProxyEndPointDefaults {
     isEnabled?: boolean | null;
     protocol?: ProxyProtocol | null;
     port?: number | null;

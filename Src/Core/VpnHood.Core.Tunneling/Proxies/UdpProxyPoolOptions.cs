@@ -1,6 +1,7 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Common;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Toolkit.Sockets;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 

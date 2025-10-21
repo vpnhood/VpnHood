@@ -12,7 +12,6 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
-using Uri = System.Uri;
 
 namespace VpnHood.AppLib.Droid.Common;
 

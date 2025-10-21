@@ -1,9 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
+namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
 // Vibe: Extract a single proxy URI from heterogeneous text.
-internal static partial class ProxyNodeExtractor
+internal static partial class ProxyEndPointExtractor
 {
     /// <summary>
     /// Extract a single proxy URI from heterogeneous text.
@@ -185,7 +185,8 @@ internal static partial class ProxyNodeExtractor
         };
 
         // Ensure port is set
-        var port = uri.Port > 0 && !uri.IsDefaultPort ? uri.Port : GetDefaultPortForScheme(scheme);
+        var port = uri is { Port: > 0, IsDefaultPort: false } 
+            ? uri.Port : GetDefaultPortForScheme(scheme);
 
         return BuildUri(scheme, uri.Host, port, uri.UserInfo);
     }

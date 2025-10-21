@@ -1,8 +1,8 @@
 ﻿using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Client.Abstractions;
+namespace VpnHood.Core.Toolkit.Monitoring;
 
-public class ProgressTracker(
+public class ProgressMonitor(
     int totalTaskCount,
     TimeSpan taskTimeout,
     int maxDegreeOfParallelism = 1)

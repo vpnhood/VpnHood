@@ -37,6 +37,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.702" />
+		<PackageReference Include="VpnHood.Core.Proxies" Version="7.3.755" />
 	</ItemGroup>
 
 </Project>

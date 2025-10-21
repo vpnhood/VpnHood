@@ -1,8 +1,8 @@
-﻿namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
+﻿namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
 public class ProxyOptions
 {
-    public ProxyNode[] ProxyNodes { get; init; } = [];
+    public ProxyEndPoint[] ProxyEndPoints { get; init; } = [];
     public Uri? AutoUpdateListUrl { get; set; }
     public TimeSpan? AutoUpdateInterval { get; set; }
     public int AutoUpdateMinPenalty { get; set; }

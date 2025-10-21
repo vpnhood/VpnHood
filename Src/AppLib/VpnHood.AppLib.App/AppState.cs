@@ -38,5 +38,5 @@ public class AppState
     public required int? StateProgress { get; init; }
     public required bool IsDiagnosing { get; set; }
     public required ChannelProtocol ChannelProtocol { get; set; }
-    public required bool IsProxyNodeActive { get; set; }
+    public required bool IsProxyEndPointActive { get; set; }
 }

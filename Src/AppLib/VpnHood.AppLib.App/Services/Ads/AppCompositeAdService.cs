@@ -2,10 +2,10 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
-using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Ads;
@@ -16,10 +16,10 @@ internal class AppCompositeAdService
     private AppAdProviderItem? _loadedAdProviderItem;
     private readonly AppAdProviderItem[] _adProviderItems;
     private readonly ITracker? _tracker;
-    private ProgressTracker? _progressTracker;
+    private ProgressMonitor? _progressMonitor;
     public bool IsPreload { get; private set; }
     public readonly record struct ShowLoadedAdResult(string NetworkName, ShowAdResult ShowAdResult);
-    public ProgressStatus? LoadAdProgress => _progressTracker?.Progress;
+    public ProgressStatus? LoadAdProgress => _progressMonitor?.Progress;
 
     public AppCompositeAdService(AppAdProviderItem[] adProviderItems, ITracker? tracker)
     {
@@ -79,7 +79,7 @@ internal class AppCompositeAdService
             .Where(x => useFallback || !x.IsFallback)
             .ToArray();
 
-        _progressTracker = new ProgressTracker(
+        _progressMonitor = new ProgressMonitor(
             totalTaskCount: filteredAdProviderItems.Count(x => !x.IsFallback),
             taskTimeout: loadAdTimeout);
 
@@ -92,7 +92,7 @@ internal class AppCompositeAdService
                     VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
                     using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
                     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-                    if (adProviderItem.IsFallback) _progressTracker = null; // do not track fallback ads
+                    if (adProviderItem.IsFallback) _progressMonitor = null; // do not track fallback ads
                     await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
                     _loadedAdProviderItem = adProviderItem;
                     return;
@@ -104,7 +104,7 @@ internal class AppCompositeAdService
                     throw; // do not report cancellation
                 }
                 catch (Exception ex) {
-                    _progressTracker?.IncrementCompleted();
+                    _progressMonitor?.IncrementCompleted();
                     var message = string.IsNullOrWhiteSpace(ex.Message)
                         ? $"Empty message. Provider: {adProviderItem.Name}, IsPreload: {isPreload}"
                         : ex.Message;
@@ -123,7 +123,7 @@ internal class AppCompositeAdService
             }
         }
         finally {
-            _progressTracker = null;
+            _progressMonitor = null;
         }
 
         var providerMessages = filteredAdProviderItems.Any()

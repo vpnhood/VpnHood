@@ -5,20 +5,23 @@ using System.Diagnostics;
 using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
-using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;
-using VpnHood.Core.Client.ProxyNodes;
+using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Proxies.EndPointManagement;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -26,7 +29,6 @@ using VpnHood.Core.Tunneling.ClientStreams;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
-using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
@@ -372,7 +374,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 State = ClientState.ValidatingProxies;
                 await ProxyClientManager.RemoveBadServers(linkedCts.Token).Vhc();
                 VhLogger.Instance.LogInformation("Proxy servers: {Count}",
-                    ProxyClientManager.Status.ProxyNodeInfos.Length);
+                    ProxyClientManager.Status.ProxyEndPointInfos.Length);
             }
 
             // Establish first connection and create a session

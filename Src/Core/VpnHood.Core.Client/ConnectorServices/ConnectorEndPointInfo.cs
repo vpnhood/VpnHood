@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using VpnHood.Core.Client.ProxyNodes;
+using VpnHood.Core.Proxies.EndPointManagement;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 

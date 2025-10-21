@@ -240,7 +240,7 @@ public class ClientProfileTest : TestAppBase
         });
 
         // ************
-        // *** TEST ***: Update should update the old node if ClientProfileId already exists
+        // *** TEST ***: Update should update the old item if ClientProfileId already exists
         var updateParams = new ClientProfileUpdateParams {
             ClientProfileName = Guid.NewGuid().ToString(),
             IsFavorite = true,

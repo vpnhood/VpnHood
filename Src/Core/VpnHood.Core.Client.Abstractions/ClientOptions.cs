@@ -1,8 +1,8 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;

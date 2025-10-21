@@ -2,76 +2,76 @@ using Microsoft.AspNetCore.Mvc;
 using VpnHood.AppLib.Services.Proxies;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.Core.Client.Abstractions.ProxyNodes;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
 namespace VpnHood.AppLib.Swagger.Controllers;
 
 [ApiController]
-[Route("api/proxy-nodes")]
-public class ProxyNodeController : ControllerBase, IProxyNodeController
+[Route("api/proxy-endpoints")]
+public class ProxyEndPointController : ControllerBase, IProxyEndPointController
 {
     /// <summary>
     /// Get the device information
     /// </summary>
     [HttpGet("device")]
-    public Task<AppProxyNodeInfo?> GetDevice()
+    public Task<AppProxyEndPointInfo?> GetDevice()
     {
         throw new SwaggerOnlyException();
     }
 
     /// <summary>
-    /// List all proxy nodes
+    /// List all proxy endpoints
     /// </summary>
     [HttpGet]
-    public Task<AppProxyNodeInfo[]> List()
+    public Task<AppProxyEndPointInfo[]> List()
     {
         throw new SwaggerOnlyException();
     }
 
     /// <summary>
-    /// Parse and create a proxy node from the provided text
+    /// Parse and create a proxy endpoint from the provided text
     /// </summary>
     /// <param name="text">The text to parse</param>
-    /// <param name="defaults">The default settings for the proxy node</param>
+    /// <param name="defaults">The default settings for the proxy endpoint</param>
     [HttpPost("parse")]
-    public Task<AppProxyNodeInfo> Parse([FromQuery] string text, [FromBody] ProxyNodeDefaults defaults)
+    public Task<AppProxyEndPointInfo> Parse([FromQuery] string text, [FromBody] ProxyEndPointDefaults defaults)
     {
         throw new SwaggerOnlyException();
     }
 
     /// <summary>
-    /// Update an existing proxy node
+    /// Update an existing proxy endpoint
     /// </summary>
-    /// <param name="proxyNodeId">The ID of the proxy node to update</param>
-    /// <param name="proxyNode">The updated proxy node data</param>
-    [HttpPut("{proxyNodeId}")]
-    public Task<AppProxyNodeInfo> Update(string proxyNodeId, [FromBody] ProxyNode proxyNode)
+    /// <param name="proxyEndPointId">The ID of the proxy endpoint to update</param>
+    /// <param name="proxyEndPoint">The updated proxy endpoint data</param>
+    [HttpPut("{proxyEndPointId}")]
+    public Task<AppProxyEndPointInfo> Update(string proxyEndPointId, [FromBody] ProxyEndPoint proxyEndPoint)
     {
         throw new SwaggerOnlyException();
     }
 
     /// <summary>
-    /// Add a new proxy node
+    /// Add a new proxy endpoint
     /// </summary>
-    /// <param name="proxyNode">The proxy node to add</param>
+    /// <param name="proxyEndPoint">The proxy endpoint to add</param>
     [HttpPost]
-    public Task<AppProxyNodeInfo> Add([FromBody] ProxyNode proxyNode)
+    public Task<AppProxyEndPointInfo> Add([FromBody] ProxyEndPoint proxyEndPoint)
     {
         throw new SwaggerOnlyException();
     }
 
     /// <summary>
-    /// Delete a proxy node by its ID
+    /// Delete a proxy endpoint by its ID
     /// </summary>
-    /// <param name="proxyNodeId">The ID of the proxy node to delete</param>
-    [HttpDelete("{proxyNodeId}")]
-    public Task Delete(string proxyNodeId)
+    /// <param name="proxyEndPointId">The ID of the proxy endpoint to delete</param>
+    [HttpDelete("{proxyEndPointId}")]
+    public Task Delete(string proxyEndPointId)
     {
         throw new SwaggerOnlyException();
     }
 
     /// <summary>
-    /// Delete all proxy nodes
+    /// Delete all proxy endpoints
     /// </summary>
     [HttpDelete]
     public Task DeleteAll()
@@ -80,7 +80,7 @@ public class ProxyNodeController : ControllerBase, IProxyNodeController
     }
 
     /// <summary>
-    /// Reset the state of the proxy nodes
+    /// Reset the state of the proxy endpoints
     /// </summary>
     [HttpPost("reset-state")]
     public Task ResetState()
@@ -89,7 +89,7 @@ public class ProxyNodeController : ControllerBase, IProxyNodeController
     }
 
     /// <summary>
-    /// Import proxy nodes from text content
+    /// Import proxy endpoints from text content
     /// </summary>
     /// <param name="text">Plain text content containing proxy URLs (one per line or comma-separated)</param>
     [HttpPost("import")]

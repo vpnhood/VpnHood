@@ -1,9 +1,9 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 
-namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
+namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
-public class ProxyNode
+public class ProxyEndPoint
 {
     public string Id {
         get {

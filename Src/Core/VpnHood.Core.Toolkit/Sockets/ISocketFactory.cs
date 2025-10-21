@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-namespace VpnHood.Core.Tunneling.Sockets;
+namespace VpnHood.Core.Toolkit.Sockets;
 
 public interface ISocketFactory
 {

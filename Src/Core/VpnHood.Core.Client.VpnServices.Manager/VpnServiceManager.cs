@@ -3,12 +3,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Client.VpnServices.Manager.Exceptions;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
@@ -62,7 +62,7 @@ public class VpnServiceManager : IDisposable
     }
 
     private static ConnectionInfo BuildConnectionInfo(ClientState clientState, 
-        ProxyClientManagerStatus? proxyManagerStatus = null,
+        ProxyEndPointManagerStatus? proxyManagerStatus = null,
         Exception? ex = null)
     {
         return new ConnectionInfo {

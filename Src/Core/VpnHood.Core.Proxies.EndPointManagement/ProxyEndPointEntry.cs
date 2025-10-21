@@ -1,17 +1,16 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Abstractions.ProxyNodes;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Tunneling;
 
-namespace VpnHood.Core.Client.ProxyNodes;
+namespace VpnHood.Core.Proxies.EndPointManagement;
 
-internal class ProxyNodeItem(ProxyNodeInfo nodeInfo) 
+internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo) 
 {
     private readonly object _lock = new();
     private int _requestPosition;
-    public ProxyNodeInfo Info => nodeInfo;
-    public ProxyNodeStatus Status => nodeInfo.Status;
-    public ProxyNode Node => nodeInfo.Node;
+    public ProxyEndPointInfo Info => endPointInfo;
+    public ProxyEndPointStatus Status => endPointInfo.Status;
+    public ProxyEndPoint EndPoint => endPointInfo.EndPoint;
 
     public int GetSortValue(int currentRequestCount)
     {
@@ -36,9 +35,8 @@ internal class ProxyNodeItem(ProxyNodeInfo nodeInfo)
             if (isSlow) {
                 Status.Penalty++;
 
-                VhLogger.Instance.LogDebug(GeneralEventId.Essential,
-                    "Proxy server responded slowly. {ProxyServer}, ResponseTime: {ResponseTime}, PenaltyRate: {Penalty}",
-                    VhLogger.FormatHostName(Node.Host), latency, Status.Penalty);
+                VhLogger.Instance.LogDebug("Proxy server responded slowly. {ProxyServer}, ResponseTime: {ResponseTime}, PenaltyRate: {Penalty}",
+                    VhLogger.FormatHostName(EndPoint.Host), latency, Status.Penalty);
             }
             else {
                 if (Status.Penalty > 0)
@@ -62,9 +60,8 @@ internal class ProxyNodeItem(ProxyNodeInfo nodeInfo)
             Status.ErrorMessage = exception?.Message;
             UpdatePosition(currentRequestPos);
 
-            VhLogger.Instance.LogDebug(GeneralEventId.Essential,
-                "Failed to connect to proxy server. {ProxyServer}, FailedCount: {FailedCount}, Penalty: {Penalty}",
-                VhLogger.FormatHostName(Node.Host), Status.FailedCount, Status.Penalty);
+            VhLogger.Instance.LogDebug("Failed to connect to proxy server. {ProxyServer}, FailedCount: {FailedCount}, Penalty: {Penalty}",
+                VhLogger.FormatHostName(EndPoint.Host), Status.FailedCount, Status.Penalty);
         }
     }
 }

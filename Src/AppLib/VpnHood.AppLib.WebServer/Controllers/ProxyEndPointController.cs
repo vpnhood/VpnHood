@@ -1,18 +1,18 @@
 ﻿using VpnHood.AppLib.Services.Proxies;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Extensions;
-using VpnHood.Core.Client.Abstractions.ProxyNodes;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class ProxyNodeController : ControllerBase, IProxyNodeController
+internal class ProxyEndPointController : ControllerBase, IProxyEndPointController
 {
-    private static AppProxyNodeService ProxyNodeService => VpnHoodApp.Instance.Services.ProxyNodeService;
+    private static AppProxyEndPointService ProxyEndPointService => VpnHoodApp.Instance.Services.ProxyEndPointService;
 
     public override void AddRoutes(IRouteMapper mapper)
     {
-        const string baseUrl = "/api/proxy-nodes/";
+        const string baseUrl = "/api/proxy-endpoints/";
 
         // Get device proxy
         mapper.AddStatic(HttpMethod.GET, baseUrl + "device", async ctx => {
@@ -28,22 +28,22 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
 
         // Add
         mapper.AddStatic(HttpMethod.POST, baseUrl, async ctx => {
-            var body = ctx.ReadJson<ProxyNode>();
+            var body = ctx.ReadJson<ProxyEndPoint>();
             var res = await Add(body);
             await ctx.SendJson(res);
         });
 
         // Update
-        mapper.AddParam(HttpMethod.PUT, baseUrl + "{proxyNodeId}", async ctx => {
-            var id = ctx.GetRouteParameter<string>("proxyNodeId");
-            var body = ctx.ReadJson<ProxyNode>();
+        mapper.AddParam(HttpMethod.PUT, baseUrl + "{proxyEndPointId}", async ctx => {
+            var id = ctx.GetRouteParameter<string>("proxyEndPointId");
+            var body = ctx.ReadJson<ProxyEndPoint>();
             var res = await Update(id, body);
             await ctx.SendJson(res);
         });
 
         // Delete
-        mapper.AddParam(HttpMethod.DELETE, baseUrl + "{proxyNodeId}", async ctx => {
-            var id = ctx.GetRouteParameter<string>("proxyNodeId");
+        mapper.AddParam(HttpMethod.DELETE, baseUrl + "{proxyEndPointId}", async ctx => {
+            var id = ctx.GetRouteParameter<string>("proxyEndPointId");
             await Delete(id);
             await ctx.SendNoContent();
         });
@@ -54,10 +54,10 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
             await ctx.SendNoContent();
         });
 
-        // Parse (query: text, body: ProxyNodeDefaults)
+        // Parse (query: text, body: ProxyEndPointDefaults)
         mapper.AddStatic(HttpMethod.POST, baseUrl + "parse", async ctx => {
             var text = ctx.GetQueryParameter<string>("text");
-            var defaults = ctx.ReadJson<ProxyNodeDefaults>();
+            var defaults = ctx.ReadJson<ProxyEndPointDefaults>();
             var res = await Parse(text, defaults);
             await ctx.SendJson(res);
         });
@@ -78,61 +78,61 @@ internal class ProxyNodeController : ControllerBase, IProxyNodeController
 
     public Task ResetState()
     {
-        ProxyNodeService.ResetStates();
+        ProxyEndPointService.ResetStates();
         return Task.CompletedTask;
     }
 
-    public Task<AppProxyNodeInfo?> GetDevice()
+    public Task<AppProxyEndPointInfo?> GetDevice()
     {
-        var result = ProxyNodeService.GetDeviceProxy();
+        var result = ProxyEndPointService.GetDeviceProxy();
         return Task.FromResult(result);
     }
     
-    public Task<AppProxyNodeInfo[]> List()
+    public Task<AppProxyEndPointInfo[]> List()
     {
-        var result = ProxyNodeService.ListProxies();
+        var result = ProxyEndPointService.ListProxies();
         return Task.FromResult(result);
     }
 
-    public Task<AppProxyNodeInfo> Parse(string text, ProxyNodeDefaults defaults)
+    public Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults)
     {
-        var parsed = ProxyNodeParser.ParseHostToUrl(text, defaults);
-        var node = ProxyNodeParser.FromUrl(parsed);
-        var info = new AppProxyNodeInfo {
-            Node = node,
+        var parsed = ProxyEndPointParser.ParseHostToUrl(text, defaults);
+        var endpoint = ProxyEndPointParser.FromUrl(parsed);
+        var info = new AppProxyEndPointInfo {
+            EndPoint = endpoint,
             CountryCode = null
         };
 
         return Task.FromResult(info);
     }
 
-    public Task<AppProxyNodeInfo> Update(string proxyNodeId, ProxyNode proxyNode)
+    public Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint)
     {
-        var res = ProxyNodeService.Update(proxyNodeId, proxyNode);
+        var res = ProxyEndPointService.Update(proxyEndPointId, proxyEndPoint);
         return Task.FromResult(res);
     }
 
-    public Task<AppProxyNodeInfo> Add(ProxyNode proxyNode)
+    public Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint)
     {
-        var res = ProxyNodeService.Add(proxyNode);
+        var res = ProxyEndPointService.Add(proxyEndPoint);
         return Task.FromResult(res);
     }
 
-    public Task Delete(string proxyNodeId)
+    public Task Delete(string proxyEndPointId)
     {
-        ProxyNodeService.Delete(proxyNodeId);
+        ProxyEndPointService.Delete(proxyEndPointId);
         return Task.CompletedTask;
     }
 
     public Task DeleteAll()
     {
-        ProxyNodeService.DeleteAll();
+        ProxyEndPointService.DeleteAll();
         return Task.CompletedTask;
     }
 
     public Task Import(string text)
     {
-        ProxyNodeService.Import(text);
+        ProxyEndPointService.Import(text);
         return Task.CompletedTask;
     }
 }

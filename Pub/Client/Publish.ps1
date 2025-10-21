@@ -54,6 +54,10 @@ if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access.FileAccessManager/_publish.ps1";
 
+	# proxies
+	& "$solutionDir/Src/Core/VpnHood.Core.Proxies.EndPointManagement/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Proxies.EndPointManagement.Abstractions/_publish.ps1";
+
 	# applib
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/AppLib/VpnHood.AppLib.App/_publish.ps1";

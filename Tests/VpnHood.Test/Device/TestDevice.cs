@@ -1,8 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Common;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Test.Device;

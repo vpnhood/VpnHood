@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Common;
+using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Device;

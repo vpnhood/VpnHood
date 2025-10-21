@@ -4,16 +4,18 @@ using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Client.ProxyNodes;
+using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
-using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client;
@@ -35,7 +37,7 @@ public class ServerFinder(
         public bool? Available { get; set; }
     }
 
-    private ProgressTracker? _progressTracker;
+    private ProgressMonitor? _progressMonitor;
     private HostStatus[] _hostEndPointStatuses = [];
 
     // Progress properties
@@ -43,7 +45,7 @@ public class ServerFinder(
     public string? ServerLocation => serverLocation;
     public EndPointStrategy EndPointStrategy => endPointStrategy;
     public IPEndPoint[] CustomServerEndpoints => customServerEndpoints;
-    public ProgressStatus? Progress => _progressTracker?.Progress;
+    public ProgressStatus? Progress => _progressMonitor?.Progress;
 
     // There is much work to be done here
     public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
@@ -175,7 +177,7 @@ public class ServerFinder(
             .ToArray();
 
         // Initialize time-based progress tracking
-        _progressTracker = new ProgressTracker(hostStatuses.Length, serverQueryTimeout, maxDegreeOfParallelism);
+        _progressMonitor = new ProgressMonitor(hostStatuses.Length, serverQueryTimeout, maxDegreeOfParallelism);
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Starting server verification. Endpoints: {EndpointCount}, MaxParallelism: {MaxParallelism}",
@@ -215,7 +217,7 @@ public class ServerFinder(
                     }
                 }
                 finally {
-                    _progressTracker.IncrementCompleted();
+                    _progressMonitor.IncrementCompleted();
                 }
             }).Vhc();
         }
@@ -225,10 +227,10 @@ public class ServerFinder(
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
                 "Server verification completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
-                FastDateTime.Now - _progressTracker.Progress.StartedTime, _progressTracker.Progress.Completed, _progressTracker.Progress.Total);
+                FastDateTime.Now - _progressMonitor.Progress.StartedTime, _progressMonitor.Progress.Completed, _progressMonitor.Progress.Total);
 
         // Ensure progress is complete at the end of the operation
-        _progressTracker = null;
+        _progressMonitor = null;
 
         return hostStatuses;
     }

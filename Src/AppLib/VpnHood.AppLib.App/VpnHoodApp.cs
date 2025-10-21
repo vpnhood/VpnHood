@@ -205,8 +205,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     storageFolderPath: options.StorageFolderPath,
                     appVersion: Features.Version,
                     updateOptions: options.UpdaterOptions),
-            ProxyNodeService = new AppProxyNodeService(
-                storageFolder: Path.Combine(StorageFolderPath, "proxy_nodes"),
+            ProxyEndPointService = new AppProxyEndPointService(
+                storageFolder: Path.Combine(StorageFolderPath, "proxy_endpoints"),
                 ipLocationProvider: _ipRangeLocationProvider,
                 vpnServiceManager: _vpnServiceManager,
                 deviceUiProvider: deviceUiProvider,
@@ -286,7 +286,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     DropQuic = UserSettings.DropQuic,
                     UseTcpProxy = UserSettings.UseTcpProxy,
                     DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                    ProxyOptions = Services.ProxyNodeService.GetProxyOptions(),
+                    ProxyOptions = Services.ProxyEndPointService.GetProxyOptions(),
                 };
 
                 // it is not important to take effect immediately
@@ -404,7 +404,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
                 SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetSystemPrivateDns()),
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
-                IsProxyNodeActive = Services.ProxyNodeService.IsProxyNodeActive,
+                IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.DeviceUiProvider.GetSystemBarsInfo(uiContext)
                     : SystemBarsInfo.Default,
@@ -730,7 +730,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview,
-                ProxyOptions = Services.ProxyNodeService.GetProxyOptions()
+                ProxyOptions = Services.ProxyEndPointService.GetProxyOptions()
             };
 
             VhLogger.Instance.LogDebug(

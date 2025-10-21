@@ -33,13 +33,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
+	  <ProjectReference Include="..\VpnHood.Core.Proxies.EndPointManagement.Abstractions\VpnHood.Core.Proxies.EndPointManagement.Abstractions.csproj" />
 	</ItemGroup>
 </Project>

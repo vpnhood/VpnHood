@@ -2,15 +2,15 @@
 using System.Text.Json.Serialization.Metadata;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Settings;
-using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.IpLocations;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Proxies;
 
-public class AppProxyNodeService
+public class AppProxyEndPointService
 {
     private readonly ServiceData _data;
     private readonly HostCountryResolver? _hostCountryResolver;
@@ -20,7 +20,7 @@ public class AppProxyNodeService
     private readonly AppSettingsService _settingsService;
     private AppProxySettings ProxySettings => _settingsService.UserSettings.ProxySettings;
 
-    public AppProxyNodeService(string storageFolder,
+    public AppProxyEndPointService(string storageFolder,
         IIpLocationProvider? ipLocationProvider,
         IDeviceUiProvider deviceUiProvider,
         VpnServiceManager vpnServiceManager,
@@ -36,79 +36,79 @@ public class AppProxyNodeService
         vpnServiceManager.Reconfigured += OnVpnServiceManagerOnReconfigured;
     }
 
-    public bool IsProxyNodeActive {
+    public bool IsProxyEndPointActive {
         get {
             return ProxySettings.Mode switch {
                 AppProxyMode.NoProxy => false,
                 AppProxyMode.Device =>
                     _deviceUiProvider.IsProxySettingsSupported &&
                     _deviceUiProvider.GetProxySettings() != null,
-                _ => _data.CustomNodeInfos.Any()
+                _ => _data.CustomEndPointInfos.Any()
             };
         }
     }
 
-    public AppProxyNodeInfo? GetDeviceProxy()
+    public AppProxyEndPointInfo? GetDeviceProxy()
     {
         UpdateNodesByCore();
         return _data.SystemNodeInfo;
     }
 
-    public AppProxyNodeInfo[] ListProxies()
+    public AppProxyEndPointInfo[] ListProxies()
     {
         UpdateNodesByCore();
-        return _data.CustomNodeInfos;
+        return _data.CustomEndPointInfos;
     }
 
-    public AppProxyNodeInfo Add(ProxyNode proxyNode)
+    public AppProxyEndPointInfo Add(ProxyEndPoint proxyEndPoint)
     {
-        var ret = AddInternal(proxyNode);
+        var ret = AddInternal(proxyEndPoint);
         Save();
         return ret;
     }
 
-    private AppProxyNodeInfo AddInternal(ProxyNode proxyNode)
+    private AppProxyEndPointInfo AddInternal(ProxyEndPoint proxyEndPoint)
     {
-        proxyNode = ProxyNodeParser.Normalize(proxyNode);
+        proxyEndPoint = ProxyEndPointParser.Normalize(proxyEndPoint);
 
         // update if already exists
-        var existing = _data.CustomNodeInfos.FirstOrDefault(n => n.Node.Id == proxyNode.Id);
+        var existing = _data.CustomEndPointInfos.FirstOrDefault(n => n.EndPoint.Id == proxyEndPoint.Id);
         if (existing != null)
-            return Update(proxyNode.Id, proxyNode);
+            return Update(proxyEndPoint.Id, proxyEndPoint);
 
-        // add new node
-        var newNodeInfo = new AppProxyNodeInfo {
-            Node = proxyNode,
+        // add a new endpoint
+        var newNodeInfo = new AppProxyEndPointInfo {
+            EndPoint = proxyEndPoint,
             CountryCode = null,
-            Status = new ProxyNodeStatus()
+            Status = new ProxyEndPointStatus()
         };
-        _data.CustomNodeInfos = _data.CustomNodeInfos.Append(newNodeInfo).ToArray();
+        _data.CustomEndPointInfos = _data.CustomEndPointInfos.Append(newNodeInfo).ToArray();
         return newNodeInfo;
     }
 
 
-    public void Delete(string proxyNodeId)
+    public void Delete(string proxyEndPointId)
     {
-        _data.CustomNodeInfos = _data.CustomNodeInfos.Where(x => x.Node.Id != proxyNodeId).ToArray();
+        _data.CustomEndPointInfos = _data.CustomEndPointInfos.Where(x => x.EndPoint.Id != proxyEndPointId).ToArray();
         Save();
     }
 
     public void DeleteAll()
     {
-        _data.CustomNodeInfos = [];
+        _data.CustomEndPointInfos = [];
         Save();
     }
 
-    public AppProxyNodeInfo Update(string proxyNodeId, ProxyNode proxyNode)
+    public AppProxyEndPointInfo Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint)
     {
-        proxyNode = ProxyNodeParser.Normalize(proxyNode);
+        proxyEndPoint = ProxyEndPointParser.Normalize(proxyEndPoint);
 
-        // replace the ProxyNode and keep its position. find the node by GetId
-        var nodeInfo = _data.CustomNodeInfos.Single(x => x.Node.Id == proxyNodeId);
-        nodeInfo.Node = proxyNode;
+        // replace the ProxyEndPoint and keep its position. find the endpoint by GetId
+        var endPointInfo = _data.CustomEndPointInfos.Single(x => x.EndPoint.Id == proxyEndPointId);
+        endPointInfo.EndPoint = proxyEndPoint;
         Save();
 
-        var updatedNode = ListProxies().Single(x => x.Node.Id == proxyNode.Id);
+        var updatedNode = ListProxies().Single(x => x.EndPoint.Id == proxyEndPoint.Id);
         return updatedNode;
     }
 
@@ -126,15 +126,15 @@ public class AppProxyNodeService
     private void UpdateSystemNode()
     {
         var connectionInfo = _vpnServiceManager.ConnectionInfo;
-        var runtimeNodes = connectionInfo.ProxyManagerStatus?.ProxyNodeInfos ?? [];
+        var runtimeNodes = connectionInfo.ProxyManagerStatus?.ProxyEndPointInfos ?? [];
 
         if (!_deviceUiProvider.IsProxySettingsSupported)
             return;
 
-        var oldDeviceNode = _data.SystemNodeInfo?.Node;
+        var oldDeviceEndPoint = _data.SystemNodeInfo?.EndPoint;
 
         try {
-            // update device proxy node 
+            // update device proxy endpoint 
             var deviceProxySettings = _deviceUiProvider.GetProxySettings();
             if (deviceProxySettings?.ProxyUrl is null) {
                 _data.SystemNodeInfo = null;
@@ -142,33 +142,33 @@ public class AppProxyNodeService
             }
 
             // parse device proxy url
-            var deviceProxyNode = VhUtils.TryInvoke("Parse device proxy url",
-                () => ProxyNodeParser.FromUrl(deviceProxySettings.ProxyUrl));
-            if (deviceProxyNode is null) {
+            var deviceProxyEndPoint = VhUtils.TryInvoke("Parse device proxy url",
+                () => ProxyEndPointParser.FromUrl(deviceProxySettings.ProxyUrl));
+            if (deviceProxyEndPoint is null) {
                 _data.SystemNodeInfo = null;
                 return;
             }
 
             // ensure SystemNodeInfo exists
-            _data.SystemNodeInfo ??= new AppProxyNodeInfo {
-                Node = deviceProxyNode,
+            _data.SystemNodeInfo ??= new AppProxyEndPointInfo {
+                EndPoint = deviceProxyEndPoint,
                 CountryCode = null,
-                Status = new ProxyNodeStatus()
+                Status = new ProxyEndPointStatus()
             };
 
-            // update node info
-            _data.SystemNodeInfo.Node = deviceProxyNode;
+            // update endpoint info
+            _data.SystemNodeInfo.EndPoint = deviceProxyEndPoint;
 
             // update status
             if (ShouldUpdateNodesFromVpnService) {
-                var runtimeNode = runtimeNodes.FirstOrDefault(n => n.Node.Id == deviceProxyNode.Id);
+                var runtimeNode = runtimeNodes.FirstOrDefault(n => n.EndPoint.Id == deviceProxyEndPoint.Id);
                 if (runtimeNode != null)
                     _data.SystemNodeInfo.Status = runtimeNode.Status;
             }
         }
         finally {
-            if (_data.SystemNodeInfo?.Node.Id != oldDeviceNode?.Id) {
-                Save(updateSettings: true); // fire change if node changed
+            if (_data.SystemNodeInfo?.EndPoint.Id != oldDeviceEndPoint?.Id) {
+                Save(updateSettings: true); // fire change if endpoint changed
             }
         }
     }
@@ -180,51 +180,51 @@ public class AppProxyNodeService
             return;
 
         var connectionInfo = _vpnServiceManager.ConnectionInfo;
-        var runtimeNodes = connectionInfo.ProxyManagerStatus?.ProxyNodeInfos ?? [];
+        var runtimeNodes = connectionInfo.ProxyManagerStatus?.ProxyEndPointInfos ?? [];
 
-        // overwrite Settings node if remote url list exists
+        // overwrite Settings endpoint if remote url list exists
         if (runtimeNodes.Any() &&
             ProxySettings.Mode is AppProxyMode.Manual &&
             ProxySettings.AutoUpdateListUrl != null &&
             connectionInfo.ProxyManagerStatus?.AutoUpdate is true) {
-            // remove NodeInfos that are not in runtimeNodes
-            var runtimeNodeIds = runtimeNodes.Select(n => n.Node.Id);
-            _data.CustomNodeInfos = _data.CustomNodeInfos.Where(n => runtimeNodeIds.Contains(n.Node.Id)).ToArray();
+            // remove NodeInfos that are not in runtimeEndpoints
+            var runtimeNodeIds = runtimeNodes.Select(n => n.EndPoint.Id);
+            _data.CustomEndPointInfos = _data.CustomEndPointInfos.Where(n => runtimeNodeIds.Contains(n.EndPoint.Id)).ToArray();
 
-            // add NodeInfos that are in runtimeNodes but not in NodeInfos
-            var existingNodeIds = _data.CustomNodeInfos.Select(n => n.Node.Id);
+            // add NodeInfos that are in runtimeNodes but not in EndPointInfos
+            var existingNodeIds = _data.CustomEndPointInfos.Select(n => n.EndPoint.Id);
             var newNodes = runtimeNodes
-                .Where(n => !existingNodeIds.Contains(n.Node.Id))
-                .Select(nodeInfo => new AppProxyNodeInfo {
-                    Node = nodeInfo.Node,
+                .Where(n => !existingNodeIds.Contains(n.EndPoint.Id))
+                .Select(endPointInfo => new AppProxyEndPointInfo {
+                    EndPoint = endPointInfo.EndPoint,
                     CountryCode = null,
-                    Status = nodeInfo.Status
+                    Status = endPointInfo.Status
                 });
 
-            _data.CustomNodeInfos = _data.CustomNodeInfos.Concat(newNodes).ToArray();
+            _data.CustomEndPointInfos = _data.CustomEndPointInfos.Concat(newNodes).ToArray();
         }
 
         // update status
-        var nodeDict = _data.CustomNodeInfos.ToDictionary(info => info.Node.Id, info => info);
+        var endpointDict = _data.CustomEndPointInfos.ToDictionary(info => info.EndPoint.Id, info => info);
         foreach (var runtimeNode in runtimeNodes) {
-            if (nodeDict.TryGetValue(runtimeNode.Node.Id, out var existing))
+            if (endpointDict.TryGetValue(runtimeNode.EndPoint.Id, out var existing))
                 existing.Status = runtimeNode.Status;
         }
     }
 
     // ReSharper disable once UnusedMember.Local
-    private async Task UpdateCountryCode(IEnumerable<AppProxyNodeInfo> proxyNodeInfos, CancellationToken cancellationToken)
+    private async Task UpdateCountryCode(IEnumerable<AppProxyEndPointInfo> proxyEndPointInfos, CancellationToken cancellationToken)
     {
         if (_hostCountryResolver is null)
             return;
 
         // resolve all host with domain name 
-        proxyNodeInfos = proxyNodeInfos.Where(x => x.CountryCode is null).ToArray();
+        proxyEndPointInfos = proxyEndPointInfos.Where(x => x.CountryCode is null).ToArray();
         var hostCountries = await _hostCountryResolver
-            .GetHostCountries(proxyNodeInfos.Select(x => x.Node.Host), cancellationToken);
+            .GetHostCountries(proxyEndPointInfos.Select(x => x.EndPoint.Host), cancellationToken);
 
-        foreach (var proxyNodeInfo in proxyNodeInfos)
-            proxyNodeInfo.CountryCode = hostCountries.GetValueOrDefault(proxyNodeInfo.Node.Host);
+        foreach (var proxyEndPointInfo in proxyEndPointInfos)
+            proxyEndPointInfo.CountryCode = hostCountries.GetValueOrDefault(proxyEndPointInfo.EndPoint.Host);
     }
 
     private bool ShouldUpdateNodesFromVpnService =>
@@ -233,10 +233,10 @@ public class AppProxyNodeService
 
     public void Import(string text)
     {
-        var proxyNodeUrls = ProxyNodeParser.ExtractFromContent(text);
-        var proxyNodes = proxyNodeUrls.Select(ProxyNodeParser.FromUrl);
-        foreach (var proxyNode in proxyNodes)
-            Add(proxyNode);
+        var proxyEndPointUrls = ProxyEndPointParser.ExtractFromContent(text);
+        var proxyEndPoints = proxyEndPointUrls.Select(ProxyEndPointParser.FromUrl);
+        foreach (var proxyEndPoint in proxyEndPoints)
+            Add(proxyEndPoint);
 
         Save();
     }
@@ -244,12 +244,12 @@ public class AppProxyNodeService
     public void ResetStates()
     {
         // remove from local state
-        foreach (var nodeInfo in _data.CustomNodeInfos)
-            nodeInfo.Status = new ProxyNodeStatus();
+        foreach (var endPointInfo in _data.CustomEndPointInfos)
+            endPointInfo.Status = new ProxyEndPointStatus();
 
-        // reset system proxy node status
+        // reset system proxy endpoint status
         if (_data.SystemNodeInfo != null)
-            _data.SystemNodeInfo.Status = new ProxyNodeStatus();
+            _data.SystemNodeInfo.Status = new ProxyEndPointStatus();
 
         _data.ResetStates = true;
         Save();
@@ -258,17 +258,17 @@ public class AppProxyNodeService
     private void Save(bool updateSettings = true)
     {
         _data.UpdateTime = DateTime.Now; // make sure to use latest data
-        _data.CustomNodeInfos = _data.CustomNodeInfos.DistinctBy(x => x.Node.Id).ToArray(); // remove duplicates
+        _data.CustomEndPointInfos = _data.CustomEndPointInfos.DistinctBy(x => x.EndPoint.Id).ToArray(); // remove duplicates
 
         // customize serialization to ignore Url and Id properties
         var resolver = new DefaultJsonTypeInfoResolver();
         resolver.Modifiers.Add(typeInfo => {
-            if (typeInfo.Type == typeof(ProxyNode)) {
-                var prop = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(ProxyNode.Url));
+            if (typeInfo.Type == typeof(ProxyEndPoint)) {
+                var prop = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(ProxyEndPoint.Url));
                 if (prop is not null)
                     typeInfo.Properties.Remove(prop);
 
-                prop = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(ProxyNode.Id));
+                prop = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(ProxyEndPoint.Id));
                 if (prop is not null)
                     typeInfo.Properties.Remove(prop);
 
@@ -298,24 +298,24 @@ public class AppProxyNodeService
     {
         UpdateNodesByCore();
 
-        var proxyNodes = ProxySettings.Mode switch {
+        var proxyEndPoints = ProxySettings.Mode switch {
             AppProxyMode.NoProxy => [],
-            AppProxyMode.Device => _data.SystemNodeInfo != null ? [_data.SystemNodeInfo.Node] : [],
-            AppProxyMode.Manual => _data.CustomNodeInfos.Select(x => x.Node).ToArray(),
+            AppProxyMode.Device => _data.SystemNodeInfo != null ? [_data.SystemNodeInfo.EndPoint] : [],
+            AppProxyMode.Manual => _data.CustomEndPointInfos.Select(x => x.EndPoint).ToArray(),
             _ => []
         };
 
         return new ProxyOptions {
             ResetStates = _data.ResetStates,
-            ProxyNodes = proxyNodes
+            ProxyEndPoints = proxyEndPoints
         };
     }
 
     private class ServiceData
     {
         public DateTime UpdateTime { get; set; } = DateTime.MinValue;
-        public AppProxyNodeInfo[] CustomNodeInfos { get; set; } = [];
-        public AppProxyNodeInfo? SystemNodeInfo { get; set; }
+        public AppProxyEndPointInfo[] CustomEndPointInfos { get; set; } = [];
+        public AppProxyEndPointInfo? SystemNodeInfo { get; set; }
         public bool ResetStates { get; set; }
     }
 }

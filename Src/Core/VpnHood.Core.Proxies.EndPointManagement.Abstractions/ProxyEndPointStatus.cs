@@ -1,6 +1,6 @@
-﻿namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
+﻿namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
-public class ProxyNodeStatus
+public class ProxyEndPointStatus
 {
     public int Penalty { get; set; }
     public int SucceededCount { get; set; }

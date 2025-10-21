@@ -1,5 +1,4 @@
 ﻿using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Abstractions.ProxyNodes;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
 

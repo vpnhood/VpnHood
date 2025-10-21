@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Web;
 
-namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
+namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
-public static class ProxyNodeParser
+public static class ProxyEndPointParser
 {
     private const string PseudoScheme = "unknown";
 
-    public static ProxyNode FromUrl(Uri uri)
+    public static ProxyEndPoint FromUrl(Uri uri)
     {
         if (!Enum.TryParse<ProxyProtocol>(uri.Scheme, ignoreCase: true, out var protocol))
             throw new NotSupportedException($"Unsupported scheme: {uri.Scheme}");
@@ -28,7 +28,7 @@ public static class ProxyNodeParser
         var valueCollection = HttpUtility.ParseQueryString(uri.Query);
         var isEnabledValue = valueCollection["enabled"]?.ToLower() ?? "true";
 
-        return new ProxyNode {
+        return new ProxyEndPoint {
             Protocol = protocol,
             Host = uri.Host,
             Port = port,
@@ -38,24 +38,24 @@ public static class ProxyNodeParser
         };
     }
 
-    public static ProxyNode Normalize(ProxyNode proxyNode)
+    public static ProxyEndPoint Normalize(ProxyEndPoint proxyEndPoint)
     {
-        var defaults = new ProxyNodeDefaults {
-            IsEnabled = proxyNode.IsEnabled,
-            Password = proxyNode.Password,
-            Port = proxyNode.Port,
-            Protocol = proxyNode.Protocol,
-            Username = proxyNode.Username
+        var defaults = new ProxyEndPointDefaults {
+            IsEnabled = proxyEndPoint.IsEnabled,
+            Password = proxyEndPoint.Password,
+            Port = proxyEndPoint.Port,
+            Protocol = proxyEndPoint.Protocol,
+            Username = proxyEndPoint.Username
         };
 
-        var uri = ParseHostToUrl(proxyNode.Host, defaults);
+        var uri = ParseHostToUrl(proxyEndPoint.Host, defaults);
         var ret = FromUrl(uri);
-        ret.Username = proxyNode.Username?.Trim();
-        ret.Password = proxyNode.Password?.Trim();
+        ret.Username = proxyEndPoint.Username?.Trim();
+        ret.Password = proxyEndPoint.Password?.Trim();
         return ret;
     }
 
-    public static Uri? TryParseHostToUrl(string value, ProxyNodeDefaults? defaults)
+    public static Uri? TryParseHostToUrl(string value, ProxyEndPointDefaults? defaults)
     {
         try {
             return ParseHostToUrl(value, defaults);
@@ -67,7 +67,7 @@ public static class ProxyNodeParser
 
     public static Uri ParseHostToUrl(
         string value,
-        ProxyNodeDefaults? defaults)
+        ProxyEndPointDefaults? defaults)
     {
         if (string.IsNullOrWhiteSpace(value))
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(value));
@@ -115,7 +115,7 @@ public static class ProxyNodeParser
         string defaultScheme = "http",
         bool preferHttpsWhenPort443 = true)
     {
-        return ProxyNodeExtractor.Extract(text, defaultScheme, preferHttpsWhenPort443);
+        return ProxyEndPointExtractor.Extract(text, defaultScheme, preferHttpsWhenPort443);
     }
 
     // Same as ExtractFromText but returns multiple URIs
@@ -129,7 +129,7 @@ public static class ProxyNodeParser
         var results = new List<Uri>();
         
         foreach (var line in lines) {
-            var uri = ProxyNodeExtractor.Extract(line, defaultScheme, preferHttpsWhenPort443);
+            var uri = ProxyEndPointExtractor.Extract(line, defaultScheme, preferHttpsWhenPort443);
             if (uri != null)
                 results.Add(uri);
         }

@@ -1,7 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.Core.Client.Abstractions.ProxyNodes;
-
+namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ProxyProtocol

@@ -135,7 +135,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             .AddController(new AccountController())
             .AddController(new BillingController())
             .AddController(new IntentsController())
-            .AddController(new ProxyNodeController());
+            .AddController(new ProxyEndPointController());
 
         return server;
     }

@@ -39,7 +39,7 @@ public class AppProxyNodeService
     public bool IsProxyNodeActive {
         get {
             return ProxySettings.Mode switch {
-                AppProxyMode.Disabled => false,
+                AppProxyMode.NoProxy => false,
                 AppProxyMode.Device =>
                     _deviceUiProvider.IsProxySettingsSupported &&
                     _deviceUiProvider.GetProxySettings() != null,
@@ -176,7 +176,7 @@ public class AppProxyNodeService
     private void UpdateCustomNodes()
     {
         if (!ShouldUpdateNodesFromVpnService ||
-            ProxySettings.Mode is not AppProxyMode.Custom)
+            ProxySettings.Mode is not AppProxyMode.Manual)
             return;
 
         var connectionInfo = _vpnServiceManager.ConnectionInfo;
@@ -184,8 +184,8 @@ public class AppProxyNodeService
 
         // overwrite Settings node if remote url list exists
         if (runtimeNodes.Any() &&
-            ProxySettings.Mode is AppProxyMode.Custom &&
-            ProxySettings.RemoteNotesUrl != null) {
+            ProxySettings.Mode is AppProxyMode.Manual &&
+            ProxySettings.RemoteListUrl != null) {
             // remove NodeInfos that are not in runtimeNodes
             var runtimeNodeIds = runtimeNodes.Select(n => n.Node.Id);
             _data.CustomNodeInfos = _data.CustomNodeInfos.Where(n => runtimeNodeIds.Contains(n.Node.Id)).ToArray();
@@ -298,9 +298,9 @@ public class AppProxyNodeService
         UpdateNodesByCore();
 
         var proxyNodes = ProxySettings.Mode switch {
-            AppProxyMode.Disabled => [],
+            AppProxyMode.NoProxy => [],
             AppProxyMode.Device => _data.SystemNodeInfo != null ? [_data.SystemNodeInfo.Node] : [],
-            AppProxyMode.Custom => _data.CustomNodeInfos.Select(x => x.Node).ToArray(),
+            AppProxyMode.Manual => _data.CustomNodeInfos.Select(x => x.Node).ToArray(),
             _ => []
         };
 

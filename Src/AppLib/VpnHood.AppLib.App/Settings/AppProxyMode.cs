@@ -2,7 +2,7 @@
 
 public enum AppProxyMode
 {
-    Disabled,
+    NoProxy,
     Device,
-    Custom
+    Manual
 }

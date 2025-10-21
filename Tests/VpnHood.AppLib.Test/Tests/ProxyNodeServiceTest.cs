@@ -28,7 +28,7 @@ public class ProxyNodeServiceTest : TestAppBase
 
         // set proxy settings to use the local HTTP proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
         dom.App.Services.ProxyNodeService.Add(new ProxyNode {
             Protocol = ProxyProtocol.Http,
@@ -61,7 +61,7 @@ public class ProxyNodeServiceTest : TestAppBase
 
         // set proxy settings to use the local HTTP proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
         dom.App.Services.ProxyNodeService.Add(new ProxyNode {
             Protocol = ProxyProtocol.Http,
@@ -132,7 +132,7 @@ public class ProxyNodeServiceTest : TestAppBase
 
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
         foreach (var proxyNode in nodes)
             dom.App.Services.ProxyNodeService.Add(proxyNode);
@@ -168,7 +168,7 @@ public class ProxyNodeServiceTest : TestAppBase
         // create the client
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom,
+            Mode = AppProxyMode.Manual,
         };
         foreach (var proxyNode in nodes)
             dom.App.Services.ProxyNodeService.Add(proxyNode);
@@ -193,7 +193,7 @@ public class ProxyNodeServiceTest : TestAppBase
 
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
         foreach (var proxyNode in nodes)
             dom.App.Services.ProxyNodeService.Add(proxyNode);
@@ -258,7 +258,7 @@ public class ProxyNodeServiceTest : TestAppBase
             ProxyUrl = new Uri("http://foo.local"),
         };
 
-        dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.Disabled;
+        dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.NoProxy;
         Assert.IsFalse(dom.App.State.IsProxyNodeActive);
 
         var deviceProxy = dom.App.Services.ProxyNodeService.GetDeviceProxy();
@@ -273,7 +273,7 @@ public class ProxyNodeServiceTest : TestAppBase
         Assert.AreEqual(deviceProxy.Node.Id, dom.App.Services.ProxyNodeService.GetProxyOptions().ProxyNodes.First().Id);
 
         // disable proxy
-        dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.Disabled;
+        dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.NoProxy;
         Assert.IsFalse(dom.App.State.IsProxyNodeActive);
         Assert.HasCount(0, dom.App.Services.ProxyNodeService.GetProxyOptions().ProxyNodes);
     }
@@ -292,7 +292,7 @@ public class ProxyNodeServiceTest : TestAppBase
 
         // add proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
         var proxyNode = new ProxyNode {
             Port = socks5ProxyServer.ListenerEndPoint.Port,
@@ -319,7 +319,7 @@ public class ProxyNodeServiceTest : TestAppBase
 
         // add proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
         var proxyNode = new ProxyNode {
             Port = 900,
@@ -344,7 +344,7 @@ public class ProxyNodeServiceTest : TestAppBase
         // create app
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
 
         // add 10 proxy nodes
@@ -381,7 +381,7 @@ public class ProxyNodeServiceTest : TestAppBase
         // create app
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
 
         // import a single proxy
@@ -402,7 +402,7 @@ public class ProxyNodeServiceTest : TestAppBase
         // create app
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
 
         // import multiple proxies with various formats
@@ -450,7 +450,7 @@ public class ProxyNodeServiceTest : TestAppBase
         // create app
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
 
         // add some existing proxies
@@ -485,7 +485,7 @@ http://proxy2.example.com:8080
         // create app
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Custom
+            Mode = AppProxyMode.Manual
         };
 
         // import proxies

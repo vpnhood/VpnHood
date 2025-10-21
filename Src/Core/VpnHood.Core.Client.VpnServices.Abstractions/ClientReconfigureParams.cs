@@ -1,5 +1,5 @@
 ﻿using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 

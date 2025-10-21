@@ -6,6 +6,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.IpLocations;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Proxies;

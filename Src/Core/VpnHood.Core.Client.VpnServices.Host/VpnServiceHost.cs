@@ -218,7 +218,7 @@ public class VpnServiceHost : IDisposable
     {
         var connectionInfo = new ConnectionInfo {
             CreatedTime = FastDateTime.Now,
-            ProxyManagerStatus = client.ProxyClientManager.Status,
+            ProxyManagerStatus = client.ProxyEndPointManager.Status,
             SessionName = client.Config.SessionName,
             SessionInfo = client.SessionInfo,
             SessionStatus = client.SessionStatus?.ToDto(),

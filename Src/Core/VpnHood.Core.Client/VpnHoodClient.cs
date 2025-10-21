@@ -17,6 +17,7 @@ using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
@@ -72,7 +73,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Token Token { get; }
     public VpnHoodClientConfig Config { get; }
     public DomainFilterService DomainFilterService { get; }
-    public ProxyClientManager ProxyClientManager { get; }
+    public ProxyEndPointManager ProxyEndPointManager { get; }
     public ISocketFactory SocketFactory { get; }
     public ISessionStatus? SessionStatus => _sessionStatus;
     public ITracker? Tracker { get; }
@@ -143,7 +144,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _dnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
         _channelProtocol = options.ChannelProtocol;
-        ProxyClientManager = new ProxyClientManager(
+        ProxyEndPointManager = new ProxyEndPointManager(
             proxyOptions: options.ProxyOptions ?? new ProxyOptions(),
             storagePath: Path.Combine(storageFolder, "proxies"),
             socketFactory: socketFactory,
@@ -156,7 +157,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ? options.EndPointStrategy : Token.ServerToken.EndPointsStrategy,
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null,
-            proxyClientManager: ProxyClientManager);
+            proxyEndPointManager: ProxyEndPointManager);
 
         _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
             IsPingSupported = false,
@@ -278,7 +279,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ProgressStatus? StateProgress =>
         State switch {
             ClientState.FindingReachableServer or ClientState.FindingBestServer => _serverFinder.Progress,
-            ClientState.ValidatingProxies => ProxyClientManager.Progress,
+            ClientState.ValidatingProxies => ProxyEndPointManager.Progress,
             _ => null
         };
 
@@ -370,11 +371,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 Config.Version, Config.MinProtocolVersion, Config.MaxProtocolVersion, VhLogger.FormatId(Config.ClientId));
 
             // validate proxy servers
-            if (ProxyClientManager.IsEnabled) {
+            if (ProxyEndPointManager.IsEnabled) {
                 State = ClientState.ValidatingProxies;
-                await ProxyClientManager.RemoveBadServers(linkedCts.Token).Vhc();
+                await ProxyEndPointManager.RemoveBadServers(linkedCts.Token).Vhc();
                 VhLogger.Instance.LogInformation("Proxy servers: {Count}",
-                    ProxyClientManager.Status.ProxyEndPointInfos.Length);
+                    ProxyEndPointManager.Status.ProxyEndPointInfos.Length);
             }
 
             // Establish first connection and create a session
@@ -644,7 +645,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // create connector service
             _connectorService = new ConnectorService(
                 new ConnectorEndPointInfo {
-                    ProxyClientManager = ProxyClientManager,
+                    ProxyEndPointManager = ProxyEndPointManager,
                     HostName = Token.ServerToken.HostName,
                     TcpEndPoint = hostEndPoint,
                     CertificateHash = Token.ServerToken.CertificateHash
@@ -1224,8 +1225,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // disposing adapter
         _vpnAdapter.Dispose();
 
-        // dispose ProxyClientManager after all connections are closed
-        ProxyClientManager.Dispose();
+        // dispose ProxyEndPointManager after all connections are closed
+        ProxyEndPointManager.Dispose();
 
         // dispose ConnectorService
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");

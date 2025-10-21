@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Socks5ProxyServers;
 using VpnHood.Test.Dom;
@@ -10,13 +11,13 @@ using VpnHood.Test.Providers;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ProxyClientManagerTest : TestBase
+public class ProxyEndPointManagerTest : TestBase
 {
     [TestMethod]
     public void IsEnabled_False_When_No_Servers()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ProxyClientManager(new ProxyOptions(),
+        var mgr = new ProxyEndPointManager(new ProxyOptions(),
             storagePath: TestHelper.WorkingPath, socketFactory: socketFactory);
         Assert.IsFalse(mgr.IsEnabled);
     }
@@ -25,7 +26,7 @@ public class ProxyClientManagerTest : TestBase
     public void IsEnabled_True_When_Servers_Exist()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ProxyClientManager(
+        var mgr = new ProxyEndPointManager(
             proxyOptions: new ProxyOptions {
                 ProxyEndPoints = [new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 }]
             },
@@ -38,7 +39,7 @@ public class ProxyClientManagerTest : TestBase
     public async Task ConnectAsync_With_No_Servers_Throws_NetworkUnreachable()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ProxyClientManager(new ProxyOptions(),
+        var mgr = new ProxyEndPointManager(new ProxyOptions(),
             storagePath: TestHelper.WorkingPath, socketFactory: socketFactory);
         var target = new IPEndPoint(IPAddress.Loopback, 443);
 
@@ -59,7 +60,7 @@ public class ProxyClientManagerTest : TestBase
         };
 
         var proxyOptions = new ProxyOptions { ProxyEndPoints = proxyEndPoints };
-        var mgr = new ProxyClientManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
+        var mgr = new ProxyEndPointManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
             socketFactory: socketFactory);
 
         Assert.IsTrue(mgr.IsEnabled);
@@ -76,7 +77,7 @@ public class ProxyClientManagerTest : TestBase
         };
 
         var proxyOptions = new ProxyOptions { ProxyEndPoints = proxyEndPoints };
-        var mgr = new ProxyClientManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
+        var mgr = new ProxyEndPointManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
             socketFactory: socketFactory);
         await mgr.RemoveBadServers(CancellationToken.None);
 
@@ -117,7 +118,7 @@ public class ProxyClientManagerTest : TestBase
 
         await TestHelper.Test_Https();
 
-        var proxyEndPointInfos = clientServerDom.Client.ProxyClientManager.Status.ProxyEndPointInfos;
+        var proxyEndPointInfos = clientServerDom.Client.ProxyEndPointManager.Status.ProxyEndPointInfos;
         Assert.IsTrue(proxyEndPointInfos.All(x => x.Status.SucceededCount >= 1));
     }
 }

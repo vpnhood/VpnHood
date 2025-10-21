@@ -10,13 +10,13 @@ using VpnHood.Test.Providers;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class ProxyNodeManagerTest : TestBase
+public class ProxyClientManagerTest : TestBase
 {
     [TestMethod]
     public void IsEnabled_False_When_No_Servers()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ProxyNodeManager(new ProxyOptions(),
+        var mgr = new ProxyClientManager(new ProxyOptions(),
             storagePath: TestHelper.WorkingPath, socketFactory: socketFactory);
         Assert.IsFalse(mgr.IsEnabled);
     }
@@ -25,7 +25,7 @@ public class ProxyNodeManagerTest : TestBase
     public void IsEnabled_True_When_Servers_Exist()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ProxyNodeManager(
+        var mgr = new ProxyClientManager(
             proxyOptions: new ProxyOptions {
                 ProxyNodes = [new ProxyNode { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 }]
             },
@@ -38,7 +38,7 @@ public class ProxyNodeManagerTest : TestBase
     public async Task ConnectAsync_With_No_Servers_Throws_NetworkUnreachable()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ProxyNodeManager(new ProxyOptions(),
+        var mgr = new ProxyClientManager(new ProxyOptions(),
             storagePath: TestHelper.WorkingPath, socketFactory: socketFactory);
         var target = new IPEndPoint(IPAddress.Loopback, 443);
 
@@ -59,7 +59,7 @@ public class ProxyNodeManagerTest : TestBase
         };
 
         var proxyOptions = new ProxyOptions { ProxyNodes = proxyNodes };
-        var mgr = new ProxyNodeManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
+        var mgr = new ProxyClientManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
             socketFactory: socketFactory);
 
         Assert.IsTrue(mgr.IsEnabled);
@@ -76,7 +76,7 @@ public class ProxyNodeManagerTest : TestBase
         };
 
         var proxyOptions = new ProxyOptions { ProxyNodes = proxyNodes };
-        var mgr = new ProxyNodeManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
+        var mgr = new ProxyClientManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
             socketFactory: socketFactory);
         await mgr.RemoveBadServers(CancellationToken.None);
 
@@ -117,7 +117,7 @@ public class ProxyNodeManagerTest : TestBase
 
         await TestHelper.Test_Https();
 
-        var proxyNodeInfos = clientServerDom.Client.ProxyNodeManager.Status.ProxyNodeInfos;
+        var proxyNodeInfos = clientServerDom.Client.ProxyClientManager.Status.ProxyNodeInfos;
         Assert.IsTrue(proxyNodeInfos.All(x => x.Status.SucceededCount >= 1));
     }
 }

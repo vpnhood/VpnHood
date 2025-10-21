@@ -12,7 +12,7 @@ using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Client.ProxyNodes;
 
-public class ProxyNodeManager : IDisposable
+public class ProxyClientManager : IDisposable
 {
     private ProxyNodeItem? _fastestNode;
     private int _requestCount;
@@ -25,12 +25,12 @@ public class ProxyNodeManager : IDisposable
 
     public bool IsEnabled { get; private set; }
     public ProgressStatus? Progress => _progressTracker?.Progress;
-    public ProxyManagerStatus Status => new() {
+    public ProxyClientManagerStatus Status => new() {
         ProxyNodeInfos = _proxyNodeItems.Select(x => x.Info).ToArray(),
         IsLastConnectionSuccessful = _isLastConnectionSuccessful
     };
 
-    public ProxyNodeManager(
+    public ProxyClientManager(
         ProxyOptions proxyOptions,
         string storagePath,
         ISocketFactory socketFactory,

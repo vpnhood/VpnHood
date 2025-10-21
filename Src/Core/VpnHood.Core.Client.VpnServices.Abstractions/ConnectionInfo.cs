@@ -11,7 +11,7 @@ public class ConnectionInfo
 {
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint? ApiEndPoint { get; init; }
-    public required ProxyManagerStatus? ProxyManagerStatus { get; init; }
+    public required ProxyClientManagerStatus? ProxyManagerStatus { get; init; }
     public required DateTime? CreatedTime { get; init; }
     public string? SessionName { get; init; }
     public required ClientState ClientState { get; init; }

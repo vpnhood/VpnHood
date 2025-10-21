@@ -62,7 +62,7 @@ public class VpnServiceManager : IDisposable
     }
 
     private static ConnectionInfo BuildConnectionInfo(ClientState clientState, 
-        ProxyManagerStatus? proxyManagerStatus = null,
+        ProxyClientManagerStatus? proxyManagerStatus = null,
         Exception? ex = null)
     {
         return new ConnectionInfo {

@@ -114,7 +114,7 @@ public class AppProxyNodeService
 
     private void UpdateNodesByCore()
     {
-        UpdateCustomNodes();
+        UpdateManualNodes();
         UpdateSystemNode();
 
         // save if updated from vpn service
@@ -173,7 +173,7 @@ public class AppProxyNodeService
         }
     }
 
-    private void UpdateCustomNodes()
+    private void UpdateManualNodes()
     {
         if (!ShouldUpdateNodesFromVpnService ||
             ProxySettings.Mode is not AppProxyMode.Manual)
@@ -185,7 +185,8 @@ public class AppProxyNodeService
         // overwrite Settings node if remote url list exists
         if (runtimeNodes.Any() &&
             ProxySettings.Mode is AppProxyMode.Manual &&
-            ProxySettings.RemoteListUrl != null) {
+            ProxySettings.AutoUpdateListUrl != null &&
+            connectionInfo.ProxyManagerStatus?.AutoUpdate is true) {
             // remove NodeInfos that are not in runtimeNodes
             var runtimeNodeIds = runtimeNodes.Select(n => n.Node.Id);
             _data.CustomNodeInfos = _data.CustomNodeInfos.Where(n => runtimeNodeIds.Contains(n.Node.Id)).ToArray();

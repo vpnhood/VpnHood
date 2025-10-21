@@ -70,7 +70,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Token Token { get; }
     public VpnHoodClientConfig Config { get; }
     public DomainFilterService DomainFilterService { get; }
-    public ProxyNodeManager ProxyNodeManager { get; }
+    public ProxyClientManager ProxyClientManager { get; }
     public ISocketFactory SocketFactory { get; }
     public ISessionStatus? SessionStatus => _sessionStatus;
     public ITracker? Tracker { get; }
@@ -141,7 +141,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _dnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
         _channelProtocol = options.ChannelProtocol;
-        ProxyNodeManager = new ProxyNodeManager(
+        ProxyClientManager = new ProxyClientManager(
             proxyOptions: options.ProxyOptions ?? new ProxyOptions(),
             storagePath: Path.Combine(storageFolder, "proxies"),
             socketFactory: socketFactory,
@@ -154,7 +154,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ? options.EndPointStrategy : Token.ServerToken.EndPointsStrategy,
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null,
-            proxyNodeManager: ProxyNodeManager);
+            proxyClientManager: ProxyClientManager);
 
         _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
             IsPingSupported = false,
@@ -276,7 +276,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ProgressStatus? StateProgress =>
         State switch {
             ClientState.FindingReachableServer or ClientState.FindingBestServer => _serverFinder.Progress,
-            ClientState.ValidatingProxies => ProxyNodeManager.Progress,
+            ClientState.ValidatingProxies => ProxyClientManager.Progress,
             _ => null
         };
 
@@ -368,11 +368,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 Config.Version, Config.MinProtocolVersion, Config.MaxProtocolVersion, VhLogger.FormatId(Config.ClientId));
 
             // validate proxy servers
-            if (ProxyNodeManager.IsEnabled) {
+            if (ProxyClientManager.IsEnabled) {
                 State = ClientState.ValidatingProxies;
-                await ProxyNodeManager.RemoveBadServers(linkedCts.Token).Vhc();
+                await ProxyClientManager.RemoveBadServers(linkedCts.Token).Vhc();
                 VhLogger.Instance.LogInformation("Proxy servers: {Count}",
-                    ProxyNodeManager.Status.ProxyNodeInfos.Length);
+                    ProxyClientManager.Status.ProxyNodeInfos.Length);
             }
 
             // Establish first connection and create a session
@@ -642,7 +642,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // create connector service
             _connectorService = new ConnectorService(
                 new ConnectorEndPointInfo {
-                    ProxyNodeManager = ProxyNodeManager,
+                    ProxyClientManager = ProxyClientManager,
                     HostName = Token.ServerToken.HostName,
                     TcpEndPoint = hostEndPoint,
                     CertificateHash = Token.ServerToken.CertificateHash
@@ -1222,8 +1222,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // disposing adapter
         _vpnAdapter.Dispose();
 
-        // dispose ProxyNodeManager after all connections are closed
-        ProxyNodeManager.Dispose();
+        // dispose ProxyClientManager after all connections are closed
+        ProxyClientManager.Dispose();
 
         // dispose ConnectorService
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");

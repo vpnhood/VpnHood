@@ -26,7 +26,7 @@ public class ServerFinder(
     EndPointStrategy endPointStrategy,
     IPEndPoint[] customServerEndpoints,
     ITracker? tracker,
-    ProxyNodeManager proxyNodeManager,
+    ProxyClientManager proxyClientManager,
     int maxDegreeOfParallelism = 10)
 {
     private class HostStatus
@@ -87,7 +87,7 @@ public class ServerFinder(
             isIpV6Supported: IncludeIpV6, hasRedirected: false));
 
         // throw specific exception for proxy server issues
-        if (proxyNodeManager is { IsEnabled: true, Status.IsLastConnectionSuccessful: false })
+        if (proxyClientManager is { IsEnabled: true, Status.IsLastConnectionSuccessful: false })
             throw new UnreachableProxyServerException();
 
         throw new UnreachableServerException();
@@ -268,7 +268,7 @@ public class ServerFinder(
     private ConnectorService CreateConnector(IPEndPoint tcpEndPoint)
     {
         var endPointInfo = new ConnectorEndPointInfo {
-            ProxyNodeManager = proxyNodeManager,
+            ProxyClientManager = proxyClientManager,
             CertificateHash = serverToken.CertificateHash,
             HostName = serverToken.HostName,
             TcpEndPoint = tcpEndPoint

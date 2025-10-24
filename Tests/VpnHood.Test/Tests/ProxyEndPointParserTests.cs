@@ -192,27 +192,34 @@ public class ProxyEndPointParserTests
         // Create some existing endpoints with different penalties
         var existing = new[]
         {
-            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5),
-            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: -2),
-            CreateProxyEndPointInfo("proxy3.com", 1080, penalty: 10),
+            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow.AddMinutes(-5)),
+            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 0, lastUsedTime: DateTime.UtcNow.AddMinutes(-10)),
+            CreateProxyEndPointInfo("proxy3.com", 1080, penalty: 10, lastUsedTime: DateTime.UtcNow.AddMinutes(-15)),
         };
 
         // Create new endpoints
         var newEndPoints = new[]
         {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new_proxy1.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "new_proxy2.com", Port = 8080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy1.com", Port = 1080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy2.com", Port = 8080 },
         };
 
-        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
+        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 4, maxPenalty: 5);
 
-        // Should have 2 new + 2 existing with penalty > 0
+        // Order should be: proxy2, proxy1, newproxy1, newproxy2
+        // proxy2 has penalty -2 which is <= 0, so it comes AFTER new endpoints
         Assert.HasCount(4, merged);
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy1.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy2.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "proxy1.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "proxy3.com"));
-        Assert.IsFalse(merged.Any(p => p.Host == "proxy2.com"), "proxy2 should be excluded (penalty -2 <= 0)");
+        
+        // First should be previous used with good penalty (proxy3 with penalty 0)
+        Assert.AreEqual("proxy2.com", merged[0].Host);
+        // Then proxy1 with penalty 5
+        Assert.AreEqual("proxy1.com", merged[1].Host);
+        // Then new endpoints
+        Assert.AreEqual("newproxy1.com", merged[2].Host);
+        Assert.AreEqual("newproxy2.com", merged[3].Host);
+        
+        // proxy2 should not be included (penalty 10 is > maxPenalty)
+        Assert.IsFalse(merged.Any(p => p.Host == "proxy3.com"));
     }
 
     [TestMethod]
@@ -220,25 +227,27 @@ public class ProxyEndPointParserTests
     {
         var existing = new[]
         {
-            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5),
-            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 3),
-            CreateProxyEndPointInfo("proxy3.com", 1080, penalty: 8),
+            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 3, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("proxy3.com", 1080, penalty: 8, lastUsedTime: DateTime.UtcNow),
         };
 
         var newEndPoints = new[]
         {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new_proxy1.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "new_proxy2.com", Port = 8080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new_proxy3.com", Port = 1081 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy1.com", Port = 1080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy2.com", Port = 8080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy3.com", Port = 1081 },
         };
 
-        // Limit to 3 items - should prioritize new endpoints
-        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 3, maxPenalty: 0);
+        // Limit to 4 items - should get: 3 previous used (all have penalty > 0) + 1 new endpoint
+        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 4, maxPenalty: 0);
 
-        Assert.HasCount(3, merged);
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy1.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy2.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy3.com"));
+        Assert.HasCount(4, merged);
+        // Order: proxy3 (penalty 8), proxy1 (penalty 5), proxy2 (penalty 3), newproxy1
+        Assert.IsTrue(merged.Any(p => p.Host == "proxy3.com"));
+        Assert.IsTrue(merged.Any(p => p.Host == "proxy1.com"));
+        Assert.IsTrue(merged.Any(p => p.Host == "proxy2.com"));
+        Assert.IsTrue(merged.Any(p => p.Host == "newproxy1.com"));
     }
 
     [TestMethod]
@@ -246,24 +255,28 @@ public class ProxyEndPointParserTests
     {
         var existing = new[]
         {
-            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5),
-            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 3),
+            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 3, lastUsedTime: DateTime.UtcNow),
         };
 
         // New list contains one duplicate
         var newEndPoints = new[]
         {
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "proxy1.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "new_proxy.com", Port = 8080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy.com", Port = 8080 },
         };
 
         var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
 
-        // Should have 3 items: proxy1 (from new), new_proxy (from new), proxy2 (from existing with penalty > 0)
+        // Order: proxy1 (from existing, penalty 5), proxy2 (from existing, penalty 3), then new endpoints
+        // But proxy1 is duplicate, so: proxy1, proxy2, newproxy
         Assert.HasCount(3, merged);
         Assert.AreEqual(1, merged.Count(p => p.Host == "proxy1.com"), "Should have exactly one proxy1.com");
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy.com"));
+        Assert.IsTrue(merged.Any(p => p.Host == "newproxy.com"));
         Assert.IsTrue(merged.Any(p => p.Host == "proxy2.com"));
+        
+        // proxy1 should appear first (from existing with penalty 5)
+        Assert.AreEqual("proxy1.com", merged[0].Host);
     }
 
     [TestMethod]
@@ -275,7 +288,7 @@ public class ProxyEndPointParserTests
         };
         var newEndPoints = new[]
         {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new_proxy.com", Port = 1080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy.com", Port = 1080 },
         };
 
         Assert.Throws<ArgumentException>(() =>
@@ -291,15 +304,15 @@ public class ProxyEndPointParserTests
         var existing = Array.Empty<ProxyEndPointInfo>();
         var newEndPoints = new[]
         {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new_proxy1.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "new_proxy2.com", Port = 8080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy1.com", Port = 1080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy2.com", Port = 8080 },
         };
 
         var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
 
         Assert.HasCount(2, merged);
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy1.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy2.com"));
+        Assert.IsTrue(merged.Any(p => p.Host == "newproxy1.com"));
+        Assert.IsTrue(merged.Any(p => p.Host == "newproxy2.com"));
     }
 
     [TestMethod]
@@ -307,77 +320,75 @@ public class ProxyEndPointParserTests
     {
         var existing = new[]
         {
-            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5),
-            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 8),
+            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 8, lastUsedTime: DateTime.UtcNow),
         };
-        
         var newEndPoints = Array.Empty<ProxyEndPoint>();
+
         var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
 
         Assert.HasCount(2, merged);
         Assert.IsTrue(merged.Any(p => p.Host == "proxy1.com"));
         Assert.IsTrue(merged.Any(p => p.Host == "proxy2.com"));
+        
+        // Higher penalty comes first
+        Assert.AreEqual("proxy2.com", merged[0].Host);
+        Assert.AreEqual("proxy1.com", merged[1].Host);
     }
 
     [TestMethod]
-    public void ProxyEndPointUpdater_PrioritizeUsedEndPoints()
+    public void ProxyEndPointUpdater_OrderingTest()
     {
-        // Create existing endpoints: some with LastUsedTime (used), some without (unused)
+        // Test the exact ordering: 1) used good, 2) new, 3) unused, 4) used bad
         var existing = new[]
         {
-            CreateProxyEndPointInfo("used-proxy1.com", 1080, penalty: 10, lastUsedTime: DateTime.UtcNow.AddMinutes(-5)),
-            CreateProxyEndPointInfo("used-proxy2.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow.AddMinutes(-10)),
-            CreateProxyEndPointInfo("used-proxy3.com", 1080, penalty: 0, lastUsedTime: DateTime.UtcNow.AddMinutes(-10)),
-            CreateProxyEndPointInfo("unused-proxy1.com", 1080, penalty: 0, lastUsedTime: null),
-            CreateProxyEndPointInfo("unused-proxy2.com", 1080, penalty: 0, lastUsedTime: null),
+            CreateProxyEndPointInfo("used-good.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("used-bad.com", 1080, penalty: -5, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("unused.com", 1080, penalty: 10, lastUsedTime: null),
         };
 
         var newEndPoints = new[]
         {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new_proxy1.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new_proxy2.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new_proxy3.com", Port = 1080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new.com", Port = 1080 },
         };
 
-        // Limit to 4 items: 1 new + should prioritize used proxies
-        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 4, maxPenalty: 0);
+        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
 
         Assert.HasCount(4, merged);
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy1.com"), "New proxy should be included");
-        Assert.IsTrue(merged.Any(p => p.Host == "used-proxy1.com"), "Used proxy with high penalty should be prioritized");
-        Assert.IsTrue(merged.Any(p => p.Host == "used-proxy2.com"), "Used proxy should be prioritized over unused");
         
-        // Should include one more (either unused-proxy1 or used-proxy if there's space)
-        var hasUnusedProxy = merged.Any(p => p.Host == "unused-proxy1.com" || p.Host == "unused-proxy2.com");
-        Assert.IsTrue(hasUnusedProxy, "Should include at least one unused proxy to fill the limit");
+        // Order should be: used-good (penalty 5 > 0), new, unused, used-bad (penalty -5 <= 0)
+        Assert.AreEqual("used-good.com", merged[0].Host, "First should be used with good penalty");
+        Assert.AreEqual("new.com", merged[1].Host, "Second should be new endpoint");
+        Assert.AreEqual("unused.com", merged[2].Host, "Third should be unused endpoint");
+        Assert.AreEqual("used-bad.com", merged[3].Host, "Fourth should be used with bad penalty");
     }
 
     [TestMethod]
-    public void ProxyEndPointUpdater_OnlyUnusedWithLowPenalty()
+    public void ProxyEndPointUpdater_MultipleUsedWithDifferentPenalties()
     {
-        // All existing have no LastUsedTime and low penalty - should not have priority
         var existing = new[]
         {
-            CreateProxyEndPointInfo("unused-proxy1.com", 1080, penalty: 0, lastUsedTime: null),
-            CreateProxyEndPointInfo("unused-proxy2.com", 1080, penalty: 0, lastUsedTime: null),
-            CreateProxyEndPointInfo("unused-proxy3.com", 1080, penalty: 0, lastUsedTime: null),
+            CreateProxyEndPointInfo("used1.com", 1080, penalty: 10, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("used2.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("used3.com", 1080, penalty: -2, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("used4.com", 1080, penalty: 8, lastUsedTime: DateTime.UtcNow),
         };
 
         var newEndPoints = new[]
         {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new_proxy1.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "new_proxy2.com", Port = 8080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new.com", Port = 1080 },
         };
 
-        // Limit to 3 items - should prioritize new endpoints
-        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 3, maxPenalty: 0);
+        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
 
-        Assert.HasCount(3, merged);
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy1.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "new_proxy2.com"));
-        // Should include one unused proxy to fill the limit
-        var hasUnusedProxy = merged.Any(p => p.Host.StartsWith("unused-proxy"));
-        Assert.IsTrue(hasUnusedProxy);
+        Assert.HasCount(5, merged);
+        
+        // Order: used1 (10), used4 (8), used2 (5), new, used3 (-2)
+        Assert.AreEqual("used1.com", merged[0].Host, "Highest penalty first");
+        Assert.AreEqual("used4.com", merged[1].Host, "Second highest penalty");
+        Assert.AreEqual("used2.com", merged[2].Host, "Third penalty (still > maxPenalty)");
+        Assert.AreEqual("new.com", merged[3].Host, "New endpoint after good used ones");
+        Assert.AreEqual("used3.com", merged[4].Host, "Bad penalty last");
     }
 
     // Helper method to create ProxyEndPointInfo with custom penalty and LastUsedTime

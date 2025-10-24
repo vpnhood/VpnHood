@@ -204,22 +204,15 @@ public class ProxyEndPointParserTests
             new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy2.com", Port = 8080 },
         };
 
-        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 4, maxPenalty: 5);
+        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 1000, maxPenalty: 5);
 
         // Order should be: proxy2, proxy1, newproxy1, newproxy2
-        // proxy2 has penalty -2 which is <= 0, so it comes AFTER new endpoints
-        Assert.HasCount(4, merged);
-        
-        // First should be previous used with good penalty (proxy3 with penalty 0)
+        Assert.HasCount(5, merged);
         Assert.AreEqual("proxy2.com", merged[0].Host);
-        // Then proxy1 with penalty 5
         Assert.AreEqual("proxy1.com", merged[1].Host);
-        // Then new endpoints
         Assert.AreEqual("newproxy1.com", merged[2].Host);
         Assert.AreEqual("newproxy2.com", merged[3].Host);
-        
-        // proxy2 should not be included (penalty 10 is > maxPenalty)
-        Assert.IsFalse(merged.Any(p => p.Host == "proxy3.com"));
+        Assert.AreEqual("proxy3.com", merged[4].Host);
     }
 
     [TestMethod]
@@ -239,15 +232,15 @@ public class ProxyEndPointParserTests
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy3.com", Port = 1081 },
         };
 
-        // Limit to 4 items - should get: 3 previous used (all have penalty > 0) + 1 new endpoint
+        // With maxPenalty 0, no used-good items exist; ordering is: new endpoints first, then used-bad ascending by penalty.
+        // Limited to 4 items -> expect: newproxy1, newproxy2, newproxy3, proxy2.com (penalty 3)
         var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 4, maxPenalty: 0);
 
         Assert.HasCount(4, merged);
-        // Order: proxy3 (penalty 8), proxy1 (penalty 5), proxy2 (penalty 3), newproxy1
-        Assert.IsTrue(merged.Any(p => p.Host == "proxy3.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "proxy1.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "proxy2.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "newproxy1.com"));
+        Assert.AreEqual("newproxy1.com", merged[0].Host);
+        Assert.AreEqual("newproxy2.com", merged[1].Host);
+        Assert.AreEqual("newproxy3.com", merged[2].Host);
+        Assert.AreEqual("proxy2.com", merged[3].Host);
     }
 
     [TestMethod]
@@ -266,17 +259,15 @@ public class ProxyEndPointParserTests
             new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy.com", Port = 8080 },
         };
 
-        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
+        var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 3, maxPenalty: 0);
 
-        // Order: proxy1 (from existing, penalty 5), proxy2 (from existing, penalty 3), then new endpoints
-        // But proxy1 is duplicate, so: proxy1, proxy2, newproxy
+        // Order with maxPenalty 0: new endpoints first (deduped), then used-bad ascending by penalty
+        // Expect: proxy1.com (from new), newproxy.com, proxy2.com
         Assert.HasCount(3, merged);
         Assert.AreEqual(1, merged.Count(p => p.Host == "proxy1.com"), "Should have exactly one proxy1.com");
-        Assert.IsTrue(merged.Any(p => p.Host == "newproxy.com"));
-        Assert.IsTrue(merged.Any(p => p.Host == "proxy2.com"));
-        
-        // proxy1 should appear first (from existing with penalty 5)
         Assert.AreEqual("proxy1.com", merged[0].Host);
+        Assert.AreEqual("newproxy.com", merged[1].Host);
+        Assert.AreEqual("proxy2.com", merged[2].Host);
     }
 
     [TestMethod]
@@ -331,19 +322,19 @@ public class ProxyEndPointParserTests
         Assert.IsTrue(merged.Any(p => p.Host == "proxy1.com"));
         Assert.IsTrue(merged.Any(p => p.Host == "proxy2.com"));
         
-        // Higher penalty comes first
-        Assert.AreEqual("proxy2.com", merged[0].Host);
-        Assert.AreEqual("proxy1.com", merged[1].Host);
+        // Lower penalty is better, and used-bad are sorted ascending by penalty
+        Assert.AreEqual("proxy1.com", merged[0].Host);
+        Assert.AreEqual("proxy2.com", merged[1].Host);
     }
 
     [TestMethod]
     public void ProxyEndPointUpdater_OrderingTest()
     {
-        // Test the exact ordering: 1) used good, 2) new, 3) unused, 4) used bad
+        // Test the exact ordering: 1) used good (<= maxPenalty), 2) new, 3) unused, 4) used bad (> maxPenalty)
         var existing = new[]
         {
-            CreateProxyEndPointInfo("used-good.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
-            CreateProxyEndPointInfo("used-bad.com", 1080, penalty: -5, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("used-good.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow), // actually bad for maxPenalty=0
+            CreateProxyEndPointInfo("used-bad.com", 1080, penalty: -5, lastUsedTime: DateTime.UtcNow), // actually good for maxPenalty=0
             CreateProxyEndPointInfo("unused.com", 1080, penalty: 10, lastUsedTime: null),
         };
 
@@ -356,11 +347,11 @@ public class ProxyEndPointParserTests
 
         Assert.HasCount(4, merged);
         
-        // Order should be: used-good (penalty 5 > 0), new, unused, used-bad (penalty -5 <= 0)
-        Assert.AreEqual("used-good.com", merged[0].Host, "First should be used with good penalty");
+        // With maxPenalty=0, order should be: used-bad(-5) as good, then new, then unused, then used-good(5) as bad
+        Assert.AreEqual("used-bad.com", merged[0].Host, "First should be used with good (lowest) penalty");
         Assert.AreEqual("new.com", merged[1].Host, "Second should be new endpoint");
         Assert.AreEqual("unused.com", merged[2].Host, "Third should be unused endpoint");
-        Assert.AreEqual("used-bad.com", merged[3].Host, "Fourth should be used with bad penalty");
+        Assert.AreEqual("used-good.com", merged[3].Host, "Fourth should be used with bad (higher) penalty");
     }
 
     [TestMethod]
@@ -383,12 +374,12 @@ public class ProxyEndPointParserTests
 
         Assert.HasCount(5, merged);
         
-        // Order: used1 (10), used4 (8), used2 (5), new, used3 (-2)
-        Assert.AreEqual("used1.com", merged[0].Host, "Highest penalty first");
-        Assert.AreEqual("used4.com", merged[1].Host, "Second highest penalty");
+        // Order with lower-penalty-better: used3 (-2), new, then used-bad ascending (5,8,10)
+        Assert.AreEqual("used3.com", merged[0].Host, "Lowest penalty first");
+        Assert.AreEqual("new.com", merged[1].Host, "New endpoint next");
         Assert.AreEqual("used2.com", merged[2].Host, "Third penalty (still > maxPenalty)");
-        Assert.AreEqual("new.com", merged[3].Host, "New endpoint after good used ones");
-        Assert.AreEqual("used3.com", merged[4].Host, "Bad penalty last");
+        Assert.AreEqual("used4.com", merged[3].Host, "Then next bad");
+        Assert.AreEqual("used1.com", merged[4].Host, "Highest penalty last");
     }
 
     // Helper method to create ProxyEndPointInfo with custom penalty and LastUsedTime

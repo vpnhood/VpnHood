@@ -13,6 +13,7 @@ public class ProxyEndPointUpdater
 
         // Start with new endpoints
         var result = new List<ProxyEndPoint>();
+        var existingSet = new HashSet<ProxyEndPoint>();
 
         // 1. previous used endpoints with penalty less or equal than maxPenalty
         var usedEndPoints = currentEndPointInfos
@@ -21,17 +22,17 @@ public class ProxyEndPointUpdater
                            info.EndPoint.IsEnabled)
             .OrderBy(info => info.Status.Penalty)
             .Select(info => info.EndPoint);
-        result.AddRange(usedEndPoints);
+        AddNoDuplicate(result, usedEndPoints, existingSet);
 
         // 2. new endpoints
-        AddNoDuplicate(result, newEndPoints);
+        AddNoDuplicate(result, newEndPoints, existingSet);
 
         // 3. previous unused endpoints
         var unusedEndPoints = currentEndPointInfos
             .Where(info => !info.Status.LastUsedTime.HasValue && info.EndPoint.IsEnabled)
             .OrderBy(info => info.Status.Penalty)
             .Select(info => info.EndPoint);
-        AddNoDuplicate(result, unusedEndPoints);
+        AddNoDuplicate(result, unusedEndPoints, existingSet);
 
         // 4. previous used endpoints with penalty greater than maxPenalty
         var badEndPoints = currentEndPointInfos
@@ -40,13 +41,13 @@ public class ProxyEndPointUpdater
                            info.EndPoint.IsEnabled)
             .OrderBy(info => info.Status.Penalty)
             .Select(info => info.EndPoint);
-        AddNoDuplicate(result, badEndPoints);
+        AddNoDuplicate(result, badEndPoints, existingSet);
 
         // 5 disabled endpoints
         var disabledEndPoints = currentEndPointInfos
             .Where(info => !info.EndPoint.IsEnabled)
             .Select(info => info.EndPoint);
-        AddNoDuplicate(result, disabledEndPoints);
+        AddNoDuplicate(result, disabledEndPoints, existingSet);
 
         // Keep first maxItemCount items
         if (result.Count > maxItemCount)
@@ -74,9 +75,9 @@ public class ProxyEndPointUpdater
     }
 
     private static void AddNoDuplicate(List<ProxyEndPoint> endPoints,
-        IEnumerable<ProxyEndPoint> newEndPoints)
+        IEnumerable<ProxyEndPoint> newEndPoints, 
+        HashSet<ProxyEndPoint> existingSet)
     {
-        var existingSet = new HashSet<ProxyEndPoint>(endPoints);
         foreach (var ep in newEndPoints) {
             if (!existingSet.Contains(ep)) {
                 endPoints.Add(ep);

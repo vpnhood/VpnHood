@@ -4,5 +4,5 @@ public class ProxyEndPointManagerStatus
 {
     public ProxyEndPointInfo[] ProxyEndPointInfos { get; init; } = [];
     public bool IsLastConnectionSuccessful { get; init; }
-    public bool AutoUpdate { get; set; }
+    public bool AutoUpdate { get; init; }
 }

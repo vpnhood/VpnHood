@@ -27,10 +27,12 @@ public class ProxyEndPointManager : IDisposable
     private bool _disposed;
 
     public bool IsEnabled { get; private set; }
+
     public ProgressStatus? Progress => _progressMonitor?.Progress;
     public ProxyEndPointManagerStatus Status => new() {
         ProxyEndPointInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray(),
-        IsLastConnectionSuccessful = _isLastConnectionSuccessful
+        IsLastConnectionSuccessful = _isLastConnectionSuccessful,
+        AutoUpdate = _autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null
     };
 
     public ProxyEndPointManager(
@@ -92,7 +94,7 @@ public class ProxyEndPointManager : IDisposable
             VhLogger.Instance.LogInformation("Downloading proxy list from {Url}...", _autoUpdateOptions.Url);
 
             // memory more efficient to create a new client for infrequent requests
-            using var httpClient = new HttpClient(); 
+            using var httpClient = new HttpClient();
             var currentInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray();
             var mergedEndPoints = await ProxyEndPointUpdater.UpdateFromUrlAsync(
                 httpClient,
@@ -108,8 +110,7 @@ public class ProxyEndPointManager : IDisposable
             }
 
             VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}", mergedEndPoints.Length);
-            _proxyEndPointEntries = UpdateEntries(_proxyEndPointEntries, 
-                    mergedEndPoints, _autoUpdateOptions.MaxPenalty).ToArray();
+            _proxyEndPointEntries = UpdateEntries(_proxyEndPointEntries, mergedEndPoints).ToArray();
 
             // Save updated list
             VhLogger.Instance.LogInformation("Updated proxy list. Total proxies: {Count}", _proxyEndPointEntries.Length);
@@ -133,14 +134,11 @@ public class ProxyEndPointManager : IDisposable
     // this is used to add new endpoints and remove old endpoints from options
     private static IEnumerable<ProxyEndPointEntry> UpdateEntries(
         IEnumerable<ProxyEndPointEntry> entries,
-        ProxyEndPoint[] endPoints,
-        int maxPenalty = int.MaxValue)
+        ProxyEndPoint[] endPoints)
     {
         // remove old endpoints
         entries = entries
-            .Where(x => endPoints.Any(y =>
-                y.Id == x.EndPoint.Id ||
-                x.Status.Penalty < maxPenalty))
+            .Where(x => endPoints.Any(y => y.Id == x.EndPoint.Id))
             .ToArray();
 
         // add new endpoints

@@ -5,6 +5,7 @@ using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Socks5ProxyServers;
 
@@ -329,7 +330,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         dom.App.Services.ProxyEndPointService.Add(proxyEndPoint);
 
         // connect
-        await Assert.ThrowsAsync<UnreachableProxyServerException>(()=> dom.App.Connect());
+        await Assert.ThrowsAsync<UnreachableProxyServerException>(() => dom.App.Connect());
 
         // get info
         await dom.App.ForceUpdateState();
@@ -466,9 +467,9 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         // import new proxies
         var proxyText = @"
-socks5://proxy1.example.com:1080
-http://proxy2.example.com:8080
-";
+            socks5://proxy1.example.com:1080
+            http://proxy2.example.com:8080
+         ";
         dom.App.Services.ProxyEndPointService.Import(proxyText);
 
         // verify both existing and imported proxies
@@ -505,4 +506,52 @@ http://proxy2.example.com:8080
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(firstNodeId, endPointInfos[0].EndPoint.Id);
     }
+
+    [TestMethod]
+    public async Task Update_by_remote_url()
+    {
+        // run two socks5 and http proxy servers locally
+        using var socks5ProxyServer = new Socks5ProxyServer(new Socks5ProxyServerOptions {
+            ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
+        });
+        socks5ProxyServer.Start();
+        var socks5Ep = socks5ProxyServer.ListenerEndPoint;
+
+        using var httpProxyServer = new HttpProxyServer(new HttpProxyServerOptions {
+            ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
+        });
+        httpProxyServer.Start();
+        var httpEp = httpProxyServer.ListenerEndPoint;
+
+        // add our proxy endpoints to a remote file content
+        var proxyListContent = 
+            $"socks5://{socks5Ep}\r\n" +
+            $"http://{httpEp}\r\n";
+        TestAppHelper.WebServer.FileContent1 = proxyListContent;
+
+        // create app
+        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        dom.App.UserSettings.ProxySettings = new AppProxySettings {
+            Mode = AppProxyMode.Manual,
+            AutoUpdateOptions = new ProxyAutoUpdateOptions {
+                Url = dom.TestAppHelper.WebServer.FileHttpUrl1,
+                Interval = TimeSpan.FromMinutes(1)
+            }
+        };
+
+        // connect 
+        await dom.App.Connect();
+
+        // force sync with core
+        await dom.App.ForceUpdateState();
+
+        // check is proxies are added
+        var endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies();
+        Assert.HasCount(2, endPointInfos);
+        Assert.HasCount(1, endPointInfos.Where(
+            n => n.EndPoint.Protocol == ProxyProtocol.Socks5 && n.EndPoint.Port == socks5Ep.Port));
+        Assert.HasCount(1, endPointInfos.Where(
+            n => n.EndPoint.Protocol == ProxyProtocol.Http && n.EndPoint.Port == httpEp.Port));
+    }
+
 }

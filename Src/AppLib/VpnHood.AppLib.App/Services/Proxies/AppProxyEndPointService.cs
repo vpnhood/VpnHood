@@ -68,25 +68,12 @@ public class AppProxyEndPointService
         return ret;
     }
 
-    private AppProxyEndPointInfo AddInternal(ProxyEndPoint proxyEndPoint)
+    public AppProxyEndPointInfo Update(string id, ProxyEndPoint proxyEndPoint)
     {
-        proxyEndPoint = ProxyEndPointParser.Normalize(proxyEndPoint);
-
-        // update if already exists
-        var existing = _data.CustomEndPointInfos.FirstOrDefault(n => n.EndPoint.Id == proxyEndPoint.Id);
-        if (existing != null)
-            return Update(proxyEndPoint.Id, proxyEndPoint);
-
-        // add a new endpoint
-        var newNodeInfo = new AppProxyEndPointInfo {
-            EndPoint = proxyEndPoint,
-            CountryCode = null,
-            Status = new ProxyEndPointStatus()
-        };
-        _data.CustomEndPointInfos = _data.CustomEndPointInfos.Append(newNodeInfo).ToArray();
-        return newNodeInfo;
+        var res = UpdateInternal(id, proxyEndPoint);
+        Save();
+        return res;
     }
-
 
     public void Delete(string proxyEndPointId)
     {
@@ -100,15 +87,34 @@ public class AppProxyEndPointService
         Save();
     }
 
-    public AppProxyEndPointInfo Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint)
+    private AppProxyEndPointInfo AddInternal(ProxyEndPoint proxyEndPoint)
+    {
+        proxyEndPoint = ProxyEndPointParser.Normalize(proxyEndPoint);
+
+        // update if already exists
+        var existing = _data.CustomEndPointInfos.FirstOrDefault(n => n.EndPoint.Id == proxyEndPoint.Id);
+        if (existing != null)
+            return UpdateInternal(proxyEndPoint.Id, proxyEndPoint);
+
+        // add a new endpoint
+        var newNodeInfo = new AppProxyEndPointInfo {
+            EndPoint = proxyEndPoint,
+            CountryCode = null,
+            Status = new ProxyEndPointStatus()
+        };
+        _data.CustomEndPointInfos = _data.CustomEndPointInfos.Append(newNodeInfo).ToArray();
+        return newNodeInfo;
+    }
+
+    private AppProxyEndPointInfo UpdateInternal(string proxyEndPointId, ProxyEndPoint proxyEndPoint)
     {
         proxyEndPoint = ProxyEndPointParser.Normalize(proxyEndPoint);
 
         // replace the ProxyEndPoint and keep its position. find the endpoint by GetId
         var endPointInfo = _data.CustomEndPointInfos.Single(x => x.EndPoint.Id == proxyEndPointId);
         endPointInfo.EndPoint = proxyEndPoint;
-        Save();
 
+        // return updated node
         var updatedNode = ListProxies().Single(x => x.EndPoint.Id == proxyEndPoint.Id);
         return updatedNode;
     }
@@ -183,11 +189,14 @@ public class AppProxyEndPointService
         var connectionInfo = _vpnServiceManager.ConnectionInfo;
         var runtimeNodes = connectionInfo.ProxyManagerStatus?.ProxyEndPointInfos ?? [];
 
-        // overwrite Settings endpoint if remote url list exists
-        if (runtimeNodes.Any() &&
-            ProxySettings.Mode is AppProxyMode.Manual &&
+        // determine if we should override nodes
+        var overrideNodes =
+            runtimeNodes.Any() &&
             ProxySettings.AutoUpdateOptions.Url != null &&
-            connectionInfo.ProxyManagerStatus?.AutoUpdate is true) {
+            connectionInfo.ProxyManagerStatus?.AutoUpdate is true;
+
+        // Remove old nodes that do not exist in runtime nodes
+        if (overrideNodes) {
             // remove NodeInfos that are not in runtimeEndpoints
             var runtimeNodeIds = runtimeNodes.Select(n => n.EndPoint.Id);
             _data.CustomEndPointInfos = _data.CustomEndPointInfos.Where(n => runtimeNodeIds.Contains(n.EndPoint.Id)).ToArray();
@@ -232,14 +241,42 @@ public class AppProxyEndPointService
         _vpnServiceManager.ConnectionInfo.CreatedTime > _data.UpdateTime &&
         !_vpnServiceManager.IsReconfiguring;
 
-    public void Import(string text)
+    public void Import(string content)
     {
-        var proxyEndPointUrls = ProxyEndPointParser.ExtractFromContent(text);
-        var proxyEndPoints = proxyEndPointUrls.Select(ProxyEndPointParser.FromUrl);
-        foreach (var proxyEndPoint in proxyEndPoints)
-            Add(proxyEndPoint);
+        // parse new endpoints
+        var newProxyEndPoints = ProxyEndPointParser
+            .ExtractFromContent(content)
+            .Select(ProxyEndPointParser.FromUrl)
+            .ToArray();
 
+        // merge with existing endpoints
+        var endpoints = ProxyEndPointUpdater.Merge(_data.CustomEndPointInfos, newProxyEndPoints,
+            ProxySettings.AutoUpdateOptions.MaxItemCount, ProxySettings.AutoUpdateOptions.MaxPenalty);
+
+        // remove _data.CustomEndPointInfos that does not exist in endpoints
+        var endpointIds = endpoints.Select(e => e.Id).ToHashSet();
+        _data.CustomEndPointInfos = _data.CustomEndPointInfos
+            .Where(info => endpointIds.Contains(info.EndPoint.Id))
+            .ToArray();
+
+        // add new endpoints
+        var newEndPointInfos = endpoints.Select(x => new AppProxyEndPointInfo {
+            EndPoint = x,
+            CountryCode = null,
+            Status = new ProxyEndPointStatus()
+        });
+        _data.CustomEndPointInfos = _data.CustomEndPointInfos.Concat(newEndPointInfos).ToArray();
+
+        // save changes
         Save();
+    }
+
+    public async Task ReloadUrl(CancellationToken cancellationToken)
+    {
+        // fetch endpoints from url and merge
+        using var httpClient = new HttpClient();
+        var content = await httpClient.GetStringAsync(ProxySettings.AutoUpdateOptions.Url, cancellationToken);
+        Import(content);
     }
 
     public void ResetStates()

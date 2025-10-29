@@ -3,7 +3,7 @@ namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 public class ProxyEndPointUpdater
 {
     public static ProxyEndPoint[] Merge(
-        ProxyEndPointInfo[] currentEndPointInfos,
+        IEnumerable<ProxyEndPointInfo> currentEndPointInfos,
         ProxyEndPoint[] newEndPoints,
         int maxItemCount,
         int maxPenalty)
@@ -14,9 +14,10 @@ public class ProxyEndPointUpdater
         // Start with new endpoints
         var result = new List<ProxyEndPoint>();
         var existingSet = new HashSet<ProxyEndPoint>();
+        var currentEndPointInfosArray = currentEndPointInfos.ToArray();
 
         // 1. previous used endpoints with penalty less or equal than maxPenalty
-        var usedEndPoints = currentEndPointInfos
+        var usedEndPoints = currentEndPointInfosArray
             .Where(info => info.Status.LastUsedTime.HasValue &&
                            info.Status.Penalty <= maxPenalty &&
                            info.EndPoint.IsEnabled)
@@ -28,14 +29,14 @@ public class ProxyEndPointUpdater
         AddNoDuplicate(result, newEndPoints, existingSet);
 
         // 3. previous unused endpoints
-        var unusedEndPoints = currentEndPointInfos
+        var unusedEndPoints = currentEndPointInfosArray
             .Where(info => !info.Status.LastUsedTime.HasValue && info.EndPoint.IsEnabled)
             .OrderBy(info => info.Status.Penalty)
             .Select(info => info.EndPoint);
         AddNoDuplicate(result, unusedEndPoints, existingSet);
 
         // 4. previous used endpoints with penalty greater than maxPenalty
-        var badEndPoints = currentEndPointInfos
+        var badEndPoints = currentEndPointInfosArray
             .Where(info => info.Status.LastUsedTime.HasValue &&
                            info.Status.Penalty > maxPenalty &&
                            info.EndPoint.IsEnabled)
@@ -44,7 +45,7 @@ public class ProxyEndPointUpdater
         AddNoDuplicate(result, badEndPoints, existingSet);
 
         // 5 disabled endpoints
-        var disabledEndPoints = currentEndPointInfos
+        var disabledEndPoints = currentEndPointInfosArray
             .Where(info => !info.EndPoint.IsEnabled)
             .Select(info => info.EndPoint);
         AddNoDuplicate(result, disabledEndPoints, existingSet);
@@ -59,7 +60,7 @@ public class ProxyEndPointUpdater
     public static async Task<ProxyEndPoint[]> UpdateFromUrlAsync(
         HttpClient httpClient,
         Uri url,
-        ProxyEndPointInfo[] currentEndPointInfos,
+        IEnumerable<ProxyEndPointInfo> currentEndPointInfos,
         int maxItemCount,
         int minPenalty,
         CancellationToken cancellationToken = default)

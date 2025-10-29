@@ -13,6 +13,7 @@ public interface IProxyEndPointController
     Task ResetState();
     Task<AppProxyEndPointInfo?> GetDevice();
     Task<AppProxyEndPointInfo[]> List();
-    Task Import(string text);
+    Task Import(string content);
+    Task ReloadUrl();
 }
 

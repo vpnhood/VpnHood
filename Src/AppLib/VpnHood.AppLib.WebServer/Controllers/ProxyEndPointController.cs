@@ -74,6 +74,12 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
             await ResetState();
             await ctx.SendNoContent();
         });
+
+        // Reload from URL
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "reload-url", async ctx => {
+            await ReloadUrl();
+            await ctx.SendNoContent();
+        });
     }
 
     public Task ResetState()
@@ -130,9 +136,14 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.CompletedTask;
     }
 
-    public Task Import(string text)
+    public Task Import(string content)
     {
-        ProxyEndPointService.Import(text);
+        ProxyEndPointService.Import(content);
         return Task.CompletedTask;
+    }
+
+    public Task ReloadUrl()
+    {
+        return ProxyEndPointService.ReloadUrl(CancellationToken.None);
     }
 }

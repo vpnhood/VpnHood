@@ -91,9 +91,18 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// <summary>
     /// Import proxy endpoints from text content
     /// </summary>
-    /// <param name="text">Plain text content containing proxy URLs (one per line or comma-separated)</param>
+    /// <param name="content">Plain text content containing proxy URLs (one per line or comma-separated)</param>
     [HttpPost("import")]
-    public Task Import([FromBody] string text)
+    public Task Import([FromBody] string content)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    /// <summary>
+    /// Reload proxy endpoints from configured URL
+    /// </summary>
+    [HttpPost("reload-url")]
+    public Task ReloadUrl()
     {
         throw new SwaggerOnlyException();
     }

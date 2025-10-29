@@ -1,4 +1,5 @@
-﻿using VpnHood.AppLib.Services.Proxies;
+﻿using System.Threading;
+using VpnHood.AppLib.Services.Proxies;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
 namespace VpnHood.AppLib.WebServer.Api;
@@ -14,6 +15,6 @@ public interface IProxyEndPointController
     Task<AppProxyEndPointInfo?> GetDevice();
     Task<AppProxyEndPointInfo[]> List();
     Task Import(string content);
-    Task ReloadUrl();
+    Task ReloadUrl(CancellationToken cancellationToken);
 }
 

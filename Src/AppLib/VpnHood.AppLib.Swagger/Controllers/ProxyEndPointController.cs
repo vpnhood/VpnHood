@@ -102,7 +102,7 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// Reload proxy endpoints from configured URL
     /// </summary>
     [HttpPost("reload-url")]
-    public Task ReloadUrl()
+    public Task ReloadUrl(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

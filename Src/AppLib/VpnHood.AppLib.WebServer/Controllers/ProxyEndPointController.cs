@@ -77,7 +77,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
 
         // Reload from URL
         mapper.AddStatic(HttpMethod.POST, baseUrl + "reload-url", async ctx => {
-            await ReloadUrl();
+            await ReloadUrl(ctx.Token);
             await ctx.SendNoContent();
         });
     }
@@ -142,7 +142,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.CompletedTask;
     }
 
-    public Task ReloadUrl()
+    public Task ReloadUrl(CancellationToken cancellationToken)
     {
         return ProxyEndPointService.ReloadUrl(CancellationToken.None);
     }

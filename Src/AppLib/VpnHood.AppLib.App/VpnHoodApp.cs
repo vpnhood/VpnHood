@@ -402,11 +402,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ClientProfile = clientProfileInfo?.ToBaseInfo(),
                 ChannelProtocol = connectionInfo?.SessionStatus?.ChannelProtocol ?? UserSettings.ChannelProtocol,
                 IsNotificationEnabled = Services.DeviceUiProvider.IsNotificationEnabled,
-                SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetSystemPrivateDns()),
+                SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()),
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
-                    ? Services.DeviceUiProvider.GetSystemBarsInfo(uiContext)
+                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext)
                     : SystemBarsInfo.Default,
             };
 

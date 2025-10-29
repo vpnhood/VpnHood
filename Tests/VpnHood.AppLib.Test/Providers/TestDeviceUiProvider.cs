@@ -11,6 +11,6 @@ internal class TestDeviceUiProvider : NullDeviceUiProvider
     public override bool IsProxySettingsSupported => true;
     public override DeviceProxySettings? GetProxySettings() => DeviceProxySettings;
 
-    public override PrivateDns? GetSystemPrivateDns() => SystemPrivateDns;
-    public override SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext) => SystemBarsInfo.Default;
+    public override PrivateDns? GetPrivateDns() => SystemPrivateDns;
+    public override SystemBarsInfo GetBarsInfo(IUiContext uiContext) => SystemBarsInfo.Default;
 }

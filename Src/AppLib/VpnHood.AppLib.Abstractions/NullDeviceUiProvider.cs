@@ -4,8 +4,8 @@ namespace VpnHood.AppLib.Abstractions;
 
 public class NullDeviceUiProvider : IDeviceUiProvider
 {
-    public virtual PrivateDns? GetSystemPrivateDns() => null;
-    public virtual SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext) => SystemBarsInfo.Default;
+    public virtual PrivateDns? GetPrivateDns() => null;
+    public virtual SystemBarsInfo GetBarsInfo(IUiContext uiContext) => SystemBarsInfo.Default;
 
     public virtual bool IsQuickLaunchSupported => false;
     public virtual bool IsRequestQuickLaunchSupported => false;
@@ -20,26 +20,26 @@ public class NullDeviceUiProvider : IDeviceUiProvider
     public virtual Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
-    public virtual bool IsSystemPrivateDnsSettingsSupported => false;
+    public virtual bool IsPrivateDnsSettingsSupported => false;
 
-    public virtual bool IsSystemSettingsSupported => false;
-    public virtual void OpenSystemSettings(IUiContext uiContext) =>
+    public virtual bool IsSettingsSupported => false;
+    public virtual void OpenSettings(IUiContext uiContext) =>
         throw new NotSupportedException();
 
-    public virtual bool IsSystemAlwaysOnSettingsSupported => false;
-    public virtual void OpenSystemAlwaysOnSettings(IUiContext uiContext) =>
+    public virtual bool IsAlwaysOnSettingsSupported => false;
+    public virtual void OpenAlwaysOnSettings(IUiContext uiContext) =>
         throw new NotSupportedException();
 
-    public virtual bool IsSystemKillSwitchSettingsSupported =>false;
-    public virtual void OpenSystemKillSwitchSettings(IUiContext requiredContext) =>
+    public virtual bool IsKillSwitchSettingsSupported =>false;
+    public virtual void OpenKillSwitchSettings(IUiContext requiredContext) =>
         throw new NotSupportedException();
 
-    public virtual bool IsAppSystemSettingsSupported => false;
-    public virtual void OpenAppSystemSettings(IUiContext context) =>
+    public virtual bool IsAppSettingsSupported => false;
+    public virtual void OpenAppSettings(IUiContext context) =>
         throw new NotSupportedException();
 
-    public virtual bool IsAppSystemNotificationSettingsSupported => false;
-    public virtual void OpenAppSystemNotificationSettings(IUiContext uiContext) =>
+    public virtual bool IsAppNotificationSettingsSupported => false;
+    public virtual void OpenAppNotificationSettings(IUiContext uiContext) =>
         throw new NotSupportedException();
 
     public virtual bool IsProxySettingsSupported => false;

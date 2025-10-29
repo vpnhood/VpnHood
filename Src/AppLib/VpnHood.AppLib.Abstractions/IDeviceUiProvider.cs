@@ -12,26 +12,26 @@ public interface IDeviceUiProvider
     bool IsRequestNotificationSupported { get; }
     Task<bool> RequestNotification(IUiContext uiContext, CancellationToken cancellationToken);
 
-    bool IsSystemPrivateDnsSettingsSupported { get; }
+    bool IsPrivateDnsSettingsSupported { get; }
 
-    bool IsSystemSettingsSupported { get; }
-    void OpenSystemSettings(IUiContext uiContext);
+    bool IsSettingsSupported { get; }
+    void OpenSettings(IUiContext uiContext);
 
-    bool IsSystemAlwaysOnSettingsSupported { get; }
-    void OpenSystemAlwaysOnSettings(IUiContext uiContext);
+    bool IsAlwaysOnSettingsSupported { get; }
+    void OpenAlwaysOnSettings(IUiContext uiContext);
 
-    bool IsSystemKillSwitchSettingsSupported { get; }
-    void OpenSystemKillSwitchSettings(IUiContext requiredContext);
+    bool IsKillSwitchSettingsSupported { get; }
+    void OpenKillSwitchSettings(IUiContext requiredContext);
 
-    bool IsAppSystemSettingsSupported { get; }
-    void OpenAppSystemSettings(IUiContext context);
+    bool IsAppSettingsSupported { get; }
+    void OpenAppSettings(IUiContext context);
 
-    bool IsAppSystemNotificationSettingsSupported { get; }
-    void OpenAppSystemNotificationSettings(IUiContext uiContext);
+    bool IsAppNotificationSettingsSupported { get; }
+    void OpenAppNotificationSettings(IUiContext uiContext);
 
     bool IsProxySettingsSupported { get; }
     DeviceProxySettings? GetProxySettings();
 
-    PrivateDns? GetSystemPrivateDns();
-    SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext);
+    PrivateDns? GetPrivateDns();
+    SystemBarsInfo GetBarsInfo(IUiContext uiContext);
 }

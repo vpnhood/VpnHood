@@ -156,7 +156,7 @@ public class AppAdManager(
         _ = ex;
 
         // check if private DNS is active and is in allowed list
-        var privateDns = uiProvider.GetSystemPrivateDns();
+        var privateDns = uiProvider.GetPrivateDns();
         var isUnallowedPrivateDns =
             privateDns is { IsActive: true } &&
             allowedPrivateDnsProviders != null &&

@@ -28,28 +28,28 @@ internal class IntentsController : ControllerBase, IIntentController
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-system-kill-switch-settings", async ctx => {
-            await OpenSystemKillSwitchSettings();
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-kill-switch-settings", async ctx => {
+            await OpenKillSwitchSettings();
             await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-system-always-on-settings", async ctx => {
-            await OpenSystemAlwaysOnSettings();
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-always-on-settings", async ctx => {
+            await OpenAlwaysOnSettings();
             await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-system-settings", async ctx => {
-            await OpenSystemSettings();
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-settings", async ctx => {
+            await OpenSettings();
             await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-app-system-settings", async ctx => {
-            await OpenAppSystemSettings();
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-app-settings", async ctx => {
+            await OpenAppSettings();
             await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-app-system-notification-settings", async ctx => {
-            await OpenAppSystemNotificationSettings();
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "open-app-notification-settings", async ctx => {
+            await OpenAppNotificationSettings();
             await ctx.SendNoContent();
         });
     }
@@ -72,33 +72,33 @@ internal class IntentsController : ControllerBase, IIntentController
         return App.Services.UserReviewProvider.RequestReview(AppUiContext.RequiredContext, CancellationToken.None);
     }
 
-    public Task OpenSystemKillSwitchSettings()
+    public Task OpenKillSwitchSettings()
     {
-        App.Services.DeviceUiProvider.OpenSystemKillSwitchSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenKillSwitchSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    public Task OpenSystemAlwaysOnSettings()
+    public Task OpenAlwaysOnSettings()
     {
-        App.Services.DeviceUiProvider.OpenSystemAlwaysOnSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenAlwaysOnSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    public Task OpenSystemSettings()
+    public Task OpenSettings()
     {
-        App.Services.DeviceUiProvider.OpenSystemSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    public Task OpenAppSystemSettings()
+    public Task OpenAppSettings()
     {
-        App.Services.DeviceUiProvider.OpenAppSystemSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenAppSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    public Task OpenAppSystemNotificationSettings()
+    public Task OpenAppNotificationSettings()
     {
-        App.Services.DeviceUiProvider.OpenAppSystemNotificationSettings(AppUiContext.RequiredContext);
+        App.Services.DeviceUiProvider.OpenAppNotificationSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 }

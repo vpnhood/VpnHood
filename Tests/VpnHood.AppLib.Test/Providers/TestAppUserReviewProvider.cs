@@ -3,7 +3,7 @@ using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
 
-internal class TestUserReviewProvider : IAppUserReviewProvider
+internal class TestAppUserReviewProvider : IAppUserReviewProvider
 {
     public bool IsReviewRequested { get; set; }
 

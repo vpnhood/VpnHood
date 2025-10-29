@@ -25,17 +25,17 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;
     public bool IsRequestQuickLaunchSupported => 
         OperatingSystem.IsAndroidVersionAtLeast(33) && !IsTv;
-    public bool IsSystemPrivateDnsSettingsSupported =>
+    public bool IsPrivateDnsSettingsSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(28) && !IsTv;
-    public bool IsSystemKillSwitchSettingsSupported =>
+    public bool IsKillSwitchSettingsSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;
-    public bool IsSystemAlwaysOnSettingsSupported =>
+    public bool IsAlwaysOnSettingsSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;
     public bool IsRequestNotificationSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(33) && !IsTv;
-    public bool IsAppSystemNotificationSettingsSupported => !IsTv;
-    public bool IsSystemSettingsSupported => !IsTv;
-    public bool IsAppSystemSettingsSupported => !IsTv;
+    public bool IsAppNotificationSettingsSupported => !IsTv;
+    public bool IsSettingsSupported => !IsTv;
+    public bool IsAppSettingsSupported => !IsTv;
 
     public async Task<bool> RequestQuickLaunch(IUiContext context, CancellationToken cancellationToken)
     {
@@ -97,9 +97,9 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         }
     }
 
-    public void OpenSystemKillSwitchSettings(IUiContext context)
+    public void OpenKillSwitchSettings(IUiContext context)
     {
-        if (!IsSystemKillSwitchSettingsSupported)
+        if (!IsKillSwitchSettingsSupported)
             throw new NotSupportedException("SystemKillSwitchSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
@@ -107,9 +107,9 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         appUiContext.Activity.StartActivity(intent);
     }
 
-    public void OpenSystemAlwaysOnSettings(IUiContext context)
+    public void OpenAlwaysOnSettings(IUiContext context)
     {
-        if (!IsSystemAlwaysOnSettingsSupported)
+        if (!IsAlwaysOnSettingsSupported)
             throw new NotSupportedException("SystemAlwaysOnSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
@@ -117,9 +117,9 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         appUiContext.Activity.StartActivity(intent);
     }
 
-    public void OpenSystemSettings(IUiContext context)
+    public void OpenSettings(IUiContext context)
     {
-        if (!IsSystemSettingsSupported)
+        if (!IsSettingsSupported)
             throw new NotSupportedException("SystemSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
@@ -127,9 +127,9 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         appUiContext.Activity.StartActivity(intent);
     }
 
-    public void OpenAppSystemSettings(IUiContext context)
+    public void OpenAppSettings(IUiContext context)
     {
-        if (!IsAppSystemSettingsSupported)
+        if (!IsAppSettingsSupported)
             throw new NotSupportedException("AppSystemSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
@@ -138,9 +138,9 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         appUiContext.Activity.StartActivity(intent);
     }
 
-    public void OpenAppSystemNotificationSettings(IUiContext context)
+    public void OpenAppNotificationSettings(IUiContext context)
     {
-        if (!IsAppSystemNotificationSettingsSupported)
+        if (!IsAppNotificationSettingsSupported)
             throw new NotSupportedException("AppSystemNotificationSettings is not supported on this device.");
 
         var appUiContext = (AndroidUiContext)context;
@@ -199,7 +199,7 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         }
     }
 
-    public PrivateDns? GetSystemPrivateDns()
+    public PrivateDns? GetPrivateDns()
     {
         if (!OperatingSystem.IsAndroidVersionAtLeast(28)) // < 28
             return null;
@@ -227,7 +227,7 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         };
     }
 
-    public SystemBarsInfo GetSystemBarsInfo(IUiContext uiContext)
+    public SystemBarsInfo GetBarsInfo(IUiContext uiContext)
     {
         // check is request supported for WindowInsets.Type.SystemBars()
         if (!OperatingSystem.IsAndroidVersionAtLeast(30))

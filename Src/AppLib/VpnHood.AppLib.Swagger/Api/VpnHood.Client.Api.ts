@@ -1888,8 +1888,8 @@ export class IntentsClient {
         return Promise.resolve<boolean>(null as any);
     }
 
-    openSystemKillSwitchSettings( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/intents/open-system-kill-switch-settings";
+    openKillSwitchSettings( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/intents/open-kill-switch-settings";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -1907,11 +1907,11 @@ export class IntentsClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processOpenSystemKillSwitchSettings(_response);
+            return this.processOpenKillSwitchSettings(_response);
         });
     }
 
-    protected processOpenSystemKillSwitchSettings(response: AxiosResponse): Promise<void> {
+    protected processOpenKillSwitchSettings(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1932,8 +1932,8 @@ export class IntentsClient {
         return Promise.resolve<void>(null as any);
     }
 
-    openSystemAlwaysOnSettings( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/intents/open-system-always-on-settings";
+    openAlwaysOnSettings( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/intents/open-always-on-settings";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -1951,11 +1951,11 @@ export class IntentsClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processOpenSystemAlwaysOnSettings(_response);
+            return this.processOpenAlwaysOnSettings(_response);
         });
     }
 
-    protected processOpenSystemAlwaysOnSettings(response: AxiosResponse): Promise<void> {
+    protected processOpenAlwaysOnSettings(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1976,8 +1976,8 @@ export class IntentsClient {
         return Promise.resolve<void>(null as any);
     }
 
-    openSystemSettings( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/intents/open-system-settings";
+    openSettings( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/intents/open-settings";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -1995,11 +1995,11 @@ export class IntentsClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processOpenSystemSettings(_response);
+            return this.processOpenSettings(_response);
         });
     }
 
-    protected processOpenSystemSettings(response: AxiosResponse): Promise<void> {
+    protected processOpenSettings(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2020,8 +2020,8 @@ export class IntentsClient {
         return Promise.resolve<void>(null as any);
     }
 
-    openAppSystemSettings( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/intents/open-app-system-settings";
+    openAppSettings( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/intents/open-app-settings";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -2039,11 +2039,11 @@ export class IntentsClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processOpenAppSystemSettings(_response);
+            return this.processOpenAppSettings(_response);
         });
     }
 
-    protected processOpenAppSystemSettings(response: AxiosResponse): Promise<void> {
+    protected processOpenAppSettings(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2064,8 +2064,8 @@ export class IntentsClient {
         return Promise.resolve<void>(null as any);
     }
 
-    openAppSystemNotificationSettings( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/intents/open-app-system-notification-settings";
+    openAppNotificationSettings( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/intents/open-app-notification-settings";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -2083,11 +2083,11 @@ export class IntentsClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processOpenAppSystemNotificationSettings(_response);
+            return this.processOpenAppNotificationSettings(_response);
         });
     }
 
-    protected processOpenAppSystemNotificationSettings(response: AxiosResponse): Promise<void> {
+    protected processOpenAppNotificationSettings(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2523,11 +2523,11 @@ export class ProxyEndPointClient {
         return Promise.resolve<void>(null as any);
     }
 
-    import(text: string, cancelToken?: CancelToken): Promise<void> {
+    import(content: string, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/proxy-endpoints/import";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(text);
+        const content_ = JSON.stringify(content);
 
         let options_: AxiosRequestConfig = {
             data: content_,
@@ -2551,6 +2551,50 @@ export class ProxyEndPointClient {
     }
 
     protected processImport(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    reloadUrl( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints/reload-url";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processReloadUrl(_response);
+        });
+    }
+
+    protected processReloadUrl(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -4513,9 +4557,7 @@ export enum DnsMode {
 
 export class AppProxySettings implements IAppProxySettings {
     mode!: AppProxyMode;
-    autoUpdateListUrl?: string | null;
-    autoUpdateInterval?: string | null;
-    autoUpdateMinPenalty!: number;
+    autoUpdateOptions!: ProxyAutoUpdateOptions;
 
     constructor(data?: IAppProxySettings) {
         if (data) {
@@ -4524,14 +4566,15 @@ export class AppProxySettings implements IAppProxySettings {
                     (this as any)[property] = (data as any)[property];
             }
         }
+        if (!data) {
+            this.autoUpdateOptions = new ProxyAutoUpdateOptions();
+        }
     }
 
     init(_data?: any) {
         if (_data) {
             this.mode = _data["mode"] !== undefined ? _data["mode"] : null as any;
-            this.autoUpdateListUrl = _data["autoUpdateListUrl"] !== undefined ? _data["autoUpdateListUrl"] : null as any;
-            this.autoUpdateInterval = _data["autoUpdateInterval"] !== undefined ? _data["autoUpdateInterval"] : null as any;
-            this.autoUpdateMinPenalty = _data["autoUpdateMinPenalty"] !== undefined ? _data["autoUpdateMinPenalty"] : null as any;
+            this.autoUpdateOptions = _data["autoUpdateOptions"] ? ProxyAutoUpdateOptions.fromJS(_data["autoUpdateOptions"]) : new ProxyAutoUpdateOptions();
         }
     }
 
@@ -4545,24 +4588,68 @@ export class AppProxySettings implements IAppProxySettings {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["mode"] = this.mode !== undefined ? this.mode : null as any;
-        data["autoUpdateListUrl"] = this.autoUpdateListUrl !== undefined ? this.autoUpdateListUrl : null as any;
-        data["autoUpdateInterval"] = this.autoUpdateInterval !== undefined ? this.autoUpdateInterval : null as any;
-        data["autoUpdateMinPenalty"] = this.autoUpdateMinPenalty !== undefined ? this.autoUpdateMinPenalty : null as any;
+        data["autoUpdateOptions"] = this.autoUpdateOptions ? this.autoUpdateOptions.toJSON() : null as any;
         return data;
     }
 }
 
 export interface IAppProxySettings {
     mode: AppProxyMode;
-    autoUpdateListUrl?: string | null;
-    autoUpdateInterval?: string | null;
-    autoUpdateMinPenalty: number;
+    autoUpdateOptions: ProxyAutoUpdateOptions;
 }
 
 export enum AppProxyMode {
     NoProxy = 0,
     Device = 1,
     Manual = 2,
+}
+
+export class ProxyAutoUpdateOptions implements IProxyAutoUpdateOptions {
+    url?: string | null;
+    interval?: string | null;
+    maxPenalty!: number;
+    maxItemCount!: number;
+
+    constructor(data?: IProxyAutoUpdateOptions) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.url = _data["url"] !== undefined ? _data["url"] : null as any;
+            this.interval = _data["interval"] !== undefined ? _data["interval"] : null as any;
+            this.maxPenalty = _data["maxPenalty"] !== undefined ? _data["maxPenalty"] : null as any;
+            this.maxItemCount = _data["maxItemCount"] !== undefined ? _data["maxItemCount"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): ProxyAutoUpdateOptions {
+        data = typeof data === 'object' ? data : {};
+        let result = new ProxyAutoUpdateOptions();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["url"] = this.url !== undefined ? this.url : null as any;
+        data["interval"] = this.interval !== undefined ? this.interval : null as any;
+        data["maxPenalty"] = this.maxPenalty !== undefined ? this.maxPenalty : null as any;
+        data["maxItemCount"] = this.maxItemCount !== undefined ? this.maxItemCount : null as any;
+        return data;
+    }
+}
+
+export interface IProxyAutoUpdateOptions {
+    url?: string | null;
+    interval?: string | null;
+    maxPenalty: number;
+    maxItemCount: number;
 }
 
 export class ClientProfileInfo implements IClientProfileInfo {

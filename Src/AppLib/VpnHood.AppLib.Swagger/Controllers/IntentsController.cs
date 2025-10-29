@@ -26,32 +26,32 @@ public class IntentsController : ControllerBase, IIntentController
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("open-system-kill-switch-settings")]
-    public Task OpenSystemKillSwitchSettings()
+    [HttpPost("open-kill-switch-settings")]
+    public Task OpenKillSwitchSettings()
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("open-system-always-on-settings")]
-    public Task OpenSystemAlwaysOnSettings()
+    [HttpPost("open-always-on-settings")]
+    public Task OpenAlwaysOnSettings()
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("open-system-settings")]
-    public Task OpenSystemSettings()
+    [HttpPost("open-settings")]
+    public Task OpenSettings()
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("open-app-system-settings")]
-    public Task OpenAppSystemSettings()
+    [HttpPost("open-app-settings")]
+    public Task OpenAppSettings()
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("open-app-system-notification-settings")]
-    public Task OpenAppSystemNotificationSettings()
+    [HttpPost("open-app-notification-settings")]
+    public Task OpenAppNotificationSettings()
     {
         throw new SwaggerOnlyException();
     }

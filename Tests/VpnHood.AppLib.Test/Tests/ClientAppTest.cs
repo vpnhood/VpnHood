@@ -589,7 +589,7 @@ public class ClientAppTest : TestAppBase
         await using var server = await TestHelper.CreateServer(accessManager);
 
         // create app
-        var testUserReviewProvider = new TestUserReviewProvider();
+        var testUserReviewProvider = new TestAppUserReviewProvider();
         var token = accessManager.CreateToken();
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UserReviewProvider = testUserReviewProvider;

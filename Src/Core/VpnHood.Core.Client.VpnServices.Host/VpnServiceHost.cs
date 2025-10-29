@@ -4,7 +4,6 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
-using VpnHood.Core.Common;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
@@ -63,7 +62,7 @@ public class VpnServiceHost : IDisposable
         // update last sate
         VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}",
             client.State, client.LastException?.Message);
-        _ = UpdateConnectionInfo(client, _connectCts.Token);
+        _ = UpdateConnectionInfo(client, CancellationToken.None);
 
         // if client is not disposed, we can show notification
         if (client.State is not ClientState.Disposed) {

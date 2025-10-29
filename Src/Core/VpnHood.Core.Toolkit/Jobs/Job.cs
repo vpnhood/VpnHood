@@ -21,6 +21,7 @@ public class Job : IDisposable
     public DateTime? StartedTime { get; set; }
     public DateTime? LastExecutedTime { get; private set; }
     public string Name { get; init; }
+    public Task? LastTask { get; private set; }
 
     public Job(Func<CancellationToken, ValueTask> jobFunc, JobOptions options)
     {
@@ -99,7 +100,8 @@ public class Job : IDisposable
 
     public Task RunNow()
     {
-        return RunInternal(_cancellationTokenSource.Token);
+        LastTask = RunInternal(_cancellationTokenSource.Token);
+        return LastTask;
     }
 
     public async Task RunNow(CancellationToken cancellationToken)
@@ -107,7 +109,8 @@ public class Job : IDisposable
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
         // await required for linkedCts to be disposed properly
-        await RunInternal(linkedCts.Token);
+        LastTask =  RunInternal(linkedCts.Token);
+        await LastTask.Vhc();
     }
 
     private async Task RunInternal(CancellationToken cancellationToken)

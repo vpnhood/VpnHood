@@ -311,6 +311,7 @@ public class VpnServiceManager : IDisposable
         // we have only one TcpClient, so we need to lock it
         // VpnService should not have long-running requests, so it is ok to lock it
         using var scopeLock = await _sendRequestLock.LockAsync(cancellationToken).Vhc();
+        var maxResultLength = 0xFFFFF;
 
         var tcpClient = _tcpClient; // it may be reset to null while working
         if (tcpClient != null) {
@@ -318,7 +319,7 @@ public class VpnServiceManager : IDisposable
                 // send request
                 await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request.GetType().Name, cancellationToken).Vhc();
                 await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request, cancellationToken).Vhc();
-                return await StreamUtils.ReadObjectAsync<ApiResponse<T>>(tcpClient.GetStream(), cancellationToken).Vhc();
+                return await StreamUtils.ReadObjectAsync<ApiResponse<T>>(tcpClient.GetStream(), maxResultLength, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(ex, "Could not send request to VpnService Host. EndPoint: {EndPoint}",
@@ -339,7 +340,7 @@ public class VpnServiceManager : IDisposable
         try {
             await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request.GetType().Name, cancellationToken).Vhc();
             await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request, cancellationToken).Vhc();
-            return await StreamUtils.ReadObjectAsync<ApiResponse<T>>(_tcpClient.GetStream(), cancellationToken).Vhc();
+            return await StreamUtils.ReadObjectAsync<ApiResponse<T>>(_tcpClient.GetStream(), maxResultLength, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             _tcpClient.Dispose();

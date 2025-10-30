@@ -1,7 +1,8 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Jobs;
@@ -9,7 +10,6 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
-using System.Collections.Concurrent;
 
 namespace VpnHood.Core.Proxies.EndPointManagement;
 
@@ -160,10 +160,12 @@ public class ProxyEndPointManager : IDisposable
         CancellationToken cancellationToken)
     {
         try {
+            // var testDomain = "https://www.cloudflare.com/";
             var tickCount = Environment.TickCount64;
             using var serverCheckCts = new CancellationTokenSource(_serverCheckTimeout);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
             await proxyClient.CheckConnectionAsync(tcpClient, linkedCts.Token).Vhc();
+
             return TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
         }
         finally {
@@ -174,18 +176,18 @@ public class ProxyEndPointManager : IDisposable
     public async Task RemoveBadServers(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Checking proxy servers for reachability...");
+        var maxDegreeOfParallelism = Math.Max(20, _proxyEndPointEntries.Length);
 
-        var maxDegreeOfParallelism = Math.Max(1, _proxyEndPointEntries.Length);
         // initialize progress tracker
         _progressMonitor = new ProgressMonitor(
             totalTaskCount: _proxyEndPointEntries.Length,
             taskTimeout: _serverCheckTimeout,
             maxDegreeOfParallelism: maxDegreeOfParallelism);
 
-        // concurrent results container
-        var results = new ConcurrentBag<(ProxyEndPointEntry Entry, TcpClient? Client, TimeSpan? Latency, Exception? Error)>();
-
         try {
+            // concurrent results container
+            var results = new ConcurrentBag<(ProxyEndPointEntry Entry, TcpClient? Client, TimeSpan? Latency, Exception? Error)>();
+
             var parallelOptions = new ParallelOptions {
                 CancellationToken = cancellationToken,
                 MaxDegreeOfParallelism = maxDegreeOfParallelism
@@ -196,7 +198,7 @@ public class ProxyEndPointManager : IDisposable
                 try {
                     var proxyClient = await ProxyClientFactory.CreateProxyClient(entry.EndPoint);
                     tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
-                    var latency = await CheckConnectionAsync(proxyClient, tcpClient, _progressMonitor!, ct);
+                    var latency = await CheckConnectionAsync(proxyClient, tcpClient, _progressMonitor, ct);
                     results.Add((entry, tcpClient, latency, null));
                 }
                 catch (Exception ex) {

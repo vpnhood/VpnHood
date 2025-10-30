@@ -30,21 +30,29 @@ public static class StreamUtils
         return ret;
     }
 
-    public static async Task<T> ReadObjectAsync<T>(Stream stream, CancellationToken cancellationToken,
-        int maxLength = 0xFFFF)
+    public static Task<T> ReadObjectAsync<T>(Stream stream, CancellationToken cancellationToken)
     {
-        var message = await ReadMessageAsync(stream, cancellationToken, maxLength).Vhc();
+        return ReadObjectAsync<T>(stream, 0xFFFF, cancellationToken);
+    }
+
+    public static async Task<T> ReadObjectAsync<T>(Stream stream, int maxLength, CancellationToken cancellationToken)
+    {
+        var message = await ReadMessageAsync(stream, maxLength, cancellationToken).Vhc();
         var ret = JsonSerializer.Deserialize<T>(message) ?? throw new Exception("Could not read Message!");
         return ret;
     }
 
-    public static async Task<string> ReadMessageAsync(Stream stream, CancellationToken cancellationToken,
-        int maxLength = 0xFFFF)
+    public static Task<string> ReadMessageAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        return ReadMessageAsync(stream, 0xFFFF, cancellationToken);
+    }
+
+    public static async Task<string> ReadMessageAsync(Stream stream, int maxLength, CancellationToken cancellationToken)
     {
         // read length
         var lengthBuffer = new byte[4].AsMemory();
         await stream.ReadExactlyAsync(lengthBuffer, cancellationToken);
-        
+
         // check unauthorized exception
         if (lengthBuffer.Span.SequenceEqual("HTTP"u8))
             throw new UnauthorizedAccessException("Stream returned an HTTP response.");

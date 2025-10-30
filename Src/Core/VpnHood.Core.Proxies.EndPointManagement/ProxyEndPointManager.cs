@@ -9,6 +9,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
+using System.Collections.Concurrent;
 
 namespace VpnHood.Core.Proxies.EndPointManagement;
 
@@ -174,48 +175,55 @@ public class ProxyEndPointManager : IDisposable
     {
         VhLogger.Instance.LogDebug("Checking proxy servers for reachability...");
 
+        var maxDegreeOfParallelism = Math.Max(1, _proxyEndPointEntries.Length);
         // initialize progress tracker
         _progressMonitor = new ProgressMonitor(
             totalTaskCount: _proxyEndPointEntries.Length,
             taskTimeout: _serverCheckTimeout,
-            maxDegreeOfParallelism: _proxyEndPointEntries.Length);
+            maxDegreeOfParallelism: maxDegreeOfParallelism);
+
+        // concurrent results container
+        var results = new ConcurrentBag<(ProxyEndPointEntry Entry, TcpClient? Client, TimeSpan? Latency, Exception? Error)>();
 
         try {
-            // connect to each proxy server and check if it is reachable
-            List<(ProxyEndPointEntry, TcpClient, Task<TimeSpan>)> testTasks = [];
-            foreach (var proxyEndPointItem in _proxyEndPointEntries) {
-                var proxyClient = await ProxyClientFactory.CreateProxyClient(proxyEndPointItem.EndPoint);
-                var tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
-                var checkTask = CheckConnectionAsync(proxyClient, tcpClient, _progressMonitor, cancellationToken);
-                testTasks.Add((proxyEndPointItem, tcpClient, checkTask));
-            }
+            var parallelOptions = new ParallelOptions {
+                CancellationToken = cancellationToken,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism
+            };
 
-            // wait for all tasks to complete even if some fail
-            while (testTasks.Any(x => !x.Item3.IsCompleted))
-                await Task.WhenAny(testTasks.Select(x => x.Item3)).Vhc();
+            await Parallel.ForEachAsync(_proxyEndPointEntries, parallelOptions, async (entry, ct) => {
+                TcpClient? tcpClient = null;
+                try {
+                    var proxyClient = await ProxyClientFactory.CreateProxyClient(entry.EndPoint);
+                    tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
+                    var latency = await CheckConnectionAsync(proxyClient, tcpClient, _progressMonitor!, ct);
+                    results.Add((entry, tcpClient, latency, null));
+                }
+                catch (Exception ex) {
+                    results.Add((entry, tcpClient, null, ex));
+                }
+            }).Vhc();
 
             // find the fastest server and set threshold
-            var succeededTasks = testTasks
-                .Where(x => x.Item3.IsCompletedSuccessfully && x.Item1.EndPoint.IsEnabled)
-                .OrderBy(x => x.Item3.Result)
+            var succeededTasks = results
+                .Where(x => x.Error == null && x.Entry.EndPoint.IsEnabled && x.Latency.HasValue)
+                .OrderBy(x => x.Latency!.Value)
                 .ToArray();
 
             // set fastest server
-            TimeSpan? fastestLatency = succeededTasks.Any() ? succeededTasks.First().Item3.Result : null;
+            var fastestLatency = succeededTasks.Any() ? succeededTasks.First().Latency : null;
 
-            // update server statuses
-            foreach (var (proxyEndPointItem, tcpClient, task) in testTasks) {
-                tcpClient.Dispose();
+            // update server statuses and dispose clients
+            foreach (var (entry, client, latency, error) in results) {
+                client?.Dispose();
 
-                // set failed
-                if (!task.IsCompletedSuccessfully) {
-                    proxyEndPointItem.RecordFailed(task.Exception, _requestCount);
-                    proxyEndPointItem.EndPoint.IsEnabled = false;
+                if (error != null) {
+                    entry.RecordFailed(error, _requestCount);
+                    entry.EndPoint.IsEnabled = false;
                     continue;
                 }
 
-                // set active or poor active
-                proxyEndPointItem.RecordSuccess(latency: task.Result, fastestLatency: fastestLatency, _requestCount);
+                entry.RecordSuccess(latency!.Value, fastestLatency, _requestCount);
             }
         }
         finally {

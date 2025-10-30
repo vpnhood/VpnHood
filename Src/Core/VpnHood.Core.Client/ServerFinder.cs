@@ -4,7 +4,6 @@ using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
@@ -187,42 +186,56 @@ public class ServerFinder(
         using var parallelCts = CancellationTokenSource.CreateLinkedTokenSource(searchingCts.Token, cancellationToken);
 
         try {
-            // check all servers
-            var parallelOptions = new ParallelOptions {
-                CancellationToken = parallelCts.Token,
-                MaxDegreeOfParallelism = maxDegreeOfParallelism
-            };
-            await Parallel.ForEachAsync(hostStatuses, parallelOptions, async (hostStatus, ct) => {
+            // Use SemaphoreSlim to control max degree of parallelism
+            using var semaphore = new SemaphoreSlim(maxDegreeOfParallelism, maxDegreeOfParallelism);
+
+            // Create all verification tasks
+            var verificationTasks = hostStatuses.Select(async hostStatus => {
+                await semaphore.WaitAsync(parallelCts.Token);
                 try {
                     using var connector = CreateConnector(hostStatus.TcpEndPoint);
-                    hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, ct).Vhc();
+                    hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, parallelCts.Token).Vhc();
 
-                    // ReSharper disable once AccessToDisposedClosure
+                    // Cancel search if we found a reachable server and not searching by order
                     if (hostStatus.Available == true && !byOrder)
-                        await searchingCts.CancelAsync().Vhc(); // no need to continue, we find a server
+                        await searchingCts.CancelAsync().Vhc();
 
-                    // search by order
+                    // For ordered search, cancel if we found the first reachable server in order
                     if (byOrder) {
-                        // ReSharper disable once LoopCanBeConvertedToQuery (It can not! [false, false, null, true] is not accepted )
+                        // Check if we should stop based on order
                         foreach (var item in hostStatuses) {
                             if (item.Available == null)
                                 break; // wait to get the result in order
 
                             if (item.Available.Value) {
-                                // ReSharper disable once AccessToDisposedClosure
                                 await searchingCts.CancelAsync().Vhc();
                                 break;
                             }
                         }
                     }
+
+                    return hostStatus;
+                }
+                catch (OperationCanceledException) when (searchingCts.IsCancellationRequested) {
+                    // Server was found, stop processing this endpoint
+                    return hostStatus;
                 }
                 finally {
                     _progressMonitor.IncrementCompleted();
+                    semaphore.Release();
                 }
-            }).Vhc();
+            }).ToArray();
+
+            // Wait for all tasks to complete or until a server is found
+            try {
+                await Task.WhenAll(verificationTasks);
+            }
+            catch (OperationCanceledException) when (searchingCts.IsCancellationRequested) {
+                // A server has been found, this is expected
+            }
         }
         catch (OperationCanceledException) when (searchingCts.IsCancellationRequested) {
-            // it means a server has been found
+            // A server has been found, this is expected
         }
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,

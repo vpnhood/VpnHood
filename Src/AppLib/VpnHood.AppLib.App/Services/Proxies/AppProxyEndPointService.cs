@@ -249,6 +249,7 @@ public class AppProxyEndPointService
     }
 
     private bool ShouldUpdateNodesFromVpnService =>
+        _vpnServiceManager.ConnectionInfo.
         _vpnServiceManager.ConnectionInfo.CreatedTime > _data.UpdateTime &&
         !_vpnServiceManager.IsReconfiguring;
 

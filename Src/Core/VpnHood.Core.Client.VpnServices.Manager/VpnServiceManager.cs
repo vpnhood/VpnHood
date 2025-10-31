@@ -8,7 +8,6 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Client.VpnServices.Manager.Exceptions;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
@@ -61,12 +60,10 @@ public class VpnServiceManager : IDisposable
         }
     }
 
-    private static ConnectionInfo BuildConnectionInfo(ClientState clientState, 
-        ProxyEndPointManagerStatus? proxyManagerStatus = null,
-        Exception? ex = null)
+    private static ConnectionInfo BuildConnectionInfo(ClientState clientState, Exception? ex = null)
     {
         return new ConnectionInfo {
-            ProxyManagerStatus = proxyManagerStatus,
+            ProxyManagerStatus = null,
             CreatedTime = null,
             SessionInfo = null,
             SessionStatus = null,

@@ -159,13 +159,17 @@ public class ProxyEndPointManager : IDisposable
         TcpClient tcpClient, ProgressMonitor progressMonitor,
         CancellationToken cancellationToken)
     {
+        using var serverCheckCts = new CancellationTokenSource(_serverCheckTimeout);
         try {
             var testEp = IPEndPoint.Parse("1.1.1.1:443");
             var tickCount = Environment.TickCount64;
-            using var serverCheckCts = new CancellationTokenSource(_serverCheckTimeout);
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
+            using var linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
             await proxyClient.ConnectAsync(tcpClient, testEp, linkedCts.Token);
             return TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
+        }
+        catch (OperationCanceledException ex) when (serverCheckCts.IsCancellationRequested) {
+            throw new TimeoutException("Connection check timed out.", ex);
         }
         finally {
             progressMonitor.IncrementCompleted();
@@ -194,7 +198,11 @@ public class ProxyEndPointManager : IDisposable
                 MaxDegreeOfParallelism = maxDegreeOfParallelism
             };
 
-            await Parallel.ForEachAsync(_proxyEndPointEntries, parallelOptions, async (entry, ct) => {
+            var endpoints = _proxyEndPointEntries
+                .Where(x => x.EndPoint.IsEnabled)
+                .OrderBy(x=>x.Status.Quality);
+            
+            await Parallel.ForEachAsync(endpoints, parallelOptions, async (entry, ct) => {
                 TcpClient? tcpClient = null;
                 try {
                     var proxyClient = await ProxyClientFactory.CreateProxyClient(entry.EndPoint);
@@ -231,10 +239,12 @@ public class ProxyEndPointManager : IDisposable
                 // record failure
                 entry.RecordFailed(error, _requestCount);
 
-                // disable server for specific errors
-                entry.EndPoint.IsEnabled &= error is ProxyClientException {
+                // disable server if protocol is not supported
+                var isProtocolRejected = error is ProxyClientException {
                     SocketErrorCode: SocketError.ProtocolNotSupported or SocketError.AccessDenied
                 };
+                if (isProtocolRejected)
+                    entry.EndPoint.IsEnabled = false;
             }
         }
         finally {

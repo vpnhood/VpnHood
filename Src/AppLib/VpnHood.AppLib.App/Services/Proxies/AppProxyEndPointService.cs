@@ -220,8 +220,10 @@ public class AppProxyEndPointService
         // update status
         var endpointDict = _data.CustomEndPointInfos.ToDictionary(info => info.EndPoint.Id, info => info);
         foreach (var runtimeNode in runtimeNodes) {
-            if (endpointDict.TryGetValue(runtimeNode.EndPoint.Id, out var existing))
+            if (endpointDict.TryGetValue(runtimeNode.EndPoint.Id, out var existing)) {
                 existing.Status = runtimeNode.Status;
+                existing.EndPoint.IsEnabled = runtimeNode.EndPoint.IsEnabled;
+            }
         }
     }
 

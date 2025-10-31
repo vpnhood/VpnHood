@@ -224,7 +224,6 @@ public class ProxyEndPointManager : IDisposable
 
                 if (error != null) {
                     entry.RecordFailed(error, _requestCount);
-                    entry.EndPoint.IsEnabled = false;
                     continue;
                 }
 

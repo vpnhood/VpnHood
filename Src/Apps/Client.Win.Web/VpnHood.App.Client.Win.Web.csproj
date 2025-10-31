@@ -54,7 +54,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3537.50" />
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="6.0.702" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.705" />
 	</ItemGroup>
 
 	<ItemGroup>

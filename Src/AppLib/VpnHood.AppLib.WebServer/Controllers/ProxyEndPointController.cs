@@ -26,6 +26,13 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
             await ctx.SendJson(res);
         });
 
+        // Get by id
+        mapper.AddParam(HttpMethod.GET, baseUrl + "{proxyEndPointId}", async ctx => {
+            var id = ctx.GetRouteParameter<string>("proxyEndPointId");
+            var res = await Get(id, CancellationToken.None);
+            await ctx.SendJson(res);
+        });
+
         // Add
         mapper.AddStatic(HttpMethod.POST, baseUrl, async ctx => {
             var body = ctx.ReadJson<ProxyEndPoint>();
@@ -69,20 +76,20 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
             await ctx.SendNoContent();
         });
 
-        // Reset states
+        // Reset state
         mapper.AddStatic(HttpMethod.POST, baseUrl + "reset-states", async ctx => {
-            await ResetState();
+            await ResetStates();
             await ctx.SendNoContent();
         });
 
         // Reload from URL
         mapper.AddStatic(HttpMethod.POST, baseUrl + "reload-url", async ctx => {
-            await ReloadUrl(ctx.Token);
+            await ReloadUrl(CancellationToken.None);
             await ctx.SendNoContent();
         });
     }
 
-    public Task ResetState()
+    public Task ResetStates()
     {
         ProxyEndPointService.ResetStates();
         return Task.CompletedTask;
@@ -98,6 +105,13 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
     {
         var result = ProxyEndPointService.ListProxies();
         return Task.FromResult(result);
+    }
+
+    public Task<AppProxyEndPointInfo> Get(string proxyEndPointId, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        var item = ProxyEndPointService.Get(proxyEndPointId);
+        return Task.FromResult(item);
     }
 
     public Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults)
@@ -144,6 +158,6 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
 
     public Task ReloadUrl(CancellationToken cancellationToken)
     {
-        return ProxyEndPointService.ReloadUrl(CancellationToken.None);
+        return ProxyEndPointService.ReloadUrl(cancellationToken);
     }
 }

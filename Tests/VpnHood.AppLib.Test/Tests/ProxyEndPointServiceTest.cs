@@ -199,6 +199,11 @@ public class ProxyEndPointServiceTest : TestAppBase
         foreach (var proxyEndPoint in endpoints)
             dom.App.Services.ProxyEndPointService.Add(proxyEndPoint);
 
+        // Get
+        var proxyEndPointInfo = dom.App.Services.ProxyEndPointService.Get(endpoints.First().Id);
+        Assert.AreEqual(endpoints.First().Id, proxyEndPointInfo.EndPoint.Id);
+        Assert.AreEqual(endpoints.First().Host, proxyEndPointInfo.EndPoint.Host);
+
         // add a new endpoint
         var newNode = new ProxyEndPoint {
             Protocol = ProxyProtocol.Http,
@@ -524,7 +529,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         var httpEp = httpProxyServer.ListenerEndPoint;
 
         // add our proxy endpoints to a remote file content
-        var proxyListContent = 
+        var proxyListContent =
             $"socks5://{socks5Ep}\r\n" +
             $"http://{httpEp}\r\n";
         TestAppHelper.WebServer.FileContent1 = proxyListContent;
@@ -571,7 +576,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         var httpEp = httpProxyServer.ListenerEndPoint;
 
         // add our proxy endpoints to a remote file content
-        var proxyListContent = 
+        var proxyListContent =
             $"socks5://{socks5Ep}\r\n" +
             $"http://{httpEp}\r\n";
         TestAppHelper.WebServer.FileContent1 = proxyListContent;

@@ -5,12 +5,12 @@ namespace VpnHood.AppLib.WebServer.Api;
 
 public interface IProxyEndPointController
 {
-    Task<AppProxyEndPointInfo> Get(string proxyEndPointId);
+    Task<AppProxyEndPointInfo> Get(string proxyEndPointId, CancellationToken cancellationToken);
     Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint);
     Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint);
     Task Delete(string proxyEndPointId);
     Task DeleteAll();
-    Task ResetState();
+    Task ResetStates();
     Task<AppProxyEndPointInfo?> GetDevice();
     Task<AppProxyEndPointInfo[]> List();
     Task Import(string content);

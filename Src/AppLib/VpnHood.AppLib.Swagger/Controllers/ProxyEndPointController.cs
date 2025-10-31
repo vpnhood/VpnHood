@@ -29,6 +29,15 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     }
 
     /// <summary>
+    /// Get a proxy endpoint by id
+    /// </summary>
+    [HttpGet("{proxyEndPointId}")]
+    public Task<AppProxyEndPointInfo> Get(string proxyEndPointId, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    /// <summary>
     /// Parse and create a proxy endpoint from the provided text
     /// </summary>
     /// <param name="text">The text to parse</param>
@@ -82,8 +91,8 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// <summary>
     /// Reset the state of the proxy endpoints
     /// </summary>
-    [HttpPost("reset-state")]
-    public Task ResetState()
+    [HttpPost("reset-states")]
+    public Task ResetStates()
     {
         throw new SwaggerOnlyException();
     }

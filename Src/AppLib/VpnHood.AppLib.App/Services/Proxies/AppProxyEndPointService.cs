@@ -64,6 +64,12 @@ public class AppProxyEndPointService
         return res.ToArray();
     }
 
+    public AppProxyEndPointInfo Get(string id)
+    {
+        var res = _data.CustomEndPointInfos.Single(x => x.EndPoint.Id == id);
+        return res;
+    }
+
     public AppProxyEndPointInfo Add(ProxyEndPoint proxyEndPoint)
     {
         var ret = AddInternal(proxyEndPoint);

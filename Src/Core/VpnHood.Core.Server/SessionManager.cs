@@ -3,7 +3,6 @@ using System.Net;
 using System.Text.Json;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Packets;

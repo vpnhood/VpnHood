@@ -1,5 +1,4 @@
-﻿using System.Threading;
-using VpnHood.AppLib.Services.Proxies;
+﻿using VpnHood.AppLib.Services.Proxies;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
 namespace VpnHood.AppLib.WebServer.Api;

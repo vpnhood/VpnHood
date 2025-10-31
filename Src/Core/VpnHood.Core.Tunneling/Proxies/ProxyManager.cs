@@ -1,5 +1,4 @@
-﻿using VpnHood.Core.Common;
-using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.PacketTransports;

@@ -58,7 +58,10 @@ public class AppProxyEndPointService
     public AppProxyEndPointInfo[] ListProxies()
     {
         UpdateNodesByCore();
-        return _data.CustomEndPointInfos;
+        var res = _data.CustomEndPointInfos
+            .OrderBy(x => x.Status.Quality);
+
+        return res.ToArray();
     }
 
     public AppProxyEndPointInfo Add(ProxyEndPoint proxyEndPoint)
@@ -309,7 +312,6 @@ public class AppProxyEndPointService
                 prop = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(ProxyEndPoint.Id));
                 if (prop is not null)
                     typeInfo.Properties.Remove(prop);
-
             }
         });
 

@@ -160,12 +160,11 @@ public class ProxyEndPointManager : IDisposable
         CancellationToken cancellationToken)
     {
         try {
-            // var testDomain = "https://www.cloudflare.com/";
+            var testEp = IPEndPoint.Parse("1.1.1.1:443");
             var tickCount = Environment.TickCount64;
             using var serverCheckCts = new CancellationTokenSource(_serverCheckTimeout);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
-            await proxyClient.CheckConnectionAsync(tcpClient, linkedCts.Token).Vhc();
-
+            await proxyClient.ConnectAsync(tcpClient, testEp, linkedCts.Token);
             return TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
         }
         finally {
@@ -176,7 +175,7 @@ public class ProxyEndPointManager : IDisposable
     public async Task RemoveBadServers(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Checking proxy servers for reachability...");
-        var maxDegreeOfParallelism = Math.Max(20, _proxyEndPointEntries.Length);
+        var maxDegreeOfParallelism = Math.Max(50, _proxyEndPointEntries.Length);
 
         // initialize progress tracker
         _progressMonitor = new ProgressMonitor(
@@ -186,7 +185,9 @@ public class ProxyEndPointManager : IDisposable
 
         try {
             // concurrent results container
-            var results = new ConcurrentBag<(ProxyEndPointEntry Entry, TcpClient? Client, TimeSpan? Latency, Exception? Error)>();
+            var results = new ConcurrentBag<(
+                ProxyEndPointEntry Entry, TcpClient? Client, 
+                TimeSpan? Latency, Exception? Error)>();
 
             var parallelOptions = new ParallelOptions {
                 CancellationToken = cancellationToken,
@@ -198,6 +199,8 @@ public class ProxyEndPointManager : IDisposable
                 try {
                     var proxyClient = await ProxyClientFactory.CreateProxyClient(entry.EndPoint);
                     tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
+                    tcpClient.ReceiveBufferSize = 1024 * 4;
+                    tcpClient.SendBufferSize = 1024 * 4;
                     var latency = await CheckConnectionAsync(proxyClient, tcpClient, _progressMonitor, ct);
                     results.Add((entry, tcpClient, latency, null));
                 }

@@ -1,5 +1,4 @@
 ﻿using Ga4.Trackers;
-using VpnHood.Core.Common;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.SystemInformation;

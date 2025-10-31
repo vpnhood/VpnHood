@@ -2694,7 +2694,7 @@ export interface IAppAccount {
 
 export class AppData implements IAppData {
     features!: AppFeatures;
-    intentFeatures!: AppIntentFeatures;
+    intentFeatures!: DeviceIntentFeatures;
     state!: AppState;
     userSettings!: UserSettings;
     clientProfileInfos!: ClientProfileInfo[];
@@ -2709,7 +2709,7 @@ export class AppData implements IAppData {
         }
         if (!data) {
             this.features = new AppFeatures();
-            this.intentFeatures = new AppIntentFeatures();
+            this.intentFeatures = new DeviceIntentFeatures();
             this.state = new AppState();
             this.userSettings = new UserSettings();
             this.clientProfileInfos = [];
@@ -2720,7 +2720,7 @@ export class AppData implements IAppData {
     init(_data?: any) {
         if (_data) {
             this.features = _data["features"] ? AppFeatures.fromJS(_data["features"]) : new AppFeatures();
-            this.intentFeatures = _data["intentFeatures"] ? AppIntentFeatures.fromJS(_data["intentFeatures"]) : new AppIntentFeatures();
+            this.intentFeatures = _data["intentFeatures"] ? DeviceIntentFeatures.fromJS(_data["intentFeatures"]) : new DeviceIntentFeatures();
             this.state = _data["state"] ? AppState.fromJS(_data["state"]) : new AppState();
             this.userSettings = _data["userSettings"] ? UserSettings.fromJS(_data["userSettings"]) : new UserSettings();
             if (Array.isArray(_data["clientProfileInfos"])) {
@@ -2771,7 +2771,7 @@ export class AppData implements IAppData {
 
 export interface IAppData {
     features: AppFeatures;
-    intentFeatures: AppIntentFeatures;
+    intentFeatures: DeviceIntentFeatures;
     state: AppState;
     userSettings: UserSettings;
     clientProfileInfos: ClientProfileInfo[];
@@ -2970,19 +2970,19 @@ export enum ChannelProtocol {
     Tcp = "Tcp",
 }
 
-export class AppIntentFeatures implements IAppIntentFeatures {
+export class DeviceIntentFeatures implements IDeviceIntentFeatures {
     isUserReviewSupported!: boolean;
     isQuickLaunchSupported!: boolean;
     isRequestQuickLaunchSupported!: boolean;
     isRequestNotificationSupported!: boolean;
-    isSystemPrivateDnsSettingsSupported!: boolean;
-    isSystemKillSwitchSettingsSupported!: boolean;
-    isSystemAlwaysOnSettingsSupported!: boolean;
-    isSystemSettingsSupported!: boolean;
-    isAppSystemSettingsSupported!: boolean;
-    isAppSystemNotificationSettingsSupported!: boolean;
+    isPrivateDnsSettingsSupported!: boolean;
+    isKillSwitchSettingsSupported!: boolean;
+    isAlwaysOnSettingsSupported!: boolean;
+    isSettingsSupported!: boolean;
+    isAppSettingsSupported!: boolean;
+    isAppNotificationSettingsSupported!: boolean;
 
-    constructor(data?: IAppIntentFeatures) {
+    constructor(data?: IDeviceIntentFeatures) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -2997,18 +2997,18 @@ export class AppIntentFeatures implements IAppIntentFeatures {
             this.isQuickLaunchSupported = _data["isQuickLaunchSupported"] !== undefined ? _data["isQuickLaunchSupported"] : null as any;
             this.isRequestQuickLaunchSupported = _data["isRequestQuickLaunchSupported"] !== undefined ? _data["isRequestQuickLaunchSupported"] : null as any;
             this.isRequestNotificationSupported = _data["isRequestNotificationSupported"] !== undefined ? _data["isRequestNotificationSupported"] : null as any;
-            this.isSystemPrivateDnsSettingsSupported = _data["isSystemPrivateDnsSettingsSupported"] !== undefined ? _data["isSystemPrivateDnsSettingsSupported"] : null as any;
-            this.isSystemKillSwitchSettingsSupported = _data["isSystemKillSwitchSettingsSupported"] !== undefined ? _data["isSystemKillSwitchSettingsSupported"] : null as any;
-            this.isSystemAlwaysOnSettingsSupported = _data["isSystemAlwaysOnSettingsSupported"] !== undefined ? _data["isSystemAlwaysOnSettingsSupported"] : null as any;
-            this.isSystemSettingsSupported = _data["isSystemSettingsSupported"] !== undefined ? _data["isSystemSettingsSupported"] : null as any;
-            this.isAppSystemSettingsSupported = _data["isAppSystemSettingsSupported"] !== undefined ? _data["isAppSystemSettingsSupported"] : null as any;
-            this.isAppSystemNotificationSettingsSupported = _data["isAppSystemNotificationSettingsSupported"] !== undefined ? _data["isAppSystemNotificationSettingsSupported"] : null as any;
+            this.isPrivateDnsSettingsSupported = _data["isPrivateDnsSettingsSupported"] !== undefined ? _data["isPrivateDnsSettingsSupported"] : null as any;
+            this.isKillSwitchSettingsSupported = _data["isKillSwitchSettingsSupported"] !== undefined ? _data["isKillSwitchSettingsSupported"] : null as any;
+            this.isAlwaysOnSettingsSupported = _data["isAlwaysOnSettingsSupported"] !== undefined ? _data["isAlwaysOnSettingsSupported"] : null as any;
+            this.isSettingsSupported = _data["isSettingsSupported"] !== undefined ? _data["isSettingsSupported"] : null as any;
+            this.isAppSettingsSupported = _data["isAppSettingsSupported"] !== undefined ? _data["isAppSettingsSupported"] : null as any;
+            this.isAppNotificationSettingsSupported = _data["isAppNotificationSettingsSupported"] !== undefined ? _data["isAppNotificationSettingsSupported"] : null as any;
         }
     }
 
-    static fromJS(data: any): AppIntentFeatures {
+    static fromJS(data: any): DeviceIntentFeatures {
         data = typeof data === 'object' ? data : {};
-        let result = new AppIntentFeatures();
+        let result = new DeviceIntentFeatures();
         result.init(data);
         return result;
     }
@@ -3019,27 +3019,27 @@ export class AppIntentFeatures implements IAppIntentFeatures {
         data["isQuickLaunchSupported"] = this.isQuickLaunchSupported !== undefined ? this.isQuickLaunchSupported : null as any;
         data["isRequestQuickLaunchSupported"] = this.isRequestQuickLaunchSupported !== undefined ? this.isRequestQuickLaunchSupported : null as any;
         data["isRequestNotificationSupported"] = this.isRequestNotificationSupported !== undefined ? this.isRequestNotificationSupported : null as any;
-        data["isSystemPrivateDnsSettingsSupported"] = this.isSystemPrivateDnsSettingsSupported !== undefined ? this.isSystemPrivateDnsSettingsSupported : null as any;
-        data["isSystemKillSwitchSettingsSupported"] = this.isSystemKillSwitchSettingsSupported !== undefined ? this.isSystemKillSwitchSettingsSupported : null as any;
-        data["isSystemAlwaysOnSettingsSupported"] = this.isSystemAlwaysOnSettingsSupported !== undefined ? this.isSystemAlwaysOnSettingsSupported : null as any;
-        data["isSystemSettingsSupported"] = this.isSystemSettingsSupported !== undefined ? this.isSystemSettingsSupported : null as any;
-        data["isAppSystemSettingsSupported"] = this.isAppSystemSettingsSupported !== undefined ? this.isAppSystemSettingsSupported : null as any;
-        data["isAppSystemNotificationSettingsSupported"] = this.isAppSystemNotificationSettingsSupported !== undefined ? this.isAppSystemNotificationSettingsSupported : null as any;
+        data["isPrivateDnsSettingsSupported"] = this.isPrivateDnsSettingsSupported !== undefined ? this.isPrivateDnsSettingsSupported : null as any;
+        data["isKillSwitchSettingsSupported"] = this.isKillSwitchSettingsSupported !== undefined ? this.isKillSwitchSettingsSupported : null as any;
+        data["isAlwaysOnSettingsSupported"] = this.isAlwaysOnSettingsSupported !== undefined ? this.isAlwaysOnSettingsSupported : null as any;
+        data["isSettingsSupported"] = this.isSettingsSupported !== undefined ? this.isSettingsSupported : null as any;
+        data["isAppSettingsSupported"] = this.isAppSettingsSupported !== undefined ? this.isAppSettingsSupported : null as any;
+        data["isAppNotificationSettingsSupported"] = this.isAppNotificationSettingsSupported !== undefined ? this.isAppNotificationSettingsSupported : null as any;
         return data;
     }
 }
 
-export interface IAppIntentFeatures {
+export interface IDeviceIntentFeatures {
     isUserReviewSupported: boolean;
     isQuickLaunchSupported: boolean;
     isRequestQuickLaunchSupported: boolean;
     isRequestNotificationSupported: boolean;
-    isSystemPrivateDnsSettingsSupported: boolean;
-    isSystemKillSwitchSettingsSupported: boolean;
-    isSystemAlwaysOnSettingsSupported: boolean;
-    isSystemSettingsSupported: boolean;
-    isAppSystemSettingsSupported: boolean;
-    isAppSystemNotificationSettingsSupported: boolean;
+    isPrivateDnsSettingsSupported: boolean;
+    isKillSwitchSettingsSupported: boolean;
+    isAlwaysOnSettingsSupported: boolean;
+    isSettingsSupported: boolean;
+    isAppSettingsSupported: boolean;
+    isAppNotificationSettingsSupported: boolean;
 }
 
 export class AppState implements IAppState {
@@ -5600,6 +5600,7 @@ export class ProxyEndPointStatus implements IProxyEndPointStatus {
     latency?: string | null;
     lastUsedTime?: Date | null;
     errorMessage?: string | null;
+    quality!: StatusQuality;
 
     constructor(data?: IProxyEndPointStatus) {
         if (data) {
@@ -5618,6 +5619,7 @@ export class ProxyEndPointStatus implements IProxyEndPointStatus {
             this.latency = _data["latency"] !== undefined ? _data["latency"] : null as any;
             this.lastUsedTime = _data["lastUsedTime"] ? new Date(_data["lastUsedTime"].toString()) : null as any;
             this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : null as any;
+            this.quality = _data["quality"] !== undefined ? _data["quality"] : null as any;
         }
     }
 
@@ -5636,6 +5638,7 @@ export class ProxyEndPointStatus implements IProxyEndPointStatus {
         data["latency"] = this.latency !== undefined ? this.latency : null as any;
         data["lastUsedTime"] = this.lastUsedTime ? this.lastUsedTime.toISOString() : null as any;
         data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : null as any;
+        data["quality"] = this.quality !== undefined ? this.quality : null as any;
         return data;
     }
 }
@@ -5647,6 +5650,17 @@ export interface IProxyEndPointStatus {
     latency?: string | null;
     lastUsedTime?: Date | null;
     errorMessage?: string | null;
+    quality: StatusQuality;
+}
+
+export enum StatusQuality {
+    Unknown = "Unknown",
+    Excellent = "Excellent",
+    Good = "Good",
+    Fair = "Fair",
+    Poor = "Poor",
+    VeryPoor = "VeryPoor",
+    Failed = "Failed",
 }
 
 export class ProxyEndPointDefaults implements IProxyEndPointDefaults {

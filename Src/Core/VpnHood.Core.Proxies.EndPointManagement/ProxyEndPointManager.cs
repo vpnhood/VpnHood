@@ -186,7 +186,7 @@ public class ProxyEndPointManager : IDisposable
         try {
             // concurrent results container
             var results = new ConcurrentBag<(
-                ProxyEndPointEntry Entry, TcpClient? Client, 
+                ProxyEndPointEntry Entry, TcpClient? Client,
                 TimeSpan? Latency, Exception? Error)>();
 
             var parallelOptions = new ParallelOptions {
@@ -222,12 +222,19 @@ public class ProxyEndPointManager : IDisposable
             foreach (var (entry, client, latency, error) in results) {
                 client?.Dispose();
 
-                if (error != null) {
-                    entry.RecordFailed(error, _requestCount);
+                // record success
+                if (error is null) {
+                    entry.RecordSuccess(latency!.Value, fastestLatency, _requestCount);
                     continue;
                 }
 
-                entry.RecordSuccess(latency!.Value, fastestLatency, _requestCount);
+                // record failure
+                entry.RecordFailed(error, _requestCount);
+
+                // disable server for specific errors
+                entry.EndPoint.IsEnabled &= error is ProxyClientException {
+                    SocketErrorCode: SocketError.ProtocolNotSupported or SocketError.AccessDenied
+                };
             }
         }
         finally {

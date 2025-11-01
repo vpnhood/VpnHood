@@ -1,7 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Text.Json;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
@@ -25,6 +27,7 @@ public class ProxyEndPointManager : IDisposable
     private Job? _autoUpdateJob;
     private ProxyAutoUpdateOptions _autoUpdateOptions;
     private bool _disposed;
+    private bool _verifyTls;
 
     public bool IsEnabled { get; private set; }
 
@@ -45,6 +48,7 @@ public class ProxyEndPointManager : IDisposable
         _socketFactory = socketFactory;
         _proxyEndPointInfosFile = Path.Combine(storagePath, "proxies.json");
         _autoUpdateOptions = proxyOptions.AutoUpdateOptions;
+        _verifyTls = proxyOptions.VerifyTls;
         IsEnabled = proxyOptions.ProxyEndPoints.Any();
 
         // load last NodeInfos
@@ -60,8 +64,8 @@ public class ProxyEndPointManager : IDisposable
     public void UpdateOptions(ProxyOptions proxyOptions)
     {
         IsEnabled = proxyOptions.ProxyEndPoints.Any();
-        _proxyEndPointEntries = UpdateEntriesByOptions(_proxyEndPointEntries, proxyOptions)
-            .ToArray();
+        _verifyTls = proxyOptions.VerifyTls;
+        _proxyEndPointEntries = UpdateEntriesByOptions(_proxyEndPointEntries, proxyOptions).ToArray();
 
         // start new job if needed
         _autoUpdateOptions = proxyOptions.AutoUpdateOptions;
@@ -184,10 +188,23 @@ public class ProxyEndPointManager : IDisposable
             using var linkedCts =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
             await proxyClient.ConnectAsync(tcpClient, testEp, linkedCts.Token);
-            return TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
+            var latency = TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
+
+            // try to authenticate to make sure the proxy is fully functional
+            if (_verifyTls) {
+                var stream = new SslStream(tcpClient.GetStream());
+                await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
+                    TargetHost = "one.one.one.one",
+                }, linkedCts.Token);
+            }
+
+            return latency;
         }
         catch (OperationCanceledException ex) when (serverCheckCts.IsCancellationRequested) {
             throw new TimeoutException("Connection check timed out.", ex);
+        }
+        catch (AuthenticationException) {
+            throw new ProxyClientException(SocketError.AccessDenied, "Verification of TLS connection failed.");
         }
         finally {
             progressMonitor.IncrementCompleted();

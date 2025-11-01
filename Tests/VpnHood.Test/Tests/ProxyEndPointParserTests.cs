@@ -396,7 +396,7 @@ public class ProxyEndPointParserTests
             Status = new ProxyEndPointStatus
             {
                 Penalty = penalty,
-                LastUsedTime = lastUsedTime
+                LastSucceeded = lastUsedTime
             }
         };
     }

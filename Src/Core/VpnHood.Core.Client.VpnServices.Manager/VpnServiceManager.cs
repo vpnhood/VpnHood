@@ -190,7 +190,17 @@ public class VpnServiceManager : IDisposable
             if (connectionInfo.ClientState == ClientState.Connected)
                 break;
 
-            await Task.Delay(_connectionInfoTimeSpan, cancellationToken).Vhc();
+            // Throw immediately if cancellation is already requested
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // wait for a while before checking the state again
+            try {
+                await Task.Delay(_connectionInfoTimeSpan, cancellationToken).Vhc();
+            }
+            catch (Exception) when(cancellationToken.IsCancellationRequested) {
+                // continue to check the state again as ThrowIfCancellationRequested will throw after checking the state
+                // It helps test with short timeout process the connection established event
+            }
         }
 
         VhLogger.Instance.LogDebug("The VpnService has established a connection.");

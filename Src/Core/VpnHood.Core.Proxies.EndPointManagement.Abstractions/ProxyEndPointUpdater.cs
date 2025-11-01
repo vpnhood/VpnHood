@@ -18,7 +18,7 @@ public class ProxyEndPointUpdater
 
         // 1. previous used endpoints with penalty less or equal than maxPenalty
         var usedEndPoints = currentEndPointInfosArray
-            .Where(info => info.Status.LastUsedTime.HasValue &&
+            .Where(info => info.Status.HasUsed &&
                            info.Status.Penalty <= maxPenalty &&
                            info.EndPoint.IsEnabled)
             .OrderBy(info => info.Status.Penalty)
@@ -30,14 +30,14 @@ public class ProxyEndPointUpdater
 
         // 3. previous unused endpoints
         var unusedEndPoints = currentEndPointInfosArray
-            .Where(info => !info.Status.LastUsedTime.HasValue && info.EndPoint.IsEnabled)
+            .Where(info => !info.Status.HasUsed && info.EndPoint.IsEnabled)
             .OrderBy(info => info.Status.Penalty)
             .Select(info => info.EndPoint);
         AddNoDuplicate(result, unusedEndPoints, existingSet);
 
         // 4. previous used endpoints with penalty greater than maxPenalty
         var badEndPoints = currentEndPointInfosArray
-            .Where(info => info.Status.LastUsedTime.HasValue &&
+            .Where(info => info.Status.HasUsed &&
                            info.Status.Penalty > maxPenalty &&
                            info.EndPoint.IsEnabled)
             .OrderBy(info => info.Status.Penalty)

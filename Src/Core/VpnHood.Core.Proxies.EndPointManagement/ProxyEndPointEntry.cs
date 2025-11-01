@@ -29,7 +29,8 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
         lock (_lock) {
             Status.SucceededCount++;
             Status.Latency = latency;
-            Status.LastUsedTime = DateTime.Now;
+            Status.LastSucceeded = DateTime.UtcNow;
+            Status.ErrorMessage = null;
 
             var isSlow = fastestLatency != null && latency > GetSlowThreshold(fastestLatency.Value);
             if (isSlow) {
@@ -57,6 +58,7 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
             Status.Penalty++;
             Status.Penalty++;
             Status.FailedCount++;
+            Status.LastFailed = DateTime.UtcNow;
             Status.ErrorMessage = exception?.Message;
             UpdatePosition(currentRequestPos);
 

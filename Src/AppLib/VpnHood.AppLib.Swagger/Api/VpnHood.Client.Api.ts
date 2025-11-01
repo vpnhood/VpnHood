@@ -5649,7 +5649,8 @@ export class ProxyEndPointStatus implements IProxyEndPointStatus {
     succeededCount!: number;
     failedCount!: number;
     latency?: string | null;
-    lastUsedTime?: Date | null;
+    lastSucceeded?: Date | null;
+    lastFailed?: Date | null;
     errorMessage?: string | null;
     quality!: StatusQuality;
 
@@ -5668,7 +5669,8 @@ export class ProxyEndPointStatus implements IProxyEndPointStatus {
             this.succeededCount = _data["succeededCount"] !== undefined ? _data["succeededCount"] : null as any;
             this.failedCount = _data["failedCount"] !== undefined ? _data["failedCount"] : null as any;
             this.latency = _data["latency"] !== undefined ? _data["latency"] : null as any;
-            this.lastUsedTime = _data["lastUsedTime"] ? new Date(_data["lastUsedTime"].toString()) : null as any;
+            this.lastSucceeded = _data["lastSucceeded"] ? new Date(_data["lastSucceeded"].toString()) : null as any;
+            this.lastFailed = _data["lastFailed"] ? new Date(_data["lastFailed"].toString()) : null as any;
             this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : null as any;
             this.quality = _data["quality"] !== undefined ? _data["quality"] : null as any;
         }
@@ -5687,7 +5689,8 @@ export class ProxyEndPointStatus implements IProxyEndPointStatus {
         data["succeededCount"] = this.succeededCount !== undefined ? this.succeededCount : null as any;
         data["failedCount"] = this.failedCount !== undefined ? this.failedCount : null as any;
         data["latency"] = this.latency !== undefined ? this.latency : null as any;
-        data["lastUsedTime"] = this.lastUsedTime ? this.lastUsedTime.toISOString() : null as any;
+        data["lastSucceeded"] = this.lastSucceeded ? this.lastSucceeded.toISOString() : null as any;
+        data["lastFailed"] = this.lastFailed ? this.lastFailed.toISOString() : null as any;
         data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : null as any;
         data["quality"] = this.quality !== undefined ? this.quality : null as any;
         return data;
@@ -5699,7 +5702,8 @@ export interface IProxyEndPointStatus {
     succeededCount: number;
     failedCount: number;
     latency?: string | null;
-    lastUsedTime?: Date | null;
+    lastSucceeded?: Date | null;
+    lastFailed?: Date | null;
     errorMessage?: string | null;
     quality: StatusQuality;
 }

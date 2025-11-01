@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
@@ -67,13 +68,48 @@ public class ProxyEndPointManagerTest : TestBase
         Assert.HasCount(4, mgr.Status.ProxyEndPointInfos);
     }
 
+    private static async Task FakeListener(TcpListener tcpListener)
+    {
+        // Accept connections in background and send invalid proxy responses
+        while (true) {
+            try {
+                var client = await tcpListener.AcceptTcpClientAsync();
+                await using var stream = client.GetStream();
+                // Send invalid response to fail proxy handshake
+                await stream.WriteAsync("Invalid HTTP\r\n\r\n"u8.ToArray());
+                var buf = new byte[0xffff];
+                _ = await stream.ReadAsync(buf);
+                client.Close();
+            }
+            catch { break; }
+        }
+    }
+
     [TestMethod]
     public async Task RemoveBadServers_Marks_Unsupported_Types_As_Inactive()
     {
+
+        // Create two TCP listeners that simulate non-HTTP proxy servers by returning invalid responses
+        using var listener1 = new TcpListener(IPAddress.Loopback, 0);
+        using var listener2 = new TcpListener(IPAddress.Loopback, 0);
+        listener1.Start();
+        listener2.Start();
+        _ = FakeListener(listener1);
+        _ = FakeListener(listener2);
+
+        var endPoint1 = (IPEndPoint)listener1.LocalEndpoint;
+        var endPoint2 = (IPEndPoint)listener2.LocalEndpoint;
+
         var socketFactory = new TestSocketFactory();
         var proxyEndPoints = new[] {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks4, Host = "127.0.0.1", Port = 1081 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "127.0.0.1", Port = 8080 }
+            new ProxyEndPoint {
+                Protocol = ProxyProtocol.Http,
+                Host = endPoint1.Address.ToString(),
+                Port = endPoint1.Port },
+            new ProxyEndPoint {
+                Protocol = ProxyProtocol.Http,
+                Host = endPoint2.Address.ToString(),
+                Port = endPoint2.Port  }
         };
 
         var proxyOptions = new ProxyOptions { ProxyEndPoints = proxyEndPoints };

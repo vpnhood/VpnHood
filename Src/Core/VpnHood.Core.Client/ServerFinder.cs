@@ -88,7 +88,7 @@ public class ServerFinder(
             isIpV6Supported: IncludeIpV6, hasRedirected: false));
 
         // throw specific exception for proxy server issues
-        if (proxyEndPointManager is { IsEnabled: true, Status.IsLastConnectionSuccessful: false })
+        if (proxyEndPointManager is { IsEnabled: true, Status.IsAnySucceeded: false })
             throw new UnreachableProxyServerException();
 
         throw new UnreachableServerException();
@@ -132,6 +132,10 @@ public class ServerFinder(
 
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: true));
+
+        // throw specific exception for proxy server issues
+        if (proxyEndPointManager is { IsEnabled: true, Status.IsAnySucceeded: false })
+            throw new UnreachableProxyServerException();
 
         throw new UnreachableServerLocationException(BuildExceptionMessage(ServerLocation));
     }

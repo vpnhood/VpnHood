@@ -22,7 +22,6 @@ public class ProxyEndPointManager : IDisposable
     private ProxyEndPointEntry[] _proxyEndPointEntries;
     private ProgressMonitor? _progressMonitor;
     private readonly string _proxyEndPointInfosFile;
-    private bool _isLastConnectionSuccessful;
     private Job? _autoUpdateJob;
     private ProxyAutoUpdateOptions _autoUpdateOptions;
     private bool _disposed;
@@ -32,7 +31,7 @@ public class ProxyEndPointManager : IDisposable
     public ProgressStatus? Progress => _progressMonitor?.Progress;
     public ProxyEndPointManagerStatus Status => new() {
         ProxyEndPointInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray(),
-        IsLastConnectionSuccessful = _isLastConnectionSuccessful,
+        IsAnySucceeded = _proxyEndPointEntries.Any(x=>x.Status.ErrorMessage is null),
         AutoUpdate = _autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null
     };
 
@@ -111,7 +110,8 @@ public class ProxyEndPointManager : IDisposable
             }
 
             VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}", mergedEndPoints.Length);
-            _proxyEndPointEntries = UpdateEntries(_proxyEndPointEntries, mergedEndPoints).ToArray();
+            _proxyEndPointEntries = UpdateEntries(_proxyEndPointEntries, mergedEndPoints, 
+                    resetStates: false, keepEnabledState: true).ToArray();
 
             // Save updated list
             VhLogger.Instance.LogInformation("Updated proxy list. Total proxies: {Count}", _proxyEndPointEntries.Length);
@@ -124,35 +124,53 @@ public class ProxyEndPointManager : IDisposable
 
     private static IEnumerable<ProxyEndPointEntry> UpdateEntriesByOptions(IEnumerable<ProxyEndPointEntry> items, ProxyOptions options)
     {
-        items = UpdateEntries(items, options.ProxyEndPoints).ToArray();
-        if (options.ResetStates)
-            foreach (var item in items)
-                item.Info.Status = new ProxyEndPointStatus();
-
+        items = UpdateEntries(items, options.ProxyEndPoints, 
+            resetStates: options.ResetStates, keepEnabledState: false);
         return items;
     }
 
     // this is used to add new endpoints and remove old endpoints from options
     private static IEnumerable<ProxyEndPointEntry> UpdateEntries(
-        IEnumerable<ProxyEndPointEntry> entries,
-        ProxyEndPoint[] endPoints)
+        IEnumerable<ProxyEndPointEntry> existingEntries,
+        ProxyEndPoint[] newEntries,
+        bool resetStates,
+        bool keepEnabledState)
     {
-        // remove old endpoints
-        entries = entries
-            .Where(x => endPoints.Any(y => y.Id == x.EndPoint.Id))
-            .ToArray();
+        // create dictionary for existing entries using linq
+        var existingEntryDic = existingEntries.ToDictionary(x => x.EndPoint.Id);
+        var newEntryDic = newEntries.ToDictionary(x => x.Id);
 
-        // add new endpoints
-        foreach (var proxyEndPoint in endPoints) {
-            if (entries.All(x => x.EndPoint.Id != proxyEndPoint.Id)) {
-                var newNode = new ProxyEndPointEntry(new ProxyEndPointInfo {
-                    EndPoint = proxyEndPoint
-                });
-                entries = entries.Concat([newNode]).ToArray();
+        // update existing entries
+        foreach (var existingEntry in existingEntryDic.Values) {
+            var newEntry = newEntryDic.GetValueOrDefault(existingEntry.EndPoint.Id);
+            var oldEndPoint = existingEntry.Info.EndPoint;
+
+            // remove entries not in new list
+            if (newEntry == null) {
+                existingEntryDic.Remove(existingEntry.EndPoint.Id);
+                continue;
             }
+
+            // reset states of current items
+            if (resetStates)
+                existingEntry.Info.Status = new ProxyEndPointStatus();
+
+            // update existing entries IsEnabled
+            existingEntry.Info.EndPoint = newEntry;
+            if (keepEnabledState)
+                existingEntry.Info.EndPoint.IsEnabled = oldEndPoint.IsEnabled;
         }
 
-        return entries;
+        // add new endpoints
+        foreach (var newEntry in newEntries.Where(x => !existingEntryDic.ContainsKey(x.Id))) {
+            var entry = new ProxyEndPointEntry(new ProxyEndPointInfo {
+                EndPoint = newEntry,
+                Status = new ProxyEndPointStatus()
+            });
+            existingEntryDic.Add(newEntry.Id, entry);
+        }
+
+        return existingEntryDic.Select(x => x.Value);
     }
 
     private async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient,
@@ -200,8 +218,8 @@ public class ProxyEndPointManager : IDisposable
 
             var endpoints = _proxyEndPointEntries
                 .Where(x => x.EndPoint.IsEnabled)
-                .OrderBy(x=>x.Status.Quality);
-            
+                .OrderBy(x => x.Status.Quality);
+
             await Parallel.ForEachAsync(endpoints, parallelOptions, async (entry, ct) => {
                 TcpClient? tcpClient = null;
                 try {
@@ -256,11 +274,11 @@ public class ProxyEndPointManager : IDisposable
     {
         _requestCount++;
 
-        // order by active state then Last response duration
+        // order by active state then Last Attempt
         var proxyServers = _proxyEndPointEntries
             .Where(x => x.EndPoint.IsEnabled)
             .OrderBy(x => x.GetSortValue(_requestCount))
-            .ThenBy(x => x.Status.LastUsedTime)
+            .ThenBy(x => x.Status.LastUsed)
             .ToArray();
 
         // try to connect to a proxy server
@@ -285,7 +303,6 @@ public class ProxyEndPointManager : IDisposable
                     _fastestEntry = proxyEndPointItem;
 
                 proxyEndPointItem.RecordSuccess(latency, fastestLatency: _fastestEntry?.Status.Latency, _requestCount);
-                _isLastConnectionSuccessful = true;
                 break;
             }
             catch (Exception ex) {
@@ -293,7 +310,6 @@ public class ProxyEndPointManager : IDisposable
                     "Failed to connect to {ProxyType} proxy server {ProxyServer}.",
                     proxyEndPointItem.EndPoint.Protocol, VhLogger.FormatHostName(proxyEndPointItem.EndPoint.Host));
 
-                _isLastConnectionSuccessful = false;
                 proxyEndPointItem.RecordFailed(ex, _requestCount);
                 tcpClient?.Dispose();
             }

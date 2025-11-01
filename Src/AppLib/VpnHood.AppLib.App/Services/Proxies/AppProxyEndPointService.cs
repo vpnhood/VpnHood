@@ -59,7 +59,8 @@ public class AppProxyEndPointService
     {
         UpdateNodesByCore();
         var res = _data.CustomEndPointInfos
-            .OrderBy(x => x.Status.Quality);
+            .OrderByDescending(x=>x.EndPoint.IsEnabled)
+            .ThenBy(x => x.Status.Quality);
 
         return res.ToArray();
     }
@@ -249,7 +250,6 @@ public class AppProxyEndPointService
     }
 
     private bool ShouldUpdateNodesFromVpnService =>
-        _vpnServiceManager.ConnectionInfo.
         _vpnServiceManager.ConnectionInfo.CreatedTime > _data.UpdateTime &&
         !_vpnServiceManager.IsReconfiguring;
 

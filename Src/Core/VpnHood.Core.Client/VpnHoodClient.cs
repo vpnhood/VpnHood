@@ -372,8 +372,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (ProxyEndPointManager.IsEnabled) {
                 State = ClientState.ValidatingProxies;
                 await ProxyEndPointManager.RemoveBadServers(linkedCts.Token).Vhc();
+
+                // log proxy status
                 VhLogger.Instance.LogInformation("Proxy servers: {Count}",
-                    ProxyEndPointManager.Status.ProxyEndPointInfos.Length);
+                    ProxyEndPointManager.Status.ProxyEndPointInfos.Count(x => x.Status.ErrorMessage is null));
+
+                // check is any proxy succeeded
+                if (!ProxyEndPointManager.Status.IsAnySucceeded)
+                    throw new UnreachableProxyServerException();
             }
 
             // Establish first connection and create a session

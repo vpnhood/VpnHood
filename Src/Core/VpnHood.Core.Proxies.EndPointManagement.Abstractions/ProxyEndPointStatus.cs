@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+﻿using System.Text.Json.Serialization;
+
+namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
 public class ProxyEndPointStatus
 {
@@ -6,8 +8,16 @@ public class ProxyEndPointStatus
     public int SucceededCount { get; set; }
     public int FailedCount { get; set; }
     public TimeSpan? Latency { get; set; }
-    public DateTime? LastUsedTime { get; set; }
+    public DateTime? LastSucceeded { get; set; }
+    public DateTime? LastFailed { get; set; }
     public string? ErrorMessage { get; set; }
+
+    [JsonIgnore]
+    public DateTime? LastUsed => LastSucceeded > LastFailed ? LastSucceeded : LastFailed;
+
+    [JsonIgnore]
+    public bool HasUsed => SucceededCount > 0 || FailedCount > 0;
+
     public StatusQuality Quality {
         get {
             return Penalty switch {

@@ -30,6 +30,7 @@ public class ProxyEndPointManager : IDisposable
     private bool _verifyTls;
 
     public bool IsEnabled { get; private set; }
+    public DateTime? MinSucceededTime { get; set; }
 
     public ProgressStatus? Progress => _progressMonitor?.Progress;
     public ProxyEndPointManagerStatus Status => new() {

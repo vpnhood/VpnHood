@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Proxies.EndPointManagement;
 
@@ -29,7 +30,7 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
         lock (_lock) {
             Status.SucceededCount++;
             Status.Latency = latency;
-            Status.LastSucceeded = DateTime.UtcNow;
+            Status.LastSucceeded = FastDateTime.UtcNow;
             Status.ErrorMessage = null;
 
             var isSlow = fastestLatency != null && latency > GetSlowThreshold(fastestLatency.Value);
@@ -58,7 +59,7 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
             Status.Penalty++;
             Status.Penalty++;
             Status.FailedCount++;
-            Status.LastFailed = DateTime.UtcNow;
+            Status.LastFailed = FastDateTime.UtcNow;
             Status.ErrorMessage = exception?.Message;
             UpdatePosition(currentRequestPos);
 

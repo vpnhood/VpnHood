@@ -214,7 +214,7 @@ internal class ClientHost(
 
             // get original remote from NAT
             var orgRemoteEndPoint = 
-                orgTcpClient.SafeRemoteEndPoint() ?? throw new Exception("Could not get original remote endpoint from TcpClient.");
+                orgTcpClient.TryGetRemoteEndPoint() ?? throw new Exception("Could not get original remote endpoint from TcpClient.");
 
             ipVersion = orgRemoteEndPoint.IpVersion();
             var natItem =

@@ -197,7 +197,7 @@ public class VpnServiceManager : IDisposable
             try {
                 await Task.Delay(_connectionInfoTimeSpan, cancellationToken).Vhc();
             }
-            catch (Exception) when(cancellationToken.IsCancellationRequested) {
+            catch (Exception) when (cancellationToken.IsCancellationRequested) {
                 // continue to check the state again as ThrowIfCancellationRequested will throw after checking the state
                 // It helps test with short timeout process the connection established event
             }
@@ -306,8 +306,10 @@ public class VpnServiceManager : IDisposable
         }
 
         // convert to error. 
-        if (response.ApiError != null)
+        if (response.ApiError != null) {
+
             throw ClientExceptionConverter.ApiErrorToException(response.ApiError) ?? response.ApiError.ToException();
+        }
 
         return response.Result;
     }
@@ -330,7 +332,7 @@ public class VpnServiceManager : IDisposable
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(ex, "Could not send request to VpnService Host. EndPoint: {EndPoint}",
-                    tcpClient.SafeRemoteEndPoint());
+                    tcpClient.TryGetRemoteEndPoint());
                 tcpClient.Dispose();
                 _tcpClient = null;
             }
@@ -364,7 +366,9 @@ public class VpnServiceManager : IDisposable
         try {
             await tcpClient.ConnectAsync(apiEndPoint, cancellationToken).Vhc();
             await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), apiKey, cancellationToken).Vhc();
-            VhLogger.Instance.LogDebug("Connected to VpnService Host."); return tcpClient;
+            VhLogger.Instance.LogDebug("Connected to VpnService Host. LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
+                tcpClient.TryGetLocalEndPoint(), tcpClient.TryGetRemoteEndPoint());
+            return tcpClient;
         }
         catch (Exception ex) {
             tcpClient.Dispose();
@@ -437,7 +441,7 @@ public class VpnServiceManager : IDisposable
         try {
             if (IsStarted) {
                 await SendRequest(new ApiReconfigureRequest { Params = reconfigureParams }, cancellationToken);
-                Reconfigured?.Invoke(this, reconfigureParams );
+                Reconfigured?.Invoke(this, reconfigureParams);
             }
         }
         finally {

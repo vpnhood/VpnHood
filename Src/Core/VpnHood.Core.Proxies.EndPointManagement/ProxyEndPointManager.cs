@@ -28,14 +28,15 @@ public class ProxyEndPointManager : IDisposable
     private ProxyAutoUpdateOptions _autoUpdateOptions;
     private bool _disposed;
     private bool _verifyTls;
+    private readonly DateTime _createdTime = FastDateTime.UtcNow;
 
     public bool IsEnabled { get; private set; }
-    public DateTime? MinSucceededTime { get; set; }
+    public bool UseRecentSucceeded { get; set; }
 
     public ProgressStatus? Progress => _progressMonitor?.Progress;
     public ProxyEndPointManagerStatus Status => new() {
         ProxyEndPointInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray(),
-        IsAnySucceeded = _proxyEndPointEntries.Any(x=>x.Status.ErrorMessage is null),
+        IsAnySucceeded = _proxyEndPointEntries.Any(x => x.Status.ErrorMessage is null),
         AutoUpdate = _autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null
     };
 
@@ -115,7 +116,7 @@ public class ProxyEndPointManager : IDisposable
             }
 
             VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}", mergedEndPoints.Length);
-            _proxyEndPointEntries = UpdateEntries(_proxyEndPointEntries, mergedEndPoints, 
+            _proxyEndPointEntries = UpdateEntries(_proxyEndPointEntries, mergedEndPoints,
                     resetStates: false, keepEnabledState: true).ToArray();
 
             // Save updated list
@@ -129,7 +130,7 @@ public class ProxyEndPointManager : IDisposable
 
     private static IEnumerable<ProxyEndPointEntry> UpdateEntriesByOptions(IEnumerable<ProxyEndPointEntry> items, ProxyOptions options)
     {
-        items = UpdateEntries(items, options.ProxyEndPoints, 
+        items = UpdateEntries(items, options.ProxyEndPoints,
             resetStates: options.ResetStates, keepEnabledState: false);
         return items;
     }
@@ -186,8 +187,7 @@ public class ProxyEndPointManager : IDisposable
         try {
             var testEp = IPEndPoint.Parse("1.1.1.1:443");
             var tickCount = Environment.TickCount64;
-            using var linkedCts =
-                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
             await proxyClient.ConnectAsync(tcpClient, testEp, linkedCts.Token);
             var latency = TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
 
@@ -295,6 +295,7 @@ public class ProxyEndPointManager : IDisposable
         // order by active state then Last Attempt
         var proxyServers = _proxyEndPointEntries
             .Where(x => x.EndPoint.IsEnabled)
+            .Where(x => UseRecentSucceeded || x.Status.LastSucceeded >= _createdTime)
             .OrderBy(x => x.GetSortValue(_requestCount))
             .ThenBy(x => x.Status.LastUsed)
             .ToArray();

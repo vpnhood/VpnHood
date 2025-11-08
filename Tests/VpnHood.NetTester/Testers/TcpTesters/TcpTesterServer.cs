@@ -31,7 +31,7 @@ public class TcpTesterServer : IDisposable
 
     private static async Task ProcessClient(TcpClient client, CancellationToken cancellationToken)
     {
-        var remoteEndPoint = client.SafeRemoteEndPoint();
+        var remoteEndPoint = client.TryGetRemoteEndPoint();
         VhLogger.Instance.LogInformation("Server: Start processing client. ClientEp: {ClientEp}", remoteEndPoint);
         try {
             await using var stream = client.GetStream();

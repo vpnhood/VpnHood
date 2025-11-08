@@ -407,7 +407,7 @@ public class Session : IDisposable
 
             //tracking
             LogTrack(IpProtocol.Tcp,
-                localEndPoint: tcpClientHost.SafeLocalEndPoint(),
+                localEndPoint: tcpClientHost.TryGetLocalEndPoint(),
                 destinationEndPoint: request.DestinationEndPoint,
                 isNewLocal: true, isNewRemote: true, failReason: null);
 

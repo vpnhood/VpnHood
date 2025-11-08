@@ -5,7 +5,9 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
@@ -53,6 +55,7 @@ internal class ApiController : IDisposable
 
     private async Task ProcessClientAsync(TcpClient client, CancellationToken cancellationToken)
     {
+        var clientEp = client.TryGetLocalEndPoint();
         try {
             await using var stream = client.GetStream();
 
@@ -62,11 +65,11 @@ internal class ApiController : IDisposable
                 throw new Exception("Invalid API key.");
 
             while (!cancellationToken.IsCancellationRequested)
-                await ProcessRequests(stream, cancellationToken);
+                await ProcessRequest(stream, cancellationToken);
         }
         catch (Exception ex) {
-            if (_isDisposed == 0)
-                VhLogger.Instance.LogError(ex, "Could not handle API request.");
+            if (_isDisposed == 0) //todo
+                VhLogger.Instance.LogError(GeneralEventId.Test, ex, "Could not handle API request. ClientEp: {ClientEp}", clientEp);
         }
         finally {
             client.Dispose();
@@ -82,10 +85,10 @@ internal class ApiController : IDisposable
         return _vpnHoodService.Context.ConnectionInfo;
     }
 
-    private async Task ProcessRequests(Stream stream, CancellationToken cancellationToken)
+    private async Task ProcessRequest(Stream stream, CancellationToken cancellationToken)
     {
         try {
-            await ProcessRequestsInternal(stream, cancellationToken);
+            await ProcessRequestInternal(stream, cancellationToken);
         }
         catch (Exception ex) when (_isDisposed == 0) {
             var response = new ApiResponse<object> {
@@ -95,13 +98,21 @@ internal class ApiController : IDisposable
             };
 
             await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
+
+            // could not continue processing if the request is malformed, stream is likely desynchronized
+            if (ex is FormatException) {
+                stream.Close();
+                throw;
+            }
         }
     }
 
-    private async Task ProcessRequestsInternal(Stream stream, CancellationToken cancellationToken)
+    private async Task ProcessRequestInternal(Stream stream, CancellationToken cancellationToken)
     {
         // read request type
         var requestType = await StreamUtils.ReadObjectAsync<string>(stream, cancellationToken);
+        VhLogger.Instance.LogDebug("ApiController is reading a request: {RequestType}", requestType);
+
         switch (requestType) {
 
             // handle connection info request
@@ -137,7 +148,7 @@ internal class ApiController : IDisposable
 
             case nameof(ApiReconfigureRequest):
                 await Reconfigure(
-                    await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, cancellationToken),
+                    await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, maxLength: 0xFFFFF, cancellationToken),
                     cancellationToken);
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;

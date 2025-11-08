@@ -19,7 +19,7 @@ public static class StreamUtils
 
         if (jsonSize > maxLength)
             throw new FormatException(
-                $"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
+                $"json length for {typeof(T)} is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
 
         // read json body...
         var buffer = new byte[jsonSize].AsMemory();
@@ -63,8 +63,8 @@ public static class StreamUtils
             throw new Exception("json length is zero!");
 
         if (messageSize > maxLength)
-            throw new Exception(
-                $"json length is too big! It should be less than {maxLength} bytes but it was {messageSize} bytes");
+          throw new FormatException(
+            $"json length is too big! It should be less than {maxLength} bytes but it was {messageSize} bytes");
 
         // read json body...
         var buffer = new byte[messageSize].AsMemory();

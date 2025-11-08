@@ -221,7 +221,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         // read request version. We may wait here for reuse timeout
         var rest = await clientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (rest == 0) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, 
+            VhLogger.Instance.LogDebug(GeneralEventId.Request,
                 "ClientStream has been closed. ClientStreamId: {ClientStreamId}",
                 clientStream.ClientStreamId);
             clientStream.DisposeWithoutReuse();
@@ -371,7 +371,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             else
                 VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
                     "ServerHost could not process this request. RemoteEp: {RemoteEp}, ClientIp: {ClientIp}, ClientStreamId: {ClientStreamId}",
-                    VhLogger.Format(tcpClient.SafeRemoteEndPoint()), ex.Data["ClientIp"], ex.Data["ClientStreamId"]);
+                    VhLogger.Format(tcpClient.TryGetRemoteEndPoint()), ex.Data["ClientIp"], ex.Data["ClientStreamId"]);
 
             tcpClient.Dispose();
         }

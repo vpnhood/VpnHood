@@ -5,15 +5,25 @@ namespace VpnHood.Core.Toolkit.Net;
 
 public static class TcpClientExtensions
 {
-    public static IPEndPoint? SafeLocalEndPoint(this TcpClient tcpClient)
+    public static IPEndPoint? TryGetLocalEndPoint(this TcpClient tcpClient)
     {
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-        return tcpClient.Client?.LocalEndPoint as IPEndPoint;
+        try {
+            return tcpClient.Client?.LocalEndPoint as IPEndPoint;
+        }
+        catch {
+            return null;
+        }
     }
 
-    public static IPEndPoint? SafeRemoteEndPoint(this TcpClient tcpClient)
+    public static IPEndPoint? TryGetRemoteEndPoint(this TcpClient tcpClient)
     {
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-        return tcpClient.Client?.RemoteEndPoint as IPEndPoint;
+        try {
+            return tcpClient.Client?.RemoteEndPoint as IPEndPoint;
+        }
+        catch  {
+            return null;
+        }
     }
 }

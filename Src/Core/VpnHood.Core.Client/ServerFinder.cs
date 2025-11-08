@@ -188,8 +188,12 @@ public class ServerFinder(
 
         using var searchingCts = new CancellationTokenSource(); // this will be canceled when a server is found
         using var parallelCts = CancellationTokenSource.CreateLinkedTokenSource(searchingCts.Token, cancellationToken);
-
+        var oldUseRecentSucceeded = proxyEndPointManager.UseRecentSucceeded;
         try {
+            // Optimize proxy selection for server verification
+            // We should not try proxies that may fail as it will slow down the process
+            proxyEndPointManager.UseRecentSucceeded = true;
+
             // Use SemaphoreSlim to control max degree of parallelism
             using var semaphore = new SemaphoreSlim(maxDegreeOfParallelism, maxDegreeOfParallelism);
 
@@ -198,7 +202,8 @@ public class ServerFinder(
                 await semaphore.WaitAsync(parallelCts.Token);
                 try {
                     using var connector = CreateConnector(hostStatus.TcpEndPoint);
-                    hostStatus.Available = await VerifyServerStatus(connector, serverQueryTimeout, parallelCts.Token).Vhc();
+                    hostStatus.Available =
+                        await VerifyServerStatus(connector, serverQueryTimeout, parallelCts.Token).Vhc();
 
                     // Cancel search if we found a reachable server and not searching by order
                     if (hostStatus.Available == true && !byOrder)
@@ -240,6 +245,9 @@ public class ServerFinder(
         }
         catch (OperationCanceledException) when (searchingCts.IsCancellationRequested) {
             // A server has been found, this is expected
+        }
+        finally {
+            proxyEndPointManager.UseRecentSucceeded = oldUseRecentSucceeded;
         }
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,

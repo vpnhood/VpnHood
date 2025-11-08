@@ -18,9 +18,10 @@ public class ProxyEndPointUpdater
 
         // 1. previous used endpoints with penalty less or equal than maxPenalty
         var usedEndPoints = currentEndPointInfosArray
-            .Where(info => info.Status.HasUsed &&
-                           info.Status.Penalty <= maxPenalty &&
-                           info.EndPoint.IsEnabled)
+            .Where(info => 
+                info.Status.HasUsed &&
+                info.Status.Penalty <= maxPenalty &&
+                info.EndPoint.IsEnabled)
             .OrderBy(info => info.Status.Penalty)
             .Select(info => info.EndPoint);
         AddNoDuplicate(result, usedEndPoints, existingSet);
@@ -76,7 +77,7 @@ public class ProxyEndPointUpdater
     }
 
     private static void AddNoDuplicate(List<ProxyEndPoint> endPoints,
-        IEnumerable<ProxyEndPoint> newEndPoints, 
+        IEnumerable<ProxyEndPoint> newEndPoints,
         HashSet<ProxyEndPoint> existingSet)
     {
         foreach (var ep in newEndPoints) {

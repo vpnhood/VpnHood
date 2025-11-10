@@ -354,10 +354,7 @@ public class ProxyEndPointManager : IDisposable
         }
 
         // could not connect to any proxy server
-        if (tcpClientOk is null)
-            throw new SocketException((int)SocketError.NetworkUnreachable);
-
-        return tcpClientOk;
+        return tcpClientOk ?? throw new SocketException((int)SocketError.NetworkUnreachable);
     }
 
     private void SaveNodeInfos()

@@ -68,7 +68,7 @@ internal class ApiController : IDisposable
                 await ProcessRequest(stream, cancellationToken);
         }
         catch (Exception ex) {
-            if (_isDisposed == 0) //todo
+            if (_isDisposed == 0) 
                 VhLogger.Instance.LogError(GeneralEventId.Test, ex, "Could not handle API request. ClientEp: {ClientEp}", clientEp);
         }
         finally {

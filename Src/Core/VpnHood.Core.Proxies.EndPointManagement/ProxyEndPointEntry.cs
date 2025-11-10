@@ -8,15 +8,14 @@ namespace VpnHood.Core.Proxies.EndPointManagement;
 internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo) 
 {
     private readonly object _lock = new();
-    private int _requestPosition;
     public ProxyEndPointInfo Info => endPointInfo;
     public ProxyEndPointStatus Status => endPointInfo.Status;
     public ProxyEndPoint EndPoint => endPointInfo.EndPoint;
 
-    public int GetSortValue(int currentRequestCount)
+    public long GetSortValue(long currentRequestCount)
     {
         lock (_lock) {
-            return _requestPosition - currentRequestCount;
+            return Info.Status.QueuePosition - currentRequestCount;
         }
     }
 
@@ -25,7 +24,7 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
         return fastestLatency * 2 + TimeSpan.FromSeconds(2);
     }
 
-    public void RecordSuccess(TimeSpan latency, TimeSpan? fastestLatency, int currentRequestPos)
+    public void RecordSuccess(TimeSpan latency, TimeSpan? fastestLatency, long currentQueuePos)
     {
         lock (_lock) {
             Status.SucceededCount++;
@@ -44,16 +43,18 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
                 if (Status.Penalty > 0)
                     Status.Penalty--;
             }
-            UpdatePosition(currentRequestPos);
+            UpdatePosition(currentQueuePos);
         }
     }
 
-    private void UpdatePosition(int currentRequestPos)
+    private void UpdatePosition(long currentQueuePos)
     {
-        _requestPosition = currentRequestPos + Status.Penalty * 3 + 1;
+        lock (_lock) {
+            Info.Status.QueuePosition = currentQueuePos + Status.Penalty * 3 + 1;
+        }
     }
 
-    public void RecordFailed(Exception? exception, int currentRequestPos)
+    public void RecordFailed(Exception? exception, long currentQueuePos)
     {
         lock (_lock) {
             Status.Penalty++;
@@ -61,7 +62,7 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
             Status.FailedCount++;
             Status.LastFailed = FastDateTime.UtcNow;
             Status.ErrorMessage = exception?.Message;
-            UpdatePosition(currentRequestPos);
+            UpdatePosition(currentQueuePos);
 
             VhLogger.Instance.LogDebug("Failed to connect to proxy server. {ProxyServer}, FailedCount: {FailedCount}, Penalty: {Penalty}",
                 VhLogger.FormatHostName(EndPoint.Host), Status.FailedCount, Status.Penalty);

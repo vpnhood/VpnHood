@@ -320,7 +320,7 @@ public class VpnServiceManager : IDisposable
         // we have only one TcpClient, so we need to lock it
         // VpnService should not have long-running requests, so it is ok to lock it
         using var scopeLock = await _sendRequestLock.LockAsync(cancellationToken).Vhc();
-        var maxResultLength = 0xFFFFF;
+        const int maxResultLength = 0xFFFFFF;
 
         var tcpClient = _tcpClient; // it may be reset to null while working
         if (tcpClient != null) {

@@ -11,6 +11,11 @@ public class ProxyEndPointStatus
     public DateTime? LastSucceeded { get; set; }
     public DateTime? LastFailed { get; set; }
     public string? ErrorMessage { get; set; }
+    public long QueuePosition { get; set; }
+
+    [JsonIgnore]
+    public bool IsLastUsedSucceeded => 
+        LastSucceeded != null && (LastFailed is null || LastSucceeded > LastFailed);
 
     [JsonIgnore]
     public DateTime? LastUsed => LastSucceeded > LastFailed ? LastSucceeded : LastFailed;

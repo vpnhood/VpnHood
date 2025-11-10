@@ -148,7 +148,7 @@ internal class ApiController : IDisposable
 
             case nameof(ApiReconfigureRequest):
                 await Reconfigure(
-                    await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, maxLength: 0xFFFFF, cancellationToken),
+                    await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, maxLength: 0xFFFFFF, cancellationToken),
                     cancellationToken);
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;

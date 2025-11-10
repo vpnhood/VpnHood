@@ -12,7 +12,7 @@ public class ProxyEndPoint
             var md5 = MD5.Create();
             var bytes = Encoding.UTF8.GetBytes(id);
             var hashBytes = md5.ComputeHash(bytes);
-            return Convert.ToHexString(hashBytes); 
+            return Convert.ToHexString(hashBytes);
         }
     }
 
@@ -22,13 +22,24 @@ public class ProxyEndPoint
     public required int Port { get; init; }
     public string? Username { get; set; }
     public string? Password { get; set; }
+
     public Uri Url =>
         new UriBuilder {
-            Scheme = Protocol.ToString().ToLowerInvariant(),
+            Scheme = Protocol.ToString().ToLower(),
             Host = Host,
             Port = Port,
             UserName = Username,
             Password = Password,
             Query = IsEnabled ? "enabled=1" : null
         }.Uri;
+
+    public Uri BuildUrlWithoutPassword()
+    {
+        var url = Url;
+        return new UriBuilder {
+            Scheme = url.Scheme,
+            Host = url.Host,
+            Port = url.Port
+        }.Uri;
+    }
 }

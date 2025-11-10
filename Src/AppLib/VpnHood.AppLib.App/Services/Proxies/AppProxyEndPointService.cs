@@ -262,8 +262,9 @@ public class AppProxyEndPointService
             .ToArray();
 
         // merge with existing endpoints
+        var autoUpdateOptions = ProxySettings.AutoUpdateOptions;
         var endpoints = ProxyEndPointUpdater.Merge(_data.CustomEndPointInfos, newProxyEndPoints,
-            ProxySettings.AutoUpdateOptions.MaxItemCount, ProxySettings.AutoUpdateOptions.MaxPenalty);
+            autoUpdateOptions.MaxItemCount, autoUpdateOptions.MaxPenalty, autoUpdateOptions.RemoveDuplicateIps);
 
         // remove _data.CustomEndPointInfos that does not exist in endpoints
         var endpointIds = endpoints.Select(e => e.Id).ToHashSet();

@@ -9,13 +9,13 @@ namespace VpnHood.Core.Proxies.EndPointManagement;
 
 public static class ProxyClientFactory
 {
-    public static async Task<IPAddress> GetIpAddress(string host)
+    public static async Task<IPAddress> GetIpAddress(string host, CancellationToken cancellationToken)
     {
         // try parse the proxy address
         if (IPAddress.TryParse(host, out var ipAddress))
             return ipAddress;
 
-        var entry = await Dns.GetHostEntryAsync(host).Vhc();
+        var entry = await Dns.GetHostEntryAsync(host, cancellationToken).Vhc();
         if (entry.AddressList.Length == 0)
             throw new Exception("Failed to resolve proxy server address.");
 
@@ -24,9 +24,9 @@ public static class ProxyClientFactory
         return ipAddress;
     }
 
-    public static async Task<IProxyClient> CreateProxyClient(ProxyEndPoint proxyEndPoint)
+    public static async Task<IProxyClient> CreateProxyClient(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
-        var serverIp = await GetIpAddress(proxyEndPoint.Host).Vhc();
+        var serverIp = await GetIpAddress(proxyEndPoint.Host, cancellationToken).Vhc();
         var serverEp = new IPEndPoint(serverIp, proxyEndPoint.Port);
 
         return proxyEndPoint.Protocol switch {

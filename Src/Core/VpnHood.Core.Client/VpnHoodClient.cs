@@ -1226,15 +1226,17 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // dispose all resources before bye request
         DisposeInternal();
 
-        // disposing adapter
-        _vpnAdapter.Dispose();
-
-        // dispose ProxyEndPointManager after all connections are closed
-        ProxyEndPointManager.Dispose();
-
-        // dispose ConnectorService
+        // dispose ConnectorService before ProxyEndPointManager as it uses ProxyEndPointManager
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");
         _connectorService?.Dispose();
+
+        // dispose ProxyEndPointManager before adapter get closed and it needs Adapter's SocketFactory
+        VhLogger.Instance.LogDebug("Disposing ProxyEndPointManager...");
+        ProxyEndPointManager.Dispose();
+
+        // disposing adapter
+        VhLogger.Instance.LogDebug("Disposing Adapter...");
+        _vpnAdapter.Dispose();
 
         State = ClientState.Disposed; //everything is clean
 

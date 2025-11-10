@@ -2,12 +2,18 @@ namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
 public class ProxyEndPointUpdater
 {
+    public const int DefaultMaxItemCount = 1000;
+    public const int DefaultMaxPenalty = 50;
+
     public static ProxyEndPoint[] Merge(
         IEnumerable<ProxyEndPointInfo> currentEndPointInfos,
         ProxyEndPoint[] newEndPoints,
-        int maxItemCount,
-        int maxPenalty)
+        int? maxItemCount,
+        int? maxPenalty,
+        bool removeDuplicateIps = false)
     {
+        maxItemCount ??= DefaultMaxItemCount;
+        maxPenalty ??= DefaultMaxPenalty;
         if (maxItemCount <= 0)
             throw new ArgumentException("MaxItemCount must be greater than 0", nameof(maxItemCount));
 
@@ -16,9 +22,14 @@ public class ProxyEndPointUpdater
         var existingSet = new HashSet<ProxyEndPoint>();
         var currentEndPointInfosArray = currentEndPointInfos.ToArray();
 
+        // remove duplicates from newEndPoints if the protocol:ip already exists in currentEndPointInfos and 
+        // the current one is enabled
+        if (removeDuplicateIps)
+            newEndPoints = RemoveDuplicateIps(currentEndPointInfosArray, newEndPoints);
+
         // 1. previous used endpoints with penalty less or equal than maxPenalty
         var usedEndPoints = currentEndPointInfosArray
-            .Where(info => 
+            .Where(info =>
                 info.Status.HasUsed &&
                 info.Status.Penalty <= maxPenalty &&
                 info.EndPoint.IsEnabled)
@@ -53,27 +64,37 @@ public class ProxyEndPointUpdater
 
         // Keep first maxItemCount items
         if (result.Count > maxItemCount)
-            result = result.Take(maxItemCount).ToList();
+            result = result.Take(maxItemCount.Value).ToList();
 
         return result.ToArray();
     }
 
-    public static async Task<ProxyEndPoint[]> UpdateFromUrlAsync(
+    private static ProxyEndPoint[] RemoveDuplicateIps(ProxyEndPointInfo[] currentEndPointInfos, ProxyEndPoint[] newEndPoints)
+    {
+        // find new endpoints that already exist in currentEndPointInfos and have succeeded before
+        var alreadyExists = newEndPoints.Where(x =>
+            currentEndPointInfos.Any(y =>
+                y.EndPoint.Host.Equals(x.Host, StringComparison.OrdinalIgnoreCase) &&
+                y.EndPoint.Protocol == x.Protocol &&
+                y.Status.IsLastUsedSucceeded));
+
+        // remove them from newEndPoints
+        var filteredNewEndPoints = newEndPoints.Except(alreadyExists).ToArray();
+        return filteredNewEndPoints;
+    }
+
+    public static async Task<ProxyEndPoint[]> LoadFromUrlAsync(
         HttpClient httpClient,
         Uri url,
-        IEnumerable<ProxyEndPointInfo> currentEndPointInfos,
-        int maxItemCount,
-        int minPenalty,
         CancellationToken cancellationToken = default)
     {
         var content = await httpClient.GetStringAsync(url, cancellationToken);
-        var newProxyEndPoints = ProxyEndPointParser
+        var proxyEndPoints = ProxyEndPointParser
             .ExtractFromContent(content)
             .Select(ProxyEndPointParser.FromUrl)
             .ToArray();
 
-        // Merge with existing endpoints
-        return Merge(currentEndPointInfos, newProxyEndPoints, maxItemCount, minPenalty);
+        return proxyEndPoints;
     }
 
     private static void AddNoDuplicate(List<ProxyEndPoint> endPoints,

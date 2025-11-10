@@ -2,7 +2,8 @@
 
 public class ProxyEndPointManagerStatus
 {
-    public ProxyEndPointInfo[] ProxyEndPointInfos { get; init; } = [];
-    public bool IsAnySucceeded { get; init; }
-    public bool AutoUpdate { get; init; }
+    public required ProxyEndPointInfo[] ProxyEndPointInfos { get; init; } = [];
+    public required bool IsAnySucceeded { get; init; }
+    public required bool AutoUpdate { get; init; }
+    public required ProxyEndPointStatus SessionStatus { get; init; }
 }

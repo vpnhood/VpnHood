@@ -371,7 +371,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // validate proxy servers
             if (ProxyEndPointManager.IsEnabled) {
                 State = ClientState.ValidatingProxies;
-                await ProxyEndPointManager.RemoveBadServers(linkedCts.Token).Vhc();
+                await ProxyEndPointManager.CheckServers(linkedCts.Token).Vhc();
 
                 // log proxy status
                 VhLogger.Instance.LogInformation("Proxy servers: {Count}",

@@ -2,6 +2,7 @@
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.DtoConverters;
@@ -70,5 +71,15 @@ public static class AppDtoConverterExtensions
         apiError.Data.Remove(nameof(SessionResponse));
 
         return apiError;
+    }
+
+    public static AppProxyEndPointManagerStatus ToAppDto(this ProxyEndPointManagerStatus sessionStatus)
+    {
+        return new AppProxyEndPointManagerStatus {
+            SessionStatus = sessionStatus.SessionStatus,
+            SucceededServerCount = sessionStatus.SucceededServerCount,
+            FailedServerCount = sessionStatus.FailedServerCount,
+            UnknownServerCount = sessionStatus.UnknownServerCount
+        };
     }
 }

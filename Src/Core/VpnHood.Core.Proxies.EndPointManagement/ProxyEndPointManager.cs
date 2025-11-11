@@ -30,6 +30,7 @@ public class ProxyEndPointManager : IDisposable
     private bool _verifyTls;
     private readonly DateTime _sessionCreatedTime = FastDateTime.UtcNow;
     private readonly ProxyEndPointStatus _sessionStatus = new();
+    private const int CheckServerMaxDegreeOfParallelism = 50;
 
     public bool IsEnabled { get; private set; }
     public bool UseRecentSucceeded { get; set; }
@@ -67,7 +68,10 @@ public class ProxyEndPointManager : IDisposable
                     ProxyEndPointInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray(),
                     IsAnySucceeded = _proxyEndPointEntries.Any(x => x.Status.ErrorMessage is null),
                     AutoUpdate = _autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null,
-                    SessionStatus = _sessionStatus
+                    SessionStatus = _sessionStatus,
+                    SucceededServerCount = _proxyEndPointEntries.Count(x => x.Status.IsLastUsedSucceeded),
+                    FailedServerCount = _proxyEndPointEntries.Count(x => x.Status is { HasUsed: true, IsLastUsedSucceeded: false }),
+                    UnknownServerCount = _proxyEndPointEntries.Count(x => x.Status is { HasUsed: false })
                 };
         }
     }
@@ -127,6 +131,9 @@ public class ProxyEndPointManager : IDisposable
             // Save updated list
             VhLogger.Instance.LogInformation("Updated proxy list. Total proxies: {Count}", _proxyEndPointEntries.Length);
             SaveNodeInfos();
+
+            // Check servers
+            await CheckServers(cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to update proxy list from {Url}", _autoUpdateOptions.Url);
@@ -185,7 +192,7 @@ public class ProxyEndPointManager : IDisposable
     }
 
     private async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient,
-        TcpClient tcpClient, ProgressMonitor progressMonitor,
+        TcpClient tcpClient, ProgressMonitor? progressMonitor,
         CancellationToken cancellationToken)
     {
         using var serverCheckCts = new CancellationTokenSource(_serverCheckTimeout);
@@ -213,20 +220,33 @@ public class ProxyEndPointManager : IDisposable
             throw new ProxyClientException(SocketError.AccessDenied, "Verification of TLS connection failed.");
         }
         finally {
-            progressMonitor.IncrementCompleted();
+            progressMonitor?.IncrementCompleted();
         }
     }
 
-    public async Task RemoveBadServers(CancellationToken cancellationToken)
+    public Task CheckServers(CancellationToken cancellationToken)
+    {
+        const int satisfiedSuccessCount = 10;
+        var endpoints = _proxyEndPointEntries
+            .Where(x => x.EndPoint.IsEnabled)
+            .OrderBy(x => x.Status.Quality)
+            .ToArray();
+
+        return CheckServers(endpoints, satisfiedSuccessCount, cancellationToken);
+    }
+
+
+    private async Task CheckServers(IEnumerable<ProxyEndPointEntry> endpoints, 
+        int satisfiedSuccessCount,
+        CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Checking proxy servers for reachability...");
-        var maxDegreeOfParallelism = Math.Max(50, _proxyEndPointEntries.Length);
 
         // initialize progress tracker
         _progressMonitor = new ProgressMonitor(
             totalTaskCount: _proxyEndPointEntries.Length,
             taskTimeout: _serverCheckTimeout,
-            maxDegreeOfParallelism: maxDegreeOfParallelism);
+            maxDegreeOfParallelism: CheckServerMaxDegreeOfParallelism);
 
         try {
             // concurrent results container
@@ -236,22 +256,26 @@ public class ProxyEndPointManager : IDisposable
 
             var parallelOptions = new ParallelOptions {
                 CancellationToken = cancellationToken,
-                MaxDegreeOfParallelism = maxDegreeOfParallelism
+                MaxDegreeOfParallelism = CheckServerMaxDegreeOfParallelism
             };
 
-            var endpoints = _proxyEndPointEntries
-                .Where(x => x.EndPoint.IsEnabled)
-                .OrderBy(x => x.Status.Quality);
-
+            // check all endpoints in parallel. If enough good servers found, stop checking more.
+            var successCount = 0;
             await Parallel.ForEachAsync(endpoints, parallelOptions, async (entry, ct) => {
                 TcpClient? tcpClient = null;
                 try {
+                    // do not stop 
+                    if (successCount >= satisfiedSuccessCount && 
+                        entry.Status.Quality is not StatusQuality.Unknown)
+                        return;
+
                     var proxyClient = await ProxyClientFactory.CreateProxyClient(entry.EndPoint, ct).Vhc();
                     tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
                     tcpClient.ReceiveBufferSize = 1024 * 4;
                     tcpClient.SendBufferSize = 1024 * 4;
                     var latency = await CheckConnectionAsync(proxyClient, tcpClient, _progressMonitor, ct).Vhc();
                     results.Add((entry, tcpClient, latency, null));
+                    Interlocked.Increment(ref successCount);
                 }
                 catch (Exception ex) {
                     results.Add((entry, tcpClient, null, ex));
@@ -297,76 +321,97 @@ public class ProxyEndPointManager : IDisposable
         }
     }
 
-    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint, CancellationToken cancellationToken)
-    {
-        _queuePosition++;
 
-        // order by active state then Last Attempt
-        var proxyServers = _proxyEndPointEntries
+    // order by active state then Last Attempt
+    private IEnumerable<ProxyEndPointEntry> GetOrderedEntriesQuery()
+        => _proxyEndPointEntries
             .Where(x => x.EndPoint.IsEnabled)
             .Where(x => !UseRecentSucceeded || x.Status.LastSucceeded >= _sessionCreatedTime)
             .OrderBy(x => x.GetSortValue(_queuePosition))
-            .ThenBy(x => x.Status.LastUsed)
-            .ToArray();
+            .ThenBy(x => x.Status.LastUsed);
+
+    private readonly AsyncLock _connectLock = new();
+    private async Task<ProxyEndPointEntry[]> GetOrderedEntries(CancellationToken cancellationToken)
+    {
+        // lock till get an ordered list with at least one succeeded server
+        // if there is a failed server on top, all connection must wait till re-check is done
+        using var scopeLock = await _connectLock.LockAsync(cancellationToken);
+        Interlocked.Increment(ref _queuePosition);
+
+        var endPointEntries = GetOrderedEntriesQuery().ToArray();
+        if (endPointEntries.FirstOrDefault()?.Status.IsLastUsedSucceeded == true)
+            return endPointEntries;
+
+        // push the failed ones to the end and try again
+        await CheckServers(endPointEntries, 1, cancellationToken);
+        return GetOrderedEntriesQuery().ToArray();
+    }
+
+
+    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint, CancellationToken cancellationToken)
+    {
+        // get ordered endpoints
+        var entries = await GetOrderedEntries(cancellationToken);
 
         // try to connect to a proxy server
-        TcpClient? tcpClientOk = null;
-        foreach (var proxyEndPointItem in proxyServers) {
+        foreach (var entry in entries) {
             var tickCount = Environment.TickCount64;
             TcpClient? tcpClient = null;
             cancellationToken.ThrowIfCancellationRequested();
-            if (_disposed) throw new ObjectDisposedException(nameof(ProxyEndPointManager));
+            ObjectDisposedException.ThrowIf(_disposed, this);
 
             try {
                 VhLogger.Instance.LogDebug(
                     "Connecting via a {ProxyType} proxy server {ProxyServer}...",
-                    proxyEndPointItem.EndPoint.Protocol, VhLogger.FormatHostName(proxyEndPointItem.EndPoint.Host));
+                    entry.EndPoint.Protocol, VhLogger.FormatHostName(entry.EndPoint.Host));
 
-                var proxyClient = await ProxyClientFactory.CreateProxyClient(proxyEndPointItem.EndPoint, cancellationToken).Vhc();
+                // create proxy client
+                var proxyClient = await ProxyClientFactory.CreateProxyClient(entry.EndPoint, cancellationToken).Vhc();
                 tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
+
+                // connect to the target endpoint
                 await proxyClient.ConnectAsync(tcpClient, ipEndPoint, cancellationToken).Vhc();
-                tcpClientOk = tcpClient;
 
                 // find the fastest server
                 var latency = TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
-                if (!proxyServers.Contains(_fastestEntry) ||
+                if (!entries.Contains(_fastestEntry) ||
                     latency < _fastestEntry?.Status.Latency)
-                    _fastestEntry = proxyEndPointItem;
+                    _fastestEntry = entry;
 
-                RecordSuccess(proxyEndPointItem, latency: latency, fastestLatency: _fastestEntry?.Status.Latency);
+                RecordSuccess(entry, latency: latency, fastestLatency: _fastestEntry?.Status.Latency);
 
                 // disable other duplicate IPs if needed
                 if (_autoUpdateOptions.RemoveDuplicateIps) {
-                    var duplicateIps = proxyServers.Where(x =>
-                        x.EndPoint.Protocol == proxyEndPointItem.EndPoint.Protocol &&
-                        x.EndPoint.Host.Equals(proxyEndPointItem.EndPoint.Host, StringComparison.OrdinalIgnoreCase) &&
-                        x.EndPoint.Id != proxyEndPointItem.EndPoint.Id);
+                    var duplicateIps = entries.Where(x =>
+                        x.EndPoint.Protocol == entry.EndPoint.Protocol &&
+                        x.EndPoint.Host.Equals(entry.EndPoint.Host, StringComparison.OrdinalIgnoreCase) &&
+                        x.EndPoint.Id != entry.EndPoint.Id);
                     foreach (var dup in duplicateIps) {
                         dup.EndPoint.IsEnabled = false;
-                        var url = proxyEndPointItem.EndPoint.BuildUrlWithoutPassword();
+                        var url = entry.EndPoint.BuildUrlWithoutPassword();
                         dup.Status.ErrorMessage = $"Duplicate IP disabled in favour of {url}";
                     }
                 }
 
-                break;
+                return tcpClient;
             }
             catch (Exception ex) {
                 var delay = TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
                 VhLogger.Instance.LogError(ex,
                     "Failed to connect to {ProxyType} proxy server {ProxyServer}. Delay: {delay}",
-                    proxyEndPointItem.EndPoint.Protocol, VhLogger.FormatHostName(proxyEndPointItem.EndPoint.Host), delay);
+                    entry.EndPoint.Protocol, VhLogger.FormatHostName(entry.EndPoint.Host), delay);
 
                 // let's not assume bad server if caller cancelled the operation
                 var isCallerCancelled = ex is OperationCanceledException && delay < _serverCheckTimeout;
                 if (!isCallerCancelled)
-                    RecordFailed(proxyEndPointItem, ex);
+                    RecordFailed(entry, ex);
 
                 tcpClient?.Dispose();
             }
         }
 
         // could not connect to any proxy server
-        return tcpClientOk ?? throw new SocketException((int)SocketError.NetworkUnreachable);
+        throw new SocketException((int)SocketError.NetworkUnreachable);
     }
 
     private void RecordSuccess(ProxyEndPointEntry entry, TimeSpan? latency, TimeSpan? fastestLatency)
@@ -380,7 +425,6 @@ public class ProxyEndPointManager : IDisposable
             _sessionStatus.Penalty = entry.Status.Penalty;
             _sessionStatus.ErrorMessage = null;
         }
-
     }
 
     private void RecordFailed(ProxyEndPointEntry entry, Exception error)

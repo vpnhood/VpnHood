@@ -115,7 +115,7 @@ public class ProxyEndPointManagerTest : TestBase
         var proxyOptions = new ProxyOptions { ProxyEndPoints = proxyEndPoints };
         var mgr = new ProxyEndPointManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
             socketFactory: socketFactory);
-        await mgr.RemoveBadServers(CancellationToken.None);
+        await mgr.CheckServers(CancellationToken.None);
 
         // All non-SOCKS5 servers should be marked as inactive
         Assert.IsTrue(mgr.Status.ProxyEndPointInfos.All(status => !status.EndPoint.IsEnabled));

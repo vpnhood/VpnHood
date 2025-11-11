@@ -106,7 +106,9 @@ public class IpNetwork
                     throw new ArgumentOutOfRangeException(nameof(prefixLength), "Invalid CIDR prefix length for IPv4.");
 
                 var mask = uint.MaxValue << (32 - prefixLength);
-                return new IPAddress(BitConverter.GetBytes(mask).Reverse().ToArray());
+                var maskIpV4Bytes = BitConverter.GetBytes(mask);
+                maskIpV4Bytes.Reverse();
+                return new IPAddress(maskIpV4Bytes);
 
             case AddressFamily.InterNetworkV6:
                 if (prefixLength is < 0 or > 128)

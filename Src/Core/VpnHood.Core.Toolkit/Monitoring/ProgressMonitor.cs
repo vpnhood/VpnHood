@@ -9,7 +9,7 @@ public class ProgressMonitor(
 {
     private readonly DateTime _startTime = FastDateTime.Now;
     private DateTime _currentBatchStartTime = FastDateTime.Now;
-    private readonly object _incrementLock = new();
+    private readonly Lock _incrementLock = new();
     private int _completedTaskCount;
     private int TotalBatches => (int)Math.Ceiling(totalTaskCount / (double)maxDegreeOfParallelism);
     private TimeSpan MaxDuration => TimeSpan.FromMilliseconds(taskTimeout.TotalMilliseconds * TotalBatches);

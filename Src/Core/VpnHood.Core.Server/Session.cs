@@ -33,7 +33,7 @@ public class Session : IDisposable
     private readonly IVpnAdapter? _vpnAdapter;
     private readonly ISocketFactory _socketFactory;
     private readonly ProxyManager _proxyManager;
-    private readonly object _verifyRequestLock = new();
+    private readonly Lock _verifyRequestLock = new();
     private readonly int _maxTcpConnectWaitCount;
     private readonly int _maxTcpChannelCount;
     private readonly TransferBufferSize _streamProxyBufferSize;

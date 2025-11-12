@@ -110,7 +110,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
             Cleanup();
     }
 
-    private readonly object _cleanupLock = new();
+    private readonly Lock _cleanupLock = new();
 
     public void Cleanup(bool force = false)
     {

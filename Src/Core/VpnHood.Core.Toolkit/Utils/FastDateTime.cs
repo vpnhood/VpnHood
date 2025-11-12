@@ -2,7 +2,7 @@
 
 public static class FastDateTime
 {
-    private static readonly object Locker = new();
+    private static readonly Lock Locker = new();
     private static int _lastTickCount = Environment.TickCount;
     private static int _lastTickCountUtc = Environment.TickCount;
 

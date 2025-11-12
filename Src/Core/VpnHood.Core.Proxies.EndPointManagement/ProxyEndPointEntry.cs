@@ -7,7 +7,7 @@ namespace VpnHood.Core.Proxies.EndPointManagement;
 
 internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     public ProxyEndPointInfo Info => endPointInfo;
     public ProxyEndPointStatus Status => endPointInfo.Status;
     public ProxyEndPoint EndPoint => endPointInfo.EndPoint;

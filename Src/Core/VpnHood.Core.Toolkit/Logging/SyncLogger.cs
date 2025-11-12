@@ -4,7 +4,7 @@ namespace VpnHood.Core.Toolkit.Logging;
 
 public class SyncLogger(ILogger logger) : ILogger
 {
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {

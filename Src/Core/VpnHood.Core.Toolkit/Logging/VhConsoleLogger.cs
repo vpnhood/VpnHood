@@ -6,7 +6,7 @@ public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true, 
     : TextLogger(includeScopes, categoryName)
 {
     private static bool? _isColorSupported;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     private static bool IsColorSupported {
         get {

@@ -10,7 +10,7 @@ namespace VpnHood.Core.Tunneling.ClientStreams;
 public class TcpClientStream : IClientStream
 {
     private bool _disposed;
-    private readonly object _reuseLock = new();
+    private readonly Lock _reuseLock = new();
     private ReuseCallback? _reuseCallback;
     private string _clientStreamId;
     private readonly TcpClient _tcpClient;

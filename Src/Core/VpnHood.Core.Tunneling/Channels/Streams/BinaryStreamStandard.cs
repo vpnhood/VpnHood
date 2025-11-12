@@ -20,7 +20,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
     private bool _isConnectionClosed;
     private readonly Memory<byte> _readChunkHeaderBuffer = new byte[ChunkHeaderLength];
     private Task? _closeStreamTask;
-    private readonly object _closeStreamLock = new();
+    private readonly Lock _closeStreamLock = new();
     public override bool CanReuse => !_isConnectionClosed && _exception == null && AllowReuse;
     public int PreserveWriteBufferLength => ChunkHeaderLength;
 

@@ -7,7 +7,7 @@ namespace VpnHood.Core.Tunneling;
 
 public class Nat(bool isDestinationSensitive) : IDisposable
 {
-    private readonly object _lockObject = new();
+    private readonly Lock _lockObject = new();
     private readonly Dictionary<(IpVersion, IpProtocol), ushort> _lastNatIds = new();
     private readonly Dictionary<(IpVersion, IpProtocol, ushort), NatItem> _map = new();
     private readonly Dictionary<NatItem, NatItem> _mapR = new();

@@ -9,7 +9,7 @@ namespace VpnHood.Core.Tunneling;
 
 internal class ChannelManager : IDisposable
 {
-    private readonly object _channelListLock = new();
+    private readonly Lock _channelListLock = new();
     private readonly HashSet<IChannel> _disposingChannels = [];
     private readonly HashSet<IProxyChannel> _proxyChannels = [];
     private readonly List<IPacketChannel> _packetChannels = [];

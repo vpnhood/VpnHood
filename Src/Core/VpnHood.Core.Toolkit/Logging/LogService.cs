@@ -8,6 +8,7 @@ public class LogService(string logFilePath) : IDisposable
     private ILogger? _logger;
     private readonly List<ILoggerProvider> _loggerProviders = [];
     private int _isDisposed;
+    private readonly Lock _isStoppingLock = new();
     public string LogFilePath { get; } = logFilePath;
     public string[] LogEvents { get; private set; } = [];
     public bool Exists => File.Exists(LogFilePath);
@@ -32,7 +33,6 @@ public class LogService(string logFilePath) : IDisposable
             JsonSerializer.Serialize(options));
     }
 
-    private readonly object _isStoppingLock = new();
 
     public void Stop()
     {

@@ -6,7 +6,7 @@ namespace VpnHood.Core.Toolkit.Utils;
 
 public class EventReporter : IDisposable
 {
-    private readonly object _lockObject = new();
+    private readonly Lock _lockObject = new();
     private readonly string _message;
     private readonly EventId _eventId;
     private readonly Job _reportJob;

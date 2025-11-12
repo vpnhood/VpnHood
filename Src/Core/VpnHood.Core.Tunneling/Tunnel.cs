@@ -15,7 +15,7 @@ public class Tunnel : PassthroughPacketTransport
     private readonly TimeSpan _speedometerThreshold = TimeSpan.FromSeconds(2);
     private readonly ChannelManager _channelManager;
     private Traffic _speed = new();
-    private readonly object _speedLock = new();
+    private readonly Lock _speedLock = new();
     private readonly Job? _speedometerJob;
 
     public void AddChannel(IChannel channel) => _channelManager.AddChannel(channel);

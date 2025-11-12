@@ -21,7 +21,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private readonly Memory<byte> _readChunkHeaderBuffer = new byte[ChunkHeaderLength];
     private readonly Memory<byte> _writeChunkHeaderBuffer = new byte[ChunkHeaderLength];
     private Task? _closeStreamTask;
-    private readonly object _closeStreamLock = new();
+    private readonly Lock _closeStreamLock = new();
     private int _isDisposed;
     public override bool CanReuse => !_isConnectionClosed && _exception == null && AllowReuse;
     public int PreserveWriteBufferLength => ChunkHeaderLength;

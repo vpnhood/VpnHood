@@ -18,7 +18,7 @@ public class ProxyChannel : IProxyChannel
     private const int BufferSizeMin = 2048;
     private bool _started;
     private Traffic _traffic = new();
-    private readonly object _trafficLock = new();
+    private readonly Lock _trafficLock = new();
     private bool _isTunnelReadTaskFinished;
     private readonly Job _checkAliveJob;
     private bool IsDisposed => _isDisposed == 1;

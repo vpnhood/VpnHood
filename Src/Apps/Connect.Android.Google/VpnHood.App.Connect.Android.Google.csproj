@@ -69,7 +69,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Xamarin.Firebase.Analytics" Version="123.0.0.1" />
-		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="120.0.1" />
+		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="120.0.2" />
 	</ItemGroup>
 
 	<ItemGroup>

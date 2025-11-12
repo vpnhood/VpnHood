@@ -2,33 +2,38 @@
 
 public static class IpNetworkExtension
 {
-    public static IOrderedEnumerable<IpNetwork> Sort(this IEnumerable<IpNetwork> ipNetworks)
+    extension(IEnumerable<IpNetwork> ipNetworks)
     {
-        return ipNetworks
-            .ToIpRanges()
-            .ToIpNetworks();
+        public IOrderedEnumerable<IpNetwork> Sort()
+        {
+            return ipNetworks
+                .ToIpRanges()
+                .ToIpNetworks();
+        }
+
+        public IpRangeOrderedList ToIpRanges()
+        {
+            return ipNetworks
+                .Select(x => x.ToIpRange())
+                .ToOrderedList();
+        }
     }
 
-    public static IpRangeOrderedList ToIpRanges(this IEnumerable<IpNetwork> ipNetworks)
+    extension(IOrderedEnumerable<IpNetwork> ipNetworks)
     {
-        return ipNetworks
-            .Select(x => x.ToIpRange())
-            .ToOrderedList();
-    }
+        public bool IsAll()
+        {
+            return ipNetworks.SequenceEqual(IpNetwork.All);
+        }
 
-    public static bool IsAll(this IOrderedEnumerable<IpNetwork> ipNetworks)
-    {
-        return ipNetworks.SequenceEqual(IpNetwork.All);
-    }
+        public bool IsAllV4()
+        {
+            return ipNetworks.SequenceEqual([IpNetwork.AllV4]);
+        }
 
-    public static bool IsAllV4(this IOrderedEnumerable<IpNetwork> ipNetworks)
-    {
-        return ipNetworks.SequenceEqual([IpNetwork.AllV4]);
+        public bool IsAllV6()
+        {
+            return ipNetworks.SequenceEqual([IpNetwork.AllV6]);
+        }
     }
-
-    public static bool IsAllV6(this IOrderedEnumerable<IpNetwork> ipNetworks)
-    {
-        return ipNetworks.SequenceEqual([IpNetwork.AllV6]);
-    }
-
 }

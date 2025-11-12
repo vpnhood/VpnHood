@@ -9,16 +9,15 @@ namespace VpnHood.AppLib.Services.Updaters;
 public class AppUpdaterService
 {
     private readonly AsyncLock _versionCheckLock = new();
-    private readonly string _storageFolderPath;
     private readonly Version _appVersion;
     private readonly AppUpdaterOptions _updateOptions;
-    private string VersionCheckFilePath => Path.Combine(_storageFolderPath, "version.json");
+    private string VersionCheckFilePath => Path.Combine(field, "version.json");
     private readonly AppUpdaterData _data;
 
     public AppUpdaterService(string storageFolderPath, Version appVersion,
         AppUpdaterOptions updateOptions)
     {
-        _storageFolderPath = storageFolderPath;
+        VersionCheckFilePath = storageFolderPath;
         _appVersion = appVersion;
         _updateOptions = updateOptions;
         _data = JsonUtils.TryDeserializeFile<AppUpdaterData>(VersionCheckFilePath) ??

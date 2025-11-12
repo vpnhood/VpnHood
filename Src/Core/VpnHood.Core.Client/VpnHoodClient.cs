@@ -46,7 +46,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private DateTime? _initConnectedTime;
     private DateTime? _lastConnectionErrorTime;
     private byte[]? _sessionKey;
-    private ClientState _state = ClientState.None;
     private ClientState _lastState = ClientState.None;
     private readonly object _stateEventLock = new();
     private ConnectorService? _connectorService;
@@ -255,24 +254,24 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public ClientState State {
         get {
-            if (_state is ClientState.Disconnecting or ClientState.Disposed)
-                return _state;
+            if (field is ClientState.Disconnecting or ClientState.Disposed)
+                return field;
 
             // waiting for ad
             if (_waitForAdCts?.Task.IsCompleted is false)
                 return ClientState.WaitingForAd;
 
             // waiting 
-            if (_isPassthroughForAd && _state == ClientState.Connected)
+            if (_isPassthroughForAd && field == ClientState.Connected)
                 return ClientState.WaitingForAdEx;
 
-            return _state;
+            return field;
         }
         private set {
-            _state = value;
+            field = value;
             FireStateChanged();
         }
-    }
+    } = ClientState.None;
 
     public ProgressStatus? StateProgress =>
         State switch {
@@ -1248,16 +1247,20 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private class ClientSessionStatus(VpnHoodClient client, AccessUsage accessUsage) : ISessionStatus
     {
         private AccessUsage _accessUsage = accessUsage;
-        private readonly Traffic _cycleTraffic = accessUsage.CycleTraffic;
-        private readonly Traffic _totalTraffic = accessUsage.TotalTraffic;
         internal void Update(AccessUsage? value) => _accessUsage = value ?? _accessUsage;
 
         public ClientConnectorStatus ConnectorStatus => client.ConnectorService.Status;
         public Traffic Speed => client._tunnel.Speed;
         public Traffic SessionTraffic => client._tunnel.Traffic;
         public Traffic SessionSplitTraffic => client._proxyManager.Traffic;
-        public Traffic CycleTraffic => _cycleTraffic + client._tunnel.Traffic;
-        public Traffic TotalTraffic => _totalTraffic + client._tunnel.Traffic;
+        public Traffic CycleTraffic {
+            get => field + client._tunnel.Traffic;
+        } = accessUsage.CycleTraffic;
+
+        public Traffic TotalTraffic {
+            get => field + client._tunnel.Traffic;
+        } = accessUsage.TotalTraffic;
+
         public int SessionPacketChannelCount => client._sessionPacketChannelCount;
         public int TcpTunnelledCount => client._clientHost.Stat.TcpTunnelledCount;
         public int TcpPassthruCount => client._clientHost.Stat.TcpPassthruCount;

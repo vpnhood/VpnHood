@@ -26,14 +26,13 @@ public class Diagnoser
     public TimeSpan NsTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     public event EventHandler? StateChanged;
-    
-    private bool _isWorking;
+
     public bool IsWorking {
-        get => _isWorking;
+        get;
         private set {
-            if (value == _isWorking) return;
-            _isWorking = value;
-            Task.Run(()=>StateChanged?.Invoke(this, EventArgs.Empty));
+            if (value == field) return;
+            field = value;
+            Task.Run(() => StateChanged?.Invoke(this, EventArgs.Empty));
         }
     }
 

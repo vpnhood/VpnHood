@@ -2,35 +2,38 @@
 
 public static class AppConnectionStateExtensions
 {
-    public static bool IsIdle(this AppConnectionState connectionState)
+    extension(AppConnectionState connectionState)
     {
-        return connectionState is AppConnectionState.None;
-    }
+        public bool IsIdle()
+        {
+            return connectionState is AppConnectionState.None;
+        }
 
-    public static bool CanConnect(this AppConnectionState connectionState)
-    {
-        return connectionState.IsIdle();
-    }
+        public bool CanConnect()
+        {
+            return connectionState.IsIdle();
+        }
 
-    public static bool CanDiagnose(this AppConnectionState connectionState, bool hasDiagnoseStarted)
-    {
-        // Check if diagnose is already started
-        if (hasDiagnoseStarted)
-            return false;
+        public bool CanDiagnose(bool hasDiagnoseStarted)
+        {
+            // Check if diagnose is already started
+            if (hasDiagnoseStarted)
+                return false;
 
-        return connectionState is
-            AppConnectionState.ValidatingProxies or
-            AppConnectionState.FindingReachableServer or
-            AppConnectionState.FindingBestServer or
-            AppConnectionState.Connecting or
-            AppConnectionState.Connected or
-            AppConnectionState.Unstable or
-            AppConnectionState.None;
-    }
+            return connectionState is
+                AppConnectionState.ValidatingProxies or
+                AppConnectionState.FindingReachableServer or
+                AppConnectionState.FindingBestServer or
+                AppConnectionState.Connecting or
+                AppConnectionState.Connected or
+                AppConnectionState.Unstable or
+                AppConnectionState.None;
+        }
 
-    public static bool CanDisconnect(this AppConnectionState connectionState)
-    {
-        return connectionState != AppConnectionState.None &&
-               connectionState != AppConnectionState.Disconnecting;
+        public bool CanDisconnect()
+        {
+            return connectionState != AppConnectionState.None &&
+                   connectionState != AppConnectionState.Disconnecting;
+        }
     }
 }

@@ -13,11 +13,10 @@ namespace VpnHood.AppLib.Store;
 public class StoreAuthenticationProvider : IAppAuthenticationProvider
 {
     private bool _disposed;
-    private readonly string _storageFolderPath;
     private readonly IAppAuthenticationExternalProvider? _authenticationExternalProvider;
     private readonly HttpClient _httpClientWithoutAuth;
     private ApiKey? _apiKey;
-    private string ApiKeyFilePath => Path.Combine(_storageFolderPath, "account", "apiKey.json");
+    private string ApiKeyFilePath => Path.Combine(field, "account", "apiKey.json");
     public bool IsSignInWithGoogleSupported => _authenticationExternalProvider != null;
 
     public string? UserId => ApiKey?.UserId;
@@ -32,7 +31,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         IAppAuthenticationExternalProvider? authenticationExternalProvider,
         bool ignoreSslVerification = false)
     {
-        _storageFolderPath = storageFolderPath;
+        ApiKeyFilePath = storageFolderPath;
         _authenticationExternalProvider = authenticationExternalProvider;
         StoreAppId = storeAppId;
         var handlerWithAuth = new HttpClientHandlerAuth(this);

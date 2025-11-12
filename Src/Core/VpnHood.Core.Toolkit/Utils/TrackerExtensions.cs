@@ -6,60 +6,62 @@ namespace VpnHood.Core.Toolkit.Utils;
 
 public static class TrackerExtensions
 {
-    public static Task<bool> TryTrack(this ITracker tracker, TrackEvent trackEvent)
+    extension(ITracker tracker)
     {
-        return TryTrackWithCancellation(tracker, trackEvent, CancellationToken.None);
-    }
-
-    public static async Task<bool> TryTrackWithCancellation(this ITracker tracker, TrackEvent trackEvent, 
-        CancellationToken cancellationToken)
-    {
-        try {
-            await tracker.Track(trackEvent, cancellationToken).Vhc();
-            return true;
+        public Task<bool> TryTrack(TrackEvent trackEvent)
+        {
+            return TryTrackWithCancellation(tracker, trackEvent, CancellationToken.None);
         }
-        catch (Exception ex) {
-            VhLogger.Instance.LogDebug(ex, "Failed to track event.");
-            return false;
+
+        public async Task<bool> TryTrackWithCancellation(TrackEvent trackEvent, 
+            CancellationToken cancellationToken)
+        {
+            try {
+                await tracker.Track(trackEvent, cancellationToken).Vhc();
+                return true;
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogDebug(ex, "Failed to track event.");
+                return false;
+            }
         }
-    }
 
-    public static async Task<bool> TryTrack(this ITracker tracker, IEnumerable<TrackEvent> trackEvents)
-    {
-        try {
-            await tracker.Track(trackEvents).Vhc();
-            return true;
+        public async Task<bool> TryTrack(IEnumerable<TrackEvent> trackEvents)
+        {
+            try {
+                await tracker.Track(trackEvents).Vhc();
+                return true;
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogDebug(ex, "Failed to track events.");
+                return false;
+            }
         }
-        catch (Exception ex) {
-            VhLogger.Instance.LogDebug(ex, "Failed to track events.");
-            return false;
+
+        public Task<bool> TryTrackError(Exception exception, string message, string action)
+        {
+            return TryTrackError(tracker, exception, message, action, false);
         }
-    }
 
-    public static Task<bool> TryTrackError(this ITracker tracker, Exception exception, string message, string action)
-    {
-        return TryTrackError(tracker, exception, message, action, false);
-    }
+        public Task<bool> TryTrackWarningAsync(Exception exception, string message, string action)
+        {
+            return TryTrackError(tracker, exception, message, action, true);
+        }
 
-    public static Task<bool> TryTrackWarningAsync(this ITracker tracker, Exception exception, string message, string action)
-    {
-        return TryTrackError(tracker, exception, message, action, true);
-    }
-
-
-    private static Task<bool> TryTrackError(this ITracker tracker, Exception exception, string message,
-        string action, bool isWarning)
-    {
-        var trackEvent = new TrackEvent {
-            EventName = "vh_exception",
-            Parameters = new Dictionary<string, object?> {
+        private Task<bool> TryTrackError(Exception exception, string message,
+            string action, bool isWarning)
+        {
+            var trackEvent = new TrackEvent {
+                EventName = "vh_exception",
+                Parameters = new Dictionary<string, object?> {
                     { "method", action },
                     { "message", message + ", " + exception.Message },
                     { "error_type", exception.GetType().Name },
                     { "error_level", isWarning ? "warning" : "error" }
                 }
-        };
+            };
 
-        return tracker.TryTrack([trackEvent]);
+            return tracker.TryTrack([trackEvent]);
+        }
     }
 }

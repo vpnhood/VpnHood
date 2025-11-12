@@ -8,14 +8,13 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     private bool _disposed;
     protected IPAddress? SourceAddressField;
     protected IPAddress? DestinationAddressField;
-    private IPayloadPacket? _payloadPacket;
     public Memory<byte> Buffer => _disposed ? throw new ObjectDisposedException(nameof(IpPacket)) : buffer;
 
     public int PacketLength => buffer.Length;
 
     public IPayloadPacket? PayloadPacket {
-        get => _payloadPacket;
-        set => _payloadPacket = value == null || value.Buffer.Equals(Payload)
+        get;
+        set => field = value == null || value.Buffer.Equals(Payload)
             ? value
             : throw new InvalidOperationException("The PayloadPacket buffer must match the packet buffer.");
     }

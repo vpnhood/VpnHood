@@ -10,48 +10,51 @@ internal static class HttpContextBaseExtensions
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    public static T? GetQueryParameter<T>(this HttpContextBase ctx, string key, T? defaultValue)
+    extension(HttpContextBase ctx)
     {
-        return ctx.Request.QuerystringExists(key)
-            ? ctx.GetQueryParameter<T>(key)
-            : defaultValue;
-    }
-
-    public static T GetQueryParameter<T>(this HttpContextBase ctx, string key)
-    {
-        if (!ctx.Request.QuerystringExists(key))
-            throw new ArgumentException($"Route parameter '{key}' is required.");
-
-        var value = ctx.Request.RetrieveQueryValue(key);
-        try {
-            return ConvertString<T>(value) ?? 
-                   throw new Exception($"The value of {key} should not be null.");
+        public T? GetQueryParameter<T>(string key, T? defaultValue)
+        {
+            return ctx.Request.QuerystringExists(key)
+                ? ctx.GetQueryParameter<T>(key)
+                : defaultValue;
         }
-        catch (Exception ex) {
-            throw new ArgumentException($"Cannot convert '{value}' to {typeof(T)} for parameter '{key}'", ex);
+
+        public T GetQueryParameter<T>(string key)
+        {
+            if (!ctx.Request.QuerystringExists(key))
+                throw new ArgumentException($"Route parameter '{key}' is required.");
+
+            var value = ctx.Request.RetrieveQueryValue(key);
+            try {
+                return ConvertString<T>(value) ?? 
+                       throw new Exception($"The value of {key} should not be null.");
+            }
+            catch (Exception ex) {
+                throw new ArgumentException($"Cannot convert '{value}' to {typeof(T)} for parameter '{key}'", ex);
+            }
         }
-    }
 
-    public static T? GetRouteParameter<T>(this HttpContextBase ctx, string key, T? defaultValue)
-    {
-        var value = ctx.Request.Url.Parameters.Get(key);
-        return value is null 
-            ? defaultValue 
-            : ctx.GetRouteParameter<T>(key);
-    }
-
-    public static T GetRouteParameter<T>(this HttpContextBase ctx, string key)
-    {
-        var value = ctx.Request.Url.Parameters.Get(key);
-        if (value is null)
-            throw new ArgumentException($"Route parameter '{key}' is required.");
-
-        try {
-            return ConvertString<T>(value) ??
-                   throw new Exception($"The value of {key} should not be null.");
+        public T? GetRouteParameter<T>(string key, T? defaultValue)
+        {
+            var value = ctx.Request.Url.Parameters.Get(key);
+            return value is null 
+                ? defaultValue 
+                : ctx.GetRouteParameter<T>(key);
         }
-        catch (Exception ex) {
-            throw new ArgumentException($"Cannot convert '{value}' to {typeof(T)} for parameter '{key}'", ex);
+
+        public T GetRouteParameter<T>(string key)
+        {
+            var value = ctx.Request.Url.Parameters.Get(key);
+            if (value is null)
+                throw new ArgumentException($"Route parameter '{key}' is required.");
+
+            try {
+                return ConvertString<T>(value) ??
+                       throw new Exception($"The value of {key} should not be null.");
+            }
+            catch (Exception ex) {
+                throw new ArgumentException($"Cannot convert '{value}' to {typeof(T)} for parameter '{key}'", ex);
+            }
         }
     }
 
@@ -97,55 +100,58 @@ internal static class HttpContextBaseExtensions
         return context.Response.Send();
     }
 
-    public static async Task SendJson(this HttpContextBase ctx, object? data, int statusCode = 200)
+    extension(HttpContextBase ctx)
     {
-        if (data is null) {
-            ctx.Response.StatusCode = (int)HttpStatusCode.NoContent;
-            await ctx.Response.Send();
-            return;
+        public async Task SendJson(object? data, int statusCode = 200)
+        {
+            if (data is null) {
+                ctx.Response.StatusCode = (int)HttpStatusCode.NoContent;
+                await ctx.Response.Send();
+                return;
+            }
+
+            var json = JsonSerializer.Serialize(data, JsonOptions);
+            ctx.Response.StatusCode = statusCode;
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.Send(json);
         }
 
-        var json = JsonSerializer.Serialize(data, JsonOptions);
-        ctx.Response.StatusCode = statusCode;
-        ctx.Response.ContentType = "application/json";
-        await ctx.Response.Send(json);
-    }
+        public T ReadJson<T>()
+        {
+            try {
+                var bytes = ctx.Request.DataAsBytes;
+                if (bytes == null || bytes.Length == 0)
+                    throw new InvalidOperationException($"Request body is empty for {typeof(T).Name}");
 
-    public static T ReadJson<T>(this HttpContextBase ctx)
-    {
-        try {
-            var bytes = ctx.Request.DataAsBytes;
-            if (bytes == null || bytes.Length == 0)
-                throw new InvalidOperationException($"Request body is empty for {typeof(T).Name}");
-
-            // Determine encoding from Content-Type if available
-            var encoding = Encoding.UTF8;
-            var ct = ctx.Request.ContentType;
-            if (!string.IsNullOrWhiteSpace(ct))
-                try {
-                    var parts = ct.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-                    var charsetPart = parts.FirstOrDefault(p => p.StartsWith("charset=", StringComparison.OrdinalIgnoreCase));
-                    if (charsetPart != null) {
-                        var charset = charsetPart["charset=".Length..];
-                        encoding = Encoding.GetEncoding(charset);
+                // Determine encoding from Content-Type if available
+                var encoding = Encoding.UTF8;
+                var ct = ctx.Request.ContentType;
+                if (!string.IsNullOrWhiteSpace(ct))
+                    try {
+                        var parts = ct.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                        var charsetPart = parts.FirstOrDefault(p => p.StartsWith("charset=", StringComparison.OrdinalIgnoreCase));
+                        if (charsetPart != null) {
+                            var charset = charsetPart["charset=".Length..];
+                            encoding = Encoding.GetEncoding(charset);
+                        }
                     }
-                }
-                catch {
-                    // ignore invalid charset and default to UTF-8
-                }
+                    catch {
+                        // ignore invalid charset and default to UTF-8
+                    }
 
-            var body = encoding.GetString(bytes);
+                var body = encoding.GetString(bytes);
 
-            var obj = JsonSerializer.Deserialize<T>(body, JsonOptions) ??
-                      throw new InvalidOperationException($"Failed to deserialize JSON to {typeof(T).Name}. Body: {body}");
+                var obj = JsonSerializer.Deserialize<T>(body, JsonOptions) ??
+                          throw new InvalidOperationException($"Failed to deserialize JSON to {typeof(T).Name}. Body: {body}");
 
-            return obj;
-        }
-        catch (JsonException ex) {
-            throw new InvalidOperationException($"Invalid JSON for {typeof(T).Name}: {ex.Message}");
-        }
-        catch (Exception ex) {
-            throw new InvalidOperationException($"Error reading JSON for {typeof(T).Name}: {ex.Message}", ex);
+                return obj;
+            }
+            catch (JsonException ex) {
+                throw new InvalidOperationException($"Invalid JSON for {typeof(T).Name}: {ex.Message}");
+            }
+            catch (Exception ex) {
+                throw new InvalidOperationException($"Error reading JSON for {typeof(T).Name}: {ex.Message}", ex);
+            }
         }
     }
 }

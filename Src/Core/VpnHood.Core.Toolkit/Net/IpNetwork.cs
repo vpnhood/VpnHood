@@ -107,6 +107,7 @@ public class IpNetwork
 
                 var mask = uint.MaxValue << (32 - prefixLength);
                 var maskIpV4Bytes = BitConverter.GetBytes(mask);
+                // ReSharper disable once CSharp14OverloadResolutionWithSpanBreakingChange
                 maskIpV4Bytes.Reverse();
                 return new IPAddress(maskIpV4Bytes);
 

@@ -34,28 +34,30 @@ public static class TaskExtensions
             task.GetAwaiter().GetResult();
     }
 
-    public static void TryCancel(this CancellationTokenSource cancellationTokenSource)
+    extension(CancellationTokenSource cancellationTokenSource)
     {
-        try {
-            if (!cancellationTokenSource.IsCancellationRequested)
-                cancellationTokenSource.Cancel();
+        public void TryCancel()
+        {
+            try {
+                if (!cancellationTokenSource.IsCancellationRequested)
+                    cancellationTokenSource.Cancel();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex,
+                    "Failed to cancel the CancellationTokenSource. This is not a critical error.");
+            }
         }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex,
-                "Failed to cancel the CancellationTokenSource. This is not a critical error.");
+
+        public async Task TryCancelAsync()
+        {
+            try {
+                if (!cancellationTokenSource.IsCancellationRequested)
+                    await cancellationTokenSource.CancelAsync().Vhc();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex,
+                    "Failed to cancel the CancellationTokenSource. This is not a critical error.");
+            }
         }
     }
-
-    public static async Task TryCancelAsync(this CancellationTokenSource cancellationTokenSource)
-    {
-        try {
-            if (!cancellationTokenSource.IsCancellationRequested)
-                await cancellationTokenSource.CancelAsync().Vhc();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex,
-                "Failed to cancel the CancellationTokenSource. This is not a critical error.");
-        }
-    }
-
 }

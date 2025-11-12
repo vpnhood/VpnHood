@@ -9,32 +9,35 @@ namespace VpnHood.Core.Server.Utils;
 
 public static class ClientStreamExtensions
 {
-    public static async Task WriteResponseAsync(this IClientStream clientStream, SessionResponse sessionResponse,
-        CancellationToken cancellationToken)
+    extension(IClientStream clientStream)
     {
-        var responseData = StreamUtils.ObjectToJsonBuffer(sessionResponse);
+        public async Task WriteResponseAsync(SessionResponse sessionResponse,
+            CancellationToken cancellationToken)
+        {
+            var responseData = StreamUtils.ObjectToJsonBuffer(sessionResponse);
 
-        // If the client stream requires an HTTP response, write it to the client stream
-        if (clientStream.RequireHttpResponse) {
-            clientStream.RequireHttpResponse = false;
-            await clientStream.Stream.WriteAsync(HttpResponseBuilder.Ok(responseData.Length), cancellationToken).Vhc();
+            // If the client stream requires an HTTP response, write it to the client stream
+            if (clientStream.RequireHttpResponse) {
+                clientStream.RequireHttpResponse = false;
+                await clientStream.Stream.WriteAsync(HttpResponseBuilder.Ok(responseData.Length), cancellationToken).Vhc();
+            }
+
+            // Write the session response to the client stream
+            await clientStream.Stream.WriteAsync(responseData, cancellationToken).Vhc();
         }
 
-        // Write the session response to the client stream
-        await clientStream.Stream.WriteAsync(responseData, cancellationToken).Vhc();
-    }
+        public async Task DisposeAsync(SessionResponse sessionResponse, CancellationToken cancellationToken)
+        {
+            // Write the session response to the client stream
+            try {
+                await clientStream.WriteResponseAsync(sessionResponse, cancellationToken).Vhc();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
+                    "Could not dispose a ClientStream gracefully. ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
 
-    public static async Task DisposeAsync(this IClientStream clientStream, SessionResponse sessionResponse, CancellationToken cancellationToken)
-    {
-        // Write the session response to the client stream
-        try {
-            await clientStream.WriteResponseAsync(sessionResponse, cancellationToken).Vhc();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
-                "Could not dispose a ClientStream gracefully. ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
-
-            clientStream.Dispose();
+                clientStream.Dispose();
+            }
         }
     }
 }

@@ -53,7 +53,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
 
     public async Task Run()
     {
-        // try to remove the old adapter, as previous route may till be active
+        // try to remove the old adapter, as previous route maybe till be active
         await VhUtils.TryInvokeAsync(null, () =>
             ExecuteCommandAsync($"ip link delete {VpnHoodApp.Instance.Features.AppName}", CancellationToken.None));
 

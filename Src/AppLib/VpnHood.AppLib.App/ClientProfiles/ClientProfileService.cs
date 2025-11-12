@@ -12,30 +12,28 @@ namespace VpnHood.AppLib.ClientProfiles;
 public class ClientProfileService
 {
     private const string FilenameProfiles = "vpn_profiles.json";
-    private readonly string _folderPath;
     private List<ClientProfile> _clientProfiles;
     private readonly object _updateByUrlLock = new();
     private ClientProfileInfo? _cashInfo;
-    private string _clientCountryCode = RegionInfo.CurrentRegion.Name;
-
-    private string ClientProfilesFilePath => Path.Combine(_folderPath, FilenameProfiles);
+    
+    private string ClientProfilesFilePath => Path.Combine(field, FilenameProfiles);
 
     public ClientProfileService(string folderPath)
     {
-        _folderPath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
+        ClientProfilesFilePath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
         _clientProfiles = Load().ToList();
     }
 
     public string ClientCountryCode {
-        get => _clientCountryCode;
+        get;
         set {
-            if (_clientCountryCode == value)
+            if (field == value)
                 return;
 
-            _clientCountryCode = value;
+            field = value;
             Reload();
         }
-    }
+    } = RegionInfo.CurrentRegion.Name;
 
 
     public ClientProfileInfo? FindInfo(Guid clientProfileId)

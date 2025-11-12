@@ -6,7 +6,6 @@ using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Abstractions;
 

@@ -37,14 +37,14 @@ public static class AdMobUtil
 
             // at-least one ok
             if (initializationStatus.AdapterStatusMap.Values.Any(value =>
-                    value.InitializationState == AdapterStatusState.Ready)) {
+                    value.InitializationState.Equals(AdapterStatusState.Ready))) {
                 _loadedCompletionSource.TrySetResult();
                 return;
             }
 
             // create an aggregation error from each adapter status
             var errors = initializationStatus.AdapterStatusMap
-                .Where(pair => pair.Value.InitializationState != AdapterStatusState.Ready)
+                .Where(pair => !pair.Value.InitializationState.Equals(AdapterStatusState.Ready))
                 .Select(pair => $"{pair.Key}: {pair.Value.Description}");
 
             // not success

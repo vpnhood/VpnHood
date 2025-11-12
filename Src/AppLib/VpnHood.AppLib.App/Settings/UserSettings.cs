@@ -35,13 +35,12 @@ public class UserSettings
     public bool AllowRemoteAccess { get; set; }
 
     // for compatibility convert old nullable to empty array
-    private IPAddress[] _dnsServers = [];
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[] DnsServers {
-        get => _dnsServers;
+        get;
         // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-        set => _dnsServers = value ?? [];
-    }
+        set => field = value ?? [];
+    } = [];
 
     [Obsolete("Compatibility for version <= 759; Use ChannelProtocol.")]
     public bool? UseUdpChannel {

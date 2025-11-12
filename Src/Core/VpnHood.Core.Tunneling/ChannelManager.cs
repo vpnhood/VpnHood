@@ -13,7 +13,6 @@ internal class ChannelManager : IDisposable
     private readonly HashSet<IChannel> _disposingChannels = [];
     private readonly HashSet<IProxyChannel> _proxyChannels = [];
     private readonly List<IPacketChannel> _packetChannels = [];
-    private int _maxPacketChannelCount;
     private Traffic _trafficUsage = new();
     private readonly EventHandler<IpPacket> _channelPacketReceived;
     private bool _disposed;
@@ -48,11 +47,11 @@ internal class ChannelManager : IDisposable
     }
 
     public int MaxPacketChannelCount {
-        get => _maxPacketChannelCount;
+        get;
         set {
             if (value < 1)
                 throw new ArgumentException("Value must equals or greater than 1", nameof(MaxPacketChannelCount));
-            _maxPacketChannelCount = value;
+            field = value;
         }
     }
 

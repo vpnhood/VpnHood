@@ -4,17 +4,13 @@ namespace VpnHood.Core.Client.Device.UiContexts;
 
 public static class AppUiContext
 {
-    private static IUiContext? _context;
-
     public static event EventHandler? OnChanged;
 
     public static IUiContext? Context {
-        get => _context;
+        get;
         set {
-            if (_context == value)
-                return;
-
-            _context = value;
+            if (field == value) return;
+            field = value;
             OnChanged?.Invoke(null, EventArgs.Empty);
         }
     }

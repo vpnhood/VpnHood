@@ -8,39 +8,41 @@ namespace VpnHood.AppLib.Test;
 
 public static class VpnHoodAppExtensions
 {
-    public static AppSessionStatus GetSessionStatus(this VpnHoodApp app)
+    extension(VpnHoodApp app)
     {
-        app.ForceUpdateState().Wait();
-        return app.State.SessionStatus ?? throw new InvalidOperationException("Session has not been initialized yet");
-    }
+        public AppSessionStatus GetSessionStatus()
+        {
+            app.ForceUpdateState().Wait();
+            return app.State.SessionStatus ?? throw new InvalidOperationException("Session has not been initialized yet");
+        }
 
-    public static Task WaitForState(this VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
-    {
-        return VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState,
-            "App state didn't reach the expected value.", timeout);
-    }
+        public Task WaitForState(AppConnectionState connectionSate, int timeout = 5000)
+        {
+            return VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState,
+                "App state didn't reach the expected value.", timeout);
+        }
 
-    public static Task Connect(this VpnHoodApp app, 
-        Guid? clientProfileId, 
-        ConnectPlanId planId = ConnectPlanId.Normal, 
-        bool diagnose = false,
-        CancellationToken cancellationToken = default)
-    {
-        return app.Connect(new ConnectOptions {
-            ClientProfileId = clientProfileId,
-            PlanId = planId,
-            Diagnose = diagnose
-        }, cancellationToken);
-    }
+        public Task Connect(Guid? clientProfileId, 
+            ConnectPlanId planId = ConnectPlanId.Normal, 
+            bool diagnose = false,
+            CancellationToken cancellationToken = default)
+        {
+            return app.Connect(new ConnectOptions {
+                ClientProfileId = clientProfileId,
+                PlanId = planId,
+                Diagnose = diagnose
+            }, cancellationToken);
+        }
 
-    public static void UpdateClientCountry(this VpnHoodApp app, string countryCode)
-    {
-        app.SettingsService.Settings.ClientIpLocation = new IpLocation {
-            IpAddress = IPAddress.Parse("1.2.3.4"), // Dummy IP address
-            CountryCode = countryCode,
-            CountryName = VhUtils.TryGetCountryName(countryCode) ?? "Unknown",
-            CityName = null,
-            RegionName = null
-        };
+        public void UpdateClientCountry(string countryCode)
+        {
+            app.SettingsService.Settings.ClientIpLocation = new IpLocation {
+                IpAddress = IPAddress.Parse("1.2.3.4"), // Dummy IP address
+                CountryCode = countryCode,
+                CountryName = VhUtils.TryGetCountryName(countryCode) ?? "Unknown",
+                CityName = null,
+                RegionName = null
+            };
+        }
     }
 }

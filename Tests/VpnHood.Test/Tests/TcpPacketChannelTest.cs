@@ -39,30 +39,30 @@ public class TcpPacketChannelTest : TestBase
 
         // create server channel
         var serverTcpClient = await listenerTask;
-        using var serverStream = new TcpClientStream(serverTcpClient, serverTcpClient.GetStream(), Guid.NewGuid() + ":server");
+        using var serverStream =
+            new TcpClientStream(serverTcpClient, serverTcpClient.GetStream(), Guid.NewGuid() + ":server");
         using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             ClientStream = serverStream,
             Blocking = false,
             AutoDisposePackets = true,
             Lifespan = null,
-            ChannelId = Guid.NewGuid().ToString(),
+            ChannelId = Guid.NewGuid().ToString()
         });
-  
+
         using var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverChannel);
         IpPacket? lastServerReceivedPacket = null;
-        serverTunnel.PacketReceived += (_, ipPacket) => {
-            lastServerReceivedPacket = ipPacket;
-        };
+        serverTunnel.PacketReceived += (_, ipPacket) => { lastServerReceivedPacket = ipPacket; };
 
         // create client channel
-        using var clientStream = new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client:tunnel");
+        using var clientStream =
+            new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client:tunnel");
         using var clientChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             ClientStream = clientStream,
             AutoDisposePackets = true,
             Lifespan = TimeSpan.FromMilliseconds(1000),
             Blocking = false,
-            ChannelId = Guid.NewGuid().ToString(),
+            ChannelId = Guid.NewGuid().ToString()
         });
 
         using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
@@ -71,10 +71,12 @@ public class TcpPacketChannelTest : TestBase
         // -------
         // Check sending packet to server
         // ------
-        using var testPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("1.1.1.1:1"), IPEndPoint.Parse("1.1.1.1:2"), [1, 2, 3]);
+        using var testPacket =
+            PacketBuilder.BuildUdp(IPEndPoint.Parse("1.1.1.1:1"), IPEndPoint.Parse("1.1.1.1:2"), [1, 2, 3]);
         clientTunnel.SendPacketQueued(testPacket.Clone());
-        await VhTestUtil.AssertEqualsWait(true, () => 
-            lastServerReceivedPacket!=null && testPacket.Buffer.Span.SequenceEqual(lastServerReceivedPacket.Buffer.Span) );
+        await VhTestUtil.AssertEqualsWait(true, () =>
+            lastServerReceivedPacket != null &&
+            testPacket.Buffer.Span.SequenceEqual(lastServerReceivedPacket.Buffer.Span));
         await VhTestUtil.AssertEqualsWait(0, () => clientTunnel.PacketChannelCount);
         await VhTestUtil.AssertEqualsWait(0, () => serverTunnel.PacketChannelCount);
     }

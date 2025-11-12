@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Buffers;
+﻿using System.Buffers;
 using System.Buffers.Binary;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
+
 // ReSharper disable InconsistentlySynchronizedField
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
@@ -194,7 +195,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
             throw _exception;
 
         // could not reuse the underlying stream has been closed
-        if (_isConnectionClosed) 
+        if (_isConnectionClosed)
             throw new EndOfStreamException(
                 $"Could not reuse a BinaryStream that its underling stream has been closed . StreamId: {StreamId}");
 
@@ -226,7 +227,7 @@ public class BinaryStreamStandard : ChunkStream, IPreservedChunkStream
 
             // wait for the current read task to finish
             await _readTask.AsTask().WaitAsync(timeoutCts.Token).Vhc();
-            
+
             // wait for end of stream
             await DiscardRemainingStreamData(timeoutCts.Token).Vhc();
         }

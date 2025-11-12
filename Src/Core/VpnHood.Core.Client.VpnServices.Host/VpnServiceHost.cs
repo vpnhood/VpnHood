@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -25,7 +25,10 @@ public class VpnServiceHost : IDisposable
     private bool _disconnectRequested;
 
     internal VpnHoodClient? Client { get; private set; }
-    internal VpnHoodClient RequiredClient => Client ?? throw new InvalidOperationException("Client is not initialized.");
+
+    internal VpnHoodClient RequiredClient =>
+        Client ?? throw new InvalidOperationException("Client is not initialized.");
+
     internal VpnServiceContext Context { get; }
     public static ConnectionInfo DefaultConnectionInfo => VpnServiceContext.DefaultConnectionInfo;
 
@@ -93,7 +96,8 @@ public class VpnServiceHost : IDisposable
 
             // handle previous client
             var client = Client;
-            if (!forceReconnect && client is { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
+            if (!forceReconnect && client is
+                    { State: ClientState.Connected or ClientState.Connecting or ClientState.Waiting }) {
                 // user must disconnect first
                 VhLogger.Instance.LogWarning("VpnService connection is already in progress.");
                 await UpdateConnectionInfo(client, _connectCts.Token).Vhc();
@@ -205,7 +209,6 @@ public class VpnServiceHost : IDisposable
             _vpnServiceHandler.StopSelf();
             throw;
         }
-
     }
 
     public Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
@@ -267,7 +270,8 @@ public class VpnServiceHost : IDisposable
             return trackerFactory;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not create tracker factory. ClassName: {className}", assemblyQualifiedName);
+            VhLogger.Instance.LogError(ex, "Could not create tracker factory. ClassName: {className}",
+                assemblyQualifiedName);
             return null;
         }
     }
@@ -322,4 +326,3 @@ public class VpnServiceHost : IDisposable
         _logService?.Dispose();
     }
 }
-

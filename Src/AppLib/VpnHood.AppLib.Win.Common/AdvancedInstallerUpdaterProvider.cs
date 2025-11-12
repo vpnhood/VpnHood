@@ -19,7 +19,7 @@ public class AdvancedInstallerUpdaterProvider : IAppUpdaterProvider
     {
         return UpdateInternal(true, cancellationToken);
     }
-    
+
     private static async Task<bool> UpdateInternal(bool executeUpdate, CancellationToken cancellationToken)
     {
         // launch updater if exists

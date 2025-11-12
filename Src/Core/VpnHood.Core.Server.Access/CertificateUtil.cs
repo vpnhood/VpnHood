@@ -60,7 +60,7 @@ public static class CertificateUtil
     public static X509Certificate2 CreateExportable(X509Certificate2 certificate, string password = "")
     {
         // Export with the Exportable flag to ensure the key is usable
-        return new X509Certificate2(certificate.Export(X509ContentType.Pfx, password), password,
+        return X509CertificateLoader.LoadPkcs12(certificate.Export(X509ContentType.Pfx, password), password,
             X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
     }
 

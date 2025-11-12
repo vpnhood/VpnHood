@@ -29,7 +29,8 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
         _maxClientCount = options.MaxClientCount;
         _packetProxyCallbacks = options.PacketProxyCallbacks;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.IcmpTimeout);
-        _maxWorkerEventReporter = new EventReporter("Session has reached to the maximum ping workers.", logScope: options.LogScope);
+        _maxWorkerEventReporter =
+            new EventReporter("Session has reached to the maximum ping workers.", logScope: options.LogScope);
         _cleanupJob = new Job(Cleanup, nameof(PingProxyPool));
     }
 

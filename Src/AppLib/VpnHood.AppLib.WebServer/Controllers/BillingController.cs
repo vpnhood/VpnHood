@@ -9,8 +9,8 @@ namespace VpnHood.AppLib.WebServer.Controllers;
 
 internal class BillingController : ControllerBase, IBillingController
 {
-    private static AppBillingService BillingService => 
-        VpnHoodApp.Instance.Services.AccountService?.BillingService ?? 
+    private static AppBillingService BillingService =>
+        VpnHoodApp.Instance.Services.AccountService?.BillingService ??
         throw new Exception("Billing service is not available at this moment.");
 
     public override void AddRoutes(IRouteMapper mapper)

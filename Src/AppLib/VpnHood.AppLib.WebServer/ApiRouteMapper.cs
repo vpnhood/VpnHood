@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Logging;
 using System.Net;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer.Extensions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -10,7 +10,7 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer;
 
-internal class ApiRouteMapper(WebserverLite server) 
+internal class ApiRouteMapper(WebserverLite server)
     : IRouteMapper
 {
     private static Task Options(HttpContextBase ctx)

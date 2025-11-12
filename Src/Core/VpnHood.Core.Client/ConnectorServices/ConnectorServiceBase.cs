@@ -1,11 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
@@ -129,7 +129,8 @@ internal class ConnectorServiceBase : IDisposable
         int contentLength, string streamId, CancellationToken cancellationToken)
     {
         // write HTTP request
-        var header = BuildPostRequest(EndPointInfo.HostName, TunnelStreamType.Standard, ProtocolVersion, contentLength: contentLength);
+        var header = BuildPostRequest(EndPointInfo.HostName, TunnelStreamType.Standard, ProtocolVersion,
+            contentLength: contentLength);
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
@@ -140,7 +141,6 @@ internal class ConnectorServiceBase : IDisposable
         clientStream.RequireHttpResponse = true;
         return clientStream;
     }
-
 
 
     private async Task<IClientStream> CreateClientStream(string streamId, TcpClient tcpClient, Stream sslStream,
@@ -159,14 +159,15 @@ internal class ConnectorServiceBase : IDisposable
         return await CreateSimpleClientStream(tcpClient, sslStream, contentLength, streamId, cancellationToken);
     }
 
-    protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, int contentLength, CancellationToken cancellationToken)
+    protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, int contentLength,
+        CancellationToken cancellationToken)
     {
         var tcpEndPoint = EndPointInfo.TcpEndPoint;
 
         // create new stream
         TcpClient? tcpClient = null;
         try {
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, 
+            VhLogger.Instance.LogDebug(GeneralEventId.Request,
                 "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
 
             // Client.SessionTimeout does not affect in ConnectAsync
@@ -196,12 +197,13 @@ internal class ConnectorServiceBase : IDisposable
                 VhLogger.FormatHostName(hostName));
 
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
-                TargetHost = hostName,
-                EnabledSslProtocols = SslProtocols.None // auto
-            }, cancellationToken)
+                    TargetHost = hostName,
+                    EnabledSslProtocols = SslProtocols.None // auto
+                }, cancellationToken)
                 .Vhc();
 
-            var clientStream = await CreateClientStream(streamId, tcpClient, sslStream, contentLength, cancellationToken).Vhc();
+            var clientStream =
+                await CreateClientStream(streamId, tcpClient, sslStream, contentLength, cancellationToken).Vhc();
             lock (Status) Status.CreatedConnectionCount++;
             return clientStream;
         }
@@ -241,8 +243,6 @@ internal class ConnectorServiceBase : IDisposable
 
     public Task RunJob()
     {
-
-
         return Task.CompletedTask;
     }
 

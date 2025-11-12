@@ -19,7 +19,7 @@ public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUser
         using var reviewManager = testMode
             ? new FakeReviewManager(appUiContext.Activity)
             : ReviewManagerFactory.Create(appUiContext.Activity);
-        
+
         using var reviewInfo = await reviewManager.RequestReviewFlow()
             .AsAsync<ReviewInfo>()
             .WaitAsync(cancellationToken)

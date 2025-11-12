@@ -41,8 +41,7 @@ public class HelloResponse : SessionResponse
 
     [Obsolete("Use IsTcpPacketSupported")]
     public bool IsTunProviderSupported {
-        get=> IsTcpPacketSupported; 
-        init=> IsTcpPacketSupported = value;
+        get => IsTcpPacketSupported;
+        init => IsTcpPacketSupported = value;
     }
-
 }

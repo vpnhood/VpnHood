@@ -27,7 +27,8 @@ public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
 
         // check packet length
         if (packetLength > TunnelDefaults.MaxPacketSize)
-            throw new InvalidOperationException($"Packet size exceeds the maximum allowed limit. PacketLength: {packetLength}");
+            throw new InvalidOperationException(
+                $"Packet size exceeds the maximum allowed limit. PacketLength: {packetLength}");
 
         var memoryOwner = MemoryPool<byte>.Shared.Rent(packetLength);
         try {
@@ -45,7 +46,6 @@ public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
             memoryOwner.Dispose();
             throw;
         }
-
     }
 
     public void Dispose()

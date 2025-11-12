@@ -11,6 +11,7 @@ namespace VpnHood.Core.Server;
 internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, string lastVirtualIpFilePath)
 {
     private readonly ConcurrentDictionary<IPAddress, Session> _virtualIps = new();
+
     private VirtualIpBundle _lastAllocatedVirtualIps =
         JsonUtils.TryDeserializeFile<VirtualIpBundle>(lastVirtualIpFilePath) ?? new VirtualIpBundle {
             IpV4 = ipNetworkV4.FirstIpAddress,
@@ -26,7 +27,7 @@ internal class VirtualIpManager(IpNetwork ipNetworkV4, IpNetwork ipNetworkV6, st
             // allocate new IPs
             _lastAllocatedVirtualIps = new VirtualIpBundle {
                 IpV4 = Allocate(ipNetworkV4, _lastAllocatedVirtualIps.IpV4),
-                IpV6 = Allocate(ipNetworkV6, _lastAllocatedVirtualIps.IpV6),
+                IpV6 = Allocate(ipNetworkV6, _lastAllocatedVirtualIps.IpV6)
             };
 
             // save the last IPs

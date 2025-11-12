@@ -76,7 +76,7 @@ public class SystemTray : IDisposable
         Tip = 0x04
     }
 
-    private static readonly int WmTaskbarCreated = 
+    private static readonly int WmTaskbarCreated =
         Window.RegisterWindowMessage("TaskbarCreated");
 
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)

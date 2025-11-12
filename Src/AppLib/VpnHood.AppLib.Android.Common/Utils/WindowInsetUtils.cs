@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.Droid.Common.Utils;
 
 public static class WindowInsetUtils
 {
-    public static void Configure(Window? window, 
+    public static void Configure(Window? window,
         bool lightStatusBars, bool lightNavBars, bool navigationBarContrastEnforced)
     {
         if (window == null) {
@@ -33,9 +33,9 @@ public static class WindowInsetUtils
         // set window insets listener for API 30
         else if (OperatingSystem.IsAndroidVersionAtLeast(30)) {
             // Android 11–14: valid here (deprecated only on 35+)
-            window.SetDecorFitsSystemWindows(false); 
-            window.SetStatusBarColor(Color.Transparent); 
-            window.SetNavigationBarColor(Color.Transparent); 
+            window.SetDecorFitsSystemWindows(false);
+            window.SetStatusBarColor(Color.Transparent);
+            window.SetNavigationBarColor(Color.Transparent);
 
             var contentRoot = window.DecorView;
             contentRoot.SetOnApplyWindowInsetsListener(new WindowInsetsListener());
@@ -60,7 +60,7 @@ public static class WindowInsetUtils
             return;
 
         var insetsController = window.DecorView.WindowInsetsController;
-        if (insetsController == null) 
+        if (insetsController == null)
             return;
 
         const int lightStatus = (int)WindowInsetsControllerAppearance.LightStatusBars;

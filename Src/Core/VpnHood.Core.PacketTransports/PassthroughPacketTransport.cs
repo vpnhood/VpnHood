@@ -23,5 +23,4 @@ public abstract class PassthroughPacketTransport()
     }
 
     protected abstract void SendPacket(IpPacket ipPacket);
-
 }

@@ -19,7 +19,9 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public JsonElement? CustomData { get; set; }
 
     public string StorageFolderName { get; set; } = IsDebugMode ? "VpnHoodClient.debug" : "VpnHood";
-    public Uri? UpdateInfoUrl { get; set; } = new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json");
+
+    public Uri? UpdateInfoUrl { get; set; } =
+        new("https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.json");
 
     // SampleAccessKey is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.
@@ -37,5 +39,4 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public const bool IsDebugMode = false;
 #endif
     public static bool IsDebug => IsDebugMode;
-
 }

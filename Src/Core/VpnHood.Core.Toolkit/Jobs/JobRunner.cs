@@ -17,10 +17,12 @@ public class JobRunner
     public static JobRunner SlowInstance => SlowInstanceLazy.Value;
     public static JobRunner FastInstance => FastInstanceLazy.Value;
     public TimeSpan Interval { get; set; }
+
     public int MaxDegreeOfParallelism {
         get => _maxDegreeOfParallelism;
         set {
-            if (value < 1) throw new ArgumentOutOfRangeException(nameof(value), "MaxDegreeOfParallelism must be greater than 0.");
+            if (value < 1)
+                throw new ArgumentOutOfRangeException(nameof(value), "MaxDegreeOfParallelism must be greater than 0.");
             _maxDegreeOfParallelism = value;
             _semaphore = new SemaphoreSlim(_maxDegreeOfParallelism);
         }
@@ -91,7 +93,8 @@ public class JobRunner
 
                 // if the WeakReference is dead, remove it
                 if (!node.Value.JobReference.TryGetTarget(out _)) {
-                    VhLogger.Instance.LogDebug("Removing a dead job. Ensure proper disposal by the caller. JobName: {JobName}", 
+                    VhLogger.Instance.LogDebug(
+                        "Removing a dead job. Ensure proper disposal by the caller. JobName: {JobName}",
                         node.Value.Name);
                     _jobs.Remove(node);
                 }
@@ -112,6 +115,7 @@ public class JobRunner
                 }
             }
         }
+
         return jobs;
     }
 

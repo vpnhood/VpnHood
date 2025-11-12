@@ -38,7 +38,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 UpdaterProvider = new GooglePlayAppUpdaterProvider(),
                 PromptDelay = TimeSpan.FromDays(3)
-            },
+            }
         };
     }
 
@@ -47,7 +47,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         VpnHoodAndroidApp.Init(CreateAppOptions);
         base.OnCreate();
     }
-    
+
     public override void OnTerminate()
     {
         if (VpnHoodAndroidApp.IsInit)

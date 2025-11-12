@@ -26,7 +26,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         : base(new PacketTransportOptions {
             AutoDisposePackets = autoDisposePackets,
             Blocking = false,
-            QueueCapacity = queueCapacity,
+            QueueCapacity = queueCapacity
         })
     {
         _udpClient = udpClient;
@@ -60,12 +60,14 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         try {
             // IpV4 fragmentation
             if (ipPacket.Protocol == IpProtocol.IPv4 && ipPacket is IpV4Packet ipV4Packet && AddressFamily.IsV4())
-                _udpClient.DontFragment = ipV4Packet.DontFragment; // Never call this for IPv6, it will throw exception for any value
+                _udpClient.DontFragment =
+                    ipV4Packet.DontFragment; // Never call this for IPv6, it will throw exception for any value
 
             var udpPacket = ipPacket.ExtractUdp();
 
             // check if the destination endpoint is changed. Prevent reallocating the buffer
-            if (_destinationEndPoint == null || !_destinationEndPoint.Address.Equals(ipPacket.DestinationAddress) || _destinationEndPoint.Port != udpPacket.DestinationPort)
+            if (_destinationEndPoint == null || !_destinationEndPoint.Address.Equals(ipPacket.DestinationAddress) ||
+                _destinationEndPoint.Port != udpPacket.DestinationPort)
                 _destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
 
             // send packet to destination
@@ -105,7 +107,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         catch (Exception ex) {
             if (!IsInvalidState(ex))
                 VhLogger.Instance.LogError(ex, "Unexpected error in UDP receive loop.");
-            
+
             Dispose();
         }
     }

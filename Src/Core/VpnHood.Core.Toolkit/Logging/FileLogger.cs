@@ -12,6 +12,7 @@ public class FileLogger(
 {
     private const int DefaultBufferSize = 1024;
     private readonly object _lock = new();
+
     private readonly StreamWriter _streamWriter = new(
         new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.Read),
         Encoding.UTF8, DefaultBufferSize);

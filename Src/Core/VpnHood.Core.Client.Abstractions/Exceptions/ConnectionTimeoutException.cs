@@ -1,4 +1,3 @@
-
 namespace VpnHood.Core.Client.Abstractions.Exceptions;
 
 public class ConnectionTimeoutException : TimeoutException

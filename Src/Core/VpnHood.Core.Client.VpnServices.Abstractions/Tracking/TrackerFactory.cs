@@ -17,7 +17,8 @@ public class BuiltInTrackerFactory : ITrackerFactory
             SessionCount = 1,
             ClientId = createParams.ClientId,
             SessionId = Guid.NewGuid().ToString(),
-            UserProperties = new Dictionary<string, object> { { "client_version", createParams.ClientVersion.ToString(3) } }
+            UserProperties = new Dictionary<string, object>
+                { { "client_version", createParams.ClientVersion.ToString(3) } }
         };
 
         if (!string.IsNullOrEmpty(createParams.UserAgent))

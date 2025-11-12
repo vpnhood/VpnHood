@@ -8,6 +8,7 @@ namespace VpnHood.Test.Device;
 public class TestDeviceSocketFactory(TestDevice testDevice) : ISocketFactory
 {
     private readonly TestSocketFactory _socketFactory = new();
+
     public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
     {
         var tcpClient = new TcpClient(ipEndPoint.AddressFamily);

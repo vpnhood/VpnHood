@@ -9,7 +9,7 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
     public static VpnHoodAndroidApp Init(Func<AppOptions> optionsFactory)
     {
         // do not init again or in the vpn service process
-        if (VpnHoodApp.IsInit || AndroidDevice.IsVpnServiceProcess) 
+        if (VpnHoodApp.IsInit || AndroidDevice.IsVpnServiceProcess)
             return new VpnHoodAndroidApp();
 
         //app init

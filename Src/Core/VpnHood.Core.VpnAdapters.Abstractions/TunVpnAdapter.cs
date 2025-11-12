@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Buffers;
+﻿using System.Buffers;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.PacketTransports;
@@ -21,8 +21,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private int _mtu = 0xFFFF;
     private int _ioErrorCount;
     private readonly bool _autoMetric;
-    private static readonly IpNetwork[] WebDeadNetworks = [IpNetwork.Parse("203.0.113.1/24"), IpNetwork.Parse("2001:4860:ffff::1234/48")];
-    private readonly object _stopLock = new();
+
+    private static readonly IpNetwork[] WebDeadNetworks =
+        [IpNetwork.Parse("203.0.113.1/24"), IpNetwork.Parse("2001:4860:ffff::1234/48")];
+
+    private readonly Lock _stopLock = new();
     private bool _isRestarting;
     private bool _isStopping;
     protected bool UseNat { get; private set; }
@@ -46,12 +49,15 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected abstract void AdapterClose();
     protected abstract void WaitForTunWrite();
     protected abstract void WaitForTunRead();
+
     /// <summary>
     /// Return false if there is no packet
     /// </summary>
     /// <returns></returns>
     protected abstract bool ReadPacket(byte[] buffer);
+
     protected abstract bool WritePacket(IpPacket ipPacket);
+
     protected virtual void OnPrimaryAdapterIpChanged()
     {
     }
@@ -151,7 +157,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // SetSessionName
             if (!string.IsNullOrEmpty(options.SessionName))
                 await SetSessionName(options.SessionName, cancellationToken);
-            
+
             // Set adapter IPv4 address
             if (AdapterIpNetworkV4 != null) {
                 VhLogger.Instance.LogDebug("Adding IPv4 address to adapter ...");
@@ -235,21 +241,22 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // open the adapter
             VhLogger.Instance.LogInformation("Opening TUN adapter...");
             await AdapterOpen(cancellationToken).Vhc();
-            
+
             // start reading packets
             _ = Task.Run(StartReadingPackets, CancellationToken.None);
 
             VhLogger.Instance.LogInformation("TUN adapter started.");
         }
         catch (Exception ex) {
-            VhLogger.Instance.Log(ex is OperationCanceledException ? LogLevel.Trace : LogLevel.Error, ex, 
+            VhLogger.Instance.Log(ex is OperationCanceledException ? LogLevel.Trace : LogLevel.Error, ex,
                 "Failed to start TUN adapter.");
             Stop(false);
             throw;
         }
     }
 
-    private async Task AddRouteHelper(IEnumerable<IpNetwork> ipNetworks, AddressFamily addressFamily, CancellationToken cancellationToken)
+    private async Task AddRouteHelper(IEnumerable<IpNetwork> ipNetworks, AddressFamily addressFamily,
+        CancellationToken cancellationToken)
     {
         // remove the local networks
         ipNetworks = ipNetworks.Where(x => x.AddressFamily == addressFamily);

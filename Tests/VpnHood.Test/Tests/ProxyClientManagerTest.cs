@@ -28,7 +28,8 @@ public class ProxyEndPointManagerTest : TestBase
         var socketFactory = new TestSocketFactory();
         var mgr = new ProxyEndPointManager(
             proxyOptions: new ProxyOptions {
-                ProxyEndPoints = [new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 }]
+                ProxyEndPoints =
+                    [new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 }]
             },
             storagePath: TestHelper.WorkingPath,
             socketFactory: socketFactory);
@@ -80,14 +81,15 @@ public class ProxyEndPointManagerTest : TestBase
                 _ = await stream.ReadAsync(buf);
                 client.Close();
             }
-            catch { break; }
+            catch {
+                break;
+            }
         }
     }
 
     [TestMethod]
     public async Task RemoveBadServers_Marks_Unsupported_Types_As_Inactive()
     {
-
         // Create two TCP listeners that simulate non-HTTP proxy servers by returning invalid responses
         using var listener1 = new TcpListener(IPAddress.Loopback, 0);
         using var listener2 = new TcpListener(IPAddress.Loopback, 0);
@@ -104,11 +106,13 @@ public class ProxyEndPointManagerTest : TestBase
             new ProxyEndPoint {
                 Protocol = ProxyProtocol.Http,
                 Host = endPoint1.Address.ToString(),
-                Port = endPoint1.Port },
+                Port = endPoint1.Port
+            },
             new ProxyEndPoint {
                 Protocol = ProxyProtocol.Http,
                 Host = endPoint2.Address.ToString(),
-                Port = endPoint2.Port  }
+                Port = endPoint2.Port
+            }
         };
 
         var proxyOptions = new ProxyOptions { ProxyEndPoints = proxyEndPoints };
@@ -140,13 +144,15 @@ public class ProxyEndPointManagerTest : TestBase
         clientOptions.ProxyOptions = new ProxyOptions {
             ProxyEndPoints = [
                 new ProxyEndPoint {
-                        Protocol = ProxyProtocol.Socks5,
-                        Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
-                        Port = socks5ProxyServer.ListenerEndPoint.Port },
-                    new ProxyEndPoint {
-                        Protocol = ProxyProtocol.Http,
-                        Host = httpProxyServer.ListenerEndPoint.Address.ToString(),
-                        Port = httpProxyServer.ListenerEndPoint.Port }
+                    Protocol = ProxyProtocol.Socks5,
+                    Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
+                    Port = socks5ProxyServer.ListenerEndPoint.Port
+                },
+                new ProxyEndPoint {
+                    Protocol = ProxyProtocol.Http,
+                    Host = httpProxyServer.ListenerEndPoint.Address.ToString(),
+                    Port = httpProxyServer.ListenerEndPoint.Port
+                }
             ]
         }; // set to proxies end point
         var clientServerDom = await ClientServerDom.Create(TestHelper, clientOptions);

@@ -100,7 +100,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         var result = ProxyEndPointService.GetDeviceProxy();
         return Task.FromResult(result);
     }
-    
+
     public Task<AppProxyEndPointInfo[]> List()
     {
         var result = ProxyEndPointService.ListProxies();

@@ -1,4 +1,3 @@
-
 namespace VpnHood.Core.Toolkit.ApiClients;
 
 public sealed class ApiException : Exception

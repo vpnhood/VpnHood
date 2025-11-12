@@ -14,11 +14,11 @@ public class ProgressMonitor(
     private int TotalBatches => (int)Math.Ceiling(totalTaskCount / (double)maxDegreeOfParallelism);
     private TimeSpan MaxDuration => TimeSpan.FromMilliseconds(taskTimeout.TotalMilliseconds * TotalBatches);
     private int CurrentBatchIndex => _completedTaskCount / maxDegreeOfParallelism;
-    
+
     public ProgressStatus Progress => new(
-        Completed: _completedTaskCount, 
-        Total: totalTaskCount, 
-        StartedTime: _startTime, 
+        Completed: _completedTaskCount,
+        Total: totalTaskCount,
+        StartedTime: _startTime,
         Percentage: ProgressPercentage);
 
     public void IncrementCompleted()
@@ -40,9 +40,8 @@ public class ProgressMonitor(
     private int ProgressPercentage {
         get {
             lock (_incrementLock) {
-
                 // Method 1: Progress based on completed tasks
-                var taskCompletionProgress = (_completedTaskCount / (double)totalTaskCount) * 100.0;
+                var taskCompletionProgress = _completedTaskCount / (double)totalTaskCount * 100.0;
 
                 // Method 2: Overall time-based progress
                 var completedTime = CurrentBatchIndex * taskTimeout + (FastDateTime.Now - _currentBatchStartTime);

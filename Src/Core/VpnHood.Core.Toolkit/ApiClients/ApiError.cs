@@ -138,5 +138,4 @@ public class ApiError : ICloneable, IEquatable<ApiError>
     {
         return HashCode.Combine(TypeName, TypeFullName, Message, InnerMessage);
     }
-
 }

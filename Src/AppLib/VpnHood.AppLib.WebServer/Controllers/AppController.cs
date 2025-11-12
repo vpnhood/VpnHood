@@ -194,7 +194,7 @@ internal class AppController : ControllerBase, IAppController
             new ConnectOptions {
                 ClientProfileId = clientProfileId,
                 ServerLocation = serverLocation,
-                PlanId = planId,
+                PlanId = planId
             });
     }
 
@@ -302,7 +302,7 @@ internal class AppController : ControllerBase, IAppController
             .OrderBy(region => region.EnglishName)
             .Select(region => new CountryInfo {
                 CountryCode = region.Name,
-                EnglishName = region.EnglishName,
+                EnglishName = region.EnglishName
             })
             .ToArray();
 

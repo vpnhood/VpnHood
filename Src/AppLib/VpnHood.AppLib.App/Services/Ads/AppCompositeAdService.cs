@@ -10,7 +10,6 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Ads;
 
-
 internal class AppCompositeAdService
 {
     private AppAdProviderItem? _loadedAdProviderItem;
@@ -18,7 +17,9 @@ internal class AppCompositeAdService
     private readonly ITracker? _tracker;
     private ProgressMonitor? _progressMonitor;
     public bool IsPreload { get; private set; }
+
     public readonly record struct ShowLoadedAdResult(string NetworkName, ShowAdResult ShowAdResult);
+
     public ProgressStatus? LoadAdProgress => _progressMonitor?.Progress;
 
     public AppCompositeAdService(AppAdProviderItem[] adProviderItems, ITracker? tracker)
@@ -91,7 +92,8 @@ internal class AppCompositeAdService
                 try {
                     VhLogger.Instance.LogInformation("Trying to load ad. ItemName: {ItemName}", adProviderItem.Name);
                     using var timeoutCts = new CancellationTokenSource(loadAdTimeout);
-                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+                    using var linkedCts =
+                        CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
                     if (adProviderItem.IsFallback) _progressMonitor = null; // do not track fallback ads
                     await adProviderItem.AdProvider.LoadAd(uiContext, linkedCts.Token).Vhc();
                     _loadedAdProviderItem = adProviderItem;
@@ -145,7 +147,8 @@ internal class AppCompositeAdService
         // show the ad
         try {
             VhLogger.Instance.LogInformation("Trying to show ad. ItemName: {ItemName}", _loadedAdProviderItem.Name);
-            var showAdResult = await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken).Vhc();
+            var showAdResult = await _loadedAdProviderItem.AdProvider.ShowAd(uiContext, customData, cancellationToken)
+                .Vhc();
             VhLogger.Instance.LogDebug("Showing ad has been completed. {ItemName}", _loadedAdProviderItem.Name);
             return new ShowLoadedAdResult(_loadedAdProviderItem.Name, showAdResult);
         }

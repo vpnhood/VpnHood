@@ -5,14 +5,16 @@ using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
+
 namespace VpnHood.Core.Tunneling.Proxies;
 
-public class PingProxy(bool autoDisposePackets) 
+public class PingProxy(bool autoDisposePackets)
     : SinglePacketTransport(new PacketTransportOptions {
-                AutoDisposePackets = autoDisposePackets,
-                Blocking = false, 
-                QueueCapacity = 1})
-    , ITimeoutItem
+            AutoDisposePackets = autoDisposePackets,
+            Blocking = false,
+            QueueCapacity = 1
+        })
+        , ITimeoutItem
 {
     private readonly Ping _ping = new();
     public void Cancel() => _ping.SendAsyncCancel();
@@ -45,7 +47,8 @@ public class PingProxy(bool autoDisposePackets)
             icmpPacket.Payload.ToArray(), pingOptions).Vhc();
 
         if (pingReply.Status != IPStatus.Success)
-            throw new Exception($"Ping Reply has been failed! Status: {pingReply.Status}. Packet: {PacketLogger.Format(ipPacket)}");
+            throw new Exception(
+                $"Ping Reply has been failed! Status: {pingReply.Status}. Packet: {PacketLogger.Format(ipPacket)}");
 
         var replyPacket = PacketBuilder.BuildIcmpV4EchoReply(
             sourceAddress: ipPacket.DestinationAddress, destinationAddress: ipPacket.SourceAddress,
@@ -68,7 +71,8 @@ public class PingProxy(bool autoDisposePackets)
             icmpPacket.Payload.ToArray(), pingOptions).Vhc();
 
         if (pingReply.Status != IPStatus.Success)
-            throw new Exception($"Ping Reply has been failed. Status: {pingReply.Status}. Packet: {PacketLogger.Format(ipPacket)}");
+            throw new Exception(
+                $"Ping Reply has been failed. Status: {pingReply.Status}. Packet: {PacketLogger.Format(ipPacket)}");
 
         var replyPacket = PacketBuilder.BuildIcmpV6EchoReply(
             sourceAddress: ipPacket.DestinationAddress, destinationAddress: ipPacket.SourceAddress,

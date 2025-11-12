@@ -19,7 +19,8 @@ public static class ClientStreamExtensions
             // If the client stream requires an HTTP response, write it to the client stream
             if (clientStream.RequireHttpResponse) {
                 clientStream.RequireHttpResponse = false;
-                await clientStream.Stream.WriteAsync(HttpResponseBuilder.Ok(responseData.Length), cancellationToken).Vhc();
+                await clientStream.Stream.WriteAsync(HttpResponseBuilder.Ok(responseData.Length), cancellationToken)
+                    .Vhc();
             }
 
             // Write the session response to the client stream
@@ -34,7 +35,8 @@ public static class ClientStreamExtensions
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
-                    "Could not dispose a ClientStream gracefully. ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
+                    "Could not dispose a ClientStream gracefully. ClientStreamId: {ClientStreamId}",
+                    clientStream.ClientStreamId);
 
                 clientStream.Dispose();
             }

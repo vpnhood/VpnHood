@@ -62,8 +62,8 @@ public class CheckNewVersionTest : TestAppBase
     public async Task Current_is_deprecated()
     {
         SetNewRelease(new Version(CurrentAppVersion.Major, CurrentAppVersion.Minor, CurrentAppVersion.Build + 1),
-            DateTime.UtcNow, 
-            notificationDelay: TimeSpan.Zero, 
+            DateTime.UtcNow,
+            notificationDelay: TimeSpan.Zero,
             deprecatedVersion: CurrentAppVersion);
 
         var appOptions = TestAppHelper.CreateAppOptions();
@@ -152,7 +152,7 @@ public class CheckNewVersionTest : TestAppBase
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1, 
+            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
             CheckInterval = TimeSpan.FromMilliseconds(500)
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);

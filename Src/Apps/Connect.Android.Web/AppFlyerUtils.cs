@@ -13,16 +13,17 @@ public static class AppFlyerUtils
         try {
             // Start AppsFlyer if the user's country is China
             if (useRegionPolicy && !RegionInfo.CurrentRegion.Name.Equals("CN", StringComparison.OrdinalIgnoreCase)) {
-                VhLogger.Instance.LogInformation("Bypassing AppsFlyer due to regional policy. {DeviceRegion}", RegionInfo.CurrentRegion.Name);
+                VhLogger.Instance.LogInformation("Bypassing AppsFlyer due to regional policy. {DeviceRegion}",
+                    RegionInfo.CurrentRegion.Name);
                 return;
             }
 
-            VhLogger.Instance.LogInformation("Initialize AppsFlyer. DeviceRegion: {DeviceRegion}", RegionInfo.CurrentRegion.Name);
+            VhLogger.Instance.LogInformation("Initialize AppsFlyer. DeviceRegion: {DeviceRegion}",
+                RegionInfo.CurrentRegion.Name);
             AppsFlyerLib.Instance.SetDebugLog(AppConfigs.IsDebugMode);
             AppsFlyerLib.Instance.SetDisableAdvertisingIdentifiers(true);
             AppsFlyerLib.Instance.Init(appsFlyerDevKey, null, context);
             AppsFlyerLib.Instance.Start(context);
-
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "AppsFlyer initialization failed.");

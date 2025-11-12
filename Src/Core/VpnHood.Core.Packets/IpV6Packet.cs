@@ -66,6 +66,7 @@ public class IpV6Packet : IpPacket
     public override IpProtocol Protocol => NextHeader;
     public IpProtocol NextHeader => (IpProtocol)Span[6];
     public override Memory<byte> Header => Buffer[..40];
+
     public override byte TimeToLive {
         get => HopLimit;
         set => HopLimit = value;
@@ -99,7 +100,8 @@ public class IpV6Packet : IpPacket
         }
         set {
             if (value is < 0 or > 0xFFFFF)
-                throw new ArgumentOutOfRangeException(nameof(value), "Flow Label must be a 20-bit unsigned value (0 to 1048575).");
+                throw new ArgumentOutOfRangeException(nameof(value),
+                    "Flow Label must be a 20-bit unsigned value (0 to 1048575).");
 
             // Write back 20-bit Flow Label
             Span[1] = (byte)(Span[1] & 0xF0 | value >> 16 & 0x0F);
@@ -115,8 +117,8 @@ public class IpV6Packet : IpPacket
         }
         set {
             // value is 8 bits: upper 4 bits go to lower nibble of Span[0], lower 4 bits go to upper nibble of Span[1]
-            Span[0] = (byte)(Span[0] & 0xF0 | value >> 4);     // Preserve version (upper 4 bits)
-            Span[1] = (byte)(Span[1] & 0x0F | value << 4);     // Preserve FlowLabel high bits
+            Span[0] = (byte)(Span[0] & 0xF0 | value >> 4); // Preserve version (upper 4 bits)
+            Span[1] = (byte)(Span[1] & 0x0F | value << 4); // Preserve FlowLabel high bits
         }
     }
 
@@ -126,7 +128,8 @@ public class IpV6Packet : IpPacket
             throw new ArgumentException("Buffer is not an IPv6 packet.", nameof(buffer));
 
         if (buffer.Length < 6)
-            throw new ArgumentException("IPv6 header requires at least 6 bytes to determine packet length.", nameof(buffer));
+            throw new ArgumentException("IPv6 header requires at least 6 bytes to determine packet length.",
+                nameof(buffer));
 
         var payloadLength = (ushort)(buffer[4] << 8 | buffer[5]);
         return 40 + payloadLength;

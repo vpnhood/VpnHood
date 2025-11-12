@@ -7,7 +7,8 @@ internal class TestAuthenticationProvider : IAppAuthenticationProvider
 {
     public bool IsSignInWithGoogleSupported => false;
     public string? UserId { get; private set; }
-    public HttpClient HttpClient { get; } = new ();
+    public HttpClient HttpClient { get; } = new();
+
     public Task SignInWithGoogle(IUiContext uiContext)
     {
         UserId = Guid.Empty.ToString();

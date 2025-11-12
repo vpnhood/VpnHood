@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -18,6 +18,7 @@ public class TcpClientStream : IClientStream
     private bool _reusing;
 
     public delegate void ReuseCallback(IClientStream clientStream);
+
     public Stream Stream { get; }
     public bool RequireHttpResponse { get; set; }
     public IPEndPointPair IpEndPointPair { get; }
@@ -36,7 +37,8 @@ public class TcpClientStream : IClientStream
         }
     }
 
-    public TcpClientStream(TcpClient tcpClient, Stream stream, string clientStreamId, ReuseCallback? reuseCallback = null)
+    public TcpClientStream(TcpClient tcpClient, Stream stream, string clientStreamId,
+        ReuseCallback? reuseCallback = null)
     {
         _clientStreamId = clientStreamId;
         _reuseCallback = reuseCallback;
@@ -47,7 +49,8 @@ public class TcpClientStream : IClientStream
 
         VhLogger.Instance.LogDebug(GeneralEventId.Stream,
             "A TcpClientStream has been created. ClientStreamId: {ClientStreamId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-            ClientStreamId, stream.GetType().Name, VhLogger.Format(IpEndPointPair.LocalEndPoint), VhLogger.Format(IpEndPointPair.RemoteEndPoint));
+            ClientStreamId, stream.GetType().Name, VhLogger.Format(IpEndPointPair.LocalEndPoint),
+            VhLogger.Format(IpEndPointPair.RemoteEndPoint));
     }
 
     public bool Connected {
@@ -74,8 +77,10 @@ public class TcpClientStream : IClientStream
                 "Reusing a TcpClientStream. ClientStreamId: {ClientStreamId}", ClientStreamId);
 
             // verify if we can reuse the stream
-            if (_reuseCallback == null) throw new InvalidOperationException("Can not reuse the stream when reuseCallback is null.");
-            if (Stream is not ChunkStream chunkStream) throw new InvalidOperationException("Can not reuse the stream when stream is not ChunkStream.");
+            if (_reuseCallback == null)
+                throw new InvalidOperationException("Can not reuse the stream when reuseCallback is null.");
+            if (Stream is not ChunkStream chunkStream)
+                throw new InvalidOperationException("Can not reuse the stream when stream is not ChunkStream.");
 
             await Reuse(chunkStream, _reuseCallback).Vhc();
         }
@@ -100,7 +105,7 @@ public class TcpClientStream : IClientStream
                 throw new ObjectDisposedException(GetType().Name);
 
             // we don't call SuppressFlow on debug to allow MsTest shows console output in nested task
-            using IDisposable? suppressFlow = IsDebug ? null : ExecutionContext.SuppressFlow(); 
+            using IDisposable? suppressFlow = IsDebug ? null : ExecutionContext.SuppressFlow();
             var newTcpClientStream = new TcpClientStream(_tcpClient, newStream, _clientStreamId, reuseCallback);
             Task.Run(() => reuseCallback(newTcpClientStream));
 

@@ -14,7 +14,6 @@ public class AccessCodeTest : TestAppBase
     [TestMethod]
     public async Task AaFoo()
     {
-
         var tcpClient = new TcpClient();
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);

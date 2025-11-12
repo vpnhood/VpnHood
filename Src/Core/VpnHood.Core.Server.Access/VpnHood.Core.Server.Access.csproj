@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<Description>Stores, and retrieves end users' access and usage. Provides required interfaces and classes to use or create an access server and accounting</Description>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -33,10 +33,6 @@
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="System.Text.Json" Version="10.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

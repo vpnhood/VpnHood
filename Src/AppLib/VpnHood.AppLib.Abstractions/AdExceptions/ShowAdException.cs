@@ -3,6 +3,7 @@
 public class ShowAdException : AdException
 {
     public string? AdNetworkName { get; set; }
+
     public ShowAdException(string message) : base(message)
     {
     }

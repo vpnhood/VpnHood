@@ -17,10 +17,11 @@ public static class AppTrackerBuilder
                 { "ad_network", adNetwork ?? "(vh_unknown)" },
                 { "error", errorMessage },
                 { "country", countryCode },
-                { "is_preload", isPreload },
+                { "is_preload", isPreload }
             }
         };
     }
+
     public static TrackEvent BuildAdFailed(string? adNetwork, string errorMessage,
         string? countryCode, bool isPreload)
     {
@@ -42,7 +43,7 @@ public static class AppTrackerBuilder
             errorMessage: errorMessage, countryCode: countryCode, isPreload: isPreload);
     }
 
-    public static TrackEvent BuildShowAdOk(string adNetwork, string? countryCode, bool isPreload, 
+    public static TrackEvent BuildShowAdOk(string adNetwork, string? countryCode, bool isPreload,
         ShowAdResult showAdResult)
     {
         if (countryCode?.Trim() is null or "") countryCode = "(vh_unknown)";
@@ -53,7 +54,7 @@ public static class AppTrackerBuilder
                 { "ad_network", adNetwork },
                 { "country", countryCode },
                 { "is_preload", isPreload },
-                { "action", showAdResult },
+                { "action", showAdResult }
             }
         };
     }
@@ -79,5 +80,4 @@ public static class AppTrackerBuilder
             }
         };
     }
-
 }

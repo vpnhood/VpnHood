@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Buffers;
+﻿using System.Buffers;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.WebSockets;
@@ -212,7 +212,8 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         try {
             while (true) {
                 // get chunk header
-                var webSocketHeader = await WebSocketUtils.ReadWebSocketHeader(SourceStream, _readChunkHeaderBuffer, cancellationToken);
+                var webSocketHeader =
+                    await WebSocketUtils.ReadWebSocketHeader(SourceStream, _readChunkHeaderBuffer, cancellationToken);
 
                 // skip close connection payload
                 if (webSocketHeader.IsCloseConnection) {
@@ -233,7 +234,8 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
                 // read another chunk header if it is not data chunk
                 if (webSocketHeader.IsPing || webSocketHeader.IsPing || !webSocketHeader.IsBinary) {
                     VhLogger.Instance.LogDebug(GeneralEventId.Stream,
-                        "BinaryStream has received a WebSocket frame that is not binary. StreamId: {StreamId}", StreamId);
+                        "BinaryStream has received a WebSocket frame that is not binary. StreamId: {StreamId}",
+                        StreamId);
 
                     // discard the frame payload if it is ping or pong
                     await DiscardWebSocketFrame(webSocketHeader, cancellationToken).Vhc();
@@ -258,7 +260,8 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private async Task DiscardWebSocketFrame(WebSocketHeader webSocketHeader, CancellationToken cancellationToken)
     {
         if (webSocketHeader.PayloadLength > int.MaxValue)
-            throw new InvalidOperationException($"WebSocket close frame payload length is too big: {webSocketHeader.PayloadLength}. StreamId: {StreamId}");
+            throw new InvalidOperationException(
+                $"WebSocket close frame payload length is too big: {webSocketHeader.PayloadLength}. StreamId: {StreamId}");
 
         using var memoryOwner = MemoryPool<byte>.Shared.Rent(1024 * 8);
         var memory = memoryOwner.Memory;

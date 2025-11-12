@@ -13,6 +13,7 @@ public class InternalInAdProvider : IAppAdProvider
     public bool IsWaitingForAd => _showAdTask?.Task.IsCompleted is false;
 
     private TaskCompletionSource<ShowAdResult>? _showAdTask;
+
     public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
         AdLoadedTime = FastDateTime.Now;
@@ -22,7 +23,7 @@ public class InternalInAdProvider : IAppAdProvider
     public Task<ShowAdResult> ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
     {
         _showAdTask = new TaskCompletionSource<ShowAdResult>();
-        return _showAdTask.Task.WaitAsync(cancellationToken);   
+        return _showAdTask.Task.WaitAsync(cancellationToken);
     }
 
     public void SetException(Exception ex)
@@ -39,5 +40,4 @@ public class InternalInAdProvider : IAppAdProvider
     {
         _showAdTask?.TrySetCanceled();
     }
-
 }

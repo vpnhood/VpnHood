@@ -17,8 +17,8 @@ public sealed class AndroidVpnNotification : IDisposable
     public const int NotificationId = 3500;
 
     public AndroidVpnNotification(
-        Context context, 
-        VpnServiceLocalization serviceLocalization, 
+        Context context,
+        VpnServiceLocalization serviceLocalization,
         string? sessionName)
     {
         _sessionName = sessionName;
@@ -28,7 +28,8 @@ public sealed class AndroidVpnNotification : IDisposable
 
     public Notification Build() => _notificationBuilder.Build();
 
-    private static Notification.Builder CreateNotificationBuilder(Context context, VpnServiceLocalization serviceLocalization)
+    private static Notification.Builder CreateNotificationBuilder(Context context,
+        VpnServiceLocalization serviceLocalization)
     {
         Notification.Builder notificationBuilder;
 
@@ -61,19 +62,22 @@ public sealed class AndroidVpnNotification : IDisposable
         var manageIntent = context.PackageManager.GetLaunchIntentForPackage(context.PackageName);
         var pendingIntent = PendingIntent.GetActivity(context, 1, manageIntent, intentFlags);
         notificationBuilder.SetContentIntent(pendingIntent);
-        notificationBuilder.AddAction(new Notification.Action.Builder(null, serviceLocalization.Manage, pendingIntent).Build());
+        notificationBuilder.AddAction(new Notification.Action.Builder(null, serviceLocalization.Manage, pendingIntent)
+            .Build());
 
         //  disconnect intent
         var disconnectIntent = new Intent(context, typeof(AndroidVpnService));
         disconnectIntent.SetAction(DisconnectAction);
         disconnectIntent.PutExtra("manual", true);
         pendingIntent = PendingIntent.GetService(context, 2, disconnectIntent, intentFlags);
-        notificationBuilder.AddAction(new Notification.Action.Builder(null, serviceLocalization.Disconnect, pendingIntent).Build());
+        notificationBuilder.AddAction(
+            new Notification.Action.Builder(null, serviceLocalization.Disconnect, pendingIntent).Build());
 
         notificationBuilder.SetOngoing(true); // ignored by StartForeground
         notificationBuilder.SetAutoCancel(false); // ignored by StartForeground
         notificationBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
-        var windowBackgroundColor = VpnServiceLocalization.TryParseColorFromHex(serviceLocalization.WindowBackgroundColor ?? string.Empty);
+        var windowBackgroundColor =
+            VpnServiceLocalization.TryParseColorFromHex(serviceLocalization.WindowBackgroundColor ?? string.Empty);
         if (windowBackgroundColor != null)
             notificationBuilder.SetColor(windowBackgroundColor.Value.ToAndroidColor());
 
@@ -110,7 +114,7 @@ public sealed class AndroidVpnNotification : IDisposable
 
 
             // show or hide
-            var notificationManager = 
+            var notificationManager =
                 (NotificationManager?)Application.Context.GetSystemService(Context.NotificationService);
             if (notificationManager == null)
                 return;

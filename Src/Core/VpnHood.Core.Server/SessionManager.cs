@@ -374,21 +374,25 @@ public class SessionManager : IAsyncDisposable, IDisposable
         // 
         var notSyncedIdleSessions = idleSessions.Where(x => x.Traffic.Total > 0).ToArray();
         if (notSyncedIdleSessions.Length > 0)
-            VhLogger.Instance.LogDebug(GeneralEventId.Session, "Syncing {IdleSessions} idle sessions...", notSyncedIdleSessions.Length);
+            VhLogger.Instance.LogDebug(GeneralEventId.Session, "Syncing {IdleSessions} idle sessions...",
+                notSyncedIdleSessions.Length);
 
         var syncedIdleSessions = idleSessions.Where(x => x.Traffic.Total == 0).ToArray();
         if (syncedIdleSessions.Length > 0) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {IdleSessions} idle sessions...", syncedIdleSessions.Length);
+            VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {IdleSessions} idle sessions...",
+                syncedIdleSessions.Length);
             RemoveSessions(syncedIdleSessions);
         }
     }
+
     private void DisposeFailedSessions()
     {
         var failedSessions = GetFailedSessions();
         if (failedSessions.Length == 0)
             return;
 
-        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {FailedSessions} failed sessions...", failedSessions.Length);
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {FailedSessions} failed sessions...",
+            failedSessions.Length);
         foreach (var failedSession in failedSessions)
             failedSession.Dispose();
     }
@@ -403,7 +407,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
         if (expiredSessions.Length == 0)
             return;
 
-        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {ExpiredSessions} expired sessions...", expiredSessions.Length);
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Disposing {ExpiredSessions} expired sessions...",
+            expiredSessions.Length);
         foreach (var session in expiredSessions) {
             session.SessionResponseEx = new SessionResponse {
                 ErrorCode = SessionErrorCode.SessionExpired
@@ -419,7 +424,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
         if (deadSessions.Length == 0)
             return;
 
-        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {DeadSessions} disposed sessions...", deadSessions.Length);
+        VhLogger.Instance.LogDebug(GeneralEventId.Session, "Removing {DeadSessions} disposed sessions...",
+            deadSessions.Length);
         RemoveSessions(deadSessions);
     }
 
@@ -487,7 +493,6 @@ public class SessionManager : IAsyncDisposable, IDisposable
         // update sessions from the result of access manager
         foreach (var responsePair in sessionResponses) {
             if (Sessions.TryGetValue(responsePair.Key, out var session)) {
-
                 // log for debugging
                 if (responsePair.Value.ErrorCode != SessionErrorCode.Ok)
                     VhLogger.Instance.LogDebug(GeneralEventId.Session,
@@ -514,6 +519,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     }
 
     private readonly AsyncLock _syncLock = new();
+
     public async Task<int> Sync(bool force = false)
     {
         using var lockResult = await _syncLock.LockAsync(TimeSpan.Zero).Vhc();

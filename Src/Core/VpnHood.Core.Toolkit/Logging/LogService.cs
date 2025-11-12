@@ -28,11 +28,12 @@ public class LogService(string logFilePath) : IDisposable
         }
 
         // report logger to VhLogger
-        VhLogger.Instance.LogDebug("LogService has started. Options: {Options}", 
+        VhLogger.Instance.LogDebug("LogService has started. Options: {Options}",
             JsonSerializer.Serialize(options));
     }
 
     private readonly object _isStoppingLock = new();
+
     public void Stop()
     {
         lock (_isStoppingLock) {

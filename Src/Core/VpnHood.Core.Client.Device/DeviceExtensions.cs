@@ -9,7 +9,6 @@ public static class DeviceExtensions
     {
         public bool TryBindProcessToVpn(bool value)
         {
-
             try {
                 if (!device.IsBindProcessToVpnSupported)
                     VhLogger.Instance.LogError("BindProcessToVpn is not supported.");
@@ -23,7 +22,7 @@ public static class DeviceExtensions
             }
         }
 
-        public async Task<bool> TryBindProcessToVpn(bool value, 
+        public async Task<bool> TryBindProcessToVpn(bool value,
             TimeSpan delay, CancellationToken cancellationToken)
         {
             bool result;

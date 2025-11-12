@@ -11,7 +11,7 @@ public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager ses
         Memory<byte> buffer,
         long channelCryptorPosition)
     {
-        var session = sessionManager.GetSessionById(sessionId) 
+        var session = sessionManager.GetSessionById(sessionId)
                       ?? throw new Exception($"Session does not found. SessionId: {sessionId}");
 
         //make sure UDP channel is added

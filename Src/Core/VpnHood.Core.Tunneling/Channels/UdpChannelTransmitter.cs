@@ -22,13 +22,14 @@ public abstract class UdpChannelTransmitter : IDisposable
     private bool _disposed;
     public const int HeaderLength = 32; //IV (8) + Sign (2) + Reserved (6) + SessionId (8) + SessionPos (8)
     public const int SendHeaderLength = HeaderLength - 8; //IV will not be encrypted
-    
+
     public TransferBufferSize? BufferSize {
-        get => new (_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
+        get => new(_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
         set {
             using var udpClient = new UdpClient(_udpClient.Client.AddressFamily);
             _udpClient.Client.SendBufferSize = value?.Send > 0 ? value.Value.Send : udpClient.Client.SendBufferSize;
-            _udpClient.Client.ReceiveTimeout = value?.Receive > 0 ? value.Value.Receive : udpClient.Client.ReceiveTimeout;
+            _udpClient.Client.ReceiveTimeout =
+                value?.Receive > 0 ? value.Value.Receive : udpClient.Client.ReceiveTimeout;
         }
     }
 
@@ -133,12 +134,12 @@ public abstract class UdpChannelTransmitter : IDisposable
 
                 // read session and session position
                 bufferIndex += 8;
-                var sessionId = BitConverter.ToUInt64(buffer, bufferIndex); 
+                var sessionId = BitConverter.ToUInt64(buffer, bufferIndex);
                 bufferIndex += 8;
                 var channelCryptorPosition = BitConverter.ToInt64(buffer, bufferIndex);
                 bufferIndex += 8;
 
-                OnReceiveData(sessionId, udpResult.RemoteEndPoint, 
+                OnReceiveData(sessionId, udpResult.RemoteEndPoint,
                     udpResult.Buffer.AsMemory(bufferIndex), channelCryptorPosition);
             }
             catch (Exception ex) {

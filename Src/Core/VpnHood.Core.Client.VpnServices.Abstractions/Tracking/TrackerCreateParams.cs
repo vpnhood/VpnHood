@@ -11,5 +11,4 @@ public class TrackerCreateParams
 
     [JsonConverter(typeof(VersionConverter))]
     public required Version ClientVersion { get; set; }
-
 }

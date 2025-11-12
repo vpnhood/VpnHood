@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Text.Json;
+﻿using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -21,7 +21,7 @@ public class AppUpdaterService
         _appVersion = appVersion;
         _updateOptions = updateOptions;
         _data = JsonUtils.TryDeserializeFile<AppUpdaterData>(VersionCheckFilePath) ??
-                              new AppUpdaterData();
+                new AppUpdaterData();
     }
 
     public AppUpdaterStatus Status {
@@ -52,7 +52,7 @@ public class AppUpdaterService
             return VersionStatus.Unknown;
 
         // wait for updater
-        if(DateTime.UtcNow - _data.PublishInfo.ReleaseDate < _data.PublishInfo.NotificationDelay)
+        if (DateTime.UtcNow - _data.PublishInfo.ReleaseDate < _data.PublishInfo.NotificationDelay)
             return VersionStatus.Latest; // assume the latest version is available to let store validate the app
 
         // set default notification delay
@@ -116,7 +116,6 @@ public class AppUpdaterService
         finally {
             Save();
         }
-
     }
 
     private async Task<bool> TryUpdateByProvider(bool force, CancellationToken cancellationToken)
@@ -135,7 +134,7 @@ public class AppUpdaterService
             _data.UpdaterAvailableSince ??= DateTime.Now;
 
             // check if the update is available for the given delay
-            if (!force && !IsInPostponeTime && 
+            if (!force && !IsInPostponeTime &&
                 DateTime.Now - _data.UpdaterAvailableSince < _updateOptions.PromptDelay)
                 return true; // handled
 

@@ -1,19 +1,25 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions options) 
+public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions options)
     : PacketChannel(options)
 {
     private readonly Memory<byte> _buffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly BufferCryptor _sessionCryptorWriter = new(options.SessionKey);
     private readonly BufferCryptor _sessionCryptorReader = new(options.SessionKey);
-    private readonly long _cryptorPosBase = options.LeaveTransmitterOpen ? DateTime.UtcNow.Ticks : 0; // make sure server does not use client position as IV
+
+    private readonly long
+        _cryptorPosBase =
+            options.LeaveTransmitterOpen
+                ? DateTime.UtcNow.Ticks
+                : 0; // make sure server does not use client position as IV
+
     private readonly ulong _sessionId = options.SessionId;
     private readonly int _protocolVersion = options.ProtocolVersion;
     private readonly bool _leaveTransmitterOpen = options.LeaveTransmitterOpen;
@@ -59,7 +65,8 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
                 var packetBytes = ipPacket.Buffer;
 
                 // flush buffer if this packet does not fit
-                if (bufferIndex > UdpChannelTransmitter.HeaderLength && bufferIndex + packetBytes.Length > _buffer.Length) {
+                if (bufferIndex > UdpChannelTransmitter.HeaderLength &&
+                    bufferIndex + packetBytes.Length > _buffer.Length) {
                     await SendBuffer(_buffer[..bufferIndex]).Vhc();
                     bufferIndex = UdpChannelTransmitter.HeaderLength;
                 }
@@ -82,14 +89,14 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
                 await SendBuffer(_buffer[..bufferIndex]).Vhc();
             }
         }
-        catch (Exception ex) when(ex is OperationCanceledException or ObjectDisposedException) {
+        catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException) {
             // ignore cancellation
             Dispose();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
                 "Unexpected error in sending packets. ChannelId: {ChannelId}", ChannelId);
-            
+
             if (!CanRetry(ex))
                 Dispose();
         }

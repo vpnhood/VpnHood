@@ -117,11 +117,12 @@ public class IpNetwork
 
                 var maskBytes = new byte[16];
                 for (var i = 0; i < prefixLength / 8; i++) maskBytes[i] = 0xFF;
-                if (prefixLength % 8 > 0) maskBytes[prefixLength / 8] = (byte)(0xFF << (8 - (prefixLength % 8)));
+                if (prefixLength % 8 > 0) maskBytes[prefixLength / 8] = (byte)(0xFF << (8 - prefixLength % 8));
                 return new IPAddress(maskBytes);
 
             default:
-                throw new ArgumentException("Invalid Address Family. Use InterNetwork (IPv4) or InterNetworkV6 (IPv6).");
+                throw new ArgumentException(
+                    "Invalid Address Family. Use InterNetwork (IPv4) or InterNetworkV6 (IPv6).");
         }
     }
 
@@ -168,6 +169,7 @@ public class IpNetwork
                FirstIpAddress.Equals(ipNetwork.FirstIpAddress) &&
                LastIpAddress.Equals(ipNetwork.LastIpAddress);
     }
+
     public override int GetHashCode()
     {
         return HashCode.Combine(FirstIpAddress, LastIpAddress);

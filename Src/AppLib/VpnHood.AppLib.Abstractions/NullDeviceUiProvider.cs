@@ -23,22 +23,27 @@ public class NullDeviceUiProvider : IDeviceUiProvider
     public virtual bool IsPrivateDnsSettingsSupported => false;
 
     public virtual bool IsSettingsSupported => false;
+
     public virtual void OpenSettings(IUiContext uiContext) =>
         throw new NotSupportedException();
 
     public virtual bool IsAlwaysOnSettingsSupported => false;
+
     public virtual void OpenAlwaysOnSettings(IUiContext uiContext) =>
         throw new NotSupportedException();
 
-    public virtual bool IsKillSwitchSettingsSupported =>false;
+    public virtual bool IsKillSwitchSettingsSupported => false;
+
     public virtual void OpenKillSwitchSettings(IUiContext requiredContext) =>
         throw new NotSupportedException();
 
     public virtual bool IsAppSettingsSupported => false;
+
     public virtual void OpenAppSettings(IUiContext context) =>
         throw new NotSupportedException();
 
     public virtual bool IsAppNotificationSettingsSupported => false;
+
     public virtual void OpenAppNotificationSettings(IUiContext uiContext) =>
         throw new NotSupportedException();
 

@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Exceptions;
@@ -300,7 +300,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                             new WebSocketStream(sslStream, streamId, useBuffer, isServer: true),
                             streamId, ReuseClientStream) {
                             RequireHttpResponse = false // Upgrade response has been already sent
-                        },
+                        }
                     };
 
                 case TunnelStreamType.WebSocket:
@@ -385,14 +385,16 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var clientStream = serverConnection.ClientStream;
         VhLogger.Instance.LogDebug(GeneralEventId.Request,
             "ServerHost has created a new connection. ClientStreamId: {ClientStreamId}, RemoteEp: {RemoteEp}, ClientIp: {ClientIp}",
-            clientStream.ClientStreamId, VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint), VhLogger.Format(serverConnection.ClientIp));
+            clientStream.ClientStreamId, VhLogger.Format(clientStream.IpEndPointPair.RemoteEndPoint),
+            VhLogger.Format(serverConnection.ClientIp));
 
         try {
             var requestVersion = await ReadRequestVersion(clientStream, connectCts.Token).Vhc();
             if (requestVersion <= 0)
                 return; // client stream has been closed
 
-            await ProcessClientStream(clientStream, requestVersion, clientIp: serverConnection.ClientIp, connectCts.Token).Vhc();
+            await ProcessClientStream(clientStream, requestVersion, clientIp: serverConnection.ClientIp,
+                connectCts.Token).Vhc();
         }
         catch (Exception ex) {
             // try to write unauthorized response for any unknown error if client steam is not ChunkStream
@@ -404,8 +406,11 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     clientStream.ClientStreamId);
 
                 // create a new CancellationTokenSource for close timeout
-                using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
-                using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token);
+                using var closeTimeoutCts =
+                    new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
+                using var closeCts =
+                    CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token,
+                        _cancellationTokenSource.Token);
                 await VhUtils.TryInvokeAsync("Write unauthorized response.",
                     () => clientStream.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), closeCts.Token)).Vhc();
             }
@@ -431,7 +436,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             // add client stream to reuse list and take the ownership
             using var timeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-            using var reusedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _cancellationTokenSource.Token);
+            using var reusedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _cancellationTokenSource.Token);
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "ServerHost is pending a shared ClientStream for reuse. ClientStreamId: {ClientStreamId}",
@@ -442,7 +448,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
             if (requestVersion <= 0)
                 return; // client stream has been closed
 
-            timeoutCts.CancelAfter(_sessionManager.SessionOptions.TcpReuseTimeoutValue); // reset timeout for new request
+            timeoutCts.CancelAfter(_sessionManager.SessionOptions
+                .TcpReuseTimeoutValue); // reset timeout for new request
             await ProcessClientStream(clientStream, requestVersion, clientIp: null, reusedCts.Token).Vhc();
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
@@ -481,8 +488,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             // reply the error to caller if it is SessionException
             // create a new CancellationTokenSource for close timeout
-            using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
-            using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token);
+            using var closeTimeoutCts =
+                new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
+            using var closeCts =
+                CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token);
             await clientStream.DisposeAsync(ex.SessionResponse, closeCts.Token).Vhc();
         }
         finally {
@@ -590,7 +599,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId),
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
 
-        var sessionResponseEx = await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion, clientIp).Vhc();
+        var sessionResponseEx =
+            await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion, clientIp).Vhc();
         var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
                       throw new InvalidOperationException("Session is lost!");
 

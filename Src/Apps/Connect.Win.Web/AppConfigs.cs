@@ -11,8 +11,13 @@ namespace VpnHood.App.Connect.Win.Web;
 internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
-    public string AppId { get; set; } = IsDebugMode ? "com.vpnhood.connect.windows.debug" : "com.vpnhood.connect.windows";
-    public Uri? UpdateInfoUrl { get; set; } = new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.json");
+
+    public string AppId { get; set; } =
+        IsDebugMode ? "com.vpnhood.connect.windows.debug" : "com.vpnhood.connect.windows";
+
+    public Uri? UpdateInfoUrl { get; set; } =
+        new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.json");
+
     public int? WebUiPort { get; set; } = IsDebugMode ? 7701 : 7770;
     public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
     public string? Ga4MeasurementId { get; set; }

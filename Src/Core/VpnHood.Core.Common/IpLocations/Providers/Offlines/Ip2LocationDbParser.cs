@@ -10,7 +10,7 @@ namespace VpnHood.Core.Common.IpLocations.Providers.Offlines;
 
 public class Ip2LocationDbParser
 {
-    public static async Task UpdateLocalDb(string filePath, string apiKey, bool forIpRange, TimeSpan? interval = null, 
+    public static async Task UpdateLocalDb(string filePath, string apiKey, bool forIpRange, TimeSpan? interval = null,
         CancellationToken cancellationToken = default)
     {
         interval ??= TimeSpan.FromDays(7);
@@ -27,35 +27,37 @@ public class Ip2LocationDbParser
         ipLocationZipStream.Position = 0;
 
         // build new ipLocation filePath
-        using var ipLocationZipArchive = new ZipArchive(ipLocationZipStream, ZipArchiveMode.Read);
+        await using var ipLocationZipArchive = new ZipArchive(ipLocationZipStream, ZipArchiveMode.Read);
         const string entryName = "IP2LOCATION-LITE-DB1.IPV6.CSV";
         var ipLocationEntry = ipLocationZipArchive.GetEntry(entryName) ??
                               throw new Exception($"{entryName} not found in the zip file!");
 
-        await using var crvStream = ipLocationEntry.Open();
+        await using var crvStream = await ipLocationEntry.OpenAsync(cancellationToken);
         if (forIpRange)
             await BuildLocalIpRangeLocationDb(crvStream, filePath, cancellationToken);
         else
             await BuildLocalIpLocationDb(crvStream, filePath, cancellationToken);
     }
 
-    public static async Task BuildLocalIpRangeLocationDb(Stream crvStream, string outputZipFile, CancellationToken cancellationToken)
+    public static async Task BuildLocalIpRangeLocationDb(Stream crvStream, string outputZipFile,
+        CancellationToken cancellationToken)
     {
         var countryIpRanges = await ParseIp2LocationCrv(crvStream, cancellationToken).Vhc();
 
         // Building the IpGroups directory structure
         VhLogger.Instance.LogDebug("Building the optimized Ip2Location archive...");
         await using var outputStream = File.Create(outputZipFile);
-        using var newArchive = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: true);
+        await using var newArchive = new ZipArchive(outputStream, ZipArchiveMode.Create, leaveOpen: true);
         foreach (var countryIpRange in countryIpRanges) {
             var ipRanges = new IpRangeOrderedList(countryIpRange.Value);
             var entry = newArchive.CreateEntry($"{countryIpRange.Key}.ips", CompressionLevel.NoCompression);
-            await using var entryStream = entry.Open();
+            await using var entryStream = await entry.OpenAsync(cancellationToken);
             ipRanges.Serialize(entryStream);
         }
     }
 
-    public static async Task BuildLocalIpLocationDb(Stream crvStream, string outputFile, CancellationToken cancellationToken)
+    public static async Task BuildLocalIpLocationDb(Stream crvStream, string outputFile,
+        CancellationToken cancellationToken)
     {
         var countries = await ParseIp2LocationCrv(crvStream, cancellationToken).Vhc();
 
@@ -77,7 +79,7 @@ public class Ip2LocationDbParser
         ipRangeLocationProvider.Serialize(outputStream);
     }
 
-    private static async Task<Dictionary<string, List<IpRange>>> ParseIp2LocationCrv(Stream ipLocationsCrvStream, 
+    private static async Task<Dictionary<string, List<IpRange>>> ParseIp2LocationCrv(Stream ipLocationsCrvStream,
         CancellationToken cancellationToken)
     {
         // extract IpGroups
@@ -85,7 +87,7 @@ public class Ip2LocationDbParser
         using var streamReader = new StreamReader(ipLocationsCrvStream);
         while (!streamReader.EndOfStream) {
             cancellationToken.ThrowIfCancellationRequested();
-            var line = (await streamReader.ReadLineAsync(cancellationToken).Vhc()) ?? "";
+            var line = await streamReader.ReadLineAsync(cancellationToken).Vhc() ?? "";
             var items = line.Replace("\"", "").Split(',');
             if (items.Length != 4)
                 continue;

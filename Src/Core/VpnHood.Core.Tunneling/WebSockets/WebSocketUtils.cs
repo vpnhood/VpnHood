@@ -142,7 +142,7 @@ public static class WebSocketUtils
                                 ((long)span[6] << 24) |
                                 ((long)span[7] << 16) |
                                 ((long)span[8] << 8) |
-                                ((long)span[9]);
+                                (long)span[9];
                 headerLength += 8;
                 break;
         }

@@ -448,7 +448,8 @@ public static class VhUtils
         }
     }
 
-    public static async ValueTask<T?> TryInvokeAsync<T>(string? actionName, Func<ValueTask<T>> task, T? defaultValue = default)
+    public static async ValueTask<T?> TryInvokeAsync<T>(string? actionName, Func<ValueTask<T>> task,
+        T? defaultValue = default)
     {
         try {
             return await task().Vhc();

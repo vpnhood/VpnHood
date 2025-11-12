@@ -254,7 +254,8 @@ public class ClientProfileTest : TestAppBase
         clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
         Assert.AreEqual(updateParams.ClientProfileName.Value, clientProfile.ClientProfileName);
         Assert.AreEqual(updateParams.IsFavorite.Value, clientProfile.IsFavorite);
-        CollectionAssert.AreEqual(updateParams.CustomServerEndpoints?.Value, clientProfile.CustomServerEndpoints?.Select(x=>x.ToString()).ToArray());
+        CollectionAssert.AreEqual(updateParams.CustomServerEndpoints?.Value,
+            clientProfile.CustomServerEndpoints?.Select(x => x.ToString()).ToArray());
         Assert.AreEqual(updateParams.CustomData.Value, clientProfile.CustomData);
         Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.IsPremiumLocationSelected);
         Assert.AreEqual(updateParams.SelectedLocation.Value, clientProfile.SelectedLocation);
@@ -398,7 +399,8 @@ public class ClientProfileTest : TestAppBase
             PremiumByTrial = 30,
             UnblockableOnly = false
         };
-        token.ServerToken.ServerLocations = ["US/texas [#premium]", "US/california [#tag1 #tag2]", "US/arizona [~#premium]"];
+        token.ServerToken.ServerLocations =
+            ["US/texas [#premium]", "US/california [#tag1 #tag2]", "US/arizona [~#premium]"];
         token.ClientPolicies = [defaultPolicy];
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
@@ -534,7 +536,7 @@ public class ClientProfileTest : TestAppBase
             ClientCountries = ["*"],
             Normal = 10,
             PurchaseUrl = new Uri("http://localhost/all"),
-            PurchaseUrlMode = PurchaseUrlMode.WhenNoStore,
+            PurchaseUrlMode = PurchaseUrlMode.WhenNoStore
         };
         var caPolicy = new ClientPolicy {
             ClientCountries = ["CA"],

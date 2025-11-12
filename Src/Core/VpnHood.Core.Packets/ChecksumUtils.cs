@@ -14,7 +14,7 @@ public static class ChecksumUtils
         sum += ComputeSumWords(data);
 
         // Fold into 16 bits until it fits
-        while ((sum >> 16) != 0)
+        while (sum >> 16 != 0)
             sum = (sum & 0xFFFF) + (sum >> 16);
 
 
@@ -33,6 +33,7 @@ public static class ChecksumUtils
             var word = (ushort)(data[i] << 8 | (i + 1 < data.Length ? data[i + 1] : 0));
             sum += word;
         }
+
         return sum;
     }
 }

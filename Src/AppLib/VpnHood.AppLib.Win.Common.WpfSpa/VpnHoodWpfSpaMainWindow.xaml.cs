@@ -38,7 +38,8 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         if (backgroundColor != null) VpnHoodAppWin.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
         // initialize MainWebView
-        MainWebView.CreationProperties = new CoreWebView2CreationProperties { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
+        MainWebView.CreationProperties = new CoreWebView2CreationProperties
+            { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
         MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
         if (backgroundColor != null) MainWebView.DefaultBackgroundColor = backgroundColor.Value;
@@ -108,5 +109,4 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         e.Cancel = true;
         Hide();
     }
-
 }

@@ -8,5 +8,4 @@ internal class AppUpdaterData
     public PublishInfo? PublishInfo { get; set; }
     public DateTime? UpdaterAvailableSince { get; set; }
     public bool Prompt { get; init; }
-
 }

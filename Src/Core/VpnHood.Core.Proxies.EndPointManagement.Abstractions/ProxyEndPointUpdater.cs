@@ -69,7 +69,8 @@ public class ProxyEndPointUpdater
         return result.ToArray();
     }
 
-    private static ProxyEndPoint[] RemoveDuplicateIps(ProxyEndPointInfo[] currentEndPointInfos, ProxyEndPoint[] newEndPoints)
+    private static ProxyEndPoint[] RemoveDuplicateIps(ProxyEndPointInfo[] currentEndPointInfos,
+        ProxyEndPoint[] newEndPoints)
     {
         // find new endpoints that already exist in currentEndPointInfos and have succeeded before
         var alreadyExists = newEndPoints.Where(x =>

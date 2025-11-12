@@ -38,7 +38,7 @@ public class SessionException : Exception
 
         // check is SessionResponse exists in data
         var json = apiError.Data.GetValueOrDefault(nameof(SessionResponse))
-            ?? throw new ArgumentException("apiError does not contain SessionResponse", nameof(apiError));
+                   ?? throw new ArgumentException("apiError does not contain SessionResponse", nameof(apiError));
 
         SessionResponse = JsonSerializer.Deserialize<SessionResponse>(json)!;
     }

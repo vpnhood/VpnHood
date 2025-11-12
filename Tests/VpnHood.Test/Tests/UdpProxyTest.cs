@@ -16,20 +16,20 @@ public class UdpProxyTest : TestBase
         private IpPacket? LastReceivedPacket { get; set; }
 
         public void PacketReceived(object? sender, IpPacket ipPacket)
-        { 
+        {
             LastReceivedPacket = ipPacket;
         }
 
         public Task WaitForUdpPacket(IpPacket ipPacket, TimeSpan? timeout = null)
         {
-            return WaitForUdpPacket(p => 
-                p.DestinationAddress.Equals(ipPacket.SourceAddress) &&
-                p.ExtractUdp().DestinationPort == ipPacket.ExtractUdp().SourcePort &&
-                p.SourceAddress.Equals(ipPacket.DestinationAddress) &&
-                p.ExtractUdp().SourcePort == ipPacket.ExtractUdp().DestinationPort
+            return WaitForUdpPacket(p =>
+                    p.DestinationAddress.Equals(ipPacket.SourceAddress) &&
+                    p.ExtractUdp().DestinationPort == ipPacket.ExtractUdp().SourcePort &&
+                    p.SourceAddress.Equals(ipPacket.DestinationAddress) &&
+                    p.ExtractUdp().SourcePort == ipPacket.ExtractUdp().DestinationPort
                 , timeout);
         }
-        
+
         public async Task WaitForUdpPacket(Func<IpPacket, bool> checkFunc, TimeSpan? timeout = null)
         {
             timeout ??= TimeSpan.FromSeconds(5);
@@ -48,13 +48,14 @@ public class UdpProxyTest : TestBase
         {
         }
 
-        public void OnConnectionEstablished(IpProtocol protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+        public void OnConnectionEstablished(IpProtocol protocolType, IPEndPoint localEndPoint,
+            IPEndPoint remoteEndPoint,
             bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
         {
         }
     }
 
-    
+
     [TestMethod]
     public async Task Multiple_EndPoint()
     {
@@ -105,7 +106,7 @@ public class UdpProxyTest : TestBase
             Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
-        await VhTestUtil.AssertEqualsWait(0, ()=> proxyPool.ClientCount);
+        await VhTestUtil.AssertEqualsWait(0, () => proxyPool.ClientCount);
 
         // test ip6
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[::1]:2000"), TestHelper.WebServer.UdpV6EndPoints[0],
@@ -169,12 +170,13 @@ public class UdpProxyTest : TestBase
         proxyPoolOptions = TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks);
         proxyPoolOptions.UdpTimeout = TimeSpan.FromSeconds(1);
         proxyPool = new UdpProxyPoolEx(proxyPoolOptions);
-        ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
+        ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint,
+            Guid.NewGuid().ToByteArray());
         proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
         proxyPool.SendPacketQueued(ipPacket);
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
         Assert.AreEqual(1, proxyPool.ClientCount);
-        await VhTestUtil.AssertEqualsWait(0, ()=> proxyPool.ClientCount);
+        await VhTestUtil.AssertEqualsWait(0, () => proxyPool.ClientCount);
 
         // test ip6
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[::1]:2000"), TestHelper.WebServer.UdpV6EndPoints[0],
@@ -197,7 +199,7 @@ public class UdpProxyTest : TestBase
 
         // Create Client
         await using var client =
-            await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: 
+            await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, channelProtocol:
                 ChannelProtocol.Udp));
 
         // create udpClients and send packets
@@ -211,7 +213,7 @@ public class UdpProxyTest : TestBase
 
         // wait for tasks to complete and not throw exceptions
         await VhUtils.TryInvokeAsync("", () => Task.WhenAll(tasks));
-        
+
         // Check succeeded Udp
         Assert.AreEqual(maxUdpCount, tasks.Count(x => x.IsCompletedSuccessfully));
         Assert.AreEqual(1, tasks.Count(x => x.IsFaulted || x.IsCanceled));

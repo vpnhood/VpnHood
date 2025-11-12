@@ -134,7 +134,6 @@ public static class IpPacketExtensions
 
             if (ipPacket.Protocol == IpProtocol.IcmpV6)
                 ipPacket.ExtractIcmpV6().UpdateChecksum(ipPacket);
-
         }
     }
 

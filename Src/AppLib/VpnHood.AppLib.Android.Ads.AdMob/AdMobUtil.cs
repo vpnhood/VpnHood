@@ -49,7 +49,8 @@ public static class AdMobUtil
 
             // not success
             var errorMessage = string.Join(",", errors);
-            _loadedCompletionSource.TrySetException(new AdException($"Could not initialize any ad adapter. {errorMessage}"));
+            _loadedCompletionSource.TrySetException(
+                new AdException($"Could not initialize any ad adapter. {errorMessage}"));
         }
     }
 }

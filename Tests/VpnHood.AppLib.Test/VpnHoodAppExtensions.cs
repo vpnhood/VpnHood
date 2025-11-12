@@ -13,7 +13,8 @@ public static class VpnHoodAppExtensions
         public AppSessionStatus GetSessionStatus()
         {
             app.ForceUpdateState().Wait();
-            return app.State.SessionStatus ?? throw new InvalidOperationException("Session has not been initialized yet");
+            return app.State.SessionStatus ??
+                   throw new InvalidOperationException("Session has not been initialized yet");
         }
 
         public Task WaitForState(AppConnectionState connectionSate, int timeout = 5000)
@@ -22,8 +23,8 @@ public static class VpnHoodAppExtensions
                 "App state didn't reach the expected value.", timeout);
         }
 
-        public Task Connect(Guid? clientProfileId, 
-            ConnectPlanId planId = ConnectPlanId.Normal, 
+        public Task Connect(Guid? clientProfileId,
+            ConnectPlanId planId = ConnectPlanId.Normal,
             bool diagnose = false,
             CancellationToken cancellationToken = default)
         {

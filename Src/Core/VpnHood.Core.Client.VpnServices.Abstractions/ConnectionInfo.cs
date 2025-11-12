@@ -12,6 +12,7 @@ public class ConnectionInfo
 {
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint? ApiEndPoint { get; init; }
+
     public required ProxyEndPointManagerStatus? ProxyManagerStatus { get; init; }
     public required DateTime? CreatedTime { get; init; }
     public string? SessionName { get; init; }
@@ -22,6 +23,7 @@ public class ConnectionInfo
     public required SessionInfo? SessionInfo { get; init; }
     public required SessionStatus? SessionStatus { get; init; }
     public required byte[]? ApiKey { get; init; }
+
     public bool IsStarted() => ClientState is not (
         ClientState.None or ClientState.Disposed or ClientState.Disconnecting);
 }

@@ -67,7 +67,8 @@ public class AndroidAppWebViewMainActivityHandler(
     {
         // get version name
         var versionName = OperatingSystem.IsAndroidVersionAtLeast(26)
-            ? WebView.CurrentWebViewPackage?.VersionName : null;
+            ? WebView.CurrentWebViewPackage?.VersionName
+            : null;
 
         // fallback to user agent
         if (string.IsNullOrWhiteSpace(versionName))
@@ -176,5 +177,4 @@ public class AndroidAppWebViewMainActivityHandler(
         WebView?.OnResume();
         base.OnResume();
     }
-
 }

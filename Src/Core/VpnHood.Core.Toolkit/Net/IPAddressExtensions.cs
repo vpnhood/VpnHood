@@ -90,7 +90,8 @@ public static class IPAddressExtensions
         public Span<byte> GetAddressBytesFast(Span<byte> buffer)
         {
             if (!ipAddress.TryWriteBytes(buffer, out var bytesWritten))
-                throw new ArgumentException($"buffer is not big enough to hold the IP address. BufferLength: {buffer.Length}, IPAddress: {ipAddress}.");
+                throw new ArgumentException(
+                    $"buffer is not big enough to hold the IP address. BufferLength: {buffer.Length}, IPAddress: {ipAddress}.");
 
             return buffer[..bytesWritten];
         }

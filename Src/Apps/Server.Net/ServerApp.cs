@@ -57,8 +57,8 @@ public class ServerApp : IDisposable
         // set storage folder
         var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
         var storagePath = parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish))
-                ? Path.Combine(parentAppFolderPath, FolderNameStorage)
-                : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
+            ? Path.Combine(parentAppFolderPath, FolderNameStorage)
+            : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
         Directory.CreateDirectory(storagePath);
         Directory.SetCurrentDirectory(storagePath);
 
@@ -107,9 +107,7 @@ public class ServerApp : IDisposable
         var configFilePath = Path.Combine(StoragePath, "NLog.config");
         if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
         if (File.Exists(configFilePath)) {
-            using var loggerFactory = LoggerFactory.Create(builder => {
-                builder.AddNLog(configFilePath);
-            });
+            using var loggerFactory = LoggerFactory.Create(builder => { builder.AddNLog(configFilePath); });
             if (LogManager.Configuration != null)
                 LogManager.Configuration.Variables["mydir"] = storagePath;
             VhLogger.Instance = loggerFactory.CreateLogger("VpnHood");
@@ -144,7 +142,8 @@ public class ServerApp : IDisposable
         options.PublicEndPoints ??= GetDefaultPublicEndPoints(options.TcpEndPointsValue, CancellationToken.None).Result;
 
         var accessManagerFolder = Path.Combine(storageFolderPath, "access");
-        VhLogger.Instance.LogInformation("Using FileAccessManager. AccessFolder: {AccessManagerFolder}", accessManagerFolder);
+        VhLogger.Instance.LogInformation("Using FileAccessManager. AccessFolder: {AccessManagerFolder}",
+            accessManagerFolder);
         var ret = new FileAccessManager(accessManagerFolder, options);
         return ret;
     }
@@ -186,20 +185,23 @@ public class ServerApp : IDisposable
 
         if (e.Arguments[0] == "gc") {
             VhLogger.Instance.LogInformation("I have received the gc command!");
-            VhLogger.Instance.LogInformation("[GC] Before: TotalMemory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}",
-                VhUtils.FormatBytes(GC.GetTotalMemory(forceFullCollection: false)), VhUtils.FormatBytes(GC.GetTotalAllocatedBytes()));
+            VhLogger.Instance.LogInformation(
+                "[GC] Before: TotalMemory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}",
+                VhUtils.FormatBytes(GC.GetTotalMemory(forceFullCollection: false)),
+                VhUtils.FormatBytes(GC.GetTotalAllocatedBytes()));
 
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
             GC.WaitForPendingFinalizers();
             GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
 
-            VhLogger.Instance.LogInformation("[GC] After: TotalMemory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}",
-                VhUtils.FormatBytes(GC.GetTotalMemory(forceFullCollection: false)), VhUtils.FormatBytes(GC.GetTotalAllocatedBytes()));
+            VhLogger.Instance.LogInformation(
+                "[GC] After: TotalMemory: {TotalMemory}, TotalAllocatedBytes: {TotalAllocatedBytes}",
+                VhUtils.FormatBytes(GC.GetTotalMemory(forceFullCollection: false)),
+                VhUtils.FormatBytes(GC.GetTotalAllocatedBytes()));
 
             // Report session manager
             _vpnHoodServer?.SessionManager.Report();
         }
-
     }
 
     private void RunGc(CommandLineApplication cmdApp)
@@ -299,7 +301,8 @@ public class ServerApp : IDisposable
         });
     }
 
-    private static async Task<IVpnAdapter?> CreateTunProvider(IpNetwork virtualIpNetworkV4, IpNetwork virtualIpNetworkV6, CancellationToken cancellationToken)
+    private static async Task<IVpnAdapter?> CreateTunProvider(IpNetwork virtualIpNetworkV4,
+        IpNetwork virtualIpNetworkV6, CancellationToken cancellationToken)
     {
         try {
             var vpnAdapter = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
@@ -318,7 +321,7 @@ public class ServerApp : IDisposable
                     Mtu = TunnelDefaults.Mtu,
                     UseNat = true,
                     VirtualIpNetworkV4 = virtualIpNetworkV4,
-                    VirtualIpNetworkV6 = virtualIpNetworkV6,
+                    VirtualIpNetworkV6 = virtualIpNetworkV6
                 }, cancellationToken);
             }
 

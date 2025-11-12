@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -14,6 +14,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.LinuxTun.LinuxNative;
 
 namespace VpnHood.Core.VpnAdapters.LinuxTun;
+
 public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
@@ -29,6 +30,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
+
     protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
@@ -37,7 +39,8 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     private static async Task<string> GetPrimaryAdapterName(CancellationToken cancellationToken)
     {
-        var mainInterface = await ExecuteCommandAsync("ip route | grep default | awk '{print $5}'", cancellationToken).Vhc();
+        var mainInterface = await ExecuteCommandAsync("ip route | grep default | awk '{print $5}'", cancellationToken)
+            .Vhc();
         mainInterface = mainInterface.Trim();
         if (string.IsNullOrEmpty(mainInterface))
             throw new InvalidOperationException("No active network interface found.");
@@ -48,7 +51,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     public static string? FindInterfaceNameForIp(IPAddress ip)
     {
         var interfaces = NetworkInterface.GetAllNetworkInterfaces();
-        
+
         // ReSharper disable once LoopCanBeConvertedToQuery
         foreach (var networkInterface in interfaces) {
             var props = networkInterface.GetIPProperties();
@@ -105,7 +108,8 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
         // Remove previous NAT iptables record
         if (UseNat) {
-            VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
+            VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...",
+                AdapterName);
             if (AdapterIpNetworkV4 != null)
                 TryRemoveNat(AdapterIpNetworkV4);
 
@@ -119,11 +123,16 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         // Open TUN Adapter
         VhLogger.Instance.LogDebug("Opening the TUN adapter...");
         _tunAdapterFd = OpenTunAdapter(AdapterName, false);
-        _pollFdReads = [new StructPollfd {
-            Fd = _tunAdapterFd, Events = OsConstants.Pollin
-        }];
-        _pollFdWrites = [new StructPollfd {
-            Fd = _tunAdapterFd, Events = OsConstants.Pollout }];
+        _pollFdReads = [
+            new StructPollfd {
+                Fd = _tunAdapterFd, Events = OsConstants.Pollin
+            }
+        ];
+        _pollFdWrites = [
+            new StructPollfd {
+                Fd = _tunAdapterFd, Events = OsConstants.Pollout
+            }
+        ];
 
         return Task.CompletedTask;
     }
@@ -144,15 +153,17 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
         // Configure NAT with iptables
         var iptables = ipNetwork.IsV4 ? "iptables" : "ip6tables";
-        await ExecuteCommandAsync($"{iptables} -t nat -A POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE",
-                cancellationToken).Vhc();
+        await ExecuteCommandAsync(
+            $"{iptables} -t nat -A POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE",
+            cancellationToken).Vhc();
 
         // sudo iptables 
         await ExecuteCommandAsync($"{iptables} -A FORWARD -i {AdapterName} -o {_primaryAdapterName} -j ACCEPT",
             cancellationToken).Vhc();
 
         // sudo iptables 
-        await ExecuteCommandAsync($"{iptables} -A FORWARD -i {_primaryAdapterName} -o {AdapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT",
+        await ExecuteCommandAsync(
+            $"{iptables} -A FORWARD -i {_primaryAdapterName} -o {AdapterName} -m state --state RELATED,ESTABLISHED -j ACCEPT",
             cancellationToken).Vhc();
     }
 
@@ -164,7 +175,8 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         var res = "ok";
         while (!string.IsNullOrEmpty(res)) {
             res = VhUtils.TryInvoke("Remove NAT rule", () =>
-                ExecuteCommand($"{iptables} -t nat -D POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE"));
+                ExecuteCommand(
+                    $"{iptables} -t nat -D POSTROUTING -s {ipNetwork} -o {_primaryAdapterName} -j MASQUERADE"));
         }
 
         // Remove forwarding rules
@@ -252,6 +264,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         if (_pollFdReads != null)
             WaitForTun(_pollFdReads);
     }
+
     protected override void WaitForTunWrite()
     {
         if (_pollFdWrites != null)
@@ -359,7 +372,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         var adapterName = FindInterfaceNameForIp(ipAddress);
         if (string.IsNullOrEmpty(adapterName))
             throw new InvalidOperationException($"No network interface found for IP address {ipAddress}.");
-        
+
         var optVal = Encoding.ASCII.GetBytes(adapterName + "\0");
         var result = LinuxAPI.setsockopt((int)socket.Handle, level: OsConstants.SolSocket,
             OsConstants.SoBindtodevice, optVal, (uint)optVal.Length);

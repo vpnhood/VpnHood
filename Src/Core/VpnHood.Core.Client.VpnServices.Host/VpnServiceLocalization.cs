@@ -32,7 +32,6 @@ public sealed class VpnServiceLocalization
         }
         catch {
             return null;
-
         }
     }
 }

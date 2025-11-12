@@ -45,14 +45,15 @@ public class Job : IDisposable
         : this(jobFunc, new JobOptions {
             Interval = period,
             Name = name,
-            DueTime = TimeSpan.Zero,
+            DueTime = TimeSpan.Zero
         })
     {
     }
+
     public Job(Func<CancellationToken, ValueTask> jobFunc, string? name = null)
         : this(jobFunc, new JobOptions {
             Name = name,
-            DueTime = TimeSpan.Zero,
+            DueTime = TimeSpan.Zero
         })
     {
     }
@@ -106,10 +107,11 @@ public class Job : IDisposable
 
     public async Task RunNow(CancellationToken cancellationToken)
     {
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
+        using var linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
         // await required for linkedCts to be disposed properly
-        LastTask =  RunInternal(linkedCts.Token);
+        LastTask = RunInternal(linkedCts.Token);
         await LastTask.Vhc();
     }
 

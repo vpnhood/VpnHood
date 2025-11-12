@@ -12,7 +12,10 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
     public string AppId { get; set; } = Application.Context.PackageName!;
-    public Uri? UpdateInfoUrl { get; set; } = new ("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
+
+    public Uri? UpdateInfoUrl { get; set; } =
+        new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-Android.json");
+
     public int? WebUiPort { get; set; } = IsDebugMode ? 7701 : 7770;
     public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
     public string? Ga4MeasurementId { get; set; }
@@ -24,11 +27,15 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     // It is limited and can not be used in production.
 
     // Google sign-in (It is created through Firebase)
-    public string GoogleSignInClientId { get; set; } = "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
+    public string GoogleSignInClientId { get; set; } =
+        "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
 
     // VpnHood Store server
     public string StoreBaseUri { get; set; } = new("https://store-api.vpnhood.com");
-    public Guid StoreAppId { get; set; } = Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
+
+    public Guid StoreAppId { get; set; } =
+        Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
+
     public bool StoreIgnoreSslVerification { get; set; } = IsDebugMode;
 
     // AdMob
@@ -41,7 +48,10 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 
     // Chartboost
     public string ChartboostAppId { get; set; } = "000000000000000000000000"; //YOUR_CHATBOOST_APP_ID
-    public string ChartboostAppSignature { get; set; } = "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
+
+    public string ChartboostAppSignature { get; set; } =
+        "0000000000000000000000000000000000000000"; //YOUR_CHATBOOST_APP_SIGNATURE
+
     public string ChartboostAdLocation { get; set; } = "YOUR_CHARTBOOST_AD_LOCATION";
 
     // Inmobi
@@ -75,7 +85,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     }
 
     // make dynamic to prevent warning of unreachable code in Release mode
-    public static bool IsDebug => IsDebugMode; 
+    public static bool IsDebug => IsDebugMode;
 
 #if DEBUG
     public const bool IsDebugMode = true;

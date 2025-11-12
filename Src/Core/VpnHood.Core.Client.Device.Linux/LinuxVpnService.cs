@@ -29,8 +29,7 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
 
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
-        var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings
-        {
+        var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {
             AdapterName = adapterSettings.AdapterName,
             AutoRestart = adapterSettings.AutoRestart,
             MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,

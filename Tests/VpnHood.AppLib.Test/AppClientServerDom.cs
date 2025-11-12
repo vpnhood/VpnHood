@@ -36,7 +36,7 @@ public class AppClientServerDom : IDisposable
         return new AppClientServerDom(testAppHelper, server, null);
     }
 
-    public static async Task<AppClientServerDom> Create(TestAppHelper testAppHelper, 
+    public static async Task<AppClientServerDom> Create(TestAppHelper testAppHelper,
         TestVpnAdapterOptions? adapterOptions = null)
     {
         var device = testAppHelper.CreateDevice(adapterOptions);

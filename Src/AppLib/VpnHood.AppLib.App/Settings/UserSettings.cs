@@ -50,5 +50,4 @@ public class UserSettings
                 ChannelProtocol = ChannelProtocol.Udp;
         }
     }
-
 }

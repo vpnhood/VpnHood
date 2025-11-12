@@ -1,4 +1,5 @@
 ﻿// ReSharper disable UnusedMember.Global
+
 namespace VpnHood.Core.Packets;
 
 public static class PacketUtil
@@ -14,7 +15,7 @@ public static class PacketUtil
         };
     }
 
-    public static ushort ComputeChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress, 
+    public static ushort ComputeChecksum(ReadOnlySpan<byte> sourceAddress, ReadOnlySpan<byte> destinationAddress,
         byte protocol, ReadOnlySpan<byte> data)
     {
         if (sourceAddress.Length == 4 && destinationAddress.Length == 4) {
@@ -25,7 +26,7 @@ public static class PacketUtil
             pseudoHeader[8] = 0;
             pseudoHeader[9] = protocol;
             pseudoHeader[10] = (byte)(data.Length >> 8);
-            pseudoHeader[11] = (byte)(data.Length);
+            pseudoHeader[11] = (byte)data.Length;
             return OnesComplementSum(pseudoHeader, data);
         }
 
@@ -35,7 +36,7 @@ public static class PacketUtil
             sourceAddress.CopyTo(pseudoHeader[..16]);
             destinationAddress.CopyTo(pseudoHeader[16..32]);
             pseudoHeader[32] = (byte)(data.Length >> 8);
-            pseudoHeader[33] = (byte)(data.Length);
+            pseudoHeader[33] = (byte)data.Length;
             pseudoHeader[34] = 0;
             pseudoHeader[35] = 0;
             pseudoHeader[36] = 0;

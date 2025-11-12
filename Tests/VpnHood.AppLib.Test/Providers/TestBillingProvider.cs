@@ -9,6 +9,7 @@ internal class TestBillingProvider : IAppBillingProvider
     public Exception? SubscriptionPlanException { get; set; }
 
     public string ProviderName => "Test";
+
     public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
         if (SubscriptionPlanException != null)
@@ -16,8 +17,7 @@ internal class TestBillingProvider : IAppBillingProvider
 
         await Task.CompletedTask;
         return [
-            new SubscriptionPlan
-            {
+            new SubscriptionPlan {
                 PlanPrice = "10",
                 SubscriptionPlanId = "test"
             }

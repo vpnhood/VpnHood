@@ -48,5 +48,4 @@ public class AppSettings
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public LogLevel LogLevel { get; set; } = LogLevel.Information;
-
 }

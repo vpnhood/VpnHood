@@ -78,6 +78,7 @@ public sealed class AsyncLock
                 if (semaphoreSlim.ReferenceCount == 0)
                     SemaphoreSlims.TryRemove(name, out _);
             }
+
             throw;
         }
     }

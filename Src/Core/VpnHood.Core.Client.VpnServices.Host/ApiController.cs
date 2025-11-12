@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -68,8 +68,9 @@ internal class ApiController : IDisposable
                 await ProcessRequest(stream, cancellationToken);
         }
         catch (Exception ex) {
-            if (_isDisposed == 0) 
-                VhLogger.Instance.LogError(GeneralEventId.Test, ex, "Could not handle API request. ClientEp: {ClientEp}", clientEp);
+            if (_isDisposed == 0)
+                VhLogger.Instance.LogError(GeneralEventId.Test, ex,
+                    "Could not handle API request. ClientEp: {ClientEp}", clientEp);
         }
         finally {
             client.Dispose();
@@ -114,7 +115,6 @@ internal class ApiController : IDisposable
         VhLogger.Instance.LogDebug("ApiController is reading a request: {RequestType}", requestType);
 
         switch (requestType) {
-
             // handle connection info request
             case nameof(ApiGetConnectionInfoRequest):
                 await GetConnectionInfo(
@@ -148,7 +148,8 @@ internal class ApiController : IDisposable
 
             case nameof(ApiReconfigureRequest):
                 await Reconfigure(
-                    await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, maxLength: 0xFFFFFF, cancellationToken),
+                    await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, maxLength: 0xFFFFFF,
+                        cancellationToken),
                     cancellationToken);
                 await WriteResponseResult(stream, null, cancellationToken);
                 return;
@@ -160,7 +161,8 @@ internal class ApiController : IDisposable
 
                 // don't await and let dispose in the background so we can return the response quickly
                 await Disconnect(
-                    await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken), cancellationToken);
+                    await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken),
+                    cancellationToken);
                 return;
 
             default:

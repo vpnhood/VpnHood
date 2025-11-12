@@ -12,16 +12,11 @@ public class VpnServiceTimeoutException : TimeoutException
     {
     }
 
-    public required TimeSpan TimeoutDuration
-    {
-        get
-        {
+    public required TimeSpan TimeoutDuration {
+        get {
             var value = Data["TimeoutDuration"];
             return value is null ? TimeSpan.Zero : TimeSpan.FromSeconds((int)value);
         }
-        init
-        {
-            Data["TimeoutDuration"] = (int)value.TotalSeconds;
-        }
+        init { Data["TimeoutDuration"] = (int)value.TotalSeconds; }
     }
 }

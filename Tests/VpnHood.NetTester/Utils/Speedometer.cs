@@ -70,7 +70,7 @@ public class Speedometer : IDisposable
     public void Report()
     {
         lock (_lockObject) {
-            if (_stopwatch.ElapsedMilliseconds == 0) 
+            if (_stopwatch.ElapsedMilliseconds == 0)
                 return;
 
             var curTransferSize = _transferSize - _lastTransferSize;

@@ -5,7 +5,8 @@ public class NetFilterException : Exception
     public NetFilterException(string message) : base(message)
     {
     }
-    public NetFilterException(string message, Exception innerException) 
+
+    public NetFilterException(string message, Exception innerException)
         : base(message, innerException)
     {
     }

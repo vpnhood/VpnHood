@@ -11,7 +11,8 @@ public class NatTest : TestBase
     [TestMethod]
     public void Nat_NatItem_Test()
     {
-        var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:100"), IPEndPoint.Parse("10.1.1.2:100"), null, null);
+        var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:100"), IPEndPoint.Parse("10.1.1.2:100"), null,
+            null);
         var tcpPacket = ipPacket.ExtractTcp();
 
         var nat = new Nat(false);
@@ -49,11 +50,13 @@ public class NatTest : TestBase
     {
         var nat = new Nat(true);
 
-        var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:100"), IPEndPoint.Parse("10.1.1.2:100"), null, null);
+        var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:100"), IPEndPoint.Parse("10.1.1.2:100"), null,
+            null);
         var tcpPacket = ipPacket.ExtractTcp();
         var id = nat.Add(ipPacket).NatId;
 
-        var ipPacket2 = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:101"), IPEndPoint.Parse("10.1.1.2:100"), null, null);
+        var ipPacket2 = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:101"), IPEndPoint.Parse("10.1.1.2:100"), null,
+            null);
         nat.Add(ipPacket2);
 
         // un-map
@@ -90,7 +93,8 @@ public class NatTest : TestBase
     [TestMethod]
     public void Nat_OverFlow_Test()
     {
-        var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:100"), IPEndPoint.Parse("10.1.1.2:100"), null, null);
+        var ipPacket = PacketBuilder.BuildTcp(IPEndPoint.Parse("10.1.1.1:100"), IPEndPoint.Parse("10.1.1.2:100"), null,
+            null);
         var tcpPacket = ipPacket.ExtractTcp();
         var nat = new Nat(true);
 

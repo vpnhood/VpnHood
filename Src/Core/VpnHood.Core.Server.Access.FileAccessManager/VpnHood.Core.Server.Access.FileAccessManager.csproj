@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>Light access manager using OS file system</Description>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>VpnHood.Core.Server.Access.Managers.FileAccessManagement</RootNamespace>
 	</PropertyGroup>
 
@@ -32,10 +32,6 @@
 		<Compile Remove="Exceptions\**" />
 		<EmbeddedResource Remove="Exceptions\**" />
 		<None Remove="Exceptions\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="System.Text.Json" Version="10.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

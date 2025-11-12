@@ -18,7 +18,7 @@ public class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCal
                     TypeFullName = e.Class.TypeName,
                     TypeName = e.Class.SimpleName,
                     Message = e.ToString()
-                    }));
+                }));
     }
 
     public void OnResult(Java.Lang.Object? result)

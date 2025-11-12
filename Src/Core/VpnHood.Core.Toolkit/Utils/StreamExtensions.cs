@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Text;
+﻿using System.Text;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Toolkit.Utils;
@@ -33,7 +33,8 @@ public static class StreamExtensions
                 await stream.DisposeAsync().ConfigureAwait(false);
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogDebug(ex, "Failed to dispose stream asynchronously. Falling back to synchronous dispose.");
+                VhLogger.Instance.LogDebug(ex,
+                    "Failed to dispose stream asynchronously. Falling back to synchronous dispose.");
                 // ReSharper disable once MethodHasAsyncOverload
                 stream.Dispose();
             }

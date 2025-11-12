@@ -9,7 +9,7 @@ public static class UniqueIdFactory
 
     public static string Create()
     {
-        if (_lastId==0)
+        if (_lastId == 0)
             _lastId = DebugInitId;
 
         // return an id in this format: "ReqId-0001"
@@ -20,5 +20,4 @@ public static class UniqueIdFactory
 #else
     public static string Create() => Guid.NewGuid().ToString();
 #endif
-
 }

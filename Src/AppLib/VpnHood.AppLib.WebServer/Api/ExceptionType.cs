@@ -22,23 +22,23 @@ public enum ExceptionType
     Session,
 
     [EnumMember(Value = nameof(AdException))]
-    Ad,    
-    
+    Ad,
+
     [EnumMember(Value = nameof(ShowAdException))]
     ShowAd,
-    
+
     [EnumMember(Value = nameof(ShowAdNoUiException))]
     ShowAdNoUi,
-    
+
     [EnumMember(Value = nameof(LoadAdException))]
     LoadAd,
-    
+
     [EnumMember(Value = nameof(NoInternetException))]
     NoInternet,
-    
+
     [EnumMember(Value = nameof(NoStableVpnException))]
     NoStableVpn,
-    
+
     [EnumMember(Value = nameof(UnreachableServerException))]
     UnreachableServer,
 
@@ -83,6 +83,4 @@ public enum ExceptionType
 
     [EnumMember(Value = nameof(VpnServiceRevokedException))]
     VpnServiceRevoked
-
-
 }

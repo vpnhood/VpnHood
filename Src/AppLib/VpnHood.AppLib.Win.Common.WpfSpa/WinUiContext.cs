@@ -13,7 +13,6 @@ public class WinUiContext(Window window) : IUiContext
         catch {
             return false; // If the window is destroyed, we assume it's not active
         }
-
     }
 
     // could not find a way to check if the window is destroyed in WPF,

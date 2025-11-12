@@ -3,14 +3,14 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Common.IpLocations;
+using VpnHood.Core.Common.IpLocations.Providers.Onlines;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Dtos;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement.Services;
 using VpnHood.Core.Server.Access.Messaging;
-using VpnHood.Core.Common.IpLocations;
-using VpnHood.Core.Common.IpLocations.Providers.Onlines;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -42,7 +42,8 @@ public class FileAccessManager : IAccessManager
 
         var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
         DefaultCert = File.Exists(defaultCertFile)
-            ? new X509Certificate2(defaultCertFile, options.SslCertificatesPassword ?? string.Empty,
+            ? X509CertificateLoader.LoadPkcs12FromFile(defaultCertFile,
+                options.SslCertificatesPassword ?? string.Empty,
                 X509KeyStorageFlags.Exportable)
             : CreateSelfSignedCertificate(defaultCertFile, options.SslCertificatesPassword ?? string.Empty);
 
@@ -448,7 +449,7 @@ public class FileAccessManager : IAccessManager
         var buf = certificate.Export(X509ContentType.Pfx, password);
         Directory.CreateDirectory(Path.GetDirectoryName(certFilePath)!);
         File.WriteAllBytes(certFilePath, buf);
-        return new X509Certificate2(certFilePath, password, X509KeyStorageFlags.Exportable);
+        return X509CertificateLoader.LoadPkcs12(buf, password, X509KeyStorageFlags.Exportable);
     }
 
     protected virtual void Dispose(bool disposing)

@@ -35,5 +35,4 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public const bool IsDebugMode = false;
 #endif
     public static bool IsDebug => IsDebugMode;
-
 }

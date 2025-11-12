@@ -24,7 +24,8 @@ public static class ProxyClientFactory
         return ipAddress;
     }
 
-    public static async Task<IProxyClient> CreateProxyClient(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
+    public static async Task<IProxyClient> CreateProxyClient(ProxyEndPoint proxyEndPoint,
+        CancellationToken cancellationToken)
     {
         var serverIp = await GetIpAddress(proxyEndPoint.Host, cancellationToken).Vhc();
         var serverEp = new IPEndPoint(serverIp, proxyEndPoint.Port);

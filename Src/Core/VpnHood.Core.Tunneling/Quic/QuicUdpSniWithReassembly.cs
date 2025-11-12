@@ -1,22 +1,25 @@
 ﻿// ReSharper disable IdentifierTypo
 // ReSharper disable CommentTypo
 // ReSharper disable StringLiteralTypo
-namespace VpnHood.Core.Tunneling.Quic;
 
-using System;
 using System.Buffers.Binary;
-using System.Collections.Generic;
 using System.Security.Cryptography;
+
+namespace VpnHood.Core.Tunneling.Quic;
 
 public static class QuicSniExtractorStateful
 {
     // RFC9001 (v1) & RFC9369 (v2) salts
     private static readonly byte[] V1Salt = [
-        0x38,0x76,0x2c,0xf7,0xf5,0x59,0x34,0xb3,0x4d,0x17,0x9a,0xe6,0xa4,0xc8,0x0c,0xad,0xcc,0xbb,0x7f,0x0a
+        0x38, 0x76, 0x2c, 0xf7, 0xf5, 0x59, 0x34, 0xb3, 0x4d, 0x17, 0x9a, 0xe6, 0xa4, 0xc8, 0x0c, 0xad, 0xcc, 0xbb,
+        0x7f, 0x0a
     ];
+
     private static readonly byte[] V2Salt = [
-        0x0d,0xed,0xe3,0xde,0xf7,0x00,0xa6,0xdb,0x81,0x93,0x81,0xbe,0x6e,0x26,0x9d,0xcb,0xf9,0xbd,0x2e,0xd9
+        0x0d, 0xed, 0xe3, 0xde, 0xf7, 0x00, 0xa6, 0xdb, 0x81, 0x93, 0x81, 0xbe, 0x6e, 0x26, 0x9d, 0xcb, 0xf9, 0xbd,
+        0x2e, 0xd9
     ];
+
     private const uint V2Version = 0x6b3343cf;
 
     /// <summary>
@@ -65,7 +68,7 @@ public static class QuicSniExtractorStateful
                 break;
 
             var pktIsV2 = version == V2Version;
-            var isInitialPkt = pktIsV2 ? (typeBits == 0b01) : (typeBits == 0b00);
+            var isInitialPkt = pktIsV2 ? typeBits == 0b01 : typeBits == 0b00;
 
             // ensure secrets match the actual packet (first time)
             if (!state.SecretsReady) {
@@ -109,11 +112,12 @@ public static class QuicSniExtractorStateful
 
     private static bool LooksLikeInitial(ReadOnlySpan<byte> udp, out bool isV2, out ReadOnlySpan<byte> dcid)
     {
-        isV2 = false; dcid = default;
+        isV2 = false;
+        dcid = default;
         if (udp.Length < 7) return false;
         if ((udp[0] & 0x80) == 0) return false; // long header
         var ver = BinaryPrimitives.ReadUInt32BigEndian(udp.Slice(1, 4));
-        if (ver == 0) return false;             // version negotiation
+        if (ver == 0) return false; // version negotiation
         isV2 = ver == V2Version;
 
         var p = 5;
@@ -148,7 +152,13 @@ public static class QuicSniExtractorStateful
         out ulong lengthField, out int totalPacketBytes,
         out ReadOnlySpan<byte> dcid)
     {
-        version = 0; typeBits = 0; pnOffset = 0; headerLenUpToPn = 0; lengthField = 0; totalPacketBytes = 0; dcid = default;
+        version = 0;
+        typeBits = 0;
+        pnOffset = 0;
+        headerLenUpToPn = 0;
+        lengthField = 0;
+        totalPacketBytes = 0;
+        dcid = default;
 
         if (b.Length - off < 7) return false;
 
@@ -170,7 +180,7 @@ public static class QuicSniExtractorStateful
         if (b.Length < p) return false;
 
         // only Initial has a token
-        var isInitial = (version == V2Version) ? (typeBits == 0b01) : (typeBits == 0b00);
+        var isInitial = version == V2Version ? typeBits == 0b01 : typeBits == 0b00;
         if (isInitial) {
             if (!TryReadVarInt(b, ref p, out var tokenLen)) return false;
             p += (int)tokenLen;
@@ -279,7 +289,10 @@ public static class QuicSniExtractorStateful
             var ft = plain[p++];
 
             if (ft == 0x00 || ft == 0x01) continue; // PADDING, PING
-            if (ft == 0x02 || ft == 0x03) { if (!SkipAckFrame(plain, ref p, ft == 0x03)) return; continue; }
+            if (ft == 0x02 || ft == 0x03) {
+                if (!SkipAckFrame(plain, ref p, ft == 0x03)) return;
+                continue;
+            }
 
             if (ft == 0x06) // CRYPTO
             {
@@ -309,11 +322,13 @@ public static class QuicSniExtractorStateful
             if (!TryReadVarInt(s, ref p, out _)) return false; // gap
             if (!TryReadVarInt(s, ref p, out _)) return false; // ack_range_len
         }
+
         if (withEcn) {
             if (!TryReadVarInt(s, ref p, out _)) return false;
             if (!TryReadVarInt(s, ref p, out _)) return false;
             if (!TryReadVarInt(s, ref p, out _)) return false;
         }
+
         return true;
     }
 
@@ -361,7 +376,8 @@ public static class QuicSniExtractorStateful
 
         // cipher_suites
         if (p + 2 > buf.Length) return null;
-        var csLen = (buf[p] << 8) | buf[p + 1]; p += 2;
+        var csLen = (buf[p] << 8) | buf[p + 1];
+        p += 2;
         if (p + csLen > buf.Length) return null;
         p += csLen;
 
@@ -373,30 +389,36 @@ public static class QuicSniExtractorStateful
 
         // extensions
         if (p + 2 > buf.Length) return null;
-        var extTotal = (buf[p] << 8) | buf[p + 1]; p += 2;
+        var extTotal = (buf[p] << 8) | buf[p + 1];
+        p += 2;
         var extEnd = p + extTotal;
         if (extEnd > buf.Length) return null;
 
         while (p + 4 <= extEnd) {
-            var extType = (buf[p] << 8) | buf[p + 1]; p += 2;
-            var extLen = (buf[p] << 8) | buf[p + 1]; p += 2;
+            var extType = (buf[p] << 8) | buf[p + 1];
+            p += 2;
+            var extLen = (buf[p] << 8) | buf[p + 1];
+            p += 2;
             if (p + extLen > extEnd) return null;
 
             if (extType == 0x0000) // server_name
             {
                 var q = p;
                 if (q + 2 > p + extLen) return null;
-                var listLen = (buf[q] << 8) | buf[q + 1]; q += 2;
+                var listLen = (buf[q] << 8) | buf[q + 1];
+                q += 2;
                 if (q + listLen > p + extLen) return null;
 
                 while (q + 3 <= p + extLen) {
                     var nameType = buf[q++]; // 0 = host_name
-                    var nameLen = (buf[q] << 8) | buf[q + 1]; q += 2;
+                    var nameLen = (buf[q] << 8) | buf[q + 1];
+                    q += 2;
                     if (q + nameLen > p + extLen) return null;
                     if (nameType == 0)
                         return System.Text.Encoding.ASCII.GetString(buf.Slice(q, nameLen));
                     q += nameLen;
                 }
+
                 return null;
             }
 
@@ -417,11 +439,24 @@ public static class QuicSniExtractorStateful
         if (p + len > buf.Length) return false;
 
         switch (len) {
-            case 1: v = (ulong)(b & 0x3F); p += 1; return true;
-            case 2: v = (ulong)(BinaryPrimitives.ReadUInt16BigEndian(buf.Slice(p, 2)) & 0x3FFF); p += 2; return true;
-            case 4: v = BinaryPrimitives.ReadUInt32BigEndian(buf.Slice(p, 4)) & 0x3FFF_FFFF; p += 4; return true;
-            case 8: v = BinaryPrimitives.ReadUInt64BigEndian(buf.Slice(p, 8)) & 0x3FFF_FFFF_FFFF_FFFF; p += 8; return true;
+            case 1:
+                v = (ulong)(b & 0x3F);
+                p += 1;
+                return true;
+            case 2:
+                v = (ulong)(BinaryPrimitives.ReadUInt16BigEndian(buf.Slice(p, 2)) & 0x3FFF);
+                p += 2;
+                return true;
+            case 4:
+                v = BinaryPrimitives.ReadUInt32BigEndian(buf.Slice(p, 4)) & 0x3FFF_FFFF;
+                p += 4;
+                return true;
+            case 8:
+                v = BinaryPrimitives.ReadUInt64BigEndian(buf.Slice(p, 8)) & 0x3FFF_FFFF_FFFF_FFFF;
+                p += 8;
+                return true;
         }
+
         return false;
     }
 
@@ -446,6 +481,7 @@ public static class QuicSniExtractorStateful
             T = hmac.ComputeHash(input);
             okm.AddRange(T);
         }
+
         return okm.GetRange(0, len).ToArray();
     }
 

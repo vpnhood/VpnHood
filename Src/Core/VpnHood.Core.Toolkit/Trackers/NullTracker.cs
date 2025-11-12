@@ -15,7 +15,7 @@ public class NullTracker : TrackerBase
             Parameters = x.Parameters.ToDictionary(kvp => kvp.Key, object? (kvp) => kvp.Value?.ToString()!)
         });
 
-        VhLogger.Instance.LogDebug("TrackEvent. {TrackEvent}", 
+        VhLogger.Instance.LogDebug("TrackEvent. {TrackEvent}",
             JsonSerializer.Serialize(trackEvents));
 
         return Task.CompletedTask;

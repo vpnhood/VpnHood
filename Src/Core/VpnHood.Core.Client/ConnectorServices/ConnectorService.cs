@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -18,20 +18,22 @@ internal class ConnectorService(
     ISocketFactory socketFactory,
     TimeSpan requestTimeout,
     bool allowTcpReuse)
-    : ConnectorServiceBase(endPointInfo,  socketFactory, allowTcpReuse)
+    : ConnectorServiceBase(endPointInfo, socketFactory, allowTcpReuse)
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private int _isDisposed;
 
     public TimeSpan RequestTimeout { get; private set; } = requestTimeout;
 
-    public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan requestTimeout, TimeSpan tcpReuseTimeout, bool useWebSocket)
+    public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan requestTimeout, TimeSpan tcpReuseTimeout,
+        bool useWebSocket)
     {
         RequestTimeout = requestTimeout;
         base.Init(protocolVersion, serverSecret, tcpReuseTimeout, useWebSocket && protocolVersion >= 9);
     }
 
-    public async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request, CancellationToken cancellationToken)
+    public async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
+        CancellationToken cancellationToken)
         where T : SessionResponse
     {
         using var timeoutCts = new CancellationTokenSource(RequestTimeout);
@@ -52,13 +54,15 @@ internal class ConnectorService(
             var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, requestCts.Token).Vhc();
 
             // log the response
-            VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.", ret.Response.ErrorCode);
+            VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.",
+                ret.Response.ErrorCode);
 
             lock (Status) Status.RequestCount++;
             return ret;
         }
         catch (Exception) when (timeoutCts.IsCancellationRequested) {
-            throw new TimeoutException($"Could not send the {(RequestCode)request.RequestCode} request in the given time.");
+            throw new TimeoutException(
+                $"Could not send the {(RequestCode)request.RequestCode} request in the given time.");
         }
     }
 

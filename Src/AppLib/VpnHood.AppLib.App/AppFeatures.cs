@@ -35,5 +35,4 @@ public class AppFeatures
 
     [JsonConverter(typeof(VersionConverter))]
     public required Version Version { get; init; }
-
 }

@@ -13,9 +13,9 @@ public class ClientProfileService
 {
     private const string FilenameProfiles = "vpn_profiles.json";
     private List<ClientProfile> _clientProfiles;
-    private readonly object _updateByUrlLock = new();
+    private readonly Lock _updateByUrlLock = new();
     private ClientProfileInfo? _cashInfo;
-    
+
     private string ClientProfilesFilePath => Path.Combine(field, FilenameProfiles);
 
     public ClientProfileService(string folderPath)
@@ -123,7 +123,8 @@ public class ClientProfileService
         if (updateParams.CustomServerEndpoints != null) {
             var customEndpoints = updateParams.CustomServerEndpoints.Value?.Select(IPEndPoint.Parse).ToArray();
             if (customEndpoints?.Any(x => x.Port == 0) == true)
-                throw new ArgumentException("Custom server endpoints cannot have port 0.", nameof(updateParams.CustomServerEndpoints));
+                throw new ArgumentException("Custom server endpoints cannot have port 0.",
+                    nameof(updateParams.CustomServerEndpoints));
 
             item.CustomServerEndpoints = updateParams.CustomServerEndpoints.Value?.Select(IPEndPoint.Parse).ToArray();
         }
@@ -144,7 +145,7 @@ public class ClientProfileService
 
             // reset premium location selection if access code is removed
             if (item.AccessCode is null) {
-                item.IsPremiumLocationSelected = false; 
+                item.IsPremiumLocationSelected = false;
                 item.SelectedLocation = null;
             }
         }
@@ -162,8 +163,8 @@ public class ClientProfileService
     {
         try {
             var token = Token.FromAccessKey(accessKey);
-            return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false, isForAccount: isForAccount);
-
+            return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false,
+                isForAccount: isForAccount);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not import access key.");
@@ -171,7 +172,7 @@ public class ClientProfileService
         }
     }
 
-    private readonly object _importLock = new();
+    private readonly Lock _importLock = new();
 
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
     private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn,
@@ -294,7 +295,8 @@ public class ClientProfileService
 
                 // return if the token is not new
                 if (!token.ServerToken.IsTokenUpdated(newServerToken)) {
-                    VhLogger.Instance.LogInformation("The remote ServerToken is not new and has not been updated. Url: {Url}",
+                    VhLogger.Instance.LogInformation(
+                        "The remote ServerToken is not new and has not been updated. Url: {Url}",
                         VhLogger.FormatHostName(url));
                     return false;
                 }

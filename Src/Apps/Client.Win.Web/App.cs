@@ -53,6 +53,4 @@ public class App : Application
         var app = new App();
         app.Run();
     }
-
-
 }

@@ -119,7 +119,6 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
             sessionResponse.AccessUsage.CanExtendByRewardedAd = CanExtendPremiumByAd;
             sessionResponse.AccessUsage.UserReviewRecommended = UserReviewRecommended;
         }
-
     }
 
     protected override async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage)

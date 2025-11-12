@@ -1,10 +1,10 @@
-﻿using Android;
+﻿using System.Diagnostics;
+using Android;
 using Android.Content;
 using Android.Content.PM;
 using Android.Net;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
@@ -23,7 +23,7 @@ namespace VpnHood.Core.Client.Device.Droid;
     Permission = Manifest.Permission.BindVpnService,
     Exported = false,
     ForegroundServiceType = ForegroundService.TypeSystemExempted
-    )]
+)]
 [IntentFilter(["android.net.VpnService"])]
 public class AndroidVpnService : VpnService, IVpnServiceHandler
 {
@@ -44,7 +44,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     public override StartCommandResult OnStartCommand(Intent? intent,
         [GeneratedEnum] StartCommandFlags flags, int startId)
     {
-        var action = intent?.Action; 
+        var action = intent?.Action;
         VhLogger.Instance.LogInformation( // logger may not be initialized yet
             "AndroidVpnService OnStartCommand. Action: {Action}, ProcessId: {ProcessId}",
             action, Process.GetCurrentProcess().Id);
@@ -122,7 +122,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     {
         if (_notification == null) {
             VhLogger.Instance.LogDebug("Create and show the notification for the VPN service.");
-            _notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), connectionInfo.SessionName ?? "VPN");
+            _notification =
+                new AndroidVpnNotification(this, new VpnServiceLocalization(), connectionInfo.SessionName ?? "VPN");
             StartForeground(AndroidVpnNotification.NotificationId, _notification.Build());
         }
 

@@ -14,7 +14,6 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class ProxyEndPointServiceTest : TestAppBase
 {
-
     [TestMethod]
     public async Task List()
     {
@@ -49,7 +48,6 @@ public class ProxyEndPointServiceTest : TestAppBase
     [TestMethod]
     public async Task Restore_last_NodeInfo_then_clear()
     {
-
         // create a local HTTP proxy using HttpProxyServer
         using var httpProxyServer = new HttpProxyServer(new HttpProxyServerOptions {
             ListenEndPoint = new IPEndPoint(IPAddress.Loopback, 0)
@@ -169,7 +167,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         // create the client
         using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
-            Mode = AppProxyMode.Manual,
+            Mode = AppProxyMode.Manual
         };
         foreach (var proxyEndPoint in endpoints)
             dom.App.Services.ProxyEndPointService.Add(proxyEndPoint);
@@ -243,7 +241,6 @@ public class ProxyEndPointServiceTest : TestAppBase
         updatedAppNodes = dom.App.Services.ProxyEndPointService.ListProxies();
         Assert.HasCount(10, updatedAppNodes);
         Assert.HasCount(0, updatedAppNodes.Where(x => x.EndPoint.Id == endpoints[5].Id));
-
     }
 
     [TestMethod]
@@ -261,7 +258,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
         var deviceUiProvider = (TestDeviceUiProvider)dom.App.Services.DeviceUiProvider;
         deviceUiProvider.DeviceProxySettings = new DeviceProxySettings {
-            ProxyUrl = new Uri("http://foo.local"),
+            ProxyUrl = new Uri("http://foo.local")
         };
 
         dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.NoProxy;
@@ -276,7 +273,8 @@ public class ProxyEndPointServiceTest : TestAppBase
         dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.Device;
         Assert.IsTrue(dom.App.State.IsProxyEndPointActive);
         Assert.HasCount(1, dom.App.Services.ProxyEndPointService.GetProxyOptions().ProxyEndPoints);
-        Assert.AreEqual(deviceProxy.EndPoint.Id, dom.App.Services.ProxyEndPointService.GetProxyOptions().ProxyEndPoints.First().Id);
+        Assert.AreEqual(deviceProxy.EndPoint.Id,
+            dom.App.Services.ProxyEndPointService.GetProxyOptions().ProxyEndPoints.First().Id);
 
         // disable proxy
         dom.App.UserSettings.ProxySettings.Mode = AppProxyMode.NoProxy;
@@ -553,10 +551,10 @@ public class ProxyEndPointServiceTest : TestAppBase
         // check is proxies are added
         var endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies();
         Assert.HasCount(2, endPointInfos);
-        Assert.HasCount(1, endPointInfos.Where(
-            n => n.EndPoint.Protocol == ProxyProtocol.Socks5 && n.EndPoint.Port == socks5Ep.Port));
-        Assert.HasCount(1, endPointInfos.Where(
-            n => n.EndPoint.Protocol == ProxyProtocol.Http && n.EndPoint.Port == httpEp.Port));
+        Assert.HasCount(1,
+            endPointInfos.Where(n => n.EndPoint.Protocol == ProxyProtocol.Socks5 && n.EndPoint.Port == socks5Ep.Port));
+        Assert.HasCount(1,
+            endPointInfos.Where(n => n.EndPoint.Protocol == ProxyProtocol.Http && n.EndPoint.Port == httpEp.Port));
     }
 
     [TestMethod]
@@ -595,10 +593,9 @@ public class ProxyEndPointServiceTest : TestAppBase
         await dom.App.Services.ProxyEndPointService.ReloadUrl(CancellationToken.None);
         var endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies();
         Assert.HasCount(2, endPointInfos);
-        Assert.HasCount(1, endPointInfos.Where(
-            n => n.EndPoint.Protocol == ProxyProtocol.Socks5 && n.EndPoint.Port == socks5Ep.Port));
-        Assert.HasCount(1, endPointInfos.Where(
-            n => n.EndPoint.Protocol == ProxyProtocol.Http && n.EndPoint.Port == httpEp.Port));
+        Assert.HasCount(1,
+            endPointInfos.Where(n => n.EndPoint.Protocol == ProxyProtocol.Socks5 && n.EndPoint.Port == socks5Ep.Port));
+        Assert.HasCount(1,
+            endPointInfos.Where(n => n.EndPoint.Protocol == ProxyProtocol.Http && n.EndPoint.Port == httpEp.Port));
     }
-
 }

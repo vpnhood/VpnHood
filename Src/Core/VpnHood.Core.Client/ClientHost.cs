@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
@@ -67,7 +67,8 @@ internal class ClientHost(
         _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
         _tcpListenerIpV4.Start();
         _localEndpointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
-        VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}", VhLogger.Format(_localEndpointIpV4));
+        VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}",
+            VhLogger.Format(_localEndpointIpV4));
         _ = AcceptTcpClientLoop(_tcpListenerIpV4);
 
         // IpV6
@@ -75,16 +76,17 @@ internal class ClientHost(
             _tcpListenerIpV6 = new TcpListener(IPAddress.IPv6Any, 0);
             _tcpListenerIpV6.Start();
             _localEndpointIpV6 = (IPEndPoint)_tcpListenerIpV6.LocalEndpoint; //it is slow; make sure to cache it
-            VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}", VhLogger.Format(_localEndpointIpV6));
+            VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}",
+                VhLogger.Format(_localEndpointIpV6));
             _ = AcceptTcpClientLoop(_tcpListenerIpV6);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex,
-                "Could not create a listener. EndPoint: {EndPoint}", VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0)));
+                "Could not create a listener. EndPoint: {EndPoint}",
+                VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0)));
         }
 
         // check available memory
-
     }
 
     private async Task AcceptTcpClientLoop(TcpListener tcpListener)
@@ -130,7 +132,8 @@ internal class ClientHost(
             // redirect to inbound
             if (catcherAddress.SpanEquals(ipPacket.DestinationAddressSpan)) {
                 var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
-                              ?? throw new NatEndpointNotFoundException("Could not find incoming tcp destination in NAT.");
+                              ?? throw new NatEndpointNotFoundException(
+                                  "Could not find incoming tcp destination in NAT.");
 
                 ipPacket.SourceAddress = natItem.DestinationAddress;
                 ipPacket.DestinationAddress = natItem.SourceAddress;
@@ -213,8 +216,9 @@ internal class ClientHost(
             VhUtils.ConfigTcpClient(orgTcpClient, null, null);
 
             // get original remote from NAT
-            var orgRemoteEndPoint = 
-                orgTcpClient.TryGetRemoteEndPoint() ?? throw new Exception("Could not get original remote endpoint from TcpClient.");
+            var orgRemoteEndPoint =
+                orgTcpClient.TryGetRemoteEndPoint() ??
+                throw new Exception("Could not get original remote endpoint from TcpClient.");
 
             ipVersion = orgRemoteEndPoint.IpVersion();
             var natItem =
@@ -248,7 +252,8 @@ internal class ClientHost(
             }
 
             // Filter by IP
-            var isInIpRange = syncCustomData?.IsInIpRange ?? vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
+            var isInIpRange = syncCustomData?.IsInIpRange ??
+                              vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
             if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
                 var channelId = UniqueIdFactory.Create() + ":client:passthrough";
@@ -278,7 +283,8 @@ internal class ClientHost(
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
             var orgTcpClientStream =
-                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), proxyClientStream.ClientStreamId.Replace(":tunnel", ":app"));
+                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(),
+                    proxyClientStream.ClientStreamId.Replace(":tunnel", ":app"));
 
             // flush initBuffer
             await proxyClientStream.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
@@ -330,5 +336,4 @@ internal class ClientHost(
     {
         public required bool IsInIpRange { get; init; }
     }
-
 }

@@ -14,7 +14,8 @@ using Object = Java.Lang.Object;
 
 namespace VpnHood.AppLib.Droid.Common;
 
-[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true, Exported = true)]
+[Service(Permission = Manifest.Permission.BindQuickSettingsTile, Icon = IconResourceName, Enabled = true,
+    Exported = true)]
 [MetaData(MetaDataToggleableTile, Value = "true")]
 [MetaData(MetaDataActiveTile, Value = "true")]
 [IntentFilter([ActionQsTile])]

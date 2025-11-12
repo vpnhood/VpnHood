@@ -13,8 +13,9 @@ public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
 {
     public override bool IsAppFilterSupported => true;
     public override bool IsNatSupported => true;
-    protected override bool IsSocketProtectedByBind  =>false;
+    protected override bool IsSocketProtectedByBind => false;
     protected override string AppPackageId => "VpnHood.NullAdapter";
+
     protected override Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;

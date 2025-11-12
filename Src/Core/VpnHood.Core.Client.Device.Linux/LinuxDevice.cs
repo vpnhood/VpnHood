@@ -13,13 +13,10 @@ public class LinuxDevice(string storageFolder) : IDevice
     public bool IsTcpProxySupported => true;
     public bool IsTv => false;
 
-    public DeviceMemInfo MemInfo
-    {
-        get
-        {
+    public DeviceMemInfo MemInfo {
+        get {
             var gcMemoryInfo = GC.GetGCMemoryInfo();
-            return new DeviceMemInfo
-            {
+            return new DeviceMemInfo {
                 TotalMemory = gcMemoryInfo.TotalAvailableMemoryBytes,
                 AvailableMemory = gcMemoryInfo.TotalAvailableMemoryBytes - gcMemoryInfo.MemoryLoadBytes
             };

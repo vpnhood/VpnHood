@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+
 // ReSharper disable StringLiteralTypo
 
 namespace VpnHood.AppLib.WebServer.Helpers;
@@ -8,8 +9,7 @@ namespace VpnHood.AppLib.WebServer.Helpers;
 /// </summary>
 public static class MimeTypeHelper
 {
-    private static readonly FrozenDictionary<string, string> MimeTypes = new Dictionary<string, string>
-    {
+    private static readonly FrozenDictionary<string, string> MimeTypes = new Dictionary<string, string> {
         // Text files
         [".html"] = "text/html",
         [".htm"] = "text/html",
@@ -134,7 +134,6 @@ public static class MimeTypeHelper
         [".log"] = "text/plain",
         [".out"] = "text/plain",
         [".err"] = "text/plain"
-
     }.ToFrozenDictionary();
 
     /// <summary>

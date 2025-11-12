@@ -34,5 +34,5 @@ public enum IpProtocol : byte
     Reserved253 = 253,
     Reserved254 = 254,
     Mask = 255,
-    Raw = 255,
+    Raw = 255
 }

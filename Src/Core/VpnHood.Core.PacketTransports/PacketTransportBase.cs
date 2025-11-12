@@ -57,7 +57,8 @@ public abstract class PacketTransportBase : IPacketTransport
             PacketReceived?.Invoke(this, ipPacket);
         }
         catch (Exception ex) {
-            LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Error while invoking the received packets.", exception: ex);
+            LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Error while invoking the received packets.",
+                exception: ex);
             if (_autoDisposePackets)
                 ipPacket.Dispose();
         }
@@ -77,9 +78,7 @@ public abstract class PacketTransportBase : IPacketTransport
         if (IsDisposed || IsDisposing)
             throw new ObjectDisposedException(GetType().Name);
 
-        return _passthrough ?
-            SendPacketQueuedPassthroughAsync(ipPacket) :
-            _sendChannel.Writer.WriteAsync(ipPacket);
+        return _passthrough ? SendPacketQueuedPassthroughAsync(ipPacket) : _sendChannel.Writer.WriteAsync(ipPacket);
     }
 
     private readonly IpPacket[] _singlePacketBuffer = new IpPacket[1];
@@ -94,8 +93,9 @@ public abstract class PacketTransportBase : IPacketTransport
             lock (_singlePacketBuffer) {
                 _singlePacketBuffer[0] = ipPacket;
                 var ret = SendPacketsInternalAsync(_singlePacketBuffer);
-                if (!ret.IsCompleted) throw new InvalidOperationException(
-                    "A passthrough PacketTransport should not return an incomplete task.");
+                if (!ret.IsCompleted)
+                    throw new InvalidOperationException(
+                        "A passthrough PacketTransport should not return an incomplete task.");
                 return ret.Result;
             }
         }
@@ -154,7 +154,8 @@ public abstract class PacketTransportBase : IPacketTransport
                     ipPacket.Dispose();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error in SendingPacketsAsync loop. Type: {Type}", VhLogger.FormatType(this));
+            VhLogger.Instance.LogError(ex, "Error in SendingPacketsAsync loop. Type: {Type}",
+                VhLogger.FormatType(this));
         }
     }
 
@@ -204,7 +205,8 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
-    protected virtual void LogPacket(IpPacket ipPacket, string message, LogLevel? logLevel = null, Exception? exception = null)
+    protected virtual void LogPacket(IpPacket ipPacket, string message, LogLevel? logLevel = null,
+        Exception? exception = null)
     {
         // LogPacket is so intensively used that we need to avoid unnecessary allocations or formatting
         // Just log if the log level is Trace despite the required log level

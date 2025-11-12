@@ -21,18 +21,24 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
     private static bool IsTv => AndroidUtil.IsTv();
 
-    public bool IsQuickLaunchSupported => 
+    public bool IsQuickLaunchSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;
-    public bool IsRequestQuickLaunchSupported => 
+
+    public bool IsRequestQuickLaunchSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(33) && !IsTv;
+
     public bool IsPrivateDnsSettingsSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(28) && !IsTv;
+
     public bool IsKillSwitchSettingsSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;
+
     public bool IsAlwaysOnSettingsSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;
+
     public bool IsRequestNotificationSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(33) && !IsTv;
+
     public bool IsAppNotificationSettingsSupported => !IsTv;
     public bool IsSettingsSupported => !IsTv;
     public bool IsAppSettingsSupported => !IsTv;
@@ -165,16 +171,16 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
             return null;
 
         try {
-            var connectivityManager = 
+            var connectivityManager =
                 (ConnectivityManager?)Application.Context.GetSystemService(Context.ConnectivityService) ??
                 throw new Exception("Could not retrieve ConnectivityManager for proxy settings.");
 
             // Get active network
-            var network = 
+            var network =
                 connectivityManager.ActiveNetwork ??
                 throw new Exception("Could not retrieve active network for proxy settings.");
 
-            var linkProperties = 
+            var linkProperties =
                 connectivityManager.GetLinkProperties(network) ??
                 throw new Exception("Could not retrieve LinkProperties for proxy settings.");
 
@@ -255,5 +261,4 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
         if (postNotificationsIndex != -1 && _requestPostNotificationsCompletionTask != null)
             _requestPostNotificationsCompletionTask.TrySetResult(e.GrantResults[postNotificationsIndex]);
     }
-
 }

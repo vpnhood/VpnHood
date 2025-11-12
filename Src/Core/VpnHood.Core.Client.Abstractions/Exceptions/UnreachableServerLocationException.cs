@@ -6,9 +6,9 @@ public class UnreachableServerLocationException : UnreachableServerException
         : base(message)
     {
     }
+
     public UnreachableServerLocationException(string message, Exception innerException)
         : base(message, innerException)
     {
     }
 }
-

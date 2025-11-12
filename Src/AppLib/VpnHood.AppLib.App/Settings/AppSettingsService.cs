@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.Settings;
 public class AppSettingsService
 {
     private readonly string _storagePath;
-    private readonly object _saveLock = new();
+    private readonly Lock _saveLock = new();
     private string AppSettingsFilePath => Path.Combine(_storagePath, "settings.json");
     private string RemoteSettingsFilePath => Path.Combine(_storagePath, "remote_settings.json");
 

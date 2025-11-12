@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Proxies.EndPointManagement;
 
-internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo) 
+internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
 {
     private readonly object _lock = new();
     public ProxyEndPointInfo Info => endPointInfo;
@@ -36,13 +36,15 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
             if (isSlow) {
                 Status.Penalty++;
 
-                VhLogger.Instance.LogDebug("Proxy server responded slowly. {ProxyServer}, ResponseTime: {ResponseTime}, PenaltyRate: {Penalty}",
+                VhLogger.Instance.LogDebug(
+                    "Proxy server responded slowly. {ProxyServer}, ResponseTime: {ResponseTime}, PenaltyRate: {Penalty}",
                     VhLogger.FormatHostName(EndPoint.Host), latency, Status.Penalty);
             }
             else {
                 if (Status.Penalty > 0)
                     Status.Penalty--;
             }
+
             UpdatePosition(currentQueuePos);
         }
     }
@@ -64,7 +66,8 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
             Status.ErrorMessage = exception?.Message;
             UpdatePosition(currentQueuePos);
 
-            VhLogger.Instance.LogDebug("Failed to connect to proxy server. {ProxyServer}, FailedCount: {FailedCount}, Penalty: {Penalty}",
+            VhLogger.Instance.LogDebug(
+                "Failed to connect to proxy server. {ProxyServer}, FailedCount: {FailedCount}, Penalty: {Penalty}",
                 VhLogger.FormatHostName(EndPoint.Host), Status.FailedCount, Status.Penalty);
         }
     }

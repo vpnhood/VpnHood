@@ -66,11 +66,11 @@ internal static partial class ProxyEndPointExtractor
         if (hostPortMatch.Success) {
             var host = hostPortMatch.Groups["host"].Value;
             var portStr = hostPortMatch.Groups["port"].Value;
-            
+
             // Validate port is in valid range
             if (!int.TryParse(portStr, out var port) || port < 1 || port > 65535)
                 return null;
-            
+
             var scheme = DetermineScheme(detectedProtocol, port, defaultScheme, preferHttpsWhenPort443);
             return BuildUri(scheme, host, port);
         }
@@ -90,11 +90,11 @@ internal static partial class ProxyEndPointExtractor
             var host = ipv4OnlyMatch.Groups["host"].Value;
             if (!IsValidIpv4(host))
                 return null;
-            
+
             // Only return if protocol was explicitly detected
             if (detectedProtocol == null)
                 return null;
-            
+
             var scheme = detectedProtocol;
             var port = GetDefaultPortForScheme(scheme);
             return BuildUri(scheme, host, port);
@@ -120,7 +120,7 @@ internal static partial class ProxyEndPointExtractor
     private static string? DetectProtocolFromKeywords(string text)
     {
         var lowerText = text.ToLowerInvariant();
-        
+
         // Check for protocol keywords (order matters - be specific first)
         if (lowerText.Contains("socks5") || lowerText.Contains("socks 5"))
             return "socks5";
@@ -136,7 +136,8 @@ internal static partial class ProxyEndPointExtractor
         return null;
     }
 
-    private static string DetermineScheme(string? detectedProtocol, int port, string defaultScheme, bool preferHttpsWhenPort443)
+    private static string DetermineScheme(string? detectedProtocol, int port, string defaultScheme,
+        bool preferHttpsWhenPort443)
     {
         // If protocol was detected from keywords, use it
         if (!string.IsNullOrEmpty(detectedProtocol))
@@ -144,15 +145,15 @@ internal static partial class ProxyEndPointExtractor
 
         // Otherwise, guess from port
         return port switch {
-            1080 => "socks5",  // Common SOCKS port
-            1081 => "socks5",  // Alternative SOCKS port
-            9050 => "socks5",  // Tor SOCKS port
+            1080 => "socks5", // Common SOCKS port
+            1081 => "socks5", // Alternative SOCKS port
+            9050 => "socks5", // Tor SOCKS port
             443 when preferHttpsWhenPort443 => "https",
             443 => "https",
             80 => "http",
             8080 => "http",
-            3128 => "http",    // Common HTTP proxy port (Squid)
-            8888 => "http",    // Common HTTP proxy port
+            3128 => "http", // Common HTTP proxy port (Squid)
+            8888 => "http", // Common HTTP proxy port
             _ => defaultScheme
         };
     }
@@ -185,8 +186,9 @@ internal static partial class ProxyEndPointExtractor
         };
 
         // Ensure port is set
-        var port = uri is { Port: > 0, IsDefaultPort: false } 
-            ? uri.Port : GetDefaultPortForScheme(scheme);
+        var port = uri is { Port: > 0, IsDefaultPort: false }
+            ? uri.Port
+            : GetDefaultPortForScheme(scheme);
 
         return BuildUri(scheme, uri.Host, port, uri.UserInfo);
     }
@@ -210,7 +212,9 @@ internal static partial class ProxyEndPointExtractor
     }
 
     // Complete URL pattern: scheme://[user:pass@]host[:port]
-    [GeneratedRegex(@"(?<url>(?:https?|socks5?h?|socks)://(?:[^:@\s]+(?::[^@\s]*)?@)?(?:\[[^\]]+\]|[a-zA-Z0-9\.\-]+)(?::\d{1,5})?)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(
+        @"(?<url>(?:https?|socks5?h?|socks)://(?:[^:@\s]+(?::[^@\s]*)?@)?(?:\[[^\]]+\]|[a-zA-Z0-9\.\-]+)(?::\d{1,5})?)",
+        RegexOptions.IgnoreCase)]
     private static partial Regex UrlRegex();
 
     // IPv6 with port: [2001:db8::1]:1080
@@ -225,7 +229,8 @@ internal static partial class ProxyEndPointExtractor
     // Hostname with port (more lenient, but requires valid hostname format with at least one dot)
     // Must NOT match partial IP addresses like "71.67" - require letters in hostname
     // Matches: "proxy.com:1080" or "proxy.example.com 9999"
-    [GeneratedRegex(@"\b(?<host>(?=.*[a-zA-Z])[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)+)[\s:]+(?<port>\d{1,5})\b")]
+    [GeneratedRegex(
+        @"\b(?<host>(?=.*[a-zA-Z])[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)+)[\s:]+(?<port>\d{1,5})\b")]
     private static partial Regex HostPortRegex();
 
     // Just IPv6: [2001:db8::1]

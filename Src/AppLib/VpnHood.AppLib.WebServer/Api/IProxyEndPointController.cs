@@ -17,4 +17,3 @@ public interface IProxyEndPointController
     Task ReloadUrl(CancellationToken cancellationToken);
     Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults);
 }
-

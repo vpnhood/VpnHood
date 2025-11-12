@@ -85,7 +85,7 @@ public class IpRangeOrderedList :
     public bool IsAllV4()
     {
         // use ToIpRanges for All to improve performance
-        return new [] {IpNetwork.AllV4}
+        return new[] { IpNetwork.AllV4 }
             .ToIpRanges()
             .SequenceEqual(this);
     }

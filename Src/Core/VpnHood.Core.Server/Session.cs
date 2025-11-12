@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
@@ -66,7 +66,10 @@ public class Session : IDisposable
     public SessionExtraData ExtraData { get; }
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
-    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (_udpChannel != null ? 0 : Tunnel.PacketChannelCount);
+
+    public int TcpChannelCount =>
+        Tunnel.StreamProxyChannelCount + (_udpChannel != null ? 0 : Tunnel.PacketChannelCount);
+
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
     public VirtualIpBundle VirtualIps { get; }
@@ -248,7 +251,8 @@ public class Session : IDisposable
             var ipeEndPointPair = ipPacket.GetEndPoints();
             LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
-            throw new NetFilterException($"Invalid tunnel packet source ip. SourceIp: {VhLogger.Format(ipPacket.SourceAddress)}");
+            throw new NetFilterException(
+                $"Invalid tunnel packet source ip. SourceIp: {VhLogger.Format(ipPacket.SourceAddress)}");
         }
 
         // check TcpPacket
@@ -261,7 +265,8 @@ public class Session : IDisposable
             var ipeEndPointPair = ipPacket.GetEndPoints();
             LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
-            throw new NetFilterException($"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(ipPacket.DestinationAddress)}");
+            throw new NetFilterException(
+                $"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(ipPacket.DestinationAddress)}");
         }
 
         // send using tunnel or proxy
@@ -385,7 +390,8 @@ public class Session : IDisposable
         try {
             // connect to requested site
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
-                "Connecting to the requested endpoint. RequestedEP: {Format}", VhLogger.Format(request.DestinationEndPoint));
+                "Connecting to the requested endpoint. RequestedEP: {Format}",
+                VhLogger.Format(request.DestinationEndPoint));
 
             // Apply limitation and update endpoint if needed
             VerifyTcpChannelRequest(clientStream, request);
@@ -418,8 +424,10 @@ public class Session : IDisposable
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
 
-            tcpClientStreamHost = new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
-            proxyChannel = new ProxyChannel(request.RequestId, tcpClientStreamHost, clientStream, _streamProxyBufferSize);
+            tcpClientStreamHost =
+                new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
+            proxyChannel = new ProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
+                _streamProxyBufferSize);
 
             Tunnel.AddChannel(proxyChannel);
         }
@@ -433,7 +441,8 @@ public class Session : IDisposable
                 var message = cancellationToken.IsCancellationRequested
                     ? "Could not connect to the requested destination in given time."
                     : ex.Message;
-                message += $" RemoteEndPoint: {clientStream.IpEndPointPair.RemoteEndPoint}, RequestId: {request.RequestId}";
+                message +=
+                    $" RemoteEndPoint: {clientStream.IpEndPointPair.RemoteEndPoint}, RequestId: {request.RequestId}";
                 throw new SessionException(SessionErrorCode.GeneralError, message);
             }
 
@@ -451,7 +460,8 @@ public class Session : IDisposable
         if (newEndPoint == null) {
             LogTrack(protocol, null, destinationEndPoint, false, true, "NetFilter");
             _filterReporter.Raise();
-            throw new NetFilterException($"Request discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(destinationEndPoint)}");
+            throw new NetFilterException(
+                $"Request discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(destinationEndPoint)}");
         }
 
         return newEndPoint;

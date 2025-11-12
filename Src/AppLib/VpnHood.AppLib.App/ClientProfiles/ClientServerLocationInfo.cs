@@ -40,7 +40,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
     {
         var tags = Tags ?? [];
         Options = new ServerLocationOptions {
-            HasFree = !tags.Contains(ServerRegisteredTags.Premium) || 
+            HasFree = !tags.Contains(ServerRegisteredTags.Premium) ||
                       tags.Contains($"~{ServerRegisteredTags.Premium}"),
             HasPremium = tags.Contains(ServerRegisteredTags.Premium) ||
                          tags.Contains($"~{ServerRegisteredTags.Premium}"),

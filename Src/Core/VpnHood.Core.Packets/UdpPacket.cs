@@ -6,7 +6,7 @@ public class UdpPacket : IChecksumPayloadPacket
 {
     private readonly Memory<byte> _buffer;
 
-    public UdpPacket(Memory<byte> buffer, bool building) 
+    public UdpPacket(Memory<byte> buffer, bool building)
     {
         if (buffer.Length < 8)
             throw new ArgumentException("Buffer too small for UDP header.", nameof(buffer));

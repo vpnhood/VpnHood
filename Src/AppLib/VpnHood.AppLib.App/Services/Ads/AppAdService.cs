@@ -17,6 +17,7 @@ public class AppAdService(
     ITracker tracker)
 {
     private AppCompositeAdService? _currentCompositeAdService;
+
     private readonly AppCompositeAdService _compositeInterstitialAdService = new(
         adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd).ToArray(),
         tracker);
@@ -32,12 +33,14 @@ public class AppAdService(
     public ProgressStatus? LoadAdProgress => _currentCompositeAdService?.LoadAdProgress;
 
     public bool IsWaitingForInternalAd => ActiveInternalAdProvider != null;
-    public void InternalAdDismiss(ShowAdResult showAdResult) => ActiveInternalAdProvider?.Dismiss(showAdResult); 
+    public void InternalAdDismiss(ShowAdResult showAdResult) => ActiveInternalAdProvider?.Dismiss(showAdResult);
     public void InternalAdError(Exception exception) => ActiveInternalAdProvider?.SetException(exception);
 
     public void EnableAdProvider(string providerName, bool value)
     {
-        var item = adProviderItems.FirstOrDefault(x => string.Equals(x.ProviderName, providerName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.AdProvider.NetworkName, providerName, StringComparison.OrdinalIgnoreCase));
+        var item = adProviderItems.FirstOrDefault(x =>
+            string.Equals(x.ProviderName, providerName, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.AdProvider.NetworkName, providerName, StringComparison.OrdinalIgnoreCase));
         if (item != null)
             item.IsEnabled = value;
     }
@@ -60,7 +63,8 @@ public class AppAdService(
     public async Task LoadInterstitialAd(IUiContext uiContext, bool useFallback, CancellationToken cancellationToken)
     {
         // don't use VPN for loading ad
-        var countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
+        var countryCode =
+            await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
         await LoadAd(_compositeInterstitialAdService, uiContext, isPreload: true,
             countryCode: countryCode, useFallback: useFallback,
             cancellationToken: cancellationToken).Vhc();
@@ -101,7 +105,8 @@ public class AppAdService(
     {
         string? countryCode = null;
         try {
-            countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
+            countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken)
+                .Vhc();
 
             // Load and sw ad
             var result = await LoadAndShowAd(appCompositeAdService, uiContext, sessionId, countryCode,
@@ -114,7 +119,7 @@ public class AppAdService(
             // track ad show success
             await tracker.TryTrackWithCancellation(
                 AppTrackerBuilder.BuildShowAdOk(adNetwork: result.NetworkName,
-                    countryCode: countryCode, 
+                    countryCode: countryCode,
                     isPreload: appCompositeAdService.IsPreload,
                     showAdResult: result.IsClicked ? ShowAdResult.Clicked : ShowAdResult.Closed),
                 cancellationToken).Vhc();
@@ -124,15 +129,15 @@ public class AppAdService(
         catch (Exception ex) {
             var adNetwork = ex is ShowAdException showAdException ? showAdException.AdNetworkName : null;
             await tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildAdFailed(
-                    adNetwork: adNetwork, errorMessage: ex.Message, countryCode: countryCode,
-                    isPreload: appCompositeAdService.IsPreload), cancellationToken).Vhc();
+                adNetwork: adNetwork, errorMessage: ex.Message, countryCode: countryCode,
+                isPreload: appCompositeAdService.IsPreload), cancellationToken).Vhc();
 
             // convert it to ShowAdNoUiException
             if (ex is not ShowAdNoUiException && !await AppAdUtils.IsActiveUi(uiContext)) {
                 var noUiException = new ShowAdNoUiException();
                 await tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildShowAdFailed(
-                        errorMessage: noUiException.Message, countryCode: countryCode,
-                        isPreload: appCompositeAdService.IsPreload, adNetwork: adNetwork), cancellationToken).Vhc();
+                    errorMessage: noUiException.Message, countryCode: countryCode,
+                    isPreload: appCompositeAdService.IsPreload, adNetwork: adNetwork), cancellationToken).Vhc();
                 throw noUiException;
             }
 
@@ -141,9 +146,9 @@ public class AppAdService(
     }
 
     private async Task<AdResult> LoadAndShowAd(AppCompositeAdService appCompositeAdService,
-        IUiContext uiContext, string sessionId, string countryCode, bool useFallback, CancellationToken cancellationToken)
+        IUiContext uiContext, string sessionId, string countryCode, bool useFallback,
+        CancellationToken cancellationToken)
     {
-
         // load ad if not loaded
         await LoadAd(appCompositeAdService, uiContext, isPreload: false,
             countryCode: countryCode, useFallback: useFallback, cancellationToken: cancellationToken).Vhc();
@@ -164,7 +169,7 @@ public class AppAdService(
             // track failed ad show
             var adNetwork = ex is ShowAdException showAdException ? showAdException.AdNetworkName : null;
             await tracker.TryTrackWithCancellation(AppTrackerBuilder.BuildShowAdFailed(adNetwork: adNetwork,
-                errorMessage: ex.Message, countryCode: countryCode, isPreload: appCompositeAdService.IsPreload),
+                    errorMessage: ex.Message, countryCode: countryCode, isPreload: appCompositeAdService.IsPreload),
                 cancellationToken).Vhc();
 
             throw;

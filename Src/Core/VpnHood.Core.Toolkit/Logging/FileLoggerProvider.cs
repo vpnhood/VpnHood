@@ -21,7 +21,7 @@ public class FileLoggerProvider(
     {
         // Dispose all loggers
         foreach (var logger in _loggers.Values)
-            logger.Dispose(); 
+            logger.Dispose();
 
         // Clear loggers
         _loggers.Clear();

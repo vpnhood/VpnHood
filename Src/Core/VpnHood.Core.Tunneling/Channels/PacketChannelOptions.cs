@@ -2,7 +2,7 @@
 
 public class PacketChannelOptions
 {
-    public int? QueueCapacity { get; init; } 
+    public int? QueueCapacity { get; init; }
     public required bool AutoDisposePackets { get; init; }
     public required bool Blocking { get; init; }
     public required TimeSpan? Lifespan { get; init; }

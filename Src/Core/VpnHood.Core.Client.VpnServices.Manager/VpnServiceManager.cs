@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
@@ -109,7 +109,7 @@ public class VpnServiceManager : IDisposable
 
             // save vpn config
             await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions),
-                    cancellationToken).Vhc();
+                cancellationToken).Vhc();
 
             // prepare vpn service
             VhLogger.Instance.LogInformation("Requesting VpnService...");
@@ -153,7 +153,8 @@ public class VpnServiceManager : IDisposable
             var connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
 
             // wait for vpn service to start
-            while (connectionInfo == null || connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
+            while (connectionInfo == null ||
+                   connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
                 await Task.Delay(1000, localCts.Token).Vhc();
                 connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
             }
@@ -181,7 +182,8 @@ public class VpnServiceManager : IDisposable
 
             // check for error
             if (connectionInfo.Error != null)
-                throw ClientExceptionConverter.ApiErrorToException(connectionInfo.Error) ?? connectionInfo.Error.ToException();
+                throw ClientExceptionConverter.ApiErrorToException(connectionInfo.Error) ??
+                      connectionInfo.Error.ToException();
 
             // make sure it is not disposed
             if (connectionInfo.ClientState is ClientState.Disposed or ClientState.Disconnecting)
@@ -221,6 +223,7 @@ public class VpnServiceManager : IDisposable
     }
 
     private readonly AsyncLock _connectionInfoLock = new();
+
     private async Task<ConnectionInfo> RefreshConnectionInfo(bool force, CancellationToken cancellationToken)
     {
         if (_disposed)
@@ -231,7 +234,8 @@ public class VpnServiceManager : IDisposable
             return _connectionInfo;
 
         // build a new token source to cancel the previous request
-        using var updateCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _updateConnectionInfoCts.Token);
+        using var updateCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _updateConnectionInfoCts.Token);
         using var scopeLock = await _connectionInfoLock.LockAsync(updateCts.Token).Vhc();
 
         // read from cache if not expired
@@ -256,7 +260,6 @@ public class VpnServiceManager : IDisposable
         catch (Exception ex) when (_updateConnectionInfoCts.IsCancellationRequested) {
             // it is a dead request from previous session
             VhLogger.Instance.LogWarning(ex, "Previous UpdateConnection Info has been ignored due to the new service.");
-
         }
         catch (Exception) when (_isInitializing) {
             throw; // initializing state, discard any log or setting new connection info
@@ -272,7 +275,9 @@ public class VpnServiceManager : IDisposable
             _vpnServiceUnreachableCount++;
 
             // update connection info and set error
-            if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold) { }
+            if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold) {
+            }
+
             _connectionInfo = SetConnectionInfo(ClientState.Disposed, ex);
 
             // report it first time
@@ -307,7 +312,6 @@ public class VpnServiceManager : IDisposable
 
         // convert to error. 
         if (response.ApiError != null) {
-
             throw ClientExceptionConverter.ApiErrorToException(response.ApiError) ?? response.ApiError.ToException();
         }
 
@@ -315,6 +319,7 @@ public class VpnServiceManager : IDisposable
     }
 
     private readonly AsyncLock _sendRequestLock = new();
+
     private async Task<ApiResponse<T>> SendRequestCore<T>(IApiRequest request, CancellationToken cancellationToken)
     {
         // we have only one TcpClient, so we need to lock it
@@ -326,9 +331,11 @@ public class VpnServiceManager : IDisposable
         if (tcpClient != null) {
             try {
                 // send request
-                await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request.GetType().Name, cancellationToken).Vhc();
+                await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request.GetType().Name, cancellationToken)
+                    .Vhc();
                 await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request, cancellationToken).Vhc();
-                return await StreamUtils.ReadObjectAsync<ApiResponse<T>>(tcpClient.GetStream(), maxResultLength, cancellationToken).Vhc();
+                return await StreamUtils
+                    .ReadObjectAsync<ApiResponse<T>>(tcpClient.GetStream(), maxResultLength, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(ex, "Could not send request to VpnService Host. EndPoint: {EndPoint}",
@@ -343,18 +350,21 @@ public class VpnServiceManager : IDisposable
         if (connectionInfo.Error != null) throw new VpnServiceNotReadyException("VpnService is not ready.");
         if (connectionInfo.ApiEndPoint == null) throw new VpnServiceNotReadyException("ApiEndPoint is not available.");
         if (connectionInfo.ApiKey == null) throw new VpnServiceNotReadyException("ApiKey is not available.");
-        _tcpClient = await ConnectToVpnService(connectionInfo.ApiEndPoint, connectionInfo.ApiKey, cancellationToken).Vhc();
+        _tcpClient = await ConnectToVpnService(connectionInfo.ApiEndPoint, connectionInfo.ApiKey, cancellationToken)
+            .Vhc();
 
         // send request
         try {
             await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request.GetType().Name, cancellationToken).Vhc();
             await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request, cancellationToken).Vhc();
-            return await StreamUtils.ReadObjectAsync<ApiResponse<T>>(_tcpClient.GetStream(), maxResultLength, cancellationToken).Vhc();
+            return await StreamUtils
+                .ReadObjectAsync<ApiResponse<T>>(_tcpClient.GetStream(), maxResultLength, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             _tcpClient.Dispose();
             _tcpClient = null;
-            throw new VpnServiceUnreachableException($"VpnService is unreachable. EndPoint: {connectionInfo.ApiEndPoint}", ex);
+            throw new VpnServiceUnreachableException(
+                $"VpnService is unreachable. EndPoint: {connectionInfo.ApiEndPoint}", ex);
         }
     }
 
@@ -381,6 +391,7 @@ public class VpnServiceManager : IDisposable
     /// No exception will be thrown
     /// </summary>
     private readonly AsyncLock _stopLock = new();
+
     public async Task<bool> TryStop(TimeSpan? timeout = null)
     {
         // Initialize cll this method, so it must be finished to make sure the service is not interrupted
@@ -435,6 +446,7 @@ public class VpnServiceManager : IDisposable
     }
 
     public bool IsReconfiguring { get; private set; }
+
     public async Task Reconfigure(ClientReconfigureParams reconfigureParams, CancellationToken cancellationToken)
     {
         IsReconfiguring = true;
@@ -459,7 +471,7 @@ public class VpnServiceManager : IDisposable
         return SendRequest(
             new ApiSetAdOkRequest {
                 AdResult = adResult,
-                IsRewarded = isRewarded,
+                IsRewarded = isRewarded
             },
             cancellationToken);
     }

@@ -43,6 +43,7 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
     public bool CanProtectSocket => false;
     public bool ProtectSocket(Socket socket) => false;
     public bool ProtectSocket(Socket socket, IPAddress ipAddress) => false;
+
     public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         IsStarted = true;

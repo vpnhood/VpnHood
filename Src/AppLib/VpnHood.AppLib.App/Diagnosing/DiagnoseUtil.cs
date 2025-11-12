@@ -22,7 +22,8 @@ public class DiagnoseUtil
         return WhenAnySuccess(tasks.ToArray());
     }
 
-    public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, TimeSpan timeout, CancellationToken cancellationToken)
+    public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, TimeSpan timeout,
+        CancellationToken cancellationToken)
     {
         var tasks = ipAddresses.Select(x => CheckPing(x, timeout, cancellationToken));
         return WhenAnySuccess(tasks.ToArray());

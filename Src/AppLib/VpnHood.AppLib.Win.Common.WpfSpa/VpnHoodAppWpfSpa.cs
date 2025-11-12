@@ -26,7 +26,8 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
 
             // register local domain if needed
             var alternativeUrl = string.IsNullOrEmpty(appOptions.WebUiHostName)
-                ? null : VpnHoodAppWin.RegisterLocalDomain(IPEndPoint.Parse("127.10.10.10:80"), appOptions.WebUiHostName);
+                ? null
+                : VpnHoodAppWin.RegisterLocalDomain(IPEndPoint.Parse("127.10.10.10:80"), appOptions.WebUiHostName);
 
             // initialize VpnHoodWinApp
             VpnHoodAppWin.Init(appOptions, args: args);

@@ -18,7 +18,8 @@ public static class FileUtils
         }
     }
 
-    public static async Task<string> ReadAllTextAsync(string filePath, TimeSpan timeout, CancellationToken cancellationToken = default)
+    public static async Task<string> ReadAllTextAsync(string filePath, TimeSpan timeout,
+        CancellationToken cancellationToken = default)
     {
         // don't use fast date time, it's not accurate enough
         var startTime = DateTime.Now;

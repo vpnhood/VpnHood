@@ -59,7 +59,7 @@ public class AppProxyEndPointService
     {
         UpdateNodesByCore();
         var res = _data.CustomEndPointInfos
-            .OrderByDescending(x=>x.EndPoint.IsEnabled)
+            .OrderByDescending(x => x.EndPoint.IsEnabled)
             .ThenBy(x => x.Status.Quality);
 
         return res.ToArray();
@@ -209,7 +209,8 @@ public class AppProxyEndPointService
         if (overrideNodes) {
             // remove NodeInfos that are not in runtimeEndpoints
             var runtimeNodeIds = runtimeNodes.Select(n => n.EndPoint.Id);
-            _data.CustomEndPointInfos = _data.CustomEndPointInfos.Where(n => runtimeNodeIds.Contains(n.EndPoint.Id)).ToArray();
+            _data.CustomEndPointInfos =
+                _data.CustomEndPointInfos.Where(n => runtimeNodeIds.Contains(n.EndPoint.Id)).ToArray();
 
             // add NodeInfos that are in runtimeNodes but not in EndPointInfos
             var existingNodeIds = _data.CustomEndPointInfos.Select(n => n.EndPoint.Id);
@@ -235,7 +236,8 @@ public class AppProxyEndPointService
     }
 
     // ReSharper disable once UnusedMember.Local
-    private async Task UpdateCountryCode(IEnumerable<AppProxyEndPointInfo> proxyEndPointInfos, CancellationToken cancellationToken)
+    private async Task UpdateCountryCode(IEnumerable<AppProxyEndPointInfo> proxyEndPointInfos,
+        CancellationToken cancellationToken)
     {
         if (_hostCountryResolver is null)
             return;
@@ -309,7 +311,8 @@ public class AppProxyEndPointService
     private void Save(bool updateSettings = true)
     {
         _data.UpdateTime = DateTime.Now; // make sure to use latest data
-        _data.CustomEndPointInfos = _data.CustomEndPointInfos.DistinctBy(x => x.EndPoint.Id).ToArray(); // remove duplicates
+        _data.CustomEndPointInfos =
+            _data.CustomEndPointInfos.DistinctBy(x => x.EndPoint.Id).ToArray(); // remove duplicates
 
         // customize serialization to ignore Url and Id properties
         var resolver = new DefaultJsonTypeInfoResolver();

@@ -43,7 +43,8 @@ public class AppAdManager(
         if (IsShowing)
             throw new InvalidOperationException("An ad is already being shown.");
 
-        VhLogger.Instance.LogDebug("Showing ad. Session: {SessionId}, AdRequirement: {AdRequirement}", sessionId, adRequirement);
+        VhLogger.Instance.LogDebug("Showing ad. Session: {SessionId}, AdRequirement: {AdRequirement}", sessionId,
+            adRequirement);
 
         // let's throw an exception if context is not set
         var uiContext = AppUiContext.Context;
@@ -115,7 +116,8 @@ public class AppAdManager(
 
             return
                 connectionInfo.SessionStatus is { CanExtendByRewardedAd: true } &&
-                connectionInfo.SessionStatus.SessionExpirationTime > FastDateTime.UtcNow + extendByRewardedAdThreshold &&
+                connectionInfo.SessionStatus.SessionExpirationTime >
+                FastDateTime.UtcNow + extendByRewardedAdThreshold &&
                 AdService.CanShowRewarded;
         }
     }
@@ -224,4 +226,3 @@ public class AppAdManager(
         }
     }
 }
-

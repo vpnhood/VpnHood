@@ -180,7 +180,7 @@ public class ProxyChannel : IProxyChannel
 
             // write to destination
             if (destinationPreserved != null)
-                await destinationPreserved.WritePreservedAsync(readBuffer[..(preserveCount + bytesRead)], 
+                await destinationPreserved.WritePreservedAsync(readBuffer[..(preserveCount + bytesRead)],
                     cancellationToken: destinationCt).Vhc();
             else
                 await destination.WriteAsync(readBuffer[preserveCount..bytesRead], destinationCt).Vhc();

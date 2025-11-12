@@ -21,10 +21,12 @@ public class TcpPacket : IChecksumPayloadPacket
             throw new ArgumentException("Buffer too small for TCP header.", nameof(buffer));
 
         if (optionsLength is < 0 or > 40)
-            throw new ArgumentOutOfRangeException(nameof(optionsLength), "Options length must be between 0 and 40 bytes.");
+            throw new ArgumentOutOfRangeException(nameof(optionsLength),
+                "Options length must be between 0 and 40 bytes.");
 
         if (optionsLength % 4 != 0)
-            throw new ArgumentOutOfRangeException(nameof(optionsLength), "Options length must be a multiple of 4 bytes.");
+            throw new ArgumentOutOfRangeException(nameof(optionsLength),
+                "Options length must be a multiple of 4 bytes.");
 
         buffer.Span.Clear();
 
@@ -35,7 +37,7 @@ public class TcpPacket : IChecksumPayloadPacket
         _buffer = buffer;
     }
 
-    
+
     public ushort SourcePort {
         get => BinaryPrimitives.ReadUInt16BigEndian(_buffer.Span[..2]);
         set => BinaryPrimitives.WriteUInt16BigEndian(_buffer.Span[..2], value);
@@ -141,8 +143,9 @@ public class TcpPacket : IChecksumPayloadPacket
 
     public override string ToString()
     {
-        return $"TCP Packet: SrcPort={SourcePort}, DstPort={DestinationPort}, Seq={SequenceNumber}, Ack={AcknowledgmentNumber}, " +
-               $"Flags=[Urgent={Urgent}, Ack={Acknowledgment}, Push={Push}, Reset={Reset}, Sync={Synchronize}, Fin={Finish}], " +
-               $"PayloadLen={Payload.Length}";
+        return
+            $"TCP Packet: SrcPort={SourcePort}, DstPort={DestinationPort}, Seq={SequenceNumber}, Ack={AcknowledgmentNumber}, " +
+            $"Flags=[Urgent={Urgent}, Ack={Acknowledgment}, Push={Push}, Reset={Reset}, Sync={Synchronize}, Fin={Finish}], " +
+            $"PayloadLen={Payload.Length}";
     }
 }

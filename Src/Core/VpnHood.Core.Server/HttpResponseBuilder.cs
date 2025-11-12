@@ -14,7 +14,8 @@ internal static class HttpResponseBuilder
 
         // add headers
         var responseBuilder = new StringBuilder();
-        responseBuilder.Append($"HTTP/{httpResponse.Version.Major}.{httpResponse.Version.Minor} {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}\r\n");
+        responseBuilder.Append(
+            $"HTTP/{httpResponse.Version.Major}.{httpResponse.Version.Minor} {(int)httpResponse.StatusCode} {httpResponse.ReasonPhrase}\r\n");
         foreach (var header in httpResponse.Headers)
             responseBuilder.Append($"{header.Key}: {string.Join(", ", header.Value)}\r\n");
 

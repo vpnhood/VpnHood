@@ -51,9 +51,10 @@ public static class NetPacketExtensions
                 return false;
 
             return
-                (ipPacket.Version == IPVersion.IPv4 && IpNetwork.MulticastNetworkV4.Contains(ipPacket.DestinationAddress)) ||
-                (ipPacket.Version == IPVersion.IPv6 && IpNetwork.MulticastNetworkV6.Contains(ipPacket.DestinationAddress));
-
+                (ipPacket.Version == IPVersion.IPv4 &&
+                 IpNetwork.MulticastNetworkV4.Contains(ipPacket.DestinationAddress)) ||
+                (ipPacket.Version == IPVersion.IPv6 &&
+                 IpNetwork.MulticastNetworkV6.Contains(ipPacket.DestinationAddress));
         }
 
         public IPEndPointPair GetEndPoints()

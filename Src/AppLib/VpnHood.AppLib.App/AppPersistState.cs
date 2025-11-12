@@ -7,7 +7,7 @@ namespace VpnHood.AppLib;
 
 internal class AppPersistState(string filePath)
 {
-    private readonly object _saveLock = new();
+    private readonly Lock _saveLock = new();
     private readonly Data _data = JsonUtils.TryDeserializeFile<Data>(filePath) ?? new Data();
 
     private class Data
@@ -51,10 +51,11 @@ internal class AppPersistState(string filePath)
             Save();
         }
     }
+
     public bool HasDiagnoseRequested {
         get => _data.HasDiagnoseRequested;
         set {
-            if (HasDiagnoseRequested==value)
+            if (HasDiagnoseRequested == value)
                 return;
 
             _data.HasDiagnoseRequested = value;
@@ -73,11 +74,9 @@ internal class AppPersistState(string filePath)
         }
     }
 
-    public DateTime? ConnectRequestTime
-    {
+    public DateTime? ConnectRequestTime {
         get => _data.ConnectRequestTime;
-        set
-        {
+        set {
             if (_data.ConnectRequestTime == value)
                 return;
 

@@ -17,6 +17,7 @@ public class ProxyManager : PassthroughPacketTransport
     public bool IsIpV6Supported { get; set; } = true;
     public int PingClientCount => _pingProxyPool?.ClientCount ?? 0;
     public int UdpClientCount => _udpProxyPool.ClientCount;
+
     public int TcpConnectionCount {
         get {
             lock (_streamProxyChannels)
@@ -30,7 +31,7 @@ public class ProxyManager : PassthroughPacketTransport
                 var traffic = new Traffic(PacketStat.SentBytes, PacketStat.ReceivedBytes);
                 // ReSharper disable once ForCanBeConvertedToForeach
                 // ReSharper disable once LoopCanBeConvertedToQuery
-                for (var i = 0; i < _streamProxyChannels.Count; i++) 
+                for (var i = 0; i < _streamProxyChannels.Count; i++)
                     traffic += _streamProxyChannels[i].Traffic;
 
                 return traffic;

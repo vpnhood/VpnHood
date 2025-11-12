@@ -202,7 +202,8 @@ public class VpnHoodServer : IAsyncDisposable
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
-            _configureAndSendStatusJob.Interval = serverConfig.UpdateStatusIntervalValue < serverConfig.SessionOptions.SyncIntervalValue
+            _configureAndSendStatusJob.Interval = serverConfig.UpdateStatusIntervalValue <
+                                                  serverConfig.SessionOptions.SyncIntervalValue
                 ? serverConfig.UpdateStatusIntervalValue // update status interval must be less than sync interval
                 : serverConfig.SessionOptions.SyncIntervalValue;
 
@@ -245,7 +246,7 @@ public class VpnHoodServer : IAsyncDisposable
                 DnsServers = serverConfig.DnsServersValue,
                 TcpEndPoints = serverConfig.TcpEndPointsValue,
                 UdpEndPoints = serverConfig.UdpEndPointsValue,
-                Certificates = serverConfig.Certificates.Select(x => new X509Certificate2(x.RawData)).ToArray(),
+                Certificates = serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null)).ToArray(),
                 UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue
             }).Vhc();
 
@@ -385,7 +386,8 @@ public class VpnHoodServer : IAsyncDisposable
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo)
     {
         var serverConfig = await ReadConfigImpl(serverInfo).Vhc();
-        serverConfig.SessionOptions.StreamProxyBufferSize = GetBestStreamBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.StreamProxyBufferSize);
+        serverConfig.SessionOptions.StreamProxyBufferSize = GetBestStreamBufferSize(serverInfo.TotalMemory,
+            serverConfig.SessionOptions.StreamProxyBufferSize);
         serverConfig.ApplyDefaults();
         VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
 

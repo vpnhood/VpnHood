@@ -35,7 +35,8 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             var updateAvailability = appUpdateInfo.UpdateAvailability();
             if (updateAvailability != UpdateAvailability.UpdateAvailable) {
                 VhLogger.Instance.LogDebug(
-                    "Google Play update is not available. UpdateAvailability: {UpdateAvailability}", updateAvailability);
+                    "Google Play update is not available. UpdateAvailability: {UpdateAvailability}",
+                    updateAvailability);
                 return false;
             }
 

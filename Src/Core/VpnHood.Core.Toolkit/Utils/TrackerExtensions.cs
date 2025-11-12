@@ -13,7 +13,7 @@ public static class TrackerExtensions
             return TryTrackWithCancellation(tracker, trackEvent, CancellationToken.None);
         }
 
-        public async Task<bool> TryTrackWithCancellation(TrackEvent trackEvent, 
+        public async Task<bool> TryTrackWithCancellation(TrackEvent trackEvent,
             CancellationToken cancellationToken)
         {
             try {

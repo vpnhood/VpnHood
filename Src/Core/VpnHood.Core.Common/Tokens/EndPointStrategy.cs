@@ -9,5 +9,5 @@ public enum EndPointStrategy
     DnsFirst = 1,
     TokenFirst = 2,
     DnsOnly = 3,
-    TokenOnly = 4,
+    TokenOnly = 4
 }

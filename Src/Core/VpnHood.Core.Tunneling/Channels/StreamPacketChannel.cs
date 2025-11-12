@@ -6,7 +6,7 @@ using VpnHood.Core.Tunneling.ClientStreams;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class StreamPacketChannel(StreamPacketChannelOptions options) 
+public class StreamPacketChannel(StreamPacketChannelOptions options)
     : PacketChannel(options)
 {
     private readonly int _receiveBufferSize = options.BufferSize.Receive;
@@ -55,7 +55,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
     {
         var cancellationToken = CancellationToken;
 
-        using var streamPacketReader = 
+        using var streamPacketReader =
             new StreamPacketReader(_clientStream.Stream, _receiveBufferSize);
 
         // stop reading if State is not Connected (Such as getting the close request)

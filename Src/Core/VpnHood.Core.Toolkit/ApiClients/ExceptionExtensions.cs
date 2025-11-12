@@ -25,7 +25,7 @@ public static class ExceptionExtensions
                 TypeName = exceptionType.Name,
                 TypeFullName = exceptionType.FullName,
                 Message = message ?? "",
-                InnerMessage = string.IsNullOrWhiteSpace(ex.Message) ? null : ex.InnerException?.Message,
+                InnerMessage = string.IsNullOrWhiteSpace(ex.Message) ? null : ex.InnerException?.Message
             };
 
             // add some exception data

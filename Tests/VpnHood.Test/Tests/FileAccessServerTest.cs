@@ -74,7 +74,8 @@ public class FileAccessManagerTest : TestBase
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
         Assert.HasCount(2, accessTokenDatas);
-        Assert.AreEqual(SessionErrorCode.AccessError, (await accessManager1.Session_Create(sessionRequestEx1)).ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessError,
+            (await accessManager1.Session_Create(sessionRequestEx1)).ErrorCode);
 
         // ************
         // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)
@@ -166,7 +167,7 @@ public class FileAccessManagerTest : TestBase
                 UserAgent = "Test",
                 ClientVersion = "1.0.0",
                 MinProtocolVersion = 5,
-                MaxProtocolVersion = 6,
+                MaxProtocolVersion = 6
             },
             ProtocolVersion = 5,
             HostEndPoint = token.ServerToken.HostEndPoints!.First(),

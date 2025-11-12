@@ -6,11 +6,11 @@ public class AccessUsage
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool CanExtendByRewardedAd { get; set; }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [Obsolete]
     public bool IsUserReviewRecommended { get; set; }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int UserReviewRecommended { get; set; }
 

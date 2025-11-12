@@ -46,7 +46,8 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.UdpTimeout);
         _maxClientCount = options.MaxClientCount;
         _bufferSize = options.BufferSize;
-        _maxWorkerEventReporter = new EventReporter("Session has reached to Maximum local UDP ports.", GeneralEventId.NetProtect, logScope: options.LogScope);
+        _maxWorkerEventReporter = new EventReporter("Session has reached to Maximum local UDP ports.",
+            GeneralEventId.NetProtect, logScope: options.LogScope);
 
         _connectionMap = new TimeoutDictionary<string, UdpProxyEx>(options.UdpTimeout);
         _udpTimeout = options.UdpTimeout;
@@ -67,7 +68,6 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
         // find the proxy for the connection (source-destination)
         var connectionKey = $"{sourceEndPoint}:{destinationEndPoint}";
         if (!_connectionMap.TryGetValue(connectionKey, out var udpProxy)) {
-
             // add the remote endpoint
             _remoteEndPoints.GetOrAdd(destinationEndPoint, _ => {
                 isNewRemoteEndPoint = true;
@@ -91,7 +91,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
                     }
 
                     // create a new worker
-                    udpProxy = new UdpProxyEx(CreateUdpClient(addressFamily), _udpTimeout, 
+                    udpProxy = new UdpProxyEx(CreateUdpClient(addressFamily), _udpTimeout,
                         _packetQueueCapacity, _autoDisposeSentPackets);
                     udpProxy.PacketReceived += UdpProxy_OnPacketReceived;
 
@@ -100,14 +100,16 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
                 }
 
                 // Add destinationEndPoint; a new UdpWorker can not map a destinationEndPoint to more than one source port
-                if (!udpProxy.DestinationEndPointMap.TryAdd(destinationEndPoint, new TimeoutItem<IPEndPoint>(sourceEndPoint))) {
+                if (!udpProxy.DestinationEndPointMap.TryAdd(destinationEndPoint,
+                        new TimeoutItem<IPEndPoint>(sourceEndPoint))) {
                     udpProxy.Dispose();
                     throw new Exception($"Could not add {destinationEndPoint}.");
                 }
 
                 // it is just for speed. if failed, it will be added again
                 if (!_connectionMap.TryAdd(connectionKey, udpProxy))
-                    VhLogger.Instance.LogWarning($"Could not add {connectionKey} to the connection map. It is already added.");
+                    VhLogger.Instance.LogWarning(
+                        $"Could not add {connectionKey} to the connection map. It is already added.");
             }
         }
 
@@ -121,6 +123,7 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
 
         udpProxy.SendPacketQueued(ipPacket);
     }
+
     private void UdpProxy_OnPacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);

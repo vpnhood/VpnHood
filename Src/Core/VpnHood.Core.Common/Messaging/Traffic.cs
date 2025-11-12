@@ -7,8 +7,7 @@ public readonly record struct Traffic
     public long Sent { get; init; }
     public long Received { get; init; }
 
-    [JsonIgnore] 
-    public long Total => Sent + Received;
+    [JsonIgnore] public long Total => Sent + Received;
 
     public Traffic()
     {

@@ -152,7 +152,6 @@ internal class ChannelManager : IDisposable
                 "ChannelCount: {ChannelCount}, State: {State}",
                 VhLogger.FormatType(channel), channel.ChannelId, _proxyChannels.Count, channel.State);
         }
-
     }
 
     public void RemoveChannel(IChannel channel)
@@ -267,7 +266,7 @@ internal class ChannelManager : IDisposable
                 RemoveChannel(channel);
 
             // dispose packet channels
-            foreach (var channel in _packetChannels.ToArray()) 
+            foreach (var channel in _packetChannels.ToArray())
                 RemoveChannel(channel);
 
             // dispose all disposing channels
@@ -283,5 +282,4 @@ internal class ChannelManager : IDisposable
         _cleanupJob.Dispose();
         _disposed = true; // must be set after disposing channels
     }
-
 }

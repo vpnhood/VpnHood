@@ -10,7 +10,8 @@ public static class VhTestUtil
     public class AssertException(string? message = null, Exception? innerException = null) :
         Exception(message, innerException);
 
-    private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<TValue> valueFactory, TimeSpan timeout)
+    private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<TValue> valueFactory,
+        TimeSpan timeout)
     {
         const int waitTime = 100;
         CancellationTokenSource cancellationTokenSource = new(timeout);
@@ -26,7 +27,8 @@ public static class VhTestUtil
         return actualValue;
     }
 
-    private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory, TimeSpan timeout)
+    private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory,
+        TimeSpan timeout)
     {
         const int waitTime = 100;
         CancellationTokenSource cancellationTokenSource = new(timeout);
@@ -53,7 +55,7 @@ public static class VhTestUtil
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Func<TValue> valueFactory,
         string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
     {
-        var timeoutSpan = noTimeoutOnDebugger && Debugger.IsAttached 
+        var timeoutSpan = noTimeoutOnDebugger && Debugger.IsAttached
             ? TimeSpan.FromDays(1)
             : TimeSpan.FromMilliseconds(timeout);
 
@@ -83,7 +85,8 @@ public static class VhTestUtil
         AssertEquals(expectedValue, actualValue, message);
     }
 
-    public static Task<Exception> AssertApiException(HttpStatusCode expectedStatusCode, Task task, string? message = null)
+    public static Task<Exception> AssertApiException(HttpStatusCode expectedStatusCode, Task task,
+        string? message = null)
     {
         return AssertApiException((int)expectedStatusCode, task, message);
     }
@@ -140,7 +143,8 @@ public static class VhTestUtil
         }
     }
 
-    public static async Task<Exception> AssertNotExistsException(Task task, string? message = null, string? contains = null)
+    public static async Task<Exception> AssertNotExistsException(Task task, string? message = null,
+        string? contains = null)
     {
         try {
             await task;
@@ -164,7 +168,8 @@ public static class VhTestUtil
         }
     }
 
-    public static async Task<Exception> AssertAlreadyExistsException(Task task, string? message = null, string? contains = null)
+    public static async Task<Exception> AssertAlreadyExistsException(Task task, string? message = null,
+        string? contains = null)
     {
         try {
             await task;

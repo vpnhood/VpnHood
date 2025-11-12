@@ -30,6 +30,7 @@ namespace VpnHood.Test;
 public class TestHelper : IDisposable
 {
     private static readonly string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "VpnHood.Test");
+
     public class TestAppUiContext : IUiContext
     {
         public Task<bool> IsActive() => Task.FromResult(true);
@@ -50,7 +51,7 @@ public class TestHelper : IDisposable
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create();
         NetFilter = new TestNetFilter();
-        NetFilter.Init([TestConstants.BlockedIp], 
+        NetFilter.Init([TestConstants.BlockedIp],
         [
             Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
             Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
@@ -159,7 +160,8 @@ public class TestHelper : IDisposable
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
 
-        var sentBytes = await udpClient.SendAsync(buffer, udpEndPoint, new CancellationTokenSource(timeout.Value).Token);
+        var sentBytes =
+            await udpClient.SendAsync(buffer, udpEndPoint, new CancellationTokenSource(timeout.Value).Token);
         Assert.AreEqual(buffer.Length, sentBytes);
 
         using var cts = new CancellationTokenSource(timeout.Value);
@@ -170,7 +172,8 @@ public class TestHelper : IDisposable
     public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null)
     {
         timeout ??= TestConstants.DefaultUdpTimeout;
-        var result = await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, CancellationToken.None);
+        var result =
+            await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, CancellationToken.None);
         Assert.IsNotEmpty(result.AddressList);
     }
 
@@ -434,9 +437,8 @@ public class TestHelper : IDisposable
     }
 
 
-
-    public ClientOptions CreateClientOptions(Token? token = null, 
-        ChannelProtocol channelProtocol = ChannelProtocol.Tcp, 
+    public ClientOptions CreateClientOptions(Token? token = null,
+        ChannelProtocol channelProtocol = ChannelProtocol.Tcp,
         string? clientId = null,
         bool useTcpProxy = true)
     {
@@ -471,8 +473,8 @@ public class TestHelper : IDisposable
         bool autoConnect = true)
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
-        var client = new VpnHoodClient(vpnAdapter, 
-            new TestSocketFactory(), 
+        var client = new VpnHoodClient(vpnAdapter,
+            new TestSocketFactory(),
             storageFolder: Path.Combine(WorkingPath, "ClientCore"),
             new TestTracker(), clientOptions);
 

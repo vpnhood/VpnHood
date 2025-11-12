@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Jobs;
@@ -53,8 +53,9 @@ public class ProxyEndPointManager : IDisposable
         // load last NodeInfos
         var data = JsonUtils.TryDeserializeFile<Data>(_proxyEndPointInfosFile) ?? new Data();
         _queuePosition = data.QueuePosition;
-        _proxyEndPointEntries = UpdateEntriesByOptions(data.EndPointInfos.Select(x => new ProxyEndPointEntry(x)), proxyOptions)
-            .ToArray();
+        _proxyEndPointEntries =
+            UpdateEntriesByOptions(data.EndPointInfos.Select(x => new ProxyEndPointEntry(x)), proxyOptions)
+                .ToArray();
 
         // Start auto-update if configured
         if (_autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null)
@@ -70,7 +71,8 @@ public class ProxyEndPointManager : IDisposable
                     AutoUpdate = _autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null,
                     SessionStatus = _sessionStatus,
                     SucceededServerCount = _proxyEndPointEntries.Count(x => x.Status.IsLastUsedSucceeded),
-                    FailedServerCount = _proxyEndPointEntries.Count(x => x.Status is { HasUsed: true, IsLastUsedSucceeded: false }),
+                    FailedServerCount =
+                        _proxyEndPointEntries.Count(x => x.Status is { HasUsed: true, IsLastUsedSucceeded: false }),
                     UnknownServerCount = _proxyEndPointEntries.Count(x => x.Status is { HasUsed: false })
                 };
         }
@@ -115,21 +117,25 @@ public class ProxyEndPointManager : IDisposable
             // memory more efficient to create a new client for infrequent requests
             using var httpClient = new HttpClient();
             var currentInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray();
-            var newEndPoints = await ProxyEndPointUpdater.LoadFromUrlAsync(httpClient, _autoUpdateOptions.Url, cancellationToken).Vhc();
+            var newEndPoints = await ProxyEndPointUpdater
+                .LoadFromUrlAsync(httpClient, _autoUpdateOptions.Url, cancellationToken).Vhc();
             var mergedEndPoints = ProxyEndPointUpdater.Merge(currentInfos, newEndPoints,
                 _autoUpdateOptions.MaxItemCount, _autoUpdateOptions.MaxPenalty, _autoUpdateOptions.RemoveDuplicateIps);
 
             if (mergedEndPoints.Length == 0) {
-                VhLogger.Instance.LogWarning("No proxies found in downloaded content from {Url}", _autoUpdateOptions.Url);
+                VhLogger.Instance.LogWarning("No proxies found in downloaded content from {Url}",
+                    _autoUpdateOptions.Url);
                 return;
             }
 
-            VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}", mergedEndPoints.Length);
+            VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}",
+                mergedEndPoints.Length);
             _proxyEndPointEntries = UpdateEntries(_proxyEndPointEntries, mergedEndPoints,
-                    resetStates: false, keepEnabledState: true).ToArray();
+                resetStates: false, keepEnabledState: true).ToArray();
 
             // Save updated list
-            VhLogger.Instance.LogInformation("Updated proxy list. Total proxies: {Count}", _proxyEndPointEntries.Length);
+            VhLogger.Instance.LogInformation("Updated proxy list. Total proxies: {Count}",
+                _proxyEndPointEntries.Length);
             SaveNodeInfos();
 
             // Check servers
@@ -140,7 +146,8 @@ public class ProxyEndPointManager : IDisposable
         }
     }
 
-    private static IEnumerable<ProxyEndPointEntry> UpdateEntriesByOptions(IEnumerable<ProxyEndPointEntry> items, ProxyOptions options)
+    private static IEnumerable<ProxyEndPointEntry> UpdateEntriesByOptions(IEnumerable<ProxyEndPointEntry> items,
+        ProxyOptions options)
     {
         items = UpdateEntries(items, options.ProxyEndPoints,
             resetStates: options.ResetStates, keepEnabledState: false);
@@ -199,7 +206,8 @@ public class ProxyEndPointManager : IDisposable
         try {
             var testEp = IPEndPoint.Parse("1.1.1.1:443");
             var tickCount = Environment.TickCount64;
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
+            using var linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
             await proxyClient.ConnectAsync(tcpClient, testEp, linkedCts.Token).Vhc();
             var latency = TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
 
@@ -207,7 +215,7 @@ public class ProxyEndPointManager : IDisposable
             if (_verifyTls) {
                 var stream = new SslStream(tcpClient.GetStream());
                 await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
-                    TargetHost = "one.one.one.one",
+                    TargetHost = "one.one.one.one"
                 }, linkedCts.Token).Vhc();
             }
 
@@ -236,7 +244,7 @@ public class ProxyEndPointManager : IDisposable
     }
 
 
-    private async Task CheckServers(IEnumerable<ProxyEndPointEntry> endpoints, 
+    private async Task CheckServers(IEnumerable<ProxyEndPointEntry> endpoints,
         int satisfiedSuccessCount,
         CancellationToken cancellationToken)
     {
@@ -265,7 +273,7 @@ public class ProxyEndPointManager : IDisposable
                 TcpClient? tcpClient = null;
                 try {
                     // do not stop 
-                    if (successCount >= satisfiedSuccessCount && 
+                    if (successCount >= satisfiedSuccessCount &&
                         entry.Status.Quality is not StatusQuality.Unknown)
                         return;
 
@@ -331,6 +339,7 @@ public class ProxyEndPointManager : IDisposable
             .ThenBy(x => x.Status.LastUsed);
 
     private readonly AsyncLock _connectLock = new();
+
     private async Task<ProxyEndPointEntry[]> GetOrderedEntries(CancellationToken cancellationToken)
     {
         // lock till get an ordered list with at least one succeeded server

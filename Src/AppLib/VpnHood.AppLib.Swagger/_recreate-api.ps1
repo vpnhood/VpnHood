@@ -12,7 +12,7 @@ $noBuild = $false;
 $outputFile = "$curDir/Api/$outBaseFile.ts";
 
 # run
-$nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net90/dotnet-nswag.exe";
+$nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net100/dotnet-nswag.exe";
 $variables="/variables:namespace=$namespace,apiBaseFile=$outBaseFile,projectFile=$projectFile,nobuid=$noBuild";
 & "$nswagExe" run $nswagFile $variables;
 # "/* eslint-disable */" + [Environment]::NewLine + (Get-Content $outputFile -Raw) | Set-Content $outputFile;

@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions;
+
 namespace VpnHood.AppLib.WebServer.Api;
 
 public class ConfigParams

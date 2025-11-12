@@ -6,6 +6,7 @@ namespace VpnHood.Test.Providers;
 public class TestTrackerFactory : ITrackerFactory
 {
     public static TestTracker TestTracker { get; set; } = new();
+
     public ITracker CreateTracker(TrackerCreateParams createParams)
     {
         TestTracker.TrackEvents.Clear();

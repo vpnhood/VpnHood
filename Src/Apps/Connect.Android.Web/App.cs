@@ -6,7 +6,6 @@ using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Device.Droid.Utils;
 
-
 namespace VpnHood.App.Connect.Droid.Web;
 
 [Application(
@@ -29,7 +28,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             DeviceId = AndroidUtil.GetDeviceId(this), //this will be hashed using AppId
-            AccessKeys = appConfigs.DefaultAccessKey !=null ? [appConfigs.DefaultAccessKey] : [],
+            AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             Resources = resources,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,

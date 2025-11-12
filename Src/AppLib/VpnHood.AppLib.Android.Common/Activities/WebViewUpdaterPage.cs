@@ -19,14 +19,15 @@ internal static class WebViewUpdaterPage
 
     public static void ShowWebViewExceptionPage(Activity activity, Exception ex)
     {
-        ShowExceptionPage(activity, 
+        ShowExceptionPage(activity,
             message: "WebView initialization failed. Please update your Android System WebView and Chrome Browser.",
             buttonText: "Update Android System WebView",
             buttonUrl: "https://github.com/vpnhood/VpnHood/wiki/Update-Android-System-WebView-for-VpnHood-Android-App",
             ex);
     }
 
-    public static void ShowExceptionPage(Activity activity, string message, string? buttonText, string? buttonUrl, Exception ex)
+    public static void ShowExceptionPage(Activity activity, string message, string? buttonText, string? buttonUrl,
+        Exception ex)
     {
         // get all current cpu architecture in a string
         var cpuArch = string.Join(", ", Build.SupportedAbis ?? []);

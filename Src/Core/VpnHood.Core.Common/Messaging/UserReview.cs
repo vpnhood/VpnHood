@@ -3,7 +3,10 @@
 public class UserReview
 {
     [Obsolete("Use Rating")]
-    public int Rate { get => Rating; set => Rating = value; }
+    public int Rate {
+        get => Rating;
+        set => Rating = value;
+    }
 
     public int Rating { get; set; }
     public DateTime Time { get; init; }

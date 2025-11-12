@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Linux;
 using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
@@ -32,7 +32,8 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
     public static VpnHoodAppLinux Init(Func<AppOptions> optionsFactory, string[] args)
     {
         var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
-        var showWindowAfterStart = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
+        var showWindowAfterStart =
+            !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
         var stop = args.Length > 0 && args[0].Equals("stop", StringComparison.OrdinalIgnoreCase);
         var appOptions = optionsFactory();
         Directory.CreateDirectory(appOptions.StorageFolderPath);
@@ -104,6 +105,7 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
     }
 
     private static Socket? _singleInstanceSocket;
+
     private static bool IsAnotherInstanceRunning(AppOptions appOptions)
     {
         // Linux-only: abstract UDS address starts with '\0'

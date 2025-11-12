@@ -22,7 +22,6 @@ public abstract class TextLogger(bool includeScopes, string? categoryName) : ILo
 
     protected void WriteScopeInformation(StringBuilder stringBuilder)
     {
-
         var initialLength = stringBuilder.Length;
         _scopeProvider.ForEachScope((scope, state) => {
             var (builder, length) = state;
@@ -66,4 +65,4 @@ public abstract class TextLogger(bool includeScopes, string? categoryName) : ILo
         logBuilder.AppendLine();
         return logBuilder.ToString();
     }
- }
+}

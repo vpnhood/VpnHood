@@ -68,7 +68,7 @@ public class ServerTest : TestBase
         // Create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client =
-            await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token, 
+            await TestHelper.CreateClient(clientOptions: TestHelper.CreateClientOptions(token,
                 channelProtocol: ChannelProtocol.Udp));
 
         // check usage when usage should be 0
@@ -153,17 +153,23 @@ public class ServerTest : TestBase
         Assert.IsTrue(accessManager.LastConfigureTime > dateTime);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackClientIp);
         Assert.IsTrue(server.SessionManager.TrackingOptions.TrackLocalPort);
-        Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp, server.SessionManager.TrackingOptions.TrackClientIp);
-        Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort, server.SessionManager.TrackingOptions.TrackLocalPort);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp,
+            server.SessionManager.TrackingOptions.TrackClientIp);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort,
+            server.SessionManager.TrackingOptions.TrackLocalPort);
         Assert.AreEqual(serverConfig.SessionOptions.TcpTimeout, server.SessionManager.SessionOptions.TcpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.IcmpTimeout, server.SessionManager.SessionOptions.IcmpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.UdpTimeout, server.SessionManager.SessionOptions.UdpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.Timeout, server.SessionManager.SessionOptions.Timeout);
-        Assert.AreEqual(serverConfig.SessionOptions.MaxPacketChannelCount, server.SessionManager.SessionOptions.MaxPacketChannelCount);
+        Assert.AreEqual(serverConfig.SessionOptions.MaxPacketChannelCount,
+            server.SessionManager.SessionOptions.MaxPacketChannelCount);
         Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
-        Assert.AreEqual(serverConfig.SessionOptions.StreamProxyBufferSize, server.SessionManager.SessionOptions.StreamProxyBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpProxyBufferSize, server.SessionManager.SessionOptions.UdpProxyBufferSize);
-        Assert.AreEqual(serverConfig.SessionOptions.UdpChannelBufferSize, server.SessionManager.SessionOptions.UdpChannelBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.StreamProxyBufferSize,
+            server.SessionManager.SessionOptions.StreamProxyBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpProxyBufferSize,
+            server.SessionManager.SessionOptions.UdpProxyBufferSize);
+        Assert.AreEqual(serverConfig.SessionOptions.UdpChannelBufferSize,
+            server.SessionManager.SessionOptions.UdpChannelBufferSize);
         Assert.IsFalse(accessManager.LastServerInfo?.IsRestarted);
     }
 
@@ -180,7 +186,7 @@ public class ServerTest : TestBase
         Assert.IsTrue(accessManager.SessionService.Sessions.TryGetValue(client.SessionId, out var session));
         await client.DisposeAsync();
 
-        await client.WaitForState( ClientState.Disposed);
+        await client.WaitForState(ClientState.Disposed);
         await VhTestUtil.AssertEqualsWait(false, () => session?.IsAlive);
     }
 
@@ -274,7 +280,7 @@ public class ServerTest : TestBase
         // create client
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
-        
+
         Log("Clearing all sessions...");
         accessManager.SessionService.Sessions.Clear();
 
@@ -426,6 +432,7 @@ public class ServerTest : TestBase
         serverStatus = accessManager.LastServerStatus;
         Assert.AreEqual(2500 * VhUtils.Megabytes, swapMemoryProvider.Info.TotalSize);
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize, accessManager.LastServerStatus?.TotalSwapMemory);
-        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed, serverStatus?.AvailableSwapMemory);
+        Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed,
+            serverStatus?.AvailableSwapMemory);
     }
 }

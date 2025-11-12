@@ -13,7 +13,7 @@ public static class PacketBuilder
     {
         // adjust buffer length by parsing the packet length
         var packetLength = PacketUtil.ReadPacketLength(buffer);
-        buffer = buffer[..packetLength]; 
+        buffer = buffer[..packetLength];
 
         // copy buffer to memory pool
         memoryPool ??= MemoryPool<byte>.Shared;
@@ -30,7 +30,7 @@ public static class PacketBuilder
         return version switch {
             IpVersion.IPv4 => new IpV4Packet(buffer),
             IpVersion.IPv6 => new IpV6Packet(buffer),
-            _ => throw new NotSupportedException($"IP version {version} not supported."),
+            _ => throw new NotSupportedException($"IP version {version} not supported.")
         };
     }
 
@@ -40,7 +40,7 @@ public static class PacketBuilder
         return version switch {
             IpVersion.IPv4 => new IpV4Packet(memoryOwner),
             IpVersion.IPv6 => new IpV6Packet(memoryOwner),
-            _ => throw new NotSupportedException($"IP version {version} not supported."),
+            _ => throw new NotSupportedException($"IP version {version} not supported.")
         };
     }
 
@@ -56,8 +56,10 @@ public static class PacketBuilder
 
         // create IP packet
         IpPacket ipPacket = sourceAddress.AddressFamily switch {
-            AddressFamily.InterNetwork => new IpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength, protocol, 0),
-            AddressFamily.InterNetworkV6 => new IpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength, protocol),
+            AddressFamily.InterNetwork => new IpV4Packet(memoryPool.Rent(20 + payloadLength), 20 + payloadLength,
+                protocol, 0),
+            AddressFamily.InterNetworkV6 => new IpV6Packet(memoryPool.Rent(40 + payloadLength), 40 + payloadLength,
+                protocol),
             _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} not supported.")
         };
 
@@ -138,6 +140,7 @@ public static class PacketBuilder
         payload.CopyTo(ipPacket.BuildIcmpV4().Payload.Span);
         return ipPacket;
     }
+
     public static IpPacket BuildIcmpV6(IPAddress sourceAddress, IPAddress destinationAddress,
         ReadOnlySpan<byte> payload)
     {
@@ -154,15 +157,17 @@ public static class PacketBuilder
             throw new ArgumentException("SourceAddress and DestinationAddress must have a same address family.");
 
         return sourceAddress.AddressFamily switch {
-            AddressFamily.InterNetwork => BuildIcmpV4EchoRequest(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, updateChecksum),
-            AddressFamily.InterNetworkV6 => BuildIcmpV6EchoRequest(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, updateChecksum),
+            AddressFamily.InterNetwork => BuildIcmpV4EchoRequest(sourceAddress, destinationAddress, payload, identifier,
+                sequenceNumber, updateChecksum),
+            AddressFamily.InterNetworkV6 => BuildIcmpV6EchoRequest(sourceAddress, destinationAddress, payload,
+                identifier, sequenceNumber, updateChecksum),
             _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} not supported.")
         };
     }
-    
+
 
     public static IpPacket BuildIcmpV4EchoRequest(IPAddress sourceAddress, IPAddress destinationAddress,
-         ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
+        ReadOnlySpan<byte> payload, ushort identifier = 0, ushort sequenceNumber = 0, bool updateChecksum = true)
     {
         if (!sourceAddress.IsV4() || !destinationAddress.IsV4())
             throw new ArgumentException("SourceAddress and DestinationAddress must be IPv4 addresses.");
@@ -207,8 +212,10 @@ public static class PacketBuilder
             throw new ArgumentException("SourceAddress and DestinationAddress must have a same ip version.");
 
         return sourceAddress.AddressFamily switch {
-            AddressFamily.InterNetwork => BuildIcmpV4EchoReply(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, updateChecksum),
-            AddressFamily.InterNetworkV6 => BuildIcmpV6EchoReply(sourceAddress, destinationAddress, payload, identifier, sequenceNumber, updateChecksum),
+            AddressFamily.InterNetwork => BuildIcmpV4EchoReply(sourceAddress, destinationAddress, payload, identifier,
+                sequenceNumber, updateChecksum),
+            AddressFamily.InterNetworkV6 => BuildIcmpV6EchoReply(sourceAddress, destinationAddress, payload, identifier,
+                sequenceNumber, updateChecksum),
             _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} not supported.")
         };
     }
@@ -314,15 +321,19 @@ public static class PacketBuilder
     public static IpPacket BuildIcmpUnreachableReply(IpPacket ipPacket, bool updateChecksum = true)
     {
         return ipPacket.Version == IpVersion.IPv6
-            ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.AddressUnreachable, 0, updateChecksum)
-            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.HostUnreachable, 0, updateChecksum);
+            ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.AddressUnreachable, 0,
+                updateChecksum)
+            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.HostUnreachable, 0,
+                updateChecksum);
     }
 
     public static IpPacket BuildIcmpUnreachablePortReply(IpPacket ipPacket, bool updateChecksum = true)
     {
         return ipPacket.Version == IpVersion.IPv6
-            ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.PortUnreachable, 0, updateChecksum)
-            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.PortUnreachable, 0, updateChecksum);
+            ? BuildIcmpV6Error(ipPacket, IcmpV6Type.DestinationUnreachable, IcmpV6Code.PortUnreachable, 0,
+                updateChecksum)
+            : BuildIcmpV4Error(ipPacket, IcmpV4Type.DestinationUnreachable, IcmpV4Code.PortUnreachable, 0,
+                updateChecksum);
     }
 
     public static IpPacket BuildIcmpPacketTooBigReply(IpPacket ipPacket, int mtu, bool updateChecksum = true)
@@ -356,7 +367,8 @@ public static class PacketBuilder
         return icmpIpPacket;
     }
 
-    public static IpPacket BuildIcmpV6Error(IpPacket ipPacket, IcmpV6Type icmpV6Type, IcmpV6Code code, uint messageSpecific,
+    public static IpPacket BuildIcmpV6Error(IpPacket ipPacket, IcmpV6Type icmpV6Type, IcmpV6Code code,
+        uint messageSpecific,
         bool updateChecksum = true)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));

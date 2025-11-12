@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Diagnostics;
+﻿using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Linux.Common;
@@ -87,7 +87,7 @@ internal class App
         VhLogger.Instance.LogInformation("Running the default browser...");
         Process.Start(new ProcessStartInfo {
             FileName = url.AbsoluteUri,
-            UseShellExecute = true,
+            UseShellExecute = true
         });
 
         VhLogger.Instance.LogInformation("To open VpnHood UI navigate to {0}",

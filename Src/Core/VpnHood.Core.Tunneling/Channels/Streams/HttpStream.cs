@@ -28,7 +28,8 @@ public class HttpStream : ChunkStream
     private bool IsServer => _host == null;
 
     public HttpStream(Stream sourceStream, string streamId, string? host, bool keepSourceOpen = false)
-        : base(new ReadCacheStream(sourceStream, keepSourceOpen, cacheSize: TunnelDefaults.StreamSmallReadCacheSize), streamId)
+        : base(new ReadCacheStream(sourceStream, keepSourceOpen, cacheSize: TunnelDefaults.StreamSmallReadCacheSize),
+            streamId)
     {
         _host = host;
     }
@@ -159,7 +160,8 @@ public class HttpStream : ChunkStream
         return chunkSize;
     }
 
-    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
+        CancellationToken cancellationToken = default)
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
@@ -267,7 +269,7 @@ public class HttpStream : ChunkStream
 
         // finish writing current HttpStream gracefully
         try {
-            await WriteInternalAsync(Memory<byte>.Empty,  cancellationToken).Vhc();
+            await WriteInternalAsync(Memory<byte>.Empty, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.LogError(GeneralEventId.Stream, ex,

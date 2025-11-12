@@ -32,10 +32,12 @@ public class IpV4Packet : IpPacket
 
         // validate options length
         if (optionsLength is < 0 or > 40)
-            throw new ArgumentOutOfRangeException(nameof(optionsLength), "Options length must be between 0 and 40 bytes.");
+            throw new ArgumentOutOfRangeException(nameof(optionsLength),
+                "Options length must be between 0 and 40 bytes.");
 
         if (optionsLength % 4 != 0)
-            throw new ArgumentOutOfRangeException(nameof(optionsLength), "Options length must be a multiple of 4 bytes.");
+            throw new ArgumentOutOfRangeException(nameof(optionsLength),
+                "Options length must be a multiple of 4 bytes.");
 
         // set version
         Version = IpVersion.IPv4;
@@ -94,14 +96,17 @@ public class IpV4Packet : IpPacket
         get => Span[1];
         set => Span[1] = value;
     }
+
     public ushort Identification {
         get => BinaryPrimitives.ReadUInt16BigEndian(Span.Slice(4, 2));
         set => BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(4, 2), value);
     }
+
     public byte FragmentFlags {
         get => (byte)(Span[6] >> 5);
         set => Span[6] = (byte)(value << 5 | Span[6] & 0x1F);
     }
+
     public bool DontFragment {
         get => (Span[6] & 0x40) != 0;
         set {
@@ -109,6 +114,7 @@ public class IpV4Packet : IpPacket
             else Span[6] &= 0xBF;
         }
     }
+
     public bool MoreFragments {
         get => (Span[6] & 0x20) != 0;
         set {
@@ -116,6 +122,7 @@ public class IpV4Packet : IpPacket
             else Span[6] &= 0xDF;
         }
     }
+
     public int FragmentOffset {
         get => (ushort)(BinaryPrimitives.ReadUInt16BigEndian(Span.Slice(6, 2)) & 0x1FFF);
         set {
@@ -161,7 +168,9 @@ public class IpV4Packet : IpPacket
             DestinationAddressField = null;
         }
     }
+
     public Memory<byte> Options => Buffer.Slice(20, InternetHeaderLength * 4 - 20);
+
     public bool IsHeaderChecksumValid()
     {
         var originalChecksum = HeaderChecksum;
@@ -186,7 +195,8 @@ public class IpV4Packet : IpPacket
             throw new ArgumentException("Buffer is not an IPv4 packet.", nameof(buffer));
 
         if (buffer.Length < 4)
-            throw new ArgumentException("IPv4 header requires at least 4 bytes to determine packet length.", nameof(buffer));
+            throw new ArgumentException("IPv4 header requires at least 4 bytes to determine packet length.",
+                nameof(buffer));
 
         return (ushort)(buffer[2] << 8 | buffer[3]);
     }

@@ -39,7 +39,8 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         return SourceStream.FlushAsync(cancellationToken);
     }
 
-    public sealed override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public sealed override Task<int> ReadAsync(byte[] buffer, int offset, int count,
+        CancellationToken cancellationToken)
     {
         return ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
     }
@@ -68,7 +69,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     {
         if (!leaveOpen)
             await SourceStream.DisposeAsync();
-        
+
         await base.DisposeAsync();
 
         // the base class does not call Dispose(bool) so we need to do it manually
@@ -94,7 +95,7 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
         if (!leaveOpen)
             SourceStream.Close();
     }
-    
+
     // Sealed
     public sealed override int WriteTimeout {
         get => SourceStream.WriteTimeout;

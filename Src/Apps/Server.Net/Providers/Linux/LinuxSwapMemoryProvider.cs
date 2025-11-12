@@ -121,5 +121,4 @@ public class LinuxSwapMemoryProvider(ILogger logger)
     {
         return OsUtils.ExecuteCommandAsync("/bin/bash", $"-c \"{command}\"", cancellationToken);
     }
-
 }

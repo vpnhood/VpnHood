@@ -12,7 +12,8 @@ public class ReadCacheStream : AsyncStreamDecorator
 
     public override bool CanSeek => false;
 
-    public ReadCacheStream(Stream sourceStream, bool leaveOpen, int cacheSize = 1024, ReadOnlySpan<byte> cacheData = default)
+    public ReadCacheStream(Stream sourceStream, bool leaveOpen, int cacheSize = 1024,
+        ReadOnlySpan<byte> cacheData = default)
         : base(sourceStream, leaveOpen)
     {
         if (cacheSize <= 0)
@@ -31,7 +32,7 @@ public class ReadCacheStream : AsyncStreamDecorator
         set => throw new NotSupportedException();
     }
 
-    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken =default)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         // read directly to user buffer if there is no buffer, and it is larger than cache
         if (_cacheRemain == 0 && buffer.Length > _cache.Length)
@@ -54,5 +55,4 @@ public class ReadCacheStream : AsyncStreamDecorator
         _cacheRemain -= cacheRead;
         return cacheRead;
     }
-
 }

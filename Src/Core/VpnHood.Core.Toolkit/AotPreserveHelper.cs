@@ -9,5 +9,7 @@ public static class AotPreserveHelper
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPAddress))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Version))]
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TimeSpan))]
-    public static void PreserveTypes() { }
+    public static void PreserveTypes()
+    {
+    }
 }

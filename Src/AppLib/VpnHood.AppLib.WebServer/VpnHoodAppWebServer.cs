@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer.Controllers;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Toolkit.Logging;
@@ -172,18 +172,20 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         context.Response.ContentType = "text/html";
         await context.Response.Send(_indexHtml);
     }
-    
+
     // ReSharper disable once UnusedMember.Local
     private static IEnumerable<IPAddress> GetAllPublicIp4()
     {
         var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(x => x.OperationalStatus is OperationalStatus.Up && x.Supports(NetworkInterfaceComponent.IPv4) & x.NetworkInterfaceType is not NetworkInterfaceType.Loopback);
+            .Where(x => x.OperationalStatus is OperationalStatus.Up && x.Supports(NetworkInterfaceComponent.IPv4) &
+                x.NetworkInterfaceType is not NetworkInterfaceType.Loopback);
 
         var ipAddresses = new List<IPAddress>();
         foreach (var networkInterface in networkInterfaces) {
             var ipProperties = networkInterface.GetIPProperties();
             var uniCastAddresses = ipProperties.UnicastAddresses;
-            var ips = uniCastAddresses.Where(x => x.Address.AddressFamily == AddressFamily.InterNetwork).Select(x => x.Address);
+            var ips = uniCastAddresses.Where(x => x.Address.AddressFamily == AddressFamily.InterNetwork)
+                .Select(x => x.Address);
             ipAddresses.AddRange(ips);
         }
 

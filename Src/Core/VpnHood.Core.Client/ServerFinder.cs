@@ -1,6 +1,6 @@
-﻿using Ga4.Trackers;
+﻿using System.Net;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
@@ -49,7 +49,8 @@ public class ServerFinder(
     // There is much work to be done here
     public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.Request, "Finding a reachable server... QueryTimeout: {QueryTimeout}",
+        VhLogger.Instance.LogInformation(GeneralEventId.Request,
+            "Finding a reachable server... QueryTimeout: {QueryTimeout}",
             serverQueryTimeout);
 
         // get all endpoints from serverToken
@@ -71,7 +72,8 @@ public class ServerFinder(
         VhUtils.Shuffle(hostEndPoints);
 
         // find the best server
-        _hostEndPointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
+        _hostEndPointStatuses =
+            await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
@@ -116,7 +118,8 @@ public class ServerFinder(
             hostStatus.Available = _hostEndPointStatuses
                 .FirstOrDefault(x => x.TcpEndPoint.Equals(hostStatus.TcpEndPoint))?.Available;
 
-        var endpointStatuses = await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
+        var endpointStatuses =
+            await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
         var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -251,8 +254,9 @@ public class ServerFinder(
         }
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
-                "Server verification completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
-                FastDateTime.Now - _progressMonitor.Progress.StartedTime, _progressMonitor.Progress.Completed, _progressMonitor.Progress.Total);
+            "Server verification completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
+            FastDateTime.Now - _progressMonitor.Progress.StartedTime, _progressMonitor.Progress.Completed,
+            _progressMonitor.Progress.Total);
 
         // Ensure progress is complete at the end of the operation
         _progressMonitor = null;
@@ -264,12 +268,13 @@ public class ServerFinder(
         CancellationToken cancellationToken)
     {
         try {
-
             using var queryTimeoutCts = new CancellationTokenSource(queryTimeout); // timeout for each server query
-            using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(queryTimeoutCts.Token, cancellationToken);
+            using var requestCts =
+                CancellationTokenSource.CreateLinkedTokenSource(queryTimeoutCts.Token, cancellationToken);
 
             var requestResult = await connector
-                .SendRequest<SessionResponse>(new ServerCheckRequest { RequestId = UniqueIdFactory.Create() }, requestCts.Token)
+                .SendRequest<SessionResponse>(new ServerCheckRequest { RequestId = UniqueIdFactory.Create() },
+                    requestCts.Token)
                 .Vhc();
 
             // this should be already handled by the connector and never happen

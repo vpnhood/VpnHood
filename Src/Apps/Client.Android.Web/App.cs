@@ -37,7 +37,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 PromptDelay = TimeSpan.FromDays(1)
-            },
+            }
         };
     }
 

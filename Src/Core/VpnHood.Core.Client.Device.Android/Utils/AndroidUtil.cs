@@ -99,5 +99,4 @@ public static class AndroidUtil
         var packageManager = ctx.PackageManager;
         return packageManager?.HasSystemFeature(PackageManager.FeatureLeanback) is true;
     }
-
 }

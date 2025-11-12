@@ -34,11 +34,9 @@ public class Token
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required byte[] Secret { get; set; }
 
-    [JsonPropertyName("ser")] 
-    public required ServerToken ServerToken { get; set; }
+    [JsonPropertyName("ser")] public required ServerToken ServerToken { get; set; }
 
-    [JsonPropertyName("tags")] 
-    public string[] Tags { get; set; } = [];
+    [JsonPropertyName("tags")] public string[] Tags { get; set; } = [];
 
     [JsonPropertyName("ispub")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

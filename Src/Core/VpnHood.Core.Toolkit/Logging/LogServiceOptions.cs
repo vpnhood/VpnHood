@@ -7,7 +7,7 @@ public class LogServiceOptions
 {
     public bool LogToConsole { get; set; } = true;
     public bool LogToFile { get; set; } = true;
-    public bool? LogAnonymous { get; set; } 
+    public bool? LogAnonymous { get; set; }
     public bool AutoFlush { get; set; } = true;
     public string[] LogEventNames { get; set; } = [];
     public bool SingleLineConsole { get; set; } = true;

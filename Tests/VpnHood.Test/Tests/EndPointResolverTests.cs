@@ -33,7 +33,8 @@ public class EndPointResolverTests
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.DnsOnly,
             CancellationToken.None);
 
-        Assert.IsFalse(results.All(ep => tokenEndPoints.Contains(ep)), "DnsOnly strategy should not include token-provided endpoints.");
+        Assert.IsFalse(results.All(ep => tokenEndPoints.Contains(ep)),
+            "DnsOnly strategy should not include token-provided endpoints.");
     }
 
     [TestMethod]
@@ -69,7 +70,7 @@ public class EndPointResolverTests
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.TokenFirst,
-                CancellationToken.None);
+            CancellationToken.None);
 
         Assert.AreEqual(tokenEndPoints[0], results[0]);
         Assert.AreEqual(tokenEndPoints[1], results[1]);

@@ -31,14 +31,13 @@ public class DiagnoserTest : TestAppBase
             clientApp.Connect(clientProfile.ClientProfileId));
 
         Assert.AreEqual(nameof(NoInternetException), clientApp.State.LastError?.TypeName);
-
     }
 
     [TestMethod]
     public async Task UnreachableServer()
     {
         using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
-        
+
         // change access key endpoint
         var token = dom.ClientProfile.Token;
         token.ServerToken.HostEndPoints = [TestConstants.InvalidEp];
@@ -48,7 +47,7 @@ public class DiagnoserTest : TestAppBase
         // NoInternetException
         await Assert.ThrowsExactlyAsync<UnreachableServerException>(() =>
             dom.App.Connect(clientProfile.ClientProfileId, diagnose: true));
-        
+
         Assert.AreEqual(nameof(UnreachableServerException), dom.App.State.LastError?.TypeName);
     }
 }

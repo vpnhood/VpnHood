@@ -23,7 +23,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);
     public Uri? PurchaseUrl => ClientPolicy?.PurchaseUrl;
     public PurchaseUrlMode PurchaseUrlMode => ClientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore;
-    
+
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? CustomServerEndpoints => clientProfile.CustomServerEndpoints;
 
@@ -41,7 +41,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     private ClientPolicy? ClientPolicy {
         get {
             var countryCode = VpnHoodApp.Instance.GetClientCountryCode(allowVpnServer: true);
-            return clientProfile.Token.ClientPolicies?.FirstOrDefault(x => 
+            return clientProfile.Token.ClientPolicies?.FirstOrDefault(x =>
                        x.ClientCountries.Any(y => y.Equals(countryCode, StringComparison.OrdinalIgnoreCase))) ??
                    clientProfile.Token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
         }

@@ -19,12 +19,18 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 {
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibrary(string lpFileName);
+
     private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
     private readonly List<IpNetwork> _includeIpNetworks = [];
     private IPAddress[] _dnsServers = [];
-    private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV4 = new(TimeSpan.FromSeconds(30));
-    private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>> _lastDnsServersV6 = new(TimeSpan.FromSeconds(30));
+
+    private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>>
+        _lastDnsServersV4 = new(TimeSpan.FromSeconds(30));
+
+    private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>>
+        _lastDnsServersV6 = new(TimeSpan.FromSeconds(30));
+
     private readonly bool _excludeLocalNetwork = adapterSettings.ExcludeLocalNetwork;
     private readonly bool _simulateDns = adapterSettings.SimulateDns;
 

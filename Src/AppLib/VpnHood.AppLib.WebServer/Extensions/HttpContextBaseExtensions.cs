@@ -8,7 +8,8 @@ namespace VpnHood.AppLib.WebServer.Extensions;
 
 internal static class HttpContextBaseExtensions
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    private static readonly JsonSerializerOptions JsonOptions = new()
+        { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     extension(HttpContextBase ctx)
     {
@@ -26,7 +27,7 @@ internal static class HttpContextBaseExtensions
 
             var value = ctx.Request.RetrieveQueryValue(key);
             try {
-                return ConvertString<T>(value) ?? 
+                return ConvertString<T>(value) ??
                        throw new Exception($"The value of {key} should not be null.");
             }
             catch (Exception ex) {
@@ -37,8 +38,8 @@ internal static class HttpContextBaseExtensions
         public T? GetRouteParameter<T>(string key, T? defaultValue)
         {
             var value = ctx.Request.Url.Parameters.Get(key);
-            return value is null 
-                ? defaultValue 
+            return value is null
+                ? defaultValue
                 : ctx.GetRouteParameter<T>(key);
         }
 
@@ -128,8 +129,10 @@ internal static class HttpContextBaseExtensions
                 var ct = ctx.Request.ContentType;
                 if (!string.IsNullOrWhiteSpace(ct))
                     try {
-                        var parts = ct.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-                        var charsetPart = parts.FirstOrDefault(p => p.StartsWith("charset=", StringComparison.OrdinalIgnoreCase));
+                        var parts = ct.Split(';',
+                            StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                        var charsetPart = parts.FirstOrDefault(p =>
+                            p.StartsWith("charset=", StringComparison.OrdinalIgnoreCase));
                         if (charsetPart != null) {
                             var charset = charsetPart["charset=".Length..];
                             encoding = Encoding.GetEncoding(charset);
@@ -142,7 +145,8 @@ internal static class HttpContextBaseExtensions
                 var body = encoding.GetString(bytes);
 
                 var obj = JsonSerializer.Deserialize<T>(body, JsonOptions) ??
-                          throw new InvalidOperationException($"Failed to deserialize JSON to {typeof(T).Name}. Body: {body}");
+                          throw new InvalidOperationException(
+                              $"Failed to deserialize JSON to {typeof(T).Name}. Body: {body}");
 
                 return obj;
             }

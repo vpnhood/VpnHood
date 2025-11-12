@@ -23,12 +23,10 @@ public class SessionRequestEx
 
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint HostEndPoint { get; set; }
-    
+
     [JsonConverter(typeof(IPEndPointConverter))]
     public IPEndPoint? RemoteEndPoint { get; set; } // nullable for version <= 739
 
     [JsonConverter(typeof(IPAddressConverter))]
     public required IPAddress? ClientIp { get; set; }
-    
-
 }

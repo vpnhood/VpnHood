@@ -108,11 +108,11 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("process-types")]
-    public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode )
+    public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode)
     {
         throw new SwaggerOnlyException();
     }
-    
+
     [HttpPost("user-review")]
     public Task SetUserReview(AppUserReview userReview)
     {
@@ -130,7 +130,7 @@ public class AppController : ControllerBase, IAppController
     {
         throw new SwaggerOnlyException();
     }
-    
+
     [HttpPost("internal-ad/error")]
     public Task InternalAdError(string errorMessage)
     {

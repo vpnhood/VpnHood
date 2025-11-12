@@ -39,8 +39,9 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
 
     public PacketChannelState State {
         get {
-            if (IsDisposed) return
-                PacketChannelState.Disposed;
+            if (IsDisposed)
+                return
+                    PacketChannelState.Disposed;
 
             if (_closeSentTime != null || _closeReceivedTime != null)
                 return PacketChannelState.Disconnecting;
@@ -106,7 +107,6 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         // dispose if its lifetime is over
         if (_started && _closeSentTime == null &&
             _lifespan.HasValue && FastDateTime.Now - PacketStat.CreatedTime > _lifespan.Value) {
-
             VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
                 "PacketChannel lifetime is over. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
                 ChannelId, PacketStat.CreatedTime, _lifespan);

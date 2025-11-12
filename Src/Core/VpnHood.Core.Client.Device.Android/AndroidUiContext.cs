@@ -8,6 +8,7 @@ public class AndroidUiContext(IActivityEvent activityEvent) : IUiContext
 {
     public IActivityEvent ActivityEvent => activityEvent;
     public Activity Activity => activityEvent.Activity;
+
     public Task<bool> IsDestroyed()
     {
         try {

@@ -28,7 +28,7 @@ internal class SessionLocalService : IDisposable
     public SessionLocalData Get(ulong sessionId)
     {
         return Find(sessionId) ?? throw new SessionException(SessionErrorCode.AccessError,
-                $"Could not get SessionId from session local data. SessionId: {sessionId}");
+            $"Could not get SessionId from session local data. SessionId: {sessionId}");
     }
 
     public SessionLocalData? Find(ulong sessionId)

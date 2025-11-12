@@ -10,8 +10,7 @@ public static class OsUtils
     public static string ExecuteCommand(string fileName, string command)
     {
         VhLogger.Instance.LogDebug($"Executing: {fileName} {command}");
-        var processInfo = new ProcessStartInfo
-        {
+        var processInfo = new ProcessStartInfo {
             FileName = fileName,
             Arguments = command,
             RedirectStandardOutput = true,
@@ -34,11 +33,11 @@ public static class OsUtils
         return output;
     }
 
-    public static async Task<string> ExecuteCommandAsync(string fileName, string command, CancellationToken cancellationToken)
+    public static async Task<string> ExecuteCommandAsync(string fileName, string command,
+        CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug($"Executing: {fileName} {command}");
-        var processInfo = new ProcessStartInfo
-        {
+        var processInfo = new ProcessStartInfo {
             FileName = fileName,
             Arguments = command,
             RedirectStandardOutput = true,

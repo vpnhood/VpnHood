@@ -1,6 +1,5 @@
 ﻿namespace VpnHood.Core.Tunneling.Quic;
 // ReSharper disable IdentifierTypo
-
 public sealed class QuicSniState
 {
     // Secrets
@@ -17,7 +16,7 @@ public sealed class QuicSniState
     public List<(ulong Off, byte[] Data)> Segments = [];
 
     // Budgets
-    public int PacketBudget = 3;                 // how many client Initial packets to consider
-    public long DeadlineTicks;                   // e.g., now + 300ms
-    public int MaxBytes = 64 * 1024;             // safety cap
+    public int PacketBudget = 3; // how many client Initial packets to consider
+    public long DeadlineTicks; // e.g., now + 300ms
+    public int MaxBytes = 64 * 1024; // safety cap
 }

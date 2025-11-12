@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using VpnHood.Core.Toolkit.Net;
+
 // ReSharper disable StringLiteralTypo
 // ReSharper disable InconsistentNaming
 // ReSharper disable IdentifierTypo
@@ -24,19 +25,15 @@ public static class Win32IpHelper
         public byte OnLinkPrefixLength;
         public uint Metric;
         public uint Protocol;
-        [MarshalAs(UnmanagedType.U1)]
-        public bool Loopback;
-        [MarshalAs(UnmanagedType.U1)]
-        public bool AutoconfigureAddress;
-        [MarshalAs(UnmanagedType.U1)]
-        public bool Publish;
-        [MarshalAs(UnmanagedType.U1)]
-        public bool Immortal;
+        [MarshalAs(UnmanagedType.U1)] public bool Loopback;
+        [MarshalAs(UnmanagedType.U1)] public bool AutoconfigureAddress;
+        [MarshalAs(UnmanagedType.U1)] public bool Publish;
+        [MarshalAs(UnmanagedType.U1)] public bool Immortal;
         public uint Age;
         public uint Origin;
     }
 
-	[StructLayout(LayoutKind.Sequential, Pack = 4, Size = 32)]
+    [StructLayout(LayoutKind.Sequential, Pack = 4, Size = 32)]
     public struct IP_ADDRESS_PREFIX
     {
         public SOCKADDR_INET Prefix;
@@ -58,7 +55,6 @@ public static class Win32IpHelper
         public ushort sin_port;
         public uint sin_addr;
         public ulong sin_zero;
-
     }
 
     [StructLayout(LayoutKind.Sequential, Size = 16)]
@@ -104,7 +100,7 @@ public static class Win32IpHelper
         };
     }
 
-    public static void AddRoute(uint interfaceIndex,  IpNetwork ipNetwork, CancellationToken cancellationToken)
+    public static void AddRoute(uint interfaceIndex, IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         const int noError = 0;
         const int errorObjectAlreadyExists = 5010;
@@ -189,5 +185,4 @@ public static class Win32IpHelper
                 throw new Win32Exception(result, $"Failed to add IPv6 route for {ipNetwork}");
         }
     }
-
 }

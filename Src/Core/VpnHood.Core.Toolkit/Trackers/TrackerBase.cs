@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers;
@@ -23,7 +23,9 @@ public abstract class TrackerBase : ITracker
     public Dictionary<string, object> UserProperties { get; set; } = new();
 
     public abstract Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken);
-    public Task Track(TrackEvent trackEvent, CancellationToken cancellationToken) => Track([trackEvent], cancellationToken);
+
+    public Task Track(TrackEvent trackEvent, CancellationToken cancellationToken) =>
+        Track([trackEvent], cancellationToken);
 
     public Task TrackError(string action, Exception ex, CancellationToken cancellationToken)
     {
@@ -46,7 +48,7 @@ public abstract class TrackerBase : ITracker
         //httpHeaders.Add("Sec-Ch-Ua-Platform", "\"Android\"");
     }
 
-    protected async Task SendHttpRequest(HttpRequestMessage requestMessage, string name, object? jsonData, 
+    protected async Task SendHttpRequest(HttpRequestMessage requestMessage, string name, object? jsonData,
         CancellationToken cancellationToken)
     {
         if (!IsEnabled)

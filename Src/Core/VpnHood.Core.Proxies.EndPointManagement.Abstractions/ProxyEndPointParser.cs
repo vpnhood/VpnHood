@@ -107,6 +107,7 @@ public static class ProxyEndPointParser
         if (defaults?.IsEnabled == false && valueCollection["enabled"] == null) {
             valueCollection["enabled"] = "false";
         }
+
         uriBuilder.Query = valueCollection.ToString();
         return uriBuilder.Uri;
     }
@@ -127,13 +128,13 @@ public static class ProxyEndPointParser
         // Split by new lines
         var lines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         var results = new List<Uri>();
-        
+
         foreach (var line in lines) {
             var uri = ProxyEndPointExtractor.Extract(line, defaultScheme, preferHttpsWhenPort443);
             if (uri != null)
                 results.Add(uri);
         }
-        
+
         return results.ToArray();
     }
 

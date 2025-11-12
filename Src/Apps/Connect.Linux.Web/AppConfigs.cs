@@ -11,6 +11,7 @@ namespace VpnHood.App.Connect.Linux.Web;
 internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     public const string AppTitle = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
+
     // currently can not have space or more than 20 characters in linux app name as it used for adapter name
     public const string AppName = IsDebugMode ? "VpnHOODConnect_dbg" : "VpnHoodConnect";
     public string AppId { get; set; } = IsDebugMode ? "com.vpnhood.connect.linux.debug" : "com.vpnhood.connect.linux";

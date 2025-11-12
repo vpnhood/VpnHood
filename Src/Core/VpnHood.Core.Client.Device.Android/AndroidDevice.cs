@@ -114,7 +114,7 @@ public class AndroidDevice : IDevice
             ? Application.Context.StartForegroundService(intent.SetAction("connect"))
             : Application.Context.StartService(intent.SetAction("connect"));
 
-        if (res == null) 
+        if (res == null)
             throw new VpnServiceException("Could not start AndroidVpnService.");
 
         return Task.CompletedTask;
@@ -161,7 +161,8 @@ public class AndroidDevice : IDevice
 
     public static bool IsVpnServiceProcess => CurrentProcessName.Contains(AndroidVpnService.ProcessName);
 
-    private static IEnumerable<(Network, NetworkCapabilities)> GetNetworkWithCapabilities(ConnectivityManager connectivityManager)
+    private static IEnumerable<(Network, NetworkCapabilities)> GetNetworkWithCapabilities(
+        ConnectivityManager connectivityManager)
     {
         var networks = connectivityManager.GetAllNetworks();
         foreach (var network in networks) {
@@ -176,7 +177,8 @@ public class AndroidDevice : IDevice
 
     public void BindProcessToVpn(bool value)
     {
-        var connectivityManager = (ConnectivityManager?)Application.Context.GetSystemService(Context.ConnectivityService)!;
+        var connectivityManager =
+            (ConnectivityManager?)Application.Context.GetSystemService(Context.ConnectivityService)!;
 
         // null is system default which is VPN if connected to VPN otherwise it is the default network
         if (value) {

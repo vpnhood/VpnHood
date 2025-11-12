@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
@@ -69,7 +69,7 @@ public class TunnelTest : TestBase
                 AutoDisposePackets = true,
                 Blocking = false,
                 ProtocolVersion = 4,
-                LeaveTransmitterOpen = false,
+                LeaveTransmitterOpen = false
             });
         serverTransmitter.UdpChannel = serverUdpChannel;
         return serverUdpChannel;
@@ -276,7 +276,6 @@ public class TunnelTest : TestBase
                 Assert.AreEqual(4 + 4, memStream.Position, "Stream position mismatch for payload length <= 0xFFFF");
             else
                 Assert.AreEqual(10 + 4, memStream.Position, "Stream position mismatch for payload length > 0xFFFF");
-           
         }
     }
 
@@ -292,7 +291,7 @@ public class TunnelTest : TestBase
             var header = await WebSocketUtils.ReadWebSocketHeader(memStream, readBuffer, CancellationToken.None);
             Assert.AreEqual(i, header.PayloadLength);
             Assert.IsTrue(header.IsBinary);
-            
+
             // Assert the stream position based on WebSocket payload length
             if (i <= 125)
                 Assert.AreEqual(2, memStream.Position, "Stream position mismatch for payload length <= 125");
@@ -302,5 +301,4 @@ public class TunnelTest : TestBase
                 Assert.AreEqual(10, memStream.Position, "Stream position mismatch for payload length > 0xFFFF");
         }
     }
-
 }

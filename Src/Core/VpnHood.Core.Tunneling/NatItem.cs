@@ -29,26 +29,26 @@ public class NatItem
 
         switch (ipPacket.Protocol) {
             case IpProtocol.Tcp: {
-                    var tcpPacket = ipPacket.ExtractTcp();
-                    SourcePort = tcpPacket.SourcePort;
-                    break;
-                }
+                var tcpPacket = ipPacket.ExtractTcp();
+                SourcePort = tcpPacket.SourcePort;
+                break;
+            }
 
             case IpProtocol.Udp: {
-                    var udpPacket = ipPacket.ExtractUdp();
-                    SourcePort = udpPacket.SourcePort;
-                    break;
-                }
+                var udpPacket = ipPacket.ExtractUdp();
+                SourcePort = udpPacket.SourcePort;
+                break;
+            }
 
             case IpProtocol.IcmpV4: {
-                    IcmpId = GetIcmpV4Id(ipPacket);
-                    break;
-                }
+                IcmpId = GetIcmpV4Id(ipPacket);
+                break;
+            }
 
             case IpProtocol.IcmpV6: {
-                    IcmpId = GetIcmpV6Id(ipPacket);
-                    break;
-                }
+                IcmpId = GetIcmpV6Id(ipPacket);
+                break;
+            }
 
             default:
                 throw new NotSupportedException($"{ipPacket.Protocol} is not yet supported by this NAT!");

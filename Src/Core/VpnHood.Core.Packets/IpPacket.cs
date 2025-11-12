@@ -64,11 +64,13 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
     public IPAddress DestinationAddress {
         get => DestinationAddressField ??= new IPAddress(DestinationAddressSpan);
         set {
-            if (!value.TryWriteBytes(DestinationAddressBuffer, out var written) || written != DestinationAddressSpan.Length)
+            if (!value.TryWriteBytes(DestinationAddressBuffer, out var written) ||
+                written != DestinationAddressSpan.Length)
                 throw new ArgumentException("Invalid IP address format.");
             DestinationAddressField = value;
         }
     }
+
     public abstract IpProtocol Protocol { get; }
     public abstract byte TimeToLive { get; set; }
     public abstract Memory<byte> Header { get; }

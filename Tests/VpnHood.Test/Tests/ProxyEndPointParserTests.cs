@@ -47,7 +47,8 @@ public class ProxyEndPointParserTests
         Assert.AreEqual(9090, url.Port); // Should get given port
 
         // defaults username/password + protocol
-        var d3 = new ProxyEndPointDefaults { Protocol = ProxyProtocol.Http, Username = "default-user", Password = "default-pass" };
+        var d3 = new ProxyEndPointDefaults
+            { Protocol = ProxyProtocol.Http, Username = "default-user", Password = "default-pass" };
         url = ProxyEndPointParser.TryParseHostToUrl("proxy.example.com:1080", d3);
         Assert.IsNotNull(url);
         Assert.AreEqual("http", url.Scheme);
@@ -105,7 +106,8 @@ public class ProxyEndPointParserTests
         Assert.IsNull(ProxyEndPointParser.TryParseHostToUrl("socks5://proxy.example.com:999999", null));
 
         // mixed defaults: provided credentials override defaults
-        var d5 = new ProxyEndPointDefaults { Protocol = ProxyProtocol.Https, Port = 443, Username = "fallback-user", Password = "fallback-pass" };
+        var d5 = new ProxyEndPointDefaults
+            { Protocol = ProxyProtocol.Https, Port = 443, Username = "fallback-user", Password = "fallback-pass" };
         url = ProxyEndPointParser.TryParseHostToUrl("user:pass@proxy.example.com:1080", d5);
         Assert.IsNotNull(url);
         Assert.AreEqual("https", url.Scheme);
@@ -190,18 +192,16 @@ public class ProxyEndPointParserTests
     public void ProxyEndPointUpdater_BasicMerge()
     {
         // Create some existing endpoints with different penalties
-        var existing = new[]
-        {
+        var existing = new[] {
             CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow.AddMinutes(-5)),
             CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 0, lastUsedTime: DateTime.UtcNow.AddMinutes(-10)),
-            CreateProxyEndPointInfo("proxy3.com", 1080, penalty: 10, lastUsedTime: DateTime.UtcNow.AddMinutes(-15)),
+            CreateProxyEndPointInfo("proxy3.com", 1080, penalty: 10, lastUsedTime: DateTime.UtcNow.AddMinutes(-15))
         };
 
         // Create new endpoints
-        var newEndPoints = new[]
-        {
+        var newEndPoints = new[] {
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy1.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy2.com", Port = 8080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy2.com", Port = 8080 }
         };
 
         var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 1000, maxPenalty: 5);
@@ -218,18 +218,16 @@ public class ProxyEndPointParserTests
     [TestMethod]
     public void ProxyEndPointUpdater_MaxItemCountLimit()
     {
-        var existing = new[]
-        {
+        var existing = new[] {
             CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
             CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 3, lastUsedTime: DateTime.UtcNow),
-            CreateProxyEndPointInfo("proxy3.com", 1080, penalty: 8, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("proxy3.com", 1080, penalty: 8, lastUsedTime: DateTime.UtcNow)
         };
 
-        var newEndPoints = new[]
-        {
+        var newEndPoints = new[] {
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy1.com", Port = 1080 },
             new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy2.com", Port = 8080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy3.com", Port = 1081 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy3.com", Port = 1081 }
         };
 
         // With maxPenalty 0, no used-good items exist; ordering is: new endpoints first, then used-bad ascending by penalty.
@@ -246,17 +244,15 @@ public class ProxyEndPointParserTests
     [TestMethod]
     public void ProxyEndPointUpdater_DuplicateHandling()
     {
-        var existing = new[]
-        {
+        var existing = new[] {
             CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
-            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 3, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 3, lastUsedTime: DateTime.UtcNow)
         };
 
         // New list contains one duplicate
-        var newEndPoints = new[]
-        {
+        var newEndPoints = new[] {
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "proxy1.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy.com", Port = 8080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy.com", Port = 8080 }
         };
 
         var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 3, maxPenalty: 0);
@@ -273,13 +269,11 @@ public class ProxyEndPointParserTests
     [TestMethod]
     public void ProxyEndPointUpdater_InvalidMaxItemCount()
     {
-        var existing = new[]
-        {
-            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5),
+        var existing = new[] {
+            CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5)
         };
-        var newEndPoints = new[]
-        {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy.com", Port = 1080 },
+        var newEndPoints = new[] {
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy.com", Port = 1080 }
         };
 
         Assert.Throws<ArgumentException>(() =>
@@ -293,10 +287,9 @@ public class ProxyEndPointParserTests
     public void ProxyEndPointUpdater_AllNewEndPoints()
     {
         var existing = Array.Empty<ProxyEndPointInfo>();
-        var newEndPoints = new[]
-        {
+        var newEndPoints = new[] {
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "newproxy1.com", Port = 1080 },
-            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy2.com", Port = 8080 },
+            new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "newproxy2.com", Port = 8080 }
         };
 
         var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
@@ -309,10 +302,9 @@ public class ProxyEndPointParserTests
     [TestMethod]
     public void ProxyEndPointUpdater_AllExistingWithHighPenalty()
     {
-        var existing = new[]
-        {
+        var existing = new[] {
             CreateProxyEndPointInfo("proxy1.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
-            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 8, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("proxy2.com", 1080, penalty: 8, lastUsedTime: DateTime.UtcNow)
         };
         var newEndPoints = Array.Empty<ProxyEndPoint>();
 
@@ -321,7 +313,7 @@ public class ProxyEndPointParserTests
         Assert.HasCount(2, merged);
         Assert.IsTrue(merged.Any(p => p.Host == "proxy1.com"));
         Assert.IsTrue(merged.Any(p => p.Host == "proxy2.com"));
-        
+
         // Lower penalty is better, and used-bad are sorted ascending by penalty
         Assert.AreEqual("proxy1.com", merged[0].Host);
         Assert.AreEqual("proxy2.com", merged[1].Host);
@@ -331,22 +323,22 @@ public class ProxyEndPointParserTests
     public void ProxyEndPointUpdater_OrderingTest()
     {
         // Test the exact ordering: 1) used good (<= maxPenalty), 2) new, 3) unused, 4) used bad (> maxPenalty)
-        var existing = new[]
-        {
-            CreateProxyEndPointInfo("used-good.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow), // actually bad for maxPenalty=0
-            CreateProxyEndPointInfo("used-bad.com", 1080, penalty: -5, lastUsedTime: DateTime.UtcNow), // actually good for maxPenalty=0
-            CreateProxyEndPointInfo("unused.com", 1080, penalty: 10, lastUsedTime: null),
+        var existing = new[] {
+            CreateProxyEndPointInfo("used-good.com", 1080, penalty: 5,
+                lastUsedTime: DateTime.UtcNow), // actually bad for maxPenalty=0
+            CreateProxyEndPointInfo("used-bad.com", 1080, penalty: -5,
+                lastUsedTime: DateTime.UtcNow), // actually good for maxPenalty=0
+            CreateProxyEndPointInfo("unused.com", 1080, penalty: 10, lastUsedTime: null)
         };
 
-        var newEndPoints = new[]
-        {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new.com", Port = 1080 },
+        var newEndPoints = new[] {
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new.com", Port = 1080 }
         };
 
         var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
 
         Assert.HasCount(4, merged);
-        
+
         // With maxPenalty=0, order should be: used-bad(-5) as good, then new, then unused, then used-good(5) as bad
         Assert.AreEqual("used-bad.com", merged[0].Host, "First should be used with good (lowest) penalty");
         Assert.AreEqual("new.com", merged[1].Host, "Second should be new endpoint");
@@ -357,23 +349,21 @@ public class ProxyEndPointParserTests
     [TestMethod]
     public void ProxyEndPointUpdater_MultipleUsedWithDifferentPenalties()
     {
-        var existing = new[]
-        {
+        var existing = new[] {
             CreateProxyEndPointInfo("used1.com", 1080, penalty: 10, lastUsedTime: DateTime.UtcNow),
             CreateProxyEndPointInfo("used2.com", 1080, penalty: 5, lastUsedTime: DateTime.UtcNow),
             CreateProxyEndPointInfo("used3.com", 1080, penalty: -2, lastUsedTime: DateTime.UtcNow),
-            CreateProxyEndPointInfo("used4.com", 1080, penalty: 8, lastUsedTime: DateTime.UtcNow),
+            CreateProxyEndPointInfo("used4.com", 1080, penalty: 8, lastUsedTime: DateTime.UtcNow)
         };
 
-        var newEndPoints = new[]
-        {
-            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new.com", Port = 1080 },
+        var newEndPoints = new[] {
+            new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "new.com", Port = 1080 }
         };
 
         var merged = ProxyEndPointUpdater.Merge(existing, newEndPoints, maxItemCount: 10, maxPenalty: 0);
 
         Assert.HasCount(5, merged);
-        
+
         // Order with lower-penalty-better: used3 (-2), new, then used-bad ascending (5,8,10)
         Assert.AreEqual("used3.com", merged[0].Host, "Lowest penalty first");
         Assert.AreEqual("new.com", merged[1].Host, "New endpoint next");
@@ -383,18 +373,16 @@ public class ProxyEndPointParserTests
     }
 
     // Helper method to create ProxyEndPointInfo with custom penalty and LastUsedTime
-    private static ProxyEndPointInfo CreateProxyEndPointInfo(string host, int port, int penalty, DateTime? lastUsedTime = null)
+    private static ProxyEndPointInfo CreateProxyEndPointInfo(string host, int port, int penalty,
+        DateTime? lastUsedTime = null)
     {
-        return new ProxyEndPointInfo
-        {
-            EndPoint = new ProxyEndPoint
-            {
+        return new ProxyEndPointInfo {
+            EndPoint = new ProxyEndPoint {
                 Protocol = ProxyProtocol.Socks5,
                 Host = host,
                 Port = port
             },
-            Status = new ProxyEndPointStatus
-            {
+            Status = new ProxyEndPointStatus {
                 Penalty = penalty,
                 LastSucceeded = lastUsedTime,
                 SucceededCount = lastUsedTime != null ? 1 : 0 // make sure has used

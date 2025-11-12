@@ -1,7 +1,6 @@
 ﻿namespace VpnHood.Core.Packets;
 // This enumeration was originally derived from PacketDotNet.
 // ReSharper disable IdentifierTypo
-
 public enum IcmpV6Type : byte
 {
     DestinationUnreachable = 1,
@@ -47,5 +46,5 @@ public enum IcmpV6Type : byte
     ExtendedEchoReply = 161,
     PrivateExperimentation3 = 200,
     PrivateExperimentation4 = 201,
-    ReservedForExpansion2 = 255,
+    ReservedForExpansion2 = 255
 }

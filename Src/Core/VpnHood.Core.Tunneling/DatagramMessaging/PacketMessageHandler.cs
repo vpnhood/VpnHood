@@ -46,11 +46,12 @@ public static class PacketMessageHandler
         // check version
         var version = udpPacket.Payload.Span[0];
         if (version != 1)
-            throw new NotSupportedException($"The packet message version is not supported. Version: {version}. Packet: {ipPacket}");
+            throw new NotSupportedException(
+                $"The packet message version is not supported. Version: {version}. Packet: {ipPacket}");
 
         // check message code
         var messageCode = (PacketMessageCode)udpPacket.Payload.Span[1];
-        
+
         using var stream = new MemoryStream(udpPacket.Payload[2..].ToArray());
         return messageCode switch {
             PacketMessageCode.ClosePacketChannel => StreamUtils.ReadObject<ClosePacketMessage>(stream),

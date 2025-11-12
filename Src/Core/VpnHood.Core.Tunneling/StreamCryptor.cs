@@ -77,11 +77,13 @@ public class StreamCryptor : AsyncStreamDecorator
         return readCount;
     }
 
-    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
+        CancellationToken cancellationToken = default)
     {
         // copy buffer to a shared buffer from memory pool to avoid memory allocation
         using var memoryOwner = MemoryPool<byte>.Shared.Rent(buffer.Length);
-        var copyBuffer = memoryOwner.Memory[..buffer.Length]; // warning: the returned memory may be larger than the original buffer
+        var copyBuffer =
+            memoryOwner.Memory[..buffer.Length]; // warning: the returned memory may be larger than the original buffer
         buffer.Span.CopyTo(copyBuffer.Span);
         Encrypt(copyBuffer.Span);
 

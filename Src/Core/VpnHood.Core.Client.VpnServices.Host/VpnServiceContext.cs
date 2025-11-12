@@ -13,6 +13,7 @@ internal class VpnServiceContext(string configFolder)
     public string StatusFilePath => Path.Combine(configFolder, ClientOptions.VpnStatusFileName);
     public string LogFilePath => Path.Combine(configFolder, ClientOptions.VpnLogFileName);
     public string ConfigFolder => configFolder;
+
     public static ConnectionInfo DefaultConnectionInfo { get; } = new() {
         ApiEndPoint = null,
         ApiKey = null,
@@ -48,6 +49,7 @@ internal class VpnServiceContext(string configFolder)
     }
 
     private readonly AsyncLock _connectionInfoLock = new();
+
     public async Task<bool> TryWriteConnectionInfo(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
         try {
@@ -62,7 +64,8 @@ internal class VpnServiceContext(string configFolder)
             return false; // operation was cancelled
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}", StatusFilePath);
+            VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}",
+                StatusFilePath);
             return false;
         }
     }

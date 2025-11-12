@@ -25,7 +25,7 @@ internal class ClientServerDom : IAsyncDisposable
     private ClientServerDom(Token token,
         VpnHoodClient client,
         VpnHoodServer server,
-        TestAccessManager accessManager, 
+        TestAccessManager accessManager,
         FileAccessManagerOptions fileAccessManagerOptions)
     {
         Token = token;
@@ -47,7 +47,8 @@ internal class ClientServerDom : IAsyncDisposable
         Assert.AreEqual(client.Config.UserAgent, session?.ClientInfo.UserAgent);
 
         // check ClientPublicAddress in server
-        Assert.AreEqual(fileAccessManagerOptions.TcpEndPointsValue.First().Address, client.SessionInfo?.ClientPublicIpAddress);
+        Assert.AreEqual(fileAccessManagerOptions.TcpEndPointsValue.First().Address,
+            client.SessionInfo?.ClientPublicIpAddress);
 
         Collect();
     }
@@ -82,7 +83,6 @@ internal class ClientServerDom : IAsyncDisposable
             client = await testHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: clientVpnAdapter);
             var clientServerDom = new ClientServerDom(token, client, server, accessManager, fileAccessManagerOptions);
             return clientServerDom;
-
         }
         catch {
             if (client != null) await client.DisposeAsync();
@@ -106,20 +106,20 @@ internal class ClientServerDom : IAsyncDisposable
 
     public void AssertClientTransfer(int minTunnelSendData = 100, int minTunnelReceivedData = 500)
     {
-        Assert.AreNotEqual(OldClientSentByteCount, Client.GetSessionStatus().SessionTraffic.Sent, 
+        Assert.AreNotEqual(OldClientSentByteCount, Client.GetSessionStatus().SessionTraffic.Sent,
             delta: minTunnelSendData,
             "Not enough data has been sent through the client.");
-        Assert.AreNotEqual(OldClientReceivedByteCount, Client.GetSessionStatus().SessionTraffic.Received, 
-            delta: minTunnelReceivedData, 
+        Assert.AreNotEqual(OldClientReceivedByteCount, Client.GetSessionStatus().SessionTraffic.Received,
+            delta: minTunnelReceivedData,
             "Not enough data has been received through the client.");
     }
 
     public void AssertServerTransfer(int minTunnelSendData = 500, int minTunnelReceivedData = 100)
     {
-        Assert.AreNotEqual(OldServerSentByteCount, ServerSession.Tunnel.Traffic.Sent, 
+        Assert.AreNotEqual(OldServerSentByteCount, ServerSession.Tunnel.Traffic.Sent,
             delta: minTunnelSendData,
             "Not enough data has been sent through the server.");
-        Assert.AreNotEqual(OldServerReceivedByteCount, ServerSession.Tunnel.Traffic.Received, 
+        Assert.AreNotEqual(OldServerReceivedByteCount, ServerSession.Tunnel.Traffic.Received,
             delta: minTunnelReceivedData,
             "Not enough data has been received through the server.");
     }

@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO.Compression;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -7,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Ga4.Trackers;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
@@ -93,15 +93,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
     public DeviceAppInfo[] InstalledApps => _device.InstalledApps;
+
     public LocalIpRangeLocationProvider IpRangeLocationProvider =>
         _ipRangeLocationProvider ?? throw new NotSupportedException("IpRangeLocationProvider is not supported.");
+
     public AppAdManager AdManager { get; }
 
     private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options)
     {
         var appVersion = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version();
         Resources = options.Resources;
-        StorageFolderPath = options.StorageFolderPath ?? throw new ArgumentNullException(nameof(options.StorageFolderPath));
+        StorageFolderPath = options.StorageFolderPath ??
+                            throw new ArgumentNullException(nameof(options.StorageFolderPath));
         SettingsService = settingsService;
         SettingsService.BeforeSave += SettingsBeforeSave;
         _device = device;
@@ -127,7 +130,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // IpRangeLocationProvider
         if (options.UseInternalLocationService) {
-            if (options.Resources.IpLocationZipData == null) throw new ArgumentException("Internal location service needs IpLocationZipData.");
+            if (options.Resources.IpLocationZipData == null)
+                throw new ArgumentException("Internal location service needs IpLocationZipData.");
             _ipRangeLocationProvider = new LocalIpRangeLocationProvider(
                 () => new ZipArchive(new MemoryStream(options.Resources.IpLocationZipData)),
                 () => GetClientCountryCode(false));
@@ -198,10 +202,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UserReviewProvider = options.UserReviewProvider,
             DeviceUiProvider = deviceUiProvider,
             Tracker = tracker,
-            AccountService = options.AccountProvider is null ? null :
-                new AppAccountService(this, options.AccountProvider),
-            UpdaterService = options.UpdaterOptions is null ? null :
-                new AppUpdaterService(
+            AccountService = options.AccountProvider is null
+                ? null
+                : new AppAccountService(this, options.AccountProvider),
+            UpdaterService = options.UpdaterOptions is null
+                ? null
+                : new AppUpdaterService(
                     storageFolderPath: options.StorageFolderPath,
                     appVersion: Features.Version,
                     updateOptions: options.UpdaterOptions),
@@ -286,7 +292,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     DropQuic = UserSettings.DropQuic,
                     UseTcpProxy = UserSettings.UseTcpProxy,
                     DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                    ProxyOptions = Services.ProxyEndPointService.GetProxyOptions(),
+                    ProxyOptions = Services.ProxyEndPointService.GetProxyOptions()
                 };
 
                 // it is not important to take effect immediately
@@ -307,7 +313,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
             // set default ContinueOnCapturedContext
-            Core.Toolkit.Utils.TaskExtensions.DefaultContinueOnCapturedContext = HasDebugCommand(DebugCommands.CaptureContext);
+            Core.Toolkit.Utils.TaskExtensions.DefaultContinueOnCapturedContext =
+                HasDebugCommand(DebugCommands.CaptureContext);
 
             // Update the profile country code if it is not set. Profile country policy always follows VpnServer location service
             ClientProfileService.ClientCountryCode = GetClientCountryCode(true);
@@ -364,7 +371,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return _appPersistState.LastError;
 
             return ConnectionInfo.Error?.Equals(_appPersistState.LastClearedError) == true
-                ? null : ConnectionInfo.Error;
+                ? null
+                : ConnectionInfo.Error;
         }
     }
 
@@ -393,7 +401,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IsDiagnosing = _appPersistState.HasDiagnoseRequested && !IsIdle,
                 HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
                 ClientCountryCode = GetClientCountryCode(false), // split country don't follow server location
-                ClientCountryName = VhUtils.TryGetCountryName(GetClientCountryCode(false)), // split country don't follow server location
+                ClientCountryName =
+                    VhUtils.TryGetCountryName(
+                        GetClientCountryCode(false)), // split country don't follow server location
                 ConnectRequestTime = _appPersistState.ConnectRequestTime,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
                 SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
@@ -408,7 +418,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.DeviceUiProvider.GetBarsInfo(uiContext)
-                    : SystemBarsInfo.Default,
+                    : SystemBarsInfo.Default
             };
 
             return appState;
@@ -483,9 +493,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public static void Init(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
-        var settingsService = new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl, options.IsDebugMode);
+        var settingsService =
+            new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl, options.IsDebugMode);
         var logService = new LogService(Path.Combine(options.StorageFolderPath, FileNameLog));
-        logService.Start(GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
+        logService.Start(
+            GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
             deleteOldReport: false);
 
         // initialize the singleton instance
@@ -504,7 +516,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return GetLogOptions(UserSettings, _logServiceOptions, Features.IsDebugMode);
     }
 
-    private static LogServiceOptions GetLogOptions(UserSettings userSettings, LogServiceOptions appLogOptions, bool isDebug)
+    private static LogServiceOptions GetLogOptions(UserSettings userSettings, LogServiceOptions appLogOptions,
+        bool isDebug)
     {
         var logLevel = appLogOptions.MinLogLevel;
         if (HasDebugCommand(userSettings, DebugCommands.LogDebug) || isDebug) logLevel = LogLevel.Debug;
@@ -512,7 +525,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var logOptions = new LogServiceOptions {
             MinLogLevel = logLevel,
             LogAnonymous = !isDebug && (appLogOptions.LogAnonymous == true || userSettings.LogAnonymous),
-            LogEventNames = LogService.GetLogEventNames(appLogOptions.LogEventNames, userSettings.DebugData1 ?? "").ToArray(),
+            LogEventNames = LogService.GetLogEventNames(appLogOptions.LogEventNames, userSettings.DebugData1 ?? "")
+                .ToArray(),
             SingleLineConsole = appLogOptions.SingleLineConsole,
             LogToConsole = appLogOptions.LogToConsole,
             LogToFile = appLogOptions.LogToFile,
@@ -572,7 +586,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private async Task ConnectInternal1(ConnectOptions connectOptions, CancellationToken cancellationToken)
     {
         // set use default clientProfile and serverLocation
-        var clientProfileId = connectOptions.ClientProfileId ?? UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set.");
+        var clientProfileId = connectOptions.ClientProfileId ??
+                              UserSettings.ClientProfileId ?? throw new NotExistsException("ClientProfile is not set.");
         var clientProfile = ClientProfileService.Get(clientProfileId);
 
         try {
@@ -642,7 +657,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 .Vhc();
         }
         catch (Exception) when (_appPersistState.LastError != null) {
-            throw AppExceptionConverter.ApiErrorToException(_appPersistState.LastError) ?? _appPersistState.LastError.ToException();
+            throw AppExceptionConverter.ApiErrorToException(_appPersistState.LastError) ??
+                  _appPersistState.LastError.ToException();
         }
         catch (Exception) when (_connectCts.IsCancellationRequested) {
             throw new UserCanceledException("User has cancelled the connection.");
@@ -685,7 +701,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UserSettings.DnsMode is DnsMode.AdapterDns &&
                 !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) &&
                 CheckPremiumFeature(AppFeature.CustomDns)
-                ? UserSettings.DnsServers : null;
+                    ? UserSettings.DnsServers
+                    : null;
 
             // create clientOptions
             var clientOptions = new ClientOptions {
@@ -803,20 +820,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         // update the access token if AccessKey is set
         if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {
-            ClientProfileService.TryUpdateTokenByAccessKey(profileInfo.TokenId, sessionException.SessionResponse.AccessKey);
+            ClientProfileService.TryUpdateTokenByAccessKey(profileInfo.TokenId,
+                sessionException.SessionResponse.AccessKey);
             sessionException.SessionResponse.AccessKey = null;
         }
 
         // update client country by server
         if (sessionException.SessionResponse is { ClientCountry: not null, ClientPublicAddress: not null })
-            UpdateClientIpLocationFromServer(sessionException.SessionResponse.ClientPublicAddress, sessionException.SessionResponse.ClientCountry);
+            UpdateClientIpLocationFromServer(sessionException.SessionResponse.ClientPublicAddress,
+                sessionException.SessionResponse.ClientCountry);
 
         // process session error codes
         switch (sessionException.SessionResponse.ErrorCode) {
-
             // reset the selected location if no server available or premium location required
             case SessionErrorCode.NoServerAvailable or SessionErrorCode.PremiumLocation:
-                VhLogger.Instance.LogWarning("No server available or premium location required. Resetting selected location.");
+                VhLogger.Instance.LogWarning(
+                    "No server available or premium location required. Resetting selected location.");
                 ClientProfileService.Update(profileInfo.ClientProfileId,
                     new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
                 break;
@@ -900,7 +919,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public CultureInfo SystemUiCulture =>
         _systemUiCulture ??
-        new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ?? CultureInfo.InstalledUICulture.Name);
+        new CultureInfo(Services.CultureProvider.SystemCultures.FirstOrDefault() ??
+                        CultureInfo.InstalledUICulture.Name);
 
     private void InitCulture()
     {
@@ -937,14 +957,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return GetClientCountryCodeAsync(allowVpnServer: allowVpnServer, allowCache: true, cancellationToken);
     }
 
-    public async Task<string> GetClientCountryCodeAsync(bool allowVpnServer, bool allowCache, CancellationToken cancellationToken)
+    public async Task<string> GetClientCountryCodeAsync(bool allowVpnServer, bool allowCache,
+        CancellationToken cancellationToken)
     {
-        var ipLocation = await GetClientIpLocation(allowVpnServer: allowVpnServer, allowCache: allowCache, cancellationToken);
+        var ipLocation =
+            await GetClientIpLocation(allowVpnServer: allowVpnServer, allowCache: allowCache, cancellationToken);
         return ipLocation?.CountryCode ?? RegionInfo.CurrentRegion.Name;
     }
 
     private readonly AsyncLock _currentLocationLock = new();
-    private async Task<IpLocation?> GetClientIpLocation(bool allowVpnServer, bool allowCache, CancellationToken cancellationToken)
+
+    private async Task<IpLocation?> GetClientIpLocation(bool allowVpnServer, bool allowCache,
+        CancellationToken cancellationToken)
     {
         using var scopeLock = await _currentLocationLock.LockAsync(cancellationToken);
 
@@ -984,9 +1008,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             using var httpClient = new HttpClient();
             const string userAgent = "VpnHood-Client";
             var providers = new List<IIpLocationProvider> {
-                    new CloudflareLocationProvider(httpClient, userAgent),
-                    new IpLocationIoProvider(httpClient, userAgent, apiKey: null)
-                };
+                new CloudflareLocationProvider(httpClient, userAgent),
+                new IpLocationIoProvider(httpClient, userAgent, apiKey: null)
+            };
 
             // InternalLocationService needs current ip from external service, so it is inside the if block
             if (_useInternalLocationService)
@@ -1042,6 +1066,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _showAdLock = new();
+
     private async Task TryShowAd()
     {
         // lock session
@@ -1083,6 +1108,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private readonly AsyncLock _disconnectLock = new();
+
     public async Task Disconnect()
     {
         using var scopeLock = await _disconnectLock.LockAsync();
@@ -1123,7 +1149,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // stop VpnService if it is running
             await _vpnServiceManager.TryStop().Vhc();
-
         }
         finally {
             _isDisconnecting = false;
@@ -1149,16 +1174,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         try {
             _isLoadingCountryIpRange = true;
-            using var workScope = new AutoDispose(() => { _isLoadingCountryIpRange = false; FireConnectionStateChanged(); });
+            using var workScope = new AutoDispose(() => {
+                _isLoadingCountryIpRange = false;
+                FireConnectionStateChanged();
+            });
             FireConnectionStateChanged();
 
             if (!_useInternalLocationService)
                 throw new InvalidOperationException("Could not use internal location service because it is disabled.");
 
             // do not use cache and server country code, maybe client on satellite, and they need to split their own country IPs 
-            var countryCode = await GetClientCountryCodeAsync(allowVpnServer: false, allowCache: false, cancellationToken).Vhc();
+            var countryCode =
+                await GetClientCountryCodeAsync(allowVpnServer: false, allowCache: false, cancellationToken).Vhc();
             var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(countryCode).Vhc();
-            VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}", VhUtils.TryGetCountryName(countryCode));
+            VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}",
+                VhUtils.TryGetCountryName(countryCode));
             ipRanges = ipRanges.Exclude(countryIpRanges);
         }
         catch (Exception ex) {
@@ -1283,7 +1313,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             StoreName = storeName,
             SubscriptionPlans = subscriptionPlans,
             StoreError = apiError, // no error if purchaseUrl is set
-            PurchaseUrl = externalUrl,
+            PurchaseUrl = externalUrl
         };
 
         return purchaseOptions;

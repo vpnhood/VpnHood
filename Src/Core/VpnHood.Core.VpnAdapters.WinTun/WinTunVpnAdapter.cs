@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -32,6 +32,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     public override bool IsNatSupported => true;
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
+
     protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on WinTun.");
 
@@ -88,7 +89,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
         if (_tunAdapter == IntPtr.Zero)
             throw new PInvokeException(
-                $"Failed to create WinTun adapter. Make sure the app is running with admin privilege. ErrorCode: {lastErrorCode}", 
+                $"Failed to create WinTun adapter. Make sure the app is running with admin privilege. ErrorCode: {lastErrorCode}",
                 lastErrorCode);
 
         _adapterIndex = GetAdapterIndex(AdapterName);
@@ -105,7 +106,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
         // Remove previous NAT iptables record
         if (UseNat) {
-            VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...", AdapterName);
+            VhLogger.Instance.LogDebug("Removing previous NAT iptables record for {AdapterName} TUN adapter...",
+                AdapterName);
             if (AdapterIpNetworkV4 != null)
                 TryRemoveNat(AdapterIpNetworkV4);
 
@@ -118,7 +120,6 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override Task AdapterOpen(CancellationToken cancellationToken)
     {
-
         // start WinTun session
         VhLogger.Instance.LogInformation("Starting WinTun session...");
         _tunSession = WinTunApi.WintunStartSession(_tunAdapter, _ringCapacity);
@@ -152,10 +153,12 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     protected override async Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         if (ipV4)
-            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv4 set interface \"{AdapterName}\" metric={metric}", cancellationToken);
+            await OsUtils.ExecuteCommandAsync("netsh",
+                $"interface ipv4 set interface \"{AdapterName}\" metric={metric}", cancellationToken);
 
         if (ipV6)
-            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv6 set interface \"{AdapterName}\" metric={metric}", cancellationToken);
+            await OsUtils.ExecuteCommandAsync("netsh",
+                $"interface ipv6 set interface \"{AdapterName}\" metric={metric}", cancellationToken);
     }
 
     protected override async Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)
@@ -214,10 +217,12 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     protected override async Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken)
     {
         if (ipV4)
-            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv4 set subinterface \"{AdapterName}\" mtu={mtu}", cancellationToken);
+            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv4 set subinterface \"{AdapterName}\" mtu={mtu}",
+                cancellationToken);
 
         if (ipV6)
-            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv6 set subinterface \"{AdapterName}\" mtu={mtu}", cancellationToken);
+            await OsUtils.ExecuteCommandAsync("netsh", $"interface ipv6 set subinterface \"{AdapterName}\" mtu={mtu}",
+                cancellationToken);
     }
 
 
@@ -236,7 +241,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         // Do not log in debug mode because it is common error as the adapter is usually new
         VhLogger.Instance.LogDebug("Removing previous DNS from the adapter...");
         await VhUtils.TryInvokeAsync(VhLogger.MinLogLevel == LogLevel.Trace ? "Remove previous DNS" : "",
-            () => OsUtils.ExecuteCommandAsync("netsh", $"netsh interface ipv4 delete dns \"{AdapterName}\" all", cancellationToken));
+            () => OsUtils.ExecuteCommandAsync("netsh", $"netsh interface ipv4 delete dns \"{AdapterName}\" all",
+                cancellationToken));
 
         VhLogger.Instance.LogDebug("Adding new DNS to the adapter...");
         foreach (var ipAddress in dnsServers) {
@@ -257,7 +263,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         if (ipNetwork.IsV4) {
             // let's throw error in ipv4
             var natName = $"{AdapterName}Nat";
-            await ExecutePowerShellCommandAsync($"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
+            await ExecutePowerShellCommandAsync(
+                $"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
                 cancellationToken).Vhc();
         }
 
@@ -266,7 +273,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
             // ignore exception in ipv6 on windows
             await VhUtils.TryInvokeAsync("Configuring NAT for IPv6", () =>
-                ExecutePowerShellCommandAsync($"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
+                ExecutePowerShellCommandAsync(
+                    $"New-NetNat -Name {natName} -InternalIPInterfaceAddressPrefix {ipNetwork}",
                     cancellationToken));
         }
     }
@@ -392,5 +400,4 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     {
         Dispose(false);
     }
-
 }

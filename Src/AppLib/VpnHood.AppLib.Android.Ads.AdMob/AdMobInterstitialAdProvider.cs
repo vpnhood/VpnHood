@@ -53,7 +53,8 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
         AdLoadedTime = DateTime.Now;
     }
 
-    public async Task<ShowAdResult> ShowAd(IUiContext uiContext, string? customData, CancellationToken cancellationToken)
+    public async Task<ShowAdResult> ShowAd(IUiContext uiContext, string? customData,
+        CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         var activity = appUiContext.Activity;
@@ -105,7 +106,7 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
                     : new LoadAdException(message));
         }
     }
-    
+
     public void Dispose()
     {
     }

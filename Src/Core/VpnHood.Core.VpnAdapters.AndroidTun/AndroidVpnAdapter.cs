@@ -1,10 +1,10 @@
-﻿using Android.Net;
+﻿using System.Net;
+using System.Runtime.InteropServices;
+using Android.Net;
 using Android.OS;
 using Android.Systems;
 using Java.IO;
 using Microsoft.Extensions.Logging;
-using System.Net;
-using System.Runtime.InteropServices;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -28,6 +28,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => true;
     protected override bool IsSocketProtectedByBind => false;
+
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         _builder = new VpnService.Builder(vpnService)
@@ -50,11 +51,16 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         VhLogger.Instance.LogDebug("Establishing Android tun adapter...");
         ArgumentNullException.ThrowIfNull(_builder);
         _parcelFileDescriptor = _builder.Establish() ?? throw new Exception("Could not establish VpnService.");
-        _pollFdReads = [new StructPollfd {
-            Fd = _parcelFileDescriptor.FileDescriptor, Events = (short)OsConstants.Pollin
-        }];
-        _pollFdWrites = [new StructPollfd {
-            Fd = _parcelFileDescriptor.FileDescriptor, Events = (short)OsConstants.Pollout }];
+        _pollFdReads = [
+            new StructPollfd {
+                Fd = _parcelFileDescriptor.FileDescriptor, Events = (short)OsConstants.Pollin
+            }
+        ];
+        _pollFdWrites = [
+            new StructPollfd {
+                Fd = _parcelFileDescriptor.FileDescriptor, Events = (short)OsConstants.Pollout
+            }
+        ];
 
         //Packets to be sent are queued in this input stream.
         _inStream = new FileInputStream(_parcelFileDescriptor.FileDescriptor);
@@ -195,6 +201,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         if (_pollFdReads != null)
             WaitForTun(_pollFdReads);
     }
+
     protected override void WaitForTunWrite()
     {
         if (_pollFdWrites != null)
@@ -238,7 +245,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return bytesRead switch {
             0 => false, // no more packet
             > 0 => true, // Successfully read a packet
-            < 0 => throw new System.IO.IOException("Could not read from TUN.")  // error
+            < 0 => throw new System.IO.IOException("Could not read from TUN.") // error
         };
     }
 

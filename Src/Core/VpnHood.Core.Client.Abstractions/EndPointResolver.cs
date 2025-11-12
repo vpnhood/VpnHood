@@ -9,10 +9,12 @@ namespace VpnHood.Core.Client.Abstractions;
 
 public static class EndPointResolver
 {
-    private static async Task<IEnumerable<IPEndPoint>> TryGetEndPointFromDns(ServerToken serverToken, CancellationToken cancellationToken)
+    private static async Task<IEnumerable<IPEndPoint>> TryGetEndPointFromDns(ServerToken serverToken,
+        CancellationToken cancellationToken)
     {
         try {
-            VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...", VhLogger.FormatHostName(serverToken.HostName));
+            VhLogger.Instance.LogInformation("Resolving IP from host name: {HostName}...",
+                VhLogger.FormatHostName(serverToken.HostName));
             var hostEntities = await Dns.GetHostEntryAsync(serverToken.HostName, cancellationToken).Vhc();
 
             return hostEntities.AddressList
@@ -33,27 +35,31 @@ public static class EndPointResolver
         // it is not valid host name, so return the endpoints directly
         // if token does not have any endpoints nor host name, throw an exception 
         if (!serverToken.IsValidHostName && VhUtils.IsNullOrEmpty(serverToken.HostEndPoints))
-            throw new InvalidOperationException("The token does not contain any server endpoints or a valid hostname. Please contact your provider’s support.");
+            throw new InvalidOperationException(
+                "The token does not contain any server endpoints or a valid hostname. Please contact your provider’s support.");
 
         // fix token only strategy
         if (strategy == EndPointStrategy.TokenOnly) {
             if (!VhUtils.IsNullOrEmpty(serverToken.HostEndPoints))
                 return serverToken.HostEndPoints;
 
-            VhLogger.Instance.LogWarning("TokenOnly strategy is not supported by this token because there are no endpoints in the token. Fallback to DnsOnly.");
+            VhLogger.Instance.LogWarning(
+                "TokenOnly strategy is not supported by this token because there are no endpoints in the token. Fallback to DnsOnly.");
             strategy = EndPointStrategy.DnsOnly;
         }
 
         // fix dns only strategy
         if (strategy == EndPointStrategy.DnsOnly && !serverToken.IsValidHostName) {
-            VhLogger.Instance.LogWarning("DnsOnly strategy is not supported by this token because there are valid domain in the token. Fallback to auto.");
+            VhLogger.Instance.LogWarning(
+                "DnsOnly strategy is not supported by this token because there are valid domain in the token. Fallback to auto.");
             strategy = EndPointStrategy.Auto;
         }
 
         // if token has host name, try to resolve it
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
         var dnsEndPoints = serverToken.IsValidHostName
-            ? await TryGetEndPointFromDns(serverToken, cancellationToken).Vhc() : [];
+            ? await TryGetEndPointFromDns(serverToken, cancellationToken).Vhc()
+            : [];
 
         // follow the end point strategy to combine the endpoints
         var ipEndPoints = strategy switch {

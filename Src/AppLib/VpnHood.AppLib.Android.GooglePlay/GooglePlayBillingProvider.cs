@@ -23,8 +23,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
     public GooglePlayBillingProvider(IAppAuthenticationProvider authenticationProvider)
     {
-        _billingClient = new Lazy<BillingClient>(() =>
-        {
+        _billingClient = new Lazy<BillingClient>(() => {
             var builder = BillingClient.NewBuilder(Application.Context);
             builder.SetListener(PurchasesUpdatedListener);
 
@@ -92,7 +91,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         // Get products list from GooglePlay.
         try {
-            var productDetailsResult = await _billingClient.Value.QueryProductDetailsAsync(productDetailsParams).ConfigureAwait(false);
+            var productDetailsResult = await _billingClient.Value.QueryProductDetailsAsync(productDetailsParams)
+                .ConfigureAwait(false);
 
             _productDetails = productDetailsResult.ProductDetailsList.First();
             _subscriptionOfferDetails = _productDetails.GetSubscriptionOfferDetails()

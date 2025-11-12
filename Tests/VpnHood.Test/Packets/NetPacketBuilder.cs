@@ -39,7 +39,8 @@ public static class NetPacketBuilder
             : BuildIcmpUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, mtu, updateChecksum);
     }
 
-    private static IPPacket BuildIcmpUnreachableReplyV6(IPPacket ipPacket, IcmpV6Type icmpV6Type, byte code, int reserved, bool updateChecksum)
+    private static IPPacket BuildIcmpUnreachableReplyV6(IPPacket ipPacket, IcmpV6Type icmpV6Type, byte code,
+        int reserved, bool updateChecksum)
     {
         if (ipPacket is null)
             throw new ArgumentNullException(nameof(ipPacket));

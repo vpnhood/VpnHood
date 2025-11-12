@@ -24,7 +24,7 @@ public static class TcpClientExtensions
             try {
                 return tcpClient.Client?.RemoteEndPoint as IPEndPoint;
             }
-            catch  {
+            catch {
                 return null;
             }
         }

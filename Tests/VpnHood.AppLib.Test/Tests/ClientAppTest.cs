@@ -1,9 +1,9 @@
-﻿using EmbedIO;
-using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using EmbedIO;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Test.Providers;
@@ -50,12 +50,10 @@ public class ClientAppTest : TestAppBase
             await OsUtils.ExecuteCommandAsync("git", $"{gitBase} commit -a -m Publish", CancellationToken.None);
             await OsUtils.ExecuteCommandAsync("git", $"{gitBase} pull", CancellationToken.None);
             await OsUtils.ExecuteCommandAsync("git", $"{gitBase} push", CancellationToken.None);
-
         }
         catch (ExternalException ex) when (ex.ErrorCode == 1) {
             VhLogger.Instance.LogInformation("Nothing has been updated.");
         }
-
     }
 
     [TestMethod]
@@ -238,9 +236,11 @@ public class ClientAppTest : TestAppBase
             var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
             var oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
             await testHelper.Test_Https(url);
-            Assert.AreNotEqual(oldSessionTraffic.Received, app.GetSessionStatus().SessionTraffic.Received, delta: delta);
+            Assert.AreNotEqual(oldSessionTraffic.Received, app.GetSessionStatus().SessionTraffic.Received,
+                delta: delta);
             Assert.AreNotEqual(oldSessionTraffic.Sent, app.GetSessionStatus().SessionTraffic.Sent, delta: delta);
-            Assert.AreEqual(oldSplitTraffic.Received, app.GetSessionStatus().SessionSplitTraffic.Received, delta: delta);
+            Assert.AreEqual(oldSplitTraffic.Received, app.GetSessionStatus().SessionSplitTraffic.Received,
+                delta: delta);
             Assert.AreEqual(oldSplitTraffic.Sent, app.GetSessionStatus().SessionSplitTraffic.Sent, delta: delta);
         }
     }

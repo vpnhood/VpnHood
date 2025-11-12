@@ -28,7 +28,7 @@ public class EventReporter : IDisposable
 
     public void Raise()
     {
-        if (_disposed) 
+        if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
         lock (_lockObject)
@@ -74,7 +74,7 @@ public class EventReporter : IDisposable
 
     public void Dispose()
     {
-        if (_disposed) 
+        if (_disposed)
             return;
 
         ReportInternal();

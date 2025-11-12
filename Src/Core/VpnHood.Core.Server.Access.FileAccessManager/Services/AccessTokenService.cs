@@ -187,7 +187,7 @@ public class AccessTokenService
 
         // delete files
         using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
-        
+
         // delete from cache
         _items.TryRemove(tokenId, out _);
 

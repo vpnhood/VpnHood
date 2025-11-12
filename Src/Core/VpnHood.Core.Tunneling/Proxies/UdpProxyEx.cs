@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Collections;
+
 namespace VpnHood.Core.Tunneling.Proxies;
 
 internal class UdpProxyEx(UdpClient udpClient, TimeSpan udpTimeout, int queueCapacity, bool autoDisposePackets)
@@ -10,8 +11,8 @@ internal class UdpProxyEx(UdpClient udpClient, TimeSpan udpTimeout, int queueCap
 
     protected override IPEndPoint? GetSourceEndPoint(IPEndPoint remoteEndPoint)
     {
-        return DestinationEndPointMap.TryGetValue(remoteEndPoint, out var sourceEndPoint) 
-            ? sourceEndPoint.Value 
+        return DestinationEndPointMap.TryGetValue(remoteEndPoint, out var sourceEndPoint)
+            ? sourceEndPoint.Value
             : null;
     }
 

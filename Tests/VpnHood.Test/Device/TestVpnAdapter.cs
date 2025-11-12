@@ -11,5 +11,4 @@ public class TestVpnAdapter(TestVpnAdapterOptions vpnAdapterOptions)
     })
 {
     public TestVpnAdapterOptions VpnAdapterOptions { get; } = vpnAdapterOptions;
-
 }

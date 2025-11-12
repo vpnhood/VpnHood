@@ -8,8 +8,8 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 namespace VpnHood.Test.Device;
 
 public class TestDevice(
-    TestHelper testHelper, 
-    Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory) : 
+    TestHelper testHelper,
+    Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory) :
     IDevice
 {
     private readonly CancellationTokenSource _disposeCancellationTokenSource = new();
@@ -30,6 +30,7 @@ public class TestDevice(
     public TimeSpan StartServiceDelay { get; set; } = TimeSpan.Zero;
 
     public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
+
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug("Test VpnService granted by TestDevice.");
@@ -70,5 +71,4 @@ public class TestDevice(
         VpnService?.Dispose();
         VpnService = null;
     }
-
 }

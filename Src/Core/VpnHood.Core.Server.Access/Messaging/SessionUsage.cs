@@ -10,7 +10,7 @@ public class SessionUsage
     [Obsolete("Use ErrorCode")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Closed { get; set; }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public SessionErrorCode ErrorCode { get; set; }
 
@@ -22,5 +22,6 @@ public class SessionUsage
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? AdData { get; set; }
+
     public Traffic ToTraffic() => new(Sent, Received);
 }

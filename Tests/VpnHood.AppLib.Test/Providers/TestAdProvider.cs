@@ -5,7 +5,7 @@ using VpnHood.Test.AccessManagers;
 
 namespace VpnHood.AppLib.Test.Providers;
 
-public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = AppAdType.RewardedAd) 
+public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = AppAdType.RewardedAd)
     : IAppAdProvider
 {
     public bool FailShow { get; set; }
@@ -33,8 +33,8 @@ public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = 
             await LoadAdCompletionSource.Task;
     }
 
-    public Task<ShowAdResult> ShowAd(IUiContext uiContext, 
-        string? customData, 
+    public Task<ShowAdResult> ShowAd(IUiContext uiContext,
+        string? customData,
         CancellationToken cancellationToken)
     {
         if (AdLoadedTime == null)

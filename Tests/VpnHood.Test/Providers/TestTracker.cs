@@ -9,7 +9,7 @@ public class TestTracker : ITracker
 
     public Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken)
     {
-        return Task.WhenAll(trackEvents.Select(x=>Track(x, cancellationToken)));
+        return Task.WhenAll(trackEvents.Select(x => Track(x, cancellationToken)));
     }
 
     public Task Track(TrackEvent trackEvent, CancellationToken cancellationToken)

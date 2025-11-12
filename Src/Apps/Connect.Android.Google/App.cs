@@ -64,7 +64,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 UpdaterProvider = new GooglePlayAppUpdaterProvider()
-            },
+            }
         };
     }
 

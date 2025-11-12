@@ -22,7 +22,7 @@ public static class PacketLogger
         Exception? exception = null, EventId? eventId = null)
     {
         try {
-            if (VhLogger.MinLogLevel > LogLevel.Trace) 
+            if (VhLogger.MinLogLevel > LogLevel.Trace)
                 return;
 
             var packetEventId = GeneralEventId.Packet;
@@ -30,32 +30,32 @@ public static class PacketLogger
 
             switch (ipPacket.Protocol) {
                 case IpProtocol.IcmpV4: {
-                        packetEventId = GeneralEventId.Ping;
-                        var icmpPacket = ipPacket.ExtractIcmpV4();
-                        packetPayload = icmpPacket.Payload;
-                        break;
-                    }
+                    packetEventId = GeneralEventId.Ping;
+                    var icmpPacket = ipPacket.ExtractIcmpV4();
+                    packetPayload = icmpPacket.Payload;
+                    break;
+                }
 
                 case IpProtocol.IcmpV6: {
-                        packetEventId = GeneralEventId.Ping;
-                        var icmpPacket = ipPacket.ExtractIcmpV6();
-                        packetPayload = icmpPacket.Payload;
-                        break;
-                    }
+                    packetEventId = GeneralEventId.Ping;
+                    var icmpPacket = ipPacket.ExtractIcmpV6();
+                    packetPayload = icmpPacket.Payload;
+                    break;
+                }
 
                 case IpProtocol.Udp: {
-                        packetEventId = GeneralEventId.Udp;
-                        var udpPacket = ipPacket.ExtractUdp();
-                        packetPayload = udpPacket.Payload;
-                        break;
-                    }
+                    packetEventId = GeneralEventId.Udp;
+                    var udpPacket = ipPacket.ExtractUdp();
+                    packetPayload = udpPacket.Payload;
+                    break;
+                }
 
                 case IpProtocol.Tcp: {
-                        packetEventId = GeneralEventId.Tcp;
-                        var tcpPacket = ipPacket.ExtractTcp();
-                        packetPayload = tcpPacket.Payload;
-                        break;
-                    }
+                    packetEventId = GeneralEventId.Tcp;
+                    var tcpPacket = ipPacket.ExtractTcp();
+                    packetPayload = tcpPacket.Payload;
+                    break;
+                }
             }
 
             // set network filter event id if the exception is NetFilterException
@@ -74,6 +74,7 @@ public static class PacketLogger
                 Format(ipPacket), message, exception);
         }
     }
+
     public static string Format(IpPacket ipPacket)
     {
         return VhLogger.FormatIpPacket(ipPacket.ToString());

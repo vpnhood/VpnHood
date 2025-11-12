@@ -3,7 +3,7 @@
 		<Product>VpnHood! CONNECT</Product>
 		<Description>VpnHood Windows Client App</Description>
 		<OutputType>WinExe</OutputType>
-		<TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+		<TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
 		<UseWPF>true</UseWPF>
 		<UseWindowsForms>False</UseWindowsForms>
 		<AssemblyName>VpnHoodConnect</AssemblyName>

@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Drawing;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Win;
 using VpnHood.Core.Common;
 using VpnHood.Core.Toolkit.Logging;
@@ -46,8 +46,9 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         _storageFolder = storageFolder;
 
         // get app icon
-        var assemblyLocation = Assembly.GetEntryAssembly()?.Location ?? throw new Exception("Could not get the location of Assembly.");
-        _appIcon = Icon.ExtractAssociatedIcon(assemblyLocation) ?? 
+        var assemblyLocation = Assembly.GetEntryAssembly()?.Location ??
+                               throw new Exception("Could not get the location of Assembly.");
+        _appIcon = Icon.ExtractAssociatedIcon(assemblyLocation) ??
                    throw new Exception("Could not get the icon of the executing assembly.");
 
         //create command Listener
@@ -101,7 +102,8 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     private void PreStart(string[] args)
     {
         ConnectAfterStart = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
-        ShowWindowAfterStart = !ConnectAfterStart && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
+        ShowWindowAfterStart = !ConnectAfterStart &&
+                               !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
 
         // Make single instance
         // if you like to wait a few seconds in case that the instance is just shutting down
@@ -149,7 +151,8 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
                 (_, _) => OpenMainWindowInBrowser());
         _sysTray.ContextMenu.AddMenuSeparator();
         _connectMenuItemId =
-            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Connect, (_, _) => _ = ConnectClicked());
+            _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Connect,
+                (_, _) => _ = ConnectClicked());
         _disconnectMenuItemId = _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Disconnect,
             (_, _) => _ = VpnHoodApp.Instance.TryDisconnect());
         _sysTray.ContextMenu.AddMenuSeparator();
@@ -233,7 +236,8 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     {
         var lastFirewallConfig = Path.Combine(appDataPath, "lastFirewallConfig");
         var lastExeMark = File.Exists(lastFirewallConfig) ? File.ReadAllText(lastFirewallConfig) : null;
-        var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? throw new FileNotFoundException("Could not find current module file.");
+        var exePath = Process.GetCurrentProcess().MainModule?.FileName ??
+                      throw new FileNotFoundException("Could not find current module file.");
         var exeMark = $"{exePath}\r\n{File.GetCreationTimeUtc(exePath)}\r\n{Assembly.GetExecutingAssembly().FullName}";
         if (lastExeMark == exeMark)
             return;
@@ -332,7 +336,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
             _sysTray?.Dispose();
 
             // disconnect and dispose app
-            if (VpnHoodApp.IsInit) 
+            if (VpnHoodApp.IsInit)
                 VpnHoodApp.Instance.Dispose();
         }
     }

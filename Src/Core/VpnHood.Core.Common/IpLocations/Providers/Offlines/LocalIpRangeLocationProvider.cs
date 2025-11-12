@@ -48,11 +48,8 @@ public class LocalIpRangeLocationProvider(
             return countryIpRangeCache;
 
         try {
-            await using var stream =
-                _zipArchive.Value
-                    .GetEntry($"{countryCode.ToLower()}.ips")?
-                    .Open() ?? throw new NotExistsException();
-
+            var entry = _zipArchive.Value.GetEntry($"{countryCode.ToLower()}.ips") ?? throw new NotExistsException();
+            await using var stream = await entry.OpenAsync();
             return IpRangeOrderedList.Deserialize(stream);
         }
         catch (Exception ex) {

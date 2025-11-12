@@ -3,7 +3,7 @@
 		<Product>VpnHood! CLIENT</Product>
 		<Description>VpnHood Linux Client App</Description>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net9.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<AssemblyName>VpnHoodClient</AssemblyName>
 	</PropertyGroup>
 

@@ -35,7 +35,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.Core.Proxies" Version="7.3.767" />
+		<PackageReference Include="VpnHood.Core.Proxies" Version="7.4.768" />
 	</ItemGroup>
 
 	<ItemGroup>

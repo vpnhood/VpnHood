@@ -21,7 +21,6 @@ public class Job : IDisposable
     public DateTime? StartedTime { get; set; }
     public DateTime? LastExecutedTime { get; private set; }
     public string Name { get; init; }
-    public Task? LastTask { get; private set; }
 
     public Job(Func<CancellationToken, ValueTask> jobFunc, JobOptions options)
     {
@@ -101,18 +100,15 @@ public class Job : IDisposable
 
     public Task RunNow()
     {
-        LastTask = RunInternal(_cancellationTokenSource.Token);
-        return LastTask;
+        return RunInternal(_cancellationTokenSource.Token);
     }
 
     public async Task RunNow(CancellationToken cancellationToken)
     {
-        using var linkedCts =
-            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
         // await required for linkedCts to be disposed properly
-        LastTask = RunInternal(linkedCts.Token);
-        await LastTask.Vhc();
+        await RunInternal(linkedCts.Token).Vhc();
     }
 
     private async Task RunInternal(CancellationToken cancellationToken)
@@ -120,8 +116,10 @@ public class Job : IDisposable
         if (_isDisposed != 0)
             throw new ObjectDisposedException(nameof(Job));
 
+        // wait until we can run the job
+        await _jobSemaphore.WaitAsync(cancellationToken).Vhc();
+
         try {
-            await _jobSemaphore.WaitAsync(cancellationToken).Vhc();
             await _jobFunc(cancellationToken).Vhc();
             _currentFailedCount = 0;
             SucceededCount++;
@@ -146,7 +144,7 @@ public class Job : IDisposable
         }
         finally {
             LastExecutedTime = FastDateTime.Now;
-            _jobSemaphore.Release();
+            VhUtils.TryInvoke(()=>_jobSemaphore.Release()); // semaphore may be already disposed
         }
     }
 

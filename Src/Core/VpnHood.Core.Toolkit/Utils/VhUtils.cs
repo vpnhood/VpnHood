@@ -471,6 +471,11 @@ public static class VhUtils
         }
     }
 
+    public static void TryInvoke(Action action)
+    {
+        TryInvoke((string?)null, action);
+    }
+
     public static void TryInvoke(string? actionName, Action action)
     {
         try {
@@ -480,6 +485,9 @@ public static class VhUtils
             LogInvokeError(ex, actionName);
         }
     }
+
+    public static T? TryInvoke<T>(Func<T> func, T? defaultValue = default)
+        => TryInvoke(null, func, defaultValue);
 
     public static T? TryInvoke<T>(string? actionName, Func<T> func, T? defaultValue = default)
     {

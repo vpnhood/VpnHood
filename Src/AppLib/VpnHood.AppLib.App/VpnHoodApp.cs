@@ -1396,6 +1396,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         SettingsService.BeforeSave -= SettingsBeforeSave;
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
         _vpnServiceManager.Dispose();
+        Services.UpdaterService?.Dispose();
         _device.Dispose();
         _logService.Dispose();
         AppUiContext.OnChanged -= ActiveUiContext_OnChanged;

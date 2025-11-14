@@ -6,13 +6,14 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Updaters;
 
-public class AppUpdaterService
+public class AppUpdaterService : IDisposable
 {
     private readonly AsyncLock _versionCheckLock = new();
     private readonly Version _appVersion;
     private readonly AppUpdaterOptions _updateOptions;
     private string VersionCheckFilePath => Path.Combine(field, "version.json");
     private readonly AppUpdaterData _data;
+    private bool _disposed;
 
     public AppUpdaterService(string storageFolderPath, Version appVersion,
         AppUpdaterOptions updateOptions)
@@ -67,7 +68,7 @@ public class AppUpdaterService
     public async Task TryCheckForUpdate(bool force, CancellationToken cancellationToken)
     {
         try {
-            await CheckForUpdate(force, cancellationToken);
+            await CheckForUpdate(force, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error occurred while checking for updates.");
@@ -191,6 +192,14 @@ public class AppUpdaterService
 
     private void Save()
     {
-        File.WriteAllText(VersionCheckFilePath, JsonSerializer.Serialize(_data));
+        // It looks like TryCheckForUpdate could not handle exceptions in .NET 10 background tasks
+        // The folder does not exist in test finalizer and test host crash so we try not to save if disposed
+        if (!_disposed)
+            File.WriteAllText(VersionCheckFilePath, JsonSerializer.Serialize(_data));
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
     }
 }

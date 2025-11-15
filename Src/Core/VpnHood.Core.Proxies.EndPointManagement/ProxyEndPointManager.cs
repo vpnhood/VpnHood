@@ -10,6 +10,7 @@ using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -66,14 +67,14 @@ public class ProxyEndPointManager : IDisposable
         get {
             lock (_sessionStatus)
                 return new ProxyEndPointManagerStatus {
-                    ProxyEndPointInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray(),
-                    IsAnySucceeded = _proxyEndPointEntries.Any(x => x.Status.ErrorMessage is null),
                     AutoUpdate = _autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null,
                     SessionStatus = _sessionStatus,
-                    SucceededServerCount = _proxyEndPointEntries.Count(x => x.Status.IsLastUsedSucceeded),
-                    FailedServerCount =
-                        _proxyEndPointEntries.Count(x => x.Status is { HasUsed: true, IsLastUsedSucceeded: false }),
-                    UnknownServerCount = _proxyEndPointEntries.Count(x => x.Status is { HasUsed: false })
+                    ProxyEndPointInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray(),
+                    IsAnySucceeded = _proxyEndPointEntries.Any(x => x.Status.ErrorMessage is null),
+                    SucceededServerCount = _proxyEndPointEntries.Count(x => x.EndPoint.IsEnabled && x.Status.IsLastUsedSucceeded),
+                    FailedServerCount = _proxyEndPointEntries.Count(x => x.EndPoint.IsEnabled && x.Status is { HasUsed: true, IsLastUsedSucceeded: false }),
+                    UnknownServerCount = _proxyEndPointEntries.Count(x => x.EndPoint.IsEnabled && x.Status is { HasUsed: false }),
+                    DisabledServerCount = _proxyEndPointEntries.Count(x => !x.EndPoint.IsEnabled)
                 };
         }
     }
@@ -162,8 +163,8 @@ public class ProxyEndPointManager : IDisposable
         bool keepEnabledState)
     {
         // create dictionary for existing entries using linq
-        var existingEntryDic = existingEntries.ToDictionary(x => x.EndPoint.Id);
-        var newEntryDic = newEntries.ToDictionary(x => x.Id);
+        var existingEntryDic = existingEntries.DistinctBy(x => x.EndPoint.Id).ToDictionary(x => x.EndPoint.Id);
+        var newEntryDic = newEntries.DistinctBy(x=>x.Id).ToDictionary(x => x.Id);
 
         // update existing entries
         foreach (var existingEntry in existingEntryDic.Values) {
@@ -206,8 +207,7 @@ public class ProxyEndPointManager : IDisposable
         try {
             var testEp = IPEndPoint.Parse("1.1.1.1:443");
             var tickCount = Environment.TickCount64;
-            using var linkedCts =
-                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
             await proxyClient.ConnectAsync(tcpClient, testEp, linkedCts.Token).Vhc();
             var latency = TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
 
@@ -305,13 +305,13 @@ public class ProxyEndPointManager : IDisposable
 
                 // record success
                 if (error is null) {
-                    RecordSuccess(entry, latency: latency!.Value, fastestLatency: fastestLatency);
+                    RecordSuccess(entry, latency: latency!.Value, fastestLatency: fastestLatency, checkMode: true);
                     continue;
                 }
 
                 // record failure
                 if (!cancellationToken.IsCancellationRequested)
-                    RecordFailed(entry, error);
+                    RecordFailed(entry, error, checkMode: true);
 
                 // disable server if protocol is not supported
                 var isProtocolRejected = error is ProxyClientException {
@@ -387,7 +387,7 @@ public class ProxyEndPointManager : IDisposable
                     latency < _fastestEntry?.Status.Latency)
                     _fastestEntry = entry;
 
-                RecordSuccess(entry, latency: latency, fastestLatency: _fastestEntry?.Status.Latency);
+                RecordSuccess(entry, latency: latency, fastestLatency: _fastestEntry?.Status.Latency, checkMode: false);
 
                 // disable other duplicate IPs if needed
                 if (_autoUpdateOptions.RemoveDuplicateIps) {
@@ -413,7 +413,7 @@ public class ProxyEndPointManager : IDisposable
                 // let's not assume bad server if caller cancelled the operation
                 var isCallerCancelled = ex is OperationCanceledException && delay < _serverCheckTimeout;
                 if (!isCallerCancelled)
-                    RecordFailed(entry, ex);
+                    RecordFailed(entry, ex, checkMode: false);
 
                 tcpClient?.Dispose();
             }
@@ -423,32 +423,47 @@ public class ProxyEndPointManager : IDisposable
         throw new SocketException((int)SocketError.NetworkUnreachable);
     }
 
-    private void RecordSuccess(ProxyEndPointEntry entry, TimeSpan? latency, TimeSpan? fastestLatency)
+    private void RecordSuccess(ProxyEndPointEntry entry, TimeSpan? latency, TimeSpan? fastestLatency,
+        bool checkMode)
     {
         entry.RecordSuccess(latency!.Value, fastestLatency, _queuePosition);
-        lock (_sessionStatus) {
-            _sessionStatus.SucceededCount++;
-            _sessionStatus.LastSucceeded = DateTime.UtcNow;
-            _sessionStatus.QueuePosition = _queuePosition;
-            _sessionStatus.Latency = entry.Status.Latency;
-            _sessionStatus.Penalty = entry.Status.Penalty;
-            _sessionStatus.ErrorMessage = null;
-        }
+        if (!checkMode)
+            lock (_sessionStatus) {
+                _sessionStatus.SucceededCount++;
+                _sessionStatus.LastSucceeded = DateTime.UtcNow;
+                _sessionStatus.QueuePosition = _queuePosition;
+                _sessionStatus.Latency = entry.Status.Latency;
+                _sessionStatus.Penalty = entry.Status.Penalty;
+                _sessionStatus.ErrorMessage = null;
+            }
     }
 
-    private void RecordFailed(ProxyEndPointEntry entry, Exception error)
+    private void RecordFailed(ProxyEndPointEntry entry, Exception error, bool checkMode)
     {
         entry.RecordFailed(error, _queuePosition);
-        lock (_sessionStatus) {
-            _sessionStatus.FailedCount++;
-            _sessionStatus.LastFailed = DateTime.UtcNow;
-            _sessionStatus.QueuePosition = _queuePosition;
-            _sessionStatus.Latency = null;
-            _sessionStatus.Penalty = entry.Status.Penalty;
-            _sessionStatus.ErrorMessage = entry.Status.ErrorMessage;
-        }
+        if (!checkMode)
+            lock (_sessionStatus) {
+                _sessionStatus.FailedCount++;
+                _sessionStatus.LastFailed = DateTime.UtcNow;
+                _sessionStatus.QueuePosition = _queuePosition;
+                _sessionStatus.Latency = null;
+                _sessionStatus.Penalty = entry.Status.Penalty;
+                _sessionStatus.ErrorMessage = entry.Status.ErrorMessage;
+            }
     }
 
+    public void RecordFailed(TcpClient tcpClient, Exception ex)
+    {
+        // find the entry by matching proxy endpoint
+        var remoteEndPoint = tcpClient.TryGetRemoteEndPoint();
+        var entry = _proxyEndPointEntries.FirstOrDefault(x =>
+            x.IpEndPoint?.Equals(remoteEndPoint) == true);
+
+        if (entry != null) {
+            entry.Status.SucceededCount--; // decrement succeeded count as the connection failed
+            RecordFailed(entry, ex, checkMode: false);
+        }
+    }
 
     private void SaveNodeInfos()
     {

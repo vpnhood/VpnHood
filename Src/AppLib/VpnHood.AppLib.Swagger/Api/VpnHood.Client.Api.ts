@@ -3836,6 +3836,7 @@ export class AppProxyEndPointManagerStatus implements IAppProxyEndPointManagerSt
     succeededServerCount!: number;
     failedServerCount!: number;
     unknownServerCount!: number;
+    disabledServerCount!: number;
 
     constructor(data?: IAppProxyEndPointManagerStatus) {
         if (data) {
@@ -3855,6 +3856,7 @@ export class AppProxyEndPointManagerStatus implements IAppProxyEndPointManagerSt
             this.succeededServerCount = _data["succeededServerCount"] !== undefined ? _data["succeededServerCount"] : null as any;
             this.failedServerCount = _data["failedServerCount"] !== undefined ? _data["failedServerCount"] : null as any;
             this.unknownServerCount = _data["unknownServerCount"] !== undefined ? _data["unknownServerCount"] : null as any;
+            this.disabledServerCount = _data["disabledServerCount"] !== undefined ? _data["disabledServerCount"] : null as any;
         }
     }
 
@@ -3871,6 +3873,7 @@ export class AppProxyEndPointManagerStatus implements IAppProxyEndPointManagerSt
         data["succeededServerCount"] = this.succeededServerCount !== undefined ? this.succeededServerCount : null as any;
         data["failedServerCount"] = this.failedServerCount !== undefined ? this.failedServerCount : null as any;
         data["unknownServerCount"] = this.unknownServerCount !== undefined ? this.unknownServerCount : null as any;
+        data["disabledServerCount"] = this.disabledServerCount !== undefined ? this.disabledServerCount : null as any;
         return data;
     }
 }
@@ -3880,6 +3883,7 @@ export interface IAppProxyEndPointManagerStatus {
     succeededServerCount: number;
     failedServerCount: number;
     unknownServerCount: number;
+    disabledServerCount: number;
 }
 
 export class ProxyEndPointStatus implements IProxyEndPointStatus {

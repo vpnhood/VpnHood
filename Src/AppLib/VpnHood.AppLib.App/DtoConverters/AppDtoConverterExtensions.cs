@@ -79,7 +79,8 @@ public static class AppDtoConverterExtensions
             SessionStatus = sessionStatus.SessionStatus,
             SucceededServerCount = sessionStatus.SucceededServerCount,
             FailedServerCount = sessionStatus.FailedServerCount,
-            UnknownServerCount = sessionStatus.UnknownServerCount
+            UnknownServerCount = sessionStatus.UnknownServerCount,
+            DisabledServerCount = sessionStatus.DisabledServerCount
         };
     }
 }

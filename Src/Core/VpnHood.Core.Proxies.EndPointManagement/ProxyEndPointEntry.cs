@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -11,6 +12,7 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
     public ProxyEndPointInfo Info => endPointInfo;
     public ProxyEndPointStatus Status => endPointInfo.Status;
     public ProxyEndPoint EndPoint => endPointInfo.EndPoint;
+    public IPEndPoint? IpEndPoint { get; init; }
 
     public long GetSortValue(long currentRequestCount)
     {

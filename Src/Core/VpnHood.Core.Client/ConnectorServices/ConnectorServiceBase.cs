@@ -180,7 +180,11 @@ internal class ConnectorServiceBase : IDisposable
 
             return await GetTlsConnectionToServer(streamId, tcpClient, contentLength, cancellationToken).Vhc();
         }
-        catch {
+        catch (Exception ex) {
+            // record failed proxy
+            if (EndPointInfo.ProxyEndPointManager.IsEnabled && tcpClient != null)
+                EndPointInfo.ProxyEndPointManager.RecordFailed(tcpClient, ex);
+
             tcpClient?.Dispose();
             throw;
         }
@@ -197,9 +201,9 @@ internal class ConnectorServiceBase : IDisposable
                 VhLogger.FormatHostName(hostName));
 
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
-                    TargetHost = hostName,
-                    EnabledSslProtocols = SslProtocols.None // auto
-                }, cancellationToken)
+                TargetHost = hostName,
+                EnabledSslProtocols = SslProtocols.None // auto
+            }, cancellationToken)
                 .Vhc();
 
             var clientStream =

@@ -8,4 +8,5 @@ public class AppProxyEndPointManagerStatus
     public required int SucceededServerCount { get; init; }
     public required int FailedServerCount { get; init; }
     public required int UnknownServerCount { get; init; }
+    public required int DisabledServerCount { get; init; }
 }

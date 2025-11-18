@@ -1,5 +1,6 @@
 # Upcoming
 * Fix: Diagnoser shows a wrong NoErrorFoundException
+* Update: Upgrade to .NET 10
 
 # v7.3.767
 * Fix: Remove premium code

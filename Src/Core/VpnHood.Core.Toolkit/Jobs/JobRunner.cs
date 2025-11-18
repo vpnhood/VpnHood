@@ -17,6 +17,7 @@ public class JobRunner
     public static JobRunner SlowInstance => SlowInstanceLazy.Value;
     public static JobRunner FastInstance => FastInstanceLazy.Value;
     public TimeSpan Interval { get; set; }
+    public ILogger? Logger { get; set; } = VhLogger.Instance;
 
     public int MaxDegreeOfParallelism {
         get => _maxDegreeOfParallelism;
@@ -76,7 +77,7 @@ public class JobRunner
             Remove(job);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogCritical(ex, "JobCallback should not throw this exception.");
+            Logger?.LogCritical(ex, "JobCallback should not throw this exception.");
         }
         finally {
             _semaphore.Release();
@@ -93,7 +94,7 @@ public class JobRunner
 
                 // if the WeakReference is dead, remove it
                 if (!node.Value.JobReference.TryGetTarget(out _)) {
-                    VhLogger.Instance.LogDebug(
+                    Logger?.LogDebug(
                         "Removing a dead job. Ensure proper disposal by the caller. JobName: {JobName}",
                         node.Value.Name);
                     _jobs.Remove(node);

@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Toolkit.Jobs;
@@ -22,7 +22,10 @@ public class Job : IDisposable
     public DateTime? LastExecutedTime { get; private set; }
     public string Name { get; init; }
 
-    public Job(Func<CancellationToken, ValueTask> jobFunc, JobOptions options)
+    public Job(
+        Func<CancellationToken, ValueTask> jobFunc, 
+        JobOptions options, 
+        JobRunner? jobRunner = null)
     {
         _jobFunc = jobFunc;
         _dueTime = options.DueTime ?? options.Interval;
@@ -33,9 +36,14 @@ public class Job : IDisposable
             Start();
 
         // initialize job runner based on the period
-        _jobRunner = options.Interval >= JobRunner.SlowInstance.Interval
-            ? JobRunner.SlowInstance
-            : JobRunner.FastInstance;
+        if (jobRunner != null) {
+            _jobRunner = jobRunner;
+        }
+        else {
+            _jobRunner = options.Interval >= JobRunner.SlowInstance.Interval
+                ? JobRunner.SlowInstance
+                : JobRunner.FastInstance;
+        }
 
         _jobRunner.Add(this);
     }
@@ -108,7 +116,7 @@ public class Job : IDisposable
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
         // await required for linkedCts to be disposed properly
-        await RunInternal(linkedCts.Token).Vhc();
+        await RunInternal(linkedCts.Token).ConfigureAwait(false);
     }
 
     private async Task RunInternal(CancellationToken cancellationToken)
@@ -117,10 +125,10 @@ public class Job : IDisposable
             throw new ObjectDisposedException(nameof(Job));
 
         // wait until we can run the job
-        await _jobSemaphore.WaitAsync(cancellationToken).Vhc();
+        await _jobSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try {
-            await _jobFunc(cancellationToken).Vhc();
+            await _jobFunc(cancellationToken).ConfigureAwait(false);
             _currentFailedCount = 0;
             SucceededCount++;
         }
@@ -133,8 +141,9 @@ public class Job : IDisposable
 
             // stop the job if it has failed too many times
             if (_currentFailedCount > _maxRetry) {
-                VhLogger.Instance.LogError(ex,
-                    "Job failed too many times and stopped. JobName: {JobName}, FailedCount: {FailedCount}, TotalErrorCount: {TotalFailedCount}",
+                _jobRunner.Logger?.LogError(ex,
+                    "Job failed too many times and stopped. " +
+                    "JobName: {JobName}, FailedCount: {FailedCount}, TotalErrorCount: {TotalFailedCount}",
                     Name, _currentFailedCount, FailedCount);
 
                 Stop();
@@ -144,7 +153,7 @@ public class Job : IDisposable
         }
         finally {
             LastExecutedTime = FastDateTime.Now;
-            VhUtils.TryInvoke(()=>_jobSemaphore.Release()); // semaphore may be already disposed
+            VhUtils.TryInvoke(() => _jobSemaphore.Release()); // semaphore may be already disposed
         }
     }
 

@@ -1,3 +1,6 @@
+# v7.5.769
+* Update: Upgrade to .NET 10
+
 # v7.3.766
 Fix: Set DNS on some Linux distros
 

@@ -70,7 +70,10 @@ binDir="$destinationPath/$versionTag";
 # User interaction
 if [ "$quiet" != "y" ]; then
 	if [ "$autostart" == "" ]; then
-		read -p "Auto Start (y/n)?" autostart;
+		read -p "Auto Start (Y/n)?" autostart;
+		if [ -z "$autostart" ]; then
+			autostart="y";
+		fi;
 	fi;
 fi;
 
@@ -119,7 +122,7 @@ if [ "$httpBaseUrl" != "" ]; then
 fi
 
 # init service
-if [ "$autostart" = "y" ]; then
+if [ "${autostart,,}" = "y" ]; then
 	echo "creating autostart service... Name: $assemblyName";
 	service="
 [Unit]

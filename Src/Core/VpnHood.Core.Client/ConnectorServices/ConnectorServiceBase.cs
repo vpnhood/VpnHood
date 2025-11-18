@@ -206,8 +206,7 @@ internal class ConnectorServiceBase : IDisposable
             }, cancellationToken)
                 .Vhc();
 
-            var clientStream =
-                await CreateClientStream(streamId, tcpClient, sslStream, contentLength, cancellationToken).Vhc();
+            var clientStream = await CreateClientStream(streamId, tcpClient, sslStream, contentLength, cancellationToken).Vhc();
             lock (Status) Status.CreatedConnectionCount++;
             return clientStream;
         }

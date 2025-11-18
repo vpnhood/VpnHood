@@ -1,4 +1,4 @@
-# Upcoming
+# v7.5.769
 * Fix: Diagnoser shows a wrong NoErrorFoundException
 * Update: Upgrade to .NET 10
 

@@ -1,6 +1,7 @@
-# v7.5.769
+# Upcoming
 * Fix: Diagnoser shows a wrong NoErrorFoundException
 * Update: Upgrade to .NET 10
+* Improve: Speed and stability
 
 # v7.3.767
 * Fix: Remove premium code

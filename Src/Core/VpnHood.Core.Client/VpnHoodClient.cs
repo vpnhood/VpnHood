@@ -78,7 +78,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool IsIpV6SupportedByClient { get; internal set; }
     public IpRangeOrderedList IncludeIpRanges { get; private set; }
     public IpRangeOrderedList VpnAdapterIncludeIpRanges { get; private set; }
-    public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.TcpEndPoint;
+    public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.ServerFinderItem.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
 
     public byte[] SessionKey =>
@@ -648,16 +648,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         try {
             VhLogger.Instance.LogInformation("Connecting to the server... EndPoint: {hostEndPoint}",
-                VhLogger.Format(serverFinderItem.IpEndPoint));
+                VhLogger.Format(serverFinderItem.TcpEndPoint));
             State = ClientState.Connecting;
 
             // create connector service
             _connectorService = new ConnectorService(
                 new ConnectorEndPointInfo {
                     ProxyEndPointManager = ProxyEndPointManager,
-                    HostName = serverFinderItem.ServerToken.HostName,
-                    TcpEndPoint = serverFinderItem.IpEndPoint,
-                    CertificateHash = serverFinderItem.ServerToken.CertificateHash
+                    ServerFinderItem = serverFinderItem
                 },
                 socketFactory: SocketFactory,
                 requestTimeout: Config.TcpConnectTimeout,
@@ -736,7 +734,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
             if (helloResponse.UdpPort > 0)
-                HostUdpEndPoint = new IPEndPoint(_connectorService.EndPointInfo.TcpEndPoint.Address,
+                HostUdpEndPoint = new IPEndPoint(_connectorService.EndPointInfo.ServerFinderItem.TcpEndPoint.Address,
                     helloResponse.UdpPort.Value);
 
             // VpnAdapterIpRanges
@@ -850,7 +848,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                             _serverFinder.ServerLocation,
                             isIpV6Supported: IsIpV6SupportedByClient,
                             hasRedirected: !allowRedirect,
-                            endPoint: _connectorService.EndPointInfo.TcpEndPoint,
+                            endPoint: _connectorService.EndPointInfo.ServerFinderItem.TcpEndPoint,
                             adNetworkName: null));
 
                     _clientUsageTracker = new ClientUsageTracker(_sessionStatus, Tracker);
@@ -882,7 +880,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Build the IncludeIpRanges for the VpnAdapter
             var adapterIncludeRanges =
-                BuildVpnAdapterIncludeIpRanges(_connectorService.EndPointInfo.TcpEndPoint.Address);
+                BuildVpnAdapterIncludeIpRanges(_connectorService.EndPointInfo.ServerFinderItem.TcpEndPoint.Address);
 
             // sometimes packet goes directly to the adapter especially on windows, so we need to filter them
             IncludeIpRanges = IncludeIpRanges.Intersect(adapterIncludeRanges);

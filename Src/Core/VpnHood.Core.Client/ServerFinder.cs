@@ -1,6 +1,6 @@
-﻿using System.Net;
-using Ga4.Trackers;
+﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
@@ -52,8 +52,8 @@ public class ServerFinder(
 
             // select forced endpoints for each server token
             return serverTokens
-                .SelectMany(serverToken => customServerEndpoints.Select(ep => new ServerFinderItem(serverToken, ep)))
-                .Where(x => includeIpV6 || x.IpEndPoint.IsV6() || x.IpEndPoint.Address.IsLoopback())
+                .SelectMany(serverToken => customServerEndpoints.Select(ep => new ServerFinderItem(ep, serverToken.HostName, serverToken.CertificateHash)))
+                .Where(x => includeIpV6 || x.TcpEndPoint.IsV6() || x.TcpEndPoint.Address.IsLoopback())
                 .ToArray();
         }
 
@@ -65,7 +65,7 @@ public class ServerFinder(
                 var endpoints = await EndPointResolver.ResolveHostEndPoints(
                     serverToken, endPointStrategy, cancellationToken);
 
-                return endpoints.Select(ep => new ServerFinderItem(serverToken, ep));
+                return endpoints.Select(ep => new ServerFinderItem(ep, serverToken.HostName, serverToken.CertificateHash));
             }
             catch (Exception ex) {
                 itemExceptions.Add((ex, serverToken ));
@@ -78,7 +78,7 @@ public class ServerFinder(
         
         // flatten the results into a single enumerable
         var results = resolved.SelectMany(x => x)
-            .Where(x => includeIpV6 || x.IpEndPoint.IsV6() || x.IpEndPoint.Address.IsLoopback())
+            .Where(x => includeIpV6 || x.TcpEndPoint.IsV6() || x.TcpEndPoint.Address.IsLoopback())
             .ToArray();
 
         // throw the first error if there is no resolved endpoints
@@ -163,7 +163,7 @@ public class ServerFinder(
             "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}, Best: {Best}",
             endpointStatuses.Count(x => x.Available == true), endpointStatuses.Count(x => x.Available == false),
             endpointStatuses.Count(x => x.Available == null),
-            VhLogger.Format(res?.IpEndPoint));
+            VhLogger.Format(res?.TcpEndPoint));
 
         // track new endpoints availability 
         _ = TryTrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).Vhc();
@@ -206,7 +206,7 @@ public class ServerFinder(
 
         // report endpoints
         var endPointReport = string.Join(", ",
-            changesStatus.Select(x => $"{VhLogger.Format(x.ServerFinderItem.IpEndPoint)} => {x.Available}"));
+            changesStatus.Select(x => $"{VhLogger.Format(x.ServerFinderItem.TcpEndPoint)} => {x.Available}"));
         VhLogger.Instance.LogInformation(GeneralEventId.Request, "HostEndPoints: {EndPoints}", endPointReport);
 
         return tracker?.TryTrack(trackEvents) ?? Task.CompletedTask;
@@ -324,7 +324,7 @@ public class ServerFinder(
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Could not get server status. EndPoint: {EndPoint}",
-                VhLogger.Format(connector.EndPointInfo.TcpEndPoint));
+                VhLogger.Format(connector.EndPointInfo.ServerFinderItem.TcpEndPoint));
 
             return false;
         }
@@ -334,9 +334,7 @@ public class ServerFinder(
     {
         var endPointInfo = new ConnectorEndPointInfo {
             ProxyEndPointManager = proxyEndPointManager,
-            CertificateHash = serverFinderItem.ServerToken.CertificateHash,
-            HostName = serverFinderItem.ServerToken.HostName,
-            TcpEndPoint = serverFinderItem.IpEndPoint
+            ServerFinderItem = serverFinderItem
         };
 
         var connector = new ConnectorService(endPointInfo, socketFactory, serverQueryTimeout, false);

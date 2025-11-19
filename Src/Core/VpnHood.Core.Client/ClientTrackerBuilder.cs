@@ -50,9 +50,9 @@ public static class ClientTrackerBuilder
         return new TrackEvent {
             EventName = "vh_endpoint_status",
             Parameters = new Dictionary<string, object?> {
-                { "ep", serverFinderItem.IpEndPoint },
-                { "domain", serverFinderItem.ServerToken.HostName },
-                { "ip_v6", serverFinderItem.IpEndPoint.Address.IsV6() },
+                { "ep", serverFinderItem.TcpEndPoint },
+                { "domain", serverFinderItem.HostName },
+                { "ip_v6", serverFinderItem.TcpEndPoint.Address.IsV6() },
                 { "available", available }
             }
         };

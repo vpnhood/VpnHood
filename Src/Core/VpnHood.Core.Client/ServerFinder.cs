@@ -105,12 +105,15 @@ public class ServerFinder(
         // create server finder items from ServerToken.HostEndPoints using SelectMany
         var serverFinderItems = await ResolveFinderItems(serverTokens, IncludeIpV6, cancellationToken);
 
-        // randomize endpoint 
-        VhUtils.Shuffle(serverFinderItems);
+        // create array of host statuses and shuffle them
+        // We should not let client always try the same server first to avoid overloading specific servers
+        var hostStatuses = serverFinderItems
+            .Select(x => new HostStatus { ServerFinderItem = x })
+            .Shuffle()
+            .ToArray();
 
         // find the best server
-        _hostEndPointStatuses =
-            await VerifyServersStatus(serverFinderItems, byOrder: false, cancellationToken: cancellationToken);
+        _hostEndPointStatuses = await VerifyServersStatus(hostStatuses, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.ServerFinderItem;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
@@ -153,7 +156,7 @@ public class ServerFinder(
             hostStatus.Available = _hostEndPointStatuses
                 .FirstOrDefault(x => x.ServerFinderItem.Equals(hostStatus.ServerFinderItem))?.Available;
 
-        var endpointStatuses = await VerifyServersStatus(serverFinderItems, byOrder: true, cancellationToken: cancellationToken);
+        var endpointStatuses = await VerifyServersStatus(hostStatuses, byOrder: true, cancellationToken: cancellationToken);
         var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.ServerFinderItem;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -209,13 +212,9 @@ public class ServerFinder(
         return tracker?.TryTrack(trackEvents) ?? Task.CompletedTask;
     }
 
-    private async Task<HostStatus[]> VerifyServersStatus(ServerFinderItem[] serverFinderItems, bool byOrder,
+    private async Task<HostStatus[]> VerifyServersStatus(HostStatus[] hostStatuses, bool byOrder,
         CancellationToken cancellationToken)
     {
-        var hostStatuses = serverFinderItems
-            .Select(x => new HostStatus { ServerFinderItem = x })
-            .ToArray();
-
         // Initialize time-based progress tracking
         _progressMonitor = new ProgressMonitor(hostStatuses.Length, serverQueryTimeout, maxDegreeOfParallelism);
 

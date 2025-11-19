@@ -77,7 +77,7 @@ internal class ConnectorServiceBase : IDisposable
         // write HTTP request
         var headerBuilder = new StringBuilder()
             .Append($"GET /{Guid.NewGuid()} HTTP/1.1\r\n")
-            .Append($"Host: {EndPointInfo.ServerFinderItem.HostName}\r\n")
+            .Append($"Host: {EndPointInfo.VpnEndPoint.HostName}\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
             .Append("Upgrade: websocket\r\n")
@@ -113,7 +113,7 @@ internal class ConnectorServiceBase : IDisposable
         int contentLength, string streamId, CancellationToken cancellationToken)
     {
         // write HTTP request
-        var header = BuildPostRequest(EndPointInfo.ServerFinderItem.HostName, TunnelStreamType.None, ProtocolVersion, contentLength);
+        var header = BuildPostRequest(EndPointInfo.VpnEndPoint.HostName, TunnelStreamType.None, ProtocolVersion, contentLength);
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
@@ -129,7 +129,7 @@ internal class ConnectorServiceBase : IDisposable
         int contentLength, string streamId, CancellationToken cancellationToken)
     {
         // write HTTP request
-        var header = BuildPostRequest(EndPointInfo.ServerFinderItem.HostName, TunnelStreamType.Standard, ProtocolVersion,
+        var header = BuildPostRequest(EndPointInfo.VpnEndPoint.HostName, TunnelStreamType.Standard, ProtocolVersion,
             contentLength: contentLength);
 
         // Send header and wait for its response
@@ -162,7 +162,7 @@ internal class ConnectorServiceBase : IDisposable
     protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, int contentLength,
         CancellationToken cancellationToken)
     {
-        var tcpEndPoint = EndPointInfo.ServerFinderItem.TcpEndPoint;
+        var tcpEndPoint = EndPointInfo.VpnEndPoint.TcpEndPoint;
 
         // create new stream
         TcpClient? tcpClient = null;
@@ -196,7 +196,7 @@ internal class ConnectorServiceBase : IDisposable
         // Establish a TLS connection
         var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
         try {
-            var hostName = EndPointInfo.ServerFinderItem.HostName;
+            var hostName = EndPointInfo.VpnEndPoint.HostName;
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "TLS Authenticating... HostName: {HostName}",
                 VhLogger.FormatHostName(hostName));
 
@@ -298,7 +298,7 @@ internal class ConnectorServiceBase : IDisposable
         if (sslPolicyErrors == SslPolicyErrors.None)
             return true;
 
-        var ret = EndPointInfo.ServerFinderItem.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
+        var ret = EndPointInfo.VpnEndPoint.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
         return ret;
     }
 

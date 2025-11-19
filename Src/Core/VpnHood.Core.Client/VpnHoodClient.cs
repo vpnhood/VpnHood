@@ -78,7 +78,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool IsIpV6SupportedByClient { get; internal set; }
     public IpRangeOrderedList IncludeIpRanges { get; private set; }
     public IpRangeOrderedList VpnAdapterIncludeIpRanges { get; private set; }
-    public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.ServerFinderItem.TcpEndPoint;
+    public IPEndPoint? HostTcpEndPoint => _connectorService?.EndPointInfo.VpnEndPoint.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
 
     public byte[] SessionKey =>
@@ -388,9 +388,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Establish first connection and create a session
             State = ClientState.FindingReachableServer;
-            var serverFinderItem = await _serverFinder.FindReachableServerAsync([Token.ServerToken], linkedCts.Token).Vhc();
+            var vpnEndPoint = await _serverFinder.FindReachableServerAsync([Token.ServerToken], linkedCts.Token).Vhc();
             var allowRedirect = !_serverFinder.CustomServerEndpoints.Any();
-            await ConnectInternal(serverFinderItem, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
+            await ConnectInternal(vpnEndPoint, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
 
             State = ClientState.Connected;
             _initConnectedTime = DateTime.UtcNow;
@@ -644,18 +644,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ConnectInternal(ServerFinderItem serverFinderItem, bool allowRedirect, CancellationToken cancellationToken)
+    private async Task ConnectInternal(VpnEndPoint vpnEndPoint, bool allowRedirect, CancellationToken cancellationToken)
     {
         try {
             VhLogger.Instance.LogInformation("Connecting to the server... EndPoint: {hostEndPoint}",
-                VhLogger.Format(serverFinderItem.TcpEndPoint));
+                VhLogger.Format(vpnEndPoint.TcpEndPoint));
             State = ClientState.Connecting;
 
             // create connector service
             _connectorService = new ConnectorService(
                 new ConnectorEndPointInfo {
                     ProxyEndPointManager = ProxyEndPointManager,
-                    ServerFinderItem = serverFinderItem
+                    VpnEndPoint = vpnEndPoint
                 },
                 socketFactory: SocketFactory,
                 requestTimeout: Config.TcpConnectTimeout,
@@ -734,7 +734,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
             if (helloResponse.UdpPort > 0)
-                HostUdpEndPoint = new IPEndPoint(_connectorService.EndPointInfo.ServerFinderItem.TcpEndPoint.Address,
+                HostUdpEndPoint = new IPEndPoint(_connectorService.EndPointInfo.VpnEndPoint.TcpEndPoint.Address,
                     helloResponse.UdpPort.Value);
 
             // VpnAdapterIpRanges
@@ -848,7 +848,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                             _serverFinder.ServerLocation,
                             isIpV6Supported: IsIpV6SupportedByClient,
                             hasRedirected: !allowRedirect,
-                            endPoint: _connectorService.EndPointInfo.ServerFinderItem.TcpEndPoint,
+                            endPoint: _connectorService.EndPointInfo.VpnEndPoint.TcpEndPoint,
                             adNetworkName: null));
 
                     _clientUsageTracker = new ClientUsageTracker(_sessionStatus, Tracker);
@@ -880,7 +880,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Build the IncludeIpRanges for the VpnAdapter
             var adapterIncludeRanges =
-                BuildVpnAdapterIncludeIpRanges(_connectorService.EndPointInfo.ServerFinderItem.TcpEndPoint.Address);
+                BuildVpnAdapterIncludeIpRanges(_connectorService.EndPointInfo.VpnEndPoint.TcpEndPoint.Address);
 
             // sometimes packet goes directly to the adapter especially on windows, so we need to filter them
             IncludeIpRanges = IncludeIpRanges.Intersect(adapterIncludeRanges);

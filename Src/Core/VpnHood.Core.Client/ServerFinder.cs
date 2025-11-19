@@ -38,11 +38,11 @@ public class ServerFinder(
 
     private class HostStatus
     {
-        public required ServerFinderItem ServerFinderItem { get; init; }
+        public required VpnEndPoint VpnEndPoint { get; init; }
         public bool? Available { get; set; }
     }
 
-    public async Task<ServerFinderItem[]> ResolveFinderItems(IEnumerable<ServerToken> serverTokens, bool includeIpV6,
+    public async Task<VpnEndPoint[]> ResolveVpnEndPoints(IEnumerable<ServerToken> serverTokens, bool includeIpV6,
         CancellationToken cancellationToken)
     {
         // log warning if there are some forced endpoints
@@ -52,7 +52,7 @@ public class ServerFinder(
 
             // select forced endpoints for each server token
             return serverTokens
-                .SelectMany(serverToken => customServerEndpoints.Select(ep => new ServerFinderItem(ep, serverToken.HostName, serverToken.CertificateHash)))
+                .SelectMany(serverToken => customServerEndpoints.Select(ep => new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash)))
                 .Where(x => includeIpV6 || x.TcpEndPoint.IsV6() || x.TcpEndPoint.Address.IsLoopback())
                 .ToArray();
         }
@@ -65,7 +65,7 @@ public class ServerFinder(
                 var endpoints = await EndPointResolver.ResolveHostEndPoints(
                     serverToken, endPointStrategy, cancellationToken);
 
-                return endpoints.Select(ep => new ServerFinderItem(ep, serverToken.HostName, serverToken.CertificateHash));
+                return endpoints.Select(ep => new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash));
             }
             catch (Exception ex) {
                 itemExceptions.Add((ex, serverToken ));
@@ -96,25 +96,25 @@ public class ServerFinder(
     }
 
     // There is much work to be done here
-    public async Task<ServerFinderItem> FindReachableServerAsync(IEnumerable<ServerToken> serverTokens, CancellationToken cancellationToken)
+    public async Task<VpnEndPoint> FindReachableServerAsync(IEnumerable<ServerToken> serverTokens, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Finding a reachable server... QueryTimeout: {QueryTimeout}",
             serverQueryTimeout);
 
         // create server finder items from ServerToken.HostEndPoints using SelectMany
-        var serverFinderItems = await ResolveFinderItems(serverTokens, IncludeIpV6, cancellationToken);
+        var vpnEndPoints = await ResolveVpnEndPoints(serverTokens, IncludeIpV6, cancellationToken);
 
         // create array of host statuses and shuffle them
         // We should not let client always try the same server first to avoid overloading specific servers
-        var hostStatuses = serverFinderItems
-            .Select(x => new HostStatus { ServerFinderItem = x })
+        var hostStatuses = vpnEndPoints
+            .Select(x => new HostStatus { VpnEndPoint = x })
             .Shuffle()
             .ToArray();
 
         // find the best server
         _hostEndPointStatuses = await VerifyServersStatus(hostStatuses, byOrder: false, cancellationToken: cancellationToken);
-        var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.ServerFinderItem;
+        var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.VpnEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
@@ -136,28 +136,24 @@ public class ServerFinder(
         throw new UnreachableServerException();
     }
 
-    public async Task<ServerFinderItem> FindBestRedirectedServerAsync(ServerToken[] serverTokens, CancellationToken cancellationToken)
+    public async Task<VpnEndPoint> FindBestRedirectedServerAsync(ServerToken[] serverTokens, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request, "Finding best server from redirected endpoints...");
 
         if (!serverTokens.Any())
             throw new Exception("There is no server endpoint. Please check server configuration.");
 
-        var serverFinderItems = await ResolveFinderItems(serverTokens, IncludeIpV6, cancellationToken);
+        var vpnEndPoints = await ResolveVpnEndPoints(serverTokens, IncludeIpV6, cancellationToken);
 
-        //todo: what does it DO?!
-        // create host statuses
-        var hostStatuses = serverFinderItems
-            .Select(x => new HostStatus { ServerFinderItem = x })
-            .ToArray();
-
-        // merge old values
+        // create host statuses and merge the previous availability statuses
+        var hostStatuses = vpnEndPoints.Select(x => new HostStatus { VpnEndPoint = x }).ToArray();
         foreach (var hostStatus in hostStatuses)
             hostStatus.Available = _hostEndPointStatuses
-                .FirstOrDefault(x => x.ServerFinderItem.Equals(hostStatus.ServerFinderItem))?.Available;
+                .FirstOrDefault(x => x.VpnEndPoint.Equals(hostStatus.VpnEndPoint))?.Available;
 
+        // find the best server by order
         var endpointStatuses = await VerifyServersStatus(hostStatuses, byOrder: true, cancellationToken: cancellationToken);
-        var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.ServerFinderItem;
+        var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.VpnEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
             "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}, Best: {Best}",
@@ -196,17 +192,17 @@ public class ServerFinder(
         var changesStatus = newStatuses
             .Where(x =>
                 x.Available != null &&
-                !oldStatuses.Any(y => y.Available == x.Available && y.ServerFinderItem.Equals(x.ServerFinderItem)))
+                !oldStatuses.Any(y => y.Available == x.Available && y.VpnEndPoint.Equals(x.VpnEndPoint)))
             .ToArray();
 
         var trackEvents = changesStatus
             .Where(x => x.Available != null)
-            .Select(x => ClientTrackerBuilder.BuildEndPointStatus(x.ServerFinderItem, x.Available!.Value))
+            .Select(x => ClientTrackerBuilder.BuildEndPointStatus(x.VpnEndPoint, x.Available!.Value))
             .ToArray();
 
         // report endpoints
         var endPointReport = string.Join(", ",
-            changesStatus.Select(x => $"{VhLogger.Format(x.ServerFinderItem.TcpEndPoint)} => {x.Available}"));
+            changesStatus.Select(x => $"{VhLogger.Format(x.VpnEndPoint.TcpEndPoint)} => {x.Available}"));
         VhLogger.Instance.LogInformation(GeneralEventId.Request, "HostEndPoints: {EndPoints}", endPointReport);
 
         return tracker?.TryTrack(trackEvents) ?? Task.CompletedTask;
@@ -237,7 +233,7 @@ public class ServerFinder(
             var verificationTasks = hostStatuses.Select(async hostStatus => {
                 await semaphore.WaitAsync(parallelCts.Token);
                 try {
-                    using var connector = CreateConnector(hostStatus.ServerFinderItem);
+                    using var connector = CreateConnector(hostStatus.VpnEndPoint);
                     hostStatus.Available =
                         await VerifyServerStatus(connector, serverQueryTimeout, parallelCts.Token).Vhc();
 
@@ -324,17 +320,17 @@ public class ServerFinder(
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Could not get server status. EndPoint: {EndPoint}",
-                VhLogger.Format(connector.EndPointInfo.ServerFinderItem.TcpEndPoint));
+                VhLogger.Format(connector.EndPointInfo.VpnEndPoint.TcpEndPoint));
 
             return false;
         }
     }
 
-    private ConnectorService CreateConnector(ServerFinderItem serverFinderItem)
+    private ConnectorService CreateConnector(VpnEndPoint vpnEndPoint)
     {
         var endPointInfo = new ConnectorEndPointInfo {
             ProxyEndPointManager = proxyEndPointManager,
-            ServerFinderItem = serverFinderItem
+            VpnEndPoint = vpnEndPoint
         };
 
         var connector = new ConnectorService(endPointInfo, socketFactory, serverQueryTimeout, false);

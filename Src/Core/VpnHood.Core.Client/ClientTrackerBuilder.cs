@@ -45,14 +45,14 @@ public static class ClientTrackerBuilder
         };
     }
 
-    public static TrackEvent BuildEndPointStatus(ServerFinderItem serverFinderItem, bool available)
+    public static TrackEvent BuildEndPointStatus(VpnEndPoint vpnEndPoint, bool available)
     {
         return new TrackEvent {
             EventName = "vh_endpoint_status",
             Parameters = new Dictionary<string, object?> {
-                { "ep", serverFinderItem.TcpEndPoint },
-                { "domain", serverFinderItem.HostName },
-                { "ip_v6", serverFinderItem.TcpEndPoint.Address.IsV6() },
+                { "ep", vpnEndPoint.TcpEndPoint },
+                { "domain", vpnEndPoint.HostName },
+                { "ip_v6", vpnEndPoint.TcpEndPoint.Address.IsV6() },
                 { "available", available }
             }
         };

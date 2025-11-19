@@ -21,7 +21,6 @@ namespace VpnHood.Core.Client;
 
 public class ServerFinder(
     ISocketFactory socketFactory,
-    ServerToken serverToken,
     string? serverLocation,
     TimeSpan serverQueryTimeout,
     EndPointStrategy endPointStrategy,
@@ -30,51 +29,89 @@ public class ServerFinder(
     ProxyEndPointManager proxyEndPointManager,
     int maxDegreeOfParallelism = 10)
 {
-    private class HostStatus
-    {
-        public required IPEndPoint TcpEndPoint { get; init; }
-        public bool? Available { get; set; }
-    }
-
     private ProgressMonitor? _progressMonitor;
     private HostStatus[] _hostEndPointStatuses = [];
-
-    // Progress properties
     public bool IncludeIpV6 { get; set; } = true;
     public string? ServerLocation => serverLocation;
-    public EndPointStrategy EndPointStrategy => endPointStrategy;
     public IPEndPoint[] CustomServerEndpoints => customServerEndpoints;
     public ProgressStatus? Progress => _progressMonitor?.Progress;
 
+    private class HostStatus
+    {
+        public required ServerFinderItem ServerFinderItem { get; init; }
+        public bool? Available { get; set; }
+    }
+
+    public async Task<ServerFinderItem[]> ResolveFinderItems(IEnumerable<ServerToken> serverTokens, bool includeIpV6,
+        CancellationToken cancellationToken)
+    {
+        // log warning if there are some forced endpoints
+        if (customServerEndpoints.Any()) {
+            VhLogger.Instance.LogWarning("There are forced endpoints in the configuration. EndPoints: {EndPoints}",
+                string.Join(", ", customServerEndpoints.Select(VhLogger.Format)));
+
+            // select forced endpoints for each server token
+            return serverTokens
+                .SelectMany(serverToken => customServerEndpoints.Select(ep => new ServerFinderItem(serverToken, ep)))
+                .Where(x => includeIpV6 || x.IpEndPoint.IsV6() || x.IpEndPoint.Address.IsLoopback())
+                .ToArray();
+        }
+
+        // resolve endpoints for each server token in parallel
+        var itemExceptions = new List<(Exception exception, ServerToken serverToken)>();
+        var tasks = serverTokens.Select(async serverToken =>
+        {
+            try {
+                var endpoints = await EndPointResolver.ResolveHostEndPoints(
+                    serverToken, endPointStrategy, cancellationToken);
+
+                return endpoints.Select(ep => new ServerFinderItem(serverToken, ep));
+            }
+            catch (Exception ex) {
+                itemExceptions.Add((ex, serverToken ));
+                return [];
+            }
+        });
+
+        // wait for all tasks to complete
+        var resolved = await Task.WhenAll(tasks);
+        
+        // flatten the results into a single enumerable
+        var results = resolved.SelectMany(x => x)
+            .Where(x => includeIpV6 || x.IpEndPoint.IsV6() || x.IpEndPoint.Address.IsLoopback())
+            .ToArray();
+
+        // throw the first error if there is no resolved endpoints
+        if (!results.Any() && itemExceptions.Any())
+            throw itemExceptions.First().exception;
+
+        // log all exceptions
+        foreach (var itemException in itemExceptions) {
+            VhLogger.Instance.LogWarning(itemException.exception,
+                "Failed to resolve endpoints for server token. HostName: {HostName}, HostPort: {HostPort}",
+                itemException.serverToken.HostName, itemException.serverToken.HostPort);
+        }
+
+        return results;
+    }
+
     // There is much work to be done here
-    public async Task<IPEndPoint> FindReachableServerAsync(CancellationToken cancellationToken)
+    public async Task<ServerFinderItem> FindReachableServerAsync(IEnumerable<ServerToken> serverTokens, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Finding a reachable server... QueryTimeout: {QueryTimeout}",
             serverQueryTimeout);
 
-        // get all endpoints from serverToken
-        var hostEndPoints = customServerEndpoints.Any()
-            ? customServerEndpoints
-            : await EndPointResolver.ResolveHostEndPoints(serverToken, endPointStrategy, cancellationToken);
-
-        // log warning if there are some forced endpoints
-        if (customServerEndpoints.Any())
-            VhLogger.Instance.LogWarning("There are forced endpoints in the configuration. EndPoints: {EndPoints}",
-                string.Join(", ", customServerEndpoints.Select(VhLogger.Format)));
-
-        // exclude ip v6 if not supported
-        if (!IncludeIpV6)
-            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback))
-                .ToArray();
+        // create server finder items from ServerToken.HostEndPoints using SelectMany
+        var serverFinderItems = await ResolveFinderItems(serverTokens, IncludeIpV6, cancellationToken);
 
         // randomize endpoint 
-        VhUtils.Shuffle(hostEndPoints);
+        VhUtils.Shuffle(serverFinderItems);
 
         // find the best server
         _hostEndPointStatuses =
-            await VerifyServersStatus(hostEndPoints, byOrder: false, cancellationToken: cancellationToken);
-        var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
+            await VerifyServersStatus(serverFinderItems, byOrder: false, cancellationToken: cancellationToken);
+        var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.ServerFinderItem;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
@@ -96,37 +133,34 @@ public class ServerFinder(
         throw new UnreachableServerException();
     }
 
-    public async Task<IPEndPoint> FindBestRedirectedServerAsync(IPEndPoint[] hostEndPoints,
-        CancellationToken cancellationToken)
+    public async Task<ServerFinderItem> FindBestRedirectedServerAsync(ServerToken[] serverTokens, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request, "Finding best server from redirected endpoints...");
 
-        if (!hostEndPoints.Any())
+        if (!serverTokens.Any())
             throw new Exception("There is no server endpoint. Please check server configuration.");
 
-        var hostStatuses = hostEndPoints
-            .Select(x => new HostStatus { TcpEndPoint = x })
-            .ToArray();
+        var serverFinderItems = await ResolveFinderItems(serverTokens, IncludeIpV6, cancellationToken);
 
-        // exclude ip v6 if not supported (IPv6Loopback is for tests)
-        if (!IncludeIpV6)
-            hostEndPoints = hostEndPoints.Where(x => !x.Address.IsV6() || x.Address.Equals(IPAddress.IPv6Loopback))
-                .ToArray();
+        //todo: what does it DO?!
+        // create host statuses
+        var hostStatuses = serverFinderItems
+            .Select(x => new HostStatus { ServerFinderItem = x })
+            .ToArray();
 
         // merge old values
         foreach (var hostStatus in hostStatuses)
             hostStatus.Available = _hostEndPointStatuses
-                .FirstOrDefault(x => x.TcpEndPoint.Equals(hostStatus.TcpEndPoint))?.Available;
+                .FirstOrDefault(x => x.ServerFinderItem.Equals(hostStatus.ServerFinderItem))?.Available;
 
-        var endpointStatuses =
-            await VerifyServersStatus(hostEndPoints, byOrder: true, cancellationToken: cancellationToken);
-        var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.TcpEndPoint;
+        var endpointStatuses = await VerifyServersStatus(serverFinderItems, byOrder: true, cancellationToken: cancellationToken);
+        var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.ServerFinderItem;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
             "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}, Best: {Best}",
             endpointStatuses.Count(x => x.Available == true), endpointStatuses.Count(x => x.Available == false),
             endpointStatuses.Count(x => x.Available == null),
-            VhLogger.Format(res));
+            VhLogger.Format(res?.IpEndPoint));
 
         // track new endpoints availability 
         _ = TryTrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).Vhc();
@@ -159,27 +193,27 @@ public class ServerFinder(
         var changesStatus = newStatuses
             .Where(x =>
                 x.Available != null &&
-                !oldStatuses.Any(y => y.Available == x.Available && y.TcpEndPoint.Equals(x.TcpEndPoint)))
+                !oldStatuses.Any(y => y.Available == x.Available && y.ServerFinderItem.Equals(x.ServerFinderItem)))
             .ToArray();
 
         var trackEvents = changesStatus
             .Where(x => x.Available != null)
-            .Select(x => ClientTrackerBuilder.BuildEndPointStatus(x.TcpEndPoint, x.Available!.Value))
+            .Select(x => ClientTrackerBuilder.BuildEndPointStatus(x.ServerFinderItem, x.Available!.Value))
             .ToArray();
 
         // report endpoints
         var endPointReport = string.Join(", ",
-            changesStatus.Select(x => $"{VhLogger.Format(x.TcpEndPoint)} => {x.Available}"));
+            changesStatus.Select(x => $"{VhLogger.Format(x.ServerFinderItem.IpEndPoint)} => {x.Available}"));
         VhLogger.Instance.LogInformation(GeneralEventId.Request, "HostEndPoints: {EndPoints}", endPointReport);
 
         return tracker?.TryTrack(trackEvents) ?? Task.CompletedTask;
     }
 
-    private async Task<HostStatus[]> VerifyServersStatus(IPEndPoint[] hostEndPoints, bool byOrder,
+    private async Task<HostStatus[]> VerifyServersStatus(ServerFinderItem[] serverFinderItems, bool byOrder,
         CancellationToken cancellationToken)
     {
-        var hostStatuses = hostEndPoints
-            .Select(x => new HostStatus { TcpEndPoint = x })
+        var hostStatuses = serverFinderItems
+            .Select(x => new HostStatus { ServerFinderItem = x })
             .ToArray();
 
         // Initialize time-based progress tracking
@@ -204,7 +238,7 @@ public class ServerFinder(
             var verificationTasks = hostStatuses.Select(async hostStatus => {
                 await semaphore.WaitAsync(parallelCts.Token);
                 try {
-                    using var connector = CreateConnector(hostStatus.TcpEndPoint);
+                    using var connector = CreateConnector(hostStatus.ServerFinderItem);
                     hostStatus.Available =
                         await VerifyServerStatus(connector, serverQueryTimeout, parallelCts.Token).Vhc();
 
@@ -297,20 +331,22 @@ public class ServerFinder(
         }
     }
 
-    private ConnectorService CreateConnector(IPEndPoint tcpEndPoint)
+    private ConnectorService CreateConnector(ServerFinderItem serverFinderItem)
     {
         var endPointInfo = new ConnectorEndPointInfo {
             ProxyEndPointManager = proxyEndPointManager,
-            CertificateHash = serverToken.CertificateHash,
-            HostName = serverToken.HostName,
-            TcpEndPoint = tcpEndPoint
+            CertificateHash = serverFinderItem.ServerToken.CertificateHash,
+            HostName = serverFinderItem.ServerToken.HostName,
+            TcpEndPoint = serverFinderItem.IpEndPoint
         };
+
         var connector = new ConnectorService(endPointInfo, socketFactory, serverQueryTimeout, false);
         connector.Init(
             protocolVersion: connector.ProtocolVersion, serverSecret: null,
             requestTimeout: serverQueryTimeout,
             tcpReuseTimeout: TimeSpan.Zero,
             useWebSocket: false);
+
         return connector;
     }
 }

@@ -32,6 +32,10 @@ public static class EndPointResolver
     public static async Task<IPEndPoint[]> ResolveHostEndPoints(ServerToken serverToken,
         EndPointStrategy strategy, CancellationToken cancellationToken)
     {
+        // use token strategy if auto
+        if (strategy == EndPointStrategy.Auto)
+            strategy = serverToken.EndPointsStrategy;
+
         // it is not valid host name, so return the endpoints directly
         // if token does not have any endpoints nor host name, throw an exception 
         if (!serverToken.IsValidHostName && VhUtils.IsNullOrEmpty(serverToken.HostEndPoints))

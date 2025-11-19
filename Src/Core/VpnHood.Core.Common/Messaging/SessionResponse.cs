@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
+using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.Core.Common.Messaging;
@@ -20,6 +21,7 @@ public class SessionResponse
     [JsonConverter(typeof(IPEndPointConverter))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint? RedirectHostEndPoint { get; set; }
+    public ServerToken[]? RedirectServerTokens { get; set; }
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -33,4 +35,5 @@ public class SessionResponse
 
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? ClientPublicAddress { get; set; }
+    
 }

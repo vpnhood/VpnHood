@@ -151,12 +151,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             socketFactory: socketFactory,
             serverCheckTimeout: options.ServerQueryTimeout);
 
-        _serverFinder = new ServerFinder(socketFactory, Token.ServerToken,
+        _serverFinder = new ServerFinder(socketFactory, 
             serverLocation: options.ServerLocation,
             serverQueryTimeout: options.ServerQueryTimeout,
-            endPointStrategy: options.EndPointStrategy != EndPointStrategy.Auto
-                ? options.EndPointStrategy
-                : Token.ServerToken.EndPointsStrategy,
+            endPointStrategy: options.EndPointStrategy,
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null,
             proxyEndPointManager: ProxyEndPointManager);
@@ -361,12 +359,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             VhLogger.Instance.LogInformation(
                 "DropUdp: {DropUdp}, VpnProtocol: {VpnProtocol}, " +
-                "EndPointStrategy: {EndPointStrategy}" +
                 "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
                 "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}, ProcessId: {ProcessId}",
-                Config.DropUdp, _channelProtocol, _serverFinder.EndPointStrategy,
-                Config.IncludeLocalNetwork, workerThreads, completionPortThreads, IsIpV6SupportedByClient,
-                Process.GetCurrentProcess().Id);
+                Config.DropUdp, _channelProtocol, Config.IncludeLocalNetwork, workerThreads, completionPortThreads, 
+                IsIpV6SupportedByClient, Process.GetCurrentProcess().Id);
 
             // report version
             VhLogger.Instance.LogInformation(
@@ -392,9 +388,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Establish first connection and create a session
             State = ClientState.FindingReachableServer;
-            var hostEndPoint = await _serverFinder.FindReachableServerAsync(linkedCts.Token).Vhc();
+            var serverFinderItem = await _serverFinder.FindReachableServerAsync([Token.ServerToken], linkedCts.Token).Vhc();
             var allowRedirect = !_serverFinder.CustomServerEndpoints.Any();
-            await ConnectInternal(hostEndPoint, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
+            await ConnectInternal(serverFinderItem, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
 
             State = ClientState.Connected;
             _initConnectedTime = DateTime.UtcNow;
@@ -648,20 +644,20 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task ConnectInternal(IPEndPoint hostEndPoint, bool allowRedirect, CancellationToken cancellationToken)
+    private async Task ConnectInternal(ServerFinderItem serverFinderItem, bool allowRedirect, CancellationToken cancellationToken)
     {
         try {
             VhLogger.Instance.LogInformation("Connecting to the server... EndPoint: {hostEndPoint}",
-                VhLogger.Format(hostEndPoint));
+                VhLogger.Format(serverFinderItem.IpEndPoint));
             State = ClientState.Connecting;
 
             // create connector service
             _connectorService = new ConnectorService(
                 new ConnectorEndPointInfo {
                     ProxyEndPointManager = ProxyEndPointManager,
-                    HostName = Token.ServerToken.HostName,
-                    TcpEndPoint = hostEndPoint,
-                    CertificateHash = Token.ServerToken.CertificateHash
+                    HostName = serverFinderItem.ServerToken.HostName,
+                    TcpEndPoint = serverFinderItem.IpEndPoint,
+                    CertificateHash = serverFinderItem.ServerToken.CertificateHash
                 },
                 socketFactory: SocketFactory,
                 requestTimeout: Config.TcpConnectTimeout,
@@ -932,9 +928,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // init new connector
             _connectorService?.Dispose();
             State = ClientState.FindingBestServer;
-            var redirectedEndPoint =
-                await _serverFinder.FindBestRedirectedServerAsync(ex.RedirectHostEndPoints.ToArray(),
-                    cancellationToken);
+
+            // legacy: convert the redirect host endpoints to a new server token using initial server token
+            var serverToken = JsonUtils.JsonClone(Token.ServerToken);
+            serverToken.HostEndPoints = ex.RedirectHostEndPoints;
+            var redirectedEndPoint = await _serverFinder.FindBestRedirectedServerAsync([serverToken], cancellationToken);
             await ConnectInternal(redirectedEndPoint, false, cancellationToken).Vhc();
         }
     }

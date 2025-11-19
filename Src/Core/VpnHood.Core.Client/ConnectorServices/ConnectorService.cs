@@ -1,10 +1,9 @@
-﻿using System.Net;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.ClientStreams;
@@ -14,11 +13,9 @@ using VpnHood.Core.Tunneling.Utils;
 namespace VpnHood.Core.Client.ConnectorServices;
 
 internal class ConnectorService(
-    ConnectorEndPointInfo endPointInfo,
-    ISocketFactory socketFactory,
-    TimeSpan requestTimeout,
-    bool allowTcpReuse)
-    : ConnectorServiceBase(endPointInfo, socketFactory, allowTcpReuse)
+    ConnectorServiceOptions options,
+    TimeSpan requestTimeout)
+    : ConnectorServiceBase(options)
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private int _isDisposed;

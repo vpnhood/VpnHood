@@ -6,6 +6,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
@@ -25,21 +26,22 @@ internal class ConnectorServiceBase : IDisposable
     private readonly HashSet<IClientStream> _sharedClientStream = new(50); // for preventing reuse
     private readonly Job _cleanupJob;
     private int _isDisposed;
-    private bool _allowTcpReuse;
     private bool _useWebSocket;
+    private readonly ProxyEndPointManager _proxyEndPointManager;
 
-    public ConnectorEndPointInfo EndPointInfo { get; }
     public ClientConnectorStatus Status { get; }
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ProtocolVersion { get; private set; } = 8;
+    public VpnEndPoint VpnEndPoint { get; init; }
 
-    public ConnectorServiceBase(ConnectorEndPointInfo endPointInfo, ISocketFactory socketFactory, bool allowTcpReuse)
+    public ConnectorServiceBase(ConnectorServiceOptions options)
     {
-        _socketFactory = socketFactory;
-        _allowTcpReuse = allowTcpReuse;
+        _socketFactory = options.SocketFactory;
+        AllowTcpReuse = options.AllowTcpReuse;
+        _proxyEndPointManager = options.ProxyEndPointManager;
         Status = new ClientConnectorStatusImpl(this);
         TcpReuseTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
-        EndPointInfo = endPointInfo;
+        VpnEndPoint = options.VpnEndPoint;
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
     }
 
@@ -77,7 +79,7 @@ internal class ConnectorServiceBase : IDisposable
         // write HTTP request
         var headerBuilder = new StringBuilder()
             .Append($"GET /{Guid.NewGuid()} HTTP/1.1\r\n")
-            .Append($"Host: {EndPointInfo.VpnEndPoint.HostName}\r\n")
+            .Append($"Host: {VpnEndPoint.HostName}\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
             .Append("Upgrade: websocket\r\n")
@@ -97,11 +99,11 @@ internal class ConnectorServiceBase : IDisposable
         // create a client stream
         var webSocketStream = new WebSocketStream(sslStream, streamId, UseBuffer, isServer: false);
         var clientStream = new TcpClientStream(tcpClient, webSocketStream, streamId,
-            _allowTcpReuse ? ClientStreamReuseCallback : null);
+            AllowTcpReuse ? ClientStreamReuseCallback : null);
         clientStream.RequireHttpResponse = false;
 
         // If reuse is allowed, add the client stream to the shared collection
-        if (_allowTcpReuse) {
+        if (AllowTcpReuse) {
             lock (_sharedClientStream)
                 _sharedClientStream.Add(clientStream);
         }
@@ -113,7 +115,7 @@ internal class ConnectorServiceBase : IDisposable
         int contentLength, string streamId, CancellationToken cancellationToken)
     {
         // write HTTP request
-        var header = BuildPostRequest(EndPointInfo.VpnEndPoint.HostName, TunnelStreamType.None, ProtocolVersion, contentLength);
+        var header = BuildPostRequest(VpnEndPoint.HostName, TunnelStreamType.None, ProtocolVersion, contentLength);
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
@@ -129,7 +131,7 @@ internal class ConnectorServiceBase : IDisposable
         int contentLength, string streamId, CancellationToken cancellationToken)
     {
         // write HTTP request
-        var header = BuildPostRequest(EndPointInfo.VpnEndPoint.HostName, TunnelStreamType.Standard, ProtocolVersion,
+        var header = BuildPostRequest(VpnEndPoint.HostName, TunnelStreamType.Standard, ProtocolVersion,
             contentLength: contentLength);
 
         // Send header and wait for its response
@@ -151,7 +153,7 @@ internal class ConnectorServiceBase : IDisposable
             return await CreateWebSocketClientStream(tcpClient, sslStream, streamId, cancellationToken);
 
 #pragma warning disable CS0618 // Type or member is obsolete
-        if (_allowTcpReuse)
+        if (AllowTcpReuse)
             return await CreateStandardClientStream(tcpClient, sslStream, contentLength, streamId, cancellationToken);
 #pragma warning restore CS0618 // Type or member is obsolete
 
@@ -162,7 +164,7 @@ internal class ConnectorServiceBase : IDisposable
     protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, int contentLength,
         CancellationToken cancellationToken)
     {
-        var tcpEndPoint = EndPointInfo.VpnEndPoint.TcpEndPoint;
+        var tcpEndPoint = VpnEndPoint.TcpEndPoint;
 
         // create new stream
         TcpClient? tcpClient = null;
@@ -171,8 +173,8 @@ internal class ConnectorServiceBase : IDisposable
                 "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
 
             // Client.SessionTimeout does not affect in ConnectAsync
-            if (EndPointInfo.ProxyEndPointManager.IsEnabled)
-                tcpClient = await EndPointInfo.ProxyEndPointManager.ConnectAsync(tcpEndPoint, cancellationToken);
+            if (_proxyEndPointManager.IsEnabled)
+                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, cancellationToken);
             else {
                 tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
@@ -182,8 +184,8 @@ internal class ConnectorServiceBase : IDisposable
         }
         catch (Exception ex) {
             // record failed proxy
-            if (EndPointInfo.ProxyEndPointManager.IsEnabled && tcpClient != null)
-                EndPointInfo.ProxyEndPointManager.RecordFailed(tcpClient, ex);
+            if (_proxyEndPointManager.IsEnabled && tcpClient != null)
+                _proxyEndPointManager.RecordFailed(tcpClient, ex);
 
             tcpClient?.Dispose();
             throw;
@@ -196,7 +198,7 @@ internal class ConnectorServiceBase : IDisposable
         // Establish a TLS connection
         var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
         try {
-            var hostName = EndPointInfo.VpnEndPoint.HostName;
+            var hostName = VpnEndPoint.HostName;
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "TLS Authenticating... HostName: {HostName}",
                 VhLogger.FormatHostName(hostName));
 
@@ -233,7 +235,7 @@ internal class ConnectorServiceBase : IDisposable
     private void ClientStreamReuseCallback(IClientStream clientStream)
     {
         // Check if the connector service is disposed
-        if (_isDisposed != 0 || !_allowTcpReuse) {
+        if (_isDisposed != 0 || !AllowTcpReuse) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Disposing the reused client stream because the connector service is either disposed or reuse is no longer allowed. " +
                 "ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
@@ -281,11 +283,11 @@ internal class ConnectorServiceBase : IDisposable
     }
 
     public bool AllowTcpReuse {
-        get => _allowTcpReuse;
+        get => field;
         set {
             if (!value)
                 PreventReuseSharedClients();
-            _allowTcpReuse = value;
+            field = value;
         }
     }
 
@@ -298,7 +300,7 @@ internal class ConnectorServiceBase : IDisposable
         if (sslPolicyErrors == SslPolicyErrors.None)
             return true;
 
-        var ret = EndPointInfo.VpnEndPoint.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
+        var ret = VpnEndPoint.CertificateHash?.SequenceEqual(certificate.GetCertHash()) == true;
         return ret;
     }
 

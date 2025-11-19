@@ -320,7 +320,7 @@ public class ServerFinder(
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Could not get server status. EndPoint: {EndPoint}",
-                VhLogger.Format(connector.EndPointInfo.VpnEndPoint.TcpEndPoint));
+                VhLogger.Format(connector.VpnEndPoint.TcpEndPoint));
 
             return false;
         }
@@ -328,12 +328,15 @@ public class ServerFinder(
 
     private ConnectorService CreateConnector(VpnEndPoint vpnEndPoint)
     {
-        var endPointInfo = new ConnectorEndPointInfo {
-            ProxyEndPointManager = proxyEndPointManager,
-            VpnEndPoint = vpnEndPoint
-        };
+        var connector = new ConnectorService(
+            requestTimeout: serverQueryTimeout,
+            options: new ConnectorServiceOptions(
+                VpnEndPoint: vpnEndPoint,
+                ProxyEndPointManager: proxyEndPointManager,
+                SocketFactory: socketFactory,
+                AllowTcpReuse:false)
+            );
 
-        var connector = new ConnectorService(endPointInfo, socketFactory, serverQueryTimeout, false);
         connector.Init(
             protocolVersion: connector.ProtocolVersion, serverSecret: null,
             requestTimeout: serverQueryTimeout,

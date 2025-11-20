@@ -311,7 +311,6 @@ public class SessionService : IDisposable
             ErrorCode = session.ErrorCode,
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
-            RedirectHostEndPoint = null,
             AdRequirement = accessToken.AdRequirement,
             ExtraData = session.ExtraData,
             ProtocolVersion = session.ProtocolVersion

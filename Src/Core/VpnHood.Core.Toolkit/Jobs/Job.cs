@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Toolkit.Jobs;

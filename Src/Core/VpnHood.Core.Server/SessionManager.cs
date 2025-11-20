@@ -312,7 +312,11 @@ public class SessionManager : IAsyncDisposable, IDisposable
                     ErrorMessage = session.SessionResponseEx.ErrorMessage,
                     AccessUsage = session.SessionResponseEx.AccessUsage,
                     SuppressedBy = session.SessionResponseEx.SuppressedBy,
-                    RedirectHostEndPoint = session.SessionResponseEx.RedirectHostEndPoint
+                    RedirectServerTokens = session.SessionResponseEx.RedirectServerTokens,
+#pragma warning disable CS0618 // Type or member is obsolete
+                    RedirectHostEndPoint = session.SessionResponseEx.RedirectHostEndPoint,
+                    RedirectHostEndPoints = session.SessionResponseEx.RedirectHostEndPoints,
+#pragma warning restore CS0618 // Type or member is obsolete
                 },
                 requestBase.RequestId);
 

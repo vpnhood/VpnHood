@@ -66,18 +66,21 @@ public class ServerFinderTest : TestBase
                 accessManagers.Add(accessManager);
             }
 
-            var serverEndPoints = servers.Select(x => x.ServerHost.TcpEndPoints.First()).ToArray();
-
-            accessManagers[2].RedirectHostEndPoints = [
-                serverEndPoints[4],
-                serverEndPoints[5],
-                serverEndPoints[6],
-                serverEndPoints[7]
+            var serverTokens = accessManagers.Select(x => x.CreateToken().ServerToken).ToArray();
+            accessManagers[2].RedirectServerTokens = [
+                serverTokens[4],
+                serverTokens[5],
+                serverTokens[6],
+                serverTokens[7]
             ];
 
             // create token by server[2]
             var token = TestHelper.CreateAccessToken(servers[0]);
-            token.ServerToken.HostEndPoints = [serverEndPoints[1], serverEndPoints[2]];
+            var serverEndPoints = servers.SelectMany(x => x.ServerHost.TcpEndPoints).ToArray();
+            token.ServerToken.HostEndPoints = [
+                serverEndPoints[1],
+                serverEndPoints[2]
+            ];
 
             // stop some servers
             await servers[0].DisposeAsync();

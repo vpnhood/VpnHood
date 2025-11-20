@@ -22,7 +22,8 @@ namespace VpnHood.Test.Tests;
 public class ClientServerTest : TestBase
 {
     [TestMethod]
-    public async Task Redirect_Server()
+    [Obsolete]
+    public async Task Redirect_Server_HostEndPoint()
     {
         // Create Server 1
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
@@ -49,14 +50,42 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    public async Task Redirect_Server_ServerToken()
+    {
+        // Create Server 1
+        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
+        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions1);
+        await using var server1 = await TestHelper.CreateServer(accessManager1);
+
+        // Create Server 2
+        var serverEndPoint2 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
+        fileAccessManagerOptions2.TcpEndPoints = [serverEndPoint2];
+        using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath);
+        await using var server2 = await TestHelper.CreateServer(accessManager2);
+        var token = accessManager2.CreateToken();
+
+        // redirect server1 to server2
+        accessManager1.RedirectServerTokens = [token.ServerToken];
+
+        // Create Client
+        var token1 = TestHelper.CreateAccessToken(accessManager1);
+        await using var client = await TestHelper.CreateClient(token1, vpnAdapter: TestHelper.CreateTestVpnAdapter());
+        await TestHelper.Test_Https();
+
+        Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
+    }
+
+
+    [TestMethod]
     public async Task Redirect_Server_By_ServerLocation()
     {
         // Create Server 1
         var serverEndPoint1 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint1]);
-        using var accessManager1 =
-            TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "US/california");
+        using var accessManager1 = TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "US/california");
         await using var server1 = await TestHelper.CreateServer(accessManager1);
+        var token1 = accessManager1.CreateToken();
 
         // Create Server 2
         var serverEndPoint2 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
@@ -64,14 +93,15 @@ public class ClientServerTest : TestBase
         using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath,
             serverLocation: "UK/london");
         await using var server2 = await TestHelper.CreateServer(accessManager2);
+        var token2 = accessManager2.CreateToken();
 
         // redirect server1 to server2
-        accessManager1.ServerLocations.Add("US/california", serverEndPoint1);
-        accessManager1.ServerLocations.Add("UK/london", serverEndPoint2);
+        accessManager1.ServerLocations.Add("US/california", token1.ServerToken);
+        accessManager1.ServerLocations.Add("UK/london", token2.ServerToken);
 
         // Create Client
-        var token1 = TestHelper.CreateAccessToken(accessManager1);
-        var clientOptions = TestHelper.CreateClientOptions(token: token1);
+        var token = TestHelper.CreateAccessToken(accessManager1);
+        var clientOptions = TestHelper.CreateClientOptions(token: token);
         clientOptions.ServerLocation = "UK/london";
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());

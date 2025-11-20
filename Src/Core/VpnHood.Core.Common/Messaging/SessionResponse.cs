@@ -18,11 +18,13 @@ public class SessionResponse
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public SessionSuppressType SuppressedBy { get; set; }
 
+    [Obsolete("Deprecated on protocol 10. User ServerTokens")]
     [JsonConverter(typeof(IPEndPointConverter))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint? RedirectHostEndPoint { get; set; }
     public ServerToken[]? RedirectServerTokens { get; set; }
 
+    [Obsolete("Deprecated on protocol 10. User ServerTokens")]
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint[]? RedirectHostEndPoints { get; set; }

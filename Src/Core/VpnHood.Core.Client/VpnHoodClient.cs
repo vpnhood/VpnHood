@@ -924,11 +924,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // init new connector
             _connectorService?.Dispose();
             State = ClientState.FindingBestServer;
+            var redirectServerTokens = ex.RedirectServerTokens;
 
             // legacy: convert the redirect host endpoints to a new server token using initial server token
-            var serverToken = JsonUtils.JsonClone(Token.ServerToken);
-            serverToken.HostEndPoints = ex.RedirectHostEndPoints;
-            var redirectedEndPoint = await _serverFinder.FindBestRedirectedServerAsync([serverToken], cancellationToken);
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (redirectServerTokens is null) {
+                var serverToken = JsonUtils.JsonClone(Token.ServerToken);
+                serverToken.HostEndPoints = ex.RedirectHostEndPoints;
+                redirectServerTokens = [serverToken];
+            }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            // find the best redirected server
+            var redirectedEndPoint = await _serverFinder.FindBestRedirectedServerAsync(redirectServerTokens, cancellationToken);
             await ConnectInternal(redirectedEndPoint, false, cancellationToken).Vhc();
         }
     }

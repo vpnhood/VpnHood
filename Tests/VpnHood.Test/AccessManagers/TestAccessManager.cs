@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
@@ -19,14 +20,17 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public DateTime? LastConfigureTime { get; private set; }
     public ServerInfo? LastServerInfo { get; private set; }
     public ServerStatus? LastServerStatus { get; private set; }
-    public IPEndPoint? RedirectHostEndPoint { get; set; }
-    public IPEndPoint[]? RedirectHostEndPoints { get; set; }
-    public Dictionary<string, IPEndPoint?> ServerLocations { get; set; } = new();
+    public Dictionary<string, ServerToken?> ServerLocations { get; set; } = new();
     public bool RejectAllAds { get; set; }
     public bool CanExtendPremiumByAd { get; set; }
     public Dictionary<string, string> AccessCodes { get; set; } = new();
     public int UserReviewRecommended { get; set; }
     public UserReview? UserReview { get; set; }
+    [Obsolete("Use RedirectServerTokens")]
+    public IPEndPoint? RedirectHostEndPoint { get; set; }
+    [Obsolete("Use RedirectServerTokens")]
+    public IPEndPoint[]? RedirectHostEndPoints { get; set; }
+    public ServerToken[]? RedirectServerTokens { get; set; }
 
     public void AddAdData(string adData)
     {
@@ -77,6 +81,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         if (!sessionRequestEx.AllowRedirect)
             return ret;
 
+#pragma warning disable CS0618 // Type or member is obsolete
         if (RedirectHostEndPoint != null &&
             !sessionRequestEx.HostEndPoint.Equals(RedirectHostEndPoint)) {
             ret.RedirectHostEndPoint = RedirectHostEndPoint;
@@ -88,24 +93,30 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
             ret.RedirectHostEndPoints = RedirectHostEndPoints;
             ret.ErrorCode = SessionErrorCode.RedirectHost;
         }
+#pragma warning restore CS0618 // Type or member is obsolete
+
+        if (RedirectServerTokens != null) {
+            ret.RedirectServerTokens = RedirectServerTokens;
+            ret.ErrorCode = SessionErrorCode.RedirectHost;
+        }
 
         // manage region
         if (sessionRequestEx.ServerLocation != null) {
             // check is location is valid
-            if (!ServerLocations.TryGetValue(sessionRequestEx.ServerLocation, out var redirectEndPoint)) {
+            if (!ServerLocations.TryGetValue(sessionRequestEx.ServerLocation, out var redirectServerToken)) {
                 ret.ErrorCode = SessionErrorCode.NoServerAvailable;
                 return ret;
             }
 
             // just accepted if it is null 
-            if (redirectEndPoint == null) {
+            if (redirectServerToken == null) {
                 sessionRequestEx.ServerLocation = null;
                 return ret;
             }
 
             // check if location is different
-            if (!sessionRequestEx.HostEndPoint.Equals(redirectEndPoint)) {
-                ret.RedirectHostEndPoint = ServerLocations[sessionRequestEx.ServerLocation];
+            if (!sessionRequestEx.HostEndPoint.Equals(redirectServerToken.HostEndPoints!.First())) {
+                ret.RedirectServerTokens = [redirectServerToken];
                 ret.ErrorCode = SessionErrorCode.RedirectHost;
             }
         }

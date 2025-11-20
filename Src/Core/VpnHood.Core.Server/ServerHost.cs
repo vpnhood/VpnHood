@@ -32,7 +32,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private bool _disposed;
     private readonly Job _cleanupConnectionsJob;
 
-    public const int MaxProtocolVersion = 9;
+    public const int MaxProtocolVersion = 10;
     public const int MinProtocolVersion = 6;
     public int MinClientProtocolVersion { get; set; } = 8;
     public bool IsIpV6Supported { get; set; }
@@ -651,8 +651,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
             ErrorMessage = sessionResponseEx.ErrorMessage,
             AccessUsage = sessionResponseEx.AccessUsage,
             SuppressedBy = sessionResponseEx.SuppressedBy,
-            RedirectHostEndPoint = sessionResponseEx.RedirectHostEndPoint,
-            RedirectHostEndPoints = sessionResponseEx.RedirectHostEndPoints,
             SessionId = sessionResponseEx.SessionId,
             SessionKey = sessionResponseEx.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,

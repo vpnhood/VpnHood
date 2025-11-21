@@ -3125,6 +3125,7 @@ export class AppState implements IAppState {
     isDiagnosing!: boolean;
     channelProtocol!: ChannelProtocol;
     isProxyEndPointActive!: boolean;
+    promotionImageUrl?: string | null;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -3173,6 +3174,7 @@ export class AppState implements IAppState {
             this.isDiagnosing = _data["isDiagnosing"] !== undefined ? _data["isDiagnosing"] : null as any;
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
             this.isProxyEndPointActive = _data["isProxyEndPointActive"] !== undefined ? _data["isProxyEndPointActive"] : null as any;
+            this.promotionImageUrl = _data["promotionImageUrl"] !== undefined ? _data["promotionImageUrl"] : null as any;
         }
     }
 
@@ -3216,6 +3218,7 @@ export class AppState implements IAppState {
         data["isDiagnosing"] = this.isDiagnosing !== undefined ? this.isDiagnosing : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
         data["isProxyEndPointActive"] = this.isProxyEndPointActive !== undefined ? this.isProxyEndPointActive : null as any;
+        data["promotionImageUrl"] = this.promotionImageUrl !== undefined ? this.promotionImageUrl : null as any;
         return data;
     }
 }
@@ -3252,6 +3255,7 @@ export interface IAppState {
     isDiagnosing: boolean;
     channelProtocol: ChannelProtocol;
     isProxyEndPointActive: boolean;
+    promotionImageUrl?: string | null;
 }
 
 export enum AppConnectionState {
@@ -4500,6 +4504,7 @@ export class UserSettings implements IUserSettings {
     dnsMode!: DnsMode;
     proxySettings!: AppProxySettings;
     allowRemoteAccess!: boolean;
+    customData?: CustomData | null;
     dnsServers!: string[];
     useUdpChannel?: boolean | null;
 
@@ -4552,6 +4557,7 @@ export class UserSettings implements IUserSettings {
             this.dnsMode = _data["dnsMode"] !== undefined ? _data["dnsMode"] : null as any;
             this.proxySettings = _data["proxySettings"] ? AppProxySettings.fromJS(_data["proxySettings"]) : new AppProxySettings();
             this.allowRemoteAccess = _data["allowRemoteAccess"] !== undefined ? _data["allowRemoteAccess"] : null as any;
+            this.customData = _data["customData"] !== undefined ? _data["customData"] : null as any;
             if (Array.isArray(_data["dnsServers"])) {
                 this.dnsServers = [] as any;
                 for (let item of _data["dnsServers"])
@@ -4602,6 +4608,7 @@ export class UserSettings implements IUserSettings {
         data["dnsMode"] = this.dnsMode !== undefined ? this.dnsMode : null as any;
         data["proxySettings"] = this.proxySettings ? this.proxySettings.toJSON() : null as any;
         data["allowRemoteAccess"] = this.allowRemoteAccess !== undefined ? this.allowRemoteAccess : null as any;
+        data["customData"] = this.customData !== undefined ? this.customData : null as any;
         if (Array.isArray(this.dnsServers)) {
             data["dnsServers"] = [];
             for (let item of this.dnsServers)
@@ -4638,6 +4645,7 @@ export interface IUserSettings {
     dnsMode: DnsMode;
     proxySettings: AppProxySettings;
     allowRemoteAccess: boolean;
+    customData?: CustomData | null;
     dnsServers: string[];
     useUdpChannel?: boolean | null;
 }
@@ -5835,6 +5843,50 @@ export interface IProxyEndPointDefaults {
     port?: number | null;
     username?: string | null;
     password?: string | null;
+}
+
+export class CustomData implements ICustomData {
+
+    [key: string]: any;
+
+    constructor(data?: ICustomData) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            for (var property in _data) {
+                if (_data.hasOwnProperty(property))
+                    this[property] = _data[property];
+            }
+        }
+    }
+
+    static fromJS(data: any): CustomData {
+        data = typeof data === 'object' ? data : {};
+        let result = new CustomData();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        for (var property in this) {
+            if (this.hasOwnProperty(property))
+                data[property] = this[property];
+        }
+        return data;
+    }
+}
+
+export interface ICustomData {
+
+    [key: string]: any;
 }
 
 function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): any {

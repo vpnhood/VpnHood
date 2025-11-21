@@ -147,14 +147,14 @@ public class AndroidAppWebViewMainActivityHandler(
         }
     }
 
-    protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
+    protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? keyEvent)
     {
         if (keyCode == Keycode.Back && WebView?.CanGoBack() == true) {
             WebView.GoBack();
             return true;
         }
 
-        return base.OnKeyDown(keyCode, e);
+        return base.OnKeyDown(keyCode, keyEvent);
     }
 
     protected override void OnPause()

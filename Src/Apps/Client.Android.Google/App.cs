@@ -17,7 +17,7 @@ namespace VpnHood.App.Client.Droid.Google;
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : Application(javaReference, transfer)
 {
-    private AppOptions CreateAppOptions()
+    private static AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
         var resources = ClientAppResources.Resources;

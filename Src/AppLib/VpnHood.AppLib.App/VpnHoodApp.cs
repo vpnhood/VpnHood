@@ -416,13 +416,25 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()),
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
+                PromotionImageUrl = GetPromotionImageUrl(),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
-                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext)
-                    : SystemBarsInfo.Default
+                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext) : SystemBarsInfo.Default
             };
 
             return appState;
         }
+    }
+
+    private Uri? GetPromotionImageUrl()
+    {
+        var remoteSettings = SettingsService.RemoteSettings;
+        if (CurrentClientProfileInfo?.IsPremiumAccount == true ||
+            remoteSettings?.PromotionImageUrl is null ||
+            remoteSettings.PromotionEndDate is null ||
+            remoteSettings.PromotionEndDate < DateTime.UtcNow)
+            return null;
+
+        return remoteSettings.PromotionImageUrl;
     }
 
     public Task ForceUpdateState()

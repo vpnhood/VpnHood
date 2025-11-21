@@ -182,7 +182,7 @@ public class IpV4Packet : IpPacket
         return originalChecksum == calculated;
     }
 
-    public void UpdateHeaderChecksum(IpPacket ipPacket)
+    public void UpdateHeaderChecksum()
     {
         Span[10] = 0;
         Span[11] = 0;

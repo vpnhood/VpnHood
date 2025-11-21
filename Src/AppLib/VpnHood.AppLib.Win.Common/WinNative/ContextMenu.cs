@@ -1,7 +1,8 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-
+// ReSharper disable UnassignedField.Global
 // ReSharper disable once CheckNamespace
+// ReSharper disable ClassWithVirtualMembersNeverInherited.Global
 namespace WinNative;
 
 public class ContextMenu : IDisposable
@@ -112,6 +113,14 @@ public class ContextMenu : IDisposable
     }
 
 
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+
     protected virtual void Dispose(bool disposing)
     {
         if (_disposedValue) return;
@@ -131,10 +140,4 @@ public class ContextMenu : IDisposable
         Dispose(false);
     }
 
-    public void Dispose()
-    {
-        // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
 }

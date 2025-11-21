@@ -3,6 +3,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
+// ReSharper disable once UnusedType.Global
 public class StreamCryptor : AsyncStreamDecorator
 {
     private readonly BufferCryptor _bufferCryptor;
@@ -30,7 +31,7 @@ public class StreamCryptor : AsyncStreamDecorator
 
     public static StreamCryptor Create(Stream stream, byte[] key, byte[]? salt = null,
         long maxCipherPos = long.MaxValue,
-        bool leaveOpen = false, bool encryptInGivenBuffer = true)
+        bool leaveOpen = false)
     {
         if (stream is null) throw new ArgumentNullException(nameof(stream));
         if (key is null) throw new ArgumentNullException(nameof(key));

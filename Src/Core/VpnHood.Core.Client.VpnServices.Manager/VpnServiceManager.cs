@@ -401,7 +401,7 @@ public class VpnServiceManager : IDisposable
         if (!ConnectionInfo.IsStarted())
             return true;
 
-        using var stopTimeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var stopTimeoutCts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(5));
 
         // send disconnect request
         try {

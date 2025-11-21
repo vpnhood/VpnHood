@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
 
-internal class AndroidAppLoader
+internal static class AndroidAppLoader
 {
     public static void Init(Activity activity)
     {

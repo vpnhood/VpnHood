@@ -1,5 +1,6 @@
 ﻿namespace VpnHood.Core.Common.Messaging;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class AccessDevice
 {
     public DateTime LastUsedTime { get; set; }

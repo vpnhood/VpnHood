@@ -38,6 +38,8 @@ public class AndroidAppMainActivityHandler
 
     protected virtual void OnCreate(Bundle? savedInstanceState)
     {
+        _ = savedInstanceState;
+
         AppUiContext.Context = new AndroidUiContext(ActivityEvent);
 
         // initialize the window
@@ -109,22 +111,30 @@ public class AndroidAppMainActivityHandler
         Toast.MakeText(ActivityEvent.Activity, message, ToastLength.Long)?.Show();
     }
 
-    protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions,
+    protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions, 
         [GeneratedEnum] Permission[] grantResults)
     {
+        _ = requestCode;
+        _ = permissions;
+        _ = grantResults;
     }
 
-    protected virtual bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
+    protected virtual bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? keyEvent)
     {
+        _ = keyEvent;
         return false;
     }
 
     protected virtual void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
     {
+        _ = requestCode;
+        _ = resultCode;
+        _ = data;
     }
 
     protected virtual void OnConfigurationChanged(Configuration args)
     {
+        _ = args;
         VpnHoodApp.Instance.UpdateUi();
     }
 

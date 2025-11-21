@@ -1,5 +1,6 @@
 ﻿namespace VpnHood.Core.Common.Messaging;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class AccessDevicesSummary
 {
     public int DeviceCount { get; init; } // The count of devices

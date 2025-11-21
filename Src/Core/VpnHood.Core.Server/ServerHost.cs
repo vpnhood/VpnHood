@@ -29,8 +29,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private readonly List<TcpListener> _tcpListeners;
     private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
     private readonly List<Task> _tcpListenerTasks = [];
-    private bool _disposed;
     private readonly Job _cleanupConnectionsJob;
+    private readonly AsyncLock _configureLock = new();
+    private bool _disposed;
 
     public const int MaxProtocolVersion = 10;
     public const int MinProtocolVersion = 6;
@@ -71,7 +72,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
         _tcpListenerTasks.RemoveAll(x => x.IsCompleted);
     }
 
-    private readonly AsyncLock _configureLock = new();
 
     private void ConfigureUdpListeners(IPEndPoint[] udpEndPoints, TransferBufferSize? bufferSize)
     {
@@ -242,6 +242,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
             var headers =
                 await HttpUtils.ParseHeadersAsync(sslStream, cancellationToken).Vhc()
                 ?? throw new Exception("Connection has been closed before receiving any request.");
+
+            VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", string.Join("\n", headers) );
+
 
             Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);

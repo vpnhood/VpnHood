@@ -1,6 +1,6 @@
 namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
-public class ProxyEndPointUpdater
+public static class ProxyEndPointUpdater
 {
     public const int DefaultMaxItemCount = 1000;
     public const int DefaultMaxPenalty = 50;

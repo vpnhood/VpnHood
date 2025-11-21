@@ -97,7 +97,7 @@ public class QuickLaunchTileService : TileService
         Refresh();
     }
 
-    private void DisableQuickLaunchPrompt()
+    private static void DisableQuickLaunchPrompt()
     {
         // User already has interacted with the tile
         // Do not prompt for it again

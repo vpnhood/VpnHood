@@ -3,7 +3,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test;
 
-public class TestConstants
+public static class TestConstants
 {
     public static TimeSpan DefaultHttpTimeout => TimeSpan.FromSeconds(1).WhenNoDebugger();
     public static TimeSpan DefaultUdpTimeout => DefaultHttpTimeout;

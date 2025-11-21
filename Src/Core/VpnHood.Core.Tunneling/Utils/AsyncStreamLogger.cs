@@ -1,12 +1,10 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Utils;
 
-// Use for debugging
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
+// ReSharper disable once UnusedType.Global
 public class AsyncStreamTracker(Stream sourceStream, bool leaveOpen)
     : AsyncStreamDecorator(sourceStream, leaveOpen)
 {

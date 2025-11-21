@@ -199,6 +199,7 @@ public static class VhUtils
 
     public static byte[] GenerateKey()
     {
+        // ReSharper disable once IntroduceOptionalParameters.Global
         return GenerateKey(128);
     }
 

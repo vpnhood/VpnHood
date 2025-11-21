@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
+﻿using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Tunneling.Messaging;
 
 namespace VpnHood.Core.Server.Exceptions;
@@ -32,12 +30,5 @@ public class ServerUnauthorizedAccessException : UnauthorizedAccessException
     {
         IpEndPointPair = ipEndPointPair;
         SessionId = session.SessionId;
-    }
-
-    public virtual void Log()
-    {
-        VhLogger.Instance.LogInformation("{Message} SessionId: {SessionId}, ClientIp: {ClientIp}, TokenId: {TokenId}",
-            Message, VhLogger.FormatSessionId(SessionId), VhLogger.Format(IpEndPointPair.RemoteEndPoint.Address),
-            VhLogger.FormatId(TokenId));
     }
 }

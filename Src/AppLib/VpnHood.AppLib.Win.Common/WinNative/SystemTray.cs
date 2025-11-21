@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-
+// ReSharper disable EventNeverSubscribedTo.Global
 // ReSharper disable once CheckNamespace
+
 namespace WinNative;
 
-public class SystemTray : IDisposable
+public sealed class SystemTray : IDisposable
 {
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern bool Shell_NotifyIcon(uint message, ref NotifyIconData data);
@@ -143,7 +144,7 @@ public class SystemTray : IDisposable
 
     private bool _disposedValue;
 
-    protected virtual void Dispose(bool disposing)
+    private void Dispose(bool disposing)
     {
         if (_disposedValue) return;
 

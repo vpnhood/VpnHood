@@ -2,5 +2,5 @@
 
 public class CommandReceivedEventArgs(string[] arguments) : EventArgs
 {
-    public string[] Arguments = arguments;
+    public string[] Arguments => arguments;
 }

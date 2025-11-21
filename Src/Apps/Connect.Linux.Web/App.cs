@@ -10,7 +10,7 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Linux.Web;
 
-internal class App
+internal static class App
 {
     public static string StoragePath => Path.Combine(
         Path.GetDirectoryName(Path.GetDirectoryName(Environment.ProcessPath)!)!, "storage");

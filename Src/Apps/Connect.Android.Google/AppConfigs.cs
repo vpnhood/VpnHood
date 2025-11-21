@@ -59,7 +59,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public string InmobiPlacementId { get; set; } = "000000000000"; //YOUR_INMOBI_PLACEMENT_ID
     public bool InmobiIsDebugMode { get; set; } = IsDebugMode;
 
-    public string[]? AllowedPrivateDnsProviders = [
+    public string[]? AllowedPrivateDnsProviders { get; set; } = [
         "one.one.one.one",
         "family.cloudflare-dns.com",
         "adult-filter-dns.cleanbrowsing.org",

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using VpnHood.Core.Toolkit.Utils;
+// ReSharper disable OutParameterValueIsAlwaysDiscarded.Global
 
 namespace VpnHood.Core.Toolkit.Collections;
 

@@ -80,7 +80,7 @@ public class CommandListener(string commandFilePath) : IDisposable
         }
     }
 
-    protected virtual void OnCommand(string[] args)
+    protected void OnCommand(string[] args)
     {
         CommandReceived?.Invoke(this, new CommandReceivedEventArgs(args));
     }

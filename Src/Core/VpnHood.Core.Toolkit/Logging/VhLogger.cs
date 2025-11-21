@@ -18,7 +18,7 @@ public static class VhLogger
         }
     }
 
-    public static EventId TcpCloseEventId { get; set; } = new();
+    public static EventId TcpCloseEventId { get; set; }
     public static bool IsAnonymousMode { get; set; } = true;
 
     public static LogLevel MinLogLevel { get; set; } = LogLevel.Information;

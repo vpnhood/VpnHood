@@ -205,6 +205,7 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
+    // ReSharper disable once VirtualMemberNeverOverridden.Global
     protected virtual void LogPacket(IpPacket ipPacket, string message, LogLevel? logLevel = null,
         Exception? exception = null)
     {

@@ -9,6 +9,7 @@ using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob;
 
+// ReSharper disable once UnusedType.Global
 public class AdMobAppOpenAdProvider(string adUnitId) : IAppAdProvider
 {
     private AppOpenAd? _loadedAd;

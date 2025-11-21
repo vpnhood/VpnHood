@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Tokens;
@@ -33,6 +34,8 @@ public class UserSettings
     public DnsMode DnsMode { get; set; }
     public AppProxySettings ProxySettings { get; set; } = new();
     public bool AllowRemoteAccess { get; set; }
+    public JsonElement? CustomData { get; set; }
+
 
     // for compatibility convert old nullable to empty array
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]

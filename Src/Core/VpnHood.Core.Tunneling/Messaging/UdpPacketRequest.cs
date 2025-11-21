@@ -2,6 +2,7 @@
 
 namespace VpnHood.Core.Tunneling.Messaging;
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public class UdpPacketRequest()
     : RequestBase(Messaging.RequestCode.TcpPacketChannel)
 {

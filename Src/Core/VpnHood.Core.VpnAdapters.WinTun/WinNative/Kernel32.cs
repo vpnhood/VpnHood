@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.VpnAdapters.WinTun.WinNative;
 
-internal class Kernel32
+internal static class Kernel32
 {
     public const uint WaitObject0 = 0;
     public const uint Infinite = 0xFFFFFFFF;

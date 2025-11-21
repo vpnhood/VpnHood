@@ -40,4 +40,5 @@ public class AppState
     public required bool IsDiagnosing { get; set; }
     public required ChannelProtocol ChannelProtocol { get; set; }
     public required bool IsProxyEndPointActive { get; set; }
+    public required Uri? PromotionImageUrl { get; set; }
 }

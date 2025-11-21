@@ -34,7 +34,7 @@ internal class ConnectorServiceBase : IDisposable
     public int ProtocolVersion { get; private set; } = 8;
     public VpnEndPoint VpnEndPoint { get; init; }
 
-    public ConnectorServiceBase(ConnectorServiceOptions options)
+    protected ConnectorServiceBase(ConnectorServiceOptions options)
     {
         _socketFactory = options.SocketFactory;
         AllowTcpReuse = options.AllowTcpReuse;
@@ -47,6 +47,7 @@ internal class ConnectorServiceBase : IDisposable
 
     protected void Init(int protocolVersion, byte[]? serverSecret, TimeSpan tcpReuseTimeout, bool useWebSocket)
     {
+        _ = serverSecret;
         ProtocolVersion = protocolVersion;
         TcpReuseTimeout = tcpReuseTimeout;
         _useWebSocket = useWebSocket;

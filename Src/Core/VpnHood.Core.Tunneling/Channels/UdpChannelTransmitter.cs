@@ -46,6 +46,8 @@ public abstract class UdpChannelTransmitter : IDisposable
     public async Task<int> SendAsync(IPEndPoint? ipEndPoint, ulong sessionId, long sessionCryptoPosition,
         Memory<byte> buffer, int protocolVersion)
     {
+        _ = protocolVersion;
+
         try {
             await _semaphore.WaitAsync().Vhc();
             var bufferSpan = buffer.Span;

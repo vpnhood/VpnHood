@@ -1,15 +1,12 @@
 ﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-
+// ReSharper disable ClassWithVirtualMembersNeverInherited.Global
 // ReSharper disable once CheckNamespace
+// ReSharper disable IdentifierTypo
 namespace WinNative;
 
 public class Window : IDisposable
 {
-    [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Local")]
-    [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]
-    [SuppressMessage("ReSharper", "IdentifierTypo")]
     [StructLayout(LayoutKind.Sequential)]
     private struct WndClassEx
     {

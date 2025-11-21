@@ -225,6 +225,7 @@ public class Session : IDisposable
 
     public void Adapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
+        _ = sender;
         Proxy_PacketReceived(ipPacket);
     }
 
@@ -354,12 +355,16 @@ public class Session : IDisposable
     public Task ProcessUdpPacketRequest(UdpPacketRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
+        _ = request;
+        _ = clientStream;
+        _ = cancellationToken;
         throw new NotImplementedException();
     }
 
     public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream,
         CancellationToken cancellationToken)
     {
+        _ = request;
         await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 

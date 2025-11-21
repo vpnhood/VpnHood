@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+// ReSharper disable CollectionNeverQueried.Global
 
 namespace VpnHood.Core.VpnAdapters.LinuxTun.LinuxNative;
 

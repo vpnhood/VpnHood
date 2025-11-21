@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.IpLocations.Providers.Offlines;
 
-public class Ip2LocationDbParser
+public static class Ip2LocationDbParser
 {
     public static async Task UpdateLocalDb(string filePath, string apiKey, bool forIpRange, TimeSpan? interval = null,
         CancellationToken cancellationToken = default)

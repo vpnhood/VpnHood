@@ -236,7 +236,7 @@ public class TestHelper : IDisposable
         return fileAccessManager.GetToken(accessToken);
     }
 
-    private FileAccessManager GetFileAccessManagerFromServer(VpnHoodServer server)
+    private static FileAccessManager GetFileAccessManagerFromServer(VpnHoodServer server)
     {
         var accessManager = server.AccessManager;
         return accessManager switch {

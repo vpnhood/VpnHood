@@ -30,7 +30,7 @@ public static class DeviceExtensions
                 await Task.Delay(delay, cancellationToken);
             }
             finally {
-                result = device.TryBindProcessToVpn(true);
+                result = device.TryBindProcessToVpn(value);
             }
 
             return result;

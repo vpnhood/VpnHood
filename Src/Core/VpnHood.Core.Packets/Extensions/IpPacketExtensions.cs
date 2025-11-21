@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Runtime.InteropServices;
 using VpnHood.Core.Toolkit.Net;
+// ReSharper disable OutParameterValueIsAlwaysDiscarded.Global
 
 namespace VpnHood.Core.Packets.Extensions;
 
@@ -121,7 +122,7 @@ public static class IpPacketExtensions
         public void UpdateAllChecksums()
         {
             if (ipPacket is IpV4Packet ipV4Packet)
-                ipV4Packet.UpdateHeaderChecksum(ipV4Packet);
+                ipV4Packet.UpdateHeaderChecksum();
 
             if (ipPacket.Protocol == IpProtocol.Udp)
                 ipPacket.ExtractUdp().UpdateChecksum(ipPacket);

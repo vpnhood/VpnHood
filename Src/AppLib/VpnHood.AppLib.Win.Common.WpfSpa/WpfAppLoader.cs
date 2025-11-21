@@ -7,7 +7,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Win.Common.WpfSpa;
 
-internal class WpfAppLoader
+internal static class WpfAppLoader
 {
     public static void Init(Window window)
     {

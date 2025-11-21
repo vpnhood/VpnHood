@@ -4,7 +4,7 @@ using VpnHood.Core.Tunneling.Channels;
 
 namespace VpnHood.Core.Client;
 
-public class ClientUdpChannelFactory
+public static class ClientUdpChannelFactory
 {
     private class ClientUdpChannelTransmitter(UdpClient udpClient, byte[] serverKey)
         : UdpChannelTransmitter(udpClient, serverKey)

@@ -90,6 +90,7 @@ public abstract class IpPacket(Memory<byte> buffer) : IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
+        _ = disposing;
         _disposed = true;
     }
 

@@ -69,6 +69,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         _outStream = new FileOutputStream(_parcelFileDescriptor.FileDescriptor);
 
         VhLogger.Instance.LogDebug("Android tun adapter has been established.");
+        _ = cancellationToken;
         return Task.CompletedTask;
     }
 
@@ -138,6 +139,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
     {
+        _ = cancellationToken;
         ArgumentNullException.ThrowIfNull(_builder);
         _builder.SetSession(sessionName);
         return Task.CompletedTask;
@@ -170,6 +172,8 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken)
     {
+        _ = cancellationToken;
+
         ArgumentNullException.ThrowIfNull(_builder);
         foreach (var packageId in packageIds)
             try {
@@ -184,6 +188,8 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken)
     {
+        _ = cancellationToken;
+
         ArgumentNullException.ThrowIfNull(_builder);
         foreach (var packageId in packageIds)
             try {

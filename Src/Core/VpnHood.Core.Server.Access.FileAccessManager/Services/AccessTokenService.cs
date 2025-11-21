@@ -19,7 +19,7 @@ public class AccessTokenService
     public AccessTokenService(string storagePath)
     {
         _storagePath = storagePath;
-        AccessTokenLegacyConverter.ConvertToken1ToToken2(storagePath, FileExtAccessToken);
+        AccessTokenLegacyConverter.ConvertTokens(storagePath, FileExtAccessToken);
     }
 
     private string GetAccessTokenFileName(string tokenId)

@@ -24,7 +24,7 @@ public static class ConnectAppResources
 
     public static AppResources Resources => LazyResource.Value;
 
-    public static AppFeature[] PremiumFeatures = [
+    public static AppFeature[] PremiumFeatures { get; } = [
         AppFeature.CustomDns,
         AppFeature.AlwaysOn,
         AppFeature.QuickLaunch,

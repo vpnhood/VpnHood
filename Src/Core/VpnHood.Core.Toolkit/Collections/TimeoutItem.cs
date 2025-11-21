@@ -7,6 +7,7 @@ public class TimeoutItem : ITimeoutItem
 
     protected virtual void Dispose(bool disposing)
     {
+        _ = disposing;
         IsDisposed = true;
     }
 

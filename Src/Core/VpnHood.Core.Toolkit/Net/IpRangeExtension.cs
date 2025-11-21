@@ -11,6 +11,8 @@ public static class IpRangeExtension
 
         public IEnumerable<IpRange> Intersect(IEnumerable<IpRange> second)
         {
+            _ = second;
+
             // prevent use Linq.Intersect in mistake. it is bug prone.
             throw new NotSupportedException($"Use {nameof(IpRangeOrderedList)}.Intersect.");
         }

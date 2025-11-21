@@ -19,7 +19,7 @@ internal class ApiController : IDisposable
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private VpnHoodClient VpnHoodClient => _vpnHoodService.RequiredClient;
     public IPEndPoint? ApiEndPoint { get; private set; }
-    public byte[] ApiKey { get; } = VhUtils.GenerateKey(128);
+    public byte[] ApiKey { get; } = VhUtils.GenerateKey(keySizeInBit: 128);
     public VpnServiceHost? ServiceContext { get; set; }
 
     public ApiController(VpnServiceHost vpnHoodService)

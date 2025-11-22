@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-        <Description>VpnHood Toolkit Library can be used in any project</Description>
 		<TargetFramework>net10.0</TargetFramework>
+        <Description>VpnHood Toolkit Library can be used in any project</Description>
 	</PropertyGroup>
 
 	<PropertyGroup>

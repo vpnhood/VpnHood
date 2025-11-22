@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Establish a connection to a VpnHood server. If you need to create a VpnApp client, we recommend using VpnHood.AppLib</Description>
 		<TargetFramework>net10.0</TargetFramework>
+		<Description>Establish a connection to a VpnHood server. If you need to create a VpnApp client, we recommend using VpnHood.AppLib</Description>
 		<RootNamespace>VpnHood.Core.Client</RootNamespace>
+		<OutputType>Library</OutputType>
 	</PropertyGroup>
 
 	<PropertyGroup>

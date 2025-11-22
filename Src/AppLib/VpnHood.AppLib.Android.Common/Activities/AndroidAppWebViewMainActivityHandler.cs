@@ -3,6 +3,7 @@ using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
@@ -20,6 +21,7 @@ public class AndroidAppWebViewMainActivityHandler(
     private bool _isWeViewVisible;
     private WebView? WebView { get; set; }
     public Exception? WebViewCreateException { get; private set; }
+    private AndroidBackInvokedCallback? _backInvokedCallback;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -116,6 +118,7 @@ public class AndroidAppWebViewMainActivityHandler(
                 WebView.SetBackgroundColor(VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value
                     .ToAndroidColor());
 
+            // Set WebView clients
             var webViewClient = new AndroidAppWebViewClient();
             webViewClient.PageLoaded += WebViewClient_PageLoaded;
             WebView.SetWebViewClient(webViewClient);
@@ -123,7 +126,14 @@ public class AndroidAppWebViewMainActivityHandler(
             if (VpnHoodApp.Instance.Features.IsDebugMode)
                 WebView.SetWebContentsDebuggingEnabled(true);
 
+            // Load the initial URL
             WebView.LoadUrl(GetLaunchUrl(WebView));
+
+            // Register back callback for Android 13+ (API 33+) with default priority (0)
+            if (OperatingSystem.IsAndroidVersionAtLeast(33)) {
+                _backInvokedCallback = new AndroidBackInvokedCallback(HandleBackInvoked);
+                ActivityEvent.Activity.OnBackInvokedDispatcher.RegisterOnBackInvokedCallback(priority: 0, _backInvokedCallback);
+            }
         }
         catch (Exception ex) {
             WebViewCreateException = ex;
@@ -149,7 +159,8 @@ public class AndroidAppWebViewMainActivityHandler(
 
     protected override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? keyEvent)
     {
-        if (keyCode == Keycode.Back && WebView?.CanGoBack() == true) {
+        // For Android versions prior to 13 (API 33), handle back button via OnKeyDown
+        if (!OperatingSystem.IsAndroidVersionAtLeast(33) && keyCode == Keycode.Back && WebView?.CanGoBack() == true) {
             WebView.GoBack();
             return true;
         }
@@ -176,5 +187,28 @@ public class AndroidAppWebViewMainActivityHandler(
 
         WebView?.OnResume();
         base.OnResume();
+    }
+
+    protected override void OnDestroy()
+    {
+        // Unregister back callback if registered
+        if (_backInvokedCallback != null) {
+            ActivityEvent.Activity.OnBackInvokedDispatcher.UnregisterOnBackInvokedCallback(_backInvokedCallback);
+            _backInvokedCallback.Dispose();
+            _backInvokedCallback = null;
+        }
+
+        base.OnDestroy();
+    }
+
+    private void HandleBackInvoked()
+    {
+        if (WebView?.CanGoBack() == true) {
+            WebView.GoBack();
+        }
+        else {
+            // Let the system handle the back action (minimize/close the app)
+            ActivityEvent.Activity.Finish();
+        }
     }
 }

@@ -427,6 +427,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private Uri? GetPromotionImageUrl()
     {
+        // not applied on china
+        if (GetClientCountryCode(false).Equals("CN", StringComparison.OrdinalIgnoreCase))
+            return null;
+
         var remoteSettings = SettingsService.RemoteSettings;
         if (CurrentClientProfileInfo?.IsPremiumAccount == true ||
             remoteSettings?.PromotionImageUrl is null ||

@@ -4,6 +4,7 @@ param(
 $ErrorActionPreference = "Stop";
 
 $solutionDir = Split-Path -parent (Split-Path -parent $PSScriptRoot);
+$gitDir = "$solutionDir/.git";
 $vhDir = Split-Path -parent $solutionDir;
 $pubDir = "$solutionDir/Pub";
 $msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
@@ -85,11 +86,11 @@ function Get-RolloutPercentage {
 
 function CommitAndPushToMainRepo {
 	Write-Host "Commit & push current changes to the main repo"
-	git add -A
-	git commit -m "Publish $versionTag"
+	git --git-dir=$gitDir add -A
+	git --git-dir=$gitDir commit -m "Publish $versionTag"
 
 	Write-Host "Push to main"
-	git push origin development:main --force 
+	git --git-dir=$gitDir push origin development:main --force 
 }
 
 # push to repo using gh api.

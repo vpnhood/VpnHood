@@ -8,7 +8,6 @@ namespace VpnHood.Core.Common.IpLocations.Providers.Onlines;
 
 public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : IIpLocationProvider
 {
-    // ReSharper disable once ClassNeverInstantiated.Global (used in deserialization)
     internal class ApiLocation
     {
         [JsonPropertyName("ip")]

@@ -7,11 +7,9 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.IpLocations.Providers.Onlines;
 
-// ReSharper disable once UnusedType.Global
 public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? apiKey)
     : IIpLocationProvider
 {
-    // ReSharper disable once ClassNeverInstantiated.Global (used in deserialization)
     internal class ApiLocation
     {
         [JsonPropertyName("ip")]

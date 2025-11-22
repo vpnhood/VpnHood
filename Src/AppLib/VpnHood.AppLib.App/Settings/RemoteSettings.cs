@@ -1,6 +1,5 @@
 ﻿namespace VpnHood.AppLib.Settings;
 
-// ReSharper disable once ClassNeverInstantiated.Global : is used in deserialization
 public class RemoteSettings
 {
     public bool ShowInternalAd { get; set; }

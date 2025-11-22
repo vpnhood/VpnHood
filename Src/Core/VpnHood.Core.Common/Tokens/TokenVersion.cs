@@ -2,7 +2,6 @@
 
 namespace VpnHood.Core.Common.Tokens;
 
-// ReSharper disable once ClassNeverInstantiated.Global
 internal class TokenVersion
 {
     [JsonPropertyName("v")] 

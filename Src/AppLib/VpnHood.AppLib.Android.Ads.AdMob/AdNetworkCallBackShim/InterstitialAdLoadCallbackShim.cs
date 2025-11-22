@@ -1,13 +1,14 @@
 ﻿using Android.Runtime;
 using Google.Android.Gms.Ads.Interstitial;
 
-namespace VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackFix;
+// ReSharper disable UnusedMember.Local
 
-public abstract class InterstitialAdLoadCallback : Google.Android.Gms.Ads.Interstitial.InterstitialAdLoadCallback
+namespace VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackShim;
+
+public abstract class InterstitialAdLoadCallbackShim : InterstitialAdLoadCallback
 {
     private static Delegate? _cbOnAdLoaded;
 
-    // ReSharper disable once UnusedMember.Local
     private static Delegate GetOnAdLoadedHandler()
     {
         return _cbOnAdLoaded ??= JNINativeWrapper.CreateDelegate((Action<IntPtr, IntPtr, IntPtr>)OnAdLoadedNative);
@@ -16,10 +17,15 @@ public abstract class InterstitialAdLoadCallback : Google.Android.Gms.Ads.Inters
     private static void OnAdLoadedNative(IntPtr env, IntPtr nativeThis, IntPtr nativeP0)
     {
         var interstitialAdLoadCallback =
-            GetObject<InterstitialAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
+            GetObject<InterstitialAdLoadCallbackShim>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
         var interstitialAd = GetObject<InterstitialAd>(nativeP0, JniHandleOwnership.DoNotTransfer);
         if (interstitialAd != null)
             interstitialAdLoadCallback?.OnAdLoaded(interstitialAd);
+    }
+
+    private static void n_OnAdLoaded(IntPtr jnienv, IntPtr nativeThis, IntPtr nativeP0)
+    {
+        OnAdLoadedNative(jnienv, nativeThis, nativeP0);
     }
 
     // ReSharper disable once StringLiteralTypo

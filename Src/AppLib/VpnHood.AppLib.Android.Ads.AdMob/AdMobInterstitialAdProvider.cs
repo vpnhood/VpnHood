@@ -2,6 +2,7 @@
 using Google.Android.Gms.Ads.Interstitial;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackShim;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
@@ -87,7 +88,7 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
         }
     }
 
-    private class MyInterstitialAdLoadCallback : AdNetworkCallBackFix.InterstitialAdLoadCallback
+    private class MyInterstitialAdLoadCallback : InterstitialAdLoadCallbackShim
     {
         private readonly TaskCompletionSource<InterstitialAd> _loadedCompletionSource = new();
         public Task<InterstitialAd> Task => _loadedCompletionSource.Task;

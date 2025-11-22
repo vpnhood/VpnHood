@@ -1,9 +1,10 @@
 using Android.Runtime;
 using Google.Android.Gms.Ads.Rewarded;
+// ReSharper disable UnusedMember.Local
 
-namespace VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackFix;
+namespace VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackShim;
 
-public abstract class RewardedAdLoadCallback : Google.Android.Gms.Ads.Rewarded.RewardedAdLoadCallback
+public abstract class RewardedAdLoadCallbackShim : RewardedAdLoadCallback
 {
     private static Delegate? _cbOnAdLoaded;
 
@@ -13,10 +14,16 @@ public abstract class RewardedAdLoadCallback : Google.Android.Gms.Ads.Rewarded.R
         return _cbOnAdLoaded ??= JNINativeWrapper.CreateDelegate((Action<IntPtr, IntPtr, IntPtr>)OnAdLoadedNative);
     }
 
+    // Add the native callback method explicitly
+    private static void n_OnAdLoaded(IntPtr jnienv, IntPtr nativeThis, IntPtr nativeP0)
+    {
+        OnAdLoadedNative(jnienv, nativeThis, nativeP0);
+    }
+
     private static void OnAdLoadedNative(IntPtr env, IntPtr nativeThis, IntPtr nativeP0)
     {
         var rewardedAdLoadCallback =
-            GetObject<RewardedAdLoadCallback>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
+            GetObject<RewardedAdLoadCallbackShim>(env, nativeThis, JniHandleOwnership.DoNotTransfer);
         var rewardedAd = GetObject<RewardedAd>(nativeP0, JniHandleOwnership.DoNotTransfer);
         if (rewardedAd != null)
             rewardedAdLoadCallback?.OnAdLoaded(rewardedAd);

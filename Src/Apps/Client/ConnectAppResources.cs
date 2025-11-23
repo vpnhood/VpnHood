@@ -2,6 +2,7 @@ using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets.ClassicSpa;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
+using VpnHood.Core.Toolkit.Graphics;
 
 namespace VpnHood.App.Client;
 
@@ -11,9 +12,9 @@ public static class ConnectAppResources
         IpLocationZipData = Ip2LocationLiteDb.ZipData,
         SpaZipData = ConnectSpaResources.SpaZipData,
         Colors = new AppResources.AppColors {
-            NavigationBarColor = ConnectSpaResources.NavigationBarColor,
-            WindowBackgroundColor = ConnectSpaResources.WindowBackgroundColor,
-            ProgressBarColor = ConnectSpaResources.ProgressBarColor
+            NavigationBarColor = VhColor.Parse(ConnectSpaResources.NavigationBarColor),
+            WindowBackgroundColor = VhColor.Parse(ConnectSpaResources.WindowBackgroundColor),
+            ProgressBarColor = VhColor.Parse(ConnectSpaResources.ProgressBarColor)
         },
         Icons = new AppResources.AppIcons {
             SystemTrayConnectedIcon = new AppResources.IconData(ConnectSpaResources.SystemTrayConnectedIcon),

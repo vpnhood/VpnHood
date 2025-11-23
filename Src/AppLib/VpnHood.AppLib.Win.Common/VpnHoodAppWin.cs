@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Win;
 using VpnHood.Core.Common;
+using VpnHood.Core.Toolkit.Graphics;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using WinNative;
@@ -68,7 +69,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         return ret;
     }
 
-    public static void SetWindowTitleBarColor(IntPtr hWnd, Color color)
+    public static void SetWindowTitleBarColor(IntPtr hWnd, VhColor color)
     {
         var attrValue = new[] { color.B << 16 | color.G << 8 | color.R };
         const int captionColor = 35;

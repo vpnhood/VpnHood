@@ -1,4 +1,4 @@
-﻿using System.Drawing;
+﻿using VpnHood.Core.Toolkit.Graphics;
 
 namespace VpnHood.AppLib.Abstractions;
 
@@ -6,7 +6,7 @@ public class AppResources
 {
     public byte[]? IpLocationZipData { get; set; }
     public byte[]? SpaZipData { get; set; }
-    public Size WindowSize { get; set; } = new(400, 700);
+    public VhSize WindowSize { get; set; } = new(400, 700);
     public AppStrings Strings { get; set; } = new();
     public AppColors Colors { get; set; } = new();
     public AppIcons Icons { get; set; } = new();
@@ -29,9 +29,9 @@ public class AppResources
 
     public class AppColors
     {
-        public Color? NavigationBarColor { get; set; }
-        public Color? WindowBackgroundColor { get; set; }
-        public Color? ProgressBarColor { get; set; }
+        public VhColor? NavigationBarColor { get; set; }
+        public VhColor? WindowBackgroundColor { get; set; }
+        public VhColor? ProgressBarColor { get; set; }
     }
 
     public class AppIcons

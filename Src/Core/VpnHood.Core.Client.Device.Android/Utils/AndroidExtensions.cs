@@ -1,11 +1,12 @@
 ﻿using Android.Graphics;
 using Android.Graphics.Drawables;
+using VpnHood.Core.Toolkit.Graphics;
 
 namespace VpnHood.Core.Client.Device.Droid.Utils;
 
 public static class AndroidExtensions
 {
-    public static Color ToAndroidColor(this System.Drawing.Color color)
+    public static Color ToAndroidColor(this VhColor color)
     {
         return new Color(color.R, color.G, color.B, color.A);
     }

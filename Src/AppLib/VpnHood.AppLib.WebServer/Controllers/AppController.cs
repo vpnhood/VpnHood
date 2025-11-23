@@ -7,6 +7,7 @@ using VpnHood.AppLib.WebServer.Extensions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Utils;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
@@ -98,6 +99,12 @@ internal class AppController : ControllerBase, IAppController
             var text = await Log();
             ctx.Response.ContentType = "text/plain";
             await ctx.Response.Send(text);
+        });
+
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "promotion.jpg", async ctx => {
+            var imageBytes = await PromotionImage();
+            ctx.Response.ContentType = "image/jpeg";
+            await ctx.Response.Send(imageBytes);
         });
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "installed-apps", async ctx => {
@@ -257,6 +264,14 @@ internal class AppController : ControllerBase, IAppController
         ms.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(ms);
         return await reader.ReadToEndAsync();
+    }
+
+    public async Task<byte[]> PromotionImage()
+    {
+        if (App.SettingsService.PromotionImageFilePath is null || !File.Exists(App.SettingsService.PromotionImageFilePath))
+            throw new NotExistsException();
+
+        return await File.ReadAllBytesAsync(App.SettingsService.PromotionImageFilePath);
     }
 
     public Task<DeviceAppInfo[]> GetInstalledApps()

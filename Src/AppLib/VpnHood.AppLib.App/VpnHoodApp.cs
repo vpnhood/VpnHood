@@ -416,7 +416,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SystemPrivateDns = VhUtils.TryInvoke("GetPrivateDns", () => Services.DeviceUiProvider.GetPrivateDns()),
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
-                PromotionImageUrl = GetPromotionImageUrl(),
+                PromotionExists = PromotionExists(),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.DeviceUiProvider.GetBarsInfo(uiContext) : SystemBarsInfo.Default
             };
@@ -425,20 +425,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private Uri? GetPromotionImageUrl()
+    private bool PromotionExists()
     {
         // not applied on china
         if (GetClientCountryCode(false).Equals("CN", StringComparison.OrdinalIgnoreCase))
-            return null;
+            return false;
 
         var remoteSettings = SettingsService.RemoteSettings;
         if (CurrentClientProfileInfo?.IsPremiumAccount == true ||
             remoteSettings?.PromotionImageUrl is null ||
             remoteSettings.PromotionEndDate is null ||
             remoteSettings.PromotionEndDate < DateTime.UtcNow)
-            return null;
+            return false;
 
-        return remoteSettings.PromotionImageUrl;
+        return SettingsService.PromotionImageFilePath != null;
     }
 
     public Task ForceUpdateState()

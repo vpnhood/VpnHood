@@ -3,6 +3,7 @@ using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+// ReSharper disable UnusedMemberInSuper.Global
 
 namespace VpnHood.AppLib.WebServer.Api;
 
@@ -20,6 +21,7 @@ public interface IAppController
     Task ClearLastError();
     Task SetUserSettings(UserSettings userSettings);
     Task<string> Log();
+    Task<byte[]> PromotionImage();
     Task<DeviceAppInfo[]> GetInstalledApps();
     Task VersionCheck();
     Task VersionCheckPostpone();

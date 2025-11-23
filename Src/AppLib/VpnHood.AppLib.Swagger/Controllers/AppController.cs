@@ -89,6 +89,13 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
+    [HttpGet("promotion.jpg")]
+    [Produces(MediaTypeNames.Image.Jpeg)]
+    public Task<byte[]> PromotionImage()
+    {
+        throw new SwaggerOnlyException();
+    }
+
     [HttpGet("installed-apps")]
     public Task<DeviceAppInfo[]> GetInstalledApps()
     {

@@ -901,6 +901,55 @@ export class AppClient {
         return Promise.resolve<string>(null as any);
     }
 
+    promotionImage( cancelToken?: CancelToken): Promise<string> {
+        let url_ = this.baseUrl + "/api/app/promotion.jpg";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "image/jpeg"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processPromotionImage(_response);
+        });
+    }
+
+    protected processPromotionImage(response: AxiosResponse): Promise<string> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+                result200 = resultData200 !== undefined ? resultData200 : null as any;
+    
+            return Promise.resolve<string>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<string>(null as any);
+    }
+
     getInstalledApps( cancelToken?: CancelToken): Promise<DeviceAppInfo[]> {
         let url_ = this.baseUrl + "/api/app/installed-apps";
         url_ = url_.replace(/[?&]$/, "");
@@ -3125,7 +3174,7 @@ export class AppState implements IAppState {
     isDiagnosing!: boolean;
     channelProtocol!: ChannelProtocol;
     isProxyEndPointActive!: boolean;
-    promotionImageUrl?: string | null;
+    promotionExists!: boolean;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -3174,7 +3223,7 @@ export class AppState implements IAppState {
             this.isDiagnosing = _data["isDiagnosing"] !== undefined ? _data["isDiagnosing"] : null as any;
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
             this.isProxyEndPointActive = _data["isProxyEndPointActive"] !== undefined ? _data["isProxyEndPointActive"] : null as any;
-            this.promotionImageUrl = _data["promotionImageUrl"] !== undefined ? _data["promotionImageUrl"] : null as any;
+            this.promotionExists = _data["promotionExists"] !== undefined ? _data["promotionExists"] : null as any;
         }
     }
 
@@ -3218,7 +3267,7 @@ export class AppState implements IAppState {
         data["isDiagnosing"] = this.isDiagnosing !== undefined ? this.isDiagnosing : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
         data["isProxyEndPointActive"] = this.isProxyEndPointActive !== undefined ? this.isProxyEndPointActive : null as any;
-        data["promotionImageUrl"] = this.promotionImageUrl !== undefined ? this.promotionImageUrl : null as any;
+        data["promotionExists"] = this.promotionExists !== undefined ? this.promotionExists : null as any;
         return data;
     }
 }
@@ -3255,7 +3304,7 @@ export interface IAppState {
     isDiagnosing: boolean;
     channelProtocol: ChannelProtocol;
     isProxyEndPointActive: boolean;
-    promotionImageUrl?: string | null;
+    promotionExists: boolean;
 }
 
 export enum AppConnectionState {

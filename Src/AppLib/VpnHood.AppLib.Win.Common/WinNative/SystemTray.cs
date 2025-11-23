@@ -10,11 +10,6 @@ public sealed class SystemTray : IDisposable
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     private static extern bool Shell_NotifyIcon(uint message, ref NotifyIconData data);
 
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public static extern IntPtr LoadImage(IntPtr hInst, string lpszName, uint uType, int cxDesired, int cyDesired,
-        uint fuLoad);
-
     public event EventHandler? DoubleClicked;
     public event EventHandler? Clicked;
     public ContextMenu? ContextMenu { get; set; }

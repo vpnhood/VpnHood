@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
-using System.Drawing;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Win.Common.WinNative;
 using VpnHood.Core.Client.Device.Win;
 using VpnHood.Core.Common;
 using VpnHood.Core.Toolkit.Graphics;
@@ -21,10 +21,10 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
     private SystemTray? _sysTray;
     private readonly CommandListener _commandListener;
     private readonly string _storageFolder;
-    private readonly Icon _appIcon;
-    private Icon? _disconnectedIcon;
-    private Icon? _connectedIcon;
-    private Icon? _connectingIcon;
+    private readonly IntPtr _appIcon;
+    private IntPtr _disconnectedIcon;
+    private IntPtr _connectedIcon;
+    private IntPtr _connectingIcon;
     private int _connectMenuItemId;
     private int _disconnectMenuItemId;
     private int _openMainWindowMenuItemId;
@@ -46,11 +46,11 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         _appId = appId;
         _storageFolder = storageFolder;
 
-        // get app icon
-        var assemblyLocation = Assembly.GetEntryAssembly()?.Location ??
-                               throw new Exception("Could not get the location of Assembly.");
-        _appIcon = Icon.ExtractAssociatedIcon(assemblyLocation) ??
-                   throw new Exception("Could not get the icon of the executing assembly.");
+        // get app icon from executable
+        var assemblyLocation = Assembly.GetEntryAssembly()?.Location ?? throw new Exception("Could not get the location of Assembly.");
+        _appIcon = WinIcon.ExtractLargeIcon(assemblyLocation);
+        if (_appIcon == IntPtr.Zero)
+            throw new Exception("Could not get the icon of the executing assembly.");
 
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(storageFolder, FileNameAppCommand));
@@ -142,7 +142,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
 
     private void InitNotifyIcon()
     {
-        _sysTray = new SystemTray(VpnHoodApp.Instance.Resources.Strings.AppName, _appIcon.Handle);
+        _sysTray = new SystemTray(VpnHoodApp.Instance.Resources.Strings.AppName, _appIcon);
         _sysTray.Clicked += (_, _) => OpenMainWindow();
         _sysTray.ContextMenu = new ContextMenu();
         _openMainWindowMenuItemId =
@@ -159,18 +159,15 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         _sysTray.ContextMenu.AddMenuSeparator();
         _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Exit, (_, _) => Exit());
 
-        // initialize icons
+        // initialize icons from icon data (byte arrays)
         if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon != null)
-            _connectingIcon =
-                new Icon(new MemoryStream(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon.Data));
+            _connectingIcon = WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon.Data);
 
         if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon != null)
-            _connectedIcon =
-                new Icon(new MemoryStream(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon.Data));
+            _connectedIcon = WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon.Data);
 
         if (VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon != null)
-            _disconnectedIcon =
-                new Icon(new MemoryStream(VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon.Data));
+            _disconnectedIcon = WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon.Data);
     }
 
     private void UpdateNotifyIcon()
@@ -186,9 +183,9 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         var icon = _connectingIcon;
         if (VpnHoodApp.Instance.State.ConnectionState == AppConnectionState.Connected) icon = _connectedIcon;
         else if (VpnHoodApp.Instance.IsIdle) icon = _disconnectedIcon;
-        icon ??= _appIcon;
+        if (icon == IntPtr.Zero) icon = _appIcon;
 
-        _sysTray.Update($@"{VpnHoodApp.Instance.Resources.Strings.AppName} - {stateName}", icon.Handle);
+        _sysTray.Update($@"{VpnHoodApp.Instance.Resources.Strings.AppName} - {stateName}", icon);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId,
@@ -340,5 +337,11 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
             if (VpnHoodApp.IsInit)
                 VpnHoodApp.Instance.Dispose();
         }
+
+        // Clean up icon handles
+        if (_appIcon != IntPtr.Zero) WinIcon.DestroyIcon(_appIcon);
+        if (_disconnectedIcon != IntPtr.Zero) WinIcon.DestroyIcon(_disconnectedIcon);
+        if (_connectedIcon != IntPtr.Zero) WinIcon.DestroyIcon(_connectedIcon);
+        if (_connectingIcon != IntPtr.Zero) WinIcon.DestroyIcon(_connectingIcon);
     }
 }

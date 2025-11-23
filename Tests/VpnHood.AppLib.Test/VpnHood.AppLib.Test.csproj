@@ -36,7 +36,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.709" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.710" />
 		<PackageReference Include="VpnHood.Core.Proxies" Version="7.4.768" />
 	</ItemGroup>
 

@@ -51,4 +51,8 @@
 		</None>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+	</ItemGroup>
+
 </Project>

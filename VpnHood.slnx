@@ -1,0 +1,146 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM" />
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Pub/">
+    <File Path="CHANGELOG.md" />
+    <File Path="Pub/PubVersion.json" />
+    <File Path="README.md" />
+    <Properties Name="FolderGlobals">
+      <Property Name="C_5_4Users_4Developer_4source_4repos_4Vh_4VpnHood_4Pub_4Version_1json__JsonSchema" />
+    </Properties>
+  </Folder>
+  <Folder Name="/Pub/Client/">
+    <File Path="Pub/Client/Publish.ps1" />
+    <File Path="Pub/Client/PublishToGithub.ps1" />
+  </Folder>
+  <Folder Name="/Pub/Connect/">
+    <File Path="Pub/Connect/Publish.ps1" />
+    <File Path="Pub/Connect/PublishToGithub.ps1" />
+  </Folder>
+  <Folder Name="/Pub/Core/">
+    <File Path="Pub/Core/Common.ps1" />
+    <File Path="Pub/Core/PublishAndroidApp.ps1" />
+    <File Path="Pub/Core/PublishNuget.ps1" />
+    <File Path="Pub/Core/PublishWinApp.ps1" />
+    <File Path="Pub/Core/VersionBump.ps1" />
+  </Folder>
+  <Folder Name="/Pub/Core/utils/">
+    <File Path="Pub/Core/utils/changelog_utils.ps1" />
+  </Folder>
+  <Folder Name="/Pub/Core/vh_installer/">
+    <File Path="Pub/Core/vh_installer/publish.ps1" />
+    <File Path="Pub/Core/vh_installer/publish_impl.ps1" />
+  </Folder>
+  <Folder Name="/Pub/Core/vh_installer/linux/">
+    <File Path="Pub/Core/vh_installer/linux/install-any.sh" />
+    <File Path="Pub/Core/vh_installer/linux/install.sh" />
+    <File Path="Pub/Core/vh_installer/linux/updater.sh" />
+    <File Path="Pub/Core/vh_installer/linux/vhlauncher.sh" />
+  </Folder>
+  <Folder Name="/Pub/Core/vh_installer/win/">
+    <File Path="Pub/Core/vh_installer/win/install.ps1" />
+    <File Path="Pub/Core/vh_installer/win/updater.ps1" />
+    <File Path="Pub/Core/vh_installer/win/vhlauncher.ps1" />
+  </Folder>
+  <Folder Name="/Pub/FastLane/">
+    <File Path="fastlane/Appfile" />
+    <File Path="fastlane/Fastfile" />
+  </Folder>
+  <Folder Name="/Pub/Server/">
+    <File Path="CHANGELOG.Server.md" />
+    <File Path="Pub/Server/Publish.ps1" />
+    <File Path="Pub/Server/PublishToGitHub.ps1" />
+  </Folder>
+  <Folder Name="/Samples/">
+    <File Path="Samples/samples.txt" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="README.md" />
+    <File Path="VpnHood.sln.DotSettings" />
+  </Folder>
+  <Folder Name="/Src/" />
+  <Folder Name="/Src/AppLib/">
+    <Project Path="Src/AppLib/VpnHood.AppLib.Abstractions/VpnHood.AppLib.Abstractions.csproj" />
+    <Project Path="Src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
+    <Project Path="Src/AppLib/VpnHood.AppLib.Store/VpnHood.AppLib.Store.csproj" />
+    <Project Path="Src/AppLib/VpnHood.AppLib.Swagger/VpnHood.AppLib.Swagger.csproj" />
+    <Project Path="Src/AppLib/VpnHood.AppLib.WebServer/VpnHood.AppLib.WebServer.csproj" />
+  </Folder>
+  <Folder Name="/Src/AppLib/Android/">
+    <Project Path="Src/AppLib/VpnHood.AppLib.Android.Ads.AdMob/VpnHood.AppLib.Android.Ads.AdMob.csproj" />
+    <Project Path="Src/AppLib/VpnHood.AppLib.Android.Common/VpnHood.AppLib.Android.Common.csproj" />
+    <Project Path="Src/AppLib/VpnHood.AppLib.Android.GooglePlay.Core/VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
+    <Project Path="Src/AppLib/VpnHood.AppLib.Android.GooglePlay/VpnHood.AppLib.Android.GooglePlay.csproj" />
+  </Folder>
+  <Folder Name="/Src/AppLib/Linux/">
+    <Project Path="Src/AppLib/VpnHood.AppLib.Linux.Common/VpnHood.AppLib.Linux.Common.csproj" />
+  </Folder>
+  <Folder Name="/Src/AppLib/Maui/">
+    <Project Path="Src/AppLib/VpnHood.AppLib.Maui.Common/VpnHood.AppLib.Maui.Common.csproj" />
+  </Folder>
+  <Folder Name="/Src/AppLib/Windows/">
+    <Project Path="Src/AppLib/VpnHood.AppLib.Win.Common.WpfSpa/VpnHood.AppLib.Win.Common.WpfSpa.csproj" />
+    <Project Path="Src/AppLib/VpnHood.AppLib.Win.Common/VpnHood.AppLib.Win.Common.csproj" />
+  </Folder>
+  <Folder Name="/Src/Apps/">
+    <Project Path="Src/Apps/Client.Android.Google/VpnHood.App.Client.Android.Google.csproj">
+      <Deploy />
+    </Project>
+    <Project Path="Src/Apps/Client.Android.Web/VpnHood.App.Client.Android.Web.csproj">
+      <Deploy />
+    </Project>
+    <Project Path="Src/Apps/Client.Linux.Web/VpnHood.App.Client.Linux.Web.csproj" />
+    <Project Path="Src/Apps/Client.Win.Web/VpnHood.App.Client.Win.Web.csproj" />
+    <Project Path="Src/Apps/Client/VpnHood.App.Client.csproj" />
+    <Project Path="Src/Apps/Connect.Android.Google/VpnHood.App.Connect.Android.Google.csproj">
+      <Deploy />
+    </Project>
+    <Project Path="Src/Apps/Connect.Android.Web/VpnHood.App.Connect.Android.Web.csproj">
+      <Deploy />
+    </Project>
+    <Project Path="Src/Apps/Connect.Linux.Web/VpnHood.App.Connect.Linux.Web.csproj" />
+    <Project Path="Src/Apps/Connect.Win.Web/VpnHood.App.Connect.Win.Web.csproj" />
+    <Project Path="Src/Apps/Server.Net/VpnHood.App.Server.Net.csproj" />
+  </Folder>
+  <Folder Name="/Src/Core/">
+    <Project Path="Src/Core/VpnHood.Core.Client.Abstractions/VpnHood.Core.Client.Abstractions.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.VpnServices.Abstractions/VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.VpnServices.Host/VpnHood.Core.Client.VpnServices.Host.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.VpnServices.Manager/VpnHood.Core.Client.VpnServices.Manager.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client/VpnHood.Core.Client.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Common/VpnHood.Core.Common.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Packets/VpnHood.Core.Packets.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.PacketTransports/VpnHood.Core.PacketTransports.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Proxies.EndPointManagement.Abstractions/VpnHood.Core.Proxies.EndPointManagement.Abstractions.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Proxies.EndPointManagement/VpnHood.Core.Proxies.EndPointManagement.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Server.Access.FileAccessManager/VpnHood.Core.Server.Access.FileAccessManager.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Server.Access/VpnHood.Core.Server.Access.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Toolkit/VpnHood.Core.Toolkit.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Tunneling/VpnHood.Core.Tunneling.csproj" />
+  </Folder>
+  <Folder Name="/Src/Core/Adapters/">
+    <Project Path="Src/Core/VpnHood.Core.VpnAdapters.Abstractions/VpnHood.Core.VpnAdapters.Abstractions.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.VpnAdapters.AndroidTun/VpnHood.Core.VpnAdapters.AndroidTun.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.VpnAdapters.LinuxTun/VpnHood.Core.VpnAdapters.LinuxTun.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.VpnAdapters.WinDivert/VpnHood.Core.VpnAdapters.WinDivert.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.VpnAdapters.WinTun/VpnHood.Core.VpnAdapters.WinTun.csproj" />
+  </Folder>
+  <Folder Name="/Src/Core/Devices/">
+    <Project Path="Src/Core/VpnHood.Core.Client.Device.Android/VpnHood.Core.Client.Device.Android.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.Device.Linux/VpnHood.Core.Client.Device.Linux.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.Device.Win/VpnHood.Core.Client.Device.Win.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.Device/VpnHood.Core.Client.Device.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj" />
+    <Project Path="Tests/VpnHood.NetTester/VpnHood.NetTester.csproj" />
+    <Project Path="Tests/VpnHood.Test/VpnHood.Test.csproj" />
+  </Folder>
+</Solution>

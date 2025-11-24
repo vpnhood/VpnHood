@@ -1,4 +1,4 @@
-# Upcoming
+# v7.5.771
 * Fix: Diagnoser shows a wrong NoErrorFoundException
 * Fix: Android: Back button does not work on some pages
 * Update: Upgrade to .NET 10

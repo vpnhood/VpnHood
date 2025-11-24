@@ -1,5 +1,4 @@
-﻿using System;
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets.ClassicSpa;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.Core.Toolkit.Graphics;

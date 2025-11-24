@@ -86,11 +86,11 @@ function Get-RolloutPercentage {
 
 function CommitAndPushToMainRepo {
 	Write-Host "Commit & push current changes to the main repo"
-	git --git-dir=$gitDir add -A
-	git --git-dir=$gitDir commit -m "Publish $versionTag"
+	git --git-dir=$gitDir --work-tree=$solutionDir add -A
+	git --git-dir=$gitDir --work-tree=$solutionDir commit -m "Publish $versionTag"
 
 	Write-Host "Push to main"
-	git --git-dir=$gitDir push origin development:main --force 
+	git --git-dir=$gitDir --work-tree=$solutionDir push origin development:main --force 
 }
 
 # push to repo using gh api.

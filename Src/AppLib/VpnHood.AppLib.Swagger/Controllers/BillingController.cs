@@ -16,7 +16,7 @@ public class BillingController : ControllerBase, IBillingController
     }
 
     [HttpPost("purchase")]
-    public Task<string> Purchase(string planId)
+    public Task<string> Purchase(string planId, string offerToken)
     {
         throw new SwaggerOnlyException();
     }

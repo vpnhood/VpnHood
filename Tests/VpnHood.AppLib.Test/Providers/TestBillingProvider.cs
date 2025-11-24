@@ -5,6 +5,7 @@ namespace VpnHood.AppLib.Test.Providers;
 
 internal class TestBillingProvider : IAppBillingProvider
 {
+    
     public Exception? PurchaseException { get; set; }
     public Exception? SubscriptionPlanException { get; set; }
 
@@ -18,13 +19,14 @@ internal class TestBillingProvider : IAppBillingProvider
         await Task.CompletedTask;
         return [
             new SubscriptionPlan {
-                PlanPrice = "10",
+                PlanPrices = ["10"],
+                OfferToken = "test",
                 SubscriptionPlanId = "test"
             }
         ];
     }
-
-    public async Task<string> Purchase(IUiContext uiContext, string planId)
+    
+    public async Task<string> Purchase(IUiContext uiContext, string planId, string offerToken)
     {
         if (PurchaseException != null)
             throw PurchaseException;

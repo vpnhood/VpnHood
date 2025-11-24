@@ -8,7 +8,6 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Device.UiContexts;
-using VpnHood.Core.Toolkit.Graphics;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Win.Common.WpfSpa;
@@ -43,7 +42,8 @@ public partial class VpnHoodWpfSpaMainWindow : Window
             { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
         MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
         MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
-        if (backgroundColor != null) MainWebView.DefaultBackgroundColor = ConvertFromVhColor(backgroundColor.Value);
+        // Don't use this. It makes System.Drawing dependency appear in the project and prevent self-contained publish.
+        //if (backgroundColor != null) MainWebView.DefaultBackgroundColor = ConvertFromVhColor(backgroundColor.Value);
         _ = MainWebView.EnsureCoreWebView2Async(null);
 
         // initialize tray icon
@@ -54,10 +54,10 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         AppUiContext.Context = new WinUiContext(this);
     }
 
-    private static System.Drawing.Color ConvertFromVhColor(VhColor color)
-    {
-        return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
-    }
+    //private static System.Drawing.Color ConvertFromVhColor(VhColor color)
+    //{
+    //    return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
+    //}
 
 
     private static void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)

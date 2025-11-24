@@ -123,10 +123,10 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                 .SetProductType(BillingClient.ProductType.Subs)
                 .Build(),
 
-            QueryProductDetailsParams.Product.NewBuilder()
+            /*QueryProductDetailsParams.Product.NewBuilder()
                 .SetProductId("vpnhood_6_months_subscription")
                 .SetProductType(BillingClient.ProductType.Subs)
-                .Build(),
+                .Build(),*/
         };
 
         // Build the final params object using the list

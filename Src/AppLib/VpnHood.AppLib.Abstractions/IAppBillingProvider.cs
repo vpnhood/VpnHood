@@ -8,7 +8,7 @@ public interface IAppBillingProvider : IDisposable
     Task<SubscriptionPlan[]> GetSubscriptionPlans();
 
     /// <returns>Provider Order Id</returns>
-    Task<string> Purchase(IUiContext uiContext, string planId);
+    Task<string> Purchase(IUiContext uiContext, string planId, string offerToken);
 
     BillingPurchaseState PurchaseState { get; }
 }

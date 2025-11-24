@@ -24,7 +24,8 @@ internal class BillingController : ControllerBase, IBillingController
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "purchase", async ctx => {
             var planId = ctx.GetQueryParameter<string>("planId");
-            var res = await Purchase(planId);
+            var offerToken = ctx.GetQueryParameter<string>("offerToken");
+            var res = await Purchase(planId, offerToken );
             await ctx.SendJson(res);
         });
 
@@ -39,9 +40,9 @@ internal class BillingController : ControllerBase, IBillingController
         return BillingService.GetSubscriptionPlans();
     }
 
-    public Task<string> Purchase(string planId)
+    public Task<string> Purchase(string planId, string offerToken)
     {
-        return BillingService.Purchase(AppUiContext.RequiredContext, planId);
+        return BillingService.Purchase(AppUiContext.RequiredContext, planId, offerToken);
     }
 
     public Task<AppPurchaseOptions> GetPurchaseOptions()

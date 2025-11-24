@@ -80,29 +80,27 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         }
 
         // Set list of the created products in the GooglePlay.
-        var productDetailsParams = QueryProductDetailsParams.NewBuilder()
-            .SetProductList([
-                QueryProductDetailsParams.Product.NewBuilder()
-                    .SetProductId("general_subscription")
-                    .SetProductType(BillingClient.ProductType.Subs)
-                    .Build()
-            ])
-            .Build();
+        var productDetailsParams = CreateProductList();
 
         // Get products list from GooglePlay.
         try {
             var productDetailsResult = await _billingClient.Value.QueryProductDetailsAsync(productDetailsParams)
                 .ConfigureAwait(false);
 
-            _productDetails = productDetailsResult.ProductDetailsList.First();
+            _productDetails = productDetailsResult.ProductDetailsList.Last();
             _subscriptionOfferDetails = _productDetails.GetSubscriptionOfferDetails()
                                         ?? throw new Exception("Could not get subscription offer details.");
 
             var subscriptionPlans = _subscriptionOfferDetails
                 .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
+                .OrderByDescending(plan => plan.PricingPhases.PricingPhaseList.Count)
                 .Select(plan => new SubscriptionPlan {
                     SubscriptionPlanId = plan.BasePlanId,
-                    PlanPrice = plan.PricingPhases.PricingPhaseList.First().FormattedPrice
+                    OfferToken = plan.OfferToken,
+                    PlanPrices = plan.PricingPhases.PricingPhaseList
+                        .OrderByDescending(x => x.PriceAmountMicros)
+                        .Select(x => x.FormattedPrice)
+                        .ToArray()
                 })
                 .ToArray();
 
@@ -113,8 +111,33 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             throw;
         }
     }
+    
 
-    public async Task<string> Purchase(IUiContext uiContext, string planId)
+    private static QueryProductDetailsParams CreateProductList()
+    {
+        // Create a generic List to hold the product definitions
+        var productsToQuery = new List<QueryProductDetailsParams.Product>() {
+
+            QueryProductDetailsParams.Product.NewBuilder()
+                .SetProductId("general_subscription")
+                .SetProductType(BillingClient.ProductType.Subs)
+                .Build(),
+
+            QueryProductDetailsParams.Product.NewBuilder()
+                .SetProductId("vpnhood_6_months_subscription")
+                .SetProductType(BillingClient.ProductType.Subs)
+                .Build(),
+        };
+
+        // Build the final params object using the list
+        var productDetailsParams = QueryProductDetailsParams.NewBuilder()
+            .SetProductList(productsToQuery)
+            .Build();
+
+        return productDetailsParams;
+    }
+
+    public async Task<string> Purchase(IUiContext uiContext, string planId, string offerToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
@@ -123,13 +146,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         if (_authenticationProvider.UserId == null)
             throw new AuthenticationException();
-
-        var offerToken = _subscriptionOfferDetails == null
-            ? throw new NullReferenceException("Could not found subscription offer details.")
-            : _subscriptionOfferDetails
-                .Where(x => x.BasePlanId == planId)
-                .Select(x => x.OfferToken)
-                .Single();
 
         var productDetailsParam = BillingFlowParams.ProductDetailsParams.NewBuilder()
             .SetProductDetails(_productDetails ?? throw new NullReferenceException("Could not found product details."))

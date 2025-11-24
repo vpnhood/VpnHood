@@ -22,11 +22,11 @@ internal class StoreBillingProvider(
         return billingProvider.GetSubscriptionPlans();
     }
 
-    public async Task<string> Purchase(IUiContext uiContext, string planId)
+    public async Task<string> Purchase(IUiContext uiContext, string planId, string offerToken)
     {
         try {
             PurchaseState = BillingPurchaseState.Started;
-            var providerOrderId = await billingProvider.Purchase(uiContext, planId).Vhc();
+            var providerOrderId = await billingProvider.Purchase(uiContext, planId, offerToken).Vhc();
             PurchaseState = BillingPurchaseState.Processing;
             await WaitForProcessProviderOrder(providerOrderId).Vhc();
             return providerOrderId;

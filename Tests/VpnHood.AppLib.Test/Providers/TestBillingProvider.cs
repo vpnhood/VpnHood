@@ -25,7 +25,8 @@ internal class TestBillingProvider : IAppBillingProvider
                 CurrentFormattedPrice = "$9.00",
                 OfferToken = "OfferToken",
                 ProductId = "ProductId",
-                SubscriptionPlanId = "PlanId"
+                SubscriptionPlanId = "PlanId",
+                Period = "1M"
             }
         ];
     }

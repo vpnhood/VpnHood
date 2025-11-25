@@ -114,6 +114,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                     CurrentFormattedPrice = planPrices.Last().FormattedPrice,
                     CurrentPrice = planPrices.Last().PriceAmountMicros / 1_000_000.0,
                     OfferToken = subscriptionOffer.OfferToken,
+                    Period = planPrices.First().BillingPeriod,
                 };
             }).Where(plan => plan != null).ToArray();
 

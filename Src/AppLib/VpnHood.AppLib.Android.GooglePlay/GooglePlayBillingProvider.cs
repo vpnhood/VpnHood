@@ -16,7 +16,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     private readonly Lazy<BillingClient> _billingClient;
     private readonly IAppAuthenticationProvider _authenticationProvider;
     private ProductDetails? _productDetails;
-    private IList<ProductDetails.SubscriptionOfferDetails>? _subscriptionOfferDetails;
     private TaskCompletionSource<string>? _taskCompletionSource;
     public BillingPurchaseState PurchaseState { get; private set; }
     public string ProviderName => "GooglePlay";
@@ -88,10 +87,10 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                 .ConfigureAwait(false);
 
             _productDetails = productDetailsResult.ProductDetailsList.Last();
-            _subscriptionOfferDetails = _productDetails.GetSubscriptionOfferDetails()
+            var subscriptionOfferDetails = _productDetails.GetSubscriptionOfferDetails()
                                         ?? throw new Exception("Could not get subscription offer details.");
 
-            var subscriptionPlans = _subscriptionOfferDetails
+            var subscriptionPlans = subscriptionOfferDetails
                 .Where(plan => plan.PricingPhases.PricingPhaseList.Any())
                 .OrderByDescending(plan => plan.PricingPhases.PricingPhaseList.Count)
                 .Select(plan => new SubscriptionPlan {
@@ -116,17 +115,17 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     private static QueryProductDetailsParams CreateProductList()
     {
         // Create a generic List to hold the product definitions
-        var productsToQuery = new List<QueryProductDetailsParams.Product>() {
+        var productsToQuery = new List<QueryProductDetailsParams.Product> {
 
             QueryProductDetailsParams.Product.NewBuilder()
                 .SetProductId("general_subscription")
                 .SetProductType(BillingClient.ProductType.Subs)
                 .Build(),
 
-            /*QueryProductDetailsParams.Product.NewBuilder()
+            QueryProductDetailsParams.Product.NewBuilder()
                 .SetProductId("vpnhood_6_months_subscription")
                 .SetProductType(BillingClient.ProductType.Subs)
-                .Build(),*/
+                .Build(),
         };
 
         // Build the final params object using the list

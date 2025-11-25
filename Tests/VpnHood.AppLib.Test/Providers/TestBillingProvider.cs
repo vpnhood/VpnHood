@@ -19,7 +19,7 @@ internal class TestBillingProvider : IAppBillingProvider
         await Task.CompletedTask;
         return [
             new SubscriptionPlan {
-                PlanPrices = ["10"],
+                DiscountedPrice = ["10"],
                 OfferToken = "test",
                 SubscriptionPlanId = "test"
             }

@@ -1,12 +1,11 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
+// ReSharper disable UnusedMemberInSuper.Global
 
 namespace VpnHood.AppLib.WebServer.Api;
 
-[SuppressMessage("ReSharper", "UnusedMember.Global")]
 public interface IBillingController
 {
     Task<SubscriptionPlan[]> GetSubscriptionPlans();
-    Task<string> Purchase(string planId, string offerToken);
+    Task<string> Purchase(PurchaseParams purchaseParams);
     Task<AppPurchaseOptions> GetPurchaseOptions();
 }

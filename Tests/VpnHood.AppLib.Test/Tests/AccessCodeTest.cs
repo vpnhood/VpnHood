@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using System.Text;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;

@@ -14,9 +14,9 @@ public class AppBillingService(AppAccountService accountService, IAppBillingProv
         return billingProvider.GetSubscriptionPlans();
     }
 
-    public async Task<string> Purchase(IUiContext uiContext, string planId, string offerToken)
+    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams)
     {
-        var ret = await billingProvider.Purchase(uiContext, planId, offerToken).Vhc();
+        var ret = await billingProvider.Purchase(uiContext, purchaseParams).Vhc();
         await accountService.Refresh(updateCurrentClientProfile: true).Vhc();
         return ret;
     }

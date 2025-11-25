@@ -19,14 +19,18 @@ internal class TestBillingProvider : IAppBillingProvider
         await Task.CompletedTask;
         return [
             new SubscriptionPlan {
-                DiscountedPrice = ["10"],
-                OfferToken = "test",
-                SubscriptionPlanId = "test"
+                BaseFormattedPrice = "$10.00",
+                BasePrice = 1000,
+                CurrentPrice = 9000,
+                CurrentFormattedPrice = "$9.00",
+                OfferToken = "OfferToken",
+                ProductId = "ProductId",
+                SubscriptionPlanId = "PlanId"
             }
         ];
     }
     
-    public async Task<string> Purchase(IUiContext uiContext, string planId, string offerToken)
+    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams)
     {
         if (PurchaseException != null)
             throw PurchaseException;

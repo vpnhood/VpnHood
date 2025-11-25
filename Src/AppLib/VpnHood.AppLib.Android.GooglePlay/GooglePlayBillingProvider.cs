@@ -63,7 +63,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
     public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
     {
-        var billingClient = await GetSafeBillingClient().ConfigureAwait(false);
+        var billingClient = await GetSafeBillingClient().Vhc();
 
         // Check if the purchase subscription is supported on the user's device
         try {
@@ -92,7 +92,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
                 // Get the pricing phases for that offer
                 var pricingPhases = subscriptionOffer?.PricingPhases.PricingPhaseList;
-                if (pricingPhases == null) {
+                if (subscriptionOffer is null || pricingPhases is null) {
                     VhLogger.Instance.LogWarning("Could not get GooglePlay pricing phases for product id {ProductId}",
                         product.ProductId);
                     return null;
@@ -107,12 +107,13 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                 }
 
                 return new SubscriptionPlan {
-                    SubscriptionPlanId = product.ProductId,
+                    SubscriptionPlanId = subscriptionOffer.BasePlanId,
+                    ProductId = product.ProductId,
                     BaseFormattedPrice = planPrices.First().FormattedPrice,
                     BasePrice = planPrices.First().PriceAmountMicros / 1_000_000.0,
                     CurrentFormattedPrice = planPrices.Last().FormattedPrice,
                     CurrentPrice = planPrices.Last().PriceAmountMicros / 1_000_000.0,
-                    OfferToken = subscriptionOffer?.OfferToken ?? string.Empty,
+                    OfferToken = subscriptionOffer.OfferToken,
                 };
             }).Where(plan => plan != null).ToArray();
 
@@ -150,30 +151,30 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         // Query Google Play Billing for Product Details
         var productDetailsResult = await billingClient
             .QueryProductDetailsAsync(productDetailsParams)
-            .ConfigureAwait(false);
+            .Vhc();
 
         return productDetailsResult.ProductDetailsList.ToArray();
     }
 
-    public async Task<string> Purchase(IUiContext uiContext, string planId, string offerToken)
+    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
 
-        var billingClient = await GetSafeBillingClient().ConfigureAwait(false);
+        var billingClient = await GetSafeBillingClient().Vhc();
 
         if (_authenticationProvider.UserId == null)
             throw new AuthenticationException();
 
         // Get the product details for the selected plan
-        var products = await GetProducts(billingClient).ConfigureAwait(false);
-        var product = products.SingleOrDefault(x => x.ProductId == planId) 
-            ?? throw new  ArgumentException($"Product with id {planId} not found.");
+        var products = await GetProducts(billingClient).Vhc();
+        var product = products.SingleOrDefault(x => x.ProductId == purchaseParams.ProductId) 
+            ?? throw new  ArgumentException($"Product with id {purchaseParams.ProductId} not found.");
 
         // Create the billing flow parameters
         var productParam = BillingFlowParams.ProductDetailsParams.NewBuilder()
             .SetProductDetails(product)
-            .SetOfferToken(offerToken)
+            .SetOfferToken(purchaseParams.OfferToken)
             .Build();
 
         var billingFlowParams = BillingFlowParams.NewBuilder()
@@ -189,7 +190,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
 
-            var orderId = await _taskCompletionSource.Task.ConfigureAwait(false);
+            var orderId = await _taskCompletionSource.Task.Vhc();
             return orderId;
         }
         catch (TaskCanceledException ex) {
@@ -216,7 +217,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             if (result != ConnectionResult.Success)
                 throw new GooglePlayUnavailableException();
 
-            var billingResult = await _billingClient.Value.StartConnectionAsync().ConfigureAwait(false);
+            var billingResult = await _billingClient.Value.StartConnectionAsync().Vhc();
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
 

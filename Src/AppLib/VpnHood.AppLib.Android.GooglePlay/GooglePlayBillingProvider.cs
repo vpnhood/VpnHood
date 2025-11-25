@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Android.BillingClient.Api;
 using Android.Gms.Common;
 using Microsoft.Extensions.Logging;
@@ -106,14 +107,18 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                     return null;
                 }
 
-                return new SubscriptionPlan {
-                    SubscriptionPlanId = subscriptionOffer.BasePlanId,
+                var planToken = new SubscriptionPlanToken {
                     ProductId = product.ProductId,
+                    BasePlanId = subscriptionOffer.BasePlanId,
+                    OfferToken = subscriptionOffer.OfferToken
+                };
+
+                return new SubscriptionPlan {
+                    PlanToken = JsonSerializer.Serialize(planToken),
                     BaseFormattedPrice = planPrices.First().FormattedPrice,
                     BasePrice = planPrices.First().PriceAmountMicros / 1_000_000.0,
                     CurrentFormattedPrice = planPrices.Last().FormattedPrice,
                     CurrentPrice = planPrices.Last().PriceAmountMicros / 1_000_000.0,
-                    OfferToken = subscriptionOffer.OfferToken,
                     Period = planPrices.First().BillingPeriod,
                 };
             }).Where(plan => plan != null).ToArray();
@@ -161,6 +166,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
+        var subscriptionToken = JsonUtils.Deserialize<SubscriptionPlanToken>(purchaseParams.PurchaseToken);
 
         var billingClient = await GetSafeBillingClient().Vhc();
 
@@ -169,13 +175,13 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         // Get the product details for the selected plan
         var products = await GetProducts(billingClient).Vhc();
-        var product = products.SingleOrDefault(x => x.ProductId == purchaseParams.ProductId) 
-            ?? throw new  ArgumentException($"Product with id {purchaseParams.ProductId} not found.");
+        var product = products.SingleOrDefault(x => x.ProductId == subscriptionToken.ProductId) 
+            ?? throw new  ArgumentException($"Product with id {subscriptionToken.ProductId} not found.");
 
         // Create the billing flow parameters
         var productParam = BillingFlowParams.ProductDetailsParams.NewBuilder()
             .SetProductDetails(product)
-            .SetOfferToken(purchaseParams.OfferToken)
+            .SetOfferToken(subscriptionToken.OfferToken)
             .Build();
 
         var billingFlowParams = BillingFlowParams.NewBuilder()

@@ -1310,7 +1310,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 storeName = billingService?.ProviderName;
                 if (billingService != null) {
                     subscriptionPlans = await billingService.GetSubscriptionPlans();
-                    isStoreAvailable = true;
+                    isStoreAvailable = subscriptionPlans.Any();
                 }
             }
             catch (Exception ex) {

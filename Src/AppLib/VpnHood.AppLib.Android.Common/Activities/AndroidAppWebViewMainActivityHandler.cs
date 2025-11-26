@@ -1,8 +1,8 @@
-﻿using System.Web;
-using Android.Runtime;
+﻿using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
 using Microsoft.Extensions.Logging;
+using System.Web;
 using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer;
@@ -10,6 +10,8 @@ using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
+using static Android.Provider.DocumentsContract;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
 
@@ -27,11 +29,16 @@ public class AndroidAppWebViewMainActivityHandler(
     {
         base.OnCreate(savedInstanceState);
 
-        // initialize web view
-        AndroidAppLoader.Init(ActivityEvent.Activity);
+        // ToDo: Experimental. Fixing: Window couldn't find content container view
+        // Some OEM subject to this issue, so let postpone SetContentView
+        ActivityEvent.Activity.Window?.DecorView.Post(() => {
+            // initialize web view
+            AndroidAppLoader.Init(ActivityEvent.Activity);
 
-        // Initialize UI
-        Task.Run(InitTask);
+            // Initialize UI
+            Task.Run(InitTask);
+        });
+
     }
 
     private Task InitTask()

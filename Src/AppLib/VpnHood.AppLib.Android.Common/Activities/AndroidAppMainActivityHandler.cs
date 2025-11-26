@@ -7,6 +7,7 @@ using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Utils;
 using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
@@ -41,7 +42,8 @@ public class AndroidAppMainActivityHandler
         AppUiContext.Context = new AndroidUiContext(ActivityEvent);
 
         // initialize the window
-        WindowInsetUtils.Configure(ActivityEvent.Activity.Window, false, false, false);
+        VhUtils.TryInvoke("ConfigureWindowInsets", () =>
+            WindowInsetUtils.Configure(ActivityEvent.Activity.Window, false, false, false));
 
         // process intent
         ProcessIntent(ActivityEvent.Activity.Intent);
@@ -109,7 +111,7 @@ public class AndroidAppMainActivityHandler
         Toast.MakeText(ActivityEvent.Activity, message, ToastLength.Long)?.Show();
     }
 
-    protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions, 
+    protected virtual void OnRequestPermissionsResult(int requestCode, string[] permissions,
         [GeneratedEnum] Permission[] grantResults)
     {
         _ = requestCode;

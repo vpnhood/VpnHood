@@ -140,7 +140,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 appConfigs.StoreAppId, authenticationExternalProvider,
                 ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
 
-            var googlePlayBillingProvider = TryCreateBillingClient(authenticationProvider);
+            var googlePlayBillingProvider = TryCreateBillingClient(authenticationProvider, appConfigs);
             var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider,
                 appConfigs.StoreAppId);
 
@@ -152,10 +152,11 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         }
     }
 
-    private static IAppBillingProvider? TryCreateBillingClient(IAppAuthenticationProvider authenticationProvider)
+    private static IAppBillingProvider? TryCreateBillingClient(
+        IAppAuthenticationProvider authenticationProvider, AppConfigs appConfigs)
     {
         try {
-            return new GooglePlayBillingProvider(authenticationProvider);
+            return new GooglePlayBillingProvider(authenticationProvider, appConfigs.GooglePlayProductIds);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create GooglePlayBillingProvider.");

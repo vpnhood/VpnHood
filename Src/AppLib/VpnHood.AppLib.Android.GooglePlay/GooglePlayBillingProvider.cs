@@ -16,11 +16,12 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 {
     private readonly Lazy<BillingClient> _billingClient;
     private readonly IAppAuthenticationProvider _authenticationProvider;
+    private readonly string[] _productIds;
     private TaskCompletionSource<string>? _taskCompletionSource;
     public BillingPurchaseState PurchaseState { get; private set; }
     public string ProviderName => "GooglePlay";
 
-    public GooglePlayBillingProvider(IAppAuthenticationProvider authenticationProvider)
+    public GooglePlayBillingProvider(IAppAuthenticationProvider authenticationProvider, string[] productIds)
     {
         _billingClient = new Lazy<BillingClient>(() => {
             var builder = BillingClient.NewBuilder(Application.Context);
@@ -34,6 +35,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         });
 
         _authenticationProvider = authenticationProvider;
+        _productIds = productIds;
     }
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
@@ -80,7 +82,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         // Get products list from GooglePlay.
         try {
-            var products = await GetProducts(billingClient);
+            var products = await GetProducts(billingClient, _productIds);
 
             // We chose the subscriptionOfferDetails which contains the lowest PricingPhaseList
             // Then build the SubscriptionPlan list from it.
@@ -133,20 +135,15 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     }
 
 
-    private static async Task<ProductDetails[]> GetProducts(BillingClient billingClient)
+    private static async Task<ProductDetails[]> GetProducts(BillingClient billingClient, string[] productIds)
     {
         // Create a generic List to hold the product definitions
-        var productsToQuery = new List<QueryProductDetailsParams.Product> {
-            QueryProductDetailsParams.Product.NewBuilder()
-                .SetProductId("general_subscription")
+        var productsToQuery = productIds
+            .Select(productId => QueryProductDetailsParams.Product.NewBuilder()
+                .SetProductId(productId)
                 .SetProductType(BillingClient.ProductType.Subs)
-                .Build(),
-
-            QueryProductDetailsParams.Product.NewBuilder()
-                .SetProductId("vpnhood_6_months_subscription")
-                .SetProductType(BillingClient.ProductType.Subs)
-                .Build()
-        };
+                .Build())
+            .ToList();
 
         // Build the final params object using the list
         var productDetailsParams = QueryProductDetailsParams.NewBuilder()
@@ -173,7 +170,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             throw new AuthenticationException();
 
         // Get the product details for the selected plan
-        var products = await GetProducts(billingClient).Vhc();
+        var products = await GetProducts(billingClient, _productIds).Vhc();
         var product = products.SingleOrDefault(x => x.ProductId == subscriptionToken.ProductId)
                       ?? throw new ArgumentException($"Product with id {subscriptionToken.ProductId} not found.");
 

@@ -1,29 +1,32 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
+using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Utils;
+using static VpnHood.Core.Server.Http01ChallengeService;
 
 namespace VpnHood.Core.Server;
 
-public class Http01ChallengeService(IPAddress[] ipAddresses, string token, string keyAuthorization, TimeSpan timeout)
+public class Http01ChallengeService(Http01KeyAuthorizationFunc keyAuthorizationFunc)
     : IDisposable
 {
-    private readonly CancellationTokenSource _cancellationTokenSource = new(timeout);
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly List<TcpListener> _tcpListeners = [];
     private bool _disposed;
     public bool IsStarted { get; private set; }
+    public delegate Task<string> Http01KeyAuthorizationFunc(string token);
 
-    public void Start()
+    public void Start(IPAddress[] ipAddresses, bool ignoreError)
     {
+        ObjectDisposedException.ThrowIf(_disposed, this);
         if (IsStarted) throw new InvalidOperationException("The HTTP-01 Challenge Service has already been started.");
-        if (_disposed) throw new ObjectDisposedException(nameof(Http01ChallengeService));
 
-        try {
-            IsStarted = true;
-            foreach (var ipAddress in ipAddresses) {
+        IsStarted = true;
+        foreach (var ipAddress in ipAddresses) {
+            try {
                 var ipEndPoint = new IPEndPoint(ipAddress, 80);
                 VhLogger.Instance.LogInformation("HTTP-01 Challenge Listener starting on {EndPoint}", ipEndPoint);
 
@@ -32,10 +35,11 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
                 _tcpListeners.Add(listener);
                 _ = AcceptTcpClient(listener, _cancellationTokenSource.Token);
             }
-        }
-        catch {
-            Stop();
-            throw;
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Could not start HTTP-01 Challenge Listener on {EndPoint}", ipAddress);
+                if (!ignoreError)
+                    throw;
+            }
         }
     }
 
@@ -44,7 +48,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         while (IsStarted && !cancellationToken.IsCancellationRequested) {
             using var client = await tcpListener.AcceptTcpClientAsync(cancellationToken).Vhc();
             try {
-                await HandleRequest(client, token, keyAuthorization, cancellationToken).Vhc();
+                await HandleRequest(client, keyAuthorizationFunc, cancellationToken).Vhc();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
                 // service is stopping
@@ -55,7 +59,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         }
     }
 
-    private static async Task HandleRequest(TcpClient client, string token, string keyAuthorization,
+    private static async Task HandleRequest(TcpClient client, Http01KeyAuthorizationFunc keyAuthorizationFunc,
         CancellationToken cancellationToken)
     {
         await using var stream = client.GetStream();
@@ -65,22 +69,28 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
         if (!headers.Any()) return;
         var request = headers[HttpUtils.HttpRequestKey];
         var requestParts = request.Split(' ');
-        var expectedUrl = $"/.well-known/acme-challenge/{token}";
-        var isMatched = requestParts.Length > 1 && requestParts[0] == "GET" && requestParts[1] == expectedUrl;
 
-        VhLogger.Instance.LogInformation(GeneralEventId.DnsChallenge,
-            "HTTP Challenge. Request: {request}, IsMatched: {isMatched}", request, isMatched);
+        // Retrieve token from request in this format: GET /.well-known/acme-challenge/{token} HTTP/1.1
+        const string basePath = "/.well-known/acme-challenge/";
+        var token = requestParts.Length > 2 && requestParts[0] == "GET" && requestParts[1].StartsWith(basePath)
+            ? requestParts[1][basePath.Length..]
+            : throw new HttpRequestException("Invalid HTTP-01 challenge request.", null, HttpStatusCode.BadRequest);
 
-        var response = isMatched
-            ? HttpResponseBuilder.Http01(keyAuthorization)
-            : HttpResponseBuilder.NotFound();
+        VhLogger.Instance.LogInformation(GeneralEventId.DnsChallenge, "HTTP Challenge. Request: {request}", request);
+        try {
+            var keyAuthorization = await keyAuthorizationFunc(token);
+            await stream.WriteAsync(HttpResponseBuilder.Http01(keyAuthorization), cancellationToken).Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not get key authorization for token: {token}", token);
+            await stream.WriteAsync(HttpResponseBuilder.NotFound(), cancellationToken).Vhc();
+        }
 
-        await stream.WriteAsync(response, cancellationToken).Vhc();
         await stream.FlushAsync(cancellationToken).Vhc();
     }
 
     // use dispose
-    private void Stop()
+    public void Stop()
     {
         if (!IsStarted || _disposed)
             return;
@@ -91,7 +101,7 @@ public class Http01ChallengeService(IPAddress[] ipAddresses, string token, strin
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not stop HTTP-01 Challenge Listener. {EndPoint}",
-                    listener.LocalEndpoint);
+                    VhUtils.TryInvoke(()=> listener.LocalEndpoint));
             }
         }
 

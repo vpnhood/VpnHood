@@ -16,5 +16,5 @@ public interface IAccessManager : IDisposable
     Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic);
     Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus);
     Task<ServerConfig> Server_Configure(ServerInfo serverInfo);
-    //Task<string> Cert_GetHttp01KeyAuthorization(string token);
+    Task<string> Acme_GetHttp01KeyAuthorization(string token);
 }

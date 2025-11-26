@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Xml.Linq;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Access.Configurations;
@@ -119,6 +120,15 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
     public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
     {
         return HttpPostAsync<ServerConfig>("configure", null, serverInfo);
+    }
+
+    public Task<string> Acme_GetHttp01KeyAuthorization(string token)
+    {
+        var parameters = new Dictionary<string, object?> {
+            { "token", token }
+        };
+
+        return HttpGetAsync<string>("acme/http01_key_Authorization", parameters);
     }
 
     public virtual void Dispose()

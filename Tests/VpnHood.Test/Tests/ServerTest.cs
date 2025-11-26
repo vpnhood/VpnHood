@@ -344,48 +344,29 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task DnsChallenge()
+    public async Task AcmeHttp01Challenge()
     {
         VhLogger.IsAnonymousMode = true;
 
         // create server
         using var accessManager = TestHelper.CreateAccessManager();
+        accessManager.AcmeHttp01KeyToken = Guid.NewGuid().ToString();
+        accessManager.AcmeHttp01KeyAuthorization = Guid.NewGuid().ToString();
         accessManager.ServerConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(300);
+        accessManager.ServerConfig.EnableHttp01Challenge = true;
+        accessManager.ServerConfig.TcpEndPoints = [VhUtils.GetFreeTcpEndPoint(IPAddress.Parse("127.90.91.92"))];
         await using var server = await TestHelper.CreateServer(accessManager);
 
-        // set DnsChallenge
-        var dnsChallenge = new DnsChallenge {
-            KeyAuthorization = "DnsChallenge_KeyAuthorization",
-            Token = "DnsChallenge",
-            Timeout = TimeSpan.FromSeconds(60)
-        };
-        accessManager.ServerConfig.DnsChallenge = dnsChallenge;
-
-        // notify server
-        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
-            () => accessManager.LastServerStatus!.ConfigCode);
-
         // server should listen to port 80 for HTTP-01 challenge
-        var httpClient = new HttpClient();
-        var url = new Uri(
-            $"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{dnsChallenge.Token}");
+        using var httpClient = new HttpClient();
+        var url = new Uri($"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{accessManager.AcmeHttp01KeyToken}");
         var keyAuthorization = await httpClient.GetStringAsync(url);
-        Assert.AreEqual(dnsChallenge.KeyAuthorization, keyAuthorization);
+        Assert.AreEqual(accessManager.AcmeHttp01KeyAuthorization, keyAuthorization);
 
         // check invalid url
-        url = new Uri(
-            $"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
+        url = new Uri($"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
         var response = await httpClient.GetAsync(url);
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
-
-        // remove challenge and notify server
-        accessManager.ServerConfig.DnsChallenge = null;
-        accessManager.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await VhTestUtil.AssertEqualsWait(accessManager.ServerConfig.ConfigCode,
-            () => accessManager.LastServerStatus!.ConfigCode);
-
-        await Assert.ThrowsExactlyAsync<HttpRequestException>(() => httpClient.GetAsync(url));
     }
 
     [TestMethod]

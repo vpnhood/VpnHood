@@ -115,8 +115,7 @@ public class ApiClientBase : ApiClientCommon
         Dictionary<string, object?>? parameters = null, object? data = null,
         CancellationToken cancellationToken = default)
     {
-        var res = await HttpSendExAsync<HttpNoResult>(httpMethod, urlPart, parameters, data, cancellationToken)
-            .Vhc();
+        var res = await HttpSendExAsync<HttpNoResult>(httpMethod, urlPart, parameters, data, cancellationToken).Vhc();
         return res.Text;
     }
 
@@ -203,9 +202,7 @@ public class ApiClientBase : ApiClientCommon
         await PrepareRequestAsync(client, request, urlBuilder, cancellationToken).Vhc();
 
 
-        using var response =
-            await HttpClientSendAsync(client, request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                .Vhc();
+        using var response = await HttpClientSendAsync(client, request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).Vhc();
         var headers = response.Headers.ToDictionary(h => h.Key, h => h.Value);
 
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract

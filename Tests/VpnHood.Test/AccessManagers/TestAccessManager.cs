@@ -29,6 +29,8 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     [Obsolete("Use RedirectServerTokens")] public IPEndPoint? RedirectHostEndPoint { get; set; }
     [Obsolete("Use RedirectServerTokens")] public IPEndPoint[]? RedirectHostEndPoints { get; set; }
     public ServerToken[]? RedirectServerTokens { get; set; }
+    public string? AcmeHttp01KeyToken { get; set; }
+    public string? AcmeHttp01KeyAuthorization { get; set; }
 
     public void AddAdData(string adData)
     {
@@ -140,6 +142,15 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         return sessionResponse;
     }
 
+    public override Task<string> Acme_GetHttp01KeyAuthorization(string token)
+    {
+        if (AcmeHttp01KeyToken == token && AcmeHttp01KeyAuthorization != null)
+            return Task.FromResult(AcmeHttp01KeyAuthorization);
+
+        throw new HttpRequestException("Token not found", null, HttpStatusCode.NotFound);
+    }
+
+
     protected override string? GetAccessTokenIdFromAccessCode(string accessCode)
     {
         var validatedAccessCode = AccessCodeUtils.TryValidate(accessCode);
@@ -147,6 +158,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
             return null;
 
         return AccessCodes.GetValueOrDefault(validatedAccessCode);
+
     }
 
     protected override void Dispose(bool disposing)

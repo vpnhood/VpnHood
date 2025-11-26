@@ -34,7 +34,7 @@ public class VpnHoodServer : IAsyncDisposable
     private readonly ServerConfig? _config;
     private Task _configureTask = Task.CompletedTask;
     private Task _sendStatusTask = Task.CompletedTask;
-    private Http01ChallengeService? _http01ChallengeService;
+    private readonly Http01ChallengeService _http01ChallengeService;
     private readonly NetConfigurationService? _netConfigurationService;
     private readonly ISystemInfoProvider _systemInfoProvider;
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
@@ -72,6 +72,7 @@ public class VpnHoodServer : IAsyncDisposable
                 VirtualIpNetworkV6 = options.VirtualIpNetworkV6
             });
 
+        _http01ChallengeService = new Http01ChallengeService(AccessManager.Acme_GetHttp01KeyAuthorization);
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
@@ -252,7 +253,8 @@ public class VpnHoodServer : IAsyncDisposable
             }).Vhc();
 
             // Reconfigure dns challenge
-            StartDnsChallenge(serverConfig.TcpEndPointsValue.Select(x => x.Address), serverConfig.DnsChallenge);
+            ManageHttp01Challenge(serverConfig.EnableHttp01ChallengeValue
+                ? serverConfig.TcpEndPointsValue.Select(x => x.Address).ToArray() : []);
 
             // set config status
             _lastConfigCode = serverConfig.ConfigCode;
@@ -315,17 +317,14 @@ public class VpnHoodServer : IAsyncDisposable
         }
     }
 
-    private void StartDnsChallenge(IEnumerable<IPAddress> ipAddresses, DnsChallenge? dnsChallenge)
+    private void ManageHttp01Challenge(IPAddress[] ipAddresses)
     {
-        _http01ChallengeService?.Dispose();
-        _http01ChallengeService = null;
-        if (dnsChallenge == null)
+        _http01ChallengeService.Stop();
+        if (!ipAddresses.Any())
             return;
 
         try {
-            _http01ChallengeService = new Http01ChallengeService(ipAddresses.ToArray(), dnsChallenge.Token,
-                dnsChallenge.KeyAuthorization, dnsChallenge.Timeout);
-            _http01ChallengeService.Start();
+            _http01ChallengeService.Start(ipAddresses, ignoreError: true);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not start the Http01ChallengeService.");
@@ -387,8 +386,8 @@ public class VpnHoodServer : IAsyncDisposable
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo)
     {
         var serverConfig = await ReadConfigImpl(serverInfo).Vhc();
-        serverConfig.SessionOptions.StreamProxyBufferSize = GetBestStreamBufferSize(serverInfo.TotalMemory,
-            serverConfig.SessionOptions.StreamProxyBufferSize);
+        serverConfig.SessionOptions.StreamProxyBufferSize =
+            GetBestStreamBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.StreamProxyBufferSize);
         serverConfig.ApplyDefaults();
         VhLogger.Instance.LogInformation("RemoteConfig: {RemoteConfig}", GetServerConfigReport(serverConfig));
 
@@ -530,23 +529,11 @@ public class VpnHoodServer : IAsyncDisposable
         _configureAndSendStatusJob.Dispose();
 
         // wait for configuration
-        try {
-            await _configureTask.Vhc();
-        }
-        catch {
-            /* no error */
-        }
-
-        try {
-            await _sendStatusTask.Vhc();
-        }
-        catch {
-            /* no error*/
-        }
-
+        await VhUtils.TryInvokeAsync("Finalize configureTask", () => _configureTask).Vhc();
+        await VhUtils.TryInvokeAsync("Finalize sndStatusTask", () => _sendStatusTask).Vhc();
         await ServerHost.DisposeAsync().Vhc(); // before disposing session manager to prevent recovering sessions
         await SessionManager.DisposeAsync().Vhc();
-        _http01ChallengeService?.Dispose();
+        _http01ChallengeService.Dispose();
         if (_netConfigurationService != null)
             await _netConfigurationService.DisposeAsync().Vhc();
 

@@ -167,5 +167,12 @@ public class TestEmbedIoAccessManager : IDisposable
             var serverInfo = await GetRequestDataAsync<ServerInfo>();
             return await AccessManager.Server_Configure(serverInfo);
         }
+
+        [Route(HttpVerbs.Get, "/acme/http01_key_Authorization")]
+        public async Task<string> Acme_GetHttp01KeyAuthorization([QueryField] string token)
+        {
+            var res = await AccessManager.Acme_GetHttp01KeyAuthorization(token);
+            return res;
+        }
     }
 }

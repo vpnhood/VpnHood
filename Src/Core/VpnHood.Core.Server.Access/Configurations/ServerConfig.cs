@@ -7,11 +7,14 @@ namespace VpnHood.Core.Server.Access.Configurations;
 
 public class ServerConfig
 {
-    [JsonPropertyName("Tracking")] public TrackingOptions TrackingOptions { get; set; } = new();
+    [JsonPropertyName("Tracking")] 
+    public TrackingOptions TrackingOptions { get; set; } = new();
 
-    [JsonPropertyName("Session")] public SessionOptions SessionOptions { get; set; } = new();
+    [JsonPropertyName("Session")] 
+    public SessionOptions SessionOptions { get; set; } = new();
 
-    [JsonPropertyName("NetFilter")] public NetFilterOptions NetFilterOptions { get; set; } = new();
+    [JsonPropertyName("NetFilter")] 
+    public NetFilterOptions NetFilterOptions { get; set; } = new();
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? TcpEndPoints { get; set; }
@@ -34,6 +37,7 @@ public class ServerConfig
     public string? AddListenerIpsToNetwork { get; set; }
     public CertificateData[] Certificates { get; set; } = [];
     public string? TcpCongestionControl { get; set; } = "bbr";
+    public bool? EnableHttp01Challenge { get; set; }
 
     // Inherit
     [JsonIgnore]
@@ -55,9 +59,9 @@ public class ServerConfig
     
     [JsonIgnore] 
     public string? TcpCongestionControlValue => TcpCongestionControl;
-    
-    //[Obsolete("Use Cert_Api in AccessServer Version>=774")]
-    public DnsChallenge? DnsChallenge { get; set; }
+
+    [JsonIgnore]
+    public bool EnableHttp01ChallengeValue => EnableHttp01Challenge ?? false;
 
 
     public void Merge(ServerConfig obj)
@@ -75,8 +79,8 @@ public class ServerConfig
         if (obj.MaxCompletionPortThreads != null) MaxCompletionPortThreads = obj.MaxCompletionPortThreads;
         if (obj.SwapMemorySizeMb != null) SwapMemorySizeMb = obj.SwapMemorySizeMb;
         if (obj.AddListenerIpsToNetwork != null) AddListenerIpsToNetwork = obj.AddListenerIpsToNetwork;
-        if (obj.DnsChallenge != null) DnsChallenge = obj.DnsChallenge;
         if (obj.TcpCongestionControl != null) TcpCongestionControl = obj.TcpCongestionControl;
+        if (obj.EnableHttp01Challenge != null) EnableHttp01Challenge = obj.EnableHttp01Challenge;
     }
 
     public void ApplyDefaults()
@@ -90,5 +94,6 @@ public class ServerConfig
         UpdateStatusInterval = UpdateStatusIntervalValue;
         LogAnonymizer = LogAnonymizerValue;
         TcpCongestionControl = TcpCongestionControlValue;
+        EnableHttp01Challenge = EnableHttp01ChallengeValue;
     }
 }

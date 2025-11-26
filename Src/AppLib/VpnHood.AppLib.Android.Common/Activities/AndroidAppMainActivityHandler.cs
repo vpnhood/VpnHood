@@ -25,10 +25,8 @@ public class AndroidAppMainActivityHandler
 
         activityEvent.CreateEvent += (_, args) => OnCreate(args.SavedInstanceState);
         activityEvent.NewIntentEvent += (_, args) => OnNewIntent(args.Intent);
-        activityEvent.RequestPermissionsResultEvent += (_, args) =>
-            OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);
-        activityEvent.ActivityResultEvent +=
-            (_, args) => OnActivityResult(args.RequestCode, args.ResultCode, args.Data);
+        activityEvent.RequestPermissionsResultEvent += (_, args) => OnRequestPermissionsResult(args.RequestCode, args.Permissions, args.GrantResults);
+        activityEvent.ActivityResultEvent += (_, args) => OnActivityResult(args.RequestCode, args.ResultCode, args.Data);
         activityEvent.KeyDownEvent += (_, args) => args.IsHandled = OnKeyDown(args.KeyCode, args.KeyEvent);
         activityEvent.PauseEvent += (_, _) => OnPause();
         activityEvent.ResumeEvent += (_, _) => OnResume();

@@ -1,6 +1,6 @@
-﻿using Ga4.Trackers;
+﻿using System.Net;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
@@ -52,7 +52,8 @@ public class ServerFinder(
 
             // select forced endpoints for each server token
             return serverTokens
-                .SelectMany(serverToken => customServerEndpoints.Select(ep => new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash)))
+                .SelectMany(serverToken => customServerEndpoints.Select(ep =>
+                    new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash)))
                 .Where(x => includeIpV6 || x.TcpEndPoint.IsV6() || x.TcpEndPoint.Address.IsLoopback())
                 .ToArray();
         }
@@ -95,7 +96,8 @@ public class ServerFinder(
     }
 
     // There is much work to be done here
-    public async Task<VpnEndPoint> FindReachableServerAsync(IEnumerable<ServerToken> serverTokens, CancellationToken cancellationToken)
+    public async Task<VpnEndPoint> FindReachableServerAsync(IEnumerable<ServerToken> serverTokens,
+        CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Finding a reachable server... QueryTimeout: {QueryTimeout}",
@@ -112,7 +114,8 @@ public class ServerFinder(
             .ToArray();
 
         // find the best server
-        _hostEndPointStatuses = await VerifyHostsStatus(hostStatuses, byOrder: false, cancellationToken: cancellationToken);
+        _hostEndPointStatuses =
+            await VerifyHostsStatus(hostStatuses, byOrder: false, cancellationToken: cancellationToken);
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.VpnEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
@@ -135,7 +138,8 @@ public class ServerFinder(
         throw new UnreachableServerException();
     }
 
-    public async Task<VpnEndPoint> FindBestRedirectedServerAsync(ServerToken[] serverTokens, CancellationToken cancellationToken)
+    public async Task<VpnEndPoint> FindBestRedirectedServerAsync(ServerToken[] serverTokens,
+        CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request, "Finding best server from redirected endpoints...");
 
@@ -151,7 +155,8 @@ public class ServerFinder(
                 .FirstOrDefault(x => x.VpnEndPoint.Equals(hostStatus.VpnEndPoint))?.Available;
 
         // find the best server by order
-        var endpointStatuses = await VerifyHostsStatus(hostStatuses, byOrder: true, cancellationToken: cancellationToken);
+        var endpointStatuses =
+            await VerifyHostsStatus(hostStatuses, byOrder: true, cancellationToken: cancellationToken);
         var res = endpointStatuses.FirstOrDefault(x => x.Available == true)?.VpnEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -217,10 +222,10 @@ public class ServerFinder(
 
         // Initialize time-based progress tracking
         // as we check the first server separately in unparallel mode, we add maxDegreeOfParallelism to total
-        _progressMonitor = new ProgressMonitor(hostStatuses.Length + maxDegreeOfParallelism, serverQueryTimeout, maxDegreeOfParallelism);
+        _progressMonitor = new ProgressMonitor(hostStatuses.Length + maxDegreeOfParallelism, serverQueryTimeout,
+            maxDegreeOfParallelism);
 
         try {
-
             // first attempt the first server, take it simple. If it fails, do parallel checks.
             // this help prevent false DDOS attack on servers as most client can simply connect to the first server
             await VerifyHostStatus(firstHostStatus, serverQueryTimeout, cancellationToken);
@@ -238,7 +243,8 @@ public class ServerFinder(
         finally {
             VhLogger.Instance.LogInformation(GeneralEventId.Request,
                 "Server verification completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
-                FastDateTime.Now - _progressMonitor.Progress.StartedTime, hostStatuses.Count(x => x.Available is not null), hostStatuses.Length);
+                FastDateTime.Now - _progressMonitor.Progress.StartedTime,
+                hostStatuses.Count(x => x.Available is not null), hostStatuses.Length);
 
             // Ensure progress is complete at the end of the operation
             _progressMonitor = null;
@@ -318,7 +324,8 @@ public class ServerFinder(
         return hostStatuses;
     }
 
-    private async Task VerifyHostStatus(HostStatus hostStatus, TimeSpan queryTimeout, CancellationToken cancellationToken)
+    private async Task VerifyHostStatus(HostStatus hostStatus, TimeSpan queryTimeout,
+        CancellationToken cancellationToken)
     {
         // if first server is already marked as available, return it directly
         if (hostStatus.Available is not null)
@@ -333,10 +340,12 @@ public class ServerFinder(
     {
         try {
             VhLogger.Instance.LogInformation(GeneralEventId.Request,
-                "Starting the first server verification. EndPoint: {EndPoint}", VhLogger.Format(connector.VpnEndPoint.TcpEndPoint));
+                "Starting the first server verification. EndPoint: {EndPoint}",
+                VhLogger.Format(connector.VpnEndPoint.TcpEndPoint));
 
             using var queryTimeoutCts = new CancellationTokenSource(queryTimeout); // timeout for each server query
-            using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(queryTimeoutCts.Token, cancellationToken);
+            using var requestCts =
+                CancellationTokenSource.CreateLinkedTokenSource(queryTimeoutCts.Token, cancellationToken);
 
             var requestResult = await connector
                 .SendRequest<SessionResponse>(new ServerCheckRequest { RequestId = UniqueIdFactory.Create() },
@@ -371,7 +380,7 @@ public class ServerFinder(
                 ProxyEndPointManager: proxyEndPointManager,
                 SocketFactory: socketFactory,
                 AllowTcpReuse: false)
-            );
+        );
 
         connector.Init(
             protocolVersion: connector.ProtocolVersion, serverSecret: null,

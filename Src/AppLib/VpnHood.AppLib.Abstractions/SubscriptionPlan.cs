@@ -8,5 +8,4 @@ public class SubscriptionPlan
     public required string CurrentFormattedPrice { get; init; }
     public required string Period { get; init; }
     public required string PlanToken { get; init; }
-
 }

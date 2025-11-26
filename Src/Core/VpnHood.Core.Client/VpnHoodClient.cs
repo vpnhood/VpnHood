@@ -684,7 +684,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
             requestResult.ClientStream.PreventReuse(); // lets hello request stream not to be reused
-            _connectorService.AllowTcpReuse = Config.AllowTcpReuse; // after hello, we can reuse, as the other connections can use websocket
+            _connectorService.AllowTcpReuse =
+                Config.AllowTcpReuse; // after hello, we can reuse, as the other connections can use websocket
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)
@@ -936,7 +937,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 #pragma warning restore CS0618 // Type or member is obsolete
 
             // find the best redirected server
-            var redirectedEndPoint = await _serverFinder.FindBestRedirectedServerAsync(redirectServerTokens, cancellationToken);
+            var redirectedEndPoint =
+                await _serverFinder.FindBestRedirectedServerAsync(redirectServerTokens, cancellationToken);
             await ConnectInternal(redirectedEndPoint, false, cancellationToken).Vhc();
         }
     }

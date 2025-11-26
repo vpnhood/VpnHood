@@ -3,6 +3,6 @@
 namespace VpnHood.Core.Client;
 
 public record VpnEndPoint(
-    IPEndPoint TcpEndPoint, 
-    string HostName, 
+    IPEndPoint TcpEndPoint,
+    string HostName,
     byte[]? CertificateHash);

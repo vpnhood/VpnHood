@@ -5,7 +5,6 @@ namespace VpnHood.AppLib.Test.Providers;
 
 internal class TestBillingProvider : IAppBillingProvider
 {
-    
     public Exception? PurchaseException { get; set; }
     public Exception? SubscriptionPlanException { get; set; }
 
@@ -28,7 +27,7 @@ internal class TestBillingProvider : IAppBillingProvider
             }
         ];
     }
-    
+
     public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams)
     {
         if (PurchaseException != null)

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+
 // ReSharper disable UnassignedField.Global
 // ReSharper disable once CheckNamespace
 // ReSharper disable ClassWithVirtualMembersNeverInherited.Global
@@ -139,5 +140,4 @@ public class ContextMenu : IDisposable
     {
         Dispose(false);
     }
-
 }

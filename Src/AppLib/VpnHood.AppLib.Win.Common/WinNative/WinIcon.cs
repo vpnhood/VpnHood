@@ -10,24 +10,26 @@ public static class WinIcon
 {
     public const uint RES_ICON = 1;
     public const uint DEFAULT_ICON_SIZE = 0;
-    public const uint IMAGE_ICON = 1;          // Load an icon
+    public const uint IMAGE_ICON = 1; // Load an icon
     public const uint LR_LOADFROMFILE = 0x00000010; // Load from file path
     public const uint LR_DEFAULTSIZE = 0x00000040; // Use system default icon size
 
     [DllImport("user32.dll", SetLastError = true)]
-    public static extern IntPtr CreateIconFromResourceEx(byte[] buffer, uint dwResSize, bool fIcon, uint dwVer, int cxDesired,
+    public static extern IntPtr CreateIconFromResourceEx(byte[] buffer, uint dwResSize, bool fIcon, uint dwVer,
+        int cxDesired,
         int cyDesired, uint uFlags);
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool DestroyIcon(nint hIcon);
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
-    public static extern uint ExtractIconEx(string lpszFile, int nIconIndex, IntPtr[] phiconLarge, 
+    public static extern uint ExtractIconEx(string lpszFile, int nIconIndex, IntPtr[] phiconLarge,
         IntPtr[] phiconSmall, uint nIcons);
 
     [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
     [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public static extern IntPtr LoadImage(IntPtr hInst, string lpszName, uint uType, int cxDesired, int cyDesired, uint fuLoad);
+    public static extern IntPtr LoadImage(IntPtr hInst, string lpszName, uint uType, int cxDesired, int cyDesired,
+        uint fuLoad);
 
     public static IntPtr LoadIconFromBytes(byte[] icoBytes)
     {
@@ -48,7 +50,7 @@ public static class WinIcon
 
         File.Delete(tempIco);
 
-        return hIcon != IntPtr.Zero ? hIcon : throw new InvalidOperationException("LoadImage failed."); 
+        return hIcon != IntPtr.Zero ? hIcon : throw new InvalidOperationException("LoadImage failed.");
     }
 
     public static IntPtr ExtractLargeIcon(string exePath, int index = 0)

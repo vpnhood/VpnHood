@@ -204,12 +204,13 @@ internal class ConnectorServiceBase : IDisposable
                 VhLogger.FormatHostName(hostName));
 
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
-                TargetHost = hostName,
-                EnabledSslProtocols = SslProtocols.None // auto
-            }, cancellationToken)
+                    TargetHost = hostName,
+                    EnabledSslProtocols = SslProtocols.None // auto
+                }, cancellationToken)
                 .Vhc();
 
-            var clientStream = await CreateClientStream(streamId, tcpClient, sslStream, contentLength, cancellationToken).Vhc();
+            var clientStream =
+                await CreateClientStream(streamId, tcpClient, sslStream, contentLength, cancellationToken).Vhc();
             lock (Status) Status.CreatedConnectionCount++;
             return clientStream;
         }

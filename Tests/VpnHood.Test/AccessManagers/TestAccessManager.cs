@@ -26,10 +26,8 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public Dictionary<string, string> AccessCodes { get; set; } = new();
     public int UserReviewRecommended { get; set; }
     public UserReview? UserReview { get; set; }
-    [Obsolete("Use RedirectServerTokens")]
-    public IPEndPoint? RedirectHostEndPoint { get; set; }
-    [Obsolete("Use RedirectServerTokens")]
-    public IPEndPoint[]? RedirectHostEndPoints { get; set; }
+    [Obsolete("Use RedirectServerTokens")] public IPEndPoint? RedirectHostEndPoint { get; set; }
+    [Obsolete("Use RedirectServerTokens")] public IPEndPoint[]? RedirectHostEndPoints { get; set; }
     public ServerToken[]? RedirectServerTokens { get; set; }
 
     public void AddAdData(string adData)

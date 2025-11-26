@@ -22,8 +22,8 @@ public class Job : IDisposable
     public string Name { get; init; }
 
     public Job(
-        Func<CancellationToken, ValueTask> jobFunc, 
-        JobOptions options, 
+        Func<CancellationToken, ValueTask> jobFunc,
+        JobOptions options,
         JobRunner? jobRunner = null)
     {
         _jobFunc = jobFunc;
@@ -112,7 +112,8 @@ public class Job : IDisposable
 
     public async Task RunNow(CancellationToken cancellationToken)
     {
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
+        using var linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
         // await required for linkedCts to be disposed properly
         await RunInternal(linkedCts.Token).ConfigureAwait(false);

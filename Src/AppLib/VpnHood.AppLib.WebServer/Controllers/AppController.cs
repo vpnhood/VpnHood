@@ -268,7 +268,8 @@ internal class AppController : ControllerBase, IAppController
 
     public async Task<byte[]> PromotionImage()
     {
-        if (App.SettingsService.PromotionImageFilePath is null || !File.Exists(App.SettingsService.PromotionImageFilePath))
+        if (App.SettingsService.PromotionImageFilePath is null ||
+            !File.Exists(App.SettingsService.PromotionImageFilePath))
             throw new NotExistsException();
 
         return await File.ReadAllBytesAsync(App.SettingsService.PromotionImageFilePath);

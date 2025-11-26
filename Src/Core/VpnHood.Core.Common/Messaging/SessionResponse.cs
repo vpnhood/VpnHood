@@ -22,6 +22,7 @@ public class SessionResponse
     [JsonConverter(typeof(IPEndPointConverter))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public IPEndPoint? RedirectHostEndPoint { get; set; }
+
     public ServerToken[]? RedirectServerTokens { get; set; }
 
     [Obsolete("Deprecated on protocol 10. User ServerTokens")]
@@ -37,5 +38,4 @@ public class SessionResponse
 
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress? ClientPublicAddress { get; set; }
-    
 }

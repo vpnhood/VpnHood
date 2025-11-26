@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -95,7 +95,7 @@ public class AppSettingsService
         VhLogger.Instance.LogDebug("Remote update successfully.");
 
         // download promotion image
-        await VhUtils.TryInvokeAsync("Update Promote Image", () => 
+        await VhUtils.TryInvokeAsync("Update Promote Image", () =>
             UpdatePromoteImage(httpClient, RemoteSettings.PromotionImageUrl, cancellationToken));
     }
 
@@ -103,7 +103,7 @@ public class AppSettingsService
     {
         // delete all existing promotion images
         if (url == null) {
-            if (Directory.Exists(PromotionFolderPath)) 
+            if (Directory.Exists(PromotionFolderPath))
                 Directory.Delete(PromotionFolderPath, true);
             return;
         }

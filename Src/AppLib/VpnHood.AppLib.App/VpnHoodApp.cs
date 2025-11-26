@@ -418,7 +418,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
                 PromotionExists = PromotionExists(),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
-                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext) : SystemBarsInfo.Default
+                    ? Services.DeviceUiProvider.GetBarsInfo(uiContext)
+                    : SystemBarsInfo.Default
             };
 
             return appState;

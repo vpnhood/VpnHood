@@ -47,7 +47,8 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         _storageFolder = storageFolder;
 
         // get app icon from executable
-        var assemblyLocation = Assembly.GetEntryAssembly()?.Location ?? throw new Exception("Could not get the location of Assembly.");
+        var assemblyLocation = Assembly.GetEntryAssembly()?.Location ??
+                               throw new Exception("Could not get the location of Assembly.");
         _appIcon = WinIcon.ExtractLargeIcon(assemblyLocation);
         if (_appIcon == IntPtr.Zero)
             throw new Exception("Could not get the icon of the executing assembly.");
@@ -161,13 +162,16 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
 
         // initialize icons from icon data (byte arrays)
         if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon != null)
-            _connectingIcon = WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon.Data);
+            _connectingIcon =
+                WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon.Data);
 
         if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon != null)
-            _connectedIcon = WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon.Data);
+            _connectedIcon =
+                WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon.Data);
 
         if (VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon != null)
-            _disconnectedIcon = WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon.Data);
+            _disconnectedIcon =
+                WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon.Data);
     }
 
     private void UpdateNotifyIcon()

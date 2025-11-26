@@ -9,7 +9,6 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.AndroidTun;
@@ -123,7 +122,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     {
         if (_notification == null) {
             VhLogger.Instance.LogDebug("Create and show the notification for the VPN service.");
-            _notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), connectionInfo.SessionName ?? "VPN");
+            _notification =
+                new AndroidVpnNotification(this, new VpnServiceLocalization(), connectionInfo.SessionName ?? "VPN");
 
             // start foreground with notification
             try {

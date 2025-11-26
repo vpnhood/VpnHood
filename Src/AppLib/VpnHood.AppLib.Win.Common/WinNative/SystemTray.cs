@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+
 // ReSharper disable EventNeverSubscribedTo.Global
 // ReSharper disable once CheckNamespace
 

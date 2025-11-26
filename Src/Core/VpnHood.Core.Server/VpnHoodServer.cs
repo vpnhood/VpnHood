@@ -246,7 +246,8 @@ public class VpnHoodServer : IAsyncDisposable
                 DnsServers = serverConfig.DnsServersValue,
                 TcpEndPoints = serverConfig.TcpEndPointsValue,
                 UdpEndPoints = serverConfig.UdpEndPointsValue,
-                Certificates = serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null)).ToArray(),
+                Certificates = serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null))
+                    .ToArray(),
                 UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue
             }).Vhc();
 

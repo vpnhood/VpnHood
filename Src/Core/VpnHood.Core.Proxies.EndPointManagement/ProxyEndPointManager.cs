@@ -71,9 +71,12 @@ public class ProxyEndPointManager : IDisposable
                     SessionStatus = _sessionStatus,
                     ProxyEndPointInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray(),
                     IsAnySucceeded = _proxyEndPointEntries.Any(x => x.Status.ErrorMessage is null),
-                    SucceededServerCount = _proxyEndPointEntries.Count(x => x.EndPoint.IsEnabled && x.Status.IsLastUsedSucceeded),
-                    FailedServerCount = _proxyEndPointEntries.Count(x => x.EndPoint.IsEnabled && x.Status is { HasUsed: true, IsLastUsedSucceeded: false }),
-                    UnknownServerCount = _proxyEndPointEntries.Count(x => x.EndPoint.IsEnabled && x.Status is { HasUsed: false }),
+                    SucceededServerCount =
+                        _proxyEndPointEntries.Count(x => x.EndPoint.IsEnabled && x.Status.IsLastUsedSucceeded),
+                    FailedServerCount = _proxyEndPointEntries.Count(x =>
+                        x.EndPoint.IsEnabled && x.Status is { HasUsed: true, IsLastUsedSucceeded: false }),
+                    UnknownServerCount =
+                        _proxyEndPointEntries.Count(x => x.EndPoint.IsEnabled && x.Status is { HasUsed: false }),
                     DisabledServerCount = _proxyEndPointEntries.Count(x => !x.EndPoint.IsEnabled)
                 };
         }
@@ -164,7 +167,7 @@ public class ProxyEndPointManager : IDisposable
     {
         // create dictionary for existing entries using linq
         var existingEntryDic = existingEntries.DistinctBy(x => x.EndPoint.Id).ToDictionary(x => x.EndPoint.Id);
-        var newEntryDic = newEntries.DistinctBy(x=>x.Id).ToDictionary(x => x.Id);
+        var newEntryDic = newEntries.DistinctBy(x => x.Id).ToDictionary(x => x.Id);
 
         // update existing entries
         foreach (var existingEntry in existingEntryDic.Values) {
@@ -207,7 +210,8 @@ public class ProxyEndPointManager : IDisposable
         try {
             var testEp = IPEndPoint.Parse("1.1.1.1:443");
             var tickCount = Environment.TickCount64;
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
+            using var linkedCts =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, serverCheckCts.Token);
             await proxyClient.ConnectAsync(tcpClient, testEp, linkedCts.Token).Vhc();
             var latency = TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount);
 

@@ -1,8 +1,8 @@
-﻿using Android.Runtime;
+﻿using System.Web;
+using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
 using Microsoft.Extensions.Logging;
-using System.Web;
 using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer;
@@ -136,7 +136,8 @@ public class AndroidAppWebViewMainActivityHandler(
             // Register back callback for Android 13+ (API 33+) with default priority (0)
             if (OperatingSystem.IsAndroidVersionAtLeast(33)) {
                 _backInvokedCallback = new AndroidBackInvokedCallback(HandleBackInvoked);
-                ActivityEvent.Activity.OnBackInvokedDispatcher.RegisterOnBackInvokedCallback(priority: 0, _backInvokedCallback);
+                ActivityEvent.Activity.OnBackInvokedDispatcher.RegisterOnBackInvokedCallback(priority: 0,
+                    _backInvokedCallback);
             }
         }
         catch (Exception ex) {

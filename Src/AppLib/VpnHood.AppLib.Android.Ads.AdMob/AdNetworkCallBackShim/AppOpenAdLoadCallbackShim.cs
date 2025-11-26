@@ -1,5 +1,6 @@
 using Android.Runtime;
 using Google.Android.Gms.Ads.AppOpen;
+
 // ReSharper disable UnusedMember.Local
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackShim;

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+
 // ReSharper disable ClassWithVirtualMembersNeverInherited.Global
 // ReSharper disable once CheckNamespace
 // ReSharper disable IdentifierTypo

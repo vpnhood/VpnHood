@@ -10,7 +10,7 @@ public abstract class AndroidAppMainActivity : ActivityEvent
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         // must before base.OnCreate to make sure event is fired
-        MainActivityHandler = CreateMainActivityHandler(); 
+        MainActivityHandler = CreateMainActivityHandler();
         base.OnCreate(savedInstanceState);
     }
 }

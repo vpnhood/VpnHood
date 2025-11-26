@@ -1,4 +1,5 @@
 ﻿namespace VpnHood.Core.Tunneling.Quic;
+
 // ReSharper disable IdentifierTypo
 // ReSharper disable GrammarMistakeInComment
 // ReSharper disable FieldCanBeMadeReadOnly.Global

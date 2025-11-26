@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
+
 // ReSharper disable CollectionNeverUpdated.Global
 
 namespace VpnHood.Core.Toolkit.ApiClients;
@@ -16,7 +17,7 @@ public abstract class ApiClientCommon
         return PrepareRequestAsync(client, request, urlBuilder.ToString(), cancellationToken);
     }
 
-    protected virtual Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, string url, 
+    protected virtual Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, string url,
         CancellationToken cancellationToken)
     {
         _ = url;
@@ -40,7 +41,7 @@ public abstract class ApiClientCommon
         return Task.CompletedTask;
     }
 
-    protected virtual Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, 
+    protected virtual Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response,
         CancellationToken cancellationToken)
     {
         _ = client;

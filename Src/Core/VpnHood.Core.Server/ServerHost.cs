@@ -243,7 +243,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 await HttpUtils.ParseHeadersAsync(sslStream, cancellationToken).Vhc()
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", string.Join("\n", headers) );
+            VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", string.Join("\n", headers));
 
 
             Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);

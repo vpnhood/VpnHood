@@ -23,11 +23,9 @@ public class ServerToken
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required bool IsValidHostName { get; set; }
 
-    [JsonPropertyName("sec")] 
-    public required byte[]? Secret { get; set; }
+    [JsonPropertyName("sec")] public required byte[]? Secret { get; set; }
 
-    [JsonPropertyName("ch")] 
-    public byte[]? CertificateHash { get; set; }
+    [JsonPropertyName("ch")] public byte[]? CertificateHash { get; set; }
 
     [JsonPropertyName("url")]
     [Obsolete("Use Urls. Version 558 or upper")]
@@ -39,8 +37,7 @@ public class ServerToken
         }
     }
 
-    [JsonPropertyName("urls")] 
-    public string[]? Urls { get; set; }
+    [JsonPropertyName("urls")] public string[]? Urls { get; set; }
 
     [JsonPropertyName("ep")]
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]

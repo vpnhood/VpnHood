@@ -85,7 +85,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             // We chose the subscriptionOfferDetails which contains the lowest PricingPhaseList
             // Then build the SubscriptionPlan list from it.
             var subscriptionPlans = products.Select(product => {
-
                 // Get the offer details with the lowest price
                 var subscriptionOffer = product.GetSubscriptionOfferDetails()?
                     .OrderBy(od => od.PricingPhases.PricingPhaseList.Min(pp => pp.PriceAmountMicros))
@@ -100,7 +99,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                 }
 
                 // order pricing phases by price amount descending, the first is base price, the rest are discounted prices if any
-                var planPrices = pricingPhases.OrderByDescending(pricingPhase => pricingPhase.PriceAmountMicros).ToArray();
+                var planPrices = pricingPhases.OrderByDescending(pricingPhase => pricingPhase.PriceAmountMicros)
+                    .ToArray();
                 if (!planPrices.Any()) {
                     VhLogger.Instance.LogWarning("Could not get GooglePlay plan prices for product id {ProductId}",
                         product.ProductId);
@@ -119,7 +119,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                     BasePrice = planPrices.First().PriceAmountMicros / 1_000_000.0,
                     CurrentFormattedPrice = planPrices.Last().FormattedPrice,
                     CurrentPrice = planPrices.Last().PriceAmountMicros / 1_000_000.0,
-                    Period = planPrices.First().BillingPeriod,
+                    Period = planPrices.First().BillingPeriod
                 };
             }).Where(plan => plan != null).ToArray();
 
@@ -137,7 +137,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     {
         // Create a generic List to hold the product definitions
         var productsToQuery = new List<QueryProductDetailsParams.Product> {
-
             QueryProductDetailsParams.Product.NewBuilder()
                 .SetProductId("general_subscription")
                 .SetProductType(BillingClient.ProductType.Subs)
@@ -146,7 +145,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             QueryProductDetailsParams.Product.NewBuilder()
                 .SetProductId("vpnhood_6_months_subscription")
                 .SetProductType(BillingClient.ProductType.Subs)
-                .Build(),
+                .Build()
         };
 
         // Build the final params object using the list
@@ -175,8 +174,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         // Get the product details for the selected plan
         var products = await GetProducts(billingClient).Vhc();
-        var product = products.SingleOrDefault(x => x.ProductId == subscriptionToken.ProductId) 
-            ?? throw new  ArgumentException($"Product with id {subscriptionToken.ProductId} not found.");
+        var product = products.SingleOrDefault(x => x.ProductId == subscriptionToken.ProductId)
+                      ?? throw new ArgumentException($"Product with id {subscriptionToken.ProductId} not found.");
 
         // Create the billing flow parameters
         var productParam = BillingFlowParams.ProductDetailsParams.NewBuilder()

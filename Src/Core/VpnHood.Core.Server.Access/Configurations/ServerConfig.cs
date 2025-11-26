@@ -32,7 +32,6 @@ public class ServerConfig
     public int? MaxCompletionPortThreads { get; set; }
     public int? SwapMemorySizeMb { get; set; }
     public string? AddListenerIpsToNetwork { get; set; }
-    public DnsChallenge? DnsChallenge { get; set; }
     public CertificateData[] Certificates { get; set; } = [];
     public string? TcpCongestionControl { get; set; } = "bbr";
 
@@ -45,10 +44,20 @@ public class ServerConfig
     public IPEndPoint[] UdpEndPointsValue =>
         UdpEndPoints ?? [new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.IPv6Any, 0)];
 
-    [JsonIgnore] public IPAddress[] DnsServersValue => DnsServers ?? IPAddressUtil.GoogleDnsServers;
-    [JsonIgnore] public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
-    [JsonIgnore] public bool LogAnonymizerValue => LogAnonymizer ?? true;
-    [JsonIgnore] public string? TcpCongestionControlValue => TcpCongestionControl;
+    [JsonIgnore] 
+    public IPAddress[] DnsServersValue => DnsServers ?? IPAddressUtil.GoogleDnsServers;
+    
+    [JsonIgnore] 
+    public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
+    
+    [JsonIgnore] 
+    public bool LogAnonymizerValue => LogAnonymizer ?? true;
+    
+    [JsonIgnore] 
+    public string? TcpCongestionControlValue => TcpCongestionControl;
+    
+    //[Obsolete("Use Cert_Api in AccessServer Version>=774")]
+    public DnsChallenge? DnsChallenge { get; set; }
 
 
     public void Merge(ServerConfig obj)

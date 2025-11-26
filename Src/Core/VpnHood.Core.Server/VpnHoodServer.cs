@@ -253,8 +253,8 @@ public class VpnHoodServer : IAsyncDisposable
             }).Vhc();
 
             // Reconfigure dns challenge
-            ManageHttp01Challenge(serverConfig.EnableHttp01ChallengeValue
-                ? serverConfig.TcpEndPointsValue.Select(x => x.Address).ToArray() : []);
+            _http01ChallengeService.Stop();
+            _http01ChallengeService.Start(serverConfig.TcpEndPointsValue.Select(x => x.Address).ToArray());
 
             // set config status
             _lastConfigCode = serverConfig.ConfigCode;
@@ -314,20 +314,6 @@ public class VpnHoodServer : IAsyncDisposable
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not configure swap file.");
-        }
-    }
-
-    private void ManageHttp01Challenge(IPAddress[] ipAddresses)
-    {
-        _http01ChallengeService.Stop();
-        if (!ipAddresses.Any())
-            return;
-
-        try {
-            _http01ChallengeService.Start(ipAddresses, ignoreError: true);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not start the Http01ChallengeService.");
         }
     }
 

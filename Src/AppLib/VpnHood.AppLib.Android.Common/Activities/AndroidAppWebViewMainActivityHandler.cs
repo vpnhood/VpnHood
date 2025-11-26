@@ -10,8 +10,6 @@ using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
-using static Android.Provider.DocumentsContract;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
 
@@ -38,7 +36,6 @@ public class AndroidAppWebViewMainActivityHandler(
             // Initialize UI
             Task.Run(InitTask);
         });
-
     }
 
     private Task InitTask()

@@ -26,7 +26,7 @@ public static class GeneralEventId
     public static EventId AccessManager = new((int)EventCode.AccessManager, nameof(AccessManager));
     public static EventId NetProtect = new((int)EventCode.NetProtect, nameof(NetProtect));
     public static EventId NetFilter = new((int)EventCode.NetFilter, nameof(NetFilter));
-    public static EventId DnsChallenge = new((int)EventCode.DnsChallenge, nameof(DnsChallenge));
+    public static EventId AcmeChallenge = new((int)EventCode.AcmeChallenge, nameof(AcmeChallenge));
     public static EventId SessionTrack = new((int)EventCode.SessionTrack, nameof(SessionTrack));
     public static EventId Track = new((int)EventCode.Track, nameof(Track));
 
@@ -51,7 +51,7 @@ public static class GeneralEventId
         SessionTrack,
         Request,
         Stream,
-        DnsChallenge,
+        AcmeChallenge,
         Test
     }
 }

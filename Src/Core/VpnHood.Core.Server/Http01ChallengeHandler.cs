@@ -1,7 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using VpnHood.Core.Server.Access.Managers;
+using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -38,19 +41,18 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         while (IsStarted && !cancellationToken.IsCancellationRequested) {
             using var client = await tcpListener.AcceptTcpClientAsync(cancellationToken).Vhc();
             try {
-                await HandleRequest(client, keyAuthorizationFunc, cancellationToken).Vhc();
+                await HandleRequest(client, cancellationToken).Vhc();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
                 // service is stopping
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not process the HTTP-01 challenge.");
+                VhLogger.Instance.LogError(GeneralEventId.AcmeChallenge, ex, "Could not process the HTTP-01 challenge.");
             }
         }
     }
 
-    private static async Task HandleRequest(TcpClient client, Http01KeyAuthorizationFunc keyAuthorizationFunc, 
-        CancellationToken cancellationToken)
+    private async Task HandleRequest(TcpClient client, CancellationToken cancellationToken)
     {
         await using var stream = client.GetStream();
         var headers = await HttpUtils.ParseHeadersAsync(stream, cancellationToken).Vhc()
@@ -66,17 +68,28 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
             ? requestParts[1][basePath.Length..]
             : throw new HttpRequestException("Invalid HTTP-01 challenge request.", null, HttpStatusCode.BadRequest);
 
-        VhLogger.Instance.LogInformation(GeneralEventId.DnsChallenge, "HTTP Challenge. Request: {request}", request);
+        // Get key authorization
+        VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "HTTP Challenge. Request: {request}", request);
+        var keyAuthorization = await GetKeyAuthorization(token, stream, cancellationToken);
+
+        // Send response
+        await stream.WriteAsync(HttpResponseBuilder.Http01(keyAuthorization), cancellationToken).Vhc();
+        await stream.FlushAsync(cancellationToken).Vhc();
+    }
+
+    private async Task<string> GetKeyAuthorization(string token, Stream outStream, CancellationToken cancellationToken)
+    {
         try {
             var keyAuthorization = await keyAuthorizationFunc(token);
-            await stream.WriteAsync(HttpResponseBuilder.Http01(keyAuthorization), cancellationToken).Vhc();
+            return !string.IsNullOrEmpty(keyAuthorization)
+                ? keyAuthorization
+                : throw new KeyNotFoundException("Key authorization not found for token: " + token);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(GeneralEventId.DnsChallenge, ex, "Could not get key authorization for token: {token}", token);
-            await stream.WriteAsync(HttpResponseBuilder.NotFound(), cancellationToken).Vhc();
+            await outStream.WriteAsync(HttpResponseBuilder.Error(ex), cancellationToken).Vhc();
+            await outStream.FlushAsync(cancellationToken).Vhc();
+            throw;
         }
-
-        await stream.FlushAsync(cancellationToken).Vhc();
     }
 
     public void Dispose()

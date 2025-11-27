@@ -2,6 +2,7 @@
 using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
+using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling.WebSockets;
 
 namespace VpnHood.Core.Server;
@@ -44,33 +45,11 @@ internal static class HttpResponseBuilder
         return Build(response);
     }
 
-
-    public static ReadOnlyMemory<byte> Unauthorized()
-    {
-        var response = new HttpResponseMessage(HttpStatusCode.Unauthorized);
-        response.Headers.WwwAuthenticate.Add(new AuthenticationHeaderValue("Bearer"));
-        return Build(response);
-    }
-
     public static ReadOnlyMemory<byte> Http01(string keyAuthorization)
     {
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         response.Headers.ConnectionClose = true;
-        response.Content = new StringContent(keyAuthorization, Encoding.Default, MediaTypeNames.Text.Plain);
-        return Build(response);
-    }
-
-    public static ReadOnlyMemory<byte> BadRequest()
-    {
-        var response = new HttpResponseMessage(HttpStatusCode.BadRequest);
-        response.Headers.ConnectionClose = true;
-        return Build(response);
-    }
-
-    public static ReadOnlyMemory<byte> NotFound()
-    {
-        var response = new HttpResponseMessage(HttpStatusCode.NotFound);
-        response.Headers.ConnectionClose = true;
+        response.Content = new StringContent(keyAuthorization, Encoding.UTF8, MediaTypeNames.Text.Plain);
         return Build(response);
     }
 
@@ -82,4 +61,38 @@ internal static class HttpResponseBuilder
         response.Headers.Add("Sec-WebSocket-Accept", WebSocketUtils.ComputeWebSocketAccept(webSocketKey));
         return Build(response);
     }
+
+    public static ReadOnlyMemory<byte> Error(HttpStatusCode? httpStatusCode = null, string? message = null, bool connectionClose = true)
+    {
+        var response = new HttpResponseMessage(httpStatusCode ?? HttpStatusCode.InternalServerError);
+        response.Headers.ConnectionClose = connectionClose;
+        if (!string.IsNullOrEmpty(message))
+            response.Content = new StringContent(message, Encoding.UTF8, MediaTypeNames.Text.Plain);
+        return Build(response);
+    }
+
+    public static ReadOnlyMemory<byte> Unauthorized()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.Unauthorized);
+        response.Headers.ConnectionClose = true;
+        response.Headers.WwwAuthenticate.Add(new AuthenticationHeaderValue("Bearer"));
+        return Build(response);
+    }
+
+    public static ReadOnlyMemory<byte> BadRequest(string? message)
+    {
+        return Error (HttpStatusCode.BadRequest, message);
+    }
+
+    public static ReadOnlyMemory<byte> Error(Exception ex)
+    {
+        return ex switch {
+            HttpRequestException httpRequestException  => Error(httpRequestException.StatusCode, ex.Message),
+            KeyNotFoundException => Error(HttpStatusCode.NotFound, ex.Message),
+            UnauthorizedAccessException => Unauthorized(),
+            ApiException { StatusCode: (int)HttpStatusCode.NotFound } => Error(HttpStatusCode.NotFound, ex.Message),
+            _ => Error(HttpStatusCode.InternalServerError, ex.Message)
+        };
+    }
+
 }

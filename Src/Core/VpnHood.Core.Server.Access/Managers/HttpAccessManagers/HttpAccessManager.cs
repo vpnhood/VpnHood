@@ -122,13 +122,18 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         return HttpPostAsync<ServerConfig>("configure", null, serverInfo);
     }
 
-    public Task<string> Acme_GetHttp01KeyAuthorization(string token)
+    public async Task<string> Acme_GetHttp01KeyAuthorization(string token)
     {
         var parameters = new Dictionary<string, object?> {
             { "token", token }
         };
 
-        return HttpGetAsync<string>("acme/http01_key_Authorization", parameters);
+        try {
+            return await HttpGetAsync<string>("acme/http01_key_Authorization", parameters);
+        }
+        catch (ApiException ex) when (ex.StatusCode == (int)HttpStatusCode.NotFound) {
+            throw new KeyNotFoundException("The requested token was not found.", ex);
+        }
     }
 
     public virtual void Dispose()

@@ -333,7 +333,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             //always return BadRequest 
             var response = ex is UnauthorizedAccessException
                 ? HttpResponseBuilder.Unauthorized()
-                : HttpResponseBuilder.BadRequest();
+                : HttpResponseBuilder.Error(HttpStatusCode.BadRequest);
             await sslStream.WriteAsync(response, cancellationToken).Vhc();
             throw;
         }

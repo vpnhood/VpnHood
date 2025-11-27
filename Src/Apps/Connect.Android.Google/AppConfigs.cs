@@ -37,8 +37,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
         Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
 
     public string[] GooglePlayProductIds { get; set; } = [
-        "general_subscription", 
-        "vpnhood_6_months_subscription"
+        "vpnhood_1_month_subscription", 
+        "vpnhood_1_year_subscription"
     ];
 
     public bool StoreIgnoreSslVerification { get; set; } = IsDebugMode;

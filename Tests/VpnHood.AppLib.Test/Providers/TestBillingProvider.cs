@@ -18,12 +18,11 @@ internal class TestBillingProvider : IAppBillingProvider
         await Task.CompletedTask;
         return [
             new SubscriptionPlan {
-                BaseFormattedPrice = "$10.00",
                 BasePrice = 1000,
                 CurrentPrice = 9000,
-                CurrentFormattedPrice = "$9.00",
                 Period = "1M",
-                PlanToken = "test_plan_1m"
+                PlanToken = "test_plan_1m",
+                CurrencySymbol = "$"
             }
         ];
     }

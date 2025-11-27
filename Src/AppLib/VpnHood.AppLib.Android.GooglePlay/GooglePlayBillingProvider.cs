@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Android.BillingClient.Api;
 using Android.Gms.Common;
@@ -117,11 +118,10 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
                 return new SubscriptionPlan {
                     PlanToken = JsonSerializer.Serialize(planToken),
-                    BaseFormattedPrice = planPrices.First().FormattedPrice,
                     BasePrice = planPrices.First().PriceAmountMicros / 1_000_000.0,
-                    CurrentFormattedPrice = planPrices.Last().FormattedPrice,
                     CurrentPrice = planPrices.Last().PriceAmountMicros / 1_000_000.0,
-                    Period = planPrices.First().BillingPeriod
+                    Period = planPrices.First().BillingPeriod,
+                    CurrencySymbol = planPrices.First().FormattedPrice.Substring(0,1) //TODO: trudy check
                 };
             }).Where(plan => plan != null).ToArray();
 
@@ -133,7 +133,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             throw;
         }
     }
-
 
     private static async Task<ProductDetails[]> GetProducts(BillingClient billingClient, string[] productIds)
     {

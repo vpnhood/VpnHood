@@ -1461,22 +1461,18 @@ export class BillingClient {
         return Promise.resolve<SubscriptionPlan[]>(null as any);
     }
 
-    purchase(planId: string, offerToken: string, cancelToken?: CancelToken): Promise<string> {
-        let url_ = this.baseUrl + "/api/billing/purchase?";
-        if (planId === undefined || planId === null)
-            throw new globalThis.Error("The parameter 'planId' must be defined and cannot be null.");
-        else
-            url_ += "planId=" + encodeURIComponent("" + planId) + "&";
-        if (offerToken === undefined || offerToken === null)
-            throw new globalThis.Error("The parameter 'offerToken' must be defined and cannot be null.");
-        else
-            url_ += "offerToken=" + encodeURIComponent("" + offerToken) + "&";
+    purchase(purchaseParams: PurchaseParams, cancelToken?: CancelToken): Promise<string> {
+        let url_ = this.baseUrl + "/api/billing/purchase";
         url_ = url_.replace(/[?&]$/, "");
 
+        const content_ = JSON.stringify(purchaseParams);
+
         let options_: AxiosRequestConfig = {
+            data: content_,
             method: "POST",
             url: url_,
             headers: {
+                "Content-Type": "application/json",
                 "Accept": "application/json"
             },
             cancelToken
@@ -5418,9 +5414,11 @@ export enum ShowAdResult {
 }
 
 export class SubscriptionPlan implements ISubscriptionPlan {
-    subscriptionPlanId!: string;
-    planPrices!: string[];
-    offerToken!: string;
+    basePrice!: number;
+    currentPrice!: number;
+    period!: string;
+    planToken!: string;
+    currencySymbol!: string;
 
     constructor(data?: ISubscriptionPlan) {
         if (data) {
@@ -5429,23 +5427,15 @@ export class SubscriptionPlan implements ISubscriptionPlan {
                     (this as any)[property] = (data as any)[property];
             }
         }
-        if (!data) {
-            this.planPrices = [];
-        }
     }
 
     init(_data?: any) {
         if (_data) {
-            this.subscriptionPlanId = _data["subscriptionPlanId"] !== undefined ? _data["subscriptionPlanId"] : null as any;
-            if (Array.isArray(_data["planPrices"])) {
-                this.planPrices = [] as any;
-                for (let item of _data["planPrices"])
-                    this.planPrices!.push(item);
-            }
-            else {
-                this.planPrices = null as any;
-            }
-            this.offerToken = _data["offerToken"] !== undefined ? _data["offerToken"] : null as any;
+            this.basePrice = _data["basePrice"] !== undefined ? _data["basePrice"] : null as any;
+            this.currentPrice = _data["currentPrice"] !== undefined ? _data["currentPrice"] : null as any;
+            this.period = _data["period"] !== undefined ? _data["period"] : null as any;
+            this.planToken = _data["planToken"] !== undefined ? _data["planToken"] : null as any;
+            this.currencySymbol = _data["currencySymbol"] !== undefined ? _data["currencySymbol"] : null as any;
         }
     }
 
@@ -5458,21 +5448,57 @@ export class SubscriptionPlan implements ISubscriptionPlan {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["subscriptionPlanId"] = this.subscriptionPlanId !== undefined ? this.subscriptionPlanId : null as any;
-        if (Array.isArray(this.planPrices)) {
-            data["planPrices"] = [];
-            for (let item of this.planPrices)
-                data["planPrices"].push(item);
-        }
-        data["offerToken"] = this.offerToken !== undefined ? this.offerToken : null as any;
+        data["basePrice"] = this.basePrice !== undefined ? this.basePrice : null as any;
+        data["currentPrice"] = this.currentPrice !== undefined ? this.currentPrice : null as any;
+        data["period"] = this.period !== undefined ? this.period : null as any;
+        data["planToken"] = this.planToken !== undefined ? this.planToken : null as any;
+        data["currencySymbol"] = this.currencySymbol !== undefined ? this.currencySymbol : null as any;
         return data;
     }
 }
 
 export interface ISubscriptionPlan {
-    subscriptionPlanId: string;
-    planPrices: string[];
-    offerToken: string;
+    basePrice: number;
+    currentPrice: number;
+    period: string;
+    planToken: string;
+    currencySymbol: string;
+}
+
+export class PurchaseParams implements IPurchaseParams {
+    purchaseToken!: string;
+
+    constructor(data?: IPurchaseParams) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.purchaseToken = _data["purchaseToken"] !== undefined ? _data["purchaseToken"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): PurchaseParams {
+        data = typeof data === 'object' ? data : {};
+        let result = new PurchaseParams();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["purchaseToken"] = this.purchaseToken !== undefined ? this.purchaseToken : null as any;
+        return data;
+    }
+}
+
+export interface IPurchaseParams {
+    purchaseToken: string;
 }
 
 export class AppPurchaseOptions implements IAppPurchaseOptions {

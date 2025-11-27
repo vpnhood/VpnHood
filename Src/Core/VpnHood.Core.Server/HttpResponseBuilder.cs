@@ -62,7 +62,7 @@ internal static class HttpResponseBuilder
         return Build(response);
     }
 
-    public static ReadOnlyMemory<byte> Error(HttpStatusCode? httpStatusCode = null, string? message = null, bool connectionClose = true)
+    public static ReadOnlyMemory<byte> Error(HttpStatusCode? httpStatusCode = HttpStatusCode.InternalServerError, string? message = null, bool connectionClose = true)
     {
         var response = new HttpResponseMessage(httpStatusCode ?? HttpStatusCode.InternalServerError);
         response.Headers.ConnectionClose = connectionClose;

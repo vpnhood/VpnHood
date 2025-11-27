@@ -86,6 +86,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
                 : throw new KeyNotFoundException("Key authorization not found for token: " + token);
         }
         catch (Exception ex) {
+            if (ex is NotSupportedException) ex = new KeyNotFoundException();
             await outStream.WriteAsync(HttpResponseBuilder.Error(ex), cancellationToken).Vhc();
             await outStream.FlushAsync(cancellationToken).Vhc();
             throw;

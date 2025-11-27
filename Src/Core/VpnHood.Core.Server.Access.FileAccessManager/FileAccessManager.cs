@@ -196,7 +196,7 @@ public class FileAccessManager : IAccessManager
 
     public virtual Task<string> Acme_GetHttp01KeyAuthorization(string token)
     {
-        throw new NotSupportedException("This server does not support HTTP-01 challenge.");
+        throw new KeyNotFoundException("This server does not support HTTP-01 challenge.");
     }
 
     public Token CreateToken(int maxClientCount = 1, string? tokenName = null, int maxTrafficByteCount = 0,

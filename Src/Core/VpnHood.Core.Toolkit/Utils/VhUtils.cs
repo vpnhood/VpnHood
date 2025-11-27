@@ -429,6 +429,28 @@ public static class VhUtils
         }
     }
 
+    public static string GetCurrencySymbol(string currencyCode)
+    {
+        var culture = CultureInfo
+            .GetCultures(CultureTypes.AllCultures)
+            .FirstOrDefault(c => {
+                try {
+                    var region = new RegionInfo(c.LCID);
+                    return region.ISOCurrencySymbol == currencyCode;
+                }
+                catch {
+                    return false;
+                }
+            });
+
+        if (culture == null)
+            return currencyCode; // fallback
+
+        var regionInfo = new RegionInfo(culture.LCID);
+        return regionInfo.CurrencySymbol;
+    }
+
+
     public static async Task TryInvokeAsync(string? actionName, Func<ValueTask> task)
     {
         try {

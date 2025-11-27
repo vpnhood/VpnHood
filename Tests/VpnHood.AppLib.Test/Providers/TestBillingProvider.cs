@@ -22,7 +22,8 @@ internal class TestBillingProvider : IAppBillingProvider
                 CurrentPrice = 9000,
                 Period = "1M",
                 PlanToken = "test_plan_1m",
-                CurrencySymbol = "$"
+                CurrencySymbol = "$",
+                CurrencyCode = "USD"
             }
         ];
     }

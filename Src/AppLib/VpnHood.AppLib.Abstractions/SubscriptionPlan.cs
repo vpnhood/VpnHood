@@ -7,4 +7,5 @@ public class SubscriptionPlan
     public required string Period { get; init; }
     public required string PlanToken { get; init; }
     public required string CurrencySymbol { get; init; }
+    public required string CurrencyCode { get; init; }
 }

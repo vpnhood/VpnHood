@@ -121,7 +121,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                     BasePrice = planPrices.First().PriceAmountMicros / 1_000_000.0,
                     CurrentPrice = planPrices.Last().PriceAmountMicros / 1_000_000.0,
                     Period = planPrices.First().BillingPeriod,
-                    CurrencySymbol = planPrices.First().FormattedPrice.Substring(0,1) //TODO: trudy check
+                    CurrencySymbol = VhUtils.GetCurrencySymbol(planPrices.First().PriceCurrencyCode),
+                    CurrencyCode = planPrices.First().PriceCurrencyCode
                 };
             }).Where(plan => plan != null).ToArray();
 

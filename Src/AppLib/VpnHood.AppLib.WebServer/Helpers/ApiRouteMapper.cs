@@ -63,6 +63,7 @@ public class ApiRouteMapper(WebserverLite server, bool isDebugMode)
         else if (AlreadyExistsException.Is(ex)) statusCode = HttpStatusCode.Conflict;
         else if (ex is ArgumentException or InvalidOperationException) statusCode = HttpStatusCode.BadRequest;
         else if (ex is UnauthorizedAccessException) statusCode = HttpStatusCode.Forbidden;
+        else if (ex is HttpRequestException { StatusCode: not null } requestException) statusCode = requestException.StatusCode.Value;
 
         // Default to 500 for other exceptions
         var apiError = ex.ToApiError();

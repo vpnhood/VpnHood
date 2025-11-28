@@ -22,6 +22,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
     public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);
     public Uri? PurchaseUrl => ClientPolicy?.PurchaseUrl;
+    public bool CanGoPremiumByCode => ClientPolicy?.PremiumByCode == true;
     public PurchaseUrlMode PurchaseUrlMode => ClientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore;
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]

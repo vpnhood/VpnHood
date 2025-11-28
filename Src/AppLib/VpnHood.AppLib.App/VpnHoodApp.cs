@@ -1330,7 +1330,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             StoreName = storeName,
             SubscriptionPlans = subscriptionPlans,
             StoreError = apiError, // no error if purchaseUrl is set
-            PurchaseUrl = externalUrl
+            PurchaseUrl = externalUrl,
+            CanGoPremiumByCode = profileInfo?.CanGoPremiumByCode == true
         };
 
         return purchaseOptions;

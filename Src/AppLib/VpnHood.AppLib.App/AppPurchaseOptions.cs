@@ -9,4 +9,6 @@ public class AppPurchaseOptions
     public required ApiError? StoreError { get; init; }
     public required SubscriptionPlan[] SubscriptionPlans { get; init; }
     public required Uri? PurchaseUrl { get; init; }
+    public required bool CanGoPremiumByCode { get; init; }
+
 }

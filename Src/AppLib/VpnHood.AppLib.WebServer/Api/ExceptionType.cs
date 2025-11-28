@@ -83,4 +83,5 @@ public enum ExceptionType
 
     [EnumMember(Value = nameof(VpnServiceRevokedException))]
     VpnServiceRevoked
+
 }

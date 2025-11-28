@@ -1,6 +1,6 @@
 using WatsonWebserver.Core;
 
-namespace VpnHood.AppLib.WebServer;
+namespace VpnHood.AppLib.WebServer.Helpers;
 
 internal static class CorsMiddleware
 {

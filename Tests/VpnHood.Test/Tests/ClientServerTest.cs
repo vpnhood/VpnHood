@@ -448,7 +448,8 @@ public class ClientServerTest : TestBase
         // ----------
         // Check: Go Maintenance mode by replying 403 from access-server
         // ----------
-        accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.Forbidden;
+        accessManager.HttpAccessManagerServer.Stop();
+        //accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.Forbidden;
         await using var client5 = await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
         await Assert.ThrowsExactlyAsync<MaintenanceException>(() => client5.Connect());
 
@@ -458,6 +459,7 @@ public class ClientServerTest : TestBase
         // ----------
         // Check: Connect after Maintenance is done
         // ----------
+        accessManager.HttpAccessManagerServer.Start();
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = null;
         await using var client6 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         await client6.WaitForState(ClientState.Connected);

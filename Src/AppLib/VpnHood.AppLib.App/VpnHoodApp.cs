@@ -1303,20 +1303,20 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var subscriptionPlans = Array.Empty<SubscriptionPlan>();
         string? storeName = null;
         ApiError? apiError = null;
-        var isStoreAvailable = false;
         if (purchaseUrlMode != PurchaseUrlMode.HideStore) {
             try {
                 var billingService = Services.AccountService?.BillingService;
                 storeName = billingService?.ProviderName;
-                if (billingService != null) {
+                if (billingService != null)
                     subscriptionPlans = await billingService.GetSubscriptionPlans();
-                    isStoreAvailable = subscriptionPlans.Any();
-                }
             }
             catch (Exception ex) {
                 apiError = ex.ToApiError();
             }
         }
+
+        // store is available if there is at least one subscription plan
+        var isStoreAvailable = subscriptionPlans.Any();
 
         // calculate purchase url
         var externalUrl = purchaseUrlMode switch {
@@ -1328,6 +1328,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         var purchaseOptions = new AppPurchaseOptions {
             StoreName = storeName,
+            IsStoreAvailable = isStoreAvailable,
             SubscriptionPlans = subscriptionPlans,
             StoreError = apiError, // no error if purchaseUrl is set
             PurchaseUrl = externalUrl,

@@ -23,7 +23,7 @@ internal class BillingController : ControllerBase, IBillingController
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "purchase", async ctx => {
-            var purchaseParams = ctx.GetQueryParameter<PurchaseParams>("purchaseParams");
+            var purchaseParams = ctx.ReadJson<PurchaseParams>();
             var res = await Purchase(purchaseParams);
             await ctx.SendJson(res);
         });

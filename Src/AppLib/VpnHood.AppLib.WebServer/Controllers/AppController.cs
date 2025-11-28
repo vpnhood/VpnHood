@@ -3,7 +3,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.AppLib.WebServer.Extensions;
+using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;

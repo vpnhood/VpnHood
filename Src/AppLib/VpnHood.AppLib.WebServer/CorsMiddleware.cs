@@ -12,9 +12,9 @@ internal static class CorsMiddleware
         "http://localhost:30080"
     ];
 
-    public static void AddCors(HttpContextBase ctx)
+    public static void AddCors(HttpContextBase ctx, bool isDebugMode)
     {
-        var allowedOrigins = VpnHoodApp.Instance.Features.IsDebugMode ? ["*"] : AllowedOrigins;
+        var allowedOrigins = isDebugMode ? ["*"] : AllowedOrigins;
         var cors = string.Join(", ", allowedOrigins);
 
         // Optional: cache preflight response

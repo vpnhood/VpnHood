@@ -1,6 +1,5 @@
 using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.WebServer.Extensions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
@@ -8,14 +7,14 @@ using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
-namespace VpnHood.AppLib.WebServer;
+namespace VpnHood.AppLib.WebServer.Helpers;
 
-public class ApiRouteMapper(WebserverLite server)
+public class ApiRouteMapper(WebserverLite server, bool isDebugMode)
     : IRouteMapper
 {
-    private static Task Options(HttpContextBase ctx)
+    private Task Options(HttpContextBase ctx)
     {
-        CorsMiddleware.AddCors(ctx);
+        CorsMiddleware.AddCors(ctx, isDebugMode);
         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
         return ctx.Response.Send();
     }
@@ -25,7 +24,7 @@ public class ApiRouteMapper(WebserverLite server)
         server.Routes.PreAuthentication.Static.Add(method, path, async ctx => {
             try {
                 // Add CORS to all requests centrally
-                CorsMiddleware.AddCors(ctx);
+                CorsMiddleware.AddCors(ctx, isDebugMode);
                 await handler(ctx);
             }
             catch (Exception ex) {
@@ -41,7 +40,7 @@ public class ApiRouteMapper(WebserverLite server)
         server.Routes.PreAuthentication.Parameter.Add(method, path, async ctx => {
             try {
                 // Add CORS to all requests centrally
-                CorsMiddleware.AddCors(ctx);
+                CorsMiddleware.AddCors(ctx, isDebugMode);
                 await handler(ctx);
             }
             catch (Exception ex) {

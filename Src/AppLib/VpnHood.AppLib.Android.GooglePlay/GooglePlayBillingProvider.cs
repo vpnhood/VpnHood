@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using Android.BillingClient.Api;
 using Android.Gms.Common;
@@ -102,8 +101,10 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                 }
 
                 // order pricing phases by price amount descending, the first is base price, the rest are discounted prices if any
-                var planPrices = pricingPhases.OrderByDescending(pricingPhase => pricingPhase.PriceAmountMicros)
-                    .ToArray();
+                var planPrices = pricingPhases
+                .OrderByDescending(pricingPhase => pricingPhase.PriceAmountMicros)
+                .ToArray();
+
                 if (!planPrices.Any()) {
                     VhLogger.Instance.LogWarning("Could not get GooglePlay plan prices for product id {ProductId}",
                         product.ProductId);
@@ -116,18 +117,24 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                     OfferToken = subscriptionOffer.OfferToken
                 };
 
+                // Get highest and lowest pricing phases
+                var highestPricingPhase = planPrices.First();
+                var lowestPricingPhase = planPrices.Last();
+
+                // Build and return the SubscriptionPlan
                 return new SubscriptionPlan {
                     PlanToken = JsonSerializer.Serialize(planToken),
-                    BasePrice = planPrices.First().PriceAmountMicros / 1_000_000.0,
-                    CurrentPrice = planPrices.Last().PriceAmountMicros / 1_000_000.0,
-                    Period = planPrices.First().BillingPeriod,
-                    CurrencySymbol = VhUtils.GetCurrencySymbol(planPrices.First().PriceCurrencyCode),
-                    CurrencyCode = planPrices.First().PriceCurrencyCode
+                    BasePrice = highestPricingPhase.PriceAmountMicros / 1_000_000.0,
+                    CurrentPrice = lowestPricingPhase.PriceAmountMicros / 1_000_000.0,
+                    Period = highestPricingPhase.BillingPeriod,
+                    CurrencySymbol = VhUtils.GetCurrencySymbol(highestPricingPhase.PriceCurrencyCode),
+                    CurrencyCode = highestPricingPhase.PriceCurrencyCode
                 };
-            }).Where(plan => plan != null).ToArray();
+            });
 
-            // we already filtered null plans, so this cast is safe
-            return subscriptionPlans!;
+            // filter out null plans and return as array
+            var result = subscriptionPlans.Where(plan => plan != null).ToArray();
+            return result!;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not get products from google play.");

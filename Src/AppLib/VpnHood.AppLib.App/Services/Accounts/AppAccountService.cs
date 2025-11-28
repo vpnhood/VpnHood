@@ -23,6 +23,8 @@ public class AppAccountService
 
     private string AppAccountFilePath => Path.Combine(_vpnHoodApp.StorageFolderPath, "account", "account.json");
 
+    public bool IsPremium => _vpnHoodApp.CurrentClientProfileInfo?.IsPremiumAccount == true;
+    
     public AppAuthenticationService AuthenticationService { get; }
 
     public AppBillingService? BillingService { get; }
@@ -50,7 +52,6 @@ public class AppAccountService
         await Refresh(true);
         return _appAccount;
     }
-
 
     public async Task Refresh(bool updateCurrentClientProfile = false)
     {

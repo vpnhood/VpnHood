@@ -7,12 +7,12 @@ namespace VpnHood.Test.AccessManagers;
 
 public class TestHttpAccessManager : HttpAccessManager
 {
-    public TestEmbedIoAccessManager EmbedIoAccessManager { get; }
+    public TestHttpAccessManagerServer HttpAccessManagerServer { get; }
 
     private TestHttpAccessManager(HttpAccessManagerOptions options,
-        TestEmbedIoAccessManager embedIoAccessManager) : base(options)
+        TestHttpAccessManagerServer httpAccessManagerServer) : base(options)
     {
-        EmbedIoAccessManager = embedIoAccessManager;
+        HttpAccessManagerServer = httpAccessManagerServer;
         Logger = VhLogger.Instance;
         LoggerEventId = GeneralEventId.AccessManager;
     }
@@ -21,16 +21,17 @@ public class TestHttpAccessManager : HttpAccessManager
     public static TestHttpAccessManager Create(IAccessManager baseAccessManager,
         bool autoDisposeBaseAccessManager = true)
     {
-        var embedIoAccessManager = new TestEmbedIoAccessManager(baseAccessManager,
-            autoDisposeBaseAccessManager: autoDisposeBaseAccessManager);
-        var accessManagerOptions = new HttpAccessManagerOptions(embedIoAccessManager.BaseUri, "Bearer");
-        var httpAccessManager = new TestHttpAccessManager(accessManagerOptions, embedIoAccessManager);
+        var accessManagerServer = new TestHttpAccessManagerServer(baseAccessManager, autoDisposeBaseAccessManager: autoDisposeBaseAccessManager);
+        accessManagerServer.Start();
+
+        var accessManagerOptions = new HttpAccessManagerOptions(accessManagerServer.BaseUri, "Bearer");
+        var httpAccessManager = new TestHttpAccessManager(accessManagerOptions, accessManagerServer);
         return httpAccessManager;
     }
 
     public override void Dispose()
     {
-        EmbedIoAccessManager.Dispose();
+        HttpAccessManagerServer.Dispose();
         base.Dispose();
     }
 }

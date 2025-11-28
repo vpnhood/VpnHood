@@ -19,6 +19,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private WebserverLite? _server;
     private string? _spaHash;
     private string? _spaPath;
+    private readonly bool _isDebugMode;
     public Uri Url { get; }
 
     public string SpaHash => _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
@@ -26,6 +27,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private VpnHoodAppWebServer(WebServerOptions options)
     {
+        _isDebugMode = VpnHoodApp.Instance.Features.IsDebugMode;
         var defaultPort = VpnHoodApp.Instance.Features.WebUiPort ?? 9090;
         var host = IPAddress.Loopback; // fallback safe default; adjust if you have AllowRemoteAccess
         var endPoint = VhUtils.GetFreeTcpEndPoint(host, defaultPort);
@@ -128,8 +130,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath));
 
         // Initialize API routes through controllers - CORS is handled centrally in the route mapper
-        var mapper = new ApiRouteMapper(server);
-        mapper
+        server
+            .AddRouteMapper(_isDebugMode)
             .AddController(new AppController())
             .AddController(new ClientProfileController())
             .AddController(new AccountController())
@@ -153,7 +155,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
 
         // Add CORS centrally for default route
-        CorsMiddleware.AddCors(context);
+        CorsMiddleware.AddCors(context, _isDebugMode);
 
         if (context.Request.Url.RawWithoutQuery.StartsWith("/api/", StringComparison.OrdinalIgnoreCase)) {
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;

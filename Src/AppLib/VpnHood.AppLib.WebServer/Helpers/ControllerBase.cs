@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.WebServer;
+namespace VpnHood.AppLib.WebServer.Helpers;
 
 public abstract class ControllerBase
 {

@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.AppLib.WebServer.Extensions;
+using VpnHood.AppLib.WebServer.Helpers;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;

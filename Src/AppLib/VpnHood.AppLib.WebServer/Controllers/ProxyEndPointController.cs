@@ -1,6 +1,6 @@
 ﻿using VpnHood.AppLib.Services.Proxies;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.AppLib.WebServer.Extensions;
+using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 

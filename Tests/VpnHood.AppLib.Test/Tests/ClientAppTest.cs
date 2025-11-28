@@ -383,11 +383,11 @@ public class ClientAppTest : TestAppBase
     [TestMethod]
     public async Task update_server_token_from_server_token_url()
     {
-        // create update webserver
+        // create update webserver  
         var endPoint1 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         var endPoint2 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
-        using var webServer1 = new WebServer(endPoint1.Port);
-        using var webServer2 = new WebServer(endPoint2.Port);
+        using var webServer1 = new EmbedIO.WebServer(endPoint1.Port);
+        using var webServer2 = new EmbedIO.WebServer(endPoint2.Port);
 
         // create server1
         var tcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);

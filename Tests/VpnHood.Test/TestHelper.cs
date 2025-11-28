@@ -242,7 +242,7 @@ public class TestHelper : IDisposable
         return accessManager switch {
             FileAccessManager fileAccessManager => fileAccessManager,
             TestHttpAccessManager {
-                EmbedIoAccessManager.BaseAccessManager: FileAccessManager fileAccessManager
+                HttpAccessManagerServer.BaseAccessManager: FileAccessManager fileAccessManager
             } => fileAccessManager,
             _ => throw new InvalidOperationException("Could not get FileAccessManager from the server.")
         };

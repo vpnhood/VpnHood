@@ -1,7 +1,7 @@
 using WatsonWebserver.Core;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
-namespace VpnHood.AppLib.WebServer;
+namespace VpnHood.AppLib.WebServer.Helpers;
 
 public interface IRouteMapper
 {

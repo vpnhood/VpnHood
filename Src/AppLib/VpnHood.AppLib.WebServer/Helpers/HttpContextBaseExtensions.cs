@@ -4,9 +4,9 @@ using System.Text;
 using System.Text.Json;
 using WatsonWebserver.Core;
 
-namespace VpnHood.AppLib.WebServer.Extensions;
+namespace VpnHood.AppLib.WebServer.Helpers;
 
-internal static class HttpContextBaseExtensions
+public static class HttpContextBaseExtensions
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
         { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };

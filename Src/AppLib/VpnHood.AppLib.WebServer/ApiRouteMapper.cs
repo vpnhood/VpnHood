@@ -10,7 +10,7 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer;
 
-internal class ApiRouteMapper(WebserverLite server)
+public class ApiRouteMapper(WebserverLite server)
     : IRouteMapper
 {
     private static Task Options(HttpContextBase ctx)

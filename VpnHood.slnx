@@ -140,7 +140,6 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj" />
-    <Project Path="Tests/VpnHood.NetTester/VpnHood.NetTester.csproj" />
     <Project Path="Tests/VpnHood.Test/VpnHood.Test.csproj" />
   </Folder>
 </Solution>

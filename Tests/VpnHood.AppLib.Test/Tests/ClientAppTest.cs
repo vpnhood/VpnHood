@@ -1,12 +1,11 @@
 ﻿using System.Net;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
-using EmbedIO;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Test.Providers;
+using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.IpLocations.Providers.Offlines;
@@ -17,6 +16,8 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test;
 using VpnHood.Test.Device;
+using WatsonWebserver.Core;
+using WatsonWebserver.Lite;
 
 // ReSharper disable DisposeOnUsingVariable
 
@@ -386,8 +387,6 @@ public class ClientAppTest : TestAppBase
         // create update webserver  
         var endPoint1 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
         var endPoint2 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
-        using var webServer1 = new EmbedIO.WebServer(endPoint1.Port);
-        using var webServer2 = new EmbedIO.WebServer(endPoint2.Port);
 
         // create server1
         var tcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
@@ -409,19 +408,27 @@ public class ClientAppTest : TestAppBase
 
         //update web server enc_server_token
         var isTokenRetrieved = false;
-        webServer1.WithAction("/accesskey", HttpVerbs.Get, context => {
-            isTokenRetrieved = true;
-            return context.SendStringAsync("something_wrong", "text/plain", Encoding.UTF8);
-        });
 
-        webServer2.WithAction("/accesskey", HttpVerbs.Get, context => {
-            isTokenRetrieved = true;
-            return context.SendStringAsync(token2.ServerToken.Encrypt(), "text/plain", Encoding.UTF8);
-        });
+        var settings1 = new WebserverSettings(endPoint1.Address.ToString(), endPoint1.Port);
+        using var webServer1 = new WebserverLite(settings1, x => x.SendPlainText("", 404));
+        webServer1
+            .AddRouteMapper(isDebugMode: true)
+            .AddStatic(WatsonWebserver.Core.HttpMethod.GET, "/accesskey", async ctx => {
+                isTokenRetrieved = true;
+                await ctx.SendPlainText("something_wrong");
+            });
 
-        webServer1.Start();
-        webServer2.Start();
+        var settings2 = new WebserverSettings(endPoint2.Address.ToString(), endPoint2.Port);
+        using var webServer2 = new WebserverLite(settings2, x => x.SendPlainText("", 404));
+        webServer2
+            .AddRouteMapper(isDebugMode: true)
+            .AddStatic(WatsonWebserver.Core.HttpMethod.GET, "/accesskey", async ctx => {
+                isTokenRetrieved = true;
+                await ctx.SendPlainText(token2.ServerToken.Encrypt());
+            });
 
+        _ = webServer1.StartAsync();
+        _ = webServer2.StartAsync();
 
         // connect
         await using var app = TestAppHelper.CreateClientApp();

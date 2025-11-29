@@ -31,6 +31,7 @@ public class ApiRouteMapper(WebserverLite server, bool isDebugMode)
                 await HandleException(ctx, ex);
             }
         });
+
         // Ensure preflight requests succeed for static routes
         server.Routes.PreAuthentication.Static.Add(HttpMethod.OPTIONS, path, Options);
     }

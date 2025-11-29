@@ -57,52 +57,26 @@ public static class HttpContextBaseExtensions
                 throw new ArgumentException($"Cannot convert '{value}' to {typeof(T)} for parameter '{key}'", ex);
             }
         }
-    }
 
-    private static T? ConvertString<T>(string value)
-    {
-        var underlyingType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+        public async Task SendNoContent()
+        {
+            ctx.Response.StatusCode = (int)HttpStatusCode.NoContent;
+            await ctx.Response.Send();
+        }
 
-        if (underlyingType == typeof(Guid))
-            return (T)(object)Guid.Parse(value);
+        public Task SendNotFound()
+        {
+            ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            return ctx.Response.Send();
+        }
 
-        if (underlyingType.IsEnum)
-            return (T)Enum.Parse(underlyingType, value, true);
+        public async Task SendPlainText(string text, int statusCode = 200)
+        {
+            ctx.Response.StatusCode = statusCode;
+            ctx.Response.ContentType = "text/plain";
+            await ctx.Response.Send(text);
+        }
 
-        if (underlyingType == typeof(bool))
-            return (T)(object)bool.Parse(value);
-
-        if (underlyingType == typeof(DateTime))
-            return (T)(object)DateTime.Parse(value);
-
-        if (underlyingType == typeof(DateTimeOffset))
-            return (T)(object)DateTimeOffset.Parse(value);
-
-        if (underlyingType == typeof(TimeSpan))
-            return (T)(object)TimeSpan.Parse(value);
-
-        // Use TypeConverter for complex conversions
-        var converter = TypeDescriptor.GetConverter(underlyingType);
-        if (converter.CanConvertFrom(typeof(string)))
-            return (T?)converter.ConvertFromString(value);
-
-        return (T)Convert.ChangeType(value, underlyingType);
-    }
-
-    public static async Task SendNoContent(this HttpContextBase ctx)
-    {
-        ctx.Response.StatusCode = (int)HttpStatusCode.NoContent;
-        await ctx.Response.Send();
-    }
-
-    public static Task SendNotFound(HttpContextBase context)
-    {
-        context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-        return context.Response.Send();
-    }
-
-    extension(HttpContextBase ctx)
-    {
         public async Task SendJson(object? data, int statusCode = 200)
         {
             if (data is null) {
@@ -157,5 +131,35 @@ public static class HttpContextBaseExtensions
                 throw new InvalidOperationException($"Error reading JSON for {typeof(T).Name}: {ex.Message}", ex);
             }
         }
+    }
+
+    private static T? ConvertString<T>(string value)
+    {
+        var underlyingType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+
+        if (underlyingType == typeof(Guid))
+            return (T)(object)Guid.Parse(value);
+
+        if (underlyingType.IsEnum)
+            return (T)Enum.Parse(underlyingType, value, true);
+
+        if (underlyingType == typeof(bool))
+            return (T)(object)bool.Parse(value);
+
+        if (underlyingType == typeof(DateTime))
+            return (T)(object)DateTime.Parse(value);
+
+        if (underlyingType == typeof(DateTimeOffset))
+            return (T)(object)DateTimeOffset.Parse(value);
+
+        if (underlyingType == typeof(TimeSpan))
+            return (T)(object)TimeSpan.Parse(value);
+
+        // Use TypeConverter for complex conversions
+        var converter = TypeDescriptor.GetConverter(underlyingType);
+        if (converter.CanConvertFrom(typeof(string)))
+            return (T?)converter.ConvertFromString(value);
+
+        return (T)Convert.ChangeType(value, underlyingType);
     }
 }

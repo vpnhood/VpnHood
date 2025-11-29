@@ -66,7 +66,7 @@ public class TestHttpAccessManagerServer : IDisposable
 
     public void Stop()
     {
-        _webServer.Stop();
+        _webServer.TryStop();
         VhLogger.Instance.LogInformation(GeneralEventId.Test,
             "TestHttpAccessManagerServer has stopped listening to {Uri}", BaseUri);
 

@@ -1,4 +1,4 @@
-# Upcoming
+# v7.5.776
 * Fix: Crash on some Android devices
 
 # v7.5.771

@@ -119,7 +119,7 @@ public class ServerFinder(
         var res = _hostEndPointStatuses.FirstOrDefault(x => x.Available == true)?.VpnEndPoint;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
-            "ServerFinder result. Reachable:{Reachable}, Unreachable:{Unreachable}, Unknown: {Unknown}",
+            "ServerFinder result. Reachable: {Reachable}, Unreachable: {Unreachable}, Unknown: {Unknown}",
             _hostEndPointStatuses.Count(x => x.Available == true),
             _hostEndPointStatuses.Count(x => x.Available == false),
             _hostEndPointStatuses.Count(x => x.Available == null));

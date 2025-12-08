@@ -1,5 +1,6 @@
-# v7.5.769
+# v7.5.777
 * Update: Upgrade to .NET 10
+* Update: Update HTTP01 handling for valid SSL certs
 
 # v7.3.766
 Fix: Set DNS on some Linux distros

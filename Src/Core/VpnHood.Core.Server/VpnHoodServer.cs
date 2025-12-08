@@ -254,7 +254,8 @@ public class VpnHoodServer : IAsyncDisposable
 
             // Reconfigure dns challenge
             _http01ChallengeService.Stop();
-            _http01ChallengeService.Start(serverConfig.TcpEndPointsValue.Select(x => x.Address).ToArray());
+            if (serverConfig.EnableHttp01ChallengeValue)
+                _http01ChallengeService.Start(serverConfig.TcpEndPointsValue.Select(x => x.Address).ToArray());
 
             // set config status
             _lastConfigCode = serverConfig.ConfigCode;

@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Utils;
@@ -12,6 +13,7 @@ namespace VpnHood.Core.Server;
 public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationFunc keyAuthorizationFunc)
     : IDisposable
 {
+    private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(30);
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private TcpListener? _tcpListener;
     private bool _disposed;
@@ -35,21 +37,38 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
     private async Task AcceptTcpClient(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         while (IsStarted && !cancellationToken.IsCancellationRequested) {
-            using var client = await tcpListener.AcceptTcpClientAsync(cancellationToken).Vhc();
-            try {
-                await HandleRequest(client, cancellationToken).Vhc();
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
-                // service is stopping
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(GeneralEventId.AcmeChallenge, ex, "Could not process the HTTP-01 challenge.");
-            }
+            var client = await tcpListener.AcceptTcpClientAsync(cancellationToken).Vhc();
+            _ = HandleRequest(client, cancellationToken);
         }
     }
 
     private async Task HandleRequest(TcpClient client, CancellationToken cancellationToken)
     {
+        // prevent duplicate request from each ip if too many requests come in
+        using var lockAsyncResult = await AsyncLock.LockAsync(
+            IPAddressUtil.GetDosKey(client.Client.GetRemoteEndPoint().Address), TimeSpan.Zero, cancellationToken);
+        if (!lockAsyncResult.Succeeded)
+            throw new HttpRequestException("Too many requests from the same IP address.", null, HttpStatusCode.TooManyRequests);
+
+        try {
+            using var timeoutCt = new CancellationTokenSource(_requestTimeout);
+            using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCt.Token);
+            await HandleRequestCore(client,  linkedCt.Token).Vhc();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            // service is stopping
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(GeneralEventId.AcmeChallenge, ex, "Could not process the HTTP-01 challenge.");
+        }
+        finally {
+            client.Dispose();
+        }
+    }
+
+    private async Task HandleRequestCore(TcpClient client, CancellationToken cancellationToken)
+    {
+        VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "Receiving an HTTP request...");
         await using var stream = client.GetStream();
         var headers = await HttpUtils.ParseHeadersAsync(stream, cancellationToken).Vhc()
                       ?? throw new Exception("Connection has been closed before receiving any request.");

@@ -42,7 +42,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3712-prerelease" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.4.8" />
 	</ItemGroup>
 
 

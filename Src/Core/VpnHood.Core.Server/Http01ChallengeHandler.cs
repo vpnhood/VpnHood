@@ -76,14 +76,29 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
 
         if (!headers.Any()) return;
         var request = headers[HttpUtils.HttpRequestKey];
-        var requestParts = request.Split(' ');
+        var requestParts = request.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (requestParts.Length < 2)
+            throw new HttpRequestException(
+                $"Invalid HTTP-01 challenge request. RemoteIdp: {client.Client.GetRemoteEndPoint()}. Request: {request}",
+                null, HttpStatusCode.BadRequest);
+
+        var method = requestParts[0];
+        var path = requestParts[1];
+
+        // Handle HEAD /
+        if (method == "HEAD" && path == "/") {
+            await stream.WriteAsync(HttpResponseBuilder.Ok(), cancellationToken).Vhc();
+            await stream.FlushAsync(cancellationToken).Vhc();
+            VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "HEAD / responded with 200 OK.");
+            return;
+        }
 
         // Retrieve token from request in this format: GET /.well-known/acme-challenge/{token} HTTP/1.1
         const string basePath = "/.well-known/acme-challenge/";
-        var token = requestParts.Length > 2 && requestParts[0] == "GET" && requestParts[1].StartsWith(basePath)
-            ? requestParts[1][basePath.Length..]
+        var token = method == "GET" && path.StartsWith(basePath)
+            ? path[basePath.Length..]
             : throw new HttpRequestException(
-                $"Invalid HTTP-01 challenge request. RemoteIdp: {client.Client.GetRemoteEndPoint()}. Request: {request}", 
+                $"Invalid HTTP-01 challenge request. RemoteIdp: {client.Client.GetRemoteEndPoint()}. Request: {request}",
                 null, HttpStatusCode.BadRequest);
 
         // Get key authorization

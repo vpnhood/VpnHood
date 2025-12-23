@@ -53,7 +53,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         try {
             using var timeoutCt = new CancellationTokenSource(_requestTimeout);
             using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCt.Token);
-            await HandleRequestCore(client,  linkedCt.Token).Vhc();
+            await HandleRequestCore(client, linkedCt.Token).Vhc();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             // service is stopping
@@ -68,7 +68,8 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
 
     private async Task HandleRequestCore(TcpClient client, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "Receiving an HTTP request...");
+        VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge,
+            "Receiving an HTTP request from {RemoteIp}...", client.Client.GetRemoteEndPoint());
         await using var stream = client.GetStream();
         var headers = await HttpUtils.ParseHeadersAsync(stream, cancellationToken).Vhc()
                       ?? throw new Exception("Connection has been closed before receiving any request.");
@@ -81,7 +82,9 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         const string basePath = "/.well-known/acme-challenge/";
         var token = requestParts.Length > 2 && requestParts[0] == "GET" && requestParts[1].StartsWith(basePath)
             ? requestParts[1][basePath.Length..]
-            : throw new HttpRequestException("Invalid HTTP-01 challenge request.", null, HttpStatusCode.BadRequest);
+            : throw new HttpRequestException(
+                $"Invalid HTTP-01 challenge request. RemoteIdp: {client.Client.GetRemoteEndPoint()}. Request: {request}", 
+                null, HttpStatusCode.BadRequest);
 
         // Get key authorization
         VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "HTTP Challenge. Request: {request}", request);
@@ -90,6 +93,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         // Send response
         await stream.WriteAsync(HttpResponseBuilder.Http01(keyAuthorization), cancellationToken).Vhc();
         await stream.FlushAsync(cancellationToken).Vhc();
+        VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "HTTP-01 challenge response sent.");
     }
 
     private async Task<string> GetKeyAuthorization(string token, Stream outStream, CancellationToken cancellationToken)

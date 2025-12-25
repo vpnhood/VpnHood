@@ -1105,6 +1105,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public async Task SetRewardedAdOk(string adData, CancellationToken cancellationToken)
     {
+        //todo: check validating adreward data
         // request reward from server
         using var requestResult = await SendRequest<SessionResponse>(
             new RewardedAdRequest {

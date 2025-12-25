@@ -432,9 +432,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (GetClientCountryCode(false).Equals("CN", StringComparison.OrdinalIgnoreCase))
             return false;
 
+        // check remote settings
         var remoteSettings = SettingsService.RemoteSettings;
         if (CurrentClientProfileInfo?.IsPremiumAccount == true ||
             remoteSettings?.PromotionImageUrl is null ||
+            remoteSettings.PromotionStartDate < DateTime.UtcNow ||
             remoteSettings.PromotionEndDate is null ||
             remoteSettings.PromotionEndDate < DateTime.UtcNow)
             return false;

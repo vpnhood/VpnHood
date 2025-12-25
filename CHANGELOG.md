@@ -1,5 +1,9 @@
+# Upcoming
+* Fix: Android: Backbutton does not work on some Android devices
+* Fix: PrivateDNS
+
 # v7.5.776
-* Fix: Crash on some Android devices
+* Fix: Android: Crash on some Android devices
 
 # v7.5.771
 * Fix: Diagnoser shows a wrong NoErrorFoundException

@@ -41,6 +41,7 @@
 	  <ProjectReference Include="..\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
 	</ItemGroup>
 
+	<!--Xamarin.GooglePlayServices.Ads 124.5.0.1 required to prevent conflict Tried: 2025/12/25-->
 	<ItemGroup>
 	  <PackageReference Include="Xamarin.GooglePlayServices.Ads" Version="124.5.0.1" />
 	</ItemGroup>

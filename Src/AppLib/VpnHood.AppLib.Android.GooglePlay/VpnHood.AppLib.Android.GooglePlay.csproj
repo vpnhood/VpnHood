@@ -37,12 +37,10 @@
 		</None>
 	</ItemGroup>
 
-
-	<!--Xamarin.GooglePlayServices.Auth 121.0.0.1 so uspport GoogleSignIn-->
-	<!--Xamarin.GooglePlayServices.Auth 6.1.0.2 so uspport GoogleSignIn-->
+ 
+	<!--Xamarin.Android.Google.BillingClient 8.0.0 required to prevent conflict Tried: 2025/12/25-->
 	<ItemGroup>
-		<PackageReference Include="Xamarin.AndroidX.Credentials" Version="1.5.0.3" />
-		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="8.1.0" />
+		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="8.0.0" />
 		<PackageReference Include="Xamarin.AndroidX.Credentials.PlayServicesAuth" Version="1.5.0.3" />
 		<PackageReference Include="Xamarin.GoogleAndroid.Libraries.Identity.GoogleId" Version="1.1.0.11" />
 	</ItemGroup>

@@ -23,8 +23,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
-		<PackageReference Include="PacketDotNet" Version="1.4.8" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
+		<PackageReference Include="PacketDotNet" Version="1.4.9-pre53" />
 	</ItemGroup>
 
 	<ItemGroup>

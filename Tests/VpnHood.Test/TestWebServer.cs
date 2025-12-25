@@ -1,8 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer.Helpers;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 
@@ -108,19 +111,19 @@ public class TestWebServer : IDisposable
 
     public Task Start()
     {
-        Console.WriteLine("started...");
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer Started...");
         try {
             foreach (var webServer in _webServers)
                 webServer.StartAsync(CancellationToken);
         }
         catch (Exception ex) {
-            Console.WriteLine("sss");
+            VhLogger.Instance.LogInformation(GeneralEventId.Test, ex, "TestWebServer could not start");
             throw;
         }
 
-        Console.WriteLine("starting upd...");
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting UDP...");
         StartUdpEchoServer();
-        Console.WriteLine("stopping upd...");
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer started UDP...");
         return Task.CompletedTask;
 
     }
@@ -163,8 +166,7 @@ public class TestWebServer : IDisposable
         foreach (var udpClient in UdpClients)
             udpClient.Dispose();
 
-        Console.WriteLine("disposed...");
-
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test Server Disposed.");
         _cancellationTokenSource.Dispose();
     }
 

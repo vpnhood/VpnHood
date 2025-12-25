@@ -380,4 +380,32 @@ public static class IPAddressUtil
     {
         return Compare(ipAddress1, ipAddress2) > 0 ? ipAddress1 : ipAddress2;
     }
+
+    public static string GetDosKey(IPAddress ip)
+    {
+        if (ip == null)
+            throw new ArgumentNullException(nameof(ip));
+
+        switch (ip.AddressFamily)
+        {
+            // IPv4: use full address
+            case AddressFamily.InterNetwork:
+                return ip.ToString();
+
+            // IPv6: normalize to /64
+            case AddressFamily.InterNetworkV6:
+            {
+                var bytes = ip.GetAddressBytes();
+
+                // zero last 64 bits
+                for (var i = 8; i < 16; i++)
+                    bytes[i] = 0;
+
+                var prefix = new IPAddress(bytes);
+                return $"{prefix}/64";
+            }
+            default:
+                throw new NotSupportedException("Unsupported IP address family.");
+        }
+    }
 }

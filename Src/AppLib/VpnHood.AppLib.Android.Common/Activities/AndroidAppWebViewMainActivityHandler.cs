@@ -27,7 +27,7 @@ public class AndroidAppWebViewMainActivityHandler(
     {
         base.OnCreate(savedInstanceState);
 
-        // ToDo: Experimental. Fixing: Window couldn't find content container view
+        // Experimental. Fixing: Window couldn't find content container view
         // Some OEM subject to this issue, so let postpone SetContentView
         ActivityEvent.Activity.Window?.DecorView.Post(() => {
             // initialize web view

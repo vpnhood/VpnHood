@@ -1,4 +1,4 @@
-# Upcoming
+# v7.5.779
 * Fix: Android: Backbutton does not work on some Android devices
 * Fix: PrivateDNS
 * Fix: Crashed after disconnecting on some devices

@@ -483,7 +483,7 @@ public class ClientAppTest : TestAppBase
         // connect
         var token = TestHelper.CreateAccessToken(server);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
+        await app.Connect(clientProfile.ClientProfileId);
         await app.WaitForState(AppConnectionState.Connected);
 
         // text include
@@ -518,7 +518,7 @@ public class ClientAppTest : TestAppBase
         // connect
         var token = TestHelper.CreateAccessToken(server);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
+        await app.Connect(clientProfile.ClientProfileId);
         await app.WaitForState(AppConnectionState.Connected);
 
         // text include

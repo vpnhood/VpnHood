@@ -78,7 +78,10 @@ public class ServerFinder(
 
         // flatten the results into a single enumerable
         var results = resolved.SelectMany(x => x)
-            .Where(x => !includeIpV6 || x.TcpEndPoint.IsV6() || x.TcpEndPoint.Address.IsLoopback())
+            .Where(x => 
+                x.TcpEndPoint.IsV4() || 
+                (x.TcpEndPoint.IsV6() && includeIpV6) || 
+                x.TcpEndPoint.Address.IsLoopback()) // loopback addresses are for tests
             .ToArray();
 
         // throw the first error if there is no resolved endpoints

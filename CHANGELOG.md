@@ -1,3 +1,6 @@
+# v7.5.780
+Fix: Unable to connect to some servers when the client has IPv6 enabled
+
 # v7.5.779
 * Fix: Android: Backbutton does not work on some Android devices
 * Fix: PrivateDNS

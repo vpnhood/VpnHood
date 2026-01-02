@@ -380,14 +380,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         get {
             var clientProfileInfo = CurrentClientProfileInfo;
             var connectionState = ConnectionState;
-            var connectionInfo = connectionState.IsIdle() ? null : ConnectionInfo;
+            var lastConnectionInfo = ConnectionInfo;
+            var connectionInfo = connectionState.IsIdle() ? null : lastConnectionInfo;
 
             var uiContext = AppUiContext.Context;
             var appState = new AppState {
                 ConfigTime = Settings.ConfigTime,
                 SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
                 SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
-                ProxyEndPointManagerStatus = connectionInfo?.ProxyManagerStatus?.ToAppDto(),
+                ProxyEndPointManagerStatus = lastConnectionInfo.ProxyManagerStatus?.ToAppDto(),
                 ConnectionState = connectionState,
                 CanConnect = connectionState.CanConnect(),
                 CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),

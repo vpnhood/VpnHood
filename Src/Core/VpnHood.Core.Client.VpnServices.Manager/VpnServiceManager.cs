@@ -270,15 +270,17 @@ public class VpnServiceManager : IDisposable
                 _connectionInfo = SetConnectionInfo(ClientState.Disposed, _connectionInfo.Error?.ToException());
             }
         }
+        catch (VpnServiceUnreachableException) when (_stopLock.IsLocked) {
+            // service is stopping, set the state to none
+            _connectionInfo = SetConnectionInfo(ClientState.None);
+        }
         catch (VpnServiceUnreachableException ex) {
             // increment the count to stop the service if it is unreachable for too long
             _vpnServiceUnreachableCount++;
 
             // update connection info and set error
-            if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold) {
-            }
-
-            _connectionInfo = SetConnectionInfo(ClientState.Disposed, ex);
+            if (_vpnServiceUnreachableCount == VpnServiceUnreachableThreshold)
+                _connectionInfo = SetConnectionInfo(ClientState.Disposed, ex);
 
             // report it first time
             if (_vpnServiceUnreachableCount == 1)

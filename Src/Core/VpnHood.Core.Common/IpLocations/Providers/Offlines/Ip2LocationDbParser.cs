@@ -79,7 +79,7 @@ public static class Ip2LocationDbParser
         ipRangeLocationProvider.Serialize(outputStream);
     }
 
-    private static async Task<Dictionary<string, List<IpRange>>> ParseIp2LocationCrv(Stream ipLocationsCrvStream,
+    public static async Task<Dictionary<string, List<IpRange>>> ParseIp2LocationCrv(Stream ipLocationsCrvStream,
         CancellationToken cancellationToken)
     {
         // extract IpGroups

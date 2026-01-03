@@ -28,6 +28,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="LiteDB" Version="5.0.21" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
 		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.713" />
 		<PackageReference Include="VpnHood.Core.Proxies" Version="7.4.768" />

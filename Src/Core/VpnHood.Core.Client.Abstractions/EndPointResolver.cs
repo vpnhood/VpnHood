@@ -43,7 +43,7 @@ public static class EndPointResolver
                 "The token does not contain any server endpoints or a valid hostname. Please contact your provider’s support.");
 
         // fix token only strategy
-        if (strategy == EndPointStrategy.TokenOnly) {
+        if (strategy == EndPointStrategy.IpOnly) {
             if (!VhUtils.IsNullOrEmpty(serverToken.HostEndPoints))
                 return serverToken.HostEndPoints;
 
@@ -68,7 +68,7 @@ public static class EndPointResolver
         // follow the end point strategy to combine the endpoints
         var ipEndPoints = strategy switch {
             EndPointStrategy.DnsFirst => dnsEndPoints.Concat(tokenEndPoints),
-            EndPointStrategy.TokenFirst => tokenEndPoints.Concat(dnsEndPoints),
+            EndPointStrategy.IpFirst => tokenEndPoints.Concat(dnsEndPoints),
             EndPointStrategy.DnsOnly => dnsEndPoints,
             _ => dnsEndPoints.Concat(tokenEndPoints)
         };

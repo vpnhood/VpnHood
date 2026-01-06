@@ -42,7 +42,7 @@ public class EndPointResolverTests
     {
         var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
-        var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.TokenOnly,
+        var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.IpOnly,
             CancellationToken.None);
 
         CollectionAssert.AreEqual(tokenEndPoints, results);
@@ -69,7 +69,7 @@ public class EndPointResolverTests
         var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
-        var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.TokenFirst,
+        var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.IpFirst,
             CancellationToken.None);
 
         Assert.AreEqual(tokenEndPoints[0], results[0]);

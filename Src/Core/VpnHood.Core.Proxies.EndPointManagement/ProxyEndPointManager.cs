@@ -336,12 +336,45 @@ public class ProxyEndPointManager : IDisposable
 
 
     // order by active state then Last Attempt
-    private IEnumerable<ProxyEndPointEntry> GetOrderedEntriesQuery()
-        => _proxyEndPointEntries
+    private ProxyEndPointEntry[] GetOrderedEntriesQuery()
+    {
+        var ordered =  _proxyEndPointEntries
             .Where(x => x.EndPoint.IsEnabled)
             .Where(x => !UseRecentSucceeded || x.Status.LastSucceeded >= _sessionCreatedTime)
             .OrderBy(x => x.GetSortValue(_queuePosition))
-            .ThenBy(x => x.Status.LastUsed);
+            .ThenBy(x => x.Status.LastUsed)
+            .ToArray();
+
+        // if there is at least one succeeded server, failed servers should not be more than 2
+        // this is to avoid trying too many failed servers when there are good servers available
+        
+        // Only apply the rule when there is at least one succeeded server
+        if (!ordered.Any(x => x.Status.IsLastUsedSucceeded))
+            return ordered;
+
+        // Keep the first 2 failed servers in-place (relative to succeeded ordering),
+        // move the remaining failed servers to the end (preserving their order).
+        var tailFailed = new List<ProxyEndPointEntry>();
+        var result = new List<ProxyEndPointEntry>(ordered.Length);
+
+        var failedCount = 0;
+
+        foreach (var entry in ordered) {
+            if (entry.Status.IsLastUsedSucceeded) {
+                result.Add(entry);
+                continue;
+            }
+
+            failedCount++;
+            if (failedCount <= 2)
+                result.Add(entry);
+            else
+                tailFailed.Add(entry);
+        }
+
+        result.AddRange(tailFailed);
+        return result.ToArray();
+    }
 
     private readonly AsyncLock _connectLock = new();
 

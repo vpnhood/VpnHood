@@ -30,61 +30,6 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class ClientAppTest : TestAppBase
 {
-    private class IpLocationRecord
-    {
-        public int Id { get; set; }
-        [BsonField("c")]
-
-        public string CountryCode { get; set; } = null!;
-        [BsonField("s")]
-        public byte[] StartIp { get; set; } = null!; // Store as 16 bytes for IPv6 compatibility
-        [BsonField("e")]
-        public byte[] EndIp { get; set; } = null!;   // Store as 16 bytes for IPv6 compatibility
-    }
-
-    [TestMethod]
-    public async Task CreateLiteDBFromLocationFile()
-    {
-        var crvFile = @"C:\Users\User\Downloads\IP2LOCATION-LITE-DB1.IPV6.CSV";
-        await using var crvStream = File.OpenRead(crvFile);
-        var countryToIpRanges = await Ip2LocationDbParser.ParseIp2LocationCrv(crvStream, CancellationToken.None);
-
-        // Create database file path near the source file
-        var dbFile = Path.Combine(Path.GetDirectoryName(crvFile)!, "IpLocations.litedb");
-        
-        // Delete existing database if it exists
-        if (File.Exists(dbFile))
-            File.Delete(dbFile);
-
-        // Create and populate the database
-        using var db = new LiteDatabase(dbFile);
-        var collection = db.GetCollection<IpLocationRecord>("iplocations");
-
-        // Create indexes for efficient querying
-        collection.EnsureIndex(x => x.CountryCode);
-        collection.EnsureIndex(x => x.StartIp);
-
-        // Insert all data
-        var recordId = 1;
-        foreach (var countryEntry in countryToIpRanges) {
-            var countryCode = countryEntry.Key;
-            
-            var records = countryEntry.Value.Select(ipRange => new IpLocationRecord {
-                Id = recordId++,
-                CountryCode = countryCode,
-                StartIp = IpToBytes(ipRange.FirstIpAddress),
-                EndIp = IpToBytes(ipRange.LastIpAddress)
-            });
-
-            collection.InsertBulk(records);
-        }
-
-        VhLogger.Instance.LogInformation("LiteDB created successfully at: {DbFile}", dbFile);
-        VhLogger.Instance.LogInformation("Total countries: {Count}", countryToIpRanges.Count);
-        VhLogger.Instance.LogInformation("Total IP ranges: {Count}", collection.Count());
-        VhLogger.Instance.LogInformation("Database size: {Size} MB", new FileInfo(dbFile).Length / 1024.0 / 1024.0);
-    }
-
     [TestMethod]
     public async Task CheckSqliteFromLocationFile()
     {

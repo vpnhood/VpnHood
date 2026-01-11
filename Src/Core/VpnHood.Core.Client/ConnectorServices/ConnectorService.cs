@@ -35,6 +35,10 @@ internal class ConnectorService(
         using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(
             timeoutCts.Token, cancellationToken, _cancellationTokenSource.Token);
 
+        // callback to reset timeout on each proxy attempt
+        // ReSharper disable once AccessToDisposedClosure
+        void OnAttempt() => timeoutCts.CancelAfter(RequestTimeout);
+
         try {
             var eventId = GetRequestEventId(request);
             request.RequestId += ":client";
@@ -46,7 +50,9 @@ internal class ConnectorService(
             mem.WriteByte(1);
             mem.WriteByte(request.RequestCode);
             await StreamUtils.WriteObjectAsync(mem, request, requestCts.Token).Vhc();
-            var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, timeoutCts, requestCts.Token).Vhc();
+
+            // ReSharper disable once AccessToDisposedClosure
+            var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, OnAttempt, requestCts.Token).Vhc();
 
             // log the response
             VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.",
@@ -62,7 +68,7 @@ internal class ConnectorService(
     }
 
     private async Task<ConnectorRequestResult<T>> SendRequest<T>(ReadOnlyMemory<byte> request, string requestId,
-        CancellationTokenSource requestTimeoutCts, CancellationToken cancellationToken)
+        Action onAttempt, CancellationToken cancellationToken)
         where T : SessionResponse
     {
         // try reuse
@@ -99,7 +105,7 @@ internal class ConnectorService(
 
         // create a new connection
         clientStream = await GetTlsConnectionToServer(requestId + ":tunnel", request.Length,
-            requestTimeoutCts, cancellationToken).Vhc();
+            onAttempt, cancellationToken).Vhc();
 
         // send request
         try {

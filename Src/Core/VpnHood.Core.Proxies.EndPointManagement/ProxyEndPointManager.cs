@@ -361,9 +361,8 @@ public class ProxyEndPointManager : IDisposable
         return GetOrderedEntriesQuery().ToArray();
     }
 
-
-    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint,
-        CancellationTokenSource? requestTimeoutCts, CancellationToken cancellationToken)
+    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint, 
+        Action? onAttempt, CancellationToken cancellationToken)
     {
         // get ordered endpoints
         var entries = await GetOrderedEntries(cancellationToken);
@@ -394,8 +393,7 @@ public class ProxyEndPointManager : IDisposable
                     _fastestEntry = entry;
 
                 RecordSuccess(entry, latency: latency, fastestLatency: _fastestEntry?.Status.Latency, checkMode: false);
-                if (RequestTimeout != null)
-                    requestTimeoutCts?.CancelAfter(RequestTimeout.Value);
+                onAttempt?.Invoke();
 
                 // disable other duplicate IPs if needed
                 if (_autoUpdateOptions.RemoveDuplicateIps) {
@@ -422,8 +420,7 @@ public class ProxyEndPointManager : IDisposable
                 var isCallerCancelled = ex is OperationCanceledException && delay < _serverCheckTimeout;
                 if (!isCallerCancelled) {
                     RecordFailed(entry, ex, checkMode: false);
-                    if (RequestTimeout != null)
-                        requestTimeoutCts?.CancelAfter(RequestTimeout.Value);
+                    onAttempt?.Invoke();
                 }
 
                 tcpClient?.Dispose();

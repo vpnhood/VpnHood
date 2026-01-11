@@ -164,8 +164,8 @@ internal class ConnectorServiceBase : IDisposable
         return await CreateSimpleClientStream(tcpClient, sslStream, contentLength, streamId, cancellationToken);
     }
 
-    protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, int contentLength, 
-        CancellationTokenSource requestTimeoutCts, CancellationToken cancellationToken)
+    protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, int contentLength,
+        Action? onConnectAttempt, CancellationToken cancellationToken)
     {
         var tcpEndPoint = VpnEndPoint.TcpEndPoint;
 
@@ -177,7 +177,7 @@ internal class ConnectorServiceBase : IDisposable
 
             // Client.SessionTimeout does not affect in ConnectAsync
             if (_proxyEndPointManager.IsEnabled)
-                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, requestTimeoutCts, cancellationToken);
+                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken);
             else {
                 tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();

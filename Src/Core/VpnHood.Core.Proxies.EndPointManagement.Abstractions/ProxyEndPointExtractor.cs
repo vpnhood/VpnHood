@@ -110,6 +110,10 @@ internal static partial class ProxyEndPointExtractor
             return false;
 
         foreach (var part in parts) {
+            // Reject empty parts or parts with leading zeros (except "0" itself)
+            if (string.IsNullOrEmpty(part) || (part.Length > 1 && part[0] == '0'))
+                return false;
+            
             if (!int.TryParse(part, out var num) || num < 0 || num > 255)
                 return false;
         }
@@ -223,14 +227,17 @@ internal static partial class ProxyEndPointExtractor
 
     // IPv4 with port (strict - must be valid IPv4 address)
     // Matches: "143.198.147.156 8888" or "192.168.1.1:9999"
-    [GeneratedRegex(@"\b(?<host>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})[\s:]+(?<port>\d{1,5})\b")]
+    // Must have exactly 4 octets and proper separator before port
+    // Use negative lookbehind to prevent matching in the middle of decimal numbers
+    [GeneratedRegex(@"(?<!\d)(?<!\.)(?<host>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?!\.)(?!\d)[\s:]+(?<port>\d{1,5})\b")]
     private static partial Regex Ipv4PortRegex();
 
     // Hostname with port (more lenient, but requires valid hostname format with at least one dot)
-    // Must NOT match partial IP addresses like "71.67" - require letters in hostname
+    // Must NOT match partial IP addresses like "71.67" or SVG patterns like "6.75C0" or numeric-only like "5.784.784"
     // Matches: "proxy.com:1080" or "proxy.example.com 9999"
+    // Each label must be valid: alphanumeric + hyphen, and overall hostname must contain at least one letter
     [GeneratedRegex(
-        @"\b(?<host>(?=.*[a-zA-Z])[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)+)[\s:]+(?<port>\d{1,5})\b")]
+        @"\b(?<host>(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]?)[\s:]+(?<port>\d{1,5})\b")]
     private static partial Regex HostPortRegex();
 
     // Just IPv6: [2001:db8::1]
@@ -238,6 +245,7 @@ internal static partial class ProxyEndPointExtractor
     private static partial Regex Ipv6OnlyRegex();
 
     // Just IPv4 (strict)
-    [GeneratedRegex(@"\b(?<host>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")]
+    // Negative lookbehind/ahead to ensure we're not matching in the middle of decimal numbers
+    [GeneratedRegex(@"(?<!\d)(?<!\.)(?<host>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?!\.)(?!\d)")]
     private static partial Regex Ipv4OnlyRegex();
 }

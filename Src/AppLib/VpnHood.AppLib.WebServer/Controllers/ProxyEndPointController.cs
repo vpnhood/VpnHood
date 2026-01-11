@@ -22,7 +22,20 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
 
         // List
         mapper.AddStatic(HttpMethod.GET, baseUrl, async ctx => {
-            var res = await List();
+            var includeSucceeded = ctx.GetQueryParameter("includeSucceeded", true);
+            var includeFailed = ctx.GetQueryParameter("includeFailed", true);
+            var includeUnknown = ctx.GetQueryParameter("includeUnknown", true);
+            var includeDisabled = ctx.GetQueryParameter("includeDisabled", true);
+            var recordIndex = ctx.GetQueryParameter<int?>("recordIndex", null);
+            var recordCount = ctx.GetQueryParameter<int?>("recordCount", null);
+            
+            var res = await List(
+                includeSucceeded: includeSucceeded,
+                includeFailed: includeFailed,
+                includeUnknown: includeUnknown,
+                includeDisabled: includeDisabled,
+                recordIndex: recordIndex,
+                recordCount: recordCount);
             await ctx.SendJson(res);
         });
 
@@ -116,9 +129,21 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.FromResult(result);
     }
 
-    public Task<AppProxyEndPointInfo[]> List()
+    public Task<AppProxyEndPointInfo[]> List(
+        bool includeSucceeded = true,
+        bool includeFailed = true,
+        bool includeUnknown = true,
+        bool includeDisabled = true,
+        int? recordIndex = null, 
+        int? recordCount = null)
     {
-        var result = ProxyEndPointService.ListProxies();
+        var result = ProxyEndPointService.ListProxies(
+            includeSucceeded: includeSucceeded,
+            includeFailed: includeFailed,
+            includeUnknown: includeUnknown,
+            includeDisabled: includeDisabled,
+            recordIndex: recordIndex,
+            recordCount: recordCount);
         return Task.FromResult(result);
     }
 

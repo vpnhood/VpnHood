@@ -23,7 +23,13 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// List all proxy endpoints
     /// </summary>
     [HttpGet]
-    public Task<AppProxyEndPointInfo[]> List()
+    public Task<AppProxyEndPointInfo[]> List(
+        [FromQuery] bool includeSucceeded = true,
+        [FromQuery] bool includeFailed = true,
+        [FromQuery] bool includeUnknown = true,
+        [FromQuery] bool includeDisabled = true,
+        [FromQuery] int? recordIndex = null,
+        [FromQuery] int? recordCount = null)
     {
         throw new SwaggerOnlyException();
     }

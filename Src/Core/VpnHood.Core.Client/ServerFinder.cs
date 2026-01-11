@@ -225,7 +225,8 @@ public class ServerFinder(
 
         // Initialize time-based progress tracking
         // as we check the first server separately in unparallel mode, we add maxDegreeOfParallelism to total
-        _progressMonitor = new ProgressMonitor(hostStatuses.Length + maxDegreeOfParallelism, serverQueryTimeout,
+        _progressMonitor = new ProgressMonitor(hostStatuses.Length + maxDegreeOfParallelism, 
+            serverQueryTimeout,
             maxDegreeOfParallelism);
 
         try {

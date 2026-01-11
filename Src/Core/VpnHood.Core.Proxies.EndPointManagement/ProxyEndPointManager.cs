@@ -336,7 +336,7 @@ public class ProxyEndPointManager : IDisposable
 
 
     // order by active state then Last Attempt
-    private ProxyEndPointEntry[] GetOrderedEntriesQuery()
+    private ProxyEndPointEntry[] GetOrderedEntriesQuery(int maxPriorityFailed = 1)
     {
         var ordered =  _proxyEndPointEntries
             .Where(x => x.EndPoint.IsEnabled)
@@ -352,7 +352,7 @@ public class ProxyEndPointManager : IDisposable
         if (!ordered.Any(x => x.Status.IsLastUsedSucceeded))
             return ordered;
 
-        // Keep the first 2 failed servers in-place (relative to succeeded ordering),
+        // Keep the first maxPriorityFailed failed servers in-place (relative to succeeded ordering),
         // move the remaining failed servers to the end (preserving their order).
         var tailFailed = new List<ProxyEndPointEntry>();
         var result = new List<ProxyEndPointEntry>(ordered.Length);
@@ -366,7 +366,7 @@ public class ProxyEndPointManager : IDisposable
             }
 
             failedCount++;
-            if (failedCount <= 2)
+            if (failedCount <= maxPriorityFailed)
                 result.Add(entry);
             else
                 tailFailed.Add(entry);

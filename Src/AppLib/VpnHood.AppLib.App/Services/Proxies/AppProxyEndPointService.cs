@@ -91,9 +91,37 @@ public class AppProxyEndPointService
         Save();
     }
 
-    public void DeleteAll()
+    public void DeleteAll(
+        bool deleteSucceeded = true, 
+        bool deleteFailed = true, 
+        bool deleteUnknown = true,
+        bool deleteDisabled = true)
     {
-        _data.CustomEndPointInfos = [];
+        var items = _data.CustomEndPointInfos.AsEnumerable();
+        
+        if (deleteSucceeded)
+            items = items.Where(info => info.Status is not { HasUsed: true, IsLastUsedSucceeded: true });
+
+        if (deleteFailed)
+            items = items.Where(info => info.Status is not { HasUsed: true, IsLastUsedSucceeded: false });
+
+        if (deleteUnknown)
+            items = items.Where(info => info.Status.HasUsed);
+        
+        if (deleteDisabled)
+            items = items.Where(info => info.EndPoint.IsEnabled);
+
+        _data.CustomEndPointInfos = items.ToArray();
+        Save();
+    }
+
+    public void DisableAllFailed()
+    {
+        foreach (var info in _data.CustomEndPointInfos) {
+            if (info.Status.HasUsed && !info.Status.IsLastUsedSucceeded)
+                info.EndPoint.IsEnabled = false;
+        }
+
         Save();
     }
 

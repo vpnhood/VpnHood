@@ -377,11 +377,11 @@ public class ServerFinder(
     private ConnectorService CreateConnector(VpnEndPoint vpnEndPoint)
     {
         var connector = new ConnectorService(
-            requestTimeout: serverQueryTimeout,
             options: new ConnectorServiceOptions(
                 VpnEndPoint: vpnEndPoint,
                 ProxyEndPointManager: proxyEndPointManager,
                 SocketFactory: socketFactory,
+                RequestTimeout: serverQueryTimeout,
                 AllowTcpReuse: false)
         );
 

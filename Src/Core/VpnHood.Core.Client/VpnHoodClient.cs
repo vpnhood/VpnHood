@@ -653,11 +653,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // create connector service
             _connectorService = new ConnectorService(
-                requestTimeout: Config.TcpConnectTimeout,
                 options: new ConnectorServiceOptions(
                     ProxyEndPointManager: ProxyEndPointManager,
                     SocketFactory: SocketFactory,
                     VpnEndPoint: vpnEndPoint,
+                    RequestTimeout: Config.TcpConnectTimeout,
                     AllowTcpReuse: false));
 
             // send hello request
@@ -912,7 +912,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await _vpnAdapter.Start(adapterOptions, cancellationToken);
         }
         catch (TimeoutException) {
-            // if the connection is timed out, throw connection timeout exception in this case
             throw new ConnectionTimeoutException("Could not connect to the server in the given time.");
         }
         catch (RedirectHostException ex) {

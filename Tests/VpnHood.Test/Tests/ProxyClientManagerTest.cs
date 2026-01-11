@@ -45,7 +45,7 @@ public class ProxyEndPointManagerTest : TestBase
         var target = new IPEndPoint(IPAddress.Loopback, 443);
 
         var ex = await Assert.ThrowsExactlyAsync<SocketException>(async () =>
-            await mgr.ConnectAsync(target, CancellationToken.None));
+            await mgr.ConnectAsync(target, null, CancellationToken.None));
         Assert.AreEqual((int)SocketError.NetworkUnreachable, ex.ErrorCode);
     }
 

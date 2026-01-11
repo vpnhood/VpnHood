@@ -18,6 +18,8 @@ public class AccessCodeTest : TestAppBase
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);
 
+        Console.WriteLine(int.MaxValue * 1000_000L);
+
         await Task.CompletedTask;
     }
 

@@ -125,8 +125,11 @@ public static class ProxyEndPointParser
         string defaultScheme = "http",
         bool preferHttpsWhenPort443 = true)
     {
+        // Normalize delimiters to new lines
+        content = FastReplaceCharsWithNewline(content);
+
         // Split by new lines
-        var lines = content.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         var results = new List<Uri>();
 
         foreach (var line in lines) {
@@ -203,4 +206,19 @@ public static class ProxyEndPointParser
         ProxyProtocol.Https => 443,
         _ => 8080
     };
+
+    private static string FastReplaceCharsWithNewline(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+            return content;
+
+        var chars = content.ToCharArray();
+
+        for (var i = 0; i < chars.Length; i++) {
+            if (chars[i] is '\r' or ' ' or '"' or '`' or ',' or '{' or '}' or '(' or ')' or '[' or ']')
+                chars[i] = '\n';
+        }
+
+        return new string(chars);
+    }
 }

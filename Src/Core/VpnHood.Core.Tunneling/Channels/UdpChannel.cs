@@ -85,9 +85,11 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
             }
 
             // send remaining buffer
-            if (bufferIndex > UdpChannelTransmitter.HeaderLength) {
+            if (bufferIndex > UdpChannelTransmitter.HeaderLength) 
                 await SendBuffer(_buffer[..bufferIndex]).Vhc();
-            }
+            else
+                VhLogger.Instance.LogDebug(GeneralEventId.Udp,
+                    "No packets to send in UdpChannel. ChannelId: {ChannelId}", ChannelId);
         }
         catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException) {
             // ignore cancellation

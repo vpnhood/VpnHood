@@ -7,7 +7,7 @@ namespace VpnHood.Core.Tunneling;
 public static class TunnelDefaults
 {
     public const int MaxPacketChannelCount = 8;
-    public const int MtuOverhead = 70;
+    public const int MtuOverhead = 80;
     public const int Mtu = 1500 - MtuOverhead;
     public const int MaxPacketSize = 1500;
     public const string HttpPassCheck = "VpnHoodPassCheck";

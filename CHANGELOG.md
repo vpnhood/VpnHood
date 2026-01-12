@@ -1,5 +1,9 @@
+# Upcoming
+* Fix: UDP mode on some android clients
+* Feature: Suppport for HTTP, HTTPS, SOCKS5 and SOCKS4 relay Proxies
+
 # v7.5.780
-Fix: Unable to connect to some servers when the client has IPv6 enabled
+* Fix: Unable to connect to some servers when the client has IPv6 enabled
 
 # v7.5.779
 * Fix: Android: Backbutton does not work on some Android devices

@@ -7,6 +7,11 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
+public interface IUdpReceiver
+{
+    void OnDataReceived(Span<byte> buffer);
+}
+
 public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions options)
     : PacketChannel(options)
 {

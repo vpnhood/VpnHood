@@ -20,8 +20,12 @@ public abstract class UdpChannelTransmitter : IDisposable
     private readonly BufferCryptor _serverDecryptor; // decryptor must be different object for thread safety
     private readonly RandomNumberGenerator _randomGenerator = RandomNumberGenerator.Create();
     private bool _disposed;
-    public const int HeaderLength = 32; //IV (8) + Sign (2) + Reserved (6) + SessionId (8) + SessionPos (8)
+    public const int HeaderLength = 32; // 16
     public const int SendHeaderLength = HeaderLength - 8; //IV will not be encrypted
+
+    // AES-GCM
+    // custom header session_id[8] | seq[8] | tag[16]
+
 
     public TransferBufferSize? BufferSize {
         get => new(_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
@@ -52,6 +56,7 @@ public abstract class UdpChannelTransmitter : IDisposable
             await _semaphore.WaitAsync().Vhc();
             var bufferSpan = buffer.Span;
             Span<byte> sendIv = stackalloc byte[8];
+
 
             // add random packet iv
             _randomGenerator.GetBytes(sendIv);

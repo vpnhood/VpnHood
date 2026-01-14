@@ -7,62 +7,42 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public interface IUdpReceiver
-{
-    void OnDataReceived(Span<byte> buffer);
-}
 
-public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions options)
-    : PacketChannel(options)
+public class UdpChannel : PacketChannel
 {
+    private readonly IUdpTransport _udpTransport;
     private readonly Memory<byte> _buffer = new byte[TunnelDefaults.MaxPacketSize];
-    private readonly BufferCryptor _sessionCryptorWriter = new(options.SessionKey);
-    private readonly BufferCryptor _sessionCryptorReader = new(options.SessionKey);
-
-    private readonly long
-        _cryptorPosBase =
-            options.LeaveTransmitterOpen
-                ? DateTime.UtcNow.Ticks
-                : 0; // make sure server does not use client position as IV
-
-    private readonly ulong _sessionId = options.SessionId;
-    private readonly int _protocolVersion = options.ProtocolVersion;
-    private readonly bool _leaveTransmitterOpen = options.LeaveTransmitterOpen;
-    public IPEndPoint RemoteEndPoint { get; set; } = options.RemoteEndPoint;
     private readonly TaskCompletionSource<bool> _readingTask = new();
-    public override int OverheadLength => UdpChannelTransmitter.HeaderLength + TunnelDefaults.MtuOverhead;
 
+    public override int OverheadLength => _udpTransport.OverheadLength;
+    public IPEndPoint RemoteEndPoint { get; set; }
+
+    public UdpChannel(IUdpTransport udpTransport, UdpChannelOptions options) : base(options)
+    {
+        _udpTransport = udpTransport;
+        RemoteEndPoint = options.RemoteEndPoint;
+        _udpTransport.DataReceived = OnDataReceived;
+    }
     protected override Task StartReadTask()
     {
         // already started by UdpChannelTransmitter
         return _readingTask.Task;
     }
 
-
     public async Task SendBuffer(Memory<byte> buffer)
     {
         if (RemoteEndPoint == null)
             throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
 
-        if (transmitter == null)
-            throw new InvalidOperationException("UdpChannelTransmitter has not been initialized yet in UdpChannel.");
-
-        // encrypt packets
-        var sessionCryptoPosition = _cryptorPosBase + PacketStat.SentBytes;
-        _sessionCryptorWriter.Cipher(buffer.Span[UdpChannelTransmitter.HeaderLength..],
-            sessionCryptoPosition);
-
         // send buffer
-        await transmitter
-            .SendAsync(RemoteEndPoint, _sessionId, sessionCryptoPosition, buffer, _protocolVersion)
-            .Vhc();
+        await _udpTransport.SendAsync(buffer, RemoteEndPoint).Vhc();
     }
 
     protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {
         try {
             // copy packets to buffer
-            var bufferIndex = UdpChannelTransmitter.HeaderLength;
+            var bufferIndex = _udpTransport.OverheadLength;
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < ipPackets.Count; i++) {
@@ -70,10 +50,10 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
                 var packetBytes = ipPacket.Buffer;
 
                 // flush buffer if this packet does not fit
-                if (bufferIndex > UdpChannelTransmitter.HeaderLength &&
+                if (bufferIndex > _udpTransport.OverheadLength &&
                     bufferIndex + packetBytes.Length > _buffer.Length) {
                     await SendBuffer(_buffer[..bufferIndex]).Vhc();
-                    bufferIndex = UdpChannelTransmitter.HeaderLength;
+                    bufferIndex = _udpTransport.OverheadLength;
                 }
 
                 // check if packet is too big
@@ -90,7 +70,7 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
             }
 
             // send remaining buffer
-            if (bufferIndex > UdpChannelTransmitter.HeaderLength) {
+            if (bufferIndex > _udpTransport.OverheadLength) {
                 await SendBuffer(_buffer[..bufferIndex]).Vhc();
             }
         }
@@ -130,10 +110,8 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
         return packet;
     }
 
-    public void OnDataReceived(Memory<byte> buffer, long cryptorPosition)
+    public void OnDataReceived(Memory<byte> buffer)
     {
-        _sessionCryptorReader.Cipher(buffer.Span, cryptorPosition);
-
         // read all packets
         var bufferIndex = 0;
         while (bufferIndex < buffer.Length) {
@@ -145,8 +123,7 @@ public class UdpChannel(UdpChannelTransmitter transmitter, UdpChannelOptions opt
 
     protected override void DisposeManaged()
     {
-        if (!_leaveTransmitterOpen)
-            transmitter.Dispose();
+        _udpTransport.Dispose();
 
         // finalize reading task
         _readingTask.TrySetResult(true);

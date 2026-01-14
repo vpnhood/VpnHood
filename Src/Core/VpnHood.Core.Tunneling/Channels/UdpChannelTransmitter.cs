@@ -23,10 +23,6 @@ public abstract class UdpChannelTransmitter : IDisposable
     public const int HeaderLength = 32; // 16
     public const int SendHeaderLength = HeaderLength - 8; //IV will not be encrypted
 
-    // AES-GCM
-    // custom header session_id[8] | seq[8] | tag[16]
-
-
     public TransferBufferSize? BufferSize {
         get => new(_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
         set {

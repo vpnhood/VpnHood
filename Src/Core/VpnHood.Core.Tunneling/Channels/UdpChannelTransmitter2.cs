@@ -1,24 +1,26 @@
-﻿using System.Buffers.Binary;
+﻿using Microsoft.Extensions.Logging;
+using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
-using Microsoft.Extensions.Logging;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public abstract class UdpChannelTransmitter2 : IDisposable
+public class UdpChannelTransmitter2 : IDisposable
 {
     private const int SessionIdLength = 8;
     private const int SeqLength = 8;
     private const int TagLength = 16;
-    private const int HeaderLength = SessionIdLength + SeqLength + TagLength;
+    public const int HeaderLength = SessionIdLength + SeqLength + TagLength;
 
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
     private readonly byte[] _sendBuffer = new byte[TunnelDefaults.MaxPacketSize];
-    private readonly byte[] _receivePlaintextBuffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly UdpClient _udpClient;
+    private readonly ConcurrentDictionary<ulong, SessionUdpTransport> _sessions = new();
 
     // AesGcm is not thread-safe; serialize send
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
@@ -27,7 +29,7 @@ public abstract class UdpChannelTransmitter2 : IDisposable
 
     public int MaxPacketSize { get; set; } = TunnelDefaults.MaxPacketSize;
 
-    protected UdpChannelTransmitter2(UdpClient udpClient)
+    public UdpChannelTransmitter2(UdpClient udpClient)
     {
         _udpClient = udpClient;
 
@@ -41,21 +43,25 @@ public abstract class UdpChannelTransmitter2 : IDisposable
         Task.Run(ReadLoopAsync);
     }
 
-    // Must return the session's AesGcm for decrypting packets of this session.
-    // Note: AesGcm is not thread-safe; ensure this instance is not used concurrently elsewhere.
-    protected abstract bool TryGetSessionAesGcm(long sessionId, out AesGcm aesGcm);
+    public TransferBufferSize? BufferSize {
+        get => new(_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
+        set {
+            using var udpClient = new UdpClient(_udpClient.Client.AddressFamily);
+            _udpClient.Client.SendBufferSize = value?.Send > 0 ? value.Value.Send : udpClient.Client.SendBufferSize;
+            _udpClient.Client.ReceiveTimeout =
+                value?.Receive > 0 ? value.Value.Receive : udpClient.Client.ReceiveTimeout;
+        }
+    }
 
-    protected abstract void OnPacketDecrypted(long sessionId, ReadOnlySpan<byte> plaintext, IPEndPoint remoteEndPoint);
-
-    private static void BuildNonce(Span<byte> nonce, long sessionId, ulong seq)
+    private static void BuildNonce(Span<byte> nonce, ulong sessionId, ulong seq)
     {
         // nonce = seq[8] + sessionSalt[4]
         BinaryPrimitives.WriteUInt64LittleEndian(nonce[..8], seq);
-        var sessionSalt = (uint)(((ulong)sessionId) ^ ((ulong)sessionId >> 32));
+        var sessionSalt = (uint)(sessionId ^ (sessionId >> 32));
         BinaryPrimitives.WriteUInt32LittleEndian(nonce.Slice(8, 4), sessionSalt);
     }
 
-    public async Task SendAsync(long sessionId, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload, AesGcm aesGcm)
+    private async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, AesGcm aesGcm)
     {
         if (payload.Length + HeaderLength > MaxPacketSize)
             throw new ArgumentOutOfRangeException(nameof(payload));
@@ -82,13 +88,13 @@ public abstract class UdpChannelTransmitter2 : IDisposable
         }
     }
 
-    private async Task SendCoreAsync(long sessionId, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload, AesGcm aesGcm)
+    private async Task SendCoreAsync(ulong sessionId, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload, AesGcm aesGcm)
     {
         var currentSeq = _sendSequenceNumber++;
         var bufferSpan = _sendBuffer.AsSpan();
 
         // sessionId[8]
-        BinaryPrimitives.WriteInt64LittleEndian(bufferSpan[..8], sessionId);
+        BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan[..8], sessionId);
 
         // seq[8]
         BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan.Slice(8, 8), currentSeq);
@@ -116,6 +122,7 @@ public abstract class UdpChannelTransmitter2 : IDisposable
     private async Task ReadLoopAsync()
     {
         var nonce = new byte[12];
+        var plainTextBuffer = new byte[MaxPacketSize];
 
         while (!_disposed) {
             try {
@@ -127,13 +134,15 @@ public abstract class UdpChannelTransmitter2 : IDisposable
                 }
 
                 var span = data.AsSpan();
-                var sessionId = BinaryPrimitives.ReadInt64LittleEndian(span[..8]);
+                var sessionId = BinaryPrimitives.ReadUInt64LittleEndian(span[..8]);
                 var seq = BinaryPrimitives.ReadUInt64LittleEndian(span.Slice(8, 8));
 
-                if (!TryGetSessionAesGcm(sessionId, out var aesGcm)) {
+                if (!_sessions.TryGetValue(sessionId, out var transport)) {
                     _udpSignReporter.Raise();
                     continue;
                 }
+
+                var aesGcm = transport.AesGcm;
 
                 // Extract fields
                 var tag = span.Slice(16, 16);
@@ -143,15 +152,14 @@ public abstract class UdpChannelTransmitter2 : IDisposable
 
                 // Decrypt
                 var length = ciphertext.Length;
-                if (length > _receivePlaintextBuffer.Length)
+                if (length > plainTextBuffer.Length)
                     throw new InvalidOperationException(
-                        $"Receive buffer too small. length={length}, buffer={_receivePlaintextBuffer.Length}");
+                        $"Receive buffer too small. length={length}, buffer={plainTextBuffer.Length}");
 
-                var plaintext = _receivePlaintextBuffer.AsSpan(0, length);
-                aesGcm.Decrypt(nonce, ciphertext, tag, plaintext, aad);
+                var plainTextMemory = plainTextBuffer.AsMemory(0, length);
+                aesGcm.Decrypt(nonce, ciphertext, tag, plainTextMemory.Span, aad);
 
-                // plaintext span is backed by a shared buffer; OnPacketDecrypted must not store it.
-                OnPacketDecrypted(sessionId, plaintext, result.RemoteEndPoint);
+                transport.DataReceived?.Invoke(plainTextMemory);
             }
             catch (Exception ex) when (IsInvalidState(ex)) {
                 Dispose();
@@ -169,13 +177,57 @@ public abstract class UdpChannelTransmitter2 : IDisposable
         return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
+    public IUdpTransport CreateTransport(ulong sessionId, Span<byte> key, IPEndPoint remoteEndPoint)
+    {
+        var transport = new SessionUdpTransport(this, sessionId, key, remoteEndPoint);
+        if (!_sessions.TryAdd(sessionId, transport)) {
+            transport.Dispose();
+            throw new InvalidOperationException($"Session {sessionId} already exists.");
+        }
+
+        return transport;
+    }
+
+    private void Unregister(SessionUdpTransport transport)
+    {
+        _sessions.TryRemove(transport.SessionId, out _);
+    }
+
     public void Dispose()
     {
         if (_disposed)
             return;
 
         _disposed = true;
+
+        // Dispose all sessions
+        foreach (var session in _sessions.Values)
+            session.Dispose();
+        _sessions.Clear();
+
         _udpClient.Dispose();
         _sendSemaphore.Dispose();
     }
+
+    private class SessionUdpTransport(
+        UdpChannelTransmitter2 transmitter, ulong sessionId, Span<byte> key, IPEndPoint remoteEndPoint) 
+        : IUdpTransport
+    {
+        internal AesGcm AesGcm { get; } = new(key, 16);
+        public ulong SessionId { get; } = sessionId;
+        public Action<Memory<byte>>? DataReceived { get; set; }
+        public int OverheadLength => HeaderLength;
+        
+        public Task SendAsync(Memory<byte> buffer)
+        {
+            return transmitter.SendAsync(SessionId, buffer, remoteEndPoint, AesGcm);
+        }
+
+        public void Dispose()
+        {
+            transmitter.Unregister(this);
+            AesGcm.Dispose();
+        }
+    }
+
 }

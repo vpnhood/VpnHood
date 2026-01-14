@@ -90,9 +90,9 @@ public class Session : IDisposable
         var logScope = new LogScope();
         logScope.Data.Add(sessionTuple);
 
-        _accessManager = accessManager ?? throw new ArgumentNullException(nameof(accessManager));
+        _accessManager = accessManager;
         _vpnAdapter = vpnAdapter;
-        _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
+        _socketFactory = socketFactory;
         _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
             UdpTimeout = options.UdpTimeoutValue,
             IcmpTimeout = options.IcmpTimeoutValue,

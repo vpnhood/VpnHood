@@ -164,7 +164,6 @@ public class TunnelTest : TestBase
             CreateServerUdpChannel(sessionId: sessionId, sessionKey: sessionKey);
         using var serverTransmitterDisposable = serverTransmitter;
         using var serverUdpChannelDisposable = serverUdpChannel;
-        var serverEndPoint = serverTransmitter.LocalEndPoint;
         var serverReceivedPackets = new List<IpPacket>();
 
         // Create server tunnel
@@ -177,7 +176,7 @@ public class TunnelTest : TestBase
         };
 
         // Create client
-        var (clientUdpChannel, clientTransmitter) = CreateClientUdpChannel(serverEndPoint,
+        var (clientUdpChannel, clientTransmitter) = CreateClientUdpChannel(serverTransmitter.LocalEndPoint,
             sessionId: sessionId, sessionKey: sessionKey);
         using var clientTransmitterDisposable = clientTransmitter;
         using var clientUdpChannelDisposable = clientUdpChannel;

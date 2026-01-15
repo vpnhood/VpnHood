@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Threading;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -168,9 +169,13 @@ public abstract class UdpChannelTransmitter : IDisposable
                     throw new InvalidOperationException(
                         $"Receive buffer too small. length={length}, buffer={plainTextBuffer.Length}");
 
-                var plainTextMemory = plainTextBuffer.AsMemory(0, length);
-                aesGcm.Decrypt(nonce, ciphertext, tag, plainTextMemory.Span, aad);
+                // Decrypt in a shared buffer to reduce memory allocation
+                var plainTextSpan = plainTextBuffer.AsSpan(0, length);
+                aesGcm.Decrypt(nonce, ciphertext, tag, plainTextSpan, aad);
 
+                // Copy to the already allocated result.Buffer to reduce memory copy
+                var plainTextMemory = result.Buffer.AsMemory(0, length);
+                plainTextSpan.CopyTo(plainTextMemory.Span);
                 transport.DataReceived?.Invoke(plainTextMemory);
             }
             catch (Exception) when (_disposed) {
@@ -199,6 +204,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 
         _disposed = true;
         _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();
         _udpClient.Dispose();
         _sendSemaphore.Dispose();
     }

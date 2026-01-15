@@ -714,7 +714,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"ProtocolVersion: {helloResponse.ProtocolVersion}, " +
                 $"CurrentProtocolVersion: {_connectorService.ProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}, " +
-                $"UdpChannelPort: {helloResponse.UdpPort}, " +
+                $"UdpChannelPort: {HostUdpEndPoint?.Port}, " +
                 $"IsTcpPacketSupported: {helloResponse.IsTcpPacketSupported}, " +
                 $"IsTcpProxySupported: {helloResponse.IsTcpProxySupported}, " +
                 $"IsLocalNetworkAllowed: {allowedLocalNetworks.Any()}, " +
@@ -736,7 +736,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ServerSecret = helloResponse.ServerSecret;
             IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
-            if (helloResponse.UdpPort > 0)
+            if (helloResponse is { UdpPort: > 0, ProtocolVersion: > 10 })
                 HostUdpEndPoint = new IPEndPoint(_connectorService.VpnEndPoint.TcpEndPoint.Address,
                     helloResponse.UdpPort.Value);
 

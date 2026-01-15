@@ -33,7 +33,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private readonly AsyncLock _configureLock = new();
     private bool _disposed;
 
-    public const int MaxProtocolVersion = 10;
+    public const int MaxProtocolVersion = 11;
     public const int MinProtocolVersion = 6;
     public int MinClientProtocolVersion { get; set; } = 8;
     public bool IsIpV6Supported { get; set; }
@@ -656,7 +656,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             SessionId = sessionResponseEx.SessionId,
             SessionKey = sessionResponseEx.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
-            UdpPort = udpPort,
+            UdpPort = protocolVersion > 10 ? udpPort : null,
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ProtocolVersion = sessionResponseEx.ProtocolVersion,

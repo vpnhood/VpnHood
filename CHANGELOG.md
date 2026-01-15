@@ -1,3 +1,8 @@
+# Upcoming
+Fix: Android: UDP on android
+Update: UDP protocol has been changed and client need to update to the latest version
+Feature: Protocol Version 11, UDP protocol has been changed
+
 # v7.5.780
 Fix: Unable to connect to some servers when the client has IPv6 enabled
 

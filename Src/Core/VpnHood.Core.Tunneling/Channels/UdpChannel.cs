@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
@@ -10,18 +9,18 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public class UdpChannel : PacketChannel
 {
-    private readonly IUdpTransport _udpTransport;
     private readonly Memory<byte> _buffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly TaskCompletionSource<bool> _readingTask = new();
-
-    public override int OverheadLength => _udpTransport.OverheadLength;
-    public IPEndPoint RemoteEndPoint { get; set; }
+    private readonly bool _leaveUdpTransportOpen;
+    
+    public IUdpTransport UdpTransport { get; }
+    public override int OverheadLength => UdpTransport.OverheadLength;
 
     public UdpChannel(IUdpTransport udpTransport, UdpChannelOptions options) : base(options)
     {
-        _udpTransport = udpTransport;
-        RemoteEndPoint = options.RemoteEndPoint;
-        _udpTransport.DataReceived = OnDataReceived;
+        UdpTransport = udpTransport;
+        UdpTransport.DataReceived = OnDataReceived;
+        _leaveUdpTransportOpen = options.LeaveUdpTransportOpen;
     }
     protected override Task StartReadTask()
     {
@@ -31,18 +30,14 @@ public class UdpChannel : PacketChannel
 
     public async Task SendBuffer(Memory<byte> buffer)
     {
-        if (RemoteEndPoint == null)
-            throw new InvalidOperationException("RemoveEndPoint has not been initialized yet in UdpChannel.");
-
-        // send buffer
-        await _udpTransport.SendAsync(buffer, RemoteEndPoint).Vhc();
+        await UdpTransport.SendAsync(buffer).Vhc();
     }
 
     protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {
         try {
             // copy packets to buffer
-            var bufferIndex = _udpTransport.OverheadLength;
+            var bufferIndex = UdpTransport.OverheadLength;
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < ipPackets.Count; i++) {
@@ -50,10 +45,10 @@ public class UdpChannel : PacketChannel
                 var packetBytes = ipPacket.Buffer;
 
                 // flush buffer if this packet does not fit
-                if (bufferIndex > _udpTransport.OverheadLength &&
+                if (bufferIndex > UdpTransport.OverheadLength &&
                     bufferIndex + packetBytes.Length > _buffer.Length) {
                     await SendBuffer(_buffer[..bufferIndex]).Vhc();
-                    bufferIndex = _udpTransport.OverheadLength;
+                    bufferIndex = UdpTransport.OverheadLength;
                 }
 
                 // check if packet is too big
@@ -70,7 +65,7 @@ public class UdpChannel : PacketChannel
             }
 
             // send remaining buffer
-            if (bufferIndex > _udpTransport.OverheadLength) {
+            if (bufferIndex > UdpTransport.OverheadLength) {
                 await SendBuffer(_buffer[..bufferIndex]).Vhc();
             }
         }
@@ -123,7 +118,8 @@ public class UdpChannel : PacketChannel
 
     protected override void DisposeManaged()
     {
-        _udpTransport.Dispose();
+        if (!_leaveUdpTransportOpen)
+            UdpTransport.Dispose();
 
         // finalize reading task
         _readingTask.TrySetResult(true);

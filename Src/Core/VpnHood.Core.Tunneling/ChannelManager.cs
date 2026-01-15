@@ -248,10 +248,15 @@ internal class ChannelManager : IDisposable
         }
     }
 
+    public void RemoveAllChannels<T>() where T: IChannel
+    {
+        foreach (var channel in _packetChannels.Where(x => x is T).ToArray())
+            RemoveChannel(channel);
+    }
+
     public void RemoveAllPacketChannels()
     {
-        foreach (var channel in _packetChannels.ToArray())
-            RemoveChannel(channel);
+        RemoveAllChannels<IPacketChannel>();
     }
 
     public void Dispose()

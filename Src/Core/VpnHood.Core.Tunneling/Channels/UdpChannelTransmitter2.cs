@@ -1,16 +1,16 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Buffers.Binary;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-public class UdpChannelTransmitter2 : IDisposable
+public abstract class UdpChannelTransmitter2 : IDisposable
 {
     private const int SessionIdLength = 8;
     private const int SeqLength = 8;
@@ -18,20 +18,25 @@ public class UdpChannelTransmitter2 : IDisposable
     public const int HeaderLength = SessionIdLength + SeqLength + TagLength;
 
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
+    private readonly EventReporter _invalidSessionReporter = new( "Invalid UDP session.", GeneralEventId.UdpSign);
+
     private readonly byte[] _sendBuffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly UdpClient _udpClient;
-    private readonly ConcurrentDictionary<ulong, SessionUdpTransport> _sessions = new();
 
     // AesGcm is not thread-safe; serialize send
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
     private static ulong _sendSequenceNumber;
     private bool _disposed;
 
+    protected abstract SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId);
+    
     public int MaxPacketSize { get; set; } = TunnelDefaults.MaxPacketSize;
+    public IPEndPoint LocalEndPoint { get; }
 
-    public UdpChannelTransmitter2(UdpClient udpClient)
+    protected UdpChannelTransmitter2(UdpClient udpClient)
     {
         _udpClient = udpClient;
+        LocalEndPoint = udpClient.Client.GetLocalEndPoint();
 
         // Initialize send sequence number. one per application lifetime is sufficient.
         if (_sendSequenceNumber == 0) {
@@ -61,7 +66,7 @@ public class UdpChannelTransmitter2 : IDisposable
         BinaryPrimitives.WriteUInt32LittleEndian(nonce.Slice(8, 4), sessionSalt);
     }
 
-    private async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, AesGcm aesGcm)
+    internal async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, AesGcm aesGcm)
     {
         if (payload.Length + HeaderLength > MaxPacketSize)
             throw new ArgumentOutOfRangeException(nameof(payload));
@@ -137,10 +142,16 @@ public class UdpChannelTransmitter2 : IDisposable
                 var sessionId = BinaryPrimitives.ReadUInt64LittleEndian(span[..8]);
                 var seq = BinaryPrimitives.ReadUInt64LittleEndian(span.Slice(8, 8));
 
-                if (!_sessions.TryGetValue(sessionId, out var transport)) {
-                    _udpSignReporter.Raise();
+                // Find transport
+                var transport = SessionIdToUdpTransport(sessionId);
+                if (transport is null) {
+                    _invalidSessionReporter.Raise();
                     continue;
                 }
+
+                // update remote endpoint for server, because client may use different port due to NAT
+                if (transport.IsServer)
+                    transport.RemoteEndPoint = result.RemoteEndPoint;
 
                 var aesGcm = transport.AesGcm;
 
@@ -177,57 +188,13 @@ public class UdpChannelTransmitter2 : IDisposable
         return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
-    public IUdpTransport CreateTransport(ulong sessionId, Span<byte> key, IPEndPoint remoteEndPoint)
-    {
-        var transport = new SessionUdpTransport(this, sessionId, key, remoteEndPoint);
-        if (!_sessions.TryAdd(sessionId, transport)) {
-            transport.Dispose();
-            throw new InvalidOperationException($"Session {sessionId} already exists.");
-        }
-
-        return transport;
-    }
-
-    private void Unregister(SessionUdpTransport transport)
-    {
-        _sessions.TryRemove(transport.SessionId, out _);
-    }
-
-    public void Dispose()
+    public virtual void Dispose()
     {
         if (_disposed)
             return;
 
         _disposed = true;
-
-        // Dispose all sessions
-        foreach (var session in _sessions.Values)
-            session.Dispose();
-        _sessions.Clear();
-
         _udpClient.Dispose();
         _sendSemaphore.Dispose();
     }
-
-    private class SessionUdpTransport(
-        UdpChannelTransmitter2 transmitter, ulong sessionId, Span<byte> key, IPEndPoint remoteEndPoint) 
-        : IUdpTransport
-    {
-        internal AesGcm AesGcm { get; } = new(key, 16);
-        public ulong SessionId { get; } = sessionId;
-        public Action<Memory<byte>>? DataReceived { get; set; }
-        public int OverheadLength => HeaderLength;
-        
-        public Task SendAsync(Memory<byte> buffer)
-        {
-            return transmitter.SendAsync(SessionId, buffer, remoteEndPoint, AesGcm);
-        }
-
-        public void Dispose()
-        {
-            transmitter.Unregister(this);
-            AesGcm.Dispose();
-        }
-    }
-
 }

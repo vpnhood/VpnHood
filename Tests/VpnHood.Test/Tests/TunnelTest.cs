@@ -68,8 +68,7 @@ public class TunnelTest : TestBase
                 SessionId = sessionId,
                 AutoDisposePackets = true,
                 Blocking = false,
-                ProtocolVersion = 4,
-                LeaveTransmitterOpen = false
+                ProtocolVersion = 4
             });
         serverTransmitter.UdpChannel = serverUdpChannel;
         return serverUdpChannel;

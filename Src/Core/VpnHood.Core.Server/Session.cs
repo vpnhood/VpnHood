@@ -137,6 +137,7 @@ public class Session : IDisposable
             NetScanDetector = new NetScanDetector(options.NetScanLimit.Value, options.NetScanTimeout.Value);
     }
 
+
     public Traffic Traffic {
         get {
             // Intentionally Reversed: sending to tunnel means receiving form client,
@@ -147,6 +148,20 @@ public class Session : IDisposable
                 Received = traffic.Sent
             };
         }
+    }
+
+    public IUdpTransport UseUdpTransport(Func<IUdpTransport> factory)
+    {
+        // Note: creating UdpTransport is costly, this method may be called per packet
+        _udpChannel ??= new UdpChannel(factory(), new UdpChannelOptions {
+            Blocking = false,
+            AutoDisposePackets = true,
+            Lifespan = null,
+            ChannelId = Guid.NewGuid().ToString()
+        });
+
+        UseUdpChannel = true;
+        return _udpChannel.UdpTransport;
     }
 
     public Traffic ResetTraffic()
@@ -164,53 +179,6 @@ public class Session : IDisposable
         var oldValue = IsSyncRequired;
         IsSyncRequired = false;
         return oldValue;
-    }
-
-    public void OnUdpTransmitterReceivedData(UdpChannelTransmitter transmitter, IPEndPoint remoteEndPoint,
-        long cryptorPosition, Memory<byte> buffer)
-    {
-        // create and add udp channel if not exists
-        if (_udpChannel is not { State: PacketChannelState.Connected }) {
-            _udpChannel = TryPrepareUdpChannel(transmitter, remoteEndPoint);
-            if (_udpChannel == null)
-                return;
-        }
-
-        // set remote end point and notify channel about data received
-        _udpChannel.RemoteEndPoint = remoteEndPoint;
-        _udpChannel.OnDataReceived(buffer, cryptorPosition);
-    }
-
-    private UdpChannel? TryPrepareUdpChannel(UdpChannelTransmitter transmitter, IPEndPoint remoteEndPoint)
-    {
-        // add the new udp channel
-        UdpChannel? udpChannel = null;
-        try {
-            // add new channel
-            udpChannel = new UdpChannel(transmitter, new UdpChannelOptions {
-                RemoteEndPoint = remoteEndPoint,
-                Blocking = false,
-                SessionId = SessionId,
-                SessionKey = SessionKey,
-                LeaveTransmitterOpen = true,
-                AutoDisposePackets = true,
-                ProtocolVersion = ProtocolVersion,
-                Lifespan = null,
-                ChannelId = Guid.NewGuid().ToString()
-            });
-
-            // remove old channels
-            Tunnel.RemoveAllPacketChannels();
-            Tunnel.AddChannel(udpChannel);
-            return udpChannel;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(GeneralEventId.PacketChannel, ex,
-                "Failed to create UdpChannel for session {SessionId}", SessionId);
-
-            udpChannel?.Dispose();
-            return null;
-        }
     }
 
     private IPAddress GetClientVirtualIp(IpVersion ipVersion)
@@ -324,12 +292,6 @@ public class Session : IDisposable
         // send OK reply
         await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
 
-        // Disable UdpChannel
-        if (_udpChannel != null) {
-            Tunnel.RemoveAllPacketChannels();
-            _udpChannel = null;
-        }
-
         // add channel
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
             "Creating a TcpPacketChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
@@ -345,10 +307,33 @@ public class Session : IDisposable
 
         try {
             Tunnel.AddChannel(channel);
+            UseUdpChannel = false;
         }
         catch {
             channel.Dispose();
             throw;
+        }
+    }
+    public bool UseUdpChannel {
+        get => _udpChannel != null && field;
+        set {
+            if (value == field)
+                return;
+
+            if (value) {
+                if (_udpChannel is null)
+                    throw new InvalidOperationException("UdpChannel is not created yet.");
+
+                // enable udp channel
+                Tunnel.RemoveAllPacketChannels();
+                Tunnel.AddChannel(_udpChannel);
+            }
+            else {
+                // disable udp channel
+                Tunnel.RemoveAllChannels<UdpChannel>();
+            }
+
+            field = value;
         }
     }
 

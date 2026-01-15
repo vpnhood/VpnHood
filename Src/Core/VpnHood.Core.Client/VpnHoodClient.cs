@@ -53,6 +53,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly ServerFinder _serverFinder;
     private bool _isDnsServersAccepted;
     private ulong? _sessionId;
+    private ClientUdpChannelTransmitter? _udpTransmitter;
     private ClientSessionStatus? _sessionStatus;
     private IPAddress[] _dnsServers;
     private int _sessionPacketChannelCount;
@@ -63,6 +64,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private TaskCompletionSource? _waitForAdCts;
     private bool _isPassthroughForAd;
     private bool _isDnsOverTlsDetected;
+
 
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
 
@@ -620,26 +622,28 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (VhUtils.IsNullOrEmpty(_sessionKey)) throw new Exception("Server UdpKey has not been set.");
         if (HostUdpEndPoint == null) throw new Exception("Server does not serve any UDP endpoint.");
 
-        UdpChannel? udpChannel = null;
+        // create transmitter if not created
+        _udpTransmitter ??= new ClientUdpChannelTransmitter(
+            socketFactory: SocketFactory,
+            sessionId: SessionId,
+            sessionKey: _sessionKey,
+            remoteEndPoint: HostUdpEndPoint,
+            bufferSize: TunnelDefaults.ClientUdpChannelBufferSize);
+
+        // create udp channel
+        var udpChannel = new UdpChannel(_udpTransmitter.UdpTransport, new UdpChannelOptions {
+            AutoDisposePackets = true,
+            Blocking = true,
+            ChannelId = Guid.NewGuid().ToString(),
+            Lifespan = null,
+        });
+
+        // add to tunnel
         try {
-            udpChannel = ClientUdpChannelFactory.Create(
-                new ClientUdpChannelOptions {
-                    SocketFactory = SocketFactory,
-                    ServerKey = ServerSecret,
-                    RemoteEndPoint = HostUdpEndPoint,
-                    SessionKey = _sessionKey,
-                    SessionId = SessionId,
-                    ProtocolVersion = ConnectorService.ProtocolVersion,
-                    AutoDisposePackets = true,
-                    Blocking = true,
-                    ChannelId = Guid.NewGuid().ToString(),
-                    Lifespan = null,
-                    BufferSize = TunnelDefaults.ClientUdpChannelBufferSize
-                });
             _tunnel.AddChannel(udpChannel);
         }
         catch {
-            udpChannel?.Dispose();
+            udpChannel.Dispose();
             throw;
         }
     }
@@ -1224,6 +1228,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // Tunnel
         VhLogger.Instance.LogDebug("Disposing Tunnel...");
         _tunnel.Dispose();
+        _udpTransmitter?.Dispose();
 
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         _proxyManager.Dispose();

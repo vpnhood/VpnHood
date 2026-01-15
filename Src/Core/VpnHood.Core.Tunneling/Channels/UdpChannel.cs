@@ -36,8 +36,8 @@ public class UdpChannel : PacketChannel
     protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
     {
         try {
-            // copy packets to buffer
-            var bufferIndex = UdpTransport.OverheadLength;
+            // copy packets to buffer (payload only, transmitter adds its own overhead)
+            var bufferIndex = 0;
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < ipPackets.Count; i++) {
@@ -45,14 +45,14 @@ public class UdpChannel : PacketChannel
                 var packetBytes = ipPacket.Buffer;
 
                 // flush buffer if this packet does not fit
-                if (bufferIndex > UdpTransport.OverheadLength &&
-                    bufferIndex + packetBytes.Length > _buffer.Length) {
+                if (bufferIndex > 0 &&
+                    bufferIndex + packetBytes.Length > _buffer.Length - UdpTransport.OverheadLength) {
                     await SendBuffer(_buffer[..bufferIndex]).Vhc();
-                    bufferIndex = UdpTransport.OverheadLength;
+                    bufferIndex = 0;
                 }
 
                 // check if packet is too big
-                if (bufferIndex + packetBytes.Length > _buffer.Length) {
+                if (bufferIndex + packetBytes.Length > _buffer.Length - UdpTransport.OverheadLength) {
                     VhLogger.Instance.LogWarning(GeneralEventId.Udp,
                         "Packet is too big to send. PacketLength: {PacketLength}",
                         packetBytes.Length);
@@ -65,9 +65,8 @@ public class UdpChannel : PacketChannel
             }
 
             // send remaining buffer
-            if (bufferIndex > UdpTransport.OverheadLength) {
+            if (bufferIndex > 0)
                 await SendBuffer(_buffer[..bufferIndex]).Vhc();
-            }
         }
         catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException) {
             // ignore cancellation

@@ -27,7 +27,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly List<TcpListener> _tcpListeners;
-    private readonly List<UdpChannelTransmitter2> _udpChannelTransmitters = [];
+    private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
     private readonly List<Task> _tcpListenerTasks = [];
     private readonly Job _cleanupConnectionsJob;
     private readonly AsyncLock _configureLock = new();

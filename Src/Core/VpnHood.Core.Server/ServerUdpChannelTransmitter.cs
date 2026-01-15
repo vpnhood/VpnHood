@@ -1,12 +1,11 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Tunneling.Channels;
 
 namespace VpnHood.Core.Server;
 
 public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager sessionManager)
-    : UdpChannelTransmitter2(udpClient)
+    : UdpChannelTransmitter(udpClient)
 {
     protected override SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId)
     {
@@ -15,9 +14,9 @@ public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager ses
             return null;
 
         // Currently only one UDP transport per session is supported on the server side.
-        // so if we change the transmitter of the old one. We do not create a new one because its creates a cryptographic overhead.
+        // so if we change the channelTransmitter of the old one. We do not create a new one because its creates a cryptographic overhead.
         var udpTransport = (SessionUdpTransport)session.UseUdpTransport(()=> new SessionUdpTransport(this, sessionId, session.SessionKey, null, true));
-        udpTransport.Transmitter = this;
+        udpTransport.ChannelTransmitter = this;
         return udpTransport;
     }
 

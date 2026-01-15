@@ -2,7 +2,6 @@
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
@@ -10,7 +9,6 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
-using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.Tunneling.WebSockets;
 using VpnHood.Test.Packets;
 
@@ -20,58 +18,83 @@ namespace VpnHood.Test.Tests;
 [SuppressMessage("ReSharper", "DisposeOnUsingVariable")]
 public class TunnelTest : TestBase
 {
-    private class ServerUdpChannelTransmitterTest(UdpClient udpClient, byte[] serverKey)
-        : UdpChannelTransmitter(udpClient, serverKey)
+    private class ServerUdpChannelTransmitterTest(UdpClient udpClient)
+        : UdpChannelTransmitter(udpClient)
     {
-        public UdpChannel? UdpChannel { get; set; }
+        private readonly Dictionary<ulong, SessionUdpTransport> _transports = new();
 
-        protected override void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint,
-            Memory<byte> buffer, long channelCryptorPosition)
+        public SessionUdpTransport AddSession(ulong sessionId, byte[] sessionKey)
         {
-            if (UdpChannel != null) {
-                UdpChannel.RemoteEndPoint = remoteEndPoint;
-                UdpChannel.OnDataReceived(buffer, channelCryptorPosition);
-            }
+            var transport = new SessionUdpTransport(this, sessionId, sessionKey, null, true);
+            _transports[sessionId] = transport;
+            return transport;
+        }
+
+        protected override SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId)
+        {
+            return _transports.GetValueOrDefault(sessionId);
+        }
+
+        public override void Dispose()
+        {
+            foreach (var transport in _transports.Values)
+                transport.Dispose();
+
+            _transports.Clear();
+            base.Dispose();
         }
     }
 
-    private static UdpChannel CreateClientUdpChannel(IPEndPoint serverEndPoint, byte[] serverKey,
-        uint sessionId, byte[] sessionKey)
+    private class ClientUdpChannelTransmitterTest : UdpChannelTransmitter
     {
-        var clientUdpChannel = ClientUdpChannelFactory.Create(new ClientUdpChannelOptions {
-            SessionId = sessionId,
-            SessionKey = sessionKey,
-            AutoDisposePackets = true,
-            Blocking = false,
-            ProtocolVersion = 4,
-            RemoteEndPoint = serverEndPoint,
-            Lifespan = null,
-            ChannelId = Guid.CreateVersion7().ToString(),
-            SocketFactory = new SocketFactory(),
-            ServerKey = serverKey,
-            BufferSize = null
-        });
+        public SessionUdpTransport UdpTransport { get; }
 
-        return clientUdpChannel;
+        public ClientUdpChannelTransmitterTest(IPEndPoint remoteEndPoint, ulong sessionId, byte[] sessionKey)
+            : base(new UdpClient(0, remoteEndPoint.AddressFamily))
+        {
+            UdpTransport = new SessionUdpTransport(this, sessionId, sessionKey, remoteEndPoint, false);
+        }
+
+        protected override SessionUdpTransport SessionIdToUdpTransport(ulong sessionId)
+        {
+            _ = sessionId;
+            return UdpTransport;
+        }
+
+        public override void Dispose()
+        {
+            UdpTransport.Dispose();
+            base.Dispose();
+        }
     }
 
-    private static UdpChannel CreateServerUdpChannel(UdpClient udpClient, uint sessionId, byte[] serverKey,
-        byte[] sessionKey)
+    private static (UdpChannel Channel, ClientUdpChannelTransmitterTest Transmitter) CreateClientUdpChannel(
+        IPEndPoint serverEndPoint, ulong sessionId, byte[] sessionKey)
     {
-        var serverTransmitter = new ServerUdpChannelTransmitterTest(udpClient, serverKey);
-        var serverUdpChannel = new UdpChannel(serverTransmitter,
+        var transmitter = new ClientUdpChannelTransmitterTest(serverEndPoint, sessionId, sessionKey);
+        var channel = new UdpChannel(transmitter.UdpTransport, new UdpChannelOptions {
+            AutoDisposePackets = true,
+            Blocking = false,
+            ChannelId = Guid.CreateVersion7().ToString(),
+            Lifespan = null
+        });
+
+        return (channel, transmitter);
+    }
+
+    private static (UdpChannel Channel, ServerUdpChannelTransmitterTest Transmitter) CreateServerUdpChannel(
+        ulong sessionId, byte[] sessionKey)
+    {
+        var serverTransmitter = new ServerUdpChannelTransmitterTest(new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)));
+        var channel = new UdpChannel(serverTransmitter.AddSession(sessionId, sessionKey),
             new UdpChannelOptions {
-                SessionKey = sessionKey,
-                RemoteEndPoint = new IPEndPoint(IPAddress.Loopback, 0), // This will be set later
-                ChannelId = Guid.CreateVersion7().ToString(),
-                Lifespan = null,
-                SessionId = sessionId,
                 AutoDisposePackets = true,
                 Blocking = false,
-                ProtocolVersion = 4
+                ChannelId = Guid.CreateVersion7().ToString(),
+                Lifespan = null
             });
-        serverTransmitter.UdpChannel = serverUdpChannel;
-        return serverUdpChannel;
+
+        return (channel, serverTransmitter);
     }
 
 
@@ -85,35 +108,35 @@ public class TunnelTest : TestBase
             PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true))
         };
 
-        // create keys
-        var serverKey = VhUtils.GenerateKey();
+        var sessionId = 1UL;
         var sessionKey = VhUtils.GenerateKey();
 
-        // Create server
-        using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ??
-                             throw new Exception("Server connection is not established");
-        var serverUdpChannel = CreateServerUdpChannel(serverUdpClient, 1, serverKey: serverKey, sessionKey: sessionKey);
+        var (serverUdpChannel, serverTransmitter) = CreateServerUdpChannel(sessionId, sessionKey);
+        using var serverTransmitterDisposable = serverTransmitter;
+        using var serverUdpChannelDisposable = serverUdpChannel;
+        var serverEndPoint = serverTransmitter.LocalEndPoint;
         var serverReceivedPackets = new List<IpPacket>();
         serverUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
-            // ReSharper disable once AccessToDisposedClosure
             serverReceivedPackets.Add(ipPacket);
+            // ReSharper disable once AccessToDisposedClosure
             serverUdpChannel.SendPacketQueued(ipPacket.Clone());
         };
         serverUdpChannel.Start();
 
         // Create client
-        var clientUdpChannel =
-            CreateClientUdpChannel(serverEndPoint, serverKey: serverKey, sessionKey: sessionKey, sessionId: 1);
+        var (clientUdpChannel, clientTransmitter) =
+            CreateClientUdpChannel(serverEndPoint, sessionId: sessionId, sessionKey: sessionKey);
+        using var clientTransmitterDisposable = clientTransmitter;
+        using var clientUdpChannelDisposable = clientUdpChannel;
         var clientReceivedPackets = new List<IpPacket>();
-        clientUdpChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+        clientUdpChannelDisposable.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
         };
-        clientUdpChannel.Start();
+        clientUdpChannelDisposable.Start();
 
         // send packet to server through channel
         foreach (var ipPacket in packets)
-            clientUdpChannel.SendPacketQueued(ipPacket.Clone());
+            clientUdpChannelDisposable.SendPacketQueued(ipPacket.Clone());
 
         await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Count);
         await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Count);
@@ -134,35 +157,35 @@ public class TunnelTest : TestBase
             PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true))
         };
 
-        // create keys
-        var serverKey = VhUtils.GenerateKey();
+        var sessionId = 1UL;
         var sessionKey = VhUtils.GenerateKey();
 
-        // Create server
-        using var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var serverEndPoint = (IPEndPoint?)serverUdpClient.Client.LocalEndPoint ??
-                             throw new Exception("Server connection is not established");
-        var serverUdpChannel =
-            CreateServerUdpChannel(serverUdpClient, sessionId: 1, serverKey: serverKey, sessionKey: sessionKey);
+        var (serverUdpChannel, serverTransmitter) =
+            CreateServerUdpChannel(sessionId: sessionId, sessionKey: sessionKey);
+        using var serverTransmitterDisposable = serverTransmitter;
+        using var serverUdpChannelDisposable = serverUdpChannel;
+        var serverEndPoint = serverTransmitter.LocalEndPoint;
         var serverReceivedPackets = new List<IpPacket>();
 
         // Create server tunnel
         var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
         serverTunnel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
-            // ReSharper disable once AccessToDisposedClosure
             serverReceivedPackets.Add(ipPacket);
+            // ReSharper disable once AccessToDisposedClosure
             serverUdpChannel.SendPacketQueued(ipPacket.Clone());
         };
 
         // Create client
-        var clientUdpChannel = CreateClientUdpChannel(serverEndPoint, serverKey: serverKey,
-            sessionId: 1, sessionKey: sessionKey);
+        var (clientUdpChannel, clientTransmitter) = CreateClientUdpChannel(serverEndPoint,
+            sessionId: sessionId, sessionKey: sessionKey);
+        using var clientTransmitterDisposable = clientTransmitter;
+        using var clientUdpChannelDisposable = clientUdpChannel;
 
         // Create client tunnel
         var clientReceivedPackets = new List<IpPacket>();
         var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
-        clientTunnel.AddChannel(clientUdpChannel);
+        clientTunnel.AddChannel(clientUdpChannelDisposable);
         clientTunnel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
             clientReceivedPackets.Add(ipPacket);
             waitHandle.Set();

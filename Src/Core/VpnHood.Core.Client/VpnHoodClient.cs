@@ -622,7 +622,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (VhUtils.IsNullOrEmpty(_sessionKey)) throw new Exception("Server UdpKey has not been set.");
         if (HostUdpEndPoint == null) throw new Exception("Server does not serve any UDP endpoint.");
 
-        // create transmitter if not created
+        // create channelTransmitter if not created
         _udpTransmitter ??= new ClientUdpChannelTransmitter(
             socketFactory: SocketFactory,
             sessionId: SessionId,

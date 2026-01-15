@@ -1,8 +1,8 @@
-﻿using System.Buffers.Binary;
+﻿using Microsoft.Extensions.Logging;
+using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -12,16 +12,42 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public abstract class UdpChannelTransmitter : IDisposable
 {
+    private const int SessionIdLength = 8;
+    private const int SeqLength = 8;
+    private const int TagLength = 16;
+    private readonly CancellationTokenSource _cancellationTokenSource = new ();
+    public const int HeaderLength = SessionIdLength + SeqLength + TagLength;
+
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
-    private readonly byte[] _buffer = new byte[TunnelDefaults.MaxPacketSize];
+    private readonly EventReporter _invalidSessionReporter = new( "Invalid UDP session.", GeneralEventId.UdpSign);
+
+    private readonly Memory<byte> _sendBuffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly UdpClient _udpClient;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly BufferCryptor _serverEncryptor;
-    private readonly BufferCryptor _serverDecryptor; // decryptor must be different object for thread safety
-    private readonly RandomNumberGenerator _randomGenerator = RandomNumberGenerator.Create();
+
+    // AesGcm is not thread-safe; serialize send
+    private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
+    private static ulong _sendSequenceNumber;
     private bool _disposed;
-    public const int HeaderLength = 32; // 16
-    public const int SendHeaderLength = HeaderLength - 8; //IV will not be encrypted
+
+    protected abstract SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId);
+    
+    public int MaxPacketSize { get; set; } = TunnelDefaults.MaxPacketSize;
+    public IPEndPoint LocalEndPoint { get; }
+
+    protected UdpChannelTransmitter(UdpClient udpClient)
+    {
+        _udpClient = udpClient;
+        LocalEndPoint = udpClient.Client.GetLocalEndPoint();
+
+        // Initialize send sequence number. one per application lifetime is sufficient.
+        if (_sendSequenceNumber == 0) {
+            Span<byte> seqBytes = stackalloc byte[8];
+            RandomNumberGenerator.Fill(seqBytes);
+            _sendSequenceNumber = BinaryPrimitives.ReadUInt64LittleEndian(seqBytes);
+        }
+
+        Task.Run(ReadLoopAsync);
+    }
 
     public TransferBufferSize? BufferSize {
         get => new(_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
@@ -33,155 +59,147 @@ public abstract class UdpChannelTransmitter : IDisposable
         }
     }
 
-    protected UdpChannelTransmitter(UdpClient udpClient, byte[] serverKey)
+    private static void BuildNonce(Span<byte> nonce, ulong sessionId, ulong seq)
     {
-        _udpClient = udpClient;
-        _serverEncryptor = new BufferCryptor(serverKey);
-        _serverDecryptor = new BufferCryptor(serverKey);
-        _ = ReadTask();
+        // nonce = seq[8] + sessionSalt[4]
+        BinaryPrimitives.WriteUInt64LittleEndian(nonce[..8], seq);
+        var sessionSalt = (uint)(sessionId ^ (sessionId >> 32));
+        BinaryPrimitives.WriteUInt32LittleEndian(nonce.Slice(8, 4), sessionSalt);
     }
 
-    public IPEndPoint LocalEndPoint => _udpClient.Client.GetLocalEndPoint();
-
-    public async Task<int> SendAsync(IPEndPoint? ipEndPoint, ulong sessionId, long sessionCryptoPosition,
-        Memory<byte> buffer, int protocolVersion)
+    internal async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, AesGcm aesGcm)
     {
-        _ = protocolVersion;
+        if (payload.Length + HeaderLength > MaxPacketSize)
+            throw new ArgumentOutOfRangeException(nameof(payload));
 
         try {
-            await _semaphore.WaitAsync().Vhc();
-            var bufferSpan = buffer.Span;
-            Span<byte> sendIv = stackalloc byte[8];
-
-
-            // add random packet iv
-            _randomGenerator.GetBytes(sendIv);
-            sendIv.CopyTo(bufferSpan);
-
-            // add packet signature
-            bufferSpan[8] = (byte)'O';
-            bufferSpan[9] = (byte)'K';
-
-            // write session info into the buffer
-            BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan.Slice(16, 8), sessionId);
-            BinaryPrimitives.WriteInt64LittleEndian(bufferSpan.Slice(24, 8), sessionCryptoPosition);
-
-
-            // encrypt session info part. It encrypts the session number and counter by server key and perform bitwise XOR on header.
-            // the data is not important, but it removes the signature of our packet by obfuscating the packet head. Also, the counter of session 
-            // never repeats so ECB generate a new key each time. It is just for the head obfuscation and the reset of data will encrypt
-            // by session key and that counter
-            Span<byte> sendHeadKeyBuffer = stackalloc byte[SendHeaderLength]; // IV will not be encrypted
-            _serverEncryptor.Cipher(sendHeadKeyBuffer, BitConverter.ToInt64(sendIv));
-            for (var i = 0; i < sendHeadKeyBuffer.Length; i++)
-                bufferSpan[sendIv.Length + i] ^= sendHeadKeyBuffer[i]; //simple XOR with generated unique key
-
-            // copy buffer to byte array because SendAsync does not support Memory<byte> in .NET standard 2.1
-            bufferSpan.CopyTo(_buffer.AsSpan());
-
-            // send packet to destination
-            var ret = ipEndPoint != null
-                ? await _udpClient.SendAsync(_buffer, bufferSpan.Length, ipEndPoint).Vhc()
-                : await _udpClient.SendAsync(_buffer, bufferSpan.Length).Vhc();
-
-            if (ret != buffer.Length)
-                throw new Exception($"UdpClient: Send {ret} bytes instead {buffer.Length} bytes.");
-
-            return ret;
+            await _sendSemaphore.WaitAsync().Vhc();
+            await SendCoreAsync(sessionId, ipEndPoint, payload, aesGcm);
         }
         catch (Exception ex) {
             if (IsInvalidState(ex))
                 Dispose();
 
-            VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
+            VhLogger.Instance.LogError(
+                GeneralEventId.Udp,
+                ex,
                 "UdpChannelTransmitter: Could not send data. DataLength: {DataLength}, DestinationIp: {DestinationIp}",
-                buffer.Length, VhLogger.Format(ipEndPoint));
+                payload.Length,
+                VhLogger.Format(ipEndPoint));
+
             throw;
         }
         finally {
-            _semaphore.Release();
+            _sendSemaphore.Release();
         }
     }
 
-    private async Task ReadTask()
+    private async Task SendCoreAsync(ulong sessionId, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload, AesGcm aesGcm)
     {
-        Memory<byte> headKeyBuffer = new byte[SendHeaderLength];
+        var currentSeq = _sendSequenceNumber++;
+        var bufferSpan = _sendBuffer.Span;
 
-        // wait for all incoming UDP packets
-        while (!_disposed) {
-            IPEndPoint? remoteEndPoint = null;
-            try {
-                remoteEndPoint = null;
-                var udpResult = await _udpClient.ReceiveAsync().Vhc();
-                remoteEndPoint = udpResult.RemoteEndPoint;
-                var buffer = udpResult.Buffer;
-                if (buffer.Length < HeaderLength)
-                    throw new Exception("Invalid UDP packet size. Could not find its header.");
+        // sessionId[8]
+        BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan[..8], sessionId);
 
-                // build header key
-                var bufferIndex = 0;
-                var iv = BitConverter.ToInt64(buffer, 0);
-                headKeyBuffer.Span.Clear();
-                _serverDecryptor.Cipher(headKeyBuffer.Span, iv);
-                bufferIndex += 8;
+        // seq[8]
+        BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan.Slice(8, 8), currentSeq);
 
-                // decrypt header
-                for (var i = 0; i < headKeyBuffer.Length; i++)
-                    buffer[bufferIndex + i] ^= headKeyBuffer.Span[i]; //simple XOR with the generated unique key
+        // tag[16]
+        var tag = bufferSpan.Slice(16, 16);
 
-                // check packet signature OK
-                if (buffer[8] != 'O' || buffer[9] != 'K') {
-                    _udpSignReporter.Raise();
-                    throw new Exception("Packet signature does not match.");
-                }
+        // ciphertext
+        var ciphertext = bufferSpan.Slice(HeaderLength, payload.Length);
 
-                // read session and session position
-                bufferIndex += 8;
-                var sessionId = BitConverter.ToUInt64(buffer, bufferIndex);
-                bufferIndex += 8;
-                var channelCryptorPosition = BitConverter.ToInt64(buffer, bufferIndex);
-                bufferIndex += 8;
+        // AAD = sessionId|seq
+        var aad = bufferSpan[..16];
 
-                OnReceiveData(sessionId, udpResult.RemoteEndPoint,
-                    udpResult.Buffer.AsMemory(bufferIndex), channelCryptorPosition);
-            }
-            catch (Exception ex) {
-                // finish if disposed
-                if (_disposed) {
-                    VhLogger.Instance.LogInformation(GeneralEventId.Essential,
-                        "UdpChannelTransmitter has been stopped.");
-                    break;
-                }
+        Span<byte> nonce = stackalloc byte[12];
+        BuildNonce(nonce, sessionId, currentSeq);
 
-                // break only for the first call and means that the local endpoint can not be bind
-                if (remoteEndPoint == null) {
-                    VhLogger.LogError(GeneralEventId.Essential, ex, "UdpChannelTransmitter has stopped reading.");
-                    break;
-                }
+        aesGcm.Encrypt(nonce, payload.Span, ciphertext, tag, aad);
 
-                VhLogger.Instance.LogWarning(GeneralEventId.Udp,
-                    "Error in receiving UDP packets. RemoteEndPoint: {RemoteEndPoint}, Message: {Message}",
-                    VhLogger.Format(remoteEndPoint), ex.Message);
-            }
-        }
-
-        Dispose();
+        var totalLength = HeaderLength + payload.Length;
+        var sent = await _udpClient.SendAsync(_sendBuffer[..totalLength], ipEndPoint, _cancellationTokenSource.Token).Vhc();
+        if (sent != totalLength)
+            throw new Exception($"UdpClient: Sent {sent} bytes instead of {totalLength} bytes.");
     }
 
-    protected abstract void OnReceiveData(ulong sessionId, IPEndPoint remoteEndPoint,
-        Memory<byte> buffer,
-        long channelCryptorPosition);
+    private async Task ReadLoopAsync()
+    {
+        var nonce = new byte[12];
+        var plainTextBuffer = new byte[MaxPacketSize];
+
+        while (!_disposed) {
+            try {
+                var result = await _udpClient.ReceiveAsync(_cancellationTokenSource.Token).Vhc();
+                var data = result.Buffer;
+                if (data.Length < HeaderLength) {
+                    _udpSignReporter.Raise();
+                    continue;
+                }
+
+                var span = data.AsSpan();
+                var sessionId = BinaryPrimitives.ReadUInt64LittleEndian(span[..8]);
+                var seq = BinaryPrimitives.ReadUInt64LittleEndian(span.Slice(8, 8));
+
+                // Find transport
+                var transport = SessionIdToUdpTransport(sessionId);
+                if (transport is null) {
+                    _invalidSessionReporter.Raise();
+                    continue;
+                }
+
+                // update remote endpoint for server, because client may use different port due to NAT
+                if (transport.IsServer)
+                    transport.RemoteEndPoint = result.RemoteEndPoint;
+
+                var aesGcm = transport.AesGcm;
+
+                // Extract fields
+                var tag = span.Slice(16, 16);
+                var ciphertext = span[HeaderLength..];
+                var aad = span[..16];
+                BuildNonce(nonce, sessionId, seq);
+
+                // Decrypt
+                var length = ciphertext.Length;
+                if (length > plainTextBuffer.Length)
+                    throw new InvalidOperationException(
+                        $"Receive buffer too small. length={length}, buffer={plainTextBuffer.Length}");
+
+                var plainTextMemory = plainTextBuffer.AsMemory(0, length);
+                aesGcm.Decrypt(nonce, ciphertext, tag, plainTextMemory.Span, aad);
+
+                transport.DataReceived?.Invoke(plainTextMemory);
+            }
+            catch (Exception) when (_disposed) {
+                break;
+            }
+            catch (Exception ex) when (IsInvalidState(ex)) {
+                VhLogger.Instance.LogError(GeneralEventId.Udp, ex, "UdpChannelTransmitter: Read loop crashed.");
+                Dispose();
+                break;
+            }
+            catch (Exception) {
+                _udpSignReporter.Raise();
+            }
+        }
+    }
 
     private bool IsInvalidState(Exception ex)
     {
-        return
-            _disposed ||
-            ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
+        return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
+        if (_disposed)
+            return;
+
         _disposed = true;
+        _cancellationTokenSource.Cancel();
         _udpClient.Dispose();
+        _sendSemaphore.Dispose();
     }
 }

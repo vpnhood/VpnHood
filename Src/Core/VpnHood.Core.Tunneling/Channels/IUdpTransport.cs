@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace VpnHood.Core.Tunneling.Channels;
+﻿namespace VpnHood.Core.Tunneling.Channels;
 
 public interface IUdpTransport : IDisposable
 {

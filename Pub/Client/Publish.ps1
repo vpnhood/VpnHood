@@ -53,6 +53,8 @@ if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.Server/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server.Access.FileAccessManager/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.IpLocations/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.IpLocations.SqliteProvider/_publish.ps1";
 
 	# proxies
 	& "$solutionDir/Src/Core/VpnHood.Core.Proxies.EndPointManagement/_publish.ps1";

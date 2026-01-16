@@ -1,30 +1,25 @@
-﻿using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
+﻿using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using Microsoft.Data.Sqlite;
-using VpnHood.Core.Common.IpLocations;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.AppLib.Test.Tests;
+namespace VpnHood.Core.IpLocations.SqliteProvider;
 
 
-public class IpLocationSqlLiteProvider : IIpRangeLocationProvider, IAsyncDisposable
+public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposable
 {
     private readonly Lazy<SqliteConnection> _connection;
 
-    private IpLocationSqlLiteProvider(string dbPath)
+    private IpLocationSqliteProvider(string dbPath)
     {
         _connection = new Lazy<SqliteConnection>(() => OpenConnection(dbPath));
     }
 
-    public static async Task<IpLocationSqlLiteProvider> Open(string dbPath)
+    public static async Task<IpLocationSqliteProvider> Open(string dbPath)
     {
-        var provider = new IpLocationSqlLiteProvider(dbPath);
+        var provider = new IpLocationSqliteProvider(dbPath);
         await provider._connection.Value.OpenAsync();
         return provider;
     }

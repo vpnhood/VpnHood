@@ -1,6 +1,6 @@
-﻿using VpnHood.Core.Common.IpLocations.Providers.Onlines;
+﻿using VpnHood.Core.IpLocations.Providers.Onlines;
 
-namespace VpnHood.Core.Common.IpLocations;
+namespace VpnHood.Core.IpLocations;
 
 public static class IpLocationProviderFactory
 {

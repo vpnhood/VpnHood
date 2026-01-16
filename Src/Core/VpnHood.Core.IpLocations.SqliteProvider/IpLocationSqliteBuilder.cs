@@ -1,16 +1,13 @@
-﻿using Microsoft.Data.Sqlite;
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
-using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Logging;
+using Microsoft.Data.Sqlite;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.AppLib.Test.Tests;
+namespace VpnHood.Core.IpLocations.SqliteProvider;
 
 
-public static class IpLocationSqlLiteBuilder
+public static class IpLocationSqliteBuilder
 {
     // use LocalIpLocationProvider Deserialize to rebuild and compact db if changed
     // checksum inside archive is used to detect changes
@@ -128,7 +125,7 @@ public static class IpLocationSqlLiteBuilder
 
     public static byte[] ToBytes(IPAddress ipAddress)
     {
-        return IpLocationSqlLiteProvider.ToBytes(ipAddress);
+        return IpLocationSqliteProvider.ToBytes(ipAddress);
     }
 
 }

@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace VpnHood.Core.Common.IpLocations;
+namespace VpnHood.Core.IpLocations;
 
 public interface IIpLocationProvider : IDisposable
 {

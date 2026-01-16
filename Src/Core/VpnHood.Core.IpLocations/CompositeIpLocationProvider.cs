@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Core.Common.IpLocations;
+namespace VpnHood.Core.IpLocations;
 
 public class CompositeIpLocationProvider(
     ILogger logger,

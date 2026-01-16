@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Common.IpLocations.Providers.Offlines;
+namespace VpnHood.Core.IpLocations.Providers.Offlines;
 
 public class LocalIpRangeLocationProvider(
     Func<ZipArchive> zipArchiveFactory,

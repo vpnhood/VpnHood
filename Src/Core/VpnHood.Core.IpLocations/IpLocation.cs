@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using VpnHood.Core.Toolkit.Converters;
 
-namespace VpnHood.Core.Common.IpLocations;
+namespace VpnHood.Core.IpLocations;
 
 public class IpLocation
 {

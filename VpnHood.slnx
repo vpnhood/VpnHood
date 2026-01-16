@@ -115,6 +115,8 @@
     <Project Path="Src/Core/VpnHood.Core.Client.VpnServices.Manager/VpnHood.Core.Client.VpnServices.Manager.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Client/VpnHood.Core.Client.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Common/VpnHood.Core.Common.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.IpLocations.SqliteProvider/VpnHood.Core.IpLocations.SqliteProvider.csproj" Id="347d86c5-7f80-406e-b711-1eb19d103b09" />
+    <Project Path="Src/Core/VpnHood.Core.IpLocations/VpnHood.Core.IpLocations.csproj" Id="e4e70064-ed15-4f62-87e8-5f13c791b216" />
     <Project Path="Src/Core/VpnHood.Core.Packets/VpnHood.Core.Packets.csproj" />
     <Project Path="Src/Core/VpnHood.Core.PacketTransports/VpnHood.Core.PacketTransports.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Proxies.EndPointManagement.Abstractions/VpnHood.Core.Proxies.EndPointManagement.Abstractions.csproj" />

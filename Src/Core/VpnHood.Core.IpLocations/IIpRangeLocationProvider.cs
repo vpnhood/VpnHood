@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Common.IpLocations;
+namespace VpnHood.Core.IpLocations;
 
 public interface IIpRangeLocationProvider : IIpLocationProvider
 {

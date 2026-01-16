@@ -1,8 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it</Description>
+		<Description></Description>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.AppLib</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -36,9 +35,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Core\VpnHood.Core.IpLocations\VpnHood.Core.IpLocations.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
-		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.IpLocations\VpnHood.Core.IpLocations.csproj" />
 	</ItemGroup>
 
 </Project>

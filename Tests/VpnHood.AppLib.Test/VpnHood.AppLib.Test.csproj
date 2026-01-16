@@ -24,13 +24,13 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\Src\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.IpLocations.SqliteProvider\VpnHood.Core.IpLocations.SqliteProvider.csproj" />
 		<ProjectReference Include="..\VpnHood.Test\VpnHood.Test.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.1" />
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.714" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.718" />
 		<PackageReference Include="VpnHood.Core.Proxies" Version="7.4.768" />
 	</ItemGroup>
 

@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Common.IpLocations;
+﻿namespace VpnHood.AppLib.Abstractions;
 
 public interface IRegionProvider
 {

@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Dtos;
-using VpnHood.Core.Common.IpLocations;
+using VpnHood.Core.IpLocations;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
 

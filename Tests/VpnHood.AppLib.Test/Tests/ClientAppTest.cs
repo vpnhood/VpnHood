@@ -12,8 +12,9 @@ using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Common.IpLocations.Providers.Offlines;
+using VpnHood.Core.IpLocations.Providers.Offlines;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.IpLocations.SqliteProvider;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -38,8 +39,8 @@ public class ClientAppTest : TestAppBase
         
         var dbFile = @"C:\Users\User\Downloads\IpLocations.db";
         var memoryStream = new MemoryStream(Ip2LocationLiteDb.ZipData);
-        await IpLocationSqlLiteBuilder.Build(memoryStream, dbFile);
-        await using var locationSqlLiteProvider = await IpLocationSqlLiteProvider.Open(dbFile);
+        await IpLocationSqliteBuilder.Build(memoryStream, dbFile);
+        await using var locationSqlLiteProvider = await IpLocationSqliteProvider.Open(dbFile);
 
         var list = new List<string>();
         var ranges = await locationSqlLiteProvider.GetIpRanges("tr");

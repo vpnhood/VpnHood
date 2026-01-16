@@ -186,6 +186,9 @@ public class ProxyEndPointParserTests
         Assert.IsNull(ProxyEndPointParser.ExtractFromText("hello 30 1080 "), "bad ip");
         Assert.IsNull(ProxyEndPointParser.ExtractFromText("1 1 1 5"), "bad ip");
         Assert.IsNull(ProxyEndPointParser.ExtractFromText("1.1.1.1"), "no port");
+        
+        // SVG path data should not be matched as proxy
+        Assert.IsNull(ProxyEndPointParser.ExtractFromText("M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"), "SVG path data");
     }
 
     [TestMethod]

@@ -33,6 +33,7 @@ internal class ConnectorServiceBase : IDisposable
     public TimeSpan TcpReuseTimeout { get; private set; }
     public int ProtocolVersion { get; private set; } = 8;
     public VpnEndPoint VpnEndPoint { get; init; }
+    public TimeSpan RequestTimeout { get; protected set; }
 
     protected ConnectorServiceBase(ConnectorServiceOptions options)
     {
@@ -42,6 +43,7 @@ internal class ConnectorServiceBase : IDisposable
         Status = new ClientConnectorStatusImpl(this);
         TcpReuseTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
         VpnEndPoint = options.VpnEndPoint;
+        RequestTimeout = options.RequestTimeout;
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
     }
 
@@ -163,7 +165,7 @@ internal class ConnectorServiceBase : IDisposable
     }
 
     protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, int contentLength,
-        CancellationToken cancellationToken)
+        Action? onConnectAttempt, CancellationToken cancellationToken)
     {
         var tcpEndPoint = VpnEndPoint.TcpEndPoint;
 
@@ -175,7 +177,7 @@ internal class ConnectorServiceBase : IDisposable
 
             // Client.SessionTimeout does not affect in ConnectAsync
             if (_proxyEndPointManager.IsEnabled)
-                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, cancellationToken);
+                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken);
             else {
                 tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
@@ -204,9 +206,9 @@ internal class ConnectorServiceBase : IDisposable
                 VhLogger.FormatHostName(hostName));
 
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
-                    TargetHost = hostName,
-                    EnabledSslProtocols = SslProtocols.None // auto
-                }, cancellationToken)
+                TargetHost = hostName,
+                EnabledSslProtocols = SslProtocols.None // auto
+            }, cancellationToken)
                 .Vhc();
 
             var clientStream =

@@ -22,7 +22,20 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
 
         // List
         mapper.AddStatic(HttpMethod.GET, baseUrl, async ctx => {
-            var res = await List();
+            var includeSucceeded = ctx.GetQueryParameter("includeSucceeded", true);
+            var includeFailed = ctx.GetQueryParameter("includeFailed", true);
+            var includeUnknown = ctx.GetQueryParameter("includeUnknown", true);
+            var includeDisabled = ctx.GetQueryParameter("includeDisabled", true);
+            var recordIndex = ctx.GetQueryParameter<int?>("recordIndex", null);
+            var recordCount = ctx.GetQueryParameter<int?>("recordCount", null);
+            
+            var res = await List(
+                includeSucceeded: includeSucceeded,
+                includeFailed: includeFailed,
+                includeUnknown: includeUnknown,
+                includeDisabled: includeDisabled,
+                recordIndex: recordIndex,
+                recordCount: recordCount);
             await ctx.SendJson(res);
         });
 
@@ -57,7 +70,22 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
 
         // Delete all
         mapper.AddStatic(HttpMethod.DELETE, baseUrl, async ctx => {
-            await DeleteAll();
+            var deleteSucceeded = ctx.GetQueryParameter("deleteSucceeded", true);
+            var deleteFailed = ctx.GetQueryParameter("deleteFailed", true);
+            var deleteUnknown = ctx.GetQueryParameter("deleteUnknown", true);
+            var deleteDisabled = ctx.GetQueryParameter("deleteDisabled", true);
+            await DeleteAll(
+                deleteSucceeded: deleteSucceeded,
+                deleteFailed: deleteFailed,
+                deleteUnknown: deleteUnknown,
+                deleteDisabled: deleteDisabled);
+
+            await ctx.SendNoContent();
+        });
+
+        // Disable all failed
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "disable-failed", async ctx => {
+            await DisableAllFailed();
             await ctx.SendNoContent();
         });
 
@@ -101,9 +129,21 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.FromResult(result);
     }
 
-    public Task<AppProxyEndPointInfo[]> List()
+    public Task<AppProxyEndPointInfo[]> List(
+        bool includeSucceeded = true,
+        bool includeFailed = true,
+        bool includeUnknown = true,
+        bool includeDisabled = true,
+        int? recordIndex = null, 
+        int? recordCount = null)
     {
-        var result = ProxyEndPointService.ListProxies();
+        var result = ProxyEndPointService.ListProxies(
+            includeSucceeded: includeSucceeded,
+            includeFailed: includeFailed,
+            includeUnknown: includeUnknown,
+            includeDisabled: includeDisabled,
+            recordIndex: recordIndex,
+            recordCount: recordCount);
         return Task.FromResult(result);
     }
 
@@ -144,15 +184,29 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.CompletedTask;
     }
 
-    public Task DeleteAll()
+    public Task DeleteAll(
+        bool deleteSucceeded = true,
+        bool deleteFailed = true,
+        bool deleteUnknown = true,
+        bool deleteDisabled = true)
     {
-        ProxyEndPointService.DeleteAll();
+        ProxyEndPointService.DeleteAll(
+            deleteSucceeded: deleteSucceeded, 
+            deleteFailed: deleteFailed,
+            deleteUnknown: deleteUnknown,
+            deleteDisabled: deleteDisabled);
         return Task.CompletedTask;
     }
 
     public Task Import(string content)
     {
         ProxyEndPointService.Import(content);
+        return Task.CompletedTask;
+    }
+
+    public Task DisableAllFailed()
+    {
+        ProxyEndPointService.DisableAllFailed();
         return Task.CompletedTask;
     }
 

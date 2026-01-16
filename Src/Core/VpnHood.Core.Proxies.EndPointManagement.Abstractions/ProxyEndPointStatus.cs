@@ -18,6 +18,10 @@ public class ProxyEndPointStatus
         LastSucceeded != null && (LastFailed is null || LastSucceeded > LastFailed);
 
     [JsonIgnore]
+    public bool IsLastUsedFailed =>
+        LastFailed != null && (LastSucceeded is null || LastFailed > LastSucceeded);
+
+    [JsonIgnore]
     public DateTime? LastUsed =>
         LastSucceeded > LastFailed ? LastSucceeded : LastFailed;
 

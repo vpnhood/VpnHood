@@ -55,14 +55,35 @@ public class AppProxyEndPointService
         return _data.SystemNodeInfo;
     }
 
-    public AppProxyEndPointInfo[] ListProxies()
+    public AppProxyEndPointInfo[] ListProxies(
+        bool includeSucceeded = true,
+        bool includeFailed = true,
+        bool includeUnknown = true,
+        bool includeDisabled = true,
+        int? recordIndex = null,
+        int? recordCount = null)
     {
-        UpdateNodesByCore();
-        var res = _data.CustomEndPointInfos
-            .OrderByDescending(x => x.EndPoint.IsEnabled)
-            .ThenBy(x => x.Status.Quality);
+        recordIndex ??= 0;
+        recordCount ??= int.MaxValue;
 
-        return res.ToArray();
+        UpdateNodesByCore();
+
+        var items = _data.CustomEndPointInfos
+            .Where(x => includeDisabled || x.EndPoint.IsEnabled)
+            .Where(x =>
+                (includeSucceeded && x.Status.IsLastUsedSucceeded) ||
+                (includeFailed && x.Status.IsLastUsedFailed) ||
+                (includeUnknown && !x.Status.HasUsed));
+
+
+        // Order results
+        var ordered = items
+            .OrderByDescending(x => x.EndPoint.IsEnabled)
+            .ThenBy(x => x.Status.Quality)
+            .Skip(recordIndex.Value)
+            .Take(recordCount.Value);
+
+        return ordered.ToArray();
     }
 
     public AppProxyEndPointInfo Get(string id)
@@ -91,9 +112,37 @@ public class AppProxyEndPointService
         Save();
     }
 
-    public void DeleteAll()
+    public void DeleteAll(
+        bool deleteSucceeded = true,
+        bool deleteFailed = true,
+        bool deleteUnknown = true,
+        bool deleteDisabled = true)
     {
-        _data.CustomEndPointInfos = [];
+        var items = _data.CustomEndPointInfos.AsEnumerable();
+
+        if (deleteSucceeded)
+            items = items.Where(info => info.Status is not { HasUsed: true, IsLastUsedSucceeded: true });
+
+        if (deleteFailed)
+            items = items.Where(info => info.Status is not { HasUsed: true, IsLastUsedFailed: true });
+
+        if (deleteUnknown)
+            items = items.Where(info => info.Status.HasUsed);
+
+        if (deleteDisabled)
+            items = items.Where(info => info.EndPoint.IsEnabled);
+
+        _data.CustomEndPointInfos = items.ToArray();
+        Save();
+    }
+
+    public void DisableAllFailed()
+    {
+        foreach (var info in _data.CustomEndPointInfos) {
+            if (info.Status.HasUsed && !info.Status.IsLastUsedSucceeded)
+                info.EndPoint.IsEnabled = false;
+        }
+
         Save();
     }
 

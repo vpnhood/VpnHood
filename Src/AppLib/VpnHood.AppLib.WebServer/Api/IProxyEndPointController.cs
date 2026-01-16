@@ -9,10 +9,17 @@ public interface IProxyEndPointController
     Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint);
     Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint);
     Task Delete(string proxyEndPointId);
-    Task DeleteAll();
+    Task DeleteAll(bool deleteSucceeded = true, bool deleteFailed = true, bool deleteUnknown = true, bool deleteDisabled = true);
+    Task DisableAllFailed();
     Task ResetStates();
     Task<AppProxyEndPointInfo?> GetDevice();
-    Task<AppProxyEndPointInfo[]> List();
+    Task<AppProxyEndPointInfo[]> List(
+        bool includeSucceeded = true,
+        bool includeFailed = true,
+        bool includeUnknown = true,
+        bool includeDisabled = true,
+        int? recordIndex = null,
+        int? recordCount = null);
     Task Import(string content);
     Task ReloadUrl(CancellationToken cancellationToken);
     Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults);

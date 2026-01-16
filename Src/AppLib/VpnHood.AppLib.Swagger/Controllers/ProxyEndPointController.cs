@@ -23,7 +23,13 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// List all proxy endpoints
     /// </summary>
     [HttpGet]
-    public Task<AppProxyEndPointInfo[]> List()
+    public Task<AppProxyEndPointInfo[]> List(
+        [FromQuery] bool includeSucceeded = true,
+        [FromQuery] bool includeFailed = true,
+        [FromQuery] bool includeUnknown = true,
+        [FromQuery] bool includeDisabled = true,
+        [FromQuery] int? recordIndex = null,
+        [FromQuery] int? recordCount = null)
     {
         throw new SwaggerOnlyException();
     }
@@ -83,7 +89,11 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// Delete all proxy endpoints
     /// </summary>
     [HttpDelete]
-    public Task DeleteAll()
+    public Task DeleteAll(
+        [FromQuery] bool deleteSucceeded = true,
+        [FromQuery] bool deleteFailed = true,
+        [FromQuery] bool deleteUnknown = true,
+        [FromQuery] bool deleteDisabled = true)
     {
         throw new SwaggerOnlyException();
     }
@@ -112,6 +122,15 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// </summary>
     [HttpPost("reload-url")]
     public Task ReloadUrl(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    /// <summary>
+    /// Disable all failed proxy endpoints
+    /// </summary>
+    [HttpPost("disable-failed")]
+    public Task DisableAllFailed()
     {
         throw new SwaggerOnlyException();
     }

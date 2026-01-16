@@ -225,7 +225,8 @@ public class ServerFinder(
 
         // Initialize time-based progress tracking
         // as we check the first server separately in unparallel mode, we add maxDegreeOfParallelism to total
-        _progressMonitor = new ProgressMonitor(hostStatuses.Length + maxDegreeOfParallelism, serverQueryTimeout,
+        _progressMonitor = new ProgressMonitor(hostStatuses.Length + maxDegreeOfParallelism, 
+            serverQueryTimeout,
             maxDegreeOfParallelism);
 
         try {
@@ -377,11 +378,11 @@ public class ServerFinder(
     private ConnectorService CreateConnector(VpnEndPoint vpnEndPoint)
     {
         var connector = new ConnectorService(
-            requestTimeout: serverQueryTimeout,
             options: new ConnectorServiceOptions(
                 VpnEndPoint: vpnEndPoint,
                 ProxyEndPointManager: proxyEndPointManager,
                 SocketFactory: socketFactory,
+                RequestTimeout: serverQueryTimeout,
                 AllowTcpReuse: false)
         );
 

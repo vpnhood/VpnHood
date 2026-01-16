@@ -44,13 +44,19 @@ public class ProgressMonitor(
                 var taskCompletionProgress = _completedTaskCount / (double)totalTaskCount * 100.0;
 
                 // Method 2: Overall time-based progress
+                // completedTime not exceed of its own bound
                 var completedTime = CurrentBatchIndex * taskTimeout + (FastDateTime.Now - _currentBatchStartTime);
+                var maxCurrentBatchTime = (CurrentBatchIndex + 1) * taskTimeout;
+                if (completedTime > maxCurrentBatchTime)
+                    completedTime = maxCurrentBatchTime;
+
                 var timeProgress = completedTime / MaxDuration * 100.0;
 
                 // Use the maximum of all three methods to ensure smooth progress that never goes backward
                 var progress = Math.Max(taskCompletionProgress, timeProgress);
 #if !DEBUG
                 progress = Math.Min(100, progress);
+                progress = Math.Max(0, progress);
 #endif
                 return (int)progress;
             }

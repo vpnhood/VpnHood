@@ -7,5 +7,6 @@ internal record ConnectorServiceOptions(
     VpnEndPoint VpnEndPoint,
     ProxyEndPointManager ProxyEndPointManager,
     ISocketFactory SocketFactory,
+    TimeSpan RequestTimeout,
     bool AllowTcpReuse
 );

@@ -67,6 +67,7 @@ public class UdpChannel : PacketChannel
             // send remaining buffer
             if (bufferIndex > 0)
                 await SendBuffer(_buffer[..bufferIndex]).Vhc();
+            }
         }
         catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException) {
             // ignore cancellation

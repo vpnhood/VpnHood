@@ -36,6 +36,7 @@ public class ProxyEndPointManager : IDisposable
     public bool IsEnabled { get; private set; }
     public bool UseRecentSucceeded { get; set; }
     public ProgressStatus? Progress => _progressMonitor?.Progress;
+    public TimeSpan? RequestTimeout { get; set; }
 
 
     public ProxyEndPointManager(
@@ -335,12 +336,45 @@ public class ProxyEndPointManager : IDisposable
 
 
     // order by active state then Last Attempt
-    private IEnumerable<ProxyEndPointEntry> GetOrderedEntriesQuery()
-        => _proxyEndPointEntries
+    private ProxyEndPointEntry[] GetOrderedEntriesQuery(int maxPriorityFailed = 1)
+    {
+        var ordered =  _proxyEndPointEntries
             .Where(x => x.EndPoint.IsEnabled)
             .Where(x => !UseRecentSucceeded || x.Status.LastSucceeded >= _sessionCreatedTime)
             .OrderBy(x => x.GetSortValue(_queuePosition))
-            .ThenBy(x => x.Status.LastUsed);
+            .ThenBy(x => x.Status.LastUsed)
+            .ToArray();
+
+        // if there is at least one succeeded server, failed servers should not be more than 2
+        // this is to avoid trying too many failed servers when there are good servers available
+        
+        // Only apply the rule when there is at least one succeeded server
+        if (!ordered.Any(x => x.Status.IsLastUsedSucceeded))
+            return ordered;
+
+        // Keep the first maxPriorityFailed failed servers in-place (relative to succeeded ordering),
+        // move the remaining failed servers to the end (preserving their order).
+        var tailFailed = new List<ProxyEndPointEntry>();
+        var result = new List<ProxyEndPointEntry>(ordered.Length);
+
+        var failedCount = 0;
+
+        foreach (var entry in ordered) {
+            if (entry.Status.IsLastUsedSucceeded) {
+                result.Add(entry);
+                continue;
+            }
+
+            failedCount++;
+            if (failedCount <= maxPriorityFailed)
+                result.Add(entry);
+            else
+                tailFailed.Add(entry);
+        }
+
+        result.AddRange(tailFailed);
+        return result.ToArray();
+    }
 
     private readonly AsyncLock _connectLock = new();
 
@@ -360,8 +394,8 @@ public class ProxyEndPointManager : IDisposable
         return GetOrderedEntriesQuery().ToArray();
     }
 
-
-    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint, CancellationToken cancellationToken)
+    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint, 
+        Action? onAttempt, CancellationToken cancellationToken)
     {
         // get ordered endpoints
         var entries = await GetOrderedEntries(cancellationToken);
@@ -392,6 +426,7 @@ public class ProxyEndPointManager : IDisposable
                     _fastestEntry = entry;
 
                 RecordSuccess(entry, latency: latency, fastestLatency: _fastestEntry?.Status.Latency, checkMode: false);
+                onAttempt?.Invoke();
 
                 // disable other duplicate IPs if needed
                 if (_autoUpdateOptions.RemoveDuplicateIps) {
@@ -416,8 +451,10 @@ public class ProxyEndPointManager : IDisposable
 
                 // let's not assume bad server if caller cancelled the operation
                 var isCallerCancelled = ex is OperationCanceledException && delay < _serverCheckTimeout;
-                if (!isCallerCancelled)
+                if (!isCallerCancelled) {
                     RecordFailed(entry, ex, checkMode: false);
+                    onAttempt?.Invoke();
+                }
 
                 tcpClient?.Dispose();
             }
@@ -431,7 +468,7 @@ public class ProxyEndPointManager : IDisposable
         bool checkMode)
     {
         entry.RecordSuccess(latency!.Value, fastestLatency, _queuePosition);
-        if (!checkMode)
+        if (!checkMode) {
             lock (_sessionStatus) {
                 _sessionStatus.SucceededCount++;
                 _sessionStatus.LastSucceeded = DateTime.UtcNow;
@@ -440,12 +477,13 @@ public class ProxyEndPointManager : IDisposable
                 _sessionStatus.Penalty = entry.Status.Penalty;
                 _sessionStatus.ErrorMessage = null;
             }
+        }
     }
 
     private void RecordFailed(ProxyEndPointEntry entry, Exception error, bool checkMode)
     {
         entry.RecordFailed(error, _queuePosition);
-        if (!checkMode)
+        if (!checkMode) {
             lock (_sessionStatus) {
                 _sessionStatus.FailedCount++;
                 _sessionStatus.LastFailed = DateTime.UtcNow;
@@ -454,6 +492,7 @@ public class ProxyEndPointManager : IDisposable
                 _sessionStatus.Penalty = entry.Status.Penalty;
                 _sessionStatus.ErrorMessage = entry.Status.ErrorMessage;
             }
+        }
     }
 
     public void RecordFailed(TcpClient tcpClient, Exception ex)

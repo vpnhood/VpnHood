@@ -70,13 +70,13 @@ public class AccessTokenService
         return accessToken;
     }
 
-    public async Task<AccessTokenData[]> List()
+    public async Task<AccessTokenData[]> List(CancellationToken cancellationToken)
     {
         var files = Directory.GetFiles(_storagePath, "*" + FileExtAccessToken);
         var tokenItems = new List<AccessTokenData>();
 
         foreach (var file in files) {
-            var tokenItem = await Find(Path.GetFileNameWithoutExtension(file)).Vhc();
+            var tokenItem = await Find(Path.GetFileNameWithoutExtension(file), cancellationToken).Vhc();
             if (tokenItem != null)
                 tokenItems.Add(tokenItem);
         }
@@ -90,14 +90,14 @@ public class AccessTokenService
         return Task.FromResult(files.Length);
     }
 
-    public async Task<AccessTokenData> Get(string tokenId)
+    public async Task<AccessTokenData> Get(string tokenId, CancellationToken cancellationToken)
     {
-        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
-        return await GetInternal(tokenId);
+        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
+        return await GetInternal(tokenId, cancellationToken);
     }
 
 
-    private async Task<AccessTokenData> GetInternal(string tokenId)
+    private async Task<AccessTokenData> GetInternal(string tokenId, CancellationToken cancellationToken)
     {
         // try get from cache
         if (_items.TryGetValue(tokenId, out var accessTokenData))
@@ -109,7 +109,7 @@ public class AccessTokenService
             throw new KeyNotFoundException($"Could not find tokenId. TokenId: {tokenId}");
 
         // try read token
-        var tokenJson = await File.ReadAllTextAsync(tokenFileName).Vhc();
+        var tokenJson = await File.ReadAllTextAsync(tokenFileName, cancellationToken).Vhc();
         var accessToken = JsonUtils.Deserialize<AccessToken>(tokenJson);
 
         // try read usage
@@ -134,24 +134,27 @@ public class AccessTokenService
         return accessTokenData;
     }
 
-    public async Task<AccessTokenData> Update(string tokenId, string tokenName)
+    public async Task<AccessTokenData> Update(string tokenId, string tokenName, CancellationToken cancellationToken)
     {
-        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
+        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
 
-        var accessTokenData = await GetInternal(tokenId);
+        var accessTokenData = await GetInternal(tokenId, cancellationToken);
         accessTokenData.AccessToken.Name = tokenName;
         await File
-            .WriteAllTextAsync(GetAccessTokenUsageFileName(tokenId), JsonSerializer.Serialize(accessTokenData.Usage))
+            .WriteAllTextAsync(
+                GetAccessTokenUsageFileName(tokenId), 
+                JsonSerializer.Serialize(accessTokenData.Usage), 
+                cancellationToken)
             .Vhc();
 
         return accessTokenData;
     }
 
 
-    public async Task<AccessTokenData?> Find(string tokenId)
+    public async Task<AccessTokenData?> Find(string tokenId, CancellationToken cancellationToken)
     {
         try {
-            return await Get(tokenId).Vhc();
+            return await Get(tokenId, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to get token item. TokenId: {TokenId}", tokenId);
@@ -161,13 +164,13 @@ public class AccessTokenService
 
     private static string GetTokenLockName(string tokenId) => $"token_{tokenId}";
 
-    public async Task AddUsage(string tokenId, Traffic traffic)
+    public async Task AddUsage(string tokenId, Traffic traffic, CancellationToken cancellationToken)
     {
         //lock tokenId
-        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
+        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
 
         // add usage
-        var accessTokenData = await GetInternal(tokenId).Vhc();
+        var accessTokenData = await GetInternal(tokenId, cancellationToken).Vhc();
         accessTokenData.Usage.Sent += traffic.Sent;
         accessTokenData.Usage.Received += traffic.Received;
         accessTokenData.Usage.Version = 2;
@@ -175,14 +178,17 @@ public class AccessTokenService
 
         // save to file
         await File
-            .WriteAllTextAsync(GetAccessTokenUsageFileName(tokenId), JsonSerializer.Serialize(accessTokenData.Usage))
+            .WriteAllTextAsync(
+                GetAccessTokenUsageFileName(tokenId), 
+                JsonSerializer.Serialize(accessTokenData.Usage), 
+                cancellationToken)
             .Vhc();
     }
 
-    public async Task Delete(string tokenId)
+    public async Task Delete(string tokenId, CancellationToken cancellationToken)
     {
         // validate is it exists
-        _ = await Find(tokenId).Vhc()
+        _ = await Find(tokenId, cancellationToken).Vhc()
             ?? throw new KeyNotFoundException("Could not find tokenId");
 
         // delete files

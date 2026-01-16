@@ -1,8 +1,9 @@
-﻿using System.Net;
+﻿using System.CommandLine;
+using System.CommandLine.Invocation;
+using System.Net;
 using System.Runtime.InteropServices;
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
-using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using NLog;
 using NLog.Extensions.Logging;
@@ -204,43 +205,59 @@ public class ServerApp : IDisposable
         }
     }
 
-    private void RunGc(CommandLineApplication cmdApp)
+    private static Option<bool> CreateVersionOption()
     {
-        cmdApp.Description = "Run Garbage Collector for debugging purpose.";
-        cmdApp.OnExecute(() => {
+        var option = new Option<bool>("--version", ["-n"]) {
+            Description = "Show version information."
+        };
+        return option;
+    }
+
+    private Command CreateGcCommand()
+    {
+        var command = new Command("gc", "Run Garbage Collector for debugging purpose.") {
+            Hidden = true
+        };
+
+        var versionOption = CreateVersionOption();
+        command.Add(versionOption);
+        command.SetAction(parseResult => {
+            if (TryShowVersion(parseResult.GetValue(versionOption)))
+                return Task.CompletedTask;
+
             VhLogger.Instance.LogInformation("Sending GC request...");
             _commandListener.TrySendCommand("gc");
+            return Task.CompletedTask;
         });
+        return command;
     }
 
-    private void StopServer(CommandLineApplication cmdApp)
+    private Command CreateStopCommand()
     {
-        cmdApp.Description = "Stop all instances of VpnHoodServer that running from this folder";
-        cmdApp.OnExecute(() => {
+        var command = new Command("stop",
+            "Stop all instances of VpnHoodServer that running from this folder");
+        var versionOption = CreateVersionOption();
+        command.Add(versionOption);
+        command.SetAction(parseResult => {
+            if (TryShowVersion(parseResult.GetValue(versionOption)))
+                return Task.CompletedTask;
+
             VhLogger.Instance.LogInformation("Sending stop server request...");
             _commandListener.TrySendCommand("stop");
+            return Task.CompletedTask;
         });
+        return command;
     }
 
-    private bool IsAnotherInstanceRunning()
+    private Command CreateStartCommand()
     {
-        var lockFile = Path.Combine(InternalStoragePath, "server.lock");
-        try {
-            _lockStream = File.OpenWrite(lockFile);
-            var stream = new StreamWriter(_lockStream, leaveOpen: true);
-            stream.WriteLine(DateTime.UtcNow);
-            stream.Dispose();
-            return false;
-        }
-        catch (IOException) {
-            return true;
-        }
-    }
+        var command = new Command("start", "Run the server (default command)");
+        var versionOption = CreateVersionOption();
+        command.Add(versionOption);
+        command.SetAction(async (parseResult, cancellationToken) => {
+            if (TryShowVersion(parseResult.GetValue(versionOption)))
+                return;
 
-    private void StartServer(CommandLineApplication cmdApp)
-    {
-        cmdApp.Description = "Run the server (default command)";
-        cmdApp.OnExecuteAsync(async cancellationToken => {
             // LogAnonymizer is on by default
             VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizerValue ?? true;
 
@@ -297,8 +314,33 @@ public class ServerApp : IDisposable
             await _vpnHoodServer.Start().Vhc();
             while (_vpnHoodServer.State != ServerState.Disposed)
                 await Task.Delay(1000, cancellationToken).Vhc();
-            return 0;
         });
+
+        return command;
+    }
+
+    private static bool TryShowVersion(bool showVersion)
+    {
+        if (!showVersion)
+            return false;
+
+        Console.WriteLine(VpnHoodServer.ServerVersion.ToString(3));
+        return true;
+    }
+
+    private bool IsAnotherInstanceRunning()
+    {
+        var lockFile = Path.Combine(InternalStoragePath, "server.lock");
+        try {
+            _lockStream = File.OpenWrite(lockFile);
+            var stream = new StreamWriter(_lockStream, leaveOpen: true);
+            stream.WriteLine(DateTime.UtcNow);
+            stream.Dispose();
+            return false;
+        }
+        catch (IOException) {
+            return true;
+        }
     }
 
     private static async Task<IVpnAdapter?> CreateTunProvider(IpNetwork virtualIpNetworkV4,
@@ -346,29 +388,22 @@ public class ServerApp : IDisposable
     {
         // replace "/?"
         for (var i = 0; i < args.Length; i++)
-            if (args[i] == "/?")
-                args[i] = "-?";
+            if (args[i] == "/?" || args[i] == "-?")
+                args[i] = "--help";
 
         // set default
         if (args.Length == 0) args = ["start"];
-        var cmdApp = new CommandLineApplication {
-            AllowArgumentSeparator = true,
-            Name = AppName,
-            FullName = "VpnHood server",
-            MakeSuggestionsInErrorMessage = true
-        };
+        var rootCommand = new RootCommand("VpnHood server");
 
-        cmdApp.HelpOption(true);
-        cmdApp.VersionOption("-n|--version", VpnHoodServer.ServerVersion.ToString(3));
-
-        cmdApp.Command("start", StartServer);
-        cmdApp.Command("stop", StopServer);
-        cmdApp.Command("gc", RunGc);
+        rootCommand.Add(CreateStartCommand());
+        rootCommand.Add(CreateStopCommand());
+        rootCommand.Add(CreateGcCommand());
 
         if (FileAccessManager != null)
             new FileAccessManagerCommand(FileAccessManager)
-                .AddCommands(cmdApp);
+                .AddCommands(rootCommand);
 
-        await cmdApp.ExecuteAsync(args).Vhc();
+        var parseResult = rootCommand.Parse(args);
+        await parseResult.InvokeAsync(new InvocationConfiguration(), CancellationToken.None).Vhc();
     }
 }

@@ -1,4 +1,4 @@
-﻿using McMaster.Extensions.CommandLineUtils;
+﻿using System.CommandLine;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Toolkit.Utils;
@@ -7,26 +7,30 @@ namespace VpnHood.App.Server;
 
 public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
 {
-    public void AddCommands(CommandLineApplication cmdApp)
+    public void AddCommands(Command rootCommand)
     {
-        cmdApp.Command("print", PrintToken);
-        cmdApp.Command("gen", GenerateToken);
+        rootCommand.Add(CreatePrintCommand());
+        rootCommand.Add(CreateGenerateCommand());
     }
 
-    private void PrintToken(CommandLineApplication cmdApp)
+    private Command CreatePrintCommand()
     {
-        cmdApp.Description = "Print a token";
+        var command = new Command("print", "Print a token");
+        var tokenIdArg = new Argument<string>("tokenId") { Description = "tokenId to print" };
+        command.Add(tokenIdArg);
 
-        var tokenIdArg = cmdApp.Argument("tokenId", "tokenId to print");
-        cmdApp.OnExecuteAsync(async _ => {
-            await PrintToken(tokenIdArg.Value!).Vhc();
-            return 0;
+        command.SetAction(async (parseResult, cancellationToken) => {
+            var tokenId = parseResult.GetValue(tokenIdArg);
+            ArgumentNullException.ThrowIfNull(tokenId);
+
+            await PrintToken(tokenId, cancellationToken).Vhc();
         });
+        return command;
     }
 
-    private async Task PrintToken(string tokenId)
+    private async Task PrintToken(string tokenId, CancellationToken cancellationToken)
     {
-        var accessTokenData = await fileAccessManager.AccessTokenService.Get(tokenId).Vhc();
+        var accessTokenData = await fileAccessManager.AccessTokenService.Get(tokenId, cancellationToken).Vhc();
         var token = fileAccessManager.GetToken(accessTokenData.AccessToken);
         if (accessTokenData == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
         var hostName = token.ServerToken.HostName +
@@ -57,32 +61,40 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         Console.WriteLine();
     }
 
-    private void GenerateToken(CommandLineApplication cmdApp)
+    private Command CreateGenerateCommand()
     {
-        var accessManager = fileAccessManager;
+        var command = new Command("gen", "Generate a token");
+        var nameOption = new Option<string?>("-name") {
+            Description = "TokenName. Default: <NoName>" 
+        };
+        var maxClientOption = new Option<int?>("-maxClient") {
+            Description = "MaximumClient. Default: 2" 
+        };
+        var maxTrafficOptions = new Option<int?>("-maxTraffic") {
+            Description = "MaximumTraffic in MB. Default: unlimited"
+        };
+        var expirationTimeOption = new Option<DateTime?>("-expire") {
+            Description = "ExpirationTime. Default: Never Expire. Format: 2030/01/25"
+        };
 
-        cmdApp.Description = "Generate a token";
-        var nameOption = cmdApp.Option("-name", "TokenName. Default: <NoName>", CommandOptionType.SingleValue);
-        var maxClientOption = cmdApp.Option("-maxClient", "MaximumClient. Default: 2", CommandOptionType.SingleValue);
-        var maxTrafficOptions = cmdApp.Option("-maxTraffic", "MaximumTraffic in MB. Default: unlimited",
-            CommandOptionType.SingleValue);
-        var expirationTimeOption = cmdApp.Option("-expire", "ExpirationTime. Default: Never Expire. Format: 2030/01/25",
-            CommandOptionType.SingleValue);
+        command.Add(nameOption);
+        command.Add(maxClientOption);
+        command.Add(maxTrafficOptions);
+        command.Add(expirationTimeOption);
 
-        cmdApp.OnExecuteAsync(async _ => {
-            var accessToken = accessManager.AccessTokenService.Create(
-                tokenName: nameOption.HasValue() ? nameOption.Value() : null,
-                maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2,
-                maxTrafficByteCount: maxTrafficOptions.HasValue()
-                    ? int.Parse(maxTrafficOptions.Value()!) * 1_000_000
-                    : 0,
-                expirationTime: expirationTimeOption.HasValue() ? DateTime.Parse(expirationTimeOption.Value()!) : null
+        command.SetAction(async (parseResult, cancellationToken) => {
+            var accessToken = fileAccessManager.AccessTokenService.Create(
+                tokenName: parseResult.GetValue(nameOption),
+                maxClientCount: parseResult.GetValue(maxClientOption) ?? 2,
+                maxTrafficByteCount: (parseResult.GetValue(maxTrafficOptions) ?? 0) * 1_000_000,
+                expirationTime: parseResult.GetValue(expirationTimeOption)
             );
 
             Console.WriteLine("The following token has been generated: ");
-            await PrintToken(accessToken.TokenId).Vhc();
-            Console.WriteLine($"Store Token Count: {await accessManager.AccessTokenService.GetTotalCount()}");
-            return 0;
+            await PrintToken(accessToken.TokenId, cancellationToken).Vhc();
+            Console.WriteLine($"Store Token Count: {await fileAccessManager.AccessTokenService.GetTotalCount()}");
         });
+
+        return command;
     }
 }

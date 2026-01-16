@@ -54,13 +54,13 @@ public sealed class AsyncLock
         return new SemaphoreLock(_semaphoreSlimEx, succeeded, null);
     }
 
-    public static Task<ILockAsyncResult> LockAsync(string name)
+    public static Task<ILockAsyncResult> LockAsync(string name, CancellationToken cancellationToken = default)
     {
-        return LockAsync(name, Timeout.InfiniteTimeSpan);
+        return LockAsync(name, Timeout.InfiniteTimeSpan, cancellationToken);
     }
 
-    public static async Task<ILockAsyncResult> LockAsync(string name, TimeSpan timeout,
-        CancellationToken cancellationToken = default)
+
+    public static async Task<ILockAsyncResult> LockAsync(string name, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         SemaphoreSlimEx semaphoreSlim;
         lock (SemaphoreSlims) {

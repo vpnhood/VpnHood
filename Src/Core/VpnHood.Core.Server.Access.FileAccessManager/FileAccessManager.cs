@@ -397,7 +397,8 @@ public class FileAccessManager : IAccessManager
         return ret;
     }
 
-    protected virtual async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage)
+    protected virtual async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage, 
+        CancellationToken cancellationToken)
     {
         var sessionId = sessionUsage.SessionId;
 
@@ -410,14 +411,14 @@ public class FileAccessManager : IAccessManager
             };
 
         // read accessItem
-        var accessTokenData = await AccessTokenService.Find(tokenId).Vhc();
+        var accessTokenData = await AccessTokenService.Find(tokenId, cancellationToken).Vhc();
         if (accessTokenData == null)
             return new SessionResponse {
                 ErrorCode = SessionErrorCode.AccessError,
                 ErrorMessage = "Token does not exist."
             };
 
-        await AccessTokenService.AddUsage(tokenId, sessionUsage.ToTraffic());
+        await AccessTokenService.AddUsage(tokenId, sessionUsage.ToTraffic(), cancellationToken);
 
         if (sessionUsage.ErrorCode != SessionErrorCode.Ok)
             SessionService.CloseSession(sessionId, sessionUsage.ErrorCode);

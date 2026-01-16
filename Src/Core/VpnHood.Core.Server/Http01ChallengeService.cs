@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Logging;
 using System.Net;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using static VpnHood.Core.Server.Http01ChallengeHandler;
 

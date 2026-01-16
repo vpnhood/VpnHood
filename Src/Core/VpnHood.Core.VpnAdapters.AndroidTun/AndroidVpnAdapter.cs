@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Android.Net;
 using Android.OS;
@@ -11,6 +12,7 @@ using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using IOException = System.IO.IOException;
 
 namespace VpnHood.Core.VpnAdapters.AndroidTun;
 
@@ -108,12 +110,12 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         }
     }
 
-    public override bool ProtectSocket(System.Net.Sockets.Socket socket)
+    public override bool ProtectSocket(Socket socket)
     {
         return vpnService.Protect(socket.Handle.ToInt32());
     }
 
-    public override bool ProtectSocket(System.Net.Sockets.Socket socket, IPAddress ipAddress)
+    public override bool ProtectSocket(Socket socket, IPAddress ipAddress)
     {
         return vpnService.Protect(socket.Handle.ToInt32());
     }
@@ -251,7 +253,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return bytesRead switch {
             0 => false, // no more packet
             > 0 => true, // Successfully read a packet
-            < 0 => throw new System.IO.IOException("Could not read from TUN.") // error
+            < 0 => throw new IOException("Could not read from TUN.") // error
         };
     }
 

@@ -2,6 +2,7 @@
 using Android.Content.PM;
 using Android.Content.Res;
 using Android.OS;
+using Android.Provider;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
@@ -55,9 +56,9 @@ public static class AndroidUtil
     public static string? GetDeviceId(Context context)
     {
         try {
-            return Android.Provider.Settings.Secure.GetString(
+            return Settings.Secure.GetString(
                 context.ContentResolver,
-                Android.Provider.Settings.Secure.AndroidId);
+                Settings.Secure.AndroidId);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not retrieve android id.");

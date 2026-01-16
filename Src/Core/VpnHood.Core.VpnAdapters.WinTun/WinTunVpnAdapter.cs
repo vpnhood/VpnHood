@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
@@ -43,7 +44,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     {
         adapterName = $"VpnHood.{adapterName}"; // make sure it is unique
         using var sha1 = SHA1.Create();
-        var hashBytes = sha1.ComputeHash(System.Text.Encoding.UTF8.GetBytes(adapterName));
+        var hashBytes = sha1.ComputeHash(Encoding.UTF8.GetBytes(adapterName));
 
         // Create 16 bytes array for GUID
         var guidBytes = new byte[16];

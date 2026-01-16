@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Net;
+﻿using System.Net;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Test.Providers;
@@ -15,6 +15,7 @@ using VpnHood.Test;
 using VpnHood.Test.Device;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
+using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -362,7 +363,7 @@ public class ClientAppTest : TestAppBase
         using var webServer1 = new WebserverLite(settings1, x => x.SendPlainText("", 404));
         webServer1
             .AddRouteMapper(isDebugMode: true)
-            .AddStatic(WatsonWebserver.Core.HttpMethod.GET, "/accesskey", async ctx => {
+            .AddStatic(HttpMethod.GET, "/accesskey", async ctx => {
                 isTokenRetrieved = true;
                 await ctx.SendPlainText("something_wrong");
             });
@@ -371,7 +372,7 @@ public class ClientAppTest : TestAppBase
         using var webServer2 = new WebserverLite(settings2, x => x.SendPlainText("", 404));
         webServer2
             .AddRouteMapper(isDebugMode: true)
-            .AddStatic(WatsonWebserver.Core.HttpMethod.GET, "/accesskey", async ctx => {
+            .AddStatic(HttpMethod.GET, "/accesskey", async ctx => {
                 isTokenRetrieved = true;
                 await ctx.SendPlainText(token2.ServerToken.Encrypt());
             });

@@ -8,6 +8,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
+using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.Test;
 
@@ -174,11 +175,11 @@ public class TestWebServer : IDisposable
     {
         public override void AddRoutes(IRouteMapper mapper)
         {
-            mapper.AddStatic(WatsonWebserver.Core.HttpMethod.GET, "/file1", async ctx => {
+            mapper.AddStatic(HttpMethod.GET, "/file1", async ctx => {
                 await ctx.SendPlainText(testWebServer.FileContent1);
             });
 
-            mapper.AddStatic(WatsonWebserver.Core.HttpMethod.GET, "/file2", async ctx => {
+            mapper.AddStatic(HttpMethod.GET, "/file2", async ctx => {
                 await ctx.SendPlainText(testWebServer.FileContent2);
             });
         }

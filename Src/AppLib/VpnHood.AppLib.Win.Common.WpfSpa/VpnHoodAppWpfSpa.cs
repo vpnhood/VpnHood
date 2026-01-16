@@ -68,8 +68,8 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
 
     private static void Exit()
     {
-        if (VpnHoodAppWpfSpa.IsInit)
-            VpnHoodAppWpfSpa.Instance.Dispose();
+        if (IsInit)
+            Instance.Dispose();
         Application.Current.Shutdown();
     }
 

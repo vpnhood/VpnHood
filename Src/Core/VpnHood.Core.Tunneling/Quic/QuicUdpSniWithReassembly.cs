@@ -4,6 +4,7 @@
 
 using System.Buffers.Binary;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace VpnHood.Core.Tunneling.Quic;
 
@@ -415,7 +416,7 @@ public static class QuicSniExtractorStateful
                     q += 2;
                     if (q + nameLen > p + extLen) return null;
                     if (nameType == 0)
-                        return System.Text.Encoding.ASCII.GetString(buf.Slice(q, nameLen));
+                        return Encoding.ASCII.GetString(buf.Slice(q, nameLen));
                     q += nameLen;
                 }
 
@@ -488,7 +489,7 @@ public static class QuicSniExtractorStateful
     private static byte[] HkdfExpandLabel(byte[] secret, string label, int len)
     {
         var full = "tls13 " + label;
-        var lab = System.Text.Encoding.ASCII.GetBytes(full);
+        var lab = Encoding.ASCII.GetBytes(full);
         Span<byte> info = stackalloc byte[2 + 1 + lab.Length + 1];
         BinaryPrimitives.WriteUInt16BigEndian(info, (ushort)len);
         info[2] = (byte)lab.Length;

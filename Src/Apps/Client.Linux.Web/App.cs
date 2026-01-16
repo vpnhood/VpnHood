@@ -6,6 +6,7 @@ using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
+
 // ReSharper disable LocalizableElement
 
 namespace VpnHood.App.Client.Linux.Web;

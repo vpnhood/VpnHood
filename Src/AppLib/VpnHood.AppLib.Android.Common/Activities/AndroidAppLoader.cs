@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device.Droid.Utils;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
+using Orientation = Android.Widget.Orientation;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;
 
@@ -27,7 +28,7 @@ internal static class AndroidAppLoader
         int DpToPx(int dp) => (int)TypedValue.ApplyDimension(ComplexUnitType.Dip, dp, metrics);
 
         var linearLayout = new LinearLayout(activity) {
-            Orientation = Android.Widget.Orientation.Vertical,
+            Orientation = Orientation.Vertical,
             LayoutParameters = new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MatchParent,
                 ViewGroup.LayoutParams.MatchParent)

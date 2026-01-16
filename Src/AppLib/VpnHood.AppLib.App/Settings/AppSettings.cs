@@ -1,5 +1,5 @@
-﻿using VpnHood.Core.IpLocations;
-using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.IpLocations;
 
 namespace VpnHood.AppLib.Settings;
 

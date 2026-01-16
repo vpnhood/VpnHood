@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Data;
+using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
@@ -11,16 +12,35 @@ namespace VpnHood.Core.IpLocations.SqliteProvider;
 public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposable
 {
     private readonly Lazy<SqliteConnection> _connection;
+    private readonly bool _disposeConnection;
 
     private IpLocationSqliteProvider(string dbPath)
     {
+        _disposeConnection = true;
         _connection = new Lazy<SqliteConnection>(() => OpenConnection(dbPath));
+    }
+
+    private IpLocationSqliteProvider(SqliteConnection connection, bool disposeConnection)
+    {
+        _disposeConnection = disposeConnection;
+        _connection = new Lazy<SqliteConnection>(() => connection);
     }
 
     public static async Task<IpLocationSqliteProvider> Open(string dbPath)
     {
         var provider = new IpLocationSqliteProvider(dbPath);
         await provider._connection.Value.OpenAsync();
+        return provider;
+    }
+
+    public static async Task<IpLocationSqliteProvider> Open(SqliteConnection connection, bool leaveOpen = false)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+
+        var provider = new IpLocationSqliteProvider(connection, disposeConnection: !leaveOpen);
+        if (connection.State != ConnectionState.Open)
+            await connection.OpenAsync();
+
         return provider;
     }
 
@@ -101,13 +121,13 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
 
     public async ValueTask DisposeAsync()
     {
-        if (_connection.IsValueCreated)
+        if (_connection.IsValueCreated && _disposeConnection)
             await _connection.Value.DisposeAsync();
     }
 
     public void Dispose()
     {
-        if (_connection.IsValueCreated)
+        if (_connection.IsValueCreated && _disposeConnection)
             _connection.Value.Dispose();
     }
 }

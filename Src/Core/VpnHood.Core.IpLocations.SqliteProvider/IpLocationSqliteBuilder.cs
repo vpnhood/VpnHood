@@ -1,4 +1,5 @@
-﻿using System.IO.Compression;
+﻿using System.Data;
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using Microsoft.Data.Sqlite;
@@ -23,7 +24,16 @@ public static class IpLocationSqliteBuilder
         }.ToString();
 
         await using var connection = new SqliteConnection(connectionString);
-        await connection.OpenAsync();
+        await Build(sourceStream, connection);
+    }
+
+    public static async Task Build(Stream sourceStream, SqliteConnection connection)
+    {
+        ArgumentNullException.ThrowIfNull(sourceStream);
+        ArgumentNullException.ThrowIfNull(connection);
+
+        if (connection.State != ConnectionState.Open)
+            await connection.OpenAsync();
 
         // read checksum from archive and skip rebuild when already up to date
         sourceStream.Position = 0;

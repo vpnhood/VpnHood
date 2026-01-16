@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description></Description>
+		<Description>IP location abstractions and providers for VpnHood.</Description>
 		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
 

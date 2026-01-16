@@ -2,6 +2,7 @@
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.Core.IpLocations.Providers.Offlines;

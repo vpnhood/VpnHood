@@ -602,7 +602,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
 
         var sessionResponseEx =
-            await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion, clientIp).Vhc();
+            await _sessionManager.CreateSession(request, ipEndPointPair, protocolVersion, clientIp, cancellationToken)
+                .Vhc();
         var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
                       throw new InvalidOperationException("Session is lost!");
 
@@ -695,7 +696,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var request = await ReadRequest<RewardedAdRequest>(clientStream, cancellationToken).Vhc();
         using var scope = CreateLogScope(clientStream, request);
 
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair, cancellationToken).Vhc();
         await session.ProcessRewardedAdRequest(request, clientStream, cancellationToken).Vhc();
     }
 
@@ -707,7 +708,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         using var scope = CreateLogScope(clientStream, request);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair, cancellationToken).Vhc();
 
         // processing request
         await session.ProcessSessionStatusRequest(request, clientStream, cancellationToken).Vhc();
@@ -732,14 +733,14 @@ public class ServerHost : IDisposable, IAsyncDisposable
         using var scope = CreateLogScope(clientStream, request);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair, cancellationToken).Vhc();
 
         // Dispose client stream
         clientStream.PreventReuse();
         await clientStream.DisposeAsync(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken);
 
         // must be last
-        await _sessionManager.CloseSession(session.SessionId);
+        await _sessionManager.CloseSession(session.SessionId, cancellationToken);
     }
 
     private async Task ProcessUdpPacketRequest(IClientStream clientStream, CancellationToken cancellationToken)
@@ -748,7 +749,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var request = await ReadRequest<UdpPacketRequest>(clientStream, cancellationToken).Vhc();
         using var scope = CreateLogScope(clientStream, request);
 
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair, cancellationToken).Vhc();
         await session.ProcessUdpPacketRequest(request, clientStream, cancellationToken).Vhc();
     }
 
@@ -759,7 +760,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         using var scope = CreateLogScope(clientStream, request);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair, cancellationToken).Vhc();
         await session.ProcessTcpPacketChannelRequest(request, clientStream, cancellationToken).Vhc();
     }
 
@@ -770,7 +771,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         using var scope = CreateLogScope(clientStream, request);
 
         // find session
-        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair).Vhc();
+        var session = await _sessionManager.GetSession(request, clientStream.IpEndPointPair, cancellationToken).Vhc();
         await session.ProcessTcpProxyRequest(request, clientStream, cancellationToken).Vhc();
     }
 

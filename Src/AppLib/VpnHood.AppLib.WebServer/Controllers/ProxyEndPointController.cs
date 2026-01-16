@@ -16,7 +16,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
 
         // Get device proxy
         mapper.AddStatic(HttpMethod.GET, baseUrl + "device", async ctx => {
-            var res = await GetDevice();
+            var res = await GetDevice(ctx.Token);
             await ctx.SendJson(res);
         });
 
@@ -35,21 +35,22 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
                 includeUnknown: includeUnknown,
                 includeDisabled: includeDisabled,
                 recordIndex: recordIndex,
-                recordCount: recordCount);
+                recordCount: recordCount,
+                cancellationToken: ctx.Token);
             await ctx.SendJson(res);
         });
 
         // Get by id
         mapper.AddParam(HttpMethod.GET, baseUrl + "{proxyEndPointId}", async ctx => {
             var id = ctx.GetRouteParameter<string>("proxyEndPointId");
-            var res = await Get(id, CancellationToken.None);
+            var res = await Get(id, ctx.Token);
             await ctx.SendJson(res);
         });
 
         // Add
         mapper.AddStatic(HttpMethod.POST, baseUrl, async ctx => {
             var body = ctx.ReadJson<ProxyEndPoint>();
-            var res = await Add(body);
+            var res = await Add(body, ctx.Token);
             await ctx.SendJson(res);
         });
 
@@ -57,14 +58,14 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         mapper.AddParam(HttpMethod.PUT, baseUrl + "{proxyEndPointId}", async ctx => {
             var id = ctx.GetRouteParameter<string>("proxyEndPointId");
             var body = ctx.ReadJson<ProxyEndPoint>();
-            var res = await Update(id, body);
+            var res = await Update(id, body, ctx.Token);
             await ctx.SendJson(res);
         });
 
         // Delete
         mapper.AddParam(HttpMethod.DELETE, baseUrl + "{proxyEndPointId}", async ctx => {
             var id = ctx.GetRouteParameter<string>("proxyEndPointId");
-            await Delete(id);
+            await Delete(id, ctx.Token);
             await ctx.SendNoContent();
         });
 
@@ -78,14 +79,15 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
                 deleteSucceeded: deleteSucceeded,
                 deleteFailed: deleteFailed,
                 deleteUnknown: deleteUnknown,
-                deleteDisabled: deleteDisabled);
+                deleteDisabled: deleteDisabled,
+                cancellationToken: ctx.Token);
 
             await ctx.SendNoContent();
         });
 
         // Disable all failed
         mapper.AddStatic(HttpMethod.POST, baseUrl + "disable-failed", async ctx => {
-            await DisableAllFailed();
+            await DisableAllFailed(ctx.Token);
             await ctx.SendNoContent();
         });
 
@@ -93,49 +95,50 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         mapper.AddStatic(HttpMethod.POST, baseUrl + "parse", async ctx => {
             var text = ctx.GetQueryParameter<string>("text");
             var defaults = ctx.ReadJson<ProxyEndPointDefaults>();
-            var res = await Parse(text, defaults);
+            var res = await Parse(text, defaults, ctx.Token);
             await ctx.SendJson(res);
         });
 
         // Import (query: removeOld, body raw text list)
         mapper.AddStatic(HttpMethod.POST, baseUrl + "import", async ctx => {
             var text = ctx.ReadJson<string>();
-            await Import(text);
+            await Import(text, ctx.Token);
             await ctx.SendNoContent();
         });
 
         // Reset state
         mapper.AddStatic(HttpMethod.POST, baseUrl + "reset-states", async ctx => {
-            await ResetStates();
+            await ResetStates(ctx.Token);
             await ctx.SendNoContent();
         });
 
         // Reload from URL
         mapper.AddStatic(HttpMethod.POST, baseUrl + "reload-url", async ctx => {
-            await ReloadUrl(CancellationToken.None);
+            await ReloadUrl(ctx.Token);
             await ctx.SendNoContent();
         });
     }
 
-    public Task ResetStates()
+    public Task ResetStates(CancellationToken cancellationToken)
     {
         ProxyEndPointService.ResetStates();
         return Task.CompletedTask;
     }
 
-    public Task<AppProxyEndPointInfo?> GetDevice()
+    public Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken)
     {
         var result = ProxyEndPointService.GetDeviceProxy();
         return Task.FromResult(result);
     }
 
     public Task<AppProxyEndPointInfo[]> List(
-        bool includeSucceeded = true,
-        bool includeFailed = true,
-        bool includeUnknown = true,
-        bool includeDisabled = true,
-        int? recordIndex = null, 
-        int? recordCount = null)
+        bool includeSucceeded,
+        bool includeFailed,
+        bool includeUnknown,
+        bool includeDisabled,
+        int? recordIndex, 
+        int? recordCount,
+        CancellationToken cancellationToken)
     {
         var result = ProxyEndPointService.ListProxies(
             includeSucceeded: includeSucceeded,
@@ -154,7 +157,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.FromResult(item);
     }
 
-    public Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults)
+    public Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults, CancellationToken cancellationToken)
     {
         var parsed = ProxyEndPointParser.ParseHostToUrl(text, defaults);
         var endpoint = ProxyEndPointParser.FromUrl(parsed);
@@ -166,29 +169,30 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.FromResult(info);
     }
 
-    public Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint)
+    public Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
         var res = ProxyEndPointService.Update(proxyEndPointId, proxyEndPoint);
         return Task.FromResult(res);
     }
 
-    public Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint)
+    public Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
         var res = ProxyEndPointService.Add(proxyEndPoint);
         return Task.FromResult(res);
     }
 
-    public Task Delete(string proxyEndPointId)
+    public Task Delete(string proxyEndPointId, CancellationToken cancellationToken)
     {
         ProxyEndPointService.Delete(proxyEndPointId);
         return Task.CompletedTask;
     }
 
     public Task DeleteAll(
-        bool deleteSucceeded = true,
-        bool deleteFailed = true,
-        bool deleteUnknown = true,
-        bool deleteDisabled = true)
+        bool deleteSucceeded,
+        bool deleteFailed,
+        bool deleteUnknown,
+        bool deleteDisabled,
+        CancellationToken cancellationToken)
     {
         ProxyEndPointService.DeleteAll(
             deleteSucceeded: deleteSucceeded, 
@@ -198,13 +202,13 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.CompletedTask;
     }
 
-    public Task Import(string content)
+    public Task Import(string content, CancellationToken cancellationToken)
     {
         ProxyEndPointService.Import(content);
         return Task.CompletedTask;
     }
 
-    public Task DisableAllFailed()
+    public Task DisableAllFailed(CancellationToken cancellationToken)
     {
         ProxyEndPointService.DisableAllFailed();
         return Task.CompletedTask;

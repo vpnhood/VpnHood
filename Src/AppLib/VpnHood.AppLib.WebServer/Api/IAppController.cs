@@ -10,26 +10,26 @@ namespace VpnHood.AppLib.WebServer.Api;
 
 public interface IAppController
 {
-    Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode);
-    Task<AppData> Configure(ConfigParams configParams);
-    Task<AppData> GetConfig();
-    Task<IpFilters> GetIpFilters();
-    Task SetIpFilters(IpFilters ipFilters);
-    Task<AppState> GetState();
-    Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId);
-    Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId);
-    Task Disconnect();
-    Task ClearLastError();
-    Task SetUserSettings(UserSettings userSettings);
-    Task<string> Log();
-    Task<byte[]> PromotionImage();
-    Task<DeviceAppInfo[]> GetInstalledApps();
-    Task VersionCheck();
-    Task VersionCheckPostpone();
-    Task ExtendByRewardedAd();
-    Task SetUserReview(AppUserReview userReview);
-    Task<CountryInfo[]> GetCountries();
-    Task InternalAdDismiss(ShowAdResult result);
-    Task InternalAdError(string errorMessage);
-    Task RemovePremium(Guid profileId);
+    Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken);
+    Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken);
+    Task<AppData> GetConfig(CancellationToken cancellationToken);
+    Task<IpFilters> GetIpFilters(CancellationToken cancellationToken);
+    Task SetIpFilters(IpFilters ipFilters, CancellationToken cancellationToken);
+    Task<AppState> GetState(CancellationToken cancellationToken);
+    Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
+    Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
+    Task Disconnect(CancellationToken cancellationToken);
+    Task ClearLastError(CancellationToken cancellationToken);
+    Task SetUserSettings(UserSettings userSettings, CancellationToken cancellationToken);
+    Task<string> Log(CancellationToken cancellationToken);
+    Task<byte[]> PromotionImage(CancellationToken cancellationToken);
+    Task<DeviceAppInfo[]> GetInstalledApps(CancellationToken cancellationToken);
+    Task VersionCheck(CancellationToken cancellationToken);
+    Task VersionCheckPostpone(CancellationToken cancellationToken);
+    Task ExtendByRewardedAd(CancellationToken cancellationToken);
+    Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken);
+    Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken);
+    Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken);
+    Task InternalAdError(string errorMessage, CancellationToken cancellationToken);
+    Task RemovePremium(Guid profileId, CancellationToken cancellationToken);
 }

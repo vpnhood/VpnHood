@@ -1,5 +1,4 @@
 ﻿using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.Net;
 using System.Runtime.InteropServices;
 using Ga4.Trackers;
@@ -85,7 +84,7 @@ public class ServerApp : IDisposable
         // create access server
         AccessManager = AppSettings.HttpAccessManager != null
             ? CreateHttpAccessManager(AppSettings.HttpAccessManager)
-            : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager);
+            : CreateFileAccessManager(StoragePath, AppSettings.FileAccessManager, CancellationToken.None).Result;
 
         // tracker
         var anonyClientId = GetServerId(Path.Combine(InternalStoragePath, "server-id")).ToString();
@@ -136,11 +135,11 @@ public class ServerApp : IDisposable
         return serverId;
     }
 
-    private static FileAccessManager CreateFileAccessManager(string storageFolderPath,
-        FileAccessManagerOptions? options)
+    private static async Task<FileAccessManager> CreateFileAccessManager(string storageFolderPath,
+        FileAccessManagerOptions? options, CancellationToken cancellationToken)
     {
         options ??= new FileAccessManagerOptions();
-        options.PublicEndPoints ??= GetDefaultPublicEndPoints(options.TcpEndPointsValue, CancellationToken.None).Result;
+        options.PublicEndPoints ??= await GetDefaultPublicEndPoints(options.TcpEndPointsValue, cancellationToken);
 
         var accessManagerFolder = Path.Combine(storageFolderPath, "access");
         VhLogger.Instance.LogInformation("Using FileAccessManager. AccessFolder: {AccessManagerFolder}",
@@ -311,7 +310,7 @@ public class ServerApp : IDisposable
             _commandListener.Start();
 
             // start server
-            await _vpnHoodServer.Start().Vhc();
+            await _vpnHoodServer.Start(cancellationToken).Vhc();
             while (_vpnHoodServer.State != ServerState.Disposed)
                 await Task.Delay(1000, cancellationToken).Vhc();
         });
@@ -384,7 +383,7 @@ public class ServerApp : IDisposable
         LogManager.Shutdown();
     }
 
-    public async Task Start(string[] args)
+    public async Task Start(string[] args, CancellationToken cancellationToken)
     {
         // replace "/?"
         for (var i = 0; i < args.Length; i++)
@@ -393,17 +392,17 @@ public class ServerApp : IDisposable
 
         // set default
         if (args.Length == 0) args = ["start"];
-        var rootCommand = new RootCommand("VpnHood server");
-
-        rootCommand.Add(CreateStartCommand());
-        rootCommand.Add(CreateStopCommand());
-        rootCommand.Add(CreateGcCommand());
+        var rootCommand = new RootCommand("VpnHood server") {
+            CreateStartCommand(),
+            CreateStopCommand(),
+            CreateGcCommand()
+        };
 
         if (FileAccessManager != null)
             new FileAccessManagerCommand(FileAccessManager)
                 .AddCommands(rootCommand);
 
         var parseResult = rootCommand.Parse(args);
-        await parseResult.InvokeAsync(new InvocationConfiguration(), CancellationToken.None).Vhc();
+        await parseResult.InvokeAsync(new InvocationConfiguration(), cancellationToken).Vhc();
     }
 }

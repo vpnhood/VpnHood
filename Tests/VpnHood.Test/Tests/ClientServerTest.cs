@@ -372,7 +372,7 @@ public class ClientServerTest : TestBase
 
         // close session
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Closing the session by Test.");
-        await server.SessionManager.CloseSession(client.SessionId);
+        await server.SessionManager.CloseSession(client.SessionId, TestCancellationToken);
 
         // wait for disposing session in access server
         await VhTestUtil.AssertEqualsWait(false, () =>
@@ -407,7 +407,7 @@ public class ClientServerTest : TestBase
         // ------------
         accessManager.HttpAccessManagerServer.Stop();
         await using var server2 = await TestHelper.CreateServer(accessManager, false);
-        await server2.Start();
+        await server2.Start(TestCancellationToken);
 
         // ----------
         // Check: MaintenanceMode is expected

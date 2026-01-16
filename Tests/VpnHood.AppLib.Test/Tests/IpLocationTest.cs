@@ -44,8 +44,8 @@ public class IpLocationTest : TestAppBase
 
         // get country by ip using provider
         var ipToCheck = IPAddress.Parse("75.63.95.93");
-        var sqliteLocation = await ipLocationSqliteProvider.GetLocation(ipToCheck, CancellationToken.None);
-        var localLocation = await localRangeProvider.GetLocation(ipToCheck, CancellationToken.None);
+        var sqliteLocation = await ipLocationSqliteProvider.GetLocation(ipToCheck, TestCancellationToken);
+        var localLocation = await localRangeProvider.GetLocation(ipToCheck, TestCancellationToken);
         Assert.AreEqual(sqliteLocation.CountryCode, localLocation.CountryCode,
             "Country code mismatch between providers.");
 
@@ -77,9 +77,9 @@ public class IpLocationTest : TestAppBase
         // commit project and sync
         try {
             var gitBase = $"--git-dir=\"{solutionFolder}/.git\" --work-tree=\"{solutionFolder}\"";
-            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} commit -a -m Publish", CancellationToken.None);
-            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} pull", CancellationToken.None);
-            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} push", CancellationToken.None);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} commit -a -m Publish", TestCancellationToken);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} pull", TestCancellationToken);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} push", TestCancellationToken);
         }
         catch (ExternalException ex) when (ex.ErrorCode == 1) {
             VhLogger.Instance.LogInformation("Nothing has been updated.");

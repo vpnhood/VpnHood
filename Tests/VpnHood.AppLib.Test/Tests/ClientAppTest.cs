@@ -560,10 +560,12 @@ public class ClientAppTest : TestAppBase
         accessManager.UserReviewRecommended = 2;
 
         await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
-        await VhTestUtil.AssertEqualsWait(1, () => server.SessionManager.Sync(true));
+        await VhTestUtil.AssertEqualsWait(1, () => 
+            server.SessionManager.Sync(true, TestCancellationToken));
         await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
-        await VhTestUtil.AssertEqualsWait(1, () => server.SessionManager.Sync(true));
-        await app.ForceUpdateState();
+        await VhTestUtil.AssertEqualsWait(1, 
+            () => server.SessionManager.Sync(true, TestCancellationToken));
+        await app.ForceUpdateState(TestCancellationToken);
 
         // after client disconnect it should see rating recommended
         await app.Disconnect();

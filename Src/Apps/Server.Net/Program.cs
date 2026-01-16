@@ -8,7 +8,7 @@ internal static class Program
     {
         try {
             using var serverApp = new ServerApp();
-            await serverApp.Start(args).Vhc();
+            await serverApp.Start(args, CancellationToken.None).Vhc();
         }
         catch (Exception ex) {
             throw new Exception(ex.Message);

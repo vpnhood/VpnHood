@@ -89,7 +89,7 @@ public class TestHttpAccessManagerServer : IDisposable
             const string baseUrl = "/api/agent/";
 
             mapper.AddStatic(HttpMethod.GET, baseUrl + "sessions", async ctx => {
-                var res = await AccessManager.Session_GetAll();
+                var res = await AccessManager.Session_GetAll(ctx.Token);
                 await ctx.SendJson(res);
             });
 
@@ -98,13 +98,13 @@ public class TestHttpAccessManagerServer : IDisposable
                 var hostEndPoint = ctx.GetQueryParameter<string>("hostEndPoint");
                 var clientIpStr = ctx.GetQueryParameter<string?>("clientIp", null);
                 var res = await AccessManager.Session_Get(sessionId, IPEndPoint.Parse(hostEndPoint),
-                    clientIpStr != null ? IPAddress.Parse(clientIpStr) : null);
+                    clientIpStr != null ? IPAddress.Parse(clientIpStr) : null, ctx.Token);
                 await ctx.SendJson(res);
             });
 
             mapper.AddStatic(HttpMethod.POST, baseUrl + "sessions", async ctx => {
                 var sessionRequestEx = ctx.ReadJson<SessionRequestEx>();
-                var res = await AccessManager.Session_Create(sessionRequestEx);
+                var res = await AccessManager.Session_Create(sessionRequestEx, ctx.Token);
                 await ctx.SendJson(res);
             });
 
@@ -114,32 +114,32 @@ public class TestHttpAccessManagerServer : IDisposable
                 var adData = ctx.GetQueryParameter<string?>("adData", null);
                 var traffic = ctx.ReadJson<Traffic>();
                 var res = closeSession
-                    ? await AccessManager.Session_Close(sessionId, traffic)
-                    : await AccessManager.Session_AddUsage(sessionId, traffic, adData);
+                    ? await AccessManager.Session_Close(sessionId, traffic, ctx.Token)
+                    : await AccessManager.Session_AddUsage(sessionId, traffic, adData, ctx.Token);
                 await ctx.SendJson(res);
             });
 
             mapper.AddStatic(HttpMethod.POST, baseUrl + "sessions/usages", async ctx => {
                 var sessionUsages = ctx.ReadJson<SessionUsage[]>();
-                var res = await AccessManager.Session_AddUsages(sessionUsages);
+                var res = await AccessManager.Session_AddUsages(sessionUsages, ctx.Token);
                 await ctx.SendJson(res);
             });
 
             mapper.AddStatic(HttpMethod.POST, baseUrl + "status", async ctx => {
                 var serverStatus = ctx.ReadJson<ServerStatus>();
-                var res = await AccessManager.Server_UpdateStatus(serverStatus);
+                var res = await AccessManager.Server_UpdateStatus(serverStatus, ctx.Token);
                 await ctx.SendJson(res);
             });
 
             mapper.AddStatic(HttpMethod.POST, baseUrl + "configure", async ctx => {
                 var serverInfo = ctx.ReadJson<ServerInfo>();
-                var res = await AccessManager.Server_Configure(serverInfo);
+                var res = await AccessManager.Server_Configure(serverInfo, ctx.Token);
                 await ctx.SendJson(res);
             });
 
             mapper.AddStatic(HttpMethod.GET, baseUrl + "acme/http01_key_authorization", async ctx => {
                 var token = ctx.GetQueryParameter<string>("token");
-                var res = await AccessManager.Acme_GetHttp01KeyAuthorization(token);
+                var res = await AccessManager.Acme_GetHttp01KeyAuthorization(token, ctx.Token);
                 await ctx.SendJson(res);
             });
         }

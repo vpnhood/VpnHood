@@ -192,7 +192,7 @@ public class AccessTokenService
             ?? throw new KeyNotFoundException("Could not find tokenId");
 
         // delete files
-        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId)).Vhc();
+        using var tokenLock = await AsyncLock.LockAsync(GetTokenLockName(tokenId), cancellationToken).Vhc();
 
         // delete from cache
         _items.TryRemove(tokenId, out _);

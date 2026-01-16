@@ -3,6 +3,7 @@ using VpnHood.AppLib.Services.Proxies;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+// ReSharper disable InvalidXmlDocComment
 
 namespace VpnHood.AppLib.Swagger.Controllers;
 
@@ -14,7 +15,7 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// Get the device information
     /// </summary>
     [HttpGet("device")]
-    public Task<AppProxyEndPointInfo?> GetDevice()
+    public Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -29,7 +30,8 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
         [FromQuery] bool includeUnknown = true,
         [FromQuery] bool includeDisabled = true,
         [FromQuery] int? recordIndex = null,
-        [FromQuery] int? recordCount = null)
+        [FromQuery] int? recordCount = null,
+        CancellationToken cancellationToken = default)
     {
         throw new SwaggerOnlyException();
     }
@@ -49,7 +51,9 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// <param name="text">The text to parse</param>
     /// <param name="defaults">The default settings for the proxy endpoint</param>
     [HttpPost("parse")]
-    public Task<AppProxyEndPointInfo> Parse([FromQuery] string text, [FromBody] ProxyEndPointDefaults defaults)
+    public Task<AppProxyEndPointInfo> Parse([FromQuery] string text, 
+        [FromBody] ProxyEndPointDefaults defaults,
+        CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -60,7 +64,8 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// <param name="proxyEndPointId">The ID of the proxy endpoint to update</param>
     /// <param name="proxyEndPoint">The updated proxy endpoint data</param>
     [HttpPut("{proxyEndPointId}")]
-    public Task<AppProxyEndPointInfo> Update(string proxyEndPointId, [FromBody] ProxyEndPoint proxyEndPoint)
+    public Task<AppProxyEndPointInfo> Update(string proxyEndPointId, [FromBody] ProxyEndPoint proxyEndPoint,
+        CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -70,7 +75,7 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// </summary>
     /// <param name="proxyEndPoint">The proxy endpoint to add</param>
     [HttpPost]
-    public Task<AppProxyEndPointInfo> Add([FromBody] ProxyEndPoint proxyEndPoint)
+    public Task<AppProxyEndPointInfo> Add([FromBody] ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -80,7 +85,7 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// </summary>
     /// <param name="proxyEndPointId">The ID of the proxy endpoint to delete</param>
     [HttpDelete("{proxyEndPointId}")]
-    public Task Delete(string proxyEndPointId)
+    public Task Delete(string proxyEndPointId, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -90,10 +95,11 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// </summary>
     [HttpDelete]
     public Task DeleteAll(
-        [FromQuery] bool deleteSucceeded = true,
-        [FromQuery] bool deleteFailed = true,
-        [FromQuery] bool deleteUnknown = true,
-        [FromQuery] bool deleteDisabled = true)
+        [FromQuery] bool deleteSucceeded,
+        [FromQuery] bool deleteFailed,
+        [FromQuery] bool deleteUnknown,
+        [FromQuery] bool deleteDisabled,
+        CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -102,7 +108,7 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// Reset the state of the proxy endpoints
     /// </summary>
     [HttpPost("reset-states")]
-    public Task ResetStates()
+    public Task ResetStates(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -112,7 +118,7 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// </summary>
     /// <param name="content">Plain text content containing proxy URLs (one per line or comma-separated)</param>
     [HttpPost("import")]
-    public Task Import([FromBody] string content)
+    public Task Import([FromBody] string content, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -130,7 +136,7 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// Disable all failed proxy endpoints
     /// </summary>
     [HttpPost("disable-failed")]
-    public Task DisableAllFailed()
+    public Task DisableAllFailed(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

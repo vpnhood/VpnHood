@@ -358,7 +358,7 @@ public class Session : IDisposable
         CancellationToken cancellationToken)
     {
         SessionResponseEx = await _accessManager
-            .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData).Vhc();
+            .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData, cancellationToken).Vhc();
         await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 

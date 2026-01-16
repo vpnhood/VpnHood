@@ -64,12 +64,13 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
         return serializerSettings;
     }
 
-    public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx, CancellationToken cancellationToken)
     {
-        return HttpPostAsync<SessionResponseEx>("sessions", null, sessionRequestEx);
+        return HttpPostAsync<SessionResponseEx>("sessions", null, sessionRequestEx, cancellationToken);
     }
 
-    public Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp,
+        CancellationToken cancellationToken)
     {
         var parameters = new Dictionary<string, object?> {
             { "sessionId", sessionId },
@@ -77,15 +78,16 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
             { "clientIp", clientIp }
         };
 
-        return HttpGetAsync<SessionResponseEx>($"sessions/{sessionId}", parameters);
+        return HttpGetAsync<SessionResponseEx>($"sessions/{sessionId}", parameters, cancellationToken);
     }
 
-    public Task<SessionResponseEx[]> Session_GetAll()
+    public Task<SessionResponseEx[]> Session_GetAll(CancellationToken cancellationToken)
     {
-        return HttpGetAsync<SessionResponseEx[]>("sessions");
+        return HttpGetAsync<SessionResponseEx[]>("sessions", cancellationToken: cancellationToken);
     }
 
-    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData,
+        CancellationToken cancellationToken)
     {
         var parameters = new Dictionary<string, object?> {
             { "sessionId", sessionId },
@@ -93,42 +95,44 @@ public class HttpAccessManager : ApiClientBase, IAccessManager
             { "closeSession", false }
         };
 
-        return HttpPostAsync<SessionResponse>($"sessions/{sessionId}/usage", parameters, traffic);
+        return HttpPostAsync<SessionResponse>($"sessions/{sessionId}/usage", parameters, traffic, cancellationToken);
     }
 
-    public Task<Dictionary<ulong, SessionResponse>> Session_AddUsages(SessionUsage[] sessionUsages)
+    public Task<Dictionary<ulong, SessionResponse>> Session_AddUsages(SessionUsage[] sessionUsages,
+        CancellationToken cancellationToken)
     {
-        return HttpPostAsync<Dictionary<ulong, SessionResponse>>("sessions/usages", null, data: sessionUsages);
+        return HttpPostAsync<Dictionary<ulong, SessionResponse>>("sessions/usages", null, data: sessionUsages,
+            cancellationToken);
     }
 
-    public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
+    public Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic, CancellationToken cancellationToken)
     {
         var parameters = new Dictionary<string, object?> {
             { "sessionId", sessionId },
             { "closeSession", true }
         };
 
-        return HttpPostAsync<SessionResponse>($"sessions/{sessionId}/usage", parameters, traffic);
+        return HttpPostAsync<SessionResponse>($"sessions/{sessionId}/usage", parameters, traffic, cancellationToken);
     }
 
-    public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
+    public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus, CancellationToken cancellationToken)
     {
-        return HttpPostAsync<ServerCommand>("status", null, serverStatus);
+        return HttpPostAsync<ServerCommand>("status", null, serverStatus, cancellationToken);
     }
 
-    public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
+    public Task<ServerConfig> Server_Configure(ServerInfo serverInfo, CancellationToken cancellationToken)
     {
-        return HttpPostAsync<ServerConfig>("configure", null, serverInfo);
+        return HttpPostAsync<ServerConfig>("configure", null, serverInfo, cancellationToken);
     }
 
-    public async Task<string> Acme_GetHttp01KeyAuthorization(string token)
+    public async Task<string> Acme_GetHttp01KeyAuthorization(string token, CancellationToken cancellationToken)
     {
         var parameters = new Dictionary<string, object?> {
             { "token", token }
         };
 
         try {
-            return await HttpGetAsync<string>("acme/http01_key_authorization", parameters);
+            return await HttpGetAsync<string>("acme/http01_key_authorization", parameters, cancellationToken);
         }
         catch (ApiException ex) when (ex.StatusCode == (int)HttpStatusCode.NotFound) {
             throw new KeyNotFoundException("The requested token was not found.", ex);

@@ -73,7 +73,7 @@ public class AccessTest : TestBase
 
         // test expiration
         await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
-            await server.SessionManager.Sync(true);
+            await server.SessionManager.Sync(true, TestCancellationToken);
             await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(500));
             return client.State;
         });
@@ -235,8 +235,8 @@ public class AccessTest : TestBase
             await client1.WaitForState(ClientState.Connected);
         }
 
-        await server.SessionManager.Sync(true);
-        await Task.Delay(1000);
+        await server.SessionManager.Sync(true, TestCancellationToken);
+        await Task.Delay(1000, TestCancellationToken);
         // remove milliseconds from time for comparison
         var time = DateTime.UtcNow;
         time = new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, time.Second, DateTimeKind.Utc);
@@ -255,7 +255,7 @@ public class AccessTest : TestBase
             Assert.IsTrue(accessInfo.LastUsedTime <= time, $"Diff: {(time - accessInfo.LastUsedTime).TotalSeconds}sec");
         }
 
-        await server.SessionManager.Sync(true);
+        await server.SessionManager.Sync(true, TestCancellationToken);
         await Task.Delay(200);
 
         // create a new client with the same token, it should not suppress

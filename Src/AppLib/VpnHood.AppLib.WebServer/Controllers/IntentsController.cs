@@ -14,89 +14,89 @@ internal class IntentsController : ControllerBase, IIntentController
         const string baseUrl = "/api/intents/";
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "request-quick-launch", async ctx => {
-            var res = await RequestQuickLaunch();
+            var res = await RequestQuickLaunch(ctx.Token);
             await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "request-user-review", async ctx => {
-            await RequestUserReview();
+            await RequestUserReview(ctx.Token);
             await ctx.SendNoContent();
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "request-notification", async ctx => {
-            var res = await RequestNotification();
+            var res = await RequestNotification(ctx.Token);
             await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "open-kill-switch-settings", async ctx => {
-            await OpenKillSwitchSettings();
+            await OpenKillSwitchSettings(ctx.Token);
             await ctx.SendNoContent();
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "open-always-on-settings", async ctx => {
-            await OpenAlwaysOnSettings();
+            await OpenAlwaysOnSettings(ctx.Token);
             await ctx.SendNoContent();
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "open-settings", async ctx => {
-            await OpenSettings();
+            await OpenSettings(ctx.Token);
             await ctx.SendNoContent();
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "open-app-settings", async ctx => {
-            await OpenAppSettings();
+            await OpenAppSettings(ctx.Token);
             await ctx.SendNoContent();
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "open-app-notification-settings", async ctx => {
-            await OpenAppNotificationSettings();
+            await OpenAppNotificationSettings(ctx.Token);
             await ctx.SendNoContent();
         });
     }
 
-    public Task<bool> RequestQuickLaunch()
+    public Task<bool> RequestQuickLaunch(CancellationToken cancellationToken)
     {
-        return App.Services.DeviceUiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.DeviceUiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken);
     }
 
-    public Task<bool> RequestNotification()
+    public Task<bool> RequestNotification(CancellationToken cancellationToken)
     {
-        return App.Services.DeviceUiProvider.RequestNotification(AppUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.DeviceUiProvider.RequestNotification(AppUiContext.RequiredContext, cancellationToken);
     }
 
-    public Task RequestUserReview()
+    public Task RequestUserReview(CancellationToken cancellationToken)
     {
         if (App.Services.UserReviewProvider is null)
             throw new NotSupportedException("User review is not supported.");
 
-        return App.Services.UserReviewProvider.RequestReview(AppUiContext.RequiredContext, CancellationToken.None);
+        return App.Services.UserReviewProvider.RequestReview(AppUiContext.RequiredContext, cancellationToken);
     }
 
-    public Task OpenKillSwitchSettings()
+    public Task OpenKillSwitchSettings(CancellationToken cancellationToken)
     {
         App.Services.DeviceUiProvider.OpenKillSwitchSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    public Task OpenAlwaysOnSettings()
+    public Task OpenAlwaysOnSettings(CancellationToken cancellationToken)
     {
         App.Services.DeviceUiProvider.OpenAlwaysOnSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    public Task OpenSettings()
+    public Task OpenSettings(CancellationToken cancellationToken)
     {
         App.Services.DeviceUiProvider.OpenSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    public Task OpenAppSettings()
+    public Task OpenAppSettings(CancellationToken cancellationToken)
     {
         App.Services.DeviceUiProvider.OpenAppSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
-    public Task OpenAppNotificationSettings()
+    public Task OpenAppNotificationSettings(CancellationToken cancellationToken)
     {
         App.Services.DeviceUiProvider.OpenAppNotificationSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;

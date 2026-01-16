@@ -48,35 +48,37 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         return adData != null && _adsData.TryRemove(adData, out _);
     }
 
-    public override async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
+    public override async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus,
+        CancellationToken cancellationToken)
     {
-        var ret = await base.Server_UpdateStatus(serverStatus);
+        var ret = await base.Server_UpdateStatus(serverStatus, cancellationToken);
         LastServerStatus = serverStatus;
         return ret;
     }
 
-    public override Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
+    public override Task<ServerConfig> Server_Configure(ServerInfo serverInfo, CancellationToken cancellationToken)
     {
         LastConfigureTime = DateTime.Now;
         LastServerInfo = serverInfo;
         LastServerStatus = serverInfo.Status;
-        return base.Server_Configure(serverInfo);
+        return base.Server_Configure(serverInfo, cancellationToken);
     }
 
     public override async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,
-        IPAddress? clientIp)
+        IPAddress? clientIp, CancellationToken cancellationToken)
     {
         lock (_lockObject)
             SessionGetCounter++;
 
-        var sessionResponseEx = await base.Session_Get(sessionId, hostEndPoint, clientIp);
+        var sessionResponseEx = await base.Session_Get(sessionId, hostEndPoint, clientIp, cancellationToken);
         UpdateSessionResponse(sessionResponseEx);
         return sessionResponseEx;
     }
 
-    public override async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public override async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx,
+        CancellationToken cancellationToken)
     {
-        var ret = await base.Session_Create(sessionRequestEx);
+        var ret = await base.Session_Create(sessionRequestEx, cancellationToken);
         // update by test provider
         UpdateSessionResponse(ret);
 
@@ -137,18 +139,20 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         }
     }
 
-    protected override async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage)
+    protected override async Task<SessionResponse> Session_AddUsage(SessionUsage sessionUsage,
+        CancellationToken cancellationToken)
     {
         // update test provider
-        var sessionResponse = await base.Session_AddUsage(sessionUsage);
+        var sessionResponse = await base.Session_AddUsage(sessionUsage, cancellationToken);
 
         // update by test provider
         UpdateSessionResponse(sessionResponse);
         return sessionResponse;
     }
 
-    public override Task<string> Acme_GetHttp01KeyAuthorization(string token)
+    public override Task<string> Acme_GetHttp01KeyAuthorization(string token, CancellationToken cancellationToken)
     {
+        _ = cancellationToken;
         if (AcmeHttp01KeyToken == token && AcmeHttp01KeyAuthorization != null)
             return Task.FromResult(AcmeHttp01KeyAuthorization);
 

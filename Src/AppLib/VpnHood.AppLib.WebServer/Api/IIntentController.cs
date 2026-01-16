@@ -2,11 +2,11 @@
 
 public interface IIntentController
 {
-    Task<bool> RequestNotification();
-    Task<bool> RequestQuickLaunch();
-    Task RequestUserReview();
-    Task OpenAlwaysOnSettings();
-    Task OpenSettings();
-    Task OpenAppSettings();
-    Task OpenAppNotificationSettings();
+    Task<bool> RequestNotification(CancellationToken cancellationToken);
+    Task<bool> RequestQuickLaunch(CancellationToken cancellationToken);
+    Task RequestUserReview(CancellationToken cancellationToken);
+    Task OpenAlwaysOnSettings(CancellationToken cancellationToken);
+    Task OpenSettings(CancellationToken cancellationToken);
+    Task OpenAppSettings(CancellationToken cancellationToken);
+    Task OpenAppNotificationSettings(CancellationToken cancellationToken);
 }

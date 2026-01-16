@@ -19,7 +19,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
     private bool _disposed;
     public bool IsStarted { get; private set; }
 
-    public delegate Task<string> Http01KeyAuthorizationFunc(string token);
+    public delegate Task<string> Http01KeyAuthorizationFunc(string token, CancellationToken cancellationToken);
 
     public void Start()
     {
@@ -116,7 +116,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
     private async Task<string> GetKeyAuthorization(string token, Stream outStream, CancellationToken cancellationToken)
     {
         try {
-            var keyAuthorization = await keyAuthorizationFunc(token);
+            var keyAuthorization = await keyAuthorizationFunc(token, cancellationToken);
             return !string.IsNullOrEmpty(keyAuthorization)
                 ? keyAuthorization
                 : throw new KeyNotFoundException("Key authorization not found for token: " + token);

@@ -169,11 +169,12 @@ public class TestHelper : IDisposable
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
-    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null)
+    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null, 
+        CancellationToken cancellationToken = default)
     {
         timeout ??= TestConstants.DefaultUdpTimeout;
         var result =
-            await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, CancellationToken.None);
+            await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, cancellationToken);
         Assert.IsNotEmpty(result.AddressList);
     }
 
@@ -338,7 +339,8 @@ public class TestHelper : IDisposable
         INetConfigurationProvider? netConfigurationProvider = null,
         ISwapMemoryProvider? swapMemoryProvider = null,
         IVpnAdapter? vpnAdapter = null,
-        ISocketFactory? socketFactory = null)
+        ISocketFactory? socketFactory = null,
+        CancellationToken cancellationToken = default)
     {
         if (accessManager != null && fileAccessManagerOptions != null)
             throw new InvalidOperationException(
@@ -373,7 +375,7 @@ public class TestHelper : IDisposable
         // Create server
         var server = new VpnHoodServer(accessManager, serverOptions);
         if (autoStart) {
-            await server.Start();
+            await server.Start(cancellationToken);
             Assert.AreEqual(ServerState.Ready, server.State);
         }
 

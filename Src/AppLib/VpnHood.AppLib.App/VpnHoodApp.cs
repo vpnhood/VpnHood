@@ -446,9 +446,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return SettingsService.PromotionImageFilePath != null;
     }
 
-    public Task ForceUpdateState()
+    public Task ForceUpdateState(CancellationToken cancellationToken)
     {
-        return _vpnServiceManager.RefreshState(CancellationToken.None);
+        return _vpnServiceManager.RefreshState(cancellationToken);
     }
 
     public AppConnectionState ConnectionState {

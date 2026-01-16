@@ -177,12 +177,12 @@ public class AdTest : TestAppBase
 
         // show ad
         if (acceptAd) {
-            await app.AdManager.ExtendByRewardedAd(CancellationToken.None);
+            await app.AdManager.ExtendByRewardedAd(TestCancellationToken);
             Assert.IsNull(app.State.SessionStatus?.SessionExpirationTime);
         }
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
-                app.AdManager.ExtendByRewardedAd(CancellationToken.None));
+                app.AdManager.ExtendByRewardedAd(TestCancellationToken));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
             await Task.Delay(500);
             await app.WaitForState(AppConnectionState.Connected);

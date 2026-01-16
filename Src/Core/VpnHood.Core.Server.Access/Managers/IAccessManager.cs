@@ -8,13 +8,13 @@ namespace VpnHood.Core.Server.Access.Managers;
 public interface IAccessManager : IDisposable
 {
     bool IsMaintenanceMode { get; }
-    Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx);
-    Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp);
-    Task<SessionResponseEx[]> Session_GetAll();
-    Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData);
-    Task<Dictionary<ulong, SessionResponse>> Session_AddUsages(SessionUsage[] sessionUsages);
-    Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic);
-    Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus);
-    Task<ServerConfig> Server_Configure(ServerInfo serverInfo);
-    Task<string> Acme_GetHttp01KeyAuthorization(string token);
+    Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx, CancellationToken cancellationToken);
+    Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp, CancellationToken cancellationToken);
+    Task<SessionResponseEx[]> Session_GetAll(CancellationToken cancellationToken);
+    Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData, CancellationToken cancellationToken);
+    Task<Dictionary<ulong, SessionResponse>> Session_AddUsages(SessionUsage[] sessionUsages, CancellationToken cancellationToken);
+    Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic, CancellationToken cancellationToken);
+    Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus, CancellationToken cancellationToken);
+    Task<ServerConfig> Server_Configure(ServerInfo serverInfo, CancellationToken cancellationToken);
+    Task<string> Acme_GetHttp01KeyAuthorization(string token, CancellationToken cancellationToken);
 }

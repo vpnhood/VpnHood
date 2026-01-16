@@ -10,9 +10,9 @@ public static class VpnHoodAppExtensions
 {
     extension(VpnHoodApp app)
     {
-        public AppSessionStatus GetSessionStatus()
+        public AppSessionStatus GetSessionStatus(CancellationToken cancellationToken = default)
         {
-            app.ForceUpdateState().Wait();
+            app.ForceUpdateState(cancellationToken).Wait(cancellationToken);
             return app.State.SessionStatus ??
                    throw new InvalidOperationException("Session has not been initialized yet");
         }

@@ -1,8 +1,8 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.IpLocations;
@@ -80,7 +80,7 @@ public class FileAccessManager : IAccessManager
             throw new Exception("PublicEndPoints has not been configured properly.");
 
 
-        var serverLocation = LoadServerLocation().Result;
+        var serverLocation = LoadServerLocation(CancellationToken.None).Result;
         var serverToken = new ServerToken {
             CertificateHash = serverConfig.IsValidHostName ? null : certificate.GetCertHash(),
             HostPort = serverConfig.HostPort ?? publicEndPoints.FirstOrDefault()?.Port ?? 443,
@@ -123,7 +123,7 @@ public class FileAccessManager : IAccessManager
         return Convert.FromBase64String(secretBase64);
     }
 
-    private async Task<string?> LoadServerLocation()
+    private async Task<string?> LoadServerLocation(CancellationToken cancellationToken)
     {
         try {
             var serverCountryFile = Path.Combine(StoragePath, "server_location");
@@ -139,11 +139,11 @@ public class FileAccessManager : IAccessManager
                     new IpApiCoLocationProvider(httpClient, userAgent)
                 ]);
 
-                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationTokenSource.Token)
+                var ipLocation = await ipLocationProvider.GetCurrentLocation(cancellationToken)
                     .Vhc();
                 serverLocation = IpLocationProviderFactory.GetPath(ipLocation.CountryCode, ipLocation.RegionName,
                     ipLocation.CityName);
-                await File.WriteAllTextAsync(serverCountryFile, serverLocation, CancellationToken.None)
+                await File.WriteAllTextAsync(serverCountryFile, serverLocation, cancellationToken)
                     .Vhc();
             }
 
@@ -167,16 +167,16 @@ public class FileAccessManager : IAccessManager
         }
     }
 
-    public virtual async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
+    public virtual async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus, CancellationToken cancellationToken)
     {
         ServerStatus = serverStatus;
         var result = new ServerCommand(ServerConfig.ConfigCode) {
-            SessionResponses = await Session_AddUsages(serverStatus.SessionUsages).Vhc()
+            SessionResponses = await Session_AddUsages(serverStatus.SessionUsages, cancellationToken).Vhc()
         };
         return result;
     }
 
-    public virtual Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
+    public virtual Task<ServerConfig> Server_Configure(ServerInfo serverInfo, CancellationToken cancellationToken)
     {
         ServerInfo = serverInfo;
         ServerStatus = serverInfo.Status;
@@ -194,7 +194,7 @@ public class FileAccessManager : IAccessManager
         return Task.FromResult((ServerConfig)ServerConfig);
     }
 
-    public virtual Task<string> Acme_GetHttp01KeyAuthorization(string token)
+    public virtual Task<string> Acme_GetHttp01KeyAuthorization(string token, CancellationToken cancellationToken)
     {
         throw new KeyNotFoundException("This server does not support HTTP-01 challenge.");
     }
@@ -237,10 +237,10 @@ public class FileAccessManager : IAccessManager
         return encryptClientId.SequenceEqual(sessionRequestEx.EncryptedClientId);
     }
 
-    public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public virtual async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx, CancellationToken cancellationToken)
     {
         // validate token
-        var accessTokenDataOrg = await AccessTokenService.Find(sessionRequestEx.TokenId).Vhc();
+        var accessTokenDataOrg = await AccessTokenService.Find(sessionRequestEx.TokenId, cancellationToken).Vhc();
         if (!ValidateRequest(sessionRequestEx, accessTokenDataOrg))
             return new SessionResponseEx {
                 ErrorCode = SessionErrorCode.AccessError,
@@ -254,7 +254,7 @@ public class FileAccessManager : IAccessManager
         if (!string.IsNullOrWhiteSpace(sessionRequestEx.AccessCode)) {
             var accessTokenId = GetAccessTokenIdFromAccessCode(sessionRequestEx.AccessCode);
             accessTokenData = accessTokenId != null
-                ? await AccessTokenService.Find(accessTokenId).Vhc()
+                ? await AccessTokenService.Find(accessTokenId, cancellationToken).Vhc()
                 : null;
             if (accessTokenData == null)
                 return new SessionResponseEx {
@@ -286,7 +286,7 @@ public class FileAccessManager : IAccessManager
     }
 
     public virtual async Task<SessionResponseEx> Session_Get(ulong sessionId, IPEndPoint hostEndPoint,
-        IPAddress? clientIp)
+        IPAddress? clientIp, CancellationToken cancellationToken)
     {
         _ = hostEndPoint;
         _ = clientIp;
@@ -302,7 +302,7 @@ public class FileAccessManager : IAccessManager
 
         try {
             // read accessItem
-            var accessTokenData = await AccessTokenService.Get(tokenId).Vhc();
+            var accessTokenData = await AccessTokenService.Get(tokenId, cancellationToken).Vhc();
 
             // read usage
             return SessionService.GetSessionResponse(sessionId, accessTokenData, hostEndPoint);
@@ -316,14 +316,14 @@ public class FileAccessManager : IAccessManager
         }
     }
 
-    public async Task<SessionResponseEx[]> Session_GetAll()
+    public async Task<SessionResponseEx[]> Session_GetAll(CancellationToken cancellationToken)
     {
         // read all sessions
         var responses = new List<SessionResponseEx>();
         foreach (var session in SessionService.Sessions) {
             try {
                 // read accessItem
-                var accessTokenData = await AccessTokenService.Find(session.Value.TokenId).Vhc();
+                var accessTokenData = await AccessTokenService.Find(session.Value.TokenId, cancellationToken).Vhc();
                 if (accessTokenData != null)
                     responses.Add(SessionService.GetSessionResponse(session.Key, accessTokenData,
                         session.Value.HostEndPoint));
@@ -337,32 +337,32 @@ public class FileAccessManager : IAccessManager
     }
 
 
-    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData)
+    public Task<SessionResponse> Session_AddUsage(ulong sessionId, Traffic traffic, string? adData, CancellationToken cancellationToken)
     {
         return Session_AddUsage(new SessionUsage {
             SessionId = sessionId,
             Sent = traffic.Sent,
             Received = traffic.Received,
             AdData = adData
-        });
+        }, cancellationToken);
     }
 
-    public virtual Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic)
+    public virtual Task<SessionResponse> Session_Close(ulong sessionId, Traffic traffic, CancellationToken cancellationToken)
     {
         return Session_AddUsage(new SessionUsage {
             SessionId = sessionId,
             Sent = traffic.Sent,
             Received = traffic.Received,
             ErrorCode = SessionErrorCode.SessionClosed
-        });
+        }, cancellationToken);
     }
 
-    public async Task<Dictionary<ulong, SessionResponse>> Session_AddUsages(SessionUsage[] sessionUsages)
+    public async Task<Dictionary<ulong, SessionResponse>> Session_AddUsages(SessionUsage[] sessionUsages, CancellationToken cancellationToken)
     {
         var ret = new Dictionary<ulong, SessionResponse>();
         foreach (var sessionUsage in sessionUsages) {
             try {
-                var sessionResponse = await Session_AddUsage(sessionUsage);
+                var sessionResponse = await Session_AddUsage(sessionUsage, cancellationToken);
                 ret[sessionUsage.SessionId] = sessionResponse;
             }
             catch (Exception ex) {
@@ -382,7 +382,7 @@ public class FileAccessManager : IAccessManager
             };
 
             try {
-                var sessionResponse = await Session_AddUsage(sessionUsage);
+                var sessionResponse = await Session_AddUsage(sessionUsage, cancellationToken);
                 ret[sessionUsage.SessionId] = sessionResponse;
             }
             catch (Exception ex) {

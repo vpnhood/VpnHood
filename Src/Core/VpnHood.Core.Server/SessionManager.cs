@@ -1,8 +1,8 @@
-﻿using System.Collections.Concurrent;
+﻿using Ga4.Trackers;
+using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
-using Ga4.Trackers;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Packets;
@@ -131,7 +131,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     }
 
     public async Task<SessionResponseEx> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair,
-        int protocolVersion, IPAddress clientIp)
+        int protocolVersion, IPAddress clientIp, CancellationToken cancellationToken)
     {
         // validate the token
         VhLogger.Instance.LogDebug("Validating the request by the access server. TokenId: {TokenId}",
@@ -153,7 +153,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
             AccessCode = helloRequest.AccessCode,
             ProtocolVersion = protocolVersion,
             UserReview = helloRequest.UserReview
-        }).Vhc();
+        }, cancellationToken).Vhc();
 
         // Access Error should not pass to the client in create session
         if (sessionResponseEx.ErrorCode is SessionErrorCode.AccessError)
@@ -212,10 +212,10 @@ public class SessionManager : IAsyncDisposable, IDisposable
         ]);
     }
 
-    public async Task RecoverSessions()
+    public async Task RecoverSessions(CancellationToken cancellationToken)
     {
         // recover all sessions
-        var responseExs = await _accessManager.Session_GetAll().Vhc();
+        var responseExs = await _accessManager.Session_GetAll(cancellationToken).Vhc();
         foreach (var responseEx in responseExs) {
             try {
                 var session = BuildSessionFromResponseEx(responseEx, true);
@@ -231,10 +231,10 @@ public class SessionManager : IAsyncDisposable, IDisposable
         }
     }
 
-    private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)
+    private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair, CancellationToken cancellationToken)
     {
         using var recoverLock =
-            await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}").Vhc();
+            await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}", cancellationToken).Vhc();
         var session = GetSessionById(sessionRequest.SessionId);
         if (session != null)
             return session;
@@ -254,7 +254,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
             // get the session from the access server
             var sessionResponse = await _accessManager.Session_Get(sessionRequest.SessionId,
-                    ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address)
+                    ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address, cancellationToken)
                 .Vhc();
 
             // Check session key for recovery
@@ -287,7 +287,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
         }
     }
 
-    internal async Task<Session> GetSession(RequestBase requestBase, IPEndPointPair ipEndPointPair)
+    internal async Task<Session> GetSession(RequestBase requestBase, IPEndPointPair ipEndPointPair, 
+        CancellationToken cancellationToken)
     {
         //get session
         var session = GetSessionById(requestBase.SessionId);
@@ -297,7 +298,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         }
         // try to restore session if not found
         else {
-            session = await RecoverSession(requestBase, ipEndPointPair).Vhc();
+            session = await RecoverSession(requestBase, ipEndPointPair, cancellationToken).Vhc();
         }
 
         if (session.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
@@ -524,19 +525,26 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     private readonly AsyncLock _syncLock = new();
 
-    public async Task<int> Sync(bool force = false)
+    public Task<int> Sync(CancellationToken cancellationToken)
     {
-        using var lockResult = await _syncLock.LockAsync(TimeSpan.Zero).Vhc();
+        return Sync(false, cancellationToken);
+    }
+
+    public async Task<int> Sync(bool force, CancellationToken cancellationToken)
+    {
+        using var lockResult = await _syncLock.LockAsync(TimeSpan.Zero, cancellationToken).Vhc();
         if (!lockResult.Succeeded)
             return 0;
 
         var sessionUsages = CollectSessionUsages(force);
-        var sessionResponses = await _accessManager.Session_AddUsages(sessionUsages).Vhc();
+        var sessionResponses = await _accessManager
+            .Session_AddUsages(sessionUsages, cancellationToken).Vhc();
+
         ApplySessionResponses(sessionResponses);
         return sessionResponses.Count;
     }
 
-    public async Task CloseSession(ulong sessionId)
+    public async Task CloseSession(ulong sessionId, CancellationToken cancellationToken)
     {
         var session = GetSessionById(sessionId)
                       ?? throw new KeyNotFoundException($"Could not find Session. SessionId: {sessionId}");
@@ -544,7 +552,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         // immediately close the session from the access server, to prevent get SuppressByYourself error
         session.SessionResponseEx.ErrorCode = SessionErrorCode.SessionClosed;
         session.SetSyncRequired();
-        await Sync();
+        await Sync(cancellationToken);
 
         // remove after sync to make sure it is not added by the sync
         _sessionLocalService.Remove(session.SessionId);
@@ -572,7 +580,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
         // sync sessions
         try {
-            await Sync(force: true).Vhc();
+            CancellationTokenSource cancellationTokenSource = new(TimeSpan.FromSeconds(7));
+            await Sync(force: true, cancellationTokenSource.Token).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not sync sessions in disposing.");

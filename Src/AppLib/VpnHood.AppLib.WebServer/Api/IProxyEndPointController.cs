@@ -6,21 +6,22 @@ namespace VpnHood.AppLib.WebServer.Api;
 public interface IProxyEndPointController
 {
     Task<AppProxyEndPointInfo> Get(string proxyEndPointId, CancellationToken cancellationToken);
-    Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint);
-    Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint);
-    Task Delete(string proxyEndPointId);
-    Task DeleteAll(bool deleteSucceeded = true, bool deleteFailed = true, bool deleteUnknown = true, bool deleteDisabled = true);
-    Task DisableAllFailed();
-    Task ResetStates();
-    Task<AppProxyEndPointInfo?> GetDevice();
+    Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken);
+    Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken);
+    Task Delete(string proxyEndPointId, CancellationToken cancellationToken);
+    Task DeleteAll(bool deleteSucceeded, bool deleteFailed, bool deleteUnknown, bool deleteDisabled, CancellationToken cancellationToken);
+    Task DisableAllFailed(CancellationToken cancellationToken);
+    Task ResetStates(CancellationToken cancellationToken);
+    Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken);
     Task<AppProxyEndPointInfo[]> List(
-        bool includeSucceeded = true,
-        bool includeFailed = true,
-        bool includeUnknown = true,
-        bool includeDisabled = true,
-        int? recordIndex = null,
-        int? recordCount = null);
-    Task Import(string content);
+        bool includeSucceeded,
+        bool includeFailed,
+        bool includeUnknown,
+        bool includeDisabled,
+        int? recordIndex,
+        int? recordCount,
+        CancellationToken cancellationToken);
+    Task Import(string content, CancellationToken cancellationToken);
     Task ReloadUrl(CancellationToken cancellationToken);
-    Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults);
+    Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults, CancellationToken cancellationToken);
 }

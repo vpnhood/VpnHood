@@ -7,6 +7,7 @@ namespace VpnHood.Test;
 public abstract class TestBase
 {
     protected TestHelper TestHelper { get; private set; } = null!;
+    protected virtual CancellationToken TestCancellationToken => CancellationToken.None;
 
     [TestInitialize]
     public void TestInitialize()

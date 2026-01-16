@@ -5,7 +5,7 @@ using VpnHood.Core.Common.Tokens;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-public class EndPointResolverTests
+public class EndPointResolverTests : TestBase
 {
     private static ServerToken CreateServerToken(bool isValidDomain)
     {
@@ -31,7 +31,7 @@ public class EndPointResolverTests
         var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.DnsOnly,
-            CancellationToken.None);
+            TestCancellationToken);
 
         Assert.IsFalse(results.All(ep => tokenEndPoints.Contains(ep)),
             "DnsOnly strategy should not include token-provided endpoints.");
@@ -43,7 +43,7 @@ public class EndPointResolverTests
         var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.IpOnly,
-            CancellationToken.None);
+            TestCancellationToken);
 
         CollectionAssert.AreEqual(tokenEndPoints, results);
     }
@@ -55,7 +55,7 @@ public class EndPointResolverTests
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.DnsFirst,
-            CancellationToken.None);
+            TestCancellationToken);
 
         var index = results.Length - tokenEndPoints.Length;
         Assert.AreEqual(tokenEndPoints[0], results[index + 0]);
@@ -70,7 +70,7 @@ public class EndPointResolverTests
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.IpFirst,
-            CancellationToken.None);
+            TestCancellationToken);
 
         Assert.AreEqual(tokenEndPoints[0], results[0]);
         Assert.AreEqual(tokenEndPoints[1], results[1]);
@@ -84,7 +84,7 @@ public class EndPointResolverTests
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.Auto,
-            CancellationToken.None);
+            TestCancellationToken);
 
         Assert.AreEqual(tokenEndPoints[0], results[0]);
         Assert.AreEqual(tokenEndPoints[1], results[1]);

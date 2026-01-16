@@ -11,7 +11,7 @@ public static class VhTestUtil
         Exception(message, innerException);
 
     private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<TValue> valueFactory,
-        TimeSpan timeout)
+        TimeSpan timeout, CancellationToken cancellationToken)
     {
         const int waitTime = 100;
         CancellationTokenSource cancellationTokenSource = new(timeout);
@@ -20,15 +20,15 @@ public static class VhTestUtil
             if (Equals(expectedValue, actualValue))
                 return actualValue;
 
-            await Task.Delay(waitTime, CancellationToken.None);
+            await Task.Delay(waitTime, cancellationToken);
             actualValue = valueFactory();
         }
 
         return actualValue;
     }
 
-    private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory,
-        TimeSpan timeout)
+    private static async Task<TValue> WaitForValue<TValue>(TValue expectedValue, 
+        Func<Task<TValue>> valueFactory, TimeSpan timeout, CancellationToken cancellationToken)
     {
         const int waitTime = 100;
         CancellationTokenSource cancellationTokenSource = new(timeout);
@@ -37,7 +37,7 @@ public static class VhTestUtil
             if (Equals(expectedValue, actualValue))
                 return actualValue;
 
-            await Task.Delay(waitTime, CancellationToken.None);
+            await Task.Delay(waitTime, cancellationToken);
             actualValue = await valueFactory();
         }
 
@@ -53,35 +53,38 @@ public static class VhTestUtil
     }
 
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Func<TValue> valueFactory,
-        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
+        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true, 
+        CancellationToken cancellationToken = default)
     {
         var timeoutSpan = noTimeoutOnDebugger && Debugger.IsAttached
             ? TimeSpan.FromDays(1)
             : TimeSpan.FromMilliseconds(timeout);
 
-        var actualValue = await WaitForValue(expectedValue, valueFactory, timeoutSpan);
+        var actualValue = await WaitForValue(expectedValue, valueFactory, timeoutSpan, cancellationToken);
         AssertEquals(expectedValue, actualValue, message);
     }
 
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Func<Task<TValue>> valueFactory,
-        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
+        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true, 
+        CancellationToken cancellationToken = default)
     {
         var timeoutSpan = noTimeoutOnDebugger && Debugger.IsAttached
             ? TimeSpan.FromDays(1)
             : TimeSpan.FromMilliseconds(timeout);
 
-        var actualValue = await WaitForValue(expectedValue, valueFactory, timeoutSpan);
+        var actualValue = await WaitForValue(expectedValue, valueFactory, timeoutSpan, cancellationToken);
         AssertEquals(expectedValue, actualValue, message);
     }
 
     public static async Task AssertEqualsWait<TValue>(TValue expectedValue, Task<TValue> task,
-        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true)
+        string? message = null, int timeout = 5000, bool noTimeoutOnDebugger = true, 
+        CancellationToken cancellationToken = default)
     {
         var timeoutSpan = noTimeoutOnDebugger && Debugger.IsAttached
             ? TimeSpan.FromDays(1)
             : TimeSpan.FromMilliseconds(timeout);
 
-        var actualValue = await WaitForValue(expectedValue, () => task, timeoutSpan);
+        var actualValue = await WaitForValue(expectedValue, () => task, timeoutSpan, cancellationToken);
         AssertEquals(expectedValue, actualValue, message);
     }
 

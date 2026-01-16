@@ -38,7 +38,7 @@ public class ClientAppTest : TestAppBase
         
         var dbFile = @"C:\Users\User\Downloads\IpLocations.db";
         var memoryStream = new MemoryStream(Ip2LocationLiteDb.ZipData);
-        await IpLocationSqlLiteBuilder.Build(memoryStream, dbFile, DateTime.Now);
+        await IpLocationSqlLiteBuilder.Build(memoryStream, dbFile);
         await using var locationSqlLiteProvider = await IpLocationSqlLiteProvider.Open(dbFile);
 
         var list = new List<string>();
@@ -58,104 +58,6 @@ public class ClientAppTest : TestAppBase
         var ipLocation = await locationSqlLiteProvider.GetLocation(ipToCheck, CancellationToken.None);
         Console.WriteLine($"IP {ipToCheck} belongs to country: {ipLocation.CountryCode}");
 
-    }
-
-    [TestMethod]
-    public async Task CreateSqliteFromLocationFile()
-    {
-        var crvFile = @"C:\Users\User\Downloads\IP2LOCATION-LITE-DB1.IPV6.CSV";
-        await using var crvStream = File.OpenRead(crvFile);
-        var countryToIpRanges = await Ip2LocationDbParser.ParseIp2LocationCrv(crvStream, CancellationToken.None);
-
-        // Create database file path near the source file
-        var dbFile = Path.Combine(Path.GetDirectoryName(crvFile)!, "IpLocations.db");
-        
-        // Delete existing database if it exists
-        if (File.Exists(dbFile))
-            File.Delete(dbFile);
-
-        // Create and populate the database
-        var connectionString = new SqliteConnectionStringBuilder {
-            DataSource = dbFile,
-            Mode = SqliteOpenMode.ReadWriteCreate
-        }.ToString();
-
-        await using var connection = new SqliteConnection(connectionString);
-        await connection.OpenAsync();
-
-        // Create table with BLOB type for IP addresses
-        await using (var cmd = connection.CreateCommand()) {
-            cmd.CommandText = @"
-                CREATE TABLE IpLocations (
-                    CountryCode TEXT NOT NULL,
-                    StartIp BLOB NOT NULL,
-                    EndIp BLOB NOT NULL
-                );
-                
-                CREATE INDEX idx_CountryCode ON IpLocations(CountryCode);
-                CREATE INDEX idx_StartIp ON IpLocations(StartIp);
-            ";
-            await cmd.ExecuteNonQueryAsync();
-        }
-
-        // Insert data
-        await using var transaction = await connection.BeginTransactionAsync();
-        
-        await using (var cmd = connection.CreateCommand()) {
-            cmd.CommandText = "INSERT INTO IpLocations (CountryCode, StartIp, EndIp) VALUES (@countryCode, @startIp, @endIp)";
-            
-            var countryCodeParam = cmd.Parameters.Add("@countryCode", SqliteType.Text);
-            var startIpParam = cmd.Parameters.Add("@startIp", SqliteType.Blob);
-            var endIpParam = cmd.Parameters.Add("@endIp", SqliteType.Blob);
-
-            foreach (var countryEntry in countryToIpRanges) {
-                var countryCode = countryEntry.Key;
-                
-                foreach (var ipRange in countryEntry.Value) {
-                    countryCodeParam.Value = countryCode;
-                    startIpParam.Value = IpToBytes(ipRange.FirstIpAddress);
-                    endIpParam.Value = IpToBytes(ipRange.LastIpAddress);
-                    
-                    await cmd.ExecuteNonQueryAsync();
-                }
-            }
-        }
-
-        await transaction.CommitAsync();
-        
-        VhLogger.Instance.LogInformation("SQLite database created successfully at: {DbFile}", dbFile);
-        VhLogger.Instance.LogInformation("Total countries: {Count}", countryToIpRanges.Count);
-        
-        // Display statistics
-        await using (var cmd = connection.CreateCommand()) {
-            cmd.CommandText = "SELECT COUNT(*) FROM IpLocations";
-            var totalRecords = (long)(await cmd.ExecuteScalarAsync())!;
-            VhLogger.Instance.LogInformation("Total IP ranges: {Count}", totalRecords);
-        }
-        
-        VhLogger.Instance.LogInformation("Database size: {Size} MB", new FileInfo(dbFile).Length / 1024.0 / 1024.0);
-    }
-
-    private static byte[] IpToBytes(IPAddress ipAddress)
-    {
-        // Convert to IPv6 format (16 bytes) for consistent storage
-        // IPv4 addresses will be mapped to IPv6
-        var bytes = ipAddress.AddressFamily == AddressFamily.InterNetwork
-            ? ipAddress.MapToIPv6().GetAddressBytes()
-            : ipAddress.GetAddressBytes();
-        
-        return bytes;
-    }
-
-    private static IPAddress BytesToIp(byte[] bytes)
-    {
-        var ipAddress = new IPAddress(bytes);
-        
-        // Convert back to IPv4 if it's a mapped IPv4 address
-        if (ipAddress.IsIPv4MappedToIPv6)
-            ipAddress = ipAddress.MapToIPv4();
-        
-        return ipAddress;
     }
 
     private async Task UpdateIp2LocationFile()

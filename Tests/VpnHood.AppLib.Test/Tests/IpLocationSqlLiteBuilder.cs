@@ -13,8 +13,8 @@ namespace VpnHood.AppLib.Test.Tests;
 public static class IpLocationSqlLiteBuilder
 {
     // use LocalIpLocationProvider Deserialize to rebuild and compact db if changed
-    // updatedTime is from sourceStream metadata and must be stored to db to compare next time
-    public static async Task Build(Stream sourceStream, string dbPath, DateTime sourceTime)
+    // checksum inside archive is used to detect changes
+    public static async Task Build(Stream sourceStream, string dbPath)
     {
         // ensure target folder exists
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath) ?? Directory.GetCurrentDirectory());
@@ -28,9 +28,12 @@ public static class IpLocationSqlLiteBuilder
         await using var connection = new SqliteConnection(connectionString);
         await connection.OpenAsync();
 
-        // skip rebuild when already up to date
-        var existingUpdatedTime = await GetUpdatedTime(connection);
-        if (existingUpdatedTime.HasValue && existingUpdatedTime.Value >= sourceTime)
+        // read checksum from archive and skip rebuild when already up to date
+        sourceStream.Position = 0;
+        await using var archive = new ZipArchive(sourceStream, ZipArchiveMode.Read, leaveOpen: true);
+        var newChecksum = await ReadChecksum(archive);
+        var oldChecksum = await GetChecksum(connection);
+        if (oldChecksum == newChecksum)
             return;
 
         // reset schema
@@ -69,8 +72,6 @@ public static class IpLocationSqlLiteBuilder
             var endIpParam = cmd.Parameters.Add("@endIp", SqliteType.Blob);
 
             // stream each country file to keep memory low
-            sourceStream.Position = 0;
-            await using var archive = new ZipArchive(sourceStream, ZipArchiveMode.Read, leaveOpen: true);
             foreach (var entry in archive.Entries.Where(e => Path.GetExtension(e.Name) == ".ips")) {
                 var countryCode = Path.GetFileNameWithoutExtension(entry.Name);
                 await using var entryStream = await entry.OpenAsync();
@@ -88,8 +89,8 @@ public static class IpLocationSqlLiteBuilder
             await using var metaCmd = connection.CreateCommand();
             metaCmd.Transaction = transaction;
             metaCmd.CommandText = "INSERT OR REPLACE INTO Metadata (Key, Value) VALUES (@key, @value)";
-            metaCmd.Parameters.AddWithValue("@key", "UpdatedTime");
-            metaCmd.Parameters.AddWithValue("@value", sourceTime.ToUniversalTime().Ticks.ToString());
+            metaCmd.Parameters.AddWithValue("@key", "Checksum");
+            metaCmd.Parameters.AddWithValue("@value", newChecksum);
             await metaCmd.ExecuteNonQueryAsync();
 
             await transaction.CommitAsync();
@@ -102,7 +103,7 @@ public static class IpLocationSqlLiteBuilder
         }
     }
 
-    private static async Task<DateTime?> GetUpdatedTime(SqliteConnection connection)
+    private static async Task<string?> GetChecksum(SqliteConnection connection)
     {
         await using var tableCmd = connection.CreateCommand();
         tableCmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='Metadata'";
@@ -111,12 +112,17 @@ public static class IpLocationSqlLiteBuilder
             return null;
 
         await using var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Value FROM Metadata WHERE Key = 'UpdatedTime' LIMIT 1";
-        var value = (string?)await cmd.ExecuteScalarAsync();
-        if (value == null)
-            return null;
+        cmd.CommandText = "SELECT Value FROM Metadata WHERE Key = 'Checksum' LIMIT 1";
+        return (string?)await cmd.ExecuteScalarAsync();
+    }
 
-        return new DateTime(long.Parse(value), DateTimeKind.Utc);
+    private static async Task<string> ReadChecksum(ZipArchive archive)
+    {
+        var checksumEntry = archive.GetEntry("_checksum.txt") ?? throw new FileNotFoundException("checksum.txt not found in archive");
+        await using var stream = await checksumEntry.OpenAsync();
+        using var reader = new StreamReader(stream, Encoding.ASCII, leaveOpen: true);
+        var content = await reader.ReadToEndAsync();
+        return content.Trim();
     }
 
 

@@ -3,7 +3,6 @@ using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Client.Device.UiContexts;
-using WatsonWebserver.Core;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
@@ -37,16 +36,16 @@ internal class BillingController : ControllerBase, IBillingController
 
     public Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
-        return BillingService.GetSubscriptionPlans();
+        return BillingService.GetSubscriptionPlans(cancellationToken);
     }
 
     public Task<string> Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
-        return BillingService.Purchase(AppUiContext.RequiredContext, purchaseParams);
+        return BillingService.Purchase(AppUiContext.RequiredContext, purchaseParams, cancellationToken);
     }
 
     public Task<AppPurchaseOptions> GetPurchaseOptions(CancellationToken cancellationToken)
     {
-        return VpnHoodApp.Instance.GetPurchaseOptions();
+        return VpnHoodApp.Instance.GetPurchaseOptions(cancellationToken);
     }
 }

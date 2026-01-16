@@ -10,18 +10,19 @@ public class AppBillingService(AppAccountService accountService, IAppBillingProv
     public BillingPurchaseState PurchaseState => billingProvider.PurchaseState;
     public string ProviderName => billingProvider.ProviderName;
 
-    public Task<SubscriptionPlan[]> GetSubscriptionPlans()
+    public Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
-        return billingProvider.GetSubscriptionPlans();
+        return billingProvider.GetSubscriptionPlans(cancellationToken);
     }
 
-    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams)
+    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, 
+        CancellationToken cancellationToken)
     {
         if (accountService.IsPremium)
             throw new AlreadyExistsException("You already have a premium subscription.");
 
-        var ret = await billingProvider.Purchase(uiContext, purchaseParams).Vhc();
-        await accountService.Refresh(updateCurrentClientProfile: true).Vhc();
+        var ret = await billingProvider.Purchase(uiContext, purchaseParams, cancellationToken).Vhc();
+        await accountService.Refresh(updateCurrentClientProfile: true, cancellationToken: cancellationToken).Vhc();
         return ret;
     }
 

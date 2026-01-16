@@ -10,7 +10,7 @@ internal class TestBillingProvider : IAppBillingProvider
 
     public string ProviderName => "Test";
 
-    public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
+    public async Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         if (SubscriptionPlanException != null)
             throw SubscriptionPlanException;
@@ -28,7 +28,7 @@ internal class TestBillingProvider : IAppBillingProvider
         ];
     }
 
-    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams)
+    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
         if (PurchaseException != null)
             throw PurchaseException;

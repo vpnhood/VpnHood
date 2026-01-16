@@ -29,12 +29,12 @@ public class AppAccountService
 
     public AppBillingService? BillingService { get; }
 
-    public Task<AppAccount?> GetAccount()
+    public Task<AppAccount?> GetAccount(CancellationToken cancellationToken)
     {
-        return GetAccount(useCache: true);
+        return GetAccount(useCache: true, cancellationToken);
     }
 
-    private async Task<AppAccount?> GetAccount(bool useCache)
+    private async Task<AppAccount?> GetAccount(bool useCache, CancellationToken cancellationToken)
     {
         if (AuthenticationService.UserId == null) {
             ClearAccount();
@@ -49,19 +49,24 @@ public class AppAccountService
         }
 
         // Update cache from server and update local cache
-        await Refresh(true);
+        await Refresh(true, cancellationToken);
         return _appAccount;
     }
 
-    public async Task Refresh(bool updateCurrentClientProfile = false)
+    public Task Refresh(CancellationToken cancellationToken)
     {
-        _appAccount = await _accountProvider.GetAccount().Vhc();
+        return Refresh(updateCurrentClientProfile: false, cancellationToken);
+    }
+
+    public async Task Refresh(bool updateCurrentClientProfile, CancellationToken cancellationToken)
+    {
+        _appAccount = await _accountProvider.GetAccount(cancellationToken).Vhc();
         Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
-        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount)).Vhc();
+        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount), cancellationToken).Vhc();
 
         // update profiles
         var accessKeys = _appAccount?.SubscriptionId != null
-            ? await ListAccessKeys(_appAccount.SubscriptionId).Vhc()
+            ? await ListAccessKeys(_appAccount.SubscriptionId, cancellationToken).Vhc()
             : [];
 
         // update profiles
@@ -79,8 +84,8 @@ public class AppAccountService
         _vpnHoodApp.ValidateAccountClientProfiles(false);
     }
 
-    public Task<string[]> ListAccessKeys(string subscriptionId)
+    public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken = default)
     {
-        return _accountProvider.ListAccessKeys(subscriptionId);
+        return _accountProvider.ListAccessKeys(subscriptionId, cancellationToken);
     }
 }

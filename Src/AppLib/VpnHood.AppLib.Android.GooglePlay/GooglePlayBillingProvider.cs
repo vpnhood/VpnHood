@@ -64,9 +64,9 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         }
     }
 
-    public async Task<SubscriptionPlan[]> GetSubscriptionPlans()
+    public async Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
-        var billingClient = await GetSafeBillingClient().Vhc();
+        var billingClient = await GetSafeBillingClient(cancellationToken).Vhc();
 
         // Check if the purchase subscription is supported on the user's device
         try {
@@ -165,13 +165,13 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         return productDetailsResult.ProductDetailsList.ToArray();
     }
 
-    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams)
+    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
         var subscriptionToken = JsonUtils.Deserialize<SubscriptionPlanToken>(purchaseParams.PurchaseToken);
 
-        var billingClient = await GetSafeBillingClient().Vhc();
+        var billingClient = await GetSafeBillingClient(cancellationToken).Vhc();
 
         if (_authenticationProvider.UserId == null)
             throw new AuthenticationException();
@@ -200,7 +200,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
 
-            var orderId = await _taskCompletionSource.Task.Vhc();
+            var orderId = await _taskCompletionSource.Task.WaitAsync(cancellationToken).Vhc();
             return orderId;
         }
         catch (TaskCanceledException ex) {
@@ -216,8 +216,10 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         }
     }
 
-    private async Task<BillingClient> GetSafeBillingClient()
+    private async Task<BillingClient> GetSafeBillingClient(CancellationToken cancellationToken)
     {
+        _ = cancellationToken;
+
         if (_billingClient.Value.IsReady)
             return _billingClient.Value;
 

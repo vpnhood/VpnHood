@@ -52,13 +52,13 @@ internal class AccountController : ControllerBase, IAccountController
     public Task<AppAccount?> Get(CancellationToken cancellationToken)
     {
         return VpnHoodApp.Instance.Services.AccountService != null
-            ? VpnHoodApp.Instance.Services.AccountService.GetAccount()
+            ? VpnHoodApp.Instance.Services.AccountService.GetAccount(cancellationToken)
             : Task.FromResult<AppAccount?>(null);
     }
 
     public Task Refresh(CancellationToken cancellationToken)
     {
-        return AccountService.Refresh();
+        return AccountService.Refresh(cancellationToken: cancellationToken);
     }
 
     public bool IsSigninWithGoogleSupported()
@@ -81,6 +81,6 @@ internal class AccountController : ControllerBase, IAccountController
 
     public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
     {
-        return AccountService.ListAccessKeys(subscriptionId);
+        return AccountService.ListAccessKeys(subscriptionId, cancellationToken);
     }
 }

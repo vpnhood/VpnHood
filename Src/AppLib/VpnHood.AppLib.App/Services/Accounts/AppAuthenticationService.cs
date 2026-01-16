@@ -16,13 +16,13 @@ public class AppAuthenticationService(
     public async Task SignInWithGoogle(IUiContext uiContext)
     {
         await accountProvider.SignInWithGoogle(uiContext).Vhc();
-        await accountService.Refresh(updateCurrentClientProfile: true).Vhc();
+        await accountService.Refresh(updateCurrentClientProfile: true, cancellationToken: default).Vhc();
     }
 
     public async Task SignOut(IUiContext uiContext)
     {
         await accountProvider.SignOut(uiContext).Vhc();
-        await accountService.Refresh(updateCurrentClientProfile: true).Vhc();
+        await accountService.Refresh(updateCurrentClientProfile: true, cancellationToken: default).Vhc();
     }
 
     public void Dispose()

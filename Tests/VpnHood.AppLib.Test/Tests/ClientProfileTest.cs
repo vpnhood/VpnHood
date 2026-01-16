@@ -567,7 +567,7 @@ public class ClientProfileTest : TestAppBase
 
         // test default policy (no error)
         billingProvider.SubscriptionPlanException = null;
-        var purchaseOptions = await app.GetPurchaseOptions();
+        var purchaseOptions = await app.GetPurchaseOptions(TestCancellationToken);
         Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
         Assert.IsNull(purchaseOptions.PurchaseUrl);
@@ -576,7 +576,7 @@ public class ClientProfileTest : TestAppBase
 
         // test default policy (billing error)
         billingProvider.SubscriptionPlanException = new Exception("Billing Error");
-        purchaseOptions = await app.GetPurchaseOptions();
+        purchaseOptions = await app.GetPurchaseOptions(TestCancellationToken);
         Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
@@ -587,7 +587,7 @@ public class ClientProfileTest : TestAppBase
         // test ca policy
         app.UpdateClientCountry("CA");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
-        purchaseOptions = await app.GetPurchaseOptions();
+        purchaseOptions = await app.GetPurchaseOptions(TestCancellationToken);
         Assert.AreEqual(caPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
         Assert.AreEqual(caPolicy.PurchaseUrl, clientProfileInfo.PurchaseUrl);
         Assert.AreEqual(caPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
@@ -597,7 +597,7 @@ public class ClientProfileTest : TestAppBase
         // test cn policy
         app.UpdateClientCountry("CN");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
-        purchaseOptions = await app.GetPurchaseOptions();
+        purchaseOptions = await app.GetPurchaseOptions(TestCancellationToken);
         Assert.AreEqual(cnPolicy.PurchaseUrlMode, clientProfileInfo.PurchaseUrlMode);
         Assert.AreEqual(cnPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
         Assert.IsNull(purchaseOptions.StoreName);

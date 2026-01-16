@@ -5,10 +5,10 @@ namespace VpnHood.AppLib.Abstractions;
 public interface IAppBillingProvider : IDisposable
 {
     string ProviderName { get; }
-    Task<SubscriptionPlan[]> GetSubscriptionPlans();
+    Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken);
 
     /// <returns>Provider Order Id</returns>
-    Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams);
+    Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, CancellationToken cancellationToken);
 
     BillingPurchaseState PurchaseState { get; }
 }

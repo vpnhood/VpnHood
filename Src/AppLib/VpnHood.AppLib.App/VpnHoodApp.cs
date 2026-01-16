@@ -1297,7 +1297,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VhLogger.Instance.LogError(ex, message);
     }
 
-    public async Task<AppPurchaseOptions> GetPurchaseOptions()
+    public async Task<AppPurchaseOptions> GetPurchaseOptions(CancellationToken cancellationToken)
     {
         var profileInfo = CurrentClientProfileInfo;
         var purchaseUrlMode = profileInfo?.PurchaseUrlMode;
@@ -1312,7 +1312,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 var billingService = Services.AccountService?.BillingService;
                 storeName = billingService?.ProviderName;
                 if (billingService != null)
-                    subscriptionPlans = await billingService.GetSubscriptionPlans();
+                    subscriptionPlans = await billingService.GetSubscriptionPlans(cancellationToken);
             }
             catch (Exception ex) {
                 apiError = ex.ToApiError();
@@ -1371,7 +1371,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
             ClientProfileService.Delete(profileInfo.ClientProfileId);
             if (Services.AccountService != null)
-                _ = VhUtils.TryInvokeAsync("Refresh Account", () => Services.AccountService.Refresh(true));
+                _ = VhUtils.TryInvokeAsync("Refresh Account", () => Services.AccountService.Refresh(updateCurrentClientProfile: true, cancellationToken: default));
         }
     }
 

@@ -16,18 +16,18 @@ public class StoreAccountProvider(
         ? new StoreBillingProvider(storeAppId, authenticationProvider, billingProvider)
         : null;
 
-    public async Task<AppAccount?> GetAccount()
+    public async Task<AppAccount?> GetAccount(CancellationToken cancellationToken)
     {
         if (AuthenticationProvider.UserId == null)
             return null;
 
         var httpClient = AuthenticationProvider.HttpClient;
         var authenticationClient = new AuthenticationClient(httpClient);
-        var currentUser = await authenticationClient.GetCurrentUserAsync().Vhc();
+        var currentUser = await authenticationClient.GetCurrentUserAsync(cancellationToken).Vhc();
 
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
         var activeSubscription =
-            await currentVpnUserClient.ListSubscriptionsAsync(storeAppId, false, false).Vhc();
+            await currentVpnUserClient.ListSubscriptionsAsync(storeAppId, false, false, cancellationToken).Vhc();
         var subscriptionLastOrder = activeSubscription.SingleOrDefault()?.LastOrder;
 
         var appAccount = new AppAccount {
@@ -47,17 +47,19 @@ public class StoreAccountProvider(
         return appAccount;
     }
 
-    public async Task<string[]> ListAccessKeys(string subscriptionId)
+    public async Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
     {
         var httpClient = AuthenticationProvider.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
         var accessTokens = await currentVpnUserClient
-            .ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId)).Vhc();
+            .ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId), 
+                cancellationToken: cancellationToken).Vhc();
 
         var accessKeyList = new List<string>();
         foreach (var accessToken in accessTokens) {
-            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(storeAppId, accessToken.AccessTokenId)
-                .Vhc();
+            var accessKey = await currentVpnUserClient.GetAccessKeyAsync(
+                    storeAppId, accessToken.AccessTokenId, 
+                    cancellationToken).Vhc();
             accessKeyList.Add(accessKey);
         }
 

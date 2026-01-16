@@ -60,14 +60,14 @@ public static class NetPacketExtensions
         public IPEndPointPair GetEndPoints()
         {
             if (ipPacket.Protocol == ProtocolType.Tcp) {
-                var tcpPacket = ExtractTcp(ipPacket);
+                var tcpPacket = ipPacket.ExtractTcp();
                 return new IPEndPointPair(
                     new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort),
                     new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
             }
 
             if (ipPacket.Protocol == ProtocolType.Udp) {
-                var udpPacket = ExtractUdp(ipPacket);
+                var udpPacket = ipPacket.ExtractUdp();
                 return new IPEndPointPair(
                     new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort),
                     new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort));

@@ -13,7 +13,7 @@ public static class ExceptionExtensions
             if (ex is ApiException apiException)
                 return apiException.ToApiError();
 
-            var exceptionType = GetExceptionType(ex);
+            var exceptionType = ex.GetExceptionType();
 
             // set best message
             var message = ex.Message;

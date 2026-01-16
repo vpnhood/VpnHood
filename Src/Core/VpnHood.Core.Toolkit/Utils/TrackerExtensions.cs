@@ -10,7 +10,7 @@ public static class TrackerExtensions
     {
         public Task<bool> TryTrack(TrackEvent trackEvent)
         {
-            return TryTrackWithCancellation(tracker, trackEvent, CancellationToken.None);
+            return tracker.TryTrackWithCancellation(trackEvent, CancellationToken.None);
         }
 
         public async Task<bool> TryTrackWithCancellation(TrackEvent trackEvent,
@@ -40,12 +40,12 @@ public static class TrackerExtensions
 
         public Task<bool> TryTrackError(Exception exception, string message, string action)
         {
-            return TryTrackError(tracker, exception, message, action, false);
+            return tracker.TryTrackError(exception, message, action, false);
         }
 
         public Task<bool> TryTrackWarningAsync(Exception exception, string message, string action)
         {
-            return TryTrackError(tracker, exception, message, action, true);
+            return tracker.TryTrackError(exception, message, action, true);
         }
 
         private Task<bool> TryTrackError(Exception exception, string message,

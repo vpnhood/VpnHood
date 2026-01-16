@@ -15,7 +15,7 @@ public static class AndroidExtensions
     {
         public string DrawableEncodeToBase64(int quality)
         {
-            var bitmap = DrawableToBitmap(drawable);
+            var bitmap = drawable.DrawableToBitmap();
             var stream = new MemoryStream();
             if (!bitmap.Compress(Bitmap.CompressFormat.Png!, quality, stream))
                 throw new Exception("Could not compress bitmap to png.");

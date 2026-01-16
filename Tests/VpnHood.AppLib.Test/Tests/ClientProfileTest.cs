@@ -6,6 +6,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Utils;
 
+// ReSharper disable DisposeOnUsingVariable
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]

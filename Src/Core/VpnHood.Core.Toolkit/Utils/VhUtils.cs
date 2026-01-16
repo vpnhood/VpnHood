@@ -278,36 +278,6 @@ public static class VhUtils
         return round ? Math.Round(value) : value;
     }
 
-    public static string FormatMegaBytes(long sizeMb, bool use1024 = false, bool round = false)
-    {
-        var divisor = use1024 ? 1024L : 1000L;
-        var gb = divisor;             // 1 GB = 1024 MB
-        var tb = gb * divisor;        // 1 TB = 1024 * 1024 MB
-        var pb = tb * divisor;        // 1 PB = 1024 * 1024 * 1024 MB
-
-        var negative = sizeMb < 0;
-        var abs = Math.Abs((double)sizeMb);
-        var sign = negative ? "-" : "";
-
-        if (abs >= pb) // Petabyte
-            return sign + GetVal(abs / pb).ToString("0.## ") + "PB";
-
-        if (abs >= tb) // Terabyte
-            return sign + GetVal(abs / tb).ToString("0.# ") + "TB";
-
-        if (abs >= gb) // Gigabyte (No decimal)
-            return sign + GetVal(abs / gb).ToString("0 ") + "GB";
-
-        if (abs > 0) // Megabyte (No decimal)
-            return sign + abs.ToString("0 ") + "MB";
-
-        // Zero megabytes
-        return "0";
-
-        // Helper to handle the "round" bool logic inline
-        double GetVal(double val) => round ? Math.Round(val) : val;
-    }
-
     // Pseudocode:
     // - Input: size (long), use1024 (bool), round (bool)
     // - Define unit sizes (KB, MB, GB, TB) based on use1024
@@ -348,17 +318,14 @@ public static class VhUtils
 
     public static string FormatMegaBytes(long sizeMb, bool use1024 = false, bool round = false)
     {
-        var divisor = use1024 ? 1024d : 1000d;
-        var gb = divisor; // 1 GB = 1024 MB
-        var tb = gb * divisor; // 1 TB = 1024 * 1024 MB
-        var pb = tb * divisor; // 1 PB = 1024 * 1024 * 1024 MB
+        var divisor = use1024 ? 1024L : 1000L;
+        var gb = divisor;             // 1 GB = 1024 MB
+        var tb = gb * divisor;        // 1 TB = 1024 * 1024 MB
+        var pb = tb * divisor;        // 1 PB = 1024 * 1024 * 1024 MB
 
         var negative = sizeMb < 0;
         var abs = Math.Abs((double)sizeMb);
         var sign = negative ? "-" : "";
-
-        // Helper to handle the "round" bool logic inline
-        double GetVal(double val) => round ? Math.Round(val) : val;
 
         if (abs >= pb) // Petabyte
             return sign + GetVal(abs / pb).ToString("0.## ") + "PB";
@@ -374,6 +341,9 @@ public static class VhUtils
 
         // Zero megabytes
         return "0";
+
+        // Helper to handle the "round" bool logic inline
+        double GetVal(double val) => round ? Math.Round(val) : val;
     }
 
     public static string FormatBits(long bytes)

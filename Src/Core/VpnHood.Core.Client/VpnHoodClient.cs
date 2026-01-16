@@ -635,7 +635,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             AutoDisposePackets = true,
             Blocking = true,
             ChannelId = Guid.NewGuid().ToString(),
-            Lifespan = null,
+            Lifespan = null
         });
 
         // add to tunnel

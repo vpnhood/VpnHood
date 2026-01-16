@@ -25,6 +25,6 @@ public static class DebugCommands
         UserReview,
         WinDivert,
         RemoteAccess,
-        ClientProxy,
+        ClientProxy
     ];
 }

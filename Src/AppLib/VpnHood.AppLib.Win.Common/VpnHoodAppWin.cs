@@ -72,7 +72,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
 
     public static void SetWindowTitleBarColor(IntPtr hWnd, VhColor color)
     {
-        var attrValue = new[] { color.B << 16 | color.G << 8 | color.R };
+        var attrValue = new[] { (color.B << 16) | (color.G << 8) | color.R };
         const int captionColor = 35;
         DwmSetWindowAttribute(hWnd, captionColor, attrValue, attrValue.Length * 4);
     }

@@ -47,7 +47,7 @@ public class IpV4Packet : IpPacket
 
         // set header length
         var hl = (20 + optionsLength) / 4;
-        Span[0] = (byte)(4 << 4 | hl);
+        Span[0] = (byte)((4 << 4) | hl);
 
         // set total length
         BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(2, 2), (ushort)buffer.Length);
@@ -104,7 +104,7 @@ public class IpV4Packet : IpPacket
 
     public byte FragmentFlags {
         get => (byte)(Span[6] >> 5);
-        set => Span[6] = (byte)(value << 5 | Span[6] & 0x1F);
+        set => Span[6] = (byte)((value << 5) | (Span[6] & 0x1F));
     }
 
     public bool DontFragment {
@@ -127,7 +127,7 @@ public class IpV4Packet : IpPacket
         get => (ushort)(BinaryPrimitives.ReadUInt16BigEndian(Span.Slice(6, 2)) & 0x1FFF);
         set {
             var flags = (ushort)(BinaryPrimitives.ReadUInt16BigEndian(Span.Slice(6, 2)) & 0xE000);
-            var combined = (ushort)(flags | value & 0x1FFF);
+            var combined = (ushort)(flags | (value & 0x1FFF));
             BinaryPrimitives.WriteUInt16BigEndian(Span.Slice(6, 2), combined);
         }
     }
@@ -135,12 +135,12 @@ public class IpV4Packet : IpPacket
     // ReSharper disable once IdentifierTypo
     public byte Dscp {
         get => (byte)((Span[1] & 0xFC) >> 2);
-        set => Span[1] = (byte)(Span[1] & 0x03 | (value & 0x3F) << 2);
+        set => Span[1] = (byte)((Span[1] & 0x03) | ((value & 0x3F) << 2));
     }
 
     public IpEcnField Ecn {
         get => (IpEcnField)(Span[1] & 0x03);
-        set => Span[1] = (byte)(Span[1] & 0xFC | (byte)value & 0x03);
+        set => Span[1] = (byte)((Span[1] & 0xFC) | ((byte)value & 0x03));
     }
 
     public override byte TimeToLive {
@@ -198,7 +198,7 @@ public class IpV4Packet : IpPacket
             throw new ArgumentException("IPv4 header requires at least 4 bytes to determine packet length.",
                 nameof(buffer));
 
-        return (ushort)(buffer[2] << 8 | buffer[3]);
+        return (ushort)((buffer[2] << 8) | buffer[3]);
     }
 
     protected override void Dispose(bool disposing)

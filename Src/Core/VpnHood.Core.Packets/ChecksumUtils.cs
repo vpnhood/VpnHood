@@ -30,7 +30,7 @@ public static class ChecksumUtils
     {
         uint sum = 0;
         for (var i = 0; i < data.Length; i += 2) {
-            var word = (ushort)(data[i] << 8 | (i + 1 < data.Length ? data[i + 1] : 0));
+            var word = (ushort)((data[i] << 8) | (i + 1 < data.Length ? data[i + 1] : 0));
             sum += word;
         }
 

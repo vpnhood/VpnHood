@@ -18,30 +18,38 @@ public class IpLocationTest : TestAppBase
     [TestMethod]
     public async Task CheckSqliteFromLocationFile()
     {
-        // build db from Ip2LocationLiteDb
+        var sqliteConnectionString = new SqliteConnectionStringBuilder {
+            DataSource = "file:IpLocations?mode=memory&cache=shared",
+            Mode = SqliteOpenMode.Memory,
+            Cache = SqliteCacheMode.Shared
+        }.ToString();
 
-        var dbFile = @"C:\Users\User\Downloads\IpLocations.db";
-        var memoryStream = new MemoryStream(Ip2LocationLiteDb.ZipData);
-        await IpLocationSqliteBuilder.Build(memoryStream, dbFile);
-        await using var ipLocationSqliteProvider = await IpLocationSqliteProvider.Open(dbFile);
+        await using var keepAliveConnection = new SqliteConnection(sqliteConnectionString);
+        await keepAliveConnection.OpenAsync();
 
-        var list = new List<string>();
-        var ranges = await ipLocationSqliteProvider.GetIpRanges("tr");
-        Console.WriteLine(ranges.Count);
+        await using (var memoryStream = new MemoryStream(Ip2LocationLiteDb.ZipData)) {
+            await IpLocationSqliteBuilder.Build(memoryStream, keepAliveConnection);
+        }
 
-        var z = new LocalIpRangeLocationProvider(
+        await using var ipLocationSqliteProvider = await IpLocationSqliteProvider.Open(keepAliveConnection, leaveOpen: true);
+        using var localRangeProvider = new LocalIpRangeLocationProvider(
             () => new ZipArchive(new MemoryStream(Ip2LocationLiteDb.ZipData)),
             () => null);
-        var trRanges = await z.GetIpRanges("TR");
-        Console.WriteLine(trRanges.Count);
-        Console.WriteLine(ranges.SequenceEqual(trRanges));
 
+        // compare ip ranges for a country
+        var sqliteRanges = await ipLocationSqliteProvider.GetIpRanges("TR");
+        var localRanges = await localRangeProvider.GetIpRanges("TR");
+        Assert.IsTrue(sqliteRanges.SequenceEqual(localRanges), "SQLite ranges differ from local ranges for TR.");
 
         // get country by ip using provider
         var ipToCheck = IPAddress.Parse("75.63.95.93");
-        var ipLocation = await ipLocationSqliteProvider.GetLocation(ipToCheck, CancellationToken.None);
-        Console.WriteLine($"IP {ipToCheck} belongs to country: {ipLocation.CountryCode}");
+        var sqliteLocation = await ipLocationSqliteProvider.GetLocation(ipToCheck, CancellationToken.None);
+        var localLocation = await localRangeProvider.GetLocation(ipToCheck, CancellationToken.None);
+        Assert.AreEqual(sqliteLocation.CountryCode, localLocation.CountryCode, "Country code mismatch between providers.");
 
+        // verify ip is in country ranges
+        var sqliteCountryRanges = await ipLocationSqliteProvider.GetIpRanges(sqliteLocation.CountryCode);
+        Assert.IsTrue(sqliteCountryRanges.Any(x => x.IsInRange(ipToCheck)), "SQLite provider ranges do not contain test IP.");
     }
 
     private async Task UpdateIp2LocationFile()

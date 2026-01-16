@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description></Description>
+		<Description>SQLite-backed offline IP range provider for VpnHood.</Description>
 		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
 

@@ -21,6 +21,7 @@ public class ProxyChannel : IProxyChannel
     private readonly Lock _trafficLock = new();
     private bool _isTunnelReadTaskFinished;
     private readonly Job _checkAliveJob;
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool IsDisposed => _isDisposed == 1;
 
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
@@ -72,21 +73,21 @@ public class ProxyChannel : IProxyChannel
         if (_started)
             throw new InvalidOperationException("ProxyChannel is already started.");
 
-        _ = StartInternal();
+        _ = StartInternal(_cancellationTokenSource.Token);
     }
 
-    private async Task StartInternal()
+    private async Task StartInternal(CancellationToken cancellationToken)
     {
         try {
             _started = true;
 
             var tunnelReadTask = CopyFromTunnelAsync(
                 _tunnelClientStream.Stream, _hostClientStream.Stream, _tunnelBufferSize.Receive,
-                CancellationToken.None, CancellationToken.None); // tunnel => host
+                cancellationToken, cancellationToken); // tunnel => host
 
             var tunnelWriteTask = CopyToTunnelAsync(
                 _hostClientStream.Stream, _tunnelClientStream.Stream, _tunnelBufferSize.Send,
-                CancellationToken.None, CancellationToken.None); // host => tunnel
+                cancellationToken, cancellationToken); // host => tunnel
 
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).Vhc();
             _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
@@ -223,6 +224,8 @@ public class ProxyChannel : IProxyChannel
         if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
             return;
 
+        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();
         _checkAliveJob.Dispose();
         _started = false;
         _hostClientStream.Dispose();

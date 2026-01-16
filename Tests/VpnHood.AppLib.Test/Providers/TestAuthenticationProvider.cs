@@ -9,13 +9,13 @@ internal class TestAuthenticationProvider : IAppAuthenticationProvider
     public string? UserId { get; private set; }
     public HttpClient HttpClient { get; } = new();
 
-    public Task SignInWithGoogle(IUiContext uiContext)
+    public Task SignInWithGoogle(IUiContext uiContext, CancellationToken cancellationToken)
     {
         UserId = Guid.Empty.ToString();
         return Task.CompletedTask;
     }
 
-    public Task SignOut(IUiContext uiContext)
+    public Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
     {
         UserId = null;
         return Task.CompletedTask;

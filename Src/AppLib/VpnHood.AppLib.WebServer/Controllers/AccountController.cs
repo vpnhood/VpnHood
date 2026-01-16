@@ -71,12 +71,12 @@ internal class AccountController : ControllerBase, IAccountController
         if (!AccountService.AuthenticationService.IsSignInWithGoogleSupported)
             throw new NotSupportedException("Sign in with Google is not supported.");
 
-        return AccountService.AuthenticationService.SignInWithGoogle(AppUiContext.RequiredContext);
+        return AccountService.AuthenticationService.SignInWithGoogle(AppUiContext.RequiredContext, cancellationToken);
     }
 
     public Task SignOut(CancellationToken cancellationToken)
     {
-        return AccountService.AuthenticationService.SignOut(AppUiContext.RequiredContext);
+        return AccountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, cancellationToken);
     }
 
     public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)

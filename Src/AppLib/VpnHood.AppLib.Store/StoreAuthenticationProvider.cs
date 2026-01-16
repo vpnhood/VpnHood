@@ -107,16 +107,16 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         return null;
     }
 
-    public async Task SignInWithGoogle(IUiContext uiContext)
+    public async Task SignInWithGoogle(IUiContext uiContext, CancellationToken cancellationToken)
     {
         if (_authenticationExternalProvider == null)
             throw new InvalidOperationException("Google sign in is not supported.");
 
         var idToken = await _authenticationExternalProvider.SignIn(uiContext, false).Vhc();
-        await SignInToVpnHoodStore(idToken, true).Vhc();
+        await SignInToVpnHoodStore(idToken, true, cancellationToken).Vhc();
     }
 
-    public async Task SignOut(IUiContext uiContext)
+    public async Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
     {
         ApiKey = null;
         if (File.Exists(ApiKeyFilePath))
@@ -127,7 +127,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
             await _authenticationExternalProvider.SignOut(uiContext).Vhc();
     }
 
-    private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp)
+    private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp, CancellationToken cancellationToken)
     {
         var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
         try {
@@ -135,26 +135,26 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
                     new SignInRequest {
                         IdToken = idToken,
                         RefreshTokenType = RefreshTokenType.None
-                    })
+                    }, cancellationToken)
                 .Vhc();
         }
         // store must update its nuget package to support UnregisteredUserException
         catch (ApiException ex) {
             if (ex.ExceptionTypeName == "UnregisteredUserException" && autoSignUp)
-                await SignUpToVpnHoodStore(idToken).Vhc();
+                await SignUpToVpnHoodStore(idToken, cancellationToken).Vhc();
             else
                 throw;
         }
     }
 
-    private async Task SignUpToVpnHoodStore(string idToken)
+    private async Task SignUpToVpnHoodStore(string idToken, CancellationToken cancellationToken)
     {
         var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
         ApiKey = await authenticationClient.SignUpAsync(
                 new SignUpRequest {
                     IdToken = idToken,
                     RefreshTokenType = RefreshTokenType.None
-                })
+                }, cancellationToken)
             .Vhc();
     }
 

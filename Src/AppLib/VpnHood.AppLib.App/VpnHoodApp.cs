@@ -1371,7 +1371,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
             ClientProfileService.Delete(profileInfo.ClientProfileId);
             if (Services.AccountService != null)
-                _ = VhUtils.TryInvokeAsync("Refresh Account", () => Services.AccountService.Refresh(updateCurrentClientProfile: true, cancellationToken: default));
+                _ = VhUtils.TryInvokeAsync("Refresh Account", 
+                    () => Services.AccountService.Refresh(updateCurrentClientProfile: true, CancellationToken.None));
         }
     }
 

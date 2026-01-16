@@ -1,10 +1,11 @@
-﻿using System.Net;
+﻿using System.IO.Compression;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using LiteDB;
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Test.Providers;
@@ -29,101 +30,33 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class ClientAppTest : TestAppBase
 {
-    private class IpLocationRecord
-    {
-        public int Id { get; set; }
-        [BsonField("c")]
-
-        public string CountryCode { get; set; } = null!;
-        [BsonField("s")]
-        public byte[] StartIp { get; set; } = null!; // Store as 16 bytes for IPv6 compatibility
-        [BsonField("e")]
-        public byte[] EndIp { get; set; } = null!;   // Store as 16 bytes for IPv6 compatibility
-    }
-
-    [TestMethod]
-    public async Task CreateLiteDBFromLocationFile()
-    {
-        var crvFile = @"C:\Users\User\Downloads\IP2LOCATION-LITE-DB1.IPV6.CSV";
-        await using var crvStream = File.OpenRead(crvFile);
-        var countryToIpRanges = await Ip2LocationDbParser.ParseIp2LocationCrv(crvStream, CancellationToken.None);
-
-        // Create database file path near the source file
-        var dbFile = Path.Combine(Path.GetDirectoryName(crvFile)!, "IpLocations.litedb");
-        
-        // Delete existing database if it exists
-        if (File.Exists(dbFile))
-            File.Delete(dbFile);
-
-        // Create and populate the database
-        using var db = new LiteDatabase(dbFile);
-        var collection = db.GetCollection<IpLocationRecord>("iplocations");
-
-        // Create indexes for efficient querying
-        collection.EnsureIndex(x => x.CountryCode);
-        collection.EnsureIndex(x => x.StartIp);
-
-        // Insert all data
-        var recordId = 1;
-        foreach (var countryEntry in countryToIpRanges) {
-            var countryCode = countryEntry.Key;
-            
-            var records = countryEntry.Value.Select(ipRange => new IpLocationRecord {
-                Id = recordId++,
-                CountryCode = countryCode,
-                StartIp = IpToBytes(ipRange.FirstIpAddress),
-                EndIp = IpToBytes(ipRange.LastIpAddress)
-            });
-
-            collection.InsertBulk(records);
-        }
-
-        VhLogger.Instance.LogInformation("LiteDB created successfully at: {DbFile}", dbFile);
-        VhLogger.Instance.LogInformation("Total countries: {Count}", countryToIpRanges.Count);
-        VhLogger.Instance.LogInformation("Total IP ranges: {Count}", collection.Count());
-        VhLogger.Instance.LogInformation("Database size: {Size} MB", new FileInfo(dbFile).Length / 1024.0 / 1024.0);
-    }
-
-    [TestMethod]
+    
+   [TestMethod]
     public async Task CheckSqliteFromLocationFile()
     {
-        var file = @"C:\Users\User\Downloads\IpLocations.db";
-        var connectionString = new SqliteConnectionStringBuilder {
-            DataSource = file,
-            Mode = SqliteOpenMode.ReadOnly
-        }.ToString();
-        await using var connection = new SqliteConnection(connectionString);
-        await connection.OpenAsync();
+        // build db from Ip2LocationLiteDb
+        
+        var dbFile = @"C:\Users\User\Downloads\IpLocations.db";
+        var memoryStream = new MemoryStream(Ip2LocationLiteDb.ZipData);
+        await IpLocationSqlLiteBuilder.Build(memoryStream, dbFile, DateTime.Now);
+        await using var locationSqlLiteProvider = await IpLocationSqlLiteProvider.Open(dbFile);
 
         var list = new List<string>();
-        await using (var cmd = connection.CreateCommand()) {
-            cmd.CommandText = "SELECT CountryCode, StartIp, EndIp FROM IpLocations WHERE CountryCode = @countryCode";
-            cmd.Parameters.AddWithValue("@countryCode", "ir");
-            await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync()) {
-                var countryCode = reader.GetString(0);
-                var startIpBytes = (byte[])reader["StartIp"];
-                var endIpBytes = (byte[])reader["EndIp"];
-                var startIp = BytesToIp(startIpBytes);
-                var endIp = BytesToIp(endIpBytes);
-                list.Add($"{startIp}-{endIp}");
-            }
-        }
+        var ranges = await locationSqlLiteProvider.GetIpRanges("tr");
+        Console.WriteLine(ranges.Count);
 
-        Console.WriteLine(list.Count);
+        var z = new LocalIpRangeLocationProvider(
+            () => new ZipArchive(new MemoryStream(Ip2LocationLiteDb.ZipData)),
+            () => null);
+        var trRanges = await z.GetIpRanges("TR");
+        Console.WriteLine(trRanges.Count);
+        Console.WriteLine(ranges.SequenceEqual(trRanges));
 
-        // get country by ip
+
+        // get country by ip using provider
         var ipToCheck = IPAddress.Parse("75.63.95.93");
-
-        await using (var cmd = connection.CreateCommand()) {
-            var ipBytes = IpToBytes(ipToCheck);
-            cmd.CommandText = @"
-                SELECT CountryCode FROM IpLocations 
-                WHERE @ipBytes BETWEEN StartIp AND EndIp";
-            cmd.Parameters.AddWithValue("@ipBytes", ipBytes);
-            var countryCode = (string?)await cmd.ExecuteScalarAsync();
-            Console.WriteLine($"IP {ipToCheck} belongs to country: {countryCode}");
-        }
+        var ipLocation = await locationSqlLiteProvider.GetLocation(ipToCheck, CancellationToken.None);
+        Console.WriteLine($"IP {ipToCheck} belongs to country: {ipLocation.CountryCode}");
 
     }
 

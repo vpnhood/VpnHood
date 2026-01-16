@@ -6,6 +6,7 @@ using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
+// ReSharper disable LocalizableElement
 
 namespace VpnHood.App.Client.Linux.Web;
 
@@ -93,8 +94,7 @@ internal static class App
             UseShellExecute = true
         });
 
-        VhLogger.Instance.LogInformation("To open VpnHood UI navigate to {0}",
-            url);
+        VhLogger.Instance.LogInformation("To open VpnHood UI navigate to {0}", url);
     }
 
     private static void InstanceOnExiting(object? sender, EventArgs e)

@@ -72,4 +72,8 @@ public class IpLocationIoProvider(HttpClient httpClient, string userAgent, strin
 
         return ipLocation;
     }
+
+    public void Dispose()
+    {
+    }
 }

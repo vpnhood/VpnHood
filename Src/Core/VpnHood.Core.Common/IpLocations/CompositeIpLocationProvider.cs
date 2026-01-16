@@ -47,4 +47,8 @@ public class CompositeIpLocationProvider(
 
         throw new KeyNotFoundException("No location provider could resolve the current IP address.");
     }
+
+    public void Dispose()
+    {
+    }
 }

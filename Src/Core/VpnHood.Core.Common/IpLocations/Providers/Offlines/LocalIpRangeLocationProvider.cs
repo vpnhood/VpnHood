@@ -13,7 +13,7 @@ namespace VpnHood.Core.Common.IpLocations.Providers.Offlines;
 public class LocalIpRangeLocationProvider(
     Func<ZipArchive> zipArchiveFactory,
     Func<string?> currentCountryCodeFunc)
-    : IIpLocationProvider
+    : IIpRangeLocationProvider
 {
     private readonly AsyncLock _lock = new();
     private string? _lasCurrentCountryCode;
@@ -100,5 +100,11 @@ public class LocalIpRangeLocationProvider(
             CityName = null,
             RegionName = null
         };
+    }
+
+    public void Dispose()
+    {
+        if (_zipArchive.IsValueCreated)
+            _zipArchive.Value.Dispose();
     }
 }

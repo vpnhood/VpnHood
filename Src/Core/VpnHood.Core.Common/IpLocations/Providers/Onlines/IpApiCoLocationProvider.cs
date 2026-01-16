@@ -58,4 +58,8 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
 
         return ipLocation;
     }
+
+    public void Dispose()
+    {
+    }
 }

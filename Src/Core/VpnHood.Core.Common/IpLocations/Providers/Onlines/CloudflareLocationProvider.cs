@@ -37,4 +37,8 @@ public class CloudflareLocationProvider(HttpClient httpClient, string userAgent)
 
         return ipLocation;
     }
+
+    public void Dispose()
+    {
+    }
 }

@@ -125,4 +125,8 @@ public class LocalIpLocationProvider : IIpLocationProvider
 
         return new LocalIpLocationProvider(ipRangeInfos);
     }
+
+    public void Dispose()
+    {
+    }
 }

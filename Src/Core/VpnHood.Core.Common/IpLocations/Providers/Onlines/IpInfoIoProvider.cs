@@ -84,4 +84,8 @@ public class IpInfoIoProvider(HttpClient httpClient, string userAgent, string? a
 
         return ipLocation;
     }
+
+    public void Dispose()
+    {
+    }
 }

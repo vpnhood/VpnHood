@@ -14,6 +14,7 @@ public enum EndPointStrategy
     // obsolete values
     [Obsolete]
     TokenFirst = 2,
+
     [Obsolete]
     TokenOnly = 4
 }

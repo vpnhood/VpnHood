@@ -319,9 +319,9 @@ public static class VhUtils
     public static string FormatMegaBytes(long sizeMb, bool use1024 = false, bool round = false)
     {
         var divisor = use1024 ? 1024d : 1000d;
-        var gb = divisor;             // 1 GB = 1024 MB
-        var tb = gb * divisor;        // 1 TB = 1024 * 1024 MB
-        var pb = tb * divisor;        // 1 PB = 1024 * 1024 * 1024 MB
+        var gb = divisor; // 1 GB = 1024 MB
+        var tb = gb * divisor; // 1 TB = 1024 * 1024 MB
+        var pb = tb * divisor; // 1 PB = 1024 * 1024 * 1024 MB
 
         var negative = sizeMb < 0;
         var abs = Math.Abs((double)sizeMb);

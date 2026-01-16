@@ -7,7 +7,6 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.IpLocations.SqliteProvider;
 
-
 public static class IpLocationSqliteBuilder
 {
     // use LocalIpLocationProvider Deserialize to rebuild and compact db if changed
@@ -72,7 +71,8 @@ public static class IpLocationSqliteBuilder
         await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync()) {
             await using var cmd = connection.CreateCommand();
             cmd.Transaction = transaction;
-            cmd.CommandText = "INSERT INTO IpLocations (CountryCode, StartIp, EndIp) VALUES (@countryCode, @startIp, @endIp)";
+            cmd.CommandText =
+                "INSERT INTO IpLocations (CountryCode, StartIp, EndIp) VALUES (@countryCode, @startIp, @endIp)";
 
             var countryCodeParam = cmd.Parameters.Add("@countryCode", SqliteType.Text);
             var startIpParam = cmd.Parameters.Add("@startIp", SqliteType.Blob);
@@ -125,7 +125,8 @@ public static class IpLocationSqliteBuilder
 
     private static async Task<string> ReadChecksum(ZipArchive archive)
     {
-        var checksumEntry = archive.GetEntry("_checksum.txt") ?? throw new FileNotFoundException("checksum.txt not found in archive");
+        var checksumEntry = archive.GetEntry("_checksum.txt") ??
+                            throw new FileNotFoundException("checksum.txt not found in archive");
         await using var stream = await checksumEntry.OpenAsync();
         using var reader = new StreamReader(stream, Encoding.ASCII, leaveOpen: true);
         var content = await reader.ReadToEndAsync();
@@ -137,5 +138,4 @@ public static class IpLocationSqliteBuilder
     {
         return IpLocationSqliteProvider.ToBytes(ipAddress);
     }
-
 }

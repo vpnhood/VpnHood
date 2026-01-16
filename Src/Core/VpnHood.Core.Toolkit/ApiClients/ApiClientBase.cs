@@ -202,7 +202,9 @@ public class ApiClientBase : ApiClientCommon
         await PrepareRequestAsync(client, request, urlBuilder, cancellationToken).Vhc();
 
 
-        using var response = await HttpClientSendAsync(client, request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).Vhc();
+        using var response =
+            await HttpClientSendAsync(client, request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .Vhc();
         var headers = response.Headers.ToDictionary(h => h.Key, h => h.Value);
 
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract

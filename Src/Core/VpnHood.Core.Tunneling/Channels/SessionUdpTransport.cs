@@ -4,7 +4,11 @@ using System.Security.Cryptography;
 namespace VpnHood.Core.Tunneling.Channels;
 
 public class SessionUdpTransport(
-    UdpChannelTransmitter channelTransmitter, ulong sessionId, Span<byte> key, IPEndPoint? remoteEndPoint, bool isServer)
+    UdpChannelTransmitter channelTransmitter,
+    ulong sessionId,
+    Span<byte> key,
+    IPEndPoint? remoteEndPoint,
+    bool isServer)
     : IUdpTransport
 {
     public bool IsServer { get; } = isServer;
@@ -16,8 +20,8 @@ public class SessionUdpTransport(
 
     public Task SendAsync(Memory<byte> buffer)
     {
-        return RemoteEndPoint is not null 
-            ? ChannelTransmitter.SendAsync(sessionId, buffer, RemoteEndPoint, AesGcm) 
+        return RemoteEndPoint is not null
+            ? ChannelTransmitter.SendAsync(sessionId, buffer, RemoteEndPoint, AesGcm)
             : throw new InvalidOperationException("RemoteEndPoint is not set.");
     }
 

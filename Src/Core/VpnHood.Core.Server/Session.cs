@@ -314,6 +314,7 @@ public class Session : IDisposable
             throw;
         }
     }
+
     public bool UseUdpChannel {
         get => _udpChannel != null && field;
         set {

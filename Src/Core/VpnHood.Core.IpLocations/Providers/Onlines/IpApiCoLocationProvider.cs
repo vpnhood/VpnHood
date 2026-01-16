@@ -14,11 +14,14 @@ public class IpApiCoLocationProvider(HttpClient httpClient, string userAgent) : 
         [JsonConverter(typeof(IPAddressConverter))]
         public required IPAddress Ip { get; set; }
 
-        [JsonPropertyName("country_code")] public required string CountryCode { get; set; }
+        [JsonPropertyName("country_code")]
+        public required string CountryCode { get; set; }
 
-        [JsonPropertyName("region")] public string? RegionName { get; set; }
+        [JsonPropertyName("region")]
+        public string? RegionName { get; set; }
 
-        [JsonPropertyName("city")] public string? CityName { get; set; }
+        [JsonPropertyName("city")]
+        public string? CityName { get; set; }
     }
 
     public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)

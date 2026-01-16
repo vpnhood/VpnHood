@@ -21,7 +21,8 @@ public class ProxyEndPointStatus
     public DateTime? LastUsed =>
         LastSucceeded > LastFailed ? LastSucceeded : LastFailed;
 
-    [JsonIgnore] public bool HasUsed => SucceededCount > 0 || FailedCount > 0;
+    [JsonIgnore]
+    public bool HasUsed => SucceededCount > 0 || FailedCount > 0;
 
     public StatusQuality Quality {
         get {

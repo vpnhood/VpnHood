@@ -359,12 +359,14 @@ public class ServerTest : TestBase
 
         // server should listen to port 80 for HTTP-01 challenge
         using var httpClient = new HttpClient();
-        var url = new Uri($"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{accessManager.AcmeHttp01KeyToken}");
+        var url = new Uri(
+            $"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{accessManager.AcmeHttp01KeyToken}");
         var keyAuthorization = await httpClient.GetStringAsync(url);
         Assert.AreEqual(accessManager.AcmeHttp01KeyAuthorization, keyAuthorization);
 
         // check invalid url
-        url = new Uri($"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
+        url = new Uri(
+            $"http://{accessManager.ServerConfig.TcpEndPointsValue[0].Address}:80/.well-known/acme-challenge/{Guid.NewGuid()}");
         var response = await httpClient.GetAsync(url);
         Assert.AreEqual(HttpStatusCode.NotFound, response.StatusCode);
     }

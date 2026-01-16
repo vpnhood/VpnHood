@@ -11,9 +11,15 @@ public class Window : IDisposable
     [StructLayout(LayoutKind.Sequential)]
     private struct WndClassEx
     {
-        [MarshalAs(UnmanagedType.U4)] public uint cbSize;
-        [MarshalAs(UnmanagedType.U4)] public uint style;
-        [MarshalAs(UnmanagedType.FunctionPtr)] public WndProc lpfnWndProc;
+        [MarshalAs(UnmanagedType.U4)]
+        public uint cbSize;
+
+        [MarshalAs(UnmanagedType.U4)]
+        public uint style;
+
+        [MarshalAs(UnmanagedType.FunctionPtr)]
+        public WndProc lpfnWndProc;
+
         public int cbClsExtra;
         public int cbWndExtra;
         public IntPtr hInstance;

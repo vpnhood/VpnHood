@@ -78,8 +78,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             return;
 
         VhLogger.Instance.LogInformation("Stopping web server...");
-         oldServer.TryStop();
-         oldServer.Dispose();
+        oldServer.TryStop();
+        oldServer.Dispose();
         _server = null;
     }
 

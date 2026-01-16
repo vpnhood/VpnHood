@@ -14,9 +14,14 @@ public class NetFilterOptions
     public IpRange[]? ExcludeIpRanges { get; set; }
     public bool? BlockIpV6 { get; set; }
 
-    [JsonIgnore] public bool NetworkIsolationValue => NetworkIsolation ?? true;
-    [JsonIgnore] public bool IncludeLocalNetworkValue => IncludeLocalNetwork ?? false;
-    [JsonIgnore] public bool BlockIpV6Value => BlockIpV6 ?? false;
+    [JsonIgnore]
+    public bool NetworkIsolationValue => NetworkIsolation ?? true;
+
+    [JsonIgnore]
+    public bool IncludeLocalNetworkValue => IncludeLocalNetwork ?? false;
+
+    [JsonIgnore]
+    public bool BlockIpV6Value => BlockIpV6 ?? false;
 
     public void Merge(NetFilterOptions obj)
     {

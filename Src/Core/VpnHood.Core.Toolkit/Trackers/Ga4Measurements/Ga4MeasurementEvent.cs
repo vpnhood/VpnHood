@@ -5,9 +5,11 @@ namespace Ga4.Trackers.Ga4Measurements;
 
 public class Ga4MeasurementEvent : ICloneable
 {
-    [JsonPropertyName("name")] public required string EventName { get; init; }
+    [JsonPropertyName("name")]
+    public required string EventName { get; init; }
 
-    [JsonPropertyName("params")] public Dictionary<string, object?> Parameters { get; set; } = new();
+    [JsonPropertyName("params")]
+    public Dictionary<string, object?> Parameters { get; set; } = new();
 
     public object Clone()
     {

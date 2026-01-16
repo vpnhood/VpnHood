@@ -25,10 +25,19 @@ public static class Win32IpHelper
         public byte OnLinkPrefixLength;
         public uint Metric;
         public uint Protocol;
-        [MarshalAs(UnmanagedType.U1)] public bool Loopback;
-        [MarshalAs(UnmanagedType.U1)] public bool AutoconfigureAddress;
-        [MarshalAs(UnmanagedType.U1)] public bool Publish;
-        [MarshalAs(UnmanagedType.U1)] public bool Immortal;
+
+        [MarshalAs(UnmanagedType.U1)]
+        public bool Loopback;
+
+        [MarshalAs(UnmanagedType.U1)]
+        public bool AutoconfigureAddress;
+
+        [MarshalAs(UnmanagedType.U1)]
+        public bool Publish;
+
+        [MarshalAs(UnmanagedType.U1)]
+        public bool Immortal;
+
         public uint Age;
         public uint Origin;
     }
@@ -43,9 +52,14 @@ public static class Win32IpHelper
     [StructLayout(LayoutKind.Explicit)]
     public struct SOCKADDR_INET
     {
-        [FieldOffset(0)] public SOCKADDR_IN Ipv4;
-        [FieldOffset(0)] public SOCKADDR_IN6 Ipv6;
-        [FieldOffset(0)] public ushort si_family;
+        [FieldOffset(0)]
+        public SOCKADDR_IN Ipv4;
+
+        [FieldOffset(0)]
+        public SOCKADDR_IN6 Ipv6;
+
+        [FieldOffset(0)]
+        public ushort si_family;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 2)]

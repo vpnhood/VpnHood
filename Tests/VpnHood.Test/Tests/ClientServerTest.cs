@@ -450,7 +450,8 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.HttpAccessManagerServer.Stop();
         //accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.Forbidden;
-        await using var client5 = await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
+        await using var client5 =
+            await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
         await Assert.ThrowsExactlyAsync<MaintenanceException>(() => client5.Connect());
 
         await client5.WaitForState(ClientState.Disposed);

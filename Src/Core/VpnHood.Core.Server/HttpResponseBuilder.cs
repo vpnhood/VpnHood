@@ -62,7 +62,8 @@ internal static class HttpResponseBuilder
         return Build(response);
     }
 
-    public static ReadOnlyMemory<byte> Error(HttpStatusCode? httpStatusCode = HttpStatusCode.InternalServerError, string? message = null, bool connectionClose = true)
+    public static ReadOnlyMemory<byte> Error(HttpStatusCode? httpStatusCode = HttpStatusCode.InternalServerError,
+        string? message = null, bool connectionClose = true)
     {
         var response = new HttpResponseMessage(httpStatusCode ?? HttpStatusCode.InternalServerError);
         response.Headers.ConnectionClose = connectionClose;
@@ -81,18 +82,17 @@ internal static class HttpResponseBuilder
 
     public static ReadOnlyMemory<byte> BadRequest(string? message)
     {
-        return Error (HttpStatusCode.BadRequest, message);
+        return Error(HttpStatusCode.BadRequest, message);
     }
 
     public static ReadOnlyMemory<byte> Error(Exception ex)
     {
         return ex switch {
-            HttpRequestException httpRequestException  => Error(httpRequestException.StatusCode, ex.Message),
+            HttpRequestException httpRequestException => Error(httpRequestException.StatusCode, ex.Message),
             KeyNotFoundException => Error(HttpStatusCode.NotFound, ex.Message),
             UnauthorizedAccessException => Unauthorized(),
             ApiException { StatusCode: (int)HttpStatusCode.NotFound } => Error(HttpStatusCode.NotFound, ex.Message),
             _ => Error(HttpStatusCode.InternalServerError, ex.Message)
         };
     }
-
 }

@@ -18,6 +18,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
     private TcpListener? _tcpListener;
     private bool _disposed;
     public bool IsStarted { get; private set; }
+
     public delegate Task<string> Http01KeyAuthorizationFunc(string token);
 
     public void Start()
@@ -48,7 +49,8 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         using var lockAsyncResult = await AsyncLock.LockAsync(
             IPAddressUtil.GetDosKey(client.Client.GetRemoteEndPoint().Address), TimeSpan.Zero, cancellationToken);
         if (!lockAsyncResult.Succeeded)
-            throw new HttpRequestException("Too many requests from the same IP address.", null, HttpStatusCode.TooManyRequests);
+            throw new HttpRequestException("Too many requests from the same IP address.", null,
+                HttpStatusCode.TooManyRequests);
 
         try {
             using var timeoutCt = new CancellationTokenSource(_requestTimeout);

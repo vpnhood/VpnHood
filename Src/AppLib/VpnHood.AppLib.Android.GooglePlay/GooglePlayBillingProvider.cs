@@ -102,8 +102,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
                 // order pricing phases by price amount descending, the first is base price, the rest are discounted prices if any
                 var planPrices = pricingPhases
-                .OrderByDescending(pricingPhase => pricingPhase.PriceAmountMicros)
-                .ToArray();
+                    .OrderByDescending(pricingPhase => pricingPhase.PriceAmountMicros)
+                    .ToArray();
 
                 if (!planPrices.Any()) {
                     VhLogger.Instance.LogWarning("Could not get GooglePlay plan prices for product id {ProductId}",

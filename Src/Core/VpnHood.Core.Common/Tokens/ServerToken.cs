@@ -9,7 +9,8 @@ namespace VpnHood.Core.Common.Tokens;
 
 public class ServerToken
 {
-    [JsonPropertyName("ct")] public required DateTime CreatedTime { get; set; }
+    [JsonPropertyName("ct")]
+    public required DateTime CreatedTime { get; set; }
 
     [JsonPropertyName("hname")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
@@ -23,10 +24,10 @@ public class ServerToken
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public required bool IsValidHostName { get; set; }
 
-    [JsonPropertyName("sec")] 
+    [JsonPropertyName("sec")]
     public required byte[]? Secret { get; set; }
 
-    [JsonPropertyName("ch")] 
+    [JsonPropertyName("ch")]
     public byte[]? CertificateHash { get; set; }
 
     [JsonPropertyName("url")]
@@ -39,7 +40,7 @@ public class ServerToken
         }
     }
 
-    [JsonPropertyName("urls")] 
+    [JsonPropertyName("urls")]
     public string[]? Urls { get; set; }
 
     [JsonPropertyName("ep")]

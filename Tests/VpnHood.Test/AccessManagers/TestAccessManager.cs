@@ -26,8 +26,13 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public Dictionary<string, string> AccessCodes { get; set; } = new();
     public int UserReviewRecommended { get; set; }
     public UserReview? UserReview { get; set; }
-    [Obsolete("Use RedirectServerTokens")] public IPEndPoint? RedirectHostEndPoint { get; set; }
-    [Obsolete("Use RedirectServerTokens")] public IPEndPoint[]? RedirectHostEndPoints { get; set; }
+
+    [Obsolete("Use RedirectServerTokens")]
+    public IPEndPoint? RedirectHostEndPoint { get; set; }
+
+    [Obsolete("Use RedirectServerTokens")]
+    public IPEndPoint[]? RedirectHostEndPoints { get; set; }
+
     public ServerToken[]? RedirectServerTokens { get; set; }
     public string? AcmeHttp01KeyToken { get; set; }
     public string? AcmeHttp01KeyAuthorization { get; set; }
@@ -158,7 +163,6 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
             return null;
 
         return AccessCodes.GetValueOrDefault(validatedAccessCode);
-
     }
 
     protected override void Dispose(bool disposing)

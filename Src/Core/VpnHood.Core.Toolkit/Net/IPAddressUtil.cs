@@ -386,15 +386,13 @@ public static class IPAddressUtil
         if (ip == null)
             throw new ArgumentNullException(nameof(ip));
 
-        switch (ip.AddressFamily)
-        {
+        switch (ip.AddressFamily) {
             // IPv4: use full address
             case AddressFamily.InterNetwork:
                 return ip.ToString();
 
             // IPv6: normalize to /64
-            case AddressFamily.InterNetworkV6:
-            {
+            case AddressFamily.InterNetworkV6: {
                 var bytes = ip.GetAddressBytes();
 
                 // zero last 64 bits

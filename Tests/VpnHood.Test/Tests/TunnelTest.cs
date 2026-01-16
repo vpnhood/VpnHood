@@ -85,7 +85,8 @@ public class TunnelTest : TestBase
     private static (UdpChannel Channel, ServerUdpChannelTransmitterTest Transmitter) CreateServerUdpChannel(
         ulong sessionId, byte[] sessionKey)
     {
-        var serverTransmitter = new ServerUdpChannelTransmitterTest(new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)));
+        var serverTransmitter =
+            new ServerUdpChannelTransmitterTest(new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)));
         var channel = new UdpChannel(serverTransmitter.AddSession(sessionId, sessionKey),
             new UdpChannelOptions {
                 AutoDisposePackets = true,

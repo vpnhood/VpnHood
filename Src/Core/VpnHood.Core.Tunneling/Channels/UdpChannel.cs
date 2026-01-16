@@ -6,13 +6,12 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-
 public class UdpChannel : PacketChannel
 {
     private readonly Memory<byte> _buffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly TaskCompletionSource<bool> _readingTask = new();
     private readonly bool _leaveUdpTransportOpen;
-    
+
     public IUdpTransport UdpTransport { get; }
     public override int OverheadLength => UdpTransport.OverheadLength;
 
@@ -22,6 +21,7 @@ public class UdpChannel : PacketChannel
         UdpTransport.DataReceived = OnDataReceived;
         _leaveUdpTransportOpen = options.LeaveUdpTransportOpen;
     }
+
     protected override Task StartReadTask()
     {
         // already started by UdpChannelTransmitter

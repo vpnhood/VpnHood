@@ -126,7 +126,6 @@ public class TestWebServer : IDisposable
         StartUdpEchoServer();
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer started UDP...");
         return Task.CompletedTask;
-
     }
 
     public static TestWebServer Create()
@@ -175,13 +174,11 @@ public class TestWebServer : IDisposable
     {
         public override void AddRoutes(IRouteMapper mapper)
         {
-            mapper.AddStatic(HttpMethod.GET, "/file1", async ctx => {
-                await ctx.SendPlainText(testWebServer.FileContent1);
-            });
+            mapper.AddStatic(HttpMethod.GET, "/file1",
+                async ctx => { await ctx.SendPlainText(testWebServer.FileContent1); });
 
-            mapper.AddStatic(HttpMethod.GET, "/file2", async ctx => {
-                await ctx.SendPlainText(testWebServer.FileContent2);
-            });
+            mapper.AddStatic(HttpMethod.GET, "/file2",
+                async ctx => { await ctx.SendPlainText(testWebServer.FileContent2); });
         }
     }
 }

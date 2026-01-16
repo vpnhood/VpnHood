@@ -17,13 +17,26 @@ public class TrackingOptions
     public bool IsEnabled =>
         TrackClientIpValue || TrackLocalPortValue || TrackDestinationIpValue || TrackDestinationPortValue;
 
-    [JsonIgnore] public bool TrackClientIpValue => TrackClientIp ?? false;
-    [JsonIgnore] public bool TrackLocalPortValue => TrackLocalPort ?? false;
-    [JsonIgnore] public bool TrackDestinationIpValue => TrackDestinationIp ?? false;
-    [JsonIgnore] public bool TrackDestinationPortValue => TrackDestinationPort ?? false;
-    [JsonIgnore] public bool TrackUdpValue => TrackUdp ?? true;
-    [JsonIgnore] public bool TrackTcpValue => TrackTcp ?? true;
-    [JsonIgnore] public bool TrackIcmpValue => TrackIcmp ?? true;
+    [JsonIgnore]
+    public bool TrackClientIpValue => TrackClientIp ?? false;
+
+    [JsonIgnore]
+    public bool TrackLocalPortValue => TrackLocalPort ?? false;
+
+    [JsonIgnore]
+    public bool TrackDestinationIpValue => TrackDestinationIp ?? false;
+
+    [JsonIgnore]
+    public bool TrackDestinationPortValue => TrackDestinationPort ?? false;
+
+    [JsonIgnore]
+    public bool TrackUdpValue => TrackUdp ?? true;
+
+    [JsonIgnore]
+    public bool TrackTcpValue => TrackTcp ?? true;
+
+    [JsonIgnore]
+    public bool TrackIcmpValue => TrackIcmp ?? true;
 
     public void Merge(TrackingOptions obj)
     {

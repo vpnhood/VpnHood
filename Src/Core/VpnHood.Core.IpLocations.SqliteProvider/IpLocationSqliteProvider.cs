@@ -8,7 +8,6 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.IpLocations.SqliteProvider;
 
-
 public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposable
 {
     private readonly Lazy<SqliteConnection> _connection;
@@ -84,7 +83,8 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
 
         var ranges = new List<IpRange>();
         await using var cmd = _connection.Value.CreateCommand();
-        cmd.CommandText = "SELECT StartIp, EndIp FROM IpLocations WHERE CountryCode = @countryCode COLLATE NOCASE ORDER BY StartIp";
+        cmd.CommandText =
+            "SELECT StartIp, EndIp FROM IpLocations WHERE CountryCode = @countryCode COLLATE NOCASE ORDER BY StartIp";
         cmd.Parameters.AddWithValue("@countryCode", countryCode);
 
         await using var reader = await cmd.ExecuteReaderAsync();

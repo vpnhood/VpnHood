@@ -78,9 +78,9 @@ public class ServerFinder(
 
         // flatten the results into a single enumerable
         var results = resolved.SelectMany(x => x)
-            .Where(x => 
-                x.TcpEndPoint.IsV4() || 
-                (x.TcpEndPoint.IsV6() && includeIpV6) || 
+            .Where(x =>
+                x.TcpEndPoint.IsV4() ||
+                (x.TcpEndPoint.IsV6() && includeIpV6) ||
                 x.TcpEndPoint.Address.IsLoopback()) // loopback addresses are for tests
             .ToArray();
 

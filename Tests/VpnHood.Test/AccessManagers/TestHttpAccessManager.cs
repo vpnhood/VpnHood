@@ -21,7 +21,8 @@ public class TestHttpAccessManager : HttpAccessManager
     public static TestHttpAccessManager Create(IAccessManager baseAccessManager,
         bool autoDisposeBaseAccessManager = true)
     {
-        var accessManagerServer = new TestHttpAccessManagerServer(baseAccessManager, autoDisposeBaseAccessManager: autoDisposeBaseAccessManager);
+        var accessManagerServer = new TestHttpAccessManagerServer(baseAccessManager,
+            autoDisposeBaseAccessManager: autoDisposeBaseAccessManager);
         accessManagerServer.Start();
 
         var accessManagerOptions = new HttpAccessManagerOptions(accessManagerServer.BaseUri, "Bearer");

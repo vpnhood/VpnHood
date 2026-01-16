@@ -39,14 +39,13 @@ public class TestHttpAccessManagerServer : IDisposable
         server
             .AddRouteMapper(isDebugMode: true)
             .AddController(new ApiController(this));
-        
+
         return server;
     }
 
     private async Task DefaultRoute(HttpContextBase ctx)
     {
-        if (HttpExceptionStatusCode != null)
-        {
+        if (HttpExceptionStatusCode != null) {
             ctx.Response.StatusCode = (int)HttpExceptionStatusCode.Value;
             await ctx.Response.Send();
             return;

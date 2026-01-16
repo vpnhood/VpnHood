@@ -15,7 +15,8 @@ public class ServerUdpChannelTransmitter(UdpClient udpClient, SessionManager ses
 
         // Currently only one UDP transport per session is supported on the server side.
         // so if we change the channelTransmitter of the old one. We do not create a new one because its creates a cryptographic overhead.
-        var udpTransport = (SessionUdpTransport)session.UseUdpTransport(()=> new SessionUdpTransport(this, sessionId, session.SessionKey, null, true));
+        var udpTransport = (SessionUdpTransport)session.UseUdpTransport(() =>
+            new SessionUdpTransport(this, sessionId, session.SessionKey, null, true));
         udpTransport.ChannelTransmitter = this;
         return udpTransport;
     }

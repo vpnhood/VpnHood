@@ -7,13 +7,13 @@ namespace VpnHood.Core.Server.Access.Configurations;
 
 public class ServerConfig
 {
-    [JsonPropertyName("Tracking")] 
+    [JsonPropertyName("Tracking")]
     public TrackingOptions TrackingOptions { get; set; } = new();
 
-    [JsonPropertyName("Session")] 
+    [JsonPropertyName("Session")]
     public SessionOptions SessionOptions { get; set; } = new();
 
-    [JsonPropertyName("NetFilter")] 
+    [JsonPropertyName("NetFilter")]
     public NetFilterOptions NetFilterOptions { get; set; } = new();
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
@@ -48,16 +48,16 @@ public class ServerConfig
     public IPEndPoint[] UdpEndPointsValue =>
         UdpEndPoints ?? [new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.IPv6Any, 0)];
 
-    [JsonIgnore] 
+    [JsonIgnore]
     public IPAddress[] DnsServersValue => DnsServers ?? IPAddressUtil.GoogleDnsServers;
-    
-    [JsonIgnore] 
+
+    [JsonIgnore]
     public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);
-    
-    [JsonIgnore] 
+
+    [JsonIgnore]
     public bool LogAnonymizerValue => LogAnonymizer ?? true;
-    
-    [JsonIgnore] 
+
+    [JsonIgnore]
     public string? TcpCongestionControlValue => TcpCongestionControl;
 
     [JsonIgnore]

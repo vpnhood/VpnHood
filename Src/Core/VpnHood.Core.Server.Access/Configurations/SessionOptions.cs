@@ -39,24 +39,59 @@ public class SessionOptions
     public bool? AllowTcpProxy { get; set; }
     public bool? AllowTcpPacket { get; set; }
 
-    [JsonIgnore] public TimeSpan TimeoutValue => Timeout ?? TimeSpan.FromMinutes(30);
-    [JsonIgnore] public TimeSpan UdpTimeoutValue => UdpTimeout ?? TimeSpan.FromMinutes(1);
-    [JsonIgnore] public TransferBufferSize? UdpChannelBufferSizeValue => UdpChannelBufferSize ?? null;
-    [JsonIgnore] public TransferBufferSize? UdpProxyBufferSizeValue => UdpProxyBufferSize ?? null;
-    [JsonIgnore] public TimeSpan TcpTimeoutValue => TcpTimeout ?? TimeSpan.FromMinutes(15);
-    [JsonIgnore] public TimeSpan IcmpTimeoutValue => IcmpTimeout ?? TimeSpan.FromSeconds(30);
-    [JsonIgnore] public TimeSpan SyncIntervalValue => SyncInterval ?? TimeSpan.FromMinutes(20);
-    [JsonIgnore] public long SyncCacheSizeValue => SyncCacheSize ?? 100 * 1000000; // 100 MB
-    [JsonIgnore] public int MaxPacketChannelCountValue => MaxPacketChannelCount ?? 8;
-    [JsonIgnore] public int MaxUdpClientCountValue => MaxUdpClientCount ?? 500;
-    [JsonIgnore] public int MaxIcmpClientCountValue => MaxIcmpClientCount ?? 20;
-    [JsonIgnore] public TimeSpan TcpConnectTimeoutValue => TcpConnectTimeout ?? TimeSpan.FromSeconds(30);
-    [JsonIgnore] public TimeSpan TcpReuseTimeoutValue => TcpReuseTimeout ?? TimeSpan.FromSeconds(40);
-    [JsonIgnore] public int MaxTcpConnectWaitCountValue => MaxTcpConnectWaitCount ?? 500;
-    [JsonIgnore] public int MaxTcpChannelCountValue => MaxTcpChannelCount ?? 1000;
-    [JsonIgnore] public bool UseUdpProxy2Value => UseUdpProxy2 ?? true;
-    [JsonIgnore] public bool AllowTcpProxyValue => AllowTcpProxy ?? true;
-    [JsonIgnore] public bool AllowTcpPacketValue => AllowTcpPacket ?? true;
+    [JsonIgnore]
+    public TimeSpan TimeoutValue => Timeout ?? TimeSpan.FromMinutes(30);
+
+    [JsonIgnore]
+    public TimeSpan UdpTimeoutValue => UdpTimeout ?? TimeSpan.FromMinutes(1);
+
+    [JsonIgnore]
+    public TransferBufferSize? UdpChannelBufferSizeValue => UdpChannelBufferSize ?? null;
+
+    [JsonIgnore]
+    public TransferBufferSize? UdpProxyBufferSizeValue => UdpProxyBufferSize ?? null;
+
+    [JsonIgnore]
+    public TimeSpan TcpTimeoutValue => TcpTimeout ?? TimeSpan.FromMinutes(15);
+
+    [JsonIgnore]
+    public TimeSpan IcmpTimeoutValue => IcmpTimeout ?? TimeSpan.FromSeconds(30);
+
+    [JsonIgnore]
+    public TimeSpan SyncIntervalValue => SyncInterval ?? TimeSpan.FromMinutes(20);
+
+    [JsonIgnore]
+    public long SyncCacheSizeValue => SyncCacheSize ?? 100 * 1000000; // 100 MB
+
+    [JsonIgnore]
+    public int MaxPacketChannelCountValue => MaxPacketChannelCount ?? 8;
+
+    [JsonIgnore]
+    public int MaxUdpClientCountValue => MaxUdpClientCount ?? 500;
+
+    [JsonIgnore]
+    public int MaxIcmpClientCountValue => MaxIcmpClientCount ?? 20;
+
+    [JsonIgnore]
+    public TimeSpan TcpConnectTimeoutValue => TcpConnectTimeout ?? TimeSpan.FromSeconds(30);
+
+    [JsonIgnore]
+    public TimeSpan TcpReuseTimeoutValue => TcpReuseTimeout ?? TimeSpan.FromSeconds(40);
+
+    [JsonIgnore]
+    public int MaxTcpConnectWaitCountValue => MaxTcpConnectWaitCount ?? 500;
+
+    [JsonIgnore]
+    public int MaxTcpChannelCountValue => MaxTcpChannelCount ?? 1000;
+
+    [JsonIgnore]
+    public bool UseUdpProxy2Value => UseUdpProxy2 ?? true;
+
+    [JsonIgnore]
+    public bool AllowTcpProxyValue => AllowTcpProxy ?? true;
+
+    [JsonIgnore]
+    public bool AllowTcpPacketValue => AllowTcpPacket ?? true;
 
 
     public void Merge(SessionOptions obj)

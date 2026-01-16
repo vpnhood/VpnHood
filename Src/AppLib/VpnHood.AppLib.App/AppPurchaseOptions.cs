@@ -11,5 +11,4 @@ public class AppPurchaseOptions
     public required SubscriptionPlan[] SubscriptionPlans { get; init; }
     public required Uri? PurchaseUrl { get; init; }
     public required bool CanGoPremiumByCode { get; init; }
-
 }

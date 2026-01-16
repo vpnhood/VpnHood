@@ -568,15 +568,19 @@ export class AppClient {
         return Promise.resolve<AppState>(null as any);
     }
 
-    connect(clientProfileId?: string | null | undefined, serverLocation?: string | null | undefined, planId?: ConnectPlanId | undefined, cancelToken?: CancelToken): Promise<void> {
+    connect(clientProfileId: string | null, serverLocation: string | null, planId: ConnectPlanId, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/connect?";
-        if (clientProfileId !== undefined && clientProfileId !== null)
+        if (clientProfileId === undefined)
+            throw new globalThis.Error("The parameter 'clientProfileId' must be defined.");
+        else if(clientProfileId !== null)
             url_ += "clientProfileId=" + encodeURIComponent("" + clientProfileId) + "&";
-        if (serverLocation !== undefined && serverLocation !== null)
+        if (serverLocation === undefined)
+            throw new globalThis.Error("The parameter 'serverLocation' must be defined.");
+        else if(serverLocation !== null)
             url_ += "serverLocation=" + encodeURIComponent("" + serverLocation) + "&";
-        if (planId === null)
-            throw new globalThis.Error("The parameter 'planId' cannot be null.");
-        else if (planId !== undefined)
+        if (planId === undefined || planId === null)
+            throw new globalThis.Error("The parameter 'planId' must be defined and cannot be null.");
+        else
             url_ += "planId=" + encodeURIComponent("" + planId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -620,15 +624,19 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
-    diagnose(clientProfileId?: string | null | undefined, serverLocation?: string | null | undefined, planId?: ConnectPlanId | undefined, cancelToken?: CancelToken): Promise<void> {
+    diagnose(clientProfileId: string | null, serverLocation: string | null, planId: ConnectPlanId, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/diagnose?";
-        if (clientProfileId !== undefined && clientProfileId !== null)
+        if (clientProfileId === undefined)
+            throw new globalThis.Error("The parameter 'clientProfileId' must be defined.");
+        else if(clientProfileId !== null)
             url_ += "clientProfileId=" + encodeURIComponent("" + clientProfileId) + "&";
-        if (serverLocation !== undefined && serverLocation !== null)
+        if (serverLocation === undefined)
+            throw new globalThis.Error("The parameter 'serverLocation' must be defined.");
+        else if(serverLocation !== null)
             url_ += "serverLocation=" + encodeURIComponent("" + serverLocation) + "&";
-        if (planId === null)
-            throw new globalThis.Error("The parameter 'planId' cannot be null.");
-        else if (planId !== undefined)
+        if (planId === undefined || planId === null)
+            throw new globalThis.Error("The parameter 'planId' must be defined and cannot be null.");
+        else
             url_ += "planId=" + encodeURIComponent("" + planId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -2219,8 +2227,28 @@ export class ProxyEndPointClient {
         return Promise.resolve<AppProxyEndPointInfo>(null as any);
     }
 
-    list( cancelToken?: CancelToken): Promise<AppProxyEndPointInfo[]> {
-        let url_ = this.baseUrl + "/api/proxy-endpoints";
+    list(includeSucceeded?: boolean | undefined, includeFailed?: boolean | undefined, includeUnknown?: boolean | undefined, includeDisabled?: boolean | undefined, recordIndex?: number | null | undefined, recordCount?: number | null | undefined, cancelToken?: CancelToken): Promise<AppProxyEndPointInfo[]> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints?";
+        if (includeSucceeded === null)
+            throw new globalThis.Error("The parameter 'includeSucceeded' cannot be null.");
+        else if (includeSucceeded !== undefined)
+            url_ += "includeSucceeded=" + encodeURIComponent("" + includeSucceeded) + "&";
+        if (includeFailed === null)
+            throw new globalThis.Error("The parameter 'includeFailed' cannot be null.");
+        else if (includeFailed !== undefined)
+            url_ += "includeFailed=" + encodeURIComponent("" + includeFailed) + "&";
+        if (includeUnknown === null)
+            throw new globalThis.Error("The parameter 'includeUnknown' cannot be null.");
+        else if (includeUnknown !== undefined)
+            url_ += "includeUnknown=" + encodeURIComponent("" + includeUnknown) + "&";
+        if (includeDisabled === null)
+            throw new globalThis.Error("The parameter 'includeDisabled' cannot be null.");
+        else if (includeDisabled !== undefined)
+            url_ += "includeDisabled=" + encodeURIComponent("" + includeDisabled) + "&";
+        if (recordIndex !== undefined && recordIndex !== null)
+            url_ += "recordIndex=" + encodeURIComponent("" + recordIndex) + "&";
+        if (recordCount !== undefined && recordCount !== null)
+            url_ += "recordCount=" + encodeURIComponent("" + recordCount) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -2326,8 +2354,24 @@ export class ProxyEndPointClient {
         return Promise.resolve<AppProxyEndPointInfo>(null as any);
     }
 
-    deleteAll( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/proxy-endpoints";
+    deleteAll(deleteSucceeded: boolean, deleteFailed: boolean, deleteUnknown: boolean, deleteDisabled: boolean, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints?";
+        if (deleteSucceeded === undefined || deleteSucceeded === null)
+            throw new globalThis.Error("The parameter 'deleteSucceeded' must be defined and cannot be null.");
+        else
+            url_ += "deleteSucceeded=" + encodeURIComponent("" + deleteSucceeded) + "&";
+        if (deleteFailed === undefined || deleteFailed === null)
+            throw new globalThis.Error("The parameter 'deleteFailed' must be defined and cannot be null.");
+        else
+            url_ += "deleteFailed=" + encodeURIComponent("" + deleteFailed) + "&";
+        if (deleteUnknown === undefined || deleteUnknown === null)
+            throw new globalThis.Error("The parameter 'deleteUnknown' must be defined and cannot be null.");
+        else
+            url_ += "deleteUnknown=" + encodeURIComponent("" + deleteUnknown) + "&";
+        if (deleteDisabled === undefined || deleteDisabled === null)
+            throw new globalThis.Error("The parameter 'deleteDisabled' must be defined and cannot be null.");
+        else
+            url_ += "deleteDisabled=" + encodeURIComponent("" + deleteDisabled) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -2695,6 +2739,50 @@ export class ProxyEndPointClient {
     }
 
     protected processReloadUrl(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    disableAllFailed( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/proxy-endpoints/disable-failed";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processDisableAllFailed(_response);
+        });
+    }
+
+    protected processDisableAllFailed(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -4790,9 +4878,11 @@ export interface IDomainFilter {
 export enum EndPointStrategy {
     Auto = "Auto",
     DnsFirst = "DnsFirst",
-    TokenFirst = "TokenFirst",
+    IpFirst = "IpFirst",
+    TokenFirst = "IpFirst",
     DnsOnly = "DnsOnly",
-    TokenOnly = "TokenOnly",
+    IpOnly = "IpOnly",
+    TokenOnly = "IpOnly",
 }
 
 export enum DnsMode {
@@ -4916,6 +5006,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
     accessCode?: string | null;
     locationInfos!: ClientServerLocationInfo[];
     purchaseUrl?: string | null;
+    canGoPremiumByCode!: boolean;
     purchaseUrlMode!: PurchaseUrlMode;
     customServerEndpoints?: string[] | null;
     selectedLocationInfo?: ClientServerLocationInfo | null;
@@ -4963,6 +5054,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
                 this.locationInfos = null as any;
             }
             this.purchaseUrl = _data["purchaseUrl"] !== undefined ? _data["purchaseUrl"] : null as any;
+            this.canGoPremiumByCode = _data["canGoPremiumByCode"] !== undefined ? _data["canGoPremiumByCode"] : null as any;
             this.purchaseUrlMode = _data["purchaseUrlMode"] !== undefined ? _data["purchaseUrlMode"] : null as any;
             if (Array.isArray(_data["customServerEndpoints"])) {
                 this.customServerEndpoints = [] as any;
@@ -5007,6 +5099,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
                 data["locationInfos"].push(item ? item.toJSON() : null as any);
         }
         data["purchaseUrl"] = this.purchaseUrl !== undefined ? this.purchaseUrl : null as any;
+        data["canGoPremiumByCode"] = this.canGoPremiumByCode !== undefined ? this.canGoPremiumByCode : null as any;
         data["purchaseUrlMode"] = this.purchaseUrlMode !== undefined ? this.purchaseUrlMode : null as any;
         if (Array.isArray(this.customServerEndpoints)) {
             data["customServerEndpoints"] = [];
@@ -5033,6 +5126,7 @@ export interface IClientProfileInfo {
     accessCode?: string | null;
     locationInfos: ClientServerLocationInfo[];
     purchaseUrl?: string | null;
+    canGoPremiumByCode: boolean;
     purchaseUrlMode: PurchaseUrlMode;
     customServerEndpoints?: string[] | null;
     selectedLocationInfo?: ClientServerLocationInfo | null;
@@ -5419,6 +5513,7 @@ export class SubscriptionPlan implements ISubscriptionPlan {
     period!: string;
     planToken!: string;
     currencySymbol!: string;
+    currencyCode!: string;
 
     constructor(data?: ISubscriptionPlan) {
         if (data) {
@@ -5436,6 +5531,7 @@ export class SubscriptionPlan implements ISubscriptionPlan {
             this.period = _data["period"] !== undefined ? _data["period"] : null as any;
             this.planToken = _data["planToken"] !== undefined ? _data["planToken"] : null as any;
             this.currencySymbol = _data["currencySymbol"] !== undefined ? _data["currencySymbol"] : null as any;
+            this.currencyCode = _data["currencyCode"] !== undefined ? _data["currencyCode"] : null as any;
         }
     }
 
@@ -5453,6 +5549,7 @@ export class SubscriptionPlan implements ISubscriptionPlan {
         data["period"] = this.period !== undefined ? this.period : null as any;
         data["planToken"] = this.planToken !== undefined ? this.planToken : null as any;
         data["currencySymbol"] = this.currencySymbol !== undefined ? this.currencySymbol : null as any;
+        data["currencyCode"] = this.currencyCode !== undefined ? this.currencyCode : null as any;
         return data;
     }
 }
@@ -5463,6 +5560,7 @@ export interface ISubscriptionPlan {
     period: string;
     planToken: string;
     currencySymbol: string;
+    currencyCode: string;
 }
 
 export class PurchaseParams implements IPurchaseParams {
@@ -5503,9 +5601,11 @@ export interface IPurchaseParams {
 
 export class AppPurchaseOptions implements IAppPurchaseOptions {
     storeName?: string | null;
+    isStoreAvailable!: boolean;
     storeError?: ApiError | null;
     subscriptionPlans!: SubscriptionPlan[];
     purchaseUrl?: string | null;
+    canGoPremiumByCode!: boolean;
 
     constructor(data?: IAppPurchaseOptions) {
         if (data) {
@@ -5522,6 +5622,7 @@ export class AppPurchaseOptions implements IAppPurchaseOptions {
     init(_data?: any) {
         if (_data) {
             this.storeName = _data["storeName"] !== undefined ? _data["storeName"] : null as any;
+            this.isStoreAvailable = _data["isStoreAvailable"] !== undefined ? _data["isStoreAvailable"] : null as any;
             this.storeError = _data["storeError"] ? ApiError.fromJS(_data["storeError"]) : null as any;
             if (Array.isArray(_data["subscriptionPlans"])) {
                 this.subscriptionPlans = [] as any;
@@ -5532,6 +5633,7 @@ export class AppPurchaseOptions implements IAppPurchaseOptions {
                 this.subscriptionPlans = null as any;
             }
             this.purchaseUrl = _data["purchaseUrl"] !== undefined ? _data["purchaseUrl"] : null as any;
+            this.canGoPremiumByCode = _data["canGoPremiumByCode"] !== undefined ? _data["canGoPremiumByCode"] : null as any;
         }
     }
 
@@ -5545,6 +5647,7 @@ export class AppPurchaseOptions implements IAppPurchaseOptions {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["storeName"] = this.storeName !== undefined ? this.storeName : null as any;
+        data["isStoreAvailable"] = this.isStoreAvailable !== undefined ? this.isStoreAvailable : null as any;
         data["storeError"] = this.storeError ? this.storeError.toJSON() : null as any;
         if (Array.isArray(this.subscriptionPlans)) {
             data["subscriptionPlans"] = [];
@@ -5552,15 +5655,18 @@ export class AppPurchaseOptions implements IAppPurchaseOptions {
                 data["subscriptionPlans"].push(item ? item.toJSON() : null as any);
         }
         data["purchaseUrl"] = this.purchaseUrl !== undefined ? this.purchaseUrl : null as any;
+        data["canGoPremiumByCode"] = this.canGoPremiumByCode !== undefined ? this.canGoPremiumByCode : null as any;
         return data;
     }
 }
 
 export interface IAppPurchaseOptions {
     storeName?: string | null;
+    isStoreAvailable: boolean;
     storeError?: ApiError | null;
     subscriptionPlans: SubscriptionPlan[];
     purchaseUrl?: string | null;
+    canGoPremiumByCode: boolean;
 }
 
 export class ClientProfileUpdateParams implements IClientProfileUpdateParams {

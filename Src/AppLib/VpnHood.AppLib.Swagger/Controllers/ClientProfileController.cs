@@ -10,25 +10,26 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 public class ClientProfileController : ControllerBase, IClientProfileController
 {
     [HttpPut("access-keys")]
-    public Task<ClientProfileInfo> AddByAccessKey(string accessKey)
+    public Task<ClientProfileInfo> AddByAccessKey(string accessKey, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpGet("{clientProfileId}")]
-    public Task<ClientProfileInfo> Get(Guid clientProfileId)
+    public Task<ClientProfileInfo> Get(Guid clientProfileId, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPatch("{clientProfileId}")]
-    public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams,
+        CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpDelete("{clientProfileId}")]
-    public Task Delete(Guid clientProfileId)
+    public Task Delete(Guid clientProfileId, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

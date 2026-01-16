@@ -464,7 +464,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // restart if the maximum I/O error count is exceeded
             if (_autoRestart) {
-                _ = RestartAdapter();
+                _ = RestartAdapter(CancellationToken.None);
                 throw;
             }
 
@@ -532,7 +532,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
                 // restart if the maximum I/O error count is exceeded
                 if (_autoRestart) {
-                    _ = RestartAdapter();
+                    _ = RestartAdapter(CancellationToken.None);
                     continue;
                 }
 
@@ -574,7 +574,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
-    private async Task RestartAdapter()
+    private async Task RestartAdapter(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogWarning("Restarting the adapter.");
         ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -585,7 +585,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         _isRestarting = false;
         try {
             AdapterClose();
-            await AdapterOpen(CancellationToken.None);
+            await AdapterOpen(cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to restart the adapter.");

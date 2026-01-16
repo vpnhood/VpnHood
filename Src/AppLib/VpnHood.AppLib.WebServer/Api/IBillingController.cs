@@ -6,7 +6,7 @@ namespace VpnHood.AppLib.WebServer.Api;
 
 public interface IBillingController
 {
-    Task<SubscriptionPlan[]> GetSubscriptionPlans();
-    Task<string> Purchase(PurchaseParams purchaseParams);
-    Task<AppPurchaseOptions> GetPurchaseOptions();
+    Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken);
+    Task<string> Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken);
+    Task<AppPurchaseOptions> GetPurchaseOptions(CancellationToken cancellationToken);
 }

@@ -10,13 +10,13 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 public class AccountController : ControllerBase, IAccountController
 {
     [HttpGet]
-    public Task<AppAccount?> Get()
+    public Task<AppAccount?> Get(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("refresh")]
-    public Task Refresh()
+    public Task Refresh(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -29,19 +29,19 @@ public class AccountController : ControllerBase, IAccountController
     }
 
     [HttpPost("signin-with-google")]
-    public Task SignInWithGoogle()
+    public Task SignInWithGoogle(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("sign-out")]
-    public new Task SignOut()
+    public new Task SignOut(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpGet("subscriptions/{subscriptionId}/access-keys")]
-    public Task<string[]> ListAccessKeys(string subscriptionId)
+    public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

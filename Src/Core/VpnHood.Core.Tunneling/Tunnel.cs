@@ -39,7 +39,7 @@ public class Tunnel : PassthroughPacketTransport
                 return new Traffic();
 
             if (_speedometerJob == null)
-                UpdateSpeed(CancellationToken.None);
+                UpdateSpeed();
 
             lock (_speedLock) {
                 return _speed;
@@ -51,11 +51,17 @@ public class Tunnel : PassthroughPacketTransport
     {
         _channelManager = new ChannelManager(options.MaxPacketChannelCount, Channel_OnPacketReceived);
         _speedometerJob = options.UseSpeedometerTimer
-            ? new Job(UpdateSpeed, _speedometerThreshold, "TunnelSpeedometer")
+            ? new Job(UpdateSpeedJob, _speedometerThreshold, "TunnelSpeedometer")
             : null;
     }
 
-    private ValueTask UpdateSpeed(CancellationToken cancellationToken)
+    private ValueTask UpdateSpeedJob(CancellationToken arg)
+    {
+        UpdateSpeed();
+        return ValueTask.CompletedTask;
+    }
+
+    private void UpdateSpeed()
     {
         if (IsDisposed)
             throw new ObjectDisposedException(nameof(Tunnel));
@@ -65,7 +71,7 @@ public class Tunnel : PassthroughPacketTransport
             var traffic = _channelManager.Traffic;
             var duration = (now - _lastSpeedUpdateTime).TotalSeconds;
             if (duration < 1)
-                return default;
+                return;
 
             var sendSpeed = (long)((traffic.Sent - _lastTraffic.Sent) / duration);
             var receivedSpeed = (long)((traffic.Received - _lastTraffic.Received) / duration);
@@ -78,8 +84,6 @@ public class Tunnel : PassthroughPacketTransport
                 _lastTraffic = traffic;
             }
         }
-
-        return default;
     }
 
     private void Channel_OnPacketReceived(object? sender, IpPacket ipPacket)

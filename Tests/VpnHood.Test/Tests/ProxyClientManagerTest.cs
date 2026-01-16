@@ -45,7 +45,7 @@ public class ProxyEndPointManagerTest : TestBase
         var target = new IPEndPoint(IPAddress.Loopback, 443);
 
         var ex = await Assert.ThrowsExactlyAsync<SocketException>(async () =>
-            await mgr.ConnectAsync(target, null, CancellationToken.None));
+            await mgr.ConnectAsync(target, null, TestCancellationToken));
         Assert.AreEqual((int)SocketError.NetworkUnreachable, ex.ErrorCode);
     }
 
@@ -118,7 +118,7 @@ public class ProxyEndPointManagerTest : TestBase
         var proxyOptions = new ProxyOptions { ProxyEndPoints = proxyEndPoints };
         var mgr = new ProxyEndPointManager(proxyOptions: proxyOptions, storagePath: TestHelper.WorkingPath,
             socketFactory: socketFactory);
-        await mgr.CheckServers(CancellationToken.None);
+        await mgr.CheckServers(TestCancellationToken);
 
         // All non-SOCKS5 servers should be marked as inactive
         Assert.IsTrue(mgr.Status.ProxyEndPointInfos.All(status => !status.EndPoint.IsEnabled));

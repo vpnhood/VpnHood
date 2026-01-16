@@ -3,6 +3,7 @@ using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Client.Device.UiContexts;
+using WatsonWebserver.Core;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
@@ -18,33 +19,33 @@ internal class BillingController : ControllerBase, IBillingController
         const string baseUrl = "/api/billing/";
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "subscription-plans", async ctx => {
-            var res = await GetSubscriptionPlans();
+            var res = await GetSubscriptionPlans(ctx.Token);
             await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "purchase", async ctx => {
             var purchaseParams = ctx.ReadJson<PurchaseParams>();
-            var res = await Purchase(purchaseParams);
+            var res = await Purchase(purchaseParams, ctx.Token);
             await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "purchase-options", async ctx => {
-            var res = await GetPurchaseOptions();
+            var res = await GetPurchaseOptions(ctx.Token);
             await ctx.SendJson(res);
         });
     }
 
-    public Task<SubscriptionPlan[]> GetSubscriptionPlans()
+    public Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         return BillingService.GetSubscriptionPlans();
     }
 
-    public Task<string> Purchase(PurchaseParams purchaseParams)
+    public Task<string> Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
         return BillingService.Purchase(AppUiContext.RequiredContext, purchaseParams);
     }
 
-    public Task<AppPurchaseOptions> GetPurchaseOptions()
+    public Task<AppPurchaseOptions> GetPurchaseOptions(CancellationToken cancellationToken)
     {
         return VpnHoodApp.Instance.GetPurchaseOptions();
     }

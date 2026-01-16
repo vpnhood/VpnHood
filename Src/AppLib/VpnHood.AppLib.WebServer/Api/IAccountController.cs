@@ -5,9 +5,9 @@ namespace VpnHood.AppLib.WebServer.Api;
 public interface IAccountController
 {
     bool IsSigninWithGoogleSupported();
-    Task SignInWithGoogle();
-    Task SignOut();
-    Task Refresh();
-    Task<AppAccount?> Get();
-    Task<string[]> ListAccessKeys(string subscriptionId);
+    Task SignInWithGoogle(CancellationToken cancellationToken);
+    Task SignOut(CancellationToken cancellationToken);
+    Task Refresh(CancellationToken cancellationToken);
+    Task<AppAccount?> Get(CancellationToken cancellationToken);
+    Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken);
 }

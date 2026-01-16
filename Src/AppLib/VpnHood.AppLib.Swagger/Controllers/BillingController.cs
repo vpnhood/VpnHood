@@ -10,19 +10,19 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 public class BillingController : ControllerBase, IBillingController
 {
     [HttpGet("subscription-plans")]
-    public Task<SubscriptionPlan[]> GetSubscriptionPlans()
+    public Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("purchase")]
-    public Task<string> Purchase(PurchaseParams purchaseParams)
+    public Task<string> Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpGet("purchase-options")]
-    public Task<AppPurchaseOptions> GetPurchaseOptions()
+    public Task<AppPurchaseOptions> GetPurchaseOptions(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

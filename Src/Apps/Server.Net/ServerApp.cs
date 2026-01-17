@@ -40,7 +40,6 @@ public class ServerApp : IDisposable
     public IAccessManager AccessManager { get; }
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
     public static string AppName => "VpnHoodServer";
-
     public static string AppFolderPath =>
         Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ??
         throw new Exception($"Could not acquire {nameof(AppFolderPath)}.");
@@ -204,26 +203,13 @@ public class ServerApp : IDisposable
         }
     }
 
-    private static Option<bool> CreateVersionOption()
-    {
-        var option = new Option<bool>("--version", ["-n"]) {
-            Description = "Show version information."
-        };
-        return option;
-    }
-
     private Command CreateGcCommand()
     {
         var command = new Command("gc", "Run Garbage Collector for debugging purpose.") {
             Hidden = true
         };
 
-        var versionOption = CreateVersionOption();
-        command.Add(versionOption);
-        command.SetAction(parseResult => {
-            if (TryShowVersion(parseResult.GetValue(versionOption)))
-                return Task.CompletedTask;
-
+        command.SetAction(_ => {
             VhLogger.Instance.LogInformation("Sending GC request...");
             _commandListener.TrySendCommand("gc");
             return Task.CompletedTask;
@@ -235,12 +221,7 @@ public class ServerApp : IDisposable
     {
         var command = new Command("stop",
             "Stop all instances of VpnHoodServer that running from this folder");
-        var versionOption = CreateVersionOption();
-        command.Add(versionOption);
-        command.SetAction(parseResult => {
-            if (TryShowVersion(parseResult.GetValue(versionOption)))
-                return Task.CompletedTask;
-
+        command.SetAction(_ => {
             VhLogger.Instance.LogInformation("Sending stop server request...");
             _commandListener.TrySendCommand("stop");
             return Task.CompletedTask;
@@ -251,11 +232,7 @@ public class ServerApp : IDisposable
     private Command CreateStartCommand()
     {
         var command = new Command("start", "Run the server (default command)");
-        var versionOption = CreateVersionOption();
-        command.Add(versionOption);
-        command.SetAction(async (parseResult, cancellationToken) => {
-            if (TryShowVersion(parseResult.GetValue(versionOption)))
-                return;
+        command.SetAction(async (_, cancellationToken) => {
 
             // LogAnonymizer is on by default
             VhLogger.IsAnonymousMode = AppSettings.ServerConfig?.LogAnonymizerValue ?? true;
@@ -316,15 +293,6 @@ public class ServerApp : IDisposable
         });
 
         return command;
-    }
-
-    private static bool TryShowVersion(bool showVersion)
-    {
-        if (!showVersion)
-            return false;
-
-        Console.WriteLine(VpnHoodServer.ServerVersion.ToString(3));
-        return true;
     }
 
     private bool IsAnotherInstanceRunning()
@@ -390,9 +358,16 @@ public class ServerApp : IDisposable
             if (args[i] == "/?" || args[i] == "-?")
                 args[i] = "--help";
 
+        // handle --version and exit
+        if (args.Any(arg => arg.Equals("--version", StringComparison.OrdinalIgnoreCase))) {
+            Console.WriteLine("Version:");
+            Console.WriteLine(VpnHoodServer.ServerVersion.ToString(3));
+            return;
+        }
+
         // set default
         if (args.Length == 0) args = ["start"];
-        var rootCommand = new RootCommand("VpnHood server") {
+        var rootCommand = new RootCommand($"VpnHood! Server v{VpnHoodServer.ServerVersion.ToString(3)}") {
             CreateStartCommand(),
             CreateStopCommand(),
             CreateGcCommand()

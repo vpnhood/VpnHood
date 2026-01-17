@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.Core.Server.App.Net": {
       "commandName": "Project",
-      "commandLineArgs": "gc",
+      "commandLineArgs": "-h",
       "commandLineArgs2": "gen -name LocalServer"
     },
     "WSL 2": {

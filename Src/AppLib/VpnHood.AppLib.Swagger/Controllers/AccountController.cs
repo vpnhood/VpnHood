@@ -35,7 +35,7 @@ public class AccountController : ControllerBase, IAccountController
     }
 
     [HttpPost("sign-out")]
-    public new Task SignOut(CancellationToken cancellationToken)
+    public Task SignOut(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

@@ -40,9 +40,9 @@
  
 	<!--Xamarin.Android.Google.BillingClient 8.0.0 required to prevent conflict Tried: 2025/12/25-->
 	<ItemGroup>
-		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="8.0.0" />
-		<PackageReference Include="Xamarin.AndroidX.Credentials.PlayServicesAuth" Version="1.5.0.3" />
-		<PackageReference Include="Xamarin.GoogleAndroid.Libraries.Identity.GoogleId" Version="1.1.0.11" />
+		<PackageReference Include="Xamarin.Android.Google.BillingClient" Version="8.3.0.1" />
+		<PackageReference Include="Xamarin.AndroidX.Credentials.PlayServicesAuth" Version="1.5.0.4" />
+		<PackageReference Include="Xamarin.GoogleAndroid.Libraries.Identity.GoogleId" Version="1.1.0.12" />
 	</ItemGroup>
 
 	<ItemGroup>

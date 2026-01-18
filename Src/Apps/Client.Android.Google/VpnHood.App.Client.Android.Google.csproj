@@ -77,4 +77,9 @@
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 
+	<!--Fix SDK Built Error 1/17/2026-->
+	<ItemGroup>
+		<PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.JVM" Version="1.10.0.1" ExcludeAssets="all" />
+	</ItemGroup>
+
 </Project>

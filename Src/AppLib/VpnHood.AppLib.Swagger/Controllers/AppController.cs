@@ -45,15 +45,15 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpPost("connect")]
-    public Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId,
-        CancellationToken cancellationToken)
+    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null, 
+        ConnectPlanId planId = ConnectPlanId.Normal, CancellationToken cancellationToken = default)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("diagnose")]
-    public Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId,
-        CancellationToken cancellationToken)
+    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null, 
+        ConnectPlanId planId = ConnectPlanId.Normal, CancellationToken cancellationToken = default)
     {
         throw new SwaggerOnlyException();
     }

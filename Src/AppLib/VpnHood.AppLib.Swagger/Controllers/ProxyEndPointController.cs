@@ -95,11 +95,11 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// </summary>
     [HttpDelete]
     public Task DeleteAll(
-        [FromQuery] bool deleteSucceeded,
-        [FromQuery] bool deleteFailed,
-        [FromQuery] bool deleteUnknown,
-        [FromQuery] bool deleteDisabled,
-        CancellationToken cancellationToken)
+        [FromQuery] bool deleteSucceeded = true,
+        [FromQuery] bool deleteFailed = true,
+        [FromQuery] bool deleteUnknown = true,
+        [FromQuery] bool deleteDisabled = true,
+        CancellationToken cancellationToken = default)
     {
         throw new SwaggerOnlyException();
     }

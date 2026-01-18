@@ -736,7 +736,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ServerSecret = helloResponse.ServerSecret;
             IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
-            if (helloResponse is { UdpPort: > 0, ProtocolVersion: > 10 })
+            if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= 11 })
                 HostUdpEndPoint = new IPEndPoint(_connectorService.VpnEndPoint.TcpEndPoint.Address,
                     helloResponse.UdpPort.Value);
 

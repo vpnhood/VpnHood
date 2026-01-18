@@ -8,7 +8,7 @@ internal static class ChannelProtocolValidator
     public static ChannelProtocol[] GetChannelProtocols(HelloResponse helloResponse)
     {
         var channelProtocols = new List<ChannelProtocol> { ChannelProtocol.Tcp };
-        if (helloResponse.UdpPort > 0)
+        if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= 11 })
             channelProtocols.Add(ChannelProtocol.Udp);
 
         return channelProtocols.ToArray();

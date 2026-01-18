@@ -25,8 +25,6 @@ public class AdapterSocketFactory(
 
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        //todo: must bind here
-
         // zero is needed to make sure OS assigns a free port and bind it
         var udpClient = new UdpClient(addressFamily);
         if (udpClient.Client is null) 

@@ -350,7 +350,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
-    protected void BindToAny(Socket socket)
+    protected static void BindToAny(Socket socket)
     {
         var ipAddress = socket.AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any;
         socket.Bind(new IPEndPoint(ipAddress, 0));

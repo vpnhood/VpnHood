@@ -112,11 +112,13 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     public override bool ProtectSocket(Socket socket)
     {
+        BindToAny(socket); // just for compatibility. other Tun adapters always return a bound socket
         return vpnService.Protect(socket.Handle.ToInt32());
     }
 
     public override bool ProtectSocket(Socket socket, IPAddress ipAddress)
     {
+        BindToAny(socket); // just for compatibility. other Tun adapters always return a bound socket
         return vpnService.Protect(socket.Handle.ToInt32());
     }
 

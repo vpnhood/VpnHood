@@ -9,6 +9,7 @@ using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
@@ -47,14 +48,6 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         return _sourceEndPoint;
     }
 
-    private bool IsInvalidState(Exception ex)
-    {
-        return IsDisposed || ex is ObjectDisposedException
-            or SocketException { SocketErrorCode: SocketError.InvalidArgument }
-            or SocketException { SocketErrorCode: SocketError.ConnectionAborted }
-            or SocketException { SocketErrorCode: SocketError.OperationAborted };
-    }
-
     protected override async ValueTask SendPacketAsync(IpPacket ipPacket)
     {
         try {
@@ -78,18 +71,17 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
                 throw new Exception(
                     $"Couldn't send all udp bytes. Requested: {udpPacket.Payload.Length}, Sent: {sentBytes}");
         }
-        catch (Exception ex) {
-            if (IsInvalidState(ex))
-                Dispose();
-
+        catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
+            VhLogger.Instance.LogError(ex, "Invalid UDP state detected in UdpProxy. Disposing the proxy.");
+            Dispose();
             throw;
         }
     }
 
     private async Task StartReceivingAsync()
     {
-        try {
-            while (!IsDisposed) {
+        while (!IsDisposed) {
+            try {
                 var udpResult = await _udpClient.ReceiveAsync().Vhc();
 
                 // find the audience (sourceEndPoint)
@@ -103,12 +95,13 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
                 ipPacket.UpdateAllChecksums();
                 OnPacketReceived(ipPacket);
             }
-        }
-        catch (Exception ex) {
-            if (!IsInvalidState(ex))
+            catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
                 VhLogger.Instance.LogError(ex, "Unexpected error in UDP receive loop.");
-
-            Dispose();
+                Dispose();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Error in UdpProxy receive loop.");
+            }
         }
     }
 

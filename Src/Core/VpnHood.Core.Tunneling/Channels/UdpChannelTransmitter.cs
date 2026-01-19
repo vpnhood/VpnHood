@@ -7,6 +7,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
@@ -75,10 +76,16 @@ public abstract class UdpChannelTransmitter : IDisposable
             await _sendSemaphore.WaitAsync().Vhc();
             await SendCoreAsync(sessionId, ipEndPoint, payload, aesGcm);
         }
-        catch (Exception ex) {
-            if (IsInvalidState(ex))
-                Dispose();
+        catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
+            VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
+                "UdpChannelTransmitter: Socket is in invalid state. Disposing the transmitter. " +
+                "DataLength: {DataLength}, DestinationIp: {DestinationIp}",
+                payload.Length, VhLogger.Format(ipEndPoint));
 
+            Dispose();
+            throw;
+        }
+        catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
                 "UdpChannelTransmitter: Could not send data. DataLength: {DataLength}, DestinationIp: {DestinationIp}",
                 payload.Length, VhLogger.Format(ipEndPoint));
@@ -178,7 +185,7 @@ public abstract class UdpChannelTransmitter : IDisposable
             catch (Exception) when (_disposed) {
                 break;
             }
-            catch (Exception ex) when (IsInvalidState(ex)) {
+            catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
                 VhLogger.Instance.LogError(GeneralEventId.Udp, ex, "UdpChannelTransmitter: Read loop crashed.");
                 Dispose();
                 break;
@@ -187,20 +194,6 @@ public abstract class UdpChannelTransmitter : IDisposable
                 _udpSignReporter.Raise();
             }
         }
-    }
-
-    private bool IsInvalidState(Exception ex)
-    {
-        // Returns TRUE if the client is useless/dead
-        return _disposed ||
-               ex is ObjectDisposedException ||
-               ex is SocketException {
-                   SocketErrorCode:
-                   SocketError.OperationAborted or // Socket closed during async op
-                   SocketError.Interrupted or      // Socket closed during blocking op
-                   SocketError.NotSocket or        // Handle is no longer a valid socket
-                   SocketError.InvalidArgument     // Often thrown if handle is already closed
-               };
     }
 
     public virtual void Dispose()

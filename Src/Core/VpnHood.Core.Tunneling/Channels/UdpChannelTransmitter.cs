@@ -210,5 +210,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         _cancellationTokenSource.Dispose();
         _udpClient.Dispose();
         _sendSemaphore.Dispose();
+        _invalidSessionReporter.Dispose();
+        _udpSignReporter.Dispose();
     }
 }

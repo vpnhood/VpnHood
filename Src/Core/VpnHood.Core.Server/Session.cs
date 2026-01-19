@@ -504,6 +504,7 @@ public class Session : IDisposable
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();
+        _filterReporter.Dispose();
         NetScanDetector?.Dispose();
 
         // if there is no reason it is temporary

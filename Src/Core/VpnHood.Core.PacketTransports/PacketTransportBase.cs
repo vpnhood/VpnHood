@@ -53,12 +53,11 @@ public abstract class PacketTransportBase : IPacketTransport
             _stat.LastReceivedTime = FastDateTime.Now;
             _stat.ReceivedBytes += ipPacket.PacketLength;
             _stat.ReceivedPackets++;
-            LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Received a packet.");
+            LogPacket(ipPacket, "Received a packet.");
             PacketReceived?.Invoke(this, ipPacket);
         }
         catch (Exception ex) {
-            LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Error while invoking the received packets.",
-                exception: ex);
+            LogPacket(ipPacket, ex, "Error while invoking the received packets.");
             if (_autoDisposePackets)
                 ipPacket.Dispose();
         }
@@ -88,7 +87,7 @@ public abstract class PacketTransportBase : IPacketTransport
         if (IsDisposed || IsDisposing)
             throw new ObjectDisposedException(GetType().Name);
 
-        LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Sending a packet to queue.");
+        LogPacket(ipPacket, "Sending a packet to queue.");
         if (_passthrough) {
             lock (_singlePacketBuffer) {
                 _singlePacketBuffer[0] = ipPacket;
@@ -109,7 +108,7 @@ public abstract class PacketTransportBase : IPacketTransport
             return SendPacketQueuedBlocking(ipPacket);
 
         // dispose the packet
-        LogPacket(ipPacket, $"{VhLogger.FormatType(this)}: Dropping a packet. Send queue is full.", LogLevel.Debug);
+        LogPacket(ipPacket, LogLevel.Debug, null, "Dropping a packet. Send queue is full.");
         if (_autoDisposePackets)
             ipPacket.Dispose();
 
@@ -123,7 +122,7 @@ public abstract class PacketTransportBase : IPacketTransport
             return true;
         }
         catch (Exception ex) {
-            LogPacket(ipPacket, "Dropping packet. Could not write the packet to queue.", exception: ex);
+            LogPacket(ipPacket, ex, "Dropping packet. Could not write the packet to queue.");
             if (_autoDisposePackets)
                 ipPacket.Dispose();
 
@@ -190,8 +189,7 @@ public abstract class PacketTransportBase : IPacketTransport
         catch (Exception ex) {
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < ipPackets.Count; i++) {
-                LogPacket(ipPackets[i],
-                    $"{VhLogger.FormatType(this)}: Error in sending packet via channel.", exception: ex);
+                LogPacket(ipPackets[i], ex, "Error in sending packet via channel.");
 
                 _stat.DroppedPackets++;
                 if (_autoDisposePackets)
@@ -205,17 +203,27 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
+    protected void LogPacket(IpPacket ipPacket, Exception exception, string message)
+    {
+        LogPacket(ipPacket, LogLevel.Debug, exception, message);
+    }
+
+    protected void LogPacket(IpPacket ipPacket, string message)
+    {
+        LogPacket(ipPacket, LogLevel.Trace, null, message);
+    }
+
     // ReSharper disable once VirtualMemberNeverOverridden.Global
-    protected virtual void LogPacket(IpPacket ipPacket, string message, LogLevel? logLevel = null,
-        Exception? exception = null)
+    protected virtual void LogPacket(IpPacket ipPacket, LogLevel logLevel,
+        Exception? exception, string message, params object?[] args)
     {
         // LogPacket is so intensively used that we need to avoid unnecessary allocations or formatting
         // Just log if the log level is Trace despite the required log level
         if (VhLogger.MinLogLevel > LogLevel.Trace)
             return;
 
-        logLevel ??= exception != null ? LogLevel.Debug : LogLevel.Trace;
-        VhLogger.Instance.Log(logLevel.Value, message: $"{message}. {ipPacket}", exception: exception);
+        VhLogger.Instance.Log(logLevel, message: $"{VhLogger.FormatType(this)}: {message}. {ipPacket}",
+            exception: exception, args: args);
     }
 
     public virtual void Dispose()

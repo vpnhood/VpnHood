@@ -436,7 +436,7 @@ public class VpnHoodServer : IAsyncDisposable
             // try to load last config
             try {
                 if (File.Exists(_lastConfigFilePath)) {
-                    var configJson = await File.ReadAllTextAsync(_lastConfigFilePath).Vhc();
+                    var configJson = await File.ReadAllTextAsync(_lastConfigFilePath, cancellationToken).Vhc();
                     var ret = JsonUtils.Deserialize<ServerConfig>(configJson);
                     VhLogger.Instance.LogWarning("Last configuration has been loaded to report Maintenance mode.");
                     return ret;

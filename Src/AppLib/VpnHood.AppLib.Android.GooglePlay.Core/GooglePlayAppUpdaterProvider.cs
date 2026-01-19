@@ -22,7 +22,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
         return UpdateInternal(uiContext, true, cancellationToken);
     }
 
-    public async Task<bool> UpdateInternal(IUiContext uiContext, bool execute, CancellationToken cancellationToken)
+    public static async Task<bool> UpdateInternal(IUiContext uiContext, bool execute, CancellationToken cancellationToken)
     {
         try {
             var appUiContext = (AndroidUiContext)uiContext;

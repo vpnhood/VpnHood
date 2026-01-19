@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.Threading;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;

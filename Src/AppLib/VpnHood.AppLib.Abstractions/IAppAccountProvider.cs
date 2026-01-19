@@ -1,6 +1,4 @@
-﻿using System.Threading;
-
-namespace VpnHood.AppLib.Abstractions;
+﻿namespace VpnHood.AppLib.Abstractions;
 
 public interface IAppAccountProvider
 {

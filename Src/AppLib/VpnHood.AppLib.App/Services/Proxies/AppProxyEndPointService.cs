@@ -151,7 +151,7 @@ public class AppProxyEndPointService
     public void DisableAllFailed()
     {
         foreach (var info in _data.CustomEndPointInfos) {
-            if (info.Status.HasUsed && !info.Status.IsLastUsedSucceeded)
+            if (info.Status is { HasUsed: true, IsLastUsedSucceeded: false })
                 info.EndPoint.IsEnabled = false;
         }
 

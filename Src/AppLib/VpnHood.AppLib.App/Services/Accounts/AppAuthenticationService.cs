@@ -1,5 +1,4 @@
-﻿using System.Threading;
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
 

@@ -75,8 +75,11 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
             if (ApiKey.RefreshToken != null && ApiKey.RefreshToken.ExpirationTime < DateTime.UtcNow) {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
                 ApiKey = await authenticationClient
-                    .RefreshTokenAsync(new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value })
+                    .RefreshTokenAsync(
+                        new RefreshTokenRequest { RefreshToken = ApiKey.RefreshToken.Value }, 
+                        cancellationToken)
                     .Vhc();
+
                 return ApiKey;
             }
         }

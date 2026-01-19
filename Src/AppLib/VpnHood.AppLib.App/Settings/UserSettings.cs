@@ -15,7 +15,8 @@ public class UserSettings
     public string? CultureCode { get; set; }
     public Guid? ClientProfileId { get; set; }
     public int MaxPacketChannelCount { get; set; } = ClientOptions.Default.MaxPacketChannelCount;
-    public bool TunnelClientCountry { get; set; } = true;
+    public CountryFilterMode CountryFilterMode { get; set; } = CountryFilterMode.IncludeAll;
+    public string[] CountryFilters { get; set; } = [];
     public string[] AppFilters { get; set; } = [];
     public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
@@ -52,5 +53,16 @@ public class UserSettings
             if (value == true)
                 ChannelProtocol = ChannelProtocol.Udp;
         }
+    }
+
+    [Obsolete("Use CountryFilterMode.")]
+    public bool TunnelClientCountry {
+        init {
+            if (!value)
+                CountryFilterMode = CountryFilterMode.ExcludeMyCountry;
+            else
+                CountryFilterMode = CountryFilterMode.IncludeAll; //todo: remove
+        }
+        get => CountryFilterMode != CountryFilterMode.ExcludeMyCountry; //todo: remove
     }
 }

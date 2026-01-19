@@ -9,5 +9,6 @@ public enum AppFeature
     AlwaysOn,
     CustomDns,
     AppIpFilter,
-    AdapterIpFilter
+    AdapterIpFilter,
+    CountryFilter
 }

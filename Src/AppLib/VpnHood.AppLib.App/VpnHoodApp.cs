@@ -304,7 +304,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 disconnectRequired =
                     UserSettings.UseVpnAdapterIpFilter != oldUserSettings.UseVpnAdapterIpFilter ||
                     UserSettings.UseAppIpFilter != oldUserSettings.UseAppIpFilter ||
-                    UserSettings.TunnelClientCountry != oldUserSettings.TunnelClientCountry ||
+                    UserSettings.CountryFilterMode != oldUserSettings.CountryFilterMode ||
+                    !UserSettings.CountryFilters.SequenceEqual(oldUserSettings.CountryFilters)  ||
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.IncludeLocalNetwork != oldUserSettings.IncludeLocalNetwork ||
                     UserSettings.AppFiltersMode != oldUserSettings.AppFiltersMode ||
@@ -1177,47 +1178,75 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
+    public async Task<IpRangeOrderedList> GetIncludeCountryIpRanges(CancellationToken cancellationToken)
+    {
+        var ipRanges = IpNetwork.All.ToIpRanges();
+        if (UserSettings.CountryFilterMode is CountryFilterMode.IncludeAll)
+            return ipRanges;
+
+        // set loading state
+        VerifyPremiumFeature(AppFeature.CountryFilter);
+
+        try {
+            // calculate include country IPs
+            if (UserSettings.CountryFilterMode is CountryFilterMode.IncludeList) {
+                var countryIpRanges = new List<IpRange>();
+                foreach (var country in SettingsService.UserSettings.CountryFilters)
+                    countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country).Vhc());
+                ipRanges = countryIpRanges.ToOrderedList();
+            }
+
+            // calculate exclude country IPs
+            if (UserSettings.CountryFilterMode is CountryFilterMode.ExcludeList) {
+                var countryIpRanges = new List<IpRange>();
+                foreach (var country in SettingsService.UserSettings.CountryFilters)
+                    countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country).Vhc());
+                ipRanges = ipRanges.Exclude(countryIpRanges);
+            }
+
+
+            if (UserSettings.CountryFilterMode is CountryFilterMode.ExcludeList) {
+
+                if (!_useInternalLocationService)
+                    throw new InvalidOperationException("Could not use internal location service because it is disabled.");
+
+                // do not use cache and server country code, maybe client on satellite, and they need to split their own country IPs 
+                var countryCode = await GetClientCountryCodeAsync(allowVpnServer: false, allowCache: false, cancellationToken).Vhc();
+                var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(countryCode).Vhc();
+                VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}",
+                    VhUtils.TryGetCountryName(countryCode));
+                ipRanges = ipRanges.Exclude(countryIpRanges);
+            }
+            return ipRanges;
+        }
+        catch (Exception ex) {
+            ReportError(ex, "Could not retrieve the requested countries ip ranges.");
+            UserSettings.CountryFilterMode = CountryFilterMode.IncludeAll;
+            Settings.Save();
+            return IpNetwork.All.ToIpRanges();
+        }
+    }
+
     public async Task<IpRangeOrderedList> GetIncludeIpRanges(CancellationToken cancellationToken)
     {
-        // calculate vpnAdapterIpRanges
-        var ipRanges = IpNetwork.All.ToIpRanges();
+        // set loading state
+        _isLoadingCountryIpRange = true;
+        using var workScope = new AutoDispose(() => {
+            _isLoadingCountryIpRange = false;
+            FireConnectionStateChanged();
+        });
+        FireConnectionStateChanged();
+
+        // get country ip ranges
+        var ipRanges = await GetIncludeCountryIpRanges(cancellationToken);
+
+        // calculate AppFilter IPs
         if (UserSettings.UseAppIpFilter && CheckPremiumFeature(AppFeature.AppIpFilter)) {
             ipRanges = ipRanges.Intersect(
                 IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AppIpFilterIncludes));
 
             ipRanges = ipRanges.Exclude(
                 IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AppIpFilterExcludes));
-        }
-
-        // exclude client country IPs
-        if (UserSettings.TunnelClientCountry)
-            return ipRanges;
-
-        try {
-            _isLoadingCountryIpRange = true;
-            using var workScope = new AutoDispose(() => {
-                _isLoadingCountryIpRange = false;
-                FireConnectionStateChanged();
-            });
-            FireConnectionStateChanged();
-
-            if (!_useInternalLocationService)
-                throw new InvalidOperationException("Could not use internal location service because it is disabled.");
-
-            // do not use cache and server country code, maybe client on satellite, and they need to split their own country IPs 
-            var countryCode =
-                await GetClientCountryCodeAsync(allowVpnServer: false, allowCache: false, cancellationToken).Vhc();
-            var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(countryCode).Vhc();
-            VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}",
-                VhUtils.TryGetCountryName(countryCode));
-            ipRanges = ipRanges.Exclude(countryIpRanges);
-        }
-        catch (Exception ex) {
-            ReportError(ex, "Could not get ip locations of your country.");
-            if (!UserSettings.TunnelClientCountry) {
-                UserSettings.TunnelClientCountry = true;
-                Settings.Save();
-            }
         }
 
         return ipRanges;
@@ -1371,7 +1400,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
             ClientProfileService.Delete(profileInfo.ClientProfileId);
             if (Services.AccountService != null)
-                _ = VhUtils.TryInvokeAsync("Refresh Account", 
+                _ = VhUtils.TryInvokeAsync("Refresh Account",
                     () => Services.AccountService.Refresh(updateCurrentClientProfile: true, CancellationToken.None));
         }
     }

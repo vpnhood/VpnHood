@@ -633,6 +633,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // create udp channel
         var udpChannel = new UdpChannel(_udpTransmitter.UdpTransport, new UdpChannelOptions {
             AutoDisposePackets = true,
+            LeaveUdpTransportOpen = true,
             Blocking = true,
             ChannelId = Guid.NewGuid().ToString(),
             Lifespan = null
@@ -714,7 +715,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"ProtocolVersion: {helloResponse.ProtocolVersion}, " +
                 $"CurrentProtocolVersion: {_connectorService.ProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}, " +
-                $"UdpChannelPort: {HostUdpEndPoint?.Port}, " +
+                $"UdpPort: {helloResponse.UdpPort}, " +
                 $"IsTcpPacketSupported: {helloResponse.IsTcpPacketSupported}, " +
                 $"IsTcpProxySupported: {helloResponse.IsTcpProxySupported}, " +
                 $"IsLocalNetworkAllowed: {allowedLocalNetworks.Any()}, " +

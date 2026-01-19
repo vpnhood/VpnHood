@@ -1,5 +1,4 @@
-﻿using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -28,7 +27,7 @@ public class UdpChannel : PacketChannel
         return _readingTask.Task;
     }
 
-    public async Task SendBuffer(Memory<byte> buffer)
+    private async Task SendBuffer(Memory<byte> buffer)
     {
         await UdpTransport.SendAsync(buffer).Vhc();
     }
@@ -72,29 +71,17 @@ public class UdpChannel : PacketChannel
             // ignore cancellation
             Dispose();
         }
+        catch (Exception ex) when (UdpTransport.Connected) {
+            VhLogger.Instance.LogTrace(GeneralEventId.Udp, ex,
+                "Unexpected error in sending packets. ChannelId: {ChannelId}", ChannelId);
+        }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
-                "Unexpected error in sending packets. ChannelId: {ChannelId}", ChannelId);
+                "UdpChannel has been closed due to a transport error in sending packets. ChannelId: {ChannelId}", 
+                ChannelId);
 
-            if (!CanRetry(ex))
-                Dispose();
+            Dispose();
         }
-    }
-
-    private static bool CanRetry(Exception ex)
-    {
-        if (ex is not SocketException socketException)
-            return false; // not a socket exception, no retry
-
-        return socketException.SocketErrorCode switch {
-            SocketError.TimedOut => true,
-            SocketError.Interrupted => true,
-            SocketError.NetworkUnreachable => true,
-            SocketError.HostUnreachable => true,
-            SocketError.ConnectionReset => true, // Common in UDP when destination port is closed
-            SocketError.TryAgain => true, // Possibly can retry depending on your use case
-            _ => false
-        };
     }
 
     private static IpPacket ReadNextPacketKeepMemory(Memory<byte> buffer)

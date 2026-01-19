@@ -16,15 +16,11 @@ public abstract class UdpChannelTransmitter : IDisposable
     private const int SeqLength = 8;
     private const int TagLength = 16;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    public const int HeaderLength = SessionIdLength + SeqLength + TagLength;
-
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
     private readonly EventReporter _invalidSessionReporter = new("Invalid UDP session.", GeneralEventId.UdpSign);
 
     private readonly Memory<byte> _sendBuffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly UdpClient _udpClient;
-
-    // AesGcm is not thread-safe; serialize send
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
     private static ulong _sendSequenceNumber;
     private bool _disposed;
@@ -32,7 +28,9 @@ public abstract class UdpChannelTransmitter : IDisposable
     protected abstract SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId);
 
     public int MaxPacketSize { get; set; } = TunnelDefaults.MaxPacketSize;
+    public const int HeaderLength = SessionIdLength + SeqLength + TagLength;
     public IPEndPoint LocalEndPoint { get; }
+    public bool Connected => !_disposed;
 
     protected UdpChannelTransmitter(UdpClient udpClient)
     {
@@ -73,6 +71,7 @@ public abstract class UdpChannelTransmitter : IDisposable
             throw new ArgumentOutOfRangeException(nameof(payload));
 
         try {
+            // AesGcm is not thread-safe; serialize send
             await _sendSemaphore.WaitAsync().Vhc();
             await SendCoreAsync(sessionId, ipEndPoint, payload, aesGcm);
         }
@@ -80,12 +79,9 @@ public abstract class UdpChannelTransmitter : IDisposable
             if (IsInvalidState(ex))
                 Dispose();
 
-            VhLogger.Instance.LogError(
-                GeneralEventId.Udp,
-                ex,
+            VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
                 "UdpChannelTransmitter: Could not send data. DataLength: {DataLength}, DestinationIp: {DestinationIp}",
-                payload.Length,
-                VhLogger.Format(ipEndPoint));
+                payload.Length, VhLogger.Format(ipEndPoint));
 
             throw;
         }
@@ -195,9 +191,16 @@ public abstract class UdpChannelTransmitter : IDisposable
 
     private bool IsInvalidState(Exception ex)
     {
-        return _disposed || ex is ObjectDisposedException or SocketException {
-            SocketErrorCode: SocketError.InvalidArgument
-        };
+        // Returns TRUE if the client is useless/dead
+        return _disposed ||
+               ex is ObjectDisposedException ||
+               ex is SocketException {
+                   SocketErrorCode:
+                   SocketError.OperationAborted or // Socket closed during async op
+                   SocketError.Interrupted or      // Socket closed during blocking op
+                   SocketError.NotSocket or        // Handle is no longer a valid socket
+                   SocketError.InvalidArgument     // Often thrown if handle is already closed
+               };
     }
 
     public virtual void Dispose()

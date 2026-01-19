@@ -17,6 +17,7 @@ public class SessionUdpTransport(
     public UdpChannelTransmitter ChannelTransmitter { get; set; } = channelTransmitter;
     public Action<Memory<byte>>? DataReceived { get; set; }
     public int OverheadLength => UdpChannelTransmitter.HeaderLength;
+    public bool Connected => ChannelTransmitter.Connected;
 
     public Task SendAsync(Memory<byte> buffer)
     {

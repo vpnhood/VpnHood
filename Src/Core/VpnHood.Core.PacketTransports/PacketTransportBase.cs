@@ -173,7 +173,7 @@ public abstract class PacketTransportBase : IPacketTransport
 
             // Send packets asynchronously
             var task = SendPacketsAsync(ipPackets);
-            if (!task.IsCompleted)
+            if (!task.IsCompletedSuccessfully)
                 await task;
 
             // ReSharper disable once ForCanBeConvertedToForeach

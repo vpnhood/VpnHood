@@ -222,7 +222,7 @@ public abstract class PacketTransportBase : IPacketTransport
         if (VhLogger.MinLogLevel > LogLevel.Trace)
             return;
 
-        VhLogger.Instance.Log(logLevel, message: $"{VhLogger.FormatType(this)}: {message}. {ipPacket}",
+        VhLogger.Instance.Log(logLevel, message: $"{VhLogger.FormatType(this)}: {message} {ipPacket}",
             exception: exception, args: args);
     }
 

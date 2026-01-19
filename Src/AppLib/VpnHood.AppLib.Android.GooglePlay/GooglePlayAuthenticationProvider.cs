@@ -9,7 +9,8 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 
 public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAppAuthenticationExternalProvider
 {
-    public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin)
+    public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin, 
+        CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
@@ -25,15 +26,15 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAp
             new GetCredentialRequest.Builder().AddCredentialOption(googleSignInOptions).Build();
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
         using var credentialResponse = await credentialManager
-            .GetCredentialAsync(appUiContext.Activity, credentialRequest).ConfigureAwait(false);
+            .GetCredentialAsync(appUiContext.Activity, credentialRequest, cancellationToken).ConfigureAwait(false);
         return GetIdTokenFromCredentialResponse(credentialResponse);
     }
 
-    public async Task SignOut(IUiContext uiContext)
+    public async Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
-        await credentialManager.ClearCredentialStateAsync(appUiContext.Activity).ConfigureAwait(false);
+        await credentialManager.ClearCredentialStateAsync(appUiContext.Activity, cancellationToken).ConfigureAwait(false);
     }
 
     private static string GetIdTokenFromCredentialResponse(GetCredentialResponse credentialResponse)

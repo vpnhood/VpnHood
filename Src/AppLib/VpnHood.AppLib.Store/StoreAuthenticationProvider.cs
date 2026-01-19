@@ -60,7 +60,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         }
     }
 
-    private async Task<ApiKey?> TryGetApiKey(IUiContext? uiContext)
+    private async Task<ApiKey?> TryGetApiKey(IUiContext? uiContext, CancellationToken cancellationToken)
     {
         // null if it has not been signed in yet
         if (ApiKey == null)
@@ -90,13 +90,14 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
                 throw new Exception("UI context is not available.");
 
             var idToken = _authenticationExternalProvider != null
-                ? await _authenticationExternalProvider.SignIn(uiContext, true).Vhc()
+                ? await _authenticationExternalProvider.SignIn(uiContext, true, cancellationToken).Vhc()
                 : null;
 
             if (!string.IsNullOrWhiteSpace(idToken)) {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
-                ApiKey = await authenticationClient.SignInAsync(new SignInRequest { IdToken = idToken })
-                    .Vhc();
+                ApiKey = await authenticationClient
+                    .SignInAsync(new SignInRequest { IdToken = idToken }, cancellationToken).Vhc();
+
                 return ApiKey;
             }
         }
@@ -112,7 +113,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         if (_authenticationExternalProvider == null)
             throw new InvalidOperationException("Google sign in is not supported.");
 
-        var idToken = await _authenticationExternalProvider.SignIn(uiContext, false).Vhc();
+        var idToken = await _authenticationExternalProvider.SignIn(uiContext, false, cancellationToken).Vhc();
         await SignInToVpnHoodStore(idToken, true, cancellationToken).Vhc();
     }
 
@@ -124,7 +125,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
 
 
         if (_authenticationExternalProvider != null)
-            await _authenticationExternalProvider.SignOut(uiContext).Vhc();
+            await _authenticationExternalProvider.SignOut(uiContext, cancellationToken).Vhc();
     }
 
     private async Task SignInToVpnHoodStore(string idToken, bool autoSignUp, CancellationToken cancellationToken)
@@ -173,7 +174,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            var apiKey = await accountProvider.TryGetApiKey(AppUiContext.Context).Vhc();
+            var apiKey = await accountProvider.TryGetApiKey(AppUiContext.Context, cancellationToken).Vhc();
             request.Headers.Authorization = apiKey != null
                 ? new AuthenticationHeaderValue(apiKey.AccessToken.Scheme, apiKey.AccessToken.Value)
                 : null;

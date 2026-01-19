@@ -74,6 +74,7 @@ internal class IntentsController : ControllerBase, IIntentController
 
     public Task OpenKillSwitchSettings(CancellationToken cancellationToken)
     {
+        _ = cancellationToken;
         App.Services.DeviceUiProvider.OpenKillSwitchSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }

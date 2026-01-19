@@ -13,7 +13,8 @@ public interface IProxyEndPointController
     Task DisableAllFailed(CancellationToken cancellationToken);
     Task ResetStates(CancellationToken cancellationToken);
     Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken);
-    Task<AppProxyEndPointInfo[]> List(
+    Task<PagedResult<AppProxyEndPointInfo>> List(
+        string? search,
         bool includeSucceeded,
         bool includeFailed,
         bool includeUnknown,

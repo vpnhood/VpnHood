@@ -24,7 +24,8 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// List all proxy endpoints
     /// </summary>
     [HttpGet]
-    public Task<AppProxyEndPointInfo[]> List(
+    public Task<PagedResult<AppProxyEndPointInfo>> List(
+        [FromQuery] string? search = null,
         [FromQuery] bool includeSucceeded = true,
         [FromQuery] bool includeFailed = true,
         [FromQuery] bool includeUnknown = true,

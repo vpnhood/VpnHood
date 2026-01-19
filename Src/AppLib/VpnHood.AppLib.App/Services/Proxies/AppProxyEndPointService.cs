@@ -55,7 +55,8 @@ public class AppProxyEndPointService
         return _data.SystemNodeInfo;
     }
 
-    public AppProxyEndPointInfo[] ListProxies(
+    public PagedResult<AppProxyEndPointInfo> ListProxies(
+        string? search = null,
         bool includeSucceeded = true,
         bool includeFailed = true,
         bool includeUnknown = true,
@@ -70,20 +71,31 @@ public class AppProxyEndPointService
 
         var items = _data.CustomEndPointInfos
             .Where(x => includeDisabled || x.EndPoint.IsEnabled)
+            .Where(x => search == null ||
+                x.EndPoint.Host.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                x.CountryCode?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
             .Where(x =>
                 (includeSucceeded && x.Status.IsLastUsedSucceeded) ||
                 (includeFailed && x.Status.IsLastUsedFailed) ||
                 (includeUnknown && !x.Status.HasUsed));
 
+        // Get total count before pagination
+        // ReSharper disable once PossibleMultipleEnumeration
+        var totalCount = items.Count();
 
-        // Order results
-        var ordered = items
+        // Order results and apply pagination
+        // ReSharper disable once PossibleMultipleEnumeration
+        var pagedItems = items
             .OrderByDescending(x => x.EndPoint.IsEnabled)
             .ThenBy(x => x.Status.Quality)
             .Skip(recordIndex.Value)
-            .Take(recordCount.Value);
+            .Take(recordCount.Value)
+            .ToArray();
 
-        return ordered.ToArray();
+        return new PagedResult<AppProxyEndPointInfo> {
+            Items = pagedItems,
+            TotalCount = totalCount
+        };
     }
 
     public AppProxyEndPointInfo Get(string id)
@@ -174,7 +186,7 @@ public class AppProxyEndPointService
         endPointInfo.EndPoint = proxyEndPoint;
 
         // return updated node
-        var updatedNode = ListProxies().Single(x => x.EndPoint.Id == proxyEndPoint.Id);
+        var updatedNode = ListProxies().Items.Single(x => x.EndPoint.Id == proxyEndPoint.Id);
         return updatedNode;
     }
 

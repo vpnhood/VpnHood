@@ -22,6 +22,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
 
         // List
         mapper.AddStatic(HttpMethod.GET, baseUrl, async ctx => {
+            var search = ctx.GetQueryParameter<string?>("search", null);
             var includeSucceeded = ctx.GetQueryParameter("includeSucceeded", true);
             var includeFailed = ctx.GetQueryParameter("includeFailed", true);
             var includeUnknown = ctx.GetQueryParameter("includeUnknown", true);
@@ -30,6 +31,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
             var recordCount = ctx.GetQueryParameter<int?>("recordCount", null);
             
             var res = await List(
+                search: search,
                 includeSucceeded: includeSucceeded,
                 includeFailed: includeFailed,
                 includeUnknown: includeUnknown,
@@ -131,7 +133,8 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.FromResult(result);
     }
 
-    public Task<AppProxyEndPointInfo[]> List(
+    public Task<PagedResult<AppProxyEndPointInfo>> List(
+        string? search,
         bool includeSucceeded,
         bool includeFailed,
         bool includeUnknown,
@@ -141,6 +144,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         CancellationToken cancellationToken)
     {
         var result = ProxyEndPointService.ListProxies(
+            search: search,
             includeSucceeded: includeSucceeded,
             includeFailed: includeFailed,
             includeUnknown: includeUnknown,

@@ -304,8 +304,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 disconnectRequired =
                     UserSettings.UseVpnAdapterIpFilter != oldUserSettings.UseVpnAdapterIpFilter ||
                     UserSettings.UseAppIpFilter != oldUserSettings.UseAppIpFilter ||
-                    UserSettings.CountryFilterMode != oldUserSettings.CountryFilterMode ||
-                    !UserSettings.CountryFilters.SequenceEqual(oldUserSettings.CountryFilters)  ||
+                    UserSettings.SplitByCountryMode != oldUserSettings.SplitByCountryMode ||
+                    !UserSettings.SplitByCountries.SequenceEqual(oldUserSettings.SplitByCountries)  ||
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.IncludeLocalNetwork != oldUserSettings.IncludeLocalNetwork ||
                     UserSettings.AppFiltersMode != oldUserSettings.AppFiltersMode ||
@@ -1181,7 +1181,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task<IpRangeOrderedList> GetIncludeCountryIpRanges(CancellationToken cancellationToken)
     {
         var ipRanges = IpNetwork.All.ToIpRanges();
-        if (UserSettings.CountryFilterMode is CountryFilterMode.IncludeAll)
+        if (UserSettings.SplitByCountryMode is SplitByCountryMode.IncludeAll)
             return ipRanges;
 
         // set loading state
@@ -1189,23 +1189,23 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         try {
             // calculate include country IPs
-            if (UserSettings.CountryFilterMode is CountryFilterMode.IncludeList) {
+            if (UserSettings.SplitByCountryMode is SplitByCountryMode.IncludeList) {
                 var countryIpRanges = new List<IpRange>();
-                foreach (var country in SettingsService.UserSettings.CountryFilters)
+                foreach (var country in SettingsService.UserSettings.SplitByCountries)
                     countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country).Vhc());
                 ipRanges = countryIpRanges.ToOrderedList();
             }
 
             // calculate exclude country IPs
-            if (UserSettings.CountryFilterMode is CountryFilterMode.ExcludeList) {
+            if (UserSettings.SplitByCountryMode is SplitByCountryMode.ExcludeList) {
                 var countryIpRanges = new List<IpRange>();
-                foreach (var country in SettingsService.UserSettings.CountryFilters)
+                foreach (var country in SettingsService.UserSettings.SplitByCountries)
                     countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country).Vhc());
                 ipRanges = ipRanges.Exclude(countryIpRanges);
             }
 
 
-            if (UserSettings.CountryFilterMode is CountryFilterMode.ExcludeList) {
+            if (UserSettings.SplitByCountryMode is SplitByCountryMode.ExcludeList) {
 
                 if (!_useInternalLocationService)
                     throw new InvalidOperationException("Could not use internal location service because it is disabled.");
@@ -1221,7 +1221,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex) {
             ReportError(ex, "Could not retrieve the requested countries ip ranges.");
-            UserSettings.CountryFilterMode = CountryFilterMode.IncludeAll;
+            UserSettings.SplitByCountryMode = SplitByCountryMode.IncludeAll;
             Settings.Save();
             return IpNetwork.All.ToIpRanges();
         }

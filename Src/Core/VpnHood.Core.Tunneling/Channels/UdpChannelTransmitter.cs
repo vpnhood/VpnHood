@@ -52,7 +52,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         set {
             using var udpClient = new UdpClient(_udpClient.Client.AddressFamily);
             _udpClient.Client.SendBufferSize = value?.Send > 0 ? value.Value.Send : udpClient.Client.SendBufferSize;
-            _udpClient.Client.ReceiveBufferSize = value?.Receive > 0 ? value.Value.Receive : udpClient.Client.ReceiveTimeout;
+            _udpClient.Client.ReceiveBufferSize = value?.Receive > 0 ? value.Value.Receive : udpClient.Client.ReceiveBufferSize;
         }
     }
 

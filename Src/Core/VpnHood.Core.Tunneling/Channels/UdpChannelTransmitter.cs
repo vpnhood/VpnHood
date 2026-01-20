@@ -24,6 +24,8 @@ public abstract class UdpChannelTransmitter : IDisposable
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
     private static ulong _sendSequenceNumber;
     private bool _disposed;
+    private bool _isSendBufferSizeCustomized;
+    private bool _isReceivedBufferSizeCustomized;
 
     protected abstract SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId);
 
@@ -51,8 +53,24 @@ public abstract class UdpChannelTransmitter : IDisposable
         get => new(_udpClient.Client.SendBufferSize, _udpClient.Client.ReceiveBufferSize);
         set {
             using var udpClient = new UdpClient(_udpClient.Client.AddressFamily);
-            _udpClient.Client.SendBufferSize = value?.Send > 0 ? value.Value.Send : udpClient.Client.SendBufferSize;
-            _udpClient.Client.ReceiveBufferSize = value?.Receive > 0 ? value.Value.Receive : udpClient.Client.ReceiveBufferSize;
+
+            // Send buffer size
+            if (value?.Send > 0) {
+                _isSendBufferSizeCustomized = true;
+                _udpClient.Client.SendBufferSize = value.Value.Send;
+            }
+            else if (_isSendBufferSizeCustomized) {
+                _udpClient.Client.SendBufferSize = udpClient.Client.SendBufferSize;
+            }
+
+            // Receive buffer size
+            if (value?.Receive > 0) {
+                _isReceivedBufferSizeCustomized = true;
+                _udpClient.Client.ReceiveBufferSize = value.Value.Receive;
+            }
+            else if (_isReceivedBufferSizeCustomized) {
+                _udpClient.Client.ReceiveBufferSize = udpClient.Client.ReceiveBufferSize;
+            }
         }
     }
 

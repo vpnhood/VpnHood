@@ -65,20 +65,31 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
         var isNewRemoteEndPoint = false;
         var isNewLocalEndPoint = false;
 
-        // find the proxy for the connection (source-destination)
-        var connectionKey = $"{sourceEndPoint}:{destinationEndPoint}";
-        if (!_connectionMap.TryGetValue(connectionKey, out var udpProxy)) {
-            // add the remote endpoint
-            _remoteEndPoints.GetOrAdd(destinationEndPoint, _ => {
-                isNewRemoteEndPoint = true;
-                return new TimeoutItem<bool>(true);
-            });
-            if (isNewRemoteEndPoint)
-                _packetProxyCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint);
+        // A & C can share the same worker because their destinationEndPoint is different
+        // A => D1
+        // A => D2
+        // B => D1
+        // C => D3
 
-            lock (_udpProxies) {
-                // find the proxy for the sourceEndPoint
+        lock (_udpProxies) {
+
+            // find the proxy for the connection (source-destination)
+            var connectionKey = $"{sourceEndPoint}:{destinationEndPoint}";
+            if (!_connectionMap.TryGetValue(connectionKey, out var udpProxy)) {
+                // add the remote endpoint
+                _remoteEndPoints.GetOrAdd(destinationEndPoint, _ => {
+                    isNewRemoteEndPoint = true;
+                    return new TimeoutItem<bool>(true);
+                });
+                if (isNewRemoteEndPoint)
+                    _packetProxyCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint);
+
+                // cleanup old workers
+                TimeoutItemUtil.CleanupTimeoutList(_udpProxies, _udpTimeout);
+
+                // find the proxy for the destinationEndPoint
                 udpProxy = _udpProxies.FirstOrDefault(x =>
+                    !x.IsDisposed &&
                     x.AddressFamily == addressFamily &&
                     !x.DestinationEndPointMap.TryGetValue(destinationEndPoint, out _));
 
@@ -91,44 +102,43 @@ public class UdpProxyPoolEx : PassthroughPacketTransport, IPacketProxyPool
                     }
 
                     // create a new worker
-                    udpProxy = new UdpProxyEx(CreateUdpClient(addressFamily), _udpTimeout,
-                        _packetQueueCapacity, _autoDisposeSentPackets);
+                    udpProxy = new UdpProxyEx(CreateUdpClient(addressFamily), _udpTimeout, _packetQueueCapacity, _autoDisposeSentPackets);
                     udpProxy.PacketReceived += UdpProxy_OnPacketReceived;
+                    VhLogger.Instance.LogTrace(GeneralEventId.Udp,
+                        "Created a new UdpProxyEx. WorkerCount: {WorkerCount}, {SourceEp} => {DestinationEp}",
+                        _udpProxies.Count, VhLogger.Format(sourceEndPoint), VhLogger.Format(destinationEndPoint));
 
                     _udpProxies.Add(udpProxy);
                     isNewLocalEndPoint = true;
                 }
 
-                // Add destinationEndPoint; a new UdpWorker can not map a destinationEndPoint to more than one source port
+                // Add destinationEndPoint; a new UdpProxy can not map a destinationEndPoint to more than one source endpoint
                 if (!udpProxy.DestinationEndPointMap.TryAdd(destinationEndPoint,
                         new TimeoutItem<IPEndPoint>(sourceEndPoint))) {
                     udpProxy.Dispose();
                     throw new Exception($"Could not add {destinationEndPoint}.");
                 }
 
-                // it is just for speed. if failed, it will be added again
-                if (!_connectionMap.TryAdd(connectionKey, udpProxy))
-                    VhLogger.Instance.LogWarning(
-                        $"Could not add {connectionKey} to the connection map. It is already added.");
+                // it is just for speed.
+                _connectionMap.AddOrUpdate(connectionKey, udpProxy);
             }
+
+            // Raise new endpoint
+            if (isNewLocalEndPoint || isNewRemoteEndPoint)
+                _packetProxyCallbacks?.OnConnectionEstablished(IpProtocol.Udp,
+                    localEndPoint: udpProxy.LocalEndPoint,
+                    remoteEndPoint: destinationEndPoint,
+                    isNewLocalEndPoint: isNewLocalEndPoint,
+                    isNewRemoteEndPoint: isNewRemoteEndPoint);
+
+            udpProxy.SendPacketQueued(ipPacket);
         }
-
-        // Raise new endpoint
-        if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            _packetProxyCallbacks?.OnConnectionEstablished(IpProtocol.Udp,
-                localEndPoint: udpProxy.LocalEndPoint,
-                remoteEndPoint: destinationEndPoint,
-                isNewLocalEndPoint: isNewLocalEndPoint,
-                isNewRemoteEndPoint: isNewRemoteEndPoint);
-
-        udpProxy.SendPacketQueued(ipPacket);
     }
 
     private void UdpProxy_OnPacketReceived(object? sender, IpPacket ipPacket)
     {
         OnPacketReceived(ipPacket);
     }
-
 
     private UdpClient CreateUdpClient(AddressFamily addressFamily)
     {

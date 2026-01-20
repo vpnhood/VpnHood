@@ -16,7 +16,6 @@ public abstract class UdpChannelTransmitter : IDisposable
     private const int SessionIdLength = 8;
     private const int SeqLength = 8;
     private const int TagLength = 16;
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
     private readonly EventReporter _invalidSessionReporter = new("Invalid UDP session.", GeneralEventId.UdpSign);
 
@@ -124,7 +123,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         aesGcm.Encrypt(nonce, payload.Span, ciphertext, tag, aad);
 
         var totalLength = HeaderLength + payload.Length;
-        var sent = await _udpClient.SendAsync(_sendBuffer[..totalLength], ipEndPoint, _cancellationTokenSource.Token)
+        var sent = await _udpClient.SendAsync(_sendBuffer[..totalLength], ipEndPoint)
             .Vhc();
         if (sent != totalLength)
             throw new Exception($"UdpClient: Sent {sent} bytes instead of {totalLength} bytes.");
@@ -137,7 +136,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 
         while (!_disposed) {
             try {
-                var result = await _udpClient.ReceiveAsync(_cancellationTokenSource.Token).Vhc();
+                var result = await _udpClient.ReceiveAsync().Vhc();
                 var data = result.Buffer;
                 if (data.Length < HeaderLength) {
                     _udpSignReporter.Raise();
@@ -202,8 +201,6 @@ public abstract class UdpChannelTransmitter : IDisposable
             return;
 
         _disposed = true;
-        _cancellationTokenSource.Cancel();
-        _cancellationTokenSource.Dispose();
         _udpClient.Dispose();
         _sendSemaphore.Dispose();
         _invalidSessionReporter.Dispose();

@@ -64,8 +64,8 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
                 _destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
 
             // send packet to destination
-            var sentBytes = await _udpClient.SendAsync(udpPacket.Payload, _destinationEndPoint)
-                .Vhc();
+            var sentBytes = await _udpClient.SendAsync(udpPacket.Payload, _destinationEndPoint).Vhc();
+            LastUsedTime = FastDateTime.Now; // keep worker alive while receiving traffic
 
             if (sentBytes != udpPacket.Payload.Length)
                 throw new Exception(
@@ -83,6 +83,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         while (!IsDisposed) {
             try {
                 var udpResult = await _udpClient.ReceiveAsync().Vhc();
+                LastUsedTime = FastDateTime.Now; // keep worker alive while receiving traffic
 
                 // find the audience (sourceEndPoint)
                 var sourceEndPoint = GetSourceEndPoint(udpResult.RemoteEndPoint);
@@ -95,9 +96,13 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
                 ipPacket.UpdateAllChecksums();
                 OnPacketReceived(ipPacket);
             }
+            catch (Exception) when (IsDisposed) {
+                break;
+            }
             catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
                 VhLogger.Instance.LogError(ex, "Unexpected error in UDP receive loop.");
                 Dispose();
+                break;
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in UdpProxy receive loop.");

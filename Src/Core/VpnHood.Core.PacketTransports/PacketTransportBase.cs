@@ -205,7 +205,7 @@ public abstract class PacketTransportBase : IPacketTransport
 
     protected void LogPacket(IpPacket ipPacket, Exception exception, string message)
     {
-        LogPacket(ipPacket, LogLevel.Debug, exception, message);
+        LogPacket(ipPacket, LogLevel.Error, exception, message);
     }
 
     protected void LogPacket(IpPacket ipPacket, string message)

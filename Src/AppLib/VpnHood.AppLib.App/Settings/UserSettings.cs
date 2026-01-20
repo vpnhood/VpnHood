@@ -60,9 +60,9 @@ public class UserSettings
         init {
             if (!value)
                 SplitByCountryMode = SplitByCountryMode.ExcludeMyCountry;
-            else
-                SplitByCountryMode = SplitByCountryMode.IncludeAll; //todo: remove
+            //else
+              //  SplitByCountryMode = SplitByCountryMode.IncludeAll; //todo: remove
         }
-        get => SplitByCountryMode != SplitByCountryMode.ExcludeMyCountry; //todo: remove
+        //get => SplitByCountryMode != SplitByCountryMode.ExcludeMyCountry; //todo: remove
     }
 }

@@ -55,14 +55,11 @@ public class UserSettings
         }
     }
 
-    [Obsolete("Use CountryFilterMode.")]
-    public bool TunnelClientCountry {
+    [Obsolete("Use CountryFilterMode. Version ")]
+    public bool? TunnelClientCountry {
         init {
-            if (!value)
+            if (value == false)
                 SplitByCountryMode = SplitByCountryMode.ExcludeMyCountry;
-            //else
-              //  SplitByCountryMode = SplitByCountryMode.IncludeAll; //todo: remove
         }
-        //get => SplitByCountryMode != SplitByCountryMode.ExcludeMyCountry; //todo: remove
     }
 }

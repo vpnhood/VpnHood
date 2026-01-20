@@ -39,9 +39,8 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     private static async Task<string> GetPrimaryAdapterName(CancellationToken cancellationToken)
     {
-        var mainInterface = await ExecuteCommandAsync("ip route | grep default | awk '{print $5}'", cancellationToken)
-            .Vhc();
-        mainInterface = mainInterface.Trim();
+        var mainInterface = await ExecuteCommandAsync("ip route | grep default | awk '{print $5}'", cancellationToken).Vhc();
+        mainInterface = mainInterface.Split("\n").FirstOrDefault()?.Trim();
         if (string.IsNullOrEmpty(mainInterface))
             throw new InvalidOperationException("No active network interface found.");
 

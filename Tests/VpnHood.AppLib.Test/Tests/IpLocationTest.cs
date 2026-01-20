@@ -38,8 +38,8 @@ public class IpLocationTest : TestAppBase
             () => null);
 
         // compare ip ranges for a country
-        var sqliteRanges = await ipLocationSqliteProvider.GetIpRanges("TR");
-        var localRanges = await localRangeProvider.GetIpRanges("TR");
+        var sqliteRanges = await ipLocationSqliteProvider.GetIpRanges("TR", TestCancellationToken);
+        var localRanges = await localRangeProvider.GetIpRanges("TR", TestCancellationToken);
         Assert.IsTrue(sqliteRanges.SequenceEqual(localRanges), "SQLite ranges differ from local ranges for TR.");
 
         // get country by ip using provider
@@ -50,7 +50,7 @@ public class IpLocationTest : TestAppBase
             "Country code mismatch between providers.");
 
         // verify ip is in country ranges
-        var sqliteCountryRanges = await ipLocationSqliteProvider.GetIpRanges(sqliteLocation.CountryCode);
+        var sqliteCountryRanges = await ipLocationSqliteProvider.GetIpRanges(sqliteLocation.CountryCode, TestCancellationToken);
         Assert.IsTrue(sqliteCountryRanges.Any(x => x.IsInRange(ipToCheck)),
             "SQLite provider ranges do not contain test IP.");
     }
@@ -94,11 +94,11 @@ public class IpLocationTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UseInternalLocationService = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        var countryCodes = await app.IpRangeLocationProvider.GetCountryCodes();
+        var countryCodes = await app.IpRangeLocationProvider.GetCountryCodes(TestCancellationToken);
         Assert.IsTrue(countryCodes.Any(x => x == "US"),
             "Countries has not been extracted.");
 
         // make sure GetIpRange works
-        Assert.IsTrue((await app.IpRangeLocationProvider.GetIpRanges("US")).Any());
+        Assert.IsTrue((await app.IpRangeLocationProvider.GetIpRanges("US", TestCancellationToken)).Any());
     }
 }

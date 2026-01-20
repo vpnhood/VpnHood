@@ -1,6 +1,7 @@
 using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
@@ -129,6 +130,12 @@ public class AppController : ControllerBase, IAppController
 
     [HttpGet("countries")]
     public Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("supported-split-by-countries")]
+    public Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

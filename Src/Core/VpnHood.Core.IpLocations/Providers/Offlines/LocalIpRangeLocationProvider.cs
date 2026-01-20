@@ -22,9 +22,9 @@ public class LocalIpRangeLocationProvider(
     private readonly Lazy<ZipArchive> _zipArchive = new(zipArchiveFactory);
     private string? CurrentCountryCode => currentCountryCodeFunc() ?? _lasCurrentCountryCode;
 
-    public async Task<string[]> GetCountryCodes()
+    public async Task<string[]> GetCountryCodes(CancellationToken cancellationToken)
     {
-        using var _ = await _lock.LockAsync();
+        using var _ = await _lock.LockAsync(cancellationToken);
         _countryCodes ??= _zipArchive.Value.Entries
             .Where(x => Path.GetExtension(x.Name) == ".ips")
             .Select(x => Path.GetFileNameWithoutExtension(x.Name).ToUpper())
@@ -33,23 +33,23 @@ public class LocalIpRangeLocationProvider(
         return _countryCodes;
     }
 
-    public async Task<IpRangeOrderedList> GetIpRanges(string countryCode)
+    public async Task<IpRangeOrderedList> GetIpRanges(string countryCode, CancellationToken cancellationToken)
     {
-        using var _ = await _lock.LockAsync();
-        var ipRanges = await GetIpRangesInternal(countryCode).Vhc();
+        using var _ = await _lock.LockAsync(cancellationToken);
+        var ipRanges = await GetIpRangesInternal(countryCode, cancellationToken).Vhc();
         _countryIpRanges.TryAdd(countryCode, ipRanges);
         return ipRanges;
     }
 
     // must be called within async lock
-    private async Task<IpRangeOrderedList> GetIpRangesInternal(string countryCode)
+    private async Task<IpRangeOrderedList> GetIpRangesInternal(string countryCode, CancellationToken cancellationToken)
     {
         if (_countryIpRanges.TryGetValue(countryCode, out var countryIpRangeCache))
             return countryIpRangeCache;
 
         try {
             var entry = _zipArchive.Value.GetEntry($"{countryCode.ToLower()}.ips") ?? throw new NotExistsException();
-            await using var stream = await entry.OpenAsync();
+            await using var stream = await entry.OpenAsync(cancellationToken);
             return IpRangeOrderedList.Deserialize(stream);
         }
         catch (Exception ex) {
@@ -74,15 +74,15 @@ public class LocalIpRangeLocationProvider(
     {
         // first try CurrentCountryCode for performance
         if (CurrentCountryCode != null) {
-            var ipRanges = await GetIpRanges(CurrentCountryCode).Vhc();
+            var ipRanges = await GetIpRanges(CurrentCountryCode, cancellationToken).Vhc();
             if (ipRanges.Any(x => x.IsInRange(ipAddress)))
                 return BuildIpLocation(CurrentCountryCode, ipAddress);
         }
 
         // iterate through all countries
-        var countryCodes = await GetCountryCodes();
+        var countryCodes = await GetCountryCodes(cancellationToken);
         foreach (var countryCode in countryCodes) {
-            var ipRanges = await GetIpRanges(countryCode).Vhc();
+            var ipRanges = await GetIpRanges(countryCode, cancellationToken).Vhc();
             if (ipRanges.Any(x => x.IsInRange(ipAddress)))
                 return BuildIpLocation(countryCode, ipAddress);
         }

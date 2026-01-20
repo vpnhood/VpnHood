@@ -55,7 +55,7 @@ public class UserSettings
         }
     }
 
-    [Obsolete("Use CountryFilterMode. Version ")]
+    [Obsolete("Use CountryFilterMode. for version <=784")]
     public bool? TunnelClientCountry {
         init {
             if (value == false)

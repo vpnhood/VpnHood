@@ -11,6 +11,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
+using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services.Accounts;
@@ -305,7 +306,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UserSettings.UseVpnAdapterIpFilter != oldUserSettings.UseVpnAdapterIpFilter ||
                     UserSettings.UseAppIpFilter != oldUserSettings.UseAppIpFilter ||
                     UserSettings.SplitByCountryMode != oldUserSettings.SplitByCountryMode ||
-                    !UserSettings.SplitByCountries.SequenceEqual(oldUserSettings.SplitByCountries)  ||
+                    !UserSettings.SplitByCountries.SequenceEqual(oldUserSettings.SplitByCountries) ||
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.IncludeLocalNetwork != oldUserSettings.IncludeLocalNetwork ||
                     UserSettings.AppFiltersMode != oldUserSettings.AppFiltersMode ||
@@ -1178,7 +1179,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public async Task<IpRangeOrderedList> GetIncludeCountryIpRanges(CancellationToken cancellationToken)
+    private async Task<IpRangeOrderedList> GetIncludeCountryIpRanges(CancellationToken cancellationToken)
     {
         var ipRanges = IpNetwork.All.ToIpRanges();
         if (UserSettings.SplitByCountryMode is SplitByCountryMode.IncludeAll)
@@ -1192,7 +1193,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (UserSettings.SplitByCountryMode is SplitByCountryMode.IncludeList) {
                 var countryIpRanges = new List<IpRange>();
                 foreach (var country in SettingsService.UserSettings.SplitByCountries)
-                    countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country).Vhc());
+                    countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country, cancellationToken).Vhc());
                 ipRanges = countryIpRanges.ToOrderedList();
             }
 
@@ -1200,7 +1201,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (UserSettings.SplitByCountryMode is SplitByCountryMode.ExcludeList) {
                 var countryIpRanges = new List<IpRange>();
                 foreach (var country in SettingsService.UserSettings.SplitByCountries)
-                    countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country).Vhc());
+                    countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country, cancellationToken).Vhc());
                 ipRanges = ipRanges.Exclude(countryIpRanges);
             }
 
@@ -1212,7 +1213,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
                 // do not use cache and server country code, maybe client on satellite, and they need to split their own country IPs 
                 var countryCode = await GetClientCountryCodeAsync(allowVpnServer: false, allowCache: false, cancellationToken).Vhc();
-                var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(countryCode).Vhc();
+                var countryIpRanges = await IpRangeLocationProvider.GetIpRanges(countryCode, cancellationToken).Vhc();
                 VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}",
                     VhUtils.TryGetCountryName(countryCode));
                 ipRanges = ipRanges.Exclude(countryIpRanges);
@@ -1455,5 +1456,30 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         AppUiContext.OnChanged -= ActiveUiContext_OnChanged;
 
         base.Dispose(disposing);
+    }
+
+    public CountryInfo[] GetCountries()
+    {
+        var countryInfos = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
+            .Select(culture => new RegionInfo(culture.Name))
+            .Where(region => !string.IsNullOrEmpty(region.Name))
+            .DistinctBy(region => region.Name)
+            .OrderBy(region => region.EnglishName)
+            .Select(region => new CountryInfo {
+                CountryCode = region.Name,
+                EnglishName = region.EnglishName
+            })
+            .ToArray();
+        return countryInfos;
+    }
+
+    public async Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken)
+    {
+        var splitByCountries = await IpRangeLocationProvider.GetCountryCodes(cancellationToken);
+        var countryInfos = GetCountries()
+            .Where(country => splitByCountries.Contains(country.CountryCode))
+            .ToArray();
+
+        return countryInfos;
     }
 }

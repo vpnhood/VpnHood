@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.WebServer.Api;
+﻿namespace VpnHood.AppLib.Dtos;
 
 public class CountryInfo
 {

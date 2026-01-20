@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Messaging;
@@ -29,6 +30,7 @@ public interface IAppController
     Task ExtendByRewardedAd(CancellationToken cancellationToken);
     Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken);
     Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken);
+    Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken);
     Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken);
     Task InternalAdError(string errorMessage, CancellationToken cancellationToken);
     Task RemovePremium(Guid profileId, CancellationToken cancellationToken);

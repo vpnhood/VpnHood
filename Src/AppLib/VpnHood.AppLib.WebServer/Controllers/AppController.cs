@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
@@ -140,6 +141,11 @@ internal class AppController : ControllerBase, IAppController
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "countries", async ctx => {
             var res = await GetCountries(ctx.Token);
+            await ctx.SendJson(res);
+        });
+
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "supported-split-by-countries", async ctx => {
+            var res = await GetSupportedSplitByCountries(ctx.Token);
             await ctx.SendJson(res);
         });
     }
@@ -313,17 +319,12 @@ internal class AppController : ControllerBase, IAppController
 
     public Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken)
     {
-        var countryInfos = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
-            .Select(culture => new RegionInfo(culture.Name))
-            .Where(region => !string.IsNullOrEmpty(region.Name))
-            .DistinctBy(region => region.Name)
-            .OrderBy(region => region.EnglishName)
-            .Select(region => new CountryInfo {
-                CountryCode = region.Name,
-                EnglishName = region.EnglishName
-            })
-            .ToArray();
+        _ = cancellationToken;
+        return Task.FromResult(App.GetCountries());
+    }
 
-        return Task.FromResult(countryInfos);
+    public Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken)
+    {
+        return App.GetSupportedSplitByCountries(cancellationToken);
     }
 }

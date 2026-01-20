@@ -77,7 +77,7 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
         return await GetLocation(ipAddress, cancellationToken);
     }
 
-    public async Task<IpRangeOrderedList> GetIpRanges(string countryCode)
+    public async Task<IpRangeOrderedList> GetIpRanges(string countryCode, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(countryCode);
 
@@ -87,14 +87,29 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
             "SELECT StartIp, EndIp FROM IpLocations WHERE CountryCode = @countryCode COLLATE NOCASE ORDER BY StartIp";
         cmd.Parameters.AddWithValue("@countryCode", countryCode);
 
-        await using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync()) {
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) {
             var startIpBytes = (byte[])reader[0];
             var endIpBytes = (byte[])reader[1];
             ranges.Add(new IpRange(FromBytes(startIpBytes), FromBytes(endIpBytes)));
         }
 
         return new IpRangeOrderedList(ranges);
+    }
+
+    public async Task<string[]> GetCountryCodes(CancellationToken cancellationToken)
+    {
+        var countryCodes = new List<string>();
+        await using var cmd = _connection.Value.CreateCommand();
+        cmd.CommandText = "SELECT DISTINCT CountryCode FROM IpLocations ORDER BY CountryCode";
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) {
+            var countryCode = (string)reader[0];
+            countryCodes.Add(countryCode.ToUpperInvariant());
+        }
+
+        return countryCodes.ToArray();
     }
 
     private static SqliteConnection OpenConnection(string dbPath)

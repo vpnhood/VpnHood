@@ -14,8 +14,8 @@ public interface IAppController
     Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken);
     Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken);
     Task<AppData> GetConfig(CancellationToken cancellationToken);
-    Task<IpFilters> GetIpFilters(CancellationToken cancellationToken);
-    Task SetIpFilters(IpFilters ipFilters, CancellationToken cancellationToken);
+    Task<SplitByIps> GetIpFilters(CancellationToken cancellationToken);
+    Task SetIpFilters(SplitByIps splitByIps, CancellationToken cancellationToken);
     Task<AppState> GetState(CancellationToken cancellationToken);
     Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
     Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);

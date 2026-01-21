@@ -28,13 +28,13 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpGet("ip-filters")]
-    public Task<IpFilters> GetIpFilters(CancellationToken cancellationToken)
+    public Task<SplitByIps> GetIpFilters(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPut("ip-filters")]
-    public Task SetIpFilters(IpFilters ipFilters, CancellationToken cancellationToken)
+    public Task SetIpFilters(SplitByIps splitByIps, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

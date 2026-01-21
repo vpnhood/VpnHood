@@ -62,10 +62,10 @@ public class TestAppHelper : TestHelper
         var clientApp = VpnHoodApp.Instance;
         clientApp.Diagnoser.HttpTimeout = TimeSpan.FromSeconds(2);
         clientApp.Diagnoser.NsTimeout = TimeSpan.FromSeconds(2);
-        clientApp.UserSettings.UseVpnAdapterIpFilter = true;
-        clientApp.UserSettings.UseAppIpFilter = true;
+        clientApp.UserSettings.UseSplitByIpViaDevice = true;
+        clientApp.UserSettings.UseSplitByIpViaApp = true;
         clientApp.UserSettings.UseTcpProxy = true;
-        clientApp.SettingsService.IpFilterSettings.AdapterIpFilterIncludes =
+        clientApp.SettingsService.SplitByIpSettings.DeviceIncludes =
             TestIpAddresses.Select(x => new IpRange(x)).ToText();
         clientApp.UserSettings.LogAnonymous = false;
 

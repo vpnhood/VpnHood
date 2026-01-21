@@ -297,7 +297,7 @@ public class AdTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         // we add to exclude but all ip should be split by ad
-        app.SettingsService.IpFilterSettings.AppIpFilterIncludes = customIps.ToText();
+        app.SettingsService.SplitByIpSettings.AppIncludes = customIps.ToText();
         _ = app.Connect(clientProfile.ClientProfileId);
         await app.WaitForState(AppConnectionState.WaitingForAd);
         await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);

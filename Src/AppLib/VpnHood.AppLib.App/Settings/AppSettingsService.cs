@@ -19,14 +19,14 @@ public class AppSettingsService
     public UserSettings UserSettings => Settings.UserSettings;
     public UserSettings OldUserSettings { get; private set; }
     public RemoteSettings? RemoteSettings { get; private set; }
-    public IpFilterSettings IpFilterSettings { get; }
+    public SplitByIpSettings SplitByIpSettings { get; }
 
     public AppSettingsService(string storagePath, Uri? remoteSettingsUrl, bool debugMode)
     {
         _storagePath = storagePath;
         Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? GetDefaultSettings(debugMode);
         Settings.AppSettingsService = this;
-        IpFilterSettings = new IpFilterSettings(Path.Combine(storagePath, "ip_filters"));
+        SplitByIpSettings = new SplitByIpSettings(Path.Combine(storagePath, "ip_filters"));
         OldUserSettings = Settings.UserSettings;
 
         // load remote settings

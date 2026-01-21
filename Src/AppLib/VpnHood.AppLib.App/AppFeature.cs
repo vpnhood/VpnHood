@@ -8,7 +8,7 @@ public enum AppFeature
     QuickLaunch,
     AlwaysOn,
     CustomDns,
-    AppIpFilter,
-    AdapterIpFilter,
+    SplitByIpViaApp,
+    SplitByIpViaDevice,
     CountryFilter
 }

@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
@@ -39,7 +38,7 @@ internal class AppController : ControllerBase, IAppController
         });
 
         mapper.AddStatic(HttpMethod.PUT, baseUrl + "ip-filters", async ctx => {
-            var body = ctx.ReadJson<IpFilters>();
+            var body = ctx.ReadJson<SplitByIps>();
             await SetIpFilters(body, ctx.Token);
             await ctx.SendNoContent();
         });
@@ -176,24 +175,24 @@ internal class AppController : ControllerBase, IAppController
         return Task.FromResult(ret);
     }
 
-    public Task<IpFilters> GetIpFilters(CancellationToken cancellationToken)
+    public Task<SplitByIps> GetIpFilters(CancellationToken cancellationToken)
     {
-        var appIpFilters = new IpFilters {
-            AdapterIpFilterIncludes = App.SettingsService.IpFilterSettings.AdapterIpFilterIncludes,
-            AdapterIpFilterExcludes = App.SettingsService.IpFilterSettings.AdapterIpFilterExcludes,
-            AppIpFilterIncludes = App.SettingsService.IpFilterSettings.AppIpFilterIncludes,
-            AppIpFilterExcludes = App.SettingsService.IpFilterSettings.AppIpFilterExcludes
+        var appIpFilters = new SplitByIps {
+            DeviceIncludes = App.SettingsService.SplitByIpSettings.DeviceIncludes,
+            DeviceExcludes = App.SettingsService.SplitByIpSettings.DeviceExcludes,
+            AppIncludes = App.SettingsService.SplitByIpSettings.AppIncludes,
+            AppExcludes = App.SettingsService.SplitByIpSettings.AppExcludes
         };
 
         return Task.FromResult(appIpFilters);
     }
 
-    public Task SetIpFilters(IpFilters ipFilters, CancellationToken cancellationToken)
+    public Task SetIpFilters(SplitByIps splitByIps, CancellationToken cancellationToken)
     {
-        App.SettingsService.IpFilterSettings.AdapterIpFilterExcludes = ipFilters.AdapterIpFilterExcludes;
-        App.SettingsService.IpFilterSettings.AdapterIpFilterIncludes = ipFilters.AdapterIpFilterIncludes;
-        App.SettingsService.IpFilterSettings.AppIpFilterExcludes = ipFilters.AppIpFilterExcludes;
-        App.SettingsService.IpFilterSettings.AppIpFilterIncludes = ipFilters.AppIpFilterIncludes;
+        App.SettingsService.SplitByIpSettings.DeviceExcludes = splitByIps.DeviceExcludes;
+        App.SettingsService.SplitByIpSettings.DeviceIncludes = splitByIps.DeviceIncludes;
+        App.SettingsService.SplitByIpSettings.AppExcludes = splitByIps.AppExcludes;
+        App.SettingsService.SplitByIpSettings.AppIncludes = splitByIps.AppIncludes;
         return Task.CompletedTask;
     }
 

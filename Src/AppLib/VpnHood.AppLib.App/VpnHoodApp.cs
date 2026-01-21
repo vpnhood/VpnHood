@@ -303,14 +303,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
                 // check is disconnect required
                 disconnectRequired =
-                    UserSettings.UseVpnAdapterIpFilter != oldUserSettings.UseVpnAdapterIpFilter ||
-                    UserSettings.UseAppIpFilter != oldUserSettings.UseAppIpFilter ||
+                    UserSettings.UseSplitByIpViaDevice != oldUserSettings.UseSplitByIpViaDevice ||
+                    UserSettings.UseSplitByIpViaApp != oldUserSettings.UseSplitByIpViaApp ||
                     UserSettings.SplitByCountryMode != oldUserSettings.SplitByCountryMode ||
                     !UserSettings.SplitByCountries.SequenceEqual(oldUserSettings.SplitByCountries) ||
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.IncludeLocalNetwork != oldUserSettings.IncludeLocalNetwork ||
-                    UserSettings.AppFiltersMode != oldUserSettings.AppFiltersMode ||
-                    !UserSettings.AppFilters.SequenceEqual(oldUserSettings.AppFilters) ||
+                    UserSettings.SplitByAppMode != oldUserSettings.SplitByAppMode ||
+                    !UserSettings.SplitByApps.SequenceEqual(oldUserSettings.SplitByApps) ||
                     UserSettings.DnsMode != oldUserSettings.DnsMode ||
                     !VhUtils.SequenceEquals(UserSettings.DnsServers, oldUserSettings.DnsServers);
             }
@@ -712,11 +712,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // calculate vpnAdapterIpRanges
             var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
-            if (UserSettings.UseVpnAdapterIpFilter && CheckPremiumFeature(AppFeature.AdapterIpFilter)) {
+            if (UserSettings.UseSplitByIpViaDevice && CheckPremiumFeature(AppFeature.SplitByIpViaDevice)) {
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
-                    IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AdapterIpFilterIncludes));
+                    IpRangeParser.ParseIncludes(SettingsService.SplitByIpSettings.DeviceIncludes));
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
-                    IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AdapterIpFilterExcludes));
+                    IpRangeParser.ParseExcludes(SettingsService.SplitByIpSettings.DeviceExcludes));
             }
 
             // use default DNS servers if not premium account
@@ -754,8 +754,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
                 AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
                 AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
-                ExcludeApps = UserSettings.AppFiltersMode == FilterMode.Exclude ? UserSettings.AppFilters : null,
-                IncludeApps = UserSettings.AppFiltersMode == FilterMode.Include ? UserSettings.AppFilters : null,
+                ExcludeApps = UserSettings.SplitByAppMode == SplitByMode.Exclude ? UserSettings.SplitByApps : null,
+                IncludeApps = UserSettings.SplitByAppMode == SplitByMode.Include ? UserSettings.SplitByApps : null,
                 DnsServers = dnsServers,
                 LogServiceOptions = GetLogOptions(),
                 Ga4MeasurementId = _ga4MeasurementId,
@@ -1242,12 +1242,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var ipRanges = await GetIncludeCountryIpRanges(cancellationToken);
 
         // calculate AppFilter IPs
-        if (UserSettings.UseAppIpFilter && CheckPremiumFeature(AppFeature.AppIpFilter)) {
+        if (UserSettings.UseSplitByIpViaApp && CheckPremiumFeature(AppFeature.SplitByIpViaApp)) {
             ipRanges = ipRanges.Intersect(
-                IpFilterParser.ParseIncludes(SettingsService.IpFilterSettings.AppIpFilterIncludes));
+                IpRangeParser.ParseIncludes(SettingsService.SplitByIpSettings.AppIncludes));
 
             ipRanges = ipRanges.Exclude(
-                IpFilterParser.ParseExcludes(SettingsService.IpFilterSettings.AppIpFilterExcludes));
+                IpRangeParser.ParseExcludes(SettingsService.SplitByIpSettings.AppExcludes));
         }
 
         return ipRanges;

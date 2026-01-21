@@ -142,8 +142,8 @@ public class ClientAppTest : TestAppBase
         // ************
         // *** TEST ***: Test Include ip filter
         if (include) {
-            app.SettingsService.IpFilterSettings.AppIpFilterIncludes = customIps.ToText();
-            app.SettingsService.IpFilterSettings.AppIpFilterExcludes = "";
+            app.SettingsService.SplitByIpSettings.AppIncludes = customIps.ToText();
+            app.SettingsService.SplitByIpSettings.AppExcludes = "";
             await app.Connect(clientProfile.ClientProfileId);
             await app.WaitForState(AppConnectionState.Connected);
             await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
@@ -157,8 +157,8 @@ public class ClientAppTest : TestAppBase
         // ************
         // *** TEST ***: Test Exclude ip filters
         if (!include) {
-            app.SettingsService.IpFilterSettings.AppIpFilterIncludes = "";
-            app.SettingsService.IpFilterSettings.AppIpFilterExcludes = customIps.ToText();
+            app.SettingsService.SplitByIpSettings.AppIncludes = "";
+            app.SettingsService.SplitByIpSettings.AppExcludes = customIps.ToText();
             await app.Connect(clientProfile.ClientProfileId);
             await app.WaitForState(AppConnectionState.Connected);
 

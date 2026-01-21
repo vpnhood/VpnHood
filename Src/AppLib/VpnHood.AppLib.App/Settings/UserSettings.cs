@@ -15,10 +15,12 @@ public class UserSettings
     public string? CultureCode { get; set; }
     public Guid? ClientProfileId { get; set; }
     public int MaxPacketChannelCount { get; set; } = ClientOptions.Default.MaxPacketChannelCount;
+    public SplitByMode SplitByAppMode { get; set; } = SplitByMode.All;
+    public string[] SplitByApps { get; set; } = [];
     public SplitByCountryMode SplitByCountryMode { get; set; } = SplitByCountryMode.IncludeAll;
     public string[] SplitByCountries { get; set; } = [];
-    public string[] AppFilters { get; set; } = [];
-    public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
+    public bool UseSplitByIpViaApp { get; set; }
+    public bool UseSplitByIpViaDevice { get; set; }
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;
     public bool UseTcpProxy { get; set; }
@@ -29,8 +31,6 @@ public class UserSettings
     public string? DebugData2 { get; set; }
     public bool LogAnonymous { get; set; } = true;
     public bool IncludeLocalNetwork { get; set; } = ClientOptions.Default.IncludeLocalNetwork;
-    public bool UseAppIpFilter { get; set; }
-    public bool UseVpnAdapterIpFilter { get; set; }
     public EndPointStrategy EndPointStrategy { get; set; }
     public DnsMode DnsMode { get; set; }
     public AppProxySettings ProxySettings { get; set; } = new();
@@ -62,4 +62,37 @@ public class UserSettings
                 SplitByCountryMode = SplitByCountryMode.ExcludeMyCountry;
         }
     }
+
+    [Obsolete("Use UseSplitByIpsViaApp. for version <=784")]
+    public bool? UseAppIpFilter {
+        init {
+            if (value == true)
+                UseSplitByIpViaApp = true;
+        }
+    }
+
+    [Obsolete("Use UseSplitByIpsViaDevice. for version <=784")]
+    public bool? UseVpnAdapterIpFilter { 
+        init {
+            if (value == true)
+                UseSplitByIpViaDevice = true;
+        }
+    }
+
+    [Obsolete("Use SplitByAppMode. for version <=784")]
+    public SplitByMode? AppFiltersMode { 
+        init {
+            if (value != null)
+                SplitByAppMode = value.Value;
+        }
+    }
+
+    [Obsolete("Use SplitByApps. for version <=784")]
+    public string[]? AppFilters { 
+        init {
+            if (value != null)
+                SplitByApps = value;
+        }
+    }
+
 }

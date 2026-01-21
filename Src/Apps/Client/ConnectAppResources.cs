@@ -29,7 +29,7 @@ public static class ConnectAppResources
         AppFeature.CustomDns,
         AppFeature.AlwaysOn,
         AppFeature.QuickLaunch,
-        AppFeature.AppIpFilter,
-        AppFeature.AdapterIpFilter
+        AppFeature.SplitByIpViaApp,
+        AppFeature.SplitByIpViaDevice
     ];
 }

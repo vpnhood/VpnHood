@@ -112,7 +112,7 @@ internal class ApiController : IDisposable
     {
         // read request type
         var requestType = await StreamUtils.ReadObjectAsync<string>(stream, cancellationToken);
-        VhLogger.Instance.LogDebug("ApiController is reading a request: {RequestType}", requestType);
+        VhLogger.Instance.LogTrace("ApiController is reading a request: {RequestType}", requestType);
 
         switch (requestType) {
             // handle connection info request

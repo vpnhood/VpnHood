@@ -27,14 +27,14 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpGet("ip-filters")]
-    public Task<SplitByIps> GetIpFilters(CancellationToken cancellationToken)
+    [HttpGet("split-by-ips")]
+    public Task<SplitByIps> GetSplitByIps(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPut("ip-filters")]
-    public Task SetIpFilters(SplitByIps splitByIps, CancellationToken cancellationToken)
+    [HttpPut("split-by-ips")]
+    public Task SetSplitByIps(SplitByIps value, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

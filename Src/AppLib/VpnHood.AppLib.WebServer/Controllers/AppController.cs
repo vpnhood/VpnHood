@@ -32,14 +32,14 @@ internal class AppController : ControllerBase, IAppController
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.GET, baseUrl + "ip-filters", async ctx => {
-            var res = await GetIpFilters(ctx.Token);
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "split-by-ips", async ctx => {
+            var res = await GetSplitByIps(ctx.Token);
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.PUT, baseUrl + "ip-filters", async ctx => {
+        mapper.AddStatic(HttpMethod.PUT, baseUrl + "split-by-ips", async ctx => {
             var body = ctx.ReadJson<SplitByIps>();
-            await SetIpFilters(body, ctx.Token);
+            await SetSplitByIps(body, ctx.Token);
             await ctx.SendNoContent();
         });
 
@@ -175,7 +175,7 @@ internal class AppController : ControllerBase, IAppController
         return Task.FromResult(ret);
     }
 
-    public Task<SplitByIps> GetIpFilters(CancellationToken cancellationToken)
+    public Task<SplitByIps> GetSplitByIps(CancellationToken cancellationToken)
     {
         var appIpFilters = new SplitByIps {
             DeviceIncludes = App.SettingsService.SplitByIpSettings.DeviceIncludes,
@@ -187,12 +187,12 @@ internal class AppController : ControllerBase, IAppController
         return Task.FromResult(appIpFilters);
     }
 
-    public Task SetIpFilters(SplitByIps splitByIps, CancellationToken cancellationToken)
+    public Task SetSplitByIps(SplitByIps value, CancellationToken cancellationToken)
     {
-        App.SettingsService.SplitByIpSettings.DeviceExcludes = splitByIps.DeviceExcludes;
-        App.SettingsService.SplitByIpSettings.DeviceIncludes = splitByIps.DeviceIncludes;
-        App.SettingsService.SplitByIpSettings.AppExcludes = splitByIps.AppExcludes;
-        App.SettingsService.SplitByIpSettings.AppIncludes = splitByIps.AppIncludes;
+        App.SettingsService.SplitByIpSettings.DeviceExcludes = value.DeviceExcludes;
+        App.SettingsService.SplitByIpSettings.DeviceIncludes = value.DeviceIncludes;
+        App.SettingsService.SplitByIpSettings.AppExcludes = value.AppExcludes;
+        App.SettingsService.SplitByIpSettings.AppIncludes = value.AppIncludes;
         return Task.CompletedTask;
     }
 

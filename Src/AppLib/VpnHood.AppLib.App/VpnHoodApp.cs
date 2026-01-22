@@ -1191,6 +1191,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         try {
             // calculate include country IPs
             if (UserSettings.SplitByCountryMode is SplitByCountryMode.IncludeList) {
+                VhLogger.Instance.LogInformation("Calculating include country IP ranges...");
                 var countryIpRanges = new List<IpRange>();
                 foreach (var country in SettingsService.UserSettings.SplitByCountries)
                     countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country, cancellationToken).Vhc());
@@ -1199,6 +1200,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // calculate exclude country IPs
             if (UserSettings.SplitByCountryMode is SplitByCountryMode.ExcludeList) {
+                VhLogger.Instance.LogInformation("Calculating exclude country IP ranges...");
                 var countryIpRanges = new List<IpRange>();
                 foreach (var country in SettingsService.UserSettings.SplitByCountries)
                     countryIpRanges.AddRange(await IpRangeLocationProvider.GetIpRanges(country, cancellationToken).Vhc());
@@ -1206,7 +1208,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             }
 
 
-            if (UserSettings.SplitByCountryMode is SplitByCountryMode.ExcludeList) {
+            if (UserSettings.SplitByCountryMode is SplitByCountryMode.ExcludeMyCountry) {
+                VhLogger.Instance.LogInformation("Calculating exclude my country IP ranges...");
 
                 if (!_useInternalLocationService)
                     throw new InvalidOperationException("Could not use internal location service because it is disabled.");

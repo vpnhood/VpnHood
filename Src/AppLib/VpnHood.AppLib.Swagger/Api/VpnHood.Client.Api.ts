@@ -3192,7 +3192,7 @@ export enum AppFeature {
     CustomDns = "CustomDns",
     SplitByIpViaApp = "SplitByIpViaApp",
     SplitByIpViaDevice = "SplitByIpViaDevice",
-    CountryFilter = "CountryFilter",
+    SplitByCountry = "SplitByCountry",
 }
 
 export enum ChannelProtocol {
@@ -4687,12 +4687,6 @@ export class UserSettings implements IUserSettings {
     allowRemoteAccess!: boolean;
     customData?: CustomData | null;
     dnsServers!: string[];
-    useUdpChannel?: boolean | null;
-    tunnelClientCountry?: boolean | null;
-    useAppIpFilter?: boolean | null;
-    useVpnAdapterIpFilter?: boolean | null;
-    appFiltersMode?: SplitByMode | null;
-    appFilters?: string[] | null;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -4761,19 +4755,6 @@ export class UserSettings implements IUserSettings {
             else {
                 this.dnsServers = null as any;
             }
-            this.useUdpChannel = _data["useUdpChannel"] !== undefined ? _data["useUdpChannel"] : null as any;
-            this.tunnelClientCountry = _data["tunnelClientCountry"] !== undefined ? _data["tunnelClientCountry"] : null as any;
-            this.useAppIpFilter = _data["useAppIpFilter"] !== undefined ? _data["useAppIpFilter"] : null as any;
-            this.useVpnAdapterIpFilter = _data["useVpnAdapterIpFilter"] !== undefined ? _data["useVpnAdapterIpFilter"] : null as any;
-            this.appFiltersMode = _data["appFiltersMode"] !== undefined ? _data["appFiltersMode"] : null as any;
-            if (Array.isArray(_data["appFilters"])) {
-                this.appFilters = [] as any;
-                for (let item of _data["appFilters"])
-                    this.appFilters!.push(item);
-            }
-            else {
-                this.appFilters = null as any;
-            }
         }
     }
 
@@ -4826,16 +4807,6 @@ export class UserSettings implements IUserSettings {
             for (let item of this.dnsServers)
                 data["dnsServers"].push(item);
         }
-        data["useUdpChannel"] = this.useUdpChannel !== undefined ? this.useUdpChannel : null as any;
-        data["tunnelClientCountry"] = this.tunnelClientCountry !== undefined ? this.tunnelClientCountry : null as any;
-        data["useAppIpFilter"] = this.useAppIpFilter !== undefined ? this.useAppIpFilter : null as any;
-        data["useVpnAdapterIpFilter"] = this.useVpnAdapterIpFilter !== undefined ? this.useVpnAdapterIpFilter : null as any;
-        data["appFiltersMode"] = this.appFiltersMode !== undefined ? this.appFiltersMode : null as any;
-        if (Array.isArray(this.appFilters)) {
-            data["appFilters"] = [];
-            for (let item of this.appFilters)
-                data["appFilters"].push(item);
-        }
         return data;
     }
 }
@@ -4869,12 +4840,6 @@ export interface IUserSettings {
     allowRemoteAccess: boolean;
     customData?: CustomData | null;
     dnsServers: string[];
-    useUdpChannel?: boolean | null;
-    tunnelClientCountry?: boolean | null;
-    useAppIpFilter?: boolean | null;
-    useVpnAdapterIpFilter?: boolean | null;
-    appFiltersMode?: SplitByMode | null;
-    appFilters?: string[] | null;
 }
 
 export enum SplitByMode {

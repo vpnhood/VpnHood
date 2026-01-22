@@ -424,8 +424,8 @@ export class AppClient {
         return Promise.resolve<AppData>(null as any);
     }
 
-    getIpFilters( cancelToken?: CancelToken): Promise<IpFilters> {
-        let url_ = this.baseUrl + "/api/app/ip-filters";
+    getSplitByIps( cancelToken?: CancelToken): Promise<SplitByIps> {
+        let url_ = this.baseUrl + "/api/app/split-by-ips";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -444,11 +444,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetIpFilters(_response);
+            return this.processGetSplitByIps(_response);
         });
     }
 
-    protected processGetIpFilters(response: AxiosResponse): Promise<IpFilters> {
+    protected processGetSplitByIps(response: AxiosResponse): Promise<SplitByIps> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -462,21 +462,21 @@ export class AppClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = IpFilters.fromJS(resultData200);
-            return Promise.resolve<IpFilters>(result200);
+            result200 = SplitByIps.fromJS(resultData200);
+            return Promise.resolve<SplitByIps>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<IpFilters>(null as any);
+        return Promise.resolve<SplitByIps>(null as any);
     }
 
-    setIpFilters(ipFilters: IpFilters, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/ip-filters";
+    setSplitByIps(value: SplitByIps, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/split-by-ips";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(ipFilters);
+        const content_ = JSON.stringify(value);
 
         let options_: AxiosRequestConfig = {
             data: content_,
@@ -495,11 +495,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processSetIpFilters(_response);
+            return this.processSetSplitByIps(_response);
         });
     }
 
-    protected processSetIpFilters(response: AxiosResponse): Promise<void> {
+    protected processSetSplitByIps(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -568,19 +568,15 @@ export class AppClient {
         return Promise.resolve<AppState>(null as any);
     }
 
-    connect(clientProfileId: string | null, serverLocation: string | null, planId: ConnectPlanId, cancelToken?: CancelToken): Promise<void> {
+    connect(clientProfileId?: string | null | undefined, serverLocation?: string | null | undefined, planId?: ConnectPlanId | undefined, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/connect?";
-        if (clientProfileId === undefined)
-            throw new globalThis.Error("The parameter 'clientProfileId' must be defined.");
-        else if(clientProfileId !== null)
+        if (clientProfileId !== undefined && clientProfileId !== null)
             url_ += "clientProfileId=" + encodeURIComponent("" + clientProfileId) + "&";
-        if (serverLocation === undefined)
-            throw new globalThis.Error("The parameter 'serverLocation' must be defined.");
-        else if(serverLocation !== null)
+        if (serverLocation !== undefined && serverLocation !== null)
             url_ += "serverLocation=" + encodeURIComponent("" + serverLocation) + "&";
-        if (planId === undefined || planId === null)
-            throw new globalThis.Error("The parameter 'planId' must be defined and cannot be null.");
-        else
+        if (planId === null)
+            throw new globalThis.Error("The parameter 'planId' cannot be null.");
+        else if (planId !== undefined)
             url_ += "planId=" + encodeURIComponent("" + planId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -624,19 +620,15 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
-    diagnose(clientProfileId: string | null, serverLocation: string | null, planId: ConnectPlanId, cancelToken?: CancelToken): Promise<void> {
+    diagnose(clientProfileId?: string | null | undefined, serverLocation?: string | null | undefined, planId?: ConnectPlanId | undefined, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/diagnose?";
-        if (clientProfileId === undefined)
-            throw new globalThis.Error("The parameter 'clientProfileId' must be defined.");
-        else if(clientProfileId !== null)
+        if (clientProfileId !== undefined && clientProfileId !== null)
             url_ += "clientProfileId=" + encodeURIComponent("" + clientProfileId) + "&";
-        if (serverLocation === undefined)
-            throw new globalThis.Error("The parameter 'serverLocation' must be defined.");
-        else if(serverLocation !== null)
+        if (serverLocation !== undefined && serverLocation !== null)
             url_ += "serverLocation=" + encodeURIComponent("" + serverLocation) + "&";
-        if (planId === undefined || planId === null)
-            throw new globalThis.Error("The parameter 'planId' must be defined and cannot be null.");
-        else
+        if (planId === null)
+            throw new globalThis.Error("The parameter 'planId' cannot be null.");
+        else if (planId !== undefined)
             url_ += "planId=" + encodeURIComponent("" + planId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1226,6 +1218,61 @@ export class AppClient {
     }
 
     protected processGetCountries(response: AxiosResponse): Promise<CountryInfo[]> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(CountryInfo.fromJS(item));
+            }
+            else {
+                result200 = null as any;
+            }
+            return Promise.resolve<CountryInfo[]>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<CountryInfo[]>(null as any);
+    }
+
+    getSupportedSplitByCountries( cancelToken?: CancelToken): Promise<CountryInfo[]> {
+        let url_ = this.baseUrl + "/api/app/supported-split-by-countries";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSupportedSplitByCountries(_response);
+        });
+    }
+
+    protected processGetSupportedSplitByCountries(response: AxiosResponse): Promise<CountryInfo[]> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2227,8 +2274,10 @@ export class ProxyEndPointClient {
         return Promise.resolve<AppProxyEndPointInfo>(null as any);
     }
 
-    list(includeSucceeded?: boolean | undefined, includeFailed?: boolean | undefined, includeUnknown?: boolean | undefined, includeDisabled?: boolean | undefined, recordIndex?: number | null | undefined, recordCount?: number | null | undefined, cancelToken?: CancelToken): Promise<AppProxyEndPointInfo[]> {
+    list(search?: string | null | undefined, includeSucceeded?: boolean | undefined, includeFailed?: boolean | undefined, includeUnknown?: boolean | undefined, includeDisabled?: boolean | undefined, recordIndex?: number | null | undefined, recordCount?: number | null | undefined, cancelToken?: CancelToken): Promise<PagedResultOfAppProxyEndPointInfo> {
         let url_ = this.baseUrl + "/api/proxy-endpoints?";
+        if (search !== undefined && search !== null)
+            url_ += "search=" + encodeURIComponent("" + search) + "&";
         if (includeSucceeded === null)
             throw new globalThis.Error("The parameter 'includeSucceeded' cannot be null.");
         else if (includeSucceeded !== undefined)
@@ -2271,7 +2320,7 @@ export class ProxyEndPointClient {
         });
     }
 
-    protected processList(response: AxiosResponse): Promise<AppProxyEndPointInfo[]> {
+    protected processList(response: AxiosResponse): Promise<PagedResultOfAppProxyEndPointInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2285,21 +2334,14 @@ export class ProxyEndPointClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(AppProxyEndPointInfo.fromJS(item));
-            }
-            else {
-                result200 = null as any;
-            }
-            return Promise.resolve<AppProxyEndPointInfo[]>(result200);
+            result200 = PagedResultOfAppProxyEndPointInfo.fromJS(resultData200);
+            return Promise.resolve<PagedResultOfAppProxyEndPointInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppProxyEndPointInfo[]>(null as any);
+        return Promise.resolve<PagedResultOfAppProxyEndPointInfo>(null as any);
     }
 
     add(proxyEndPoint: ProxyEndPoint, cancelToken?: CancelToken): Promise<AppProxyEndPointInfo> {
@@ -2354,23 +2396,23 @@ export class ProxyEndPointClient {
         return Promise.resolve<AppProxyEndPointInfo>(null as any);
     }
 
-    deleteAll(deleteSucceeded: boolean, deleteFailed: boolean, deleteUnknown: boolean, deleteDisabled: boolean, cancelToken?: CancelToken): Promise<void> {
+    deleteAll(deleteSucceeded?: boolean | undefined, deleteFailed?: boolean | undefined, deleteUnknown?: boolean | undefined, deleteDisabled?: boolean | undefined, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/proxy-endpoints?";
-        if (deleteSucceeded === undefined || deleteSucceeded === null)
-            throw new globalThis.Error("The parameter 'deleteSucceeded' must be defined and cannot be null.");
-        else
+        if (deleteSucceeded === null)
+            throw new globalThis.Error("The parameter 'deleteSucceeded' cannot be null.");
+        else if (deleteSucceeded !== undefined)
             url_ += "deleteSucceeded=" + encodeURIComponent("" + deleteSucceeded) + "&";
-        if (deleteFailed === undefined || deleteFailed === null)
-            throw new globalThis.Error("The parameter 'deleteFailed' must be defined and cannot be null.");
-        else
+        if (deleteFailed === null)
+            throw new globalThis.Error("The parameter 'deleteFailed' cannot be null.");
+        else if (deleteFailed !== undefined)
             url_ += "deleteFailed=" + encodeURIComponent("" + deleteFailed) + "&";
-        if (deleteUnknown === undefined || deleteUnknown === null)
-            throw new globalThis.Error("The parameter 'deleteUnknown' must be defined and cannot be null.");
-        else
+        if (deleteUnknown === null)
+            throw new globalThis.Error("The parameter 'deleteUnknown' cannot be null.");
+        else if (deleteUnknown !== undefined)
             url_ += "deleteUnknown=" + encodeURIComponent("" + deleteUnknown) + "&";
-        if (deleteDisabled === undefined || deleteDisabled === null)
-            throw new globalThis.Error("The parameter 'deleteDisabled' must be defined and cannot be null.");
-        else
+        if (deleteDisabled === null)
+            throw new globalThis.Error("The parameter 'deleteDisabled' cannot be null.");
+        else if (deleteDisabled !== undefined)
             url_ += "deleteDisabled=" + encodeURIComponent("" + deleteDisabled) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -3148,8 +3190,9 @@ export enum AppFeature {
     QuickLaunch = "QuickLaunch",
     AlwaysOn = "AlwaysOn",
     CustomDns = "CustomDns",
-    AppIpFilter = "AppIpFilter",
-    AdapterIpFilter = "AdapterIpFilter",
+    SplitByIpViaApp = "SplitByIpViaApp",
+    SplitByIpViaDevice = "SplitByIpViaDevice",
+    CountryFilter = "CountryFilter",
 }
 
 export enum ChannelProtocol {
@@ -4622,9 +4665,12 @@ export class UserSettings implements IUserSettings {
     cultureCode?: string | null;
     clientProfileId?: string | null;
     maxPacketChannelCount!: number;
-    tunnelClientCountry!: boolean;
-    appFilters!: string[];
-    appFiltersMode!: FilterMode;
+    splitByAppMode!: SplitByMode;
+    splitByApps!: string[];
+    splitByCountryMode!: SplitByCountryMode;
+    splitByCountries!: string[];
+    useSplitByIpViaApp!: boolean;
+    useSplitByIpViaDevice!: boolean;
     channelProtocol!: ChannelProtocol;
     dropUdp!: boolean;
     useTcpProxy!: boolean;
@@ -4635,8 +4681,6 @@ export class UserSettings implements IUserSettings {
     debugData2?: string | null;
     logAnonymous!: boolean;
     includeLocalNetwork!: boolean;
-    useAppIpFilter!: boolean;
-    useVpnAdapterIpFilter!: boolean;
     endPointStrategy!: EndPointStrategy;
     dnsMode!: DnsMode;
     proxySettings!: AppProxySettings;
@@ -4644,6 +4688,11 @@ export class UserSettings implements IUserSettings {
     customData?: CustomData | null;
     dnsServers!: string[];
     useUdpChannel?: boolean | null;
+    tunnelClientCountry?: boolean | null;
+    useAppIpFilter?: boolean | null;
+    useVpnAdapterIpFilter?: boolean | null;
+    appFiltersMode?: SplitByMode | null;
+    appFilters?: string[] | null;
 
     constructor(data?: IUserSettings) {
         if (data) {
@@ -4653,7 +4702,8 @@ export class UserSettings implements IUserSettings {
             }
         }
         if (!data) {
-            this.appFilters = [];
+            this.splitByApps = [];
+            this.splitByCountries = [];
             this.domainFilter = new DomainFilter();
             this.proxySettings = new AppProxySettings();
             this.dnsServers = [];
@@ -4668,16 +4718,26 @@ export class UserSettings implements IUserSettings {
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : null as any;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : null as any;
             this.maxPacketChannelCount = _data["maxPacketChannelCount"] !== undefined ? _data["maxPacketChannelCount"] : null as any;
-            this.tunnelClientCountry = _data["tunnelClientCountry"] !== undefined ? _data["tunnelClientCountry"] : null as any;
-            if (Array.isArray(_data["appFilters"])) {
-                this.appFilters = [] as any;
-                for (let item of _data["appFilters"])
-                    this.appFilters!.push(item);
+            this.splitByAppMode = _data["splitByAppMode"] !== undefined ? _data["splitByAppMode"] : null as any;
+            if (Array.isArray(_data["splitByApps"])) {
+                this.splitByApps = [] as any;
+                for (let item of _data["splitByApps"])
+                    this.splitByApps!.push(item);
             }
             else {
-                this.appFilters = null as any;
+                this.splitByApps = null as any;
             }
-            this.appFiltersMode = _data["appFiltersMode"] !== undefined ? _data["appFiltersMode"] : null as any;
+            this.splitByCountryMode = _data["splitByCountryMode"] !== undefined ? _data["splitByCountryMode"] : null as any;
+            if (Array.isArray(_data["splitByCountries"])) {
+                this.splitByCountries = [] as any;
+                for (let item of _data["splitByCountries"])
+                    this.splitByCountries!.push(item);
+            }
+            else {
+                this.splitByCountries = null as any;
+            }
+            this.useSplitByIpViaApp = _data["useSplitByIpViaApp"] !== undefined ? _data["useSplitByIpViaApp"] : null as any;
+            this.useSplitByIpViaDevice = _data["useSplitByIpViaDevice"] !== undefined ? _data["useSplitByIpViaDevice"] : null as any;
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
             this.dropUdp = _data["dropUdp"] !== undefined ? _data["dropUdp"] : null as any;
             this.useTcpProxy = _data["useTcpProxy"] !== undefined ? _data["useTcpProxy"] : null as any;
@@ -4688,8 +4748,6 @@ export class UserSettings implements IUserSettings {
             this.debugData2 = _data["debugData2"] !== undefined ? _data["debugData2"] : null as any;
             this.logAnonymous = _data["logAnonymous"] !== undefined ? _data["logAnonymous"] : null as any;
             this.includeLocalNetwork = _data["includeLocalNetwork"] !== undefined ? _data["includeLocalNetwork"] : null as any;
-            this.useAppIpFilter = _data["useAppIpFilter"] !== undefined ? _data["useAppIpFilter"] : null as any;
-            this.useVpnAdapterIpFilter = _data["useVpnAdapterIpFilter"] !== undefined ? _data["useVpnAdapterIpFilter"] : null as any;
             this.endPointStrategy = _data["endPointStrategy"] !== undefined ? _data["endPointStrategy"] : null as any;
             this.dnsMode = _data["dnsMode"] !== undefined ? _data["dnsMode"] : null as any;
             this.proxySettings = _data["proxySettings"] ? AppProxySettings.fromJS(_data["proxySettings"]) : new AppProxySettings();
@@ -4704,6 +4762,18 @@ export class UserSettings implements IUserSettings {
                 this.dnsServers = null as any;
             }
             this.useUdpChannel = _data["useUdpChannel"] !== undefined ? _data["useUdpChannel"] : null as any;
+            this.tunnelClientCountry = _data["tunnelClientCountry"] !== undefined ? _data["tunnelClientCountry"] : null as any;
+            this.useAppIpFilter = _data["useAppIpFilter"] !== undefined ? _data["useAppIpFilter"] : null as any;
+            this.useVpnAdapterIpFilter = _data["useVpnAdapterIpFilter"] !== undefined ? _data["useVpnAdapterIpFilter"] : null as any;
+            this.appFiltersMode = _data["appFiltersMode"] !== undefined ? _data["appFiltersMode"] : null as any;
+            if (Array.isArray(_data["appFilters"])) {
+                this.appFilters = [] as any;
+                for (let item of _data["appFilters"])
+                    this.appFilters!.push(item);
+            }
+            else {
+                this.appFilters = null as any;
+            }
         }
     }
 
@@ -4722,13 +4792,20 @@ export class UserSettings implements IUserSettings {
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : null as any;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : null as any;
         data["maxPacketChannelCount"] = this.maxPacketChannelCount !== undefined ? this.maxPacketChannelCount : null as any;
-        data["tunnelClientCountry"] = this.tunnelClientCountry !== undefined ? this.tunnelClientCountry : null as any;
-        if (Array.isArray(this.appFilters)) {
-            data["appFilters"] = [];
-            for (let item of this.appFilters)
-                data["appFilters"].push(item);
+        data["splitByAppMode"] = this.splitByAppMode !== undefined ? this.splitByAppMode : null as any;
+        if (Array.isArray(this.splitByApps)) {
+            data["splitByApps"] = [];
+            for (let item of this.splitByApps)
+                data["splitByApps"].push(item);
         }
-        data["appFiltersMode"] = this.appFiltersMode !== undefined ? this.appFiltersMode : null as any;
+        data["splitByCountryMode"] = this.splitByCountryMode !== undefined ? this.splitByCountryMode : null as any;
+        if (Array.isArray(this.splitByCountries)) {
+            data["splitByCountries"] = [];
+            for (let item of this.splitByCountries)
+                data["splitByCountries"].push(item);
+        }
+        data["useSplitByIpViaApp"] = this.useSplitByIpViaApp !== undefined ? this.useSplitByIpViaApp : null as any;
+        data["useSplitByIpViaDevice"] = this.useSplitByIpViaDevice !== undefined ? this.useSplitByIpViaDevice : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
         data["dropUdp"] = this.dropUdp !== undefined ? this.dropUdp : null as any;
         data["useTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : null as any;
@@ -4739,8 +4816,6 @@ export class UserSettings implements IUserSettings {
         data["debugData2"] = this.debugData2 !== undefined ? this.debugData2 : null as any;
         data["logAnonymous"] = this.logAnonymous !== undefined ? this.logAnonymous : null as any;
         data["includeLocalNetwork"] = this.includeLocalNetwork !== undefined ? this.includeLocalNetwork : null as any;
-        data["useAppIpFilter"] = this.useAppIpFilter !== undefined ? this.useAppIpFilter : null as any;
-        data["useVpnAdapterIpFilter"] = this.useVpnAdapterIpFilter !== undefined ? this.useVpnAdapterIpFilter : null as any;
         data["endPointStrategy"] = this.endPointStrategy !== undefined ? this.endPointStrategy : null as any;
         data["dnsMode"] = this.dnsMode !== undefined ? this.dnsMode : null as any;
         data["proxySettings"] = this.proxySettings ? this.proxySettings.toJSON() : null as any;
@@ -4752,6 +4827,15 @@ export class UserSettings implements IUserSettings {
                 data["dnsServers"].push(item);
         }
         data["useUdpChannel"] = this.useUdpChannel !== undefined ? this.useUdpChannel : null as any;
+        data["tunnelClientCountry"] = this.tunnelClientCountry !== undefined ? this.tunnelClientCountry : null as any;
+        data["useAppIpFilter"] = this.useAppIpFilter !== undefined ? this.useAppIpFilter : null as any;
+        data["useVpnAdapterIpFilter"] = this.useVpnAdapterIpFilter !== undefined ? this.useVpnAdapterIpFilter : null as any;
+        data["appFiltersMode"] = this.appFiltersMode !== undefined ? this.appFiltersMode : null as any;
+        if (Array.isArray(this.appFilters)) {
+            data["appFilters"] = [];
+            for (let item of this.appFilters)
+                data["appFilters"].push(item);
+        }
         return data;
     }
 }
@@ -4763,9 +4847,12 @@ export interface IUserSettings {
     cultureCode?: string | null;
     clientProfileId?: string | null;
     maxPacketChannelCount: number;
-    tunnelClientCountry: boolean;
-    appFilters: string[];
-    appFiltersMode: FilterMode;
+    splitByAppMode: SplitByMode;
+    splitByApps: string[];
+    splitByCountryMode: SplitByCountryMode;
+    splitByCountries: string[];
+    useSplitByIpViaApp: boolean;
+    useSplitByIpViaDevice: boolean;
     channelProtocol: ChannelProtocol;
     dropUdp: boolean;
     useTcpProxy: boolean;
@@ -4776,8 +4863,6 @@ export interface IUserSettings {
     debugData2?: string | null;
     logAnonymous: boolean;
     includeLocalNetwork: boolean;
-    useAppIpFilter: boolean;
-    useVpnAdapterIpFilter: boolean;
     endPointStrategy: EndPointStrategy;
     dnsMode: DnsMode;
     proxySettings: AppProxySettings;
@@ -4785,12 +4870,24 @@ export interface IUserSettings {
     customData?: CustomData | null;
     dnsServers: string[];
     useUdpChannel?: boolean | null;
+    tunnelClientCountry?: boolean | null;
+    useAppIpFilter?: boolean | null;
+    useVpnAdapterIpFilter?: boolean | null;
+    appFiltersMode?: SplitByMode | null;
+    appFilters?: string[] | null;
 }
 
-export enum FilterMode {
+export enum SplitByMode {
     All = "All",
     Exclude = "Exclude",
     Include = "Include",
+}
+
+export enum SplitByCountryMode {
+    IncludeAll = "IncludeAll",
+    ExcludeMyCountry = "ExcludeMyCountry",
+    ExcludeList = "ExcludeList",
+    IncludeList = "IncludeList",
 }
 
 export class DomainFilter implements IDomainFilter {
@@ -4934,9 +5031,9 @@ export interface IAppProxySettings {
 }
 
 export enum AppProxyMode {
-    NoProxy = 0,
-    Device = 1,
-    Manual = 2,
+    NoProxy = "NoProxy",
+    Device = "Device",
+    Manual = "Manual",
 }
 
 export class ProxyAutoUpdateOptions implements IProxyAutoUpdateOptions {
@@ -5272,13 +5369,13 @@ export interface IAppStrings {
     openInBrowser: string;
 }
 
-export class IpFilters implements IIpFilters {
-    adapterIpFilterIncludes!: string;
-    adapterIpFilterExcludes!: string;
-    appIpFilterIncludes!: string;
-    appIpFilterExcludes!: string;
+export class SplitByIps implements ISplitByIps {
+    deviceIncludes!: string;
+    deviceExcludes!: string;
+    appIncludes!: string;
+    appExcludes!: string;
 
-    constructor(data?: IIpFilters) {
+    constructor(data?: ISplitByIps) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5289,35 +5386,35 @@ export class IpFilters implements IIpFilters {
 
     init(_data?: any) {
         if (_data) {
-            this.adapterIpFilterIncludes = _data["adapterIpFilterIncludes"] !== undefined ? _data["adapterIpFilterIncludes"] : null as any;
-            this.adapterIpFilterExcludes = _data["adapterIpFilterExcludes"] !== undefined ? _data["adapterIpFilterExcludes"] : null as any;
-            this.appIpFilterIncludes = _data["appIpFilterIncludes"] !== undefined ? _data["appIpFilterIncludes"] : null as any;
-            this.appIpFilterExcludes = _data["appIpFilterExcludes"] !== undefined ? _data["appIpFilterExcludes"] : null as any;
+            this.deviceIncludes = _data["deviceIncludes"] !== undefined ? _data["deviceIncludes"] : null as any;
+            this.deviceExcludes = _data["deviceExcludes"] !== undefined ? _data["deviceExcludes"] : null as any;
+            this.appIncludes = _data["appIncludes"] !== undefined ? _data["appIncludes"] : null as any;
+            this.appExcludes = _data["appExcludes"] !== undefined ? _data["appExcludes"] : null as any;
         }
     }
 
-    static fromJS(data: any): IpFilters {
+    static fromJS(data: any): SplitByIps {
         data = typeof data === 'object' ? data : {};
-        let result = new IpFilters();
+        let result = new SplitByIps();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["adapterIpFilterIncludes"] = this.adapterIpFilterIncludes !== undefined ? this.adapterIpFilterIncludes : null as any;
-        data["adapterIpFilterExcludes"] = this.adapterIpFilterExcludes !== undefined ? this.adapterIpFilterExcludes : null as any;
-        data["appIpFilterIncludes"] = this.appIpFilterIncludes !== undefined ? this.appIpFilterIncludes : null as any;
-        data["appIpFilterExcludes"] = this.appIpFilterExcludes !== undefined ? this.appIpFilterExcludes : null as any;
+        data["deviceIncludes"] = this.deviceIncludes !== undefined ? this.deviceIncludes : null as any;
+        data["deviceExcludes"] = this.deviceExcludes !== undefined ? this.deviceExcludes : null as any;
+        data["appIncludes"] = this.appIncludes !== undefined ? this.appIncludes : null as any;
+        data["appExcludes"] = this.appExcludes !== undefined ? this.appExcludes : null as any;
         return data;
     }
 }
 
-export interface IIpFilters {
-    adapterIpFilterIncludes: string;
-    adapterIpFilterExcludes: string;
-    appIpFilterIncludes: string;
-    appIpFilterExcludes: string;
+export interface ISplitByIps {
+    deviceIncludes: string;
+    deviceExcludes: string;
+    appIncludes: string;
+    appExcludes: string;
 }
 
 export enum ConnectPlanId {
@@ -5994,6 +6091,60 @@ export enum ProxyProtocol {
     Socks5 = "Socks5",
     Http = "Http",
     Https = "Https",
+}
+
+export class PagedResultOfAppProxyEndPointInfo implements IPagedResultOfAppProxyEndPointInfo {
+    items!: AppProxyEndPointInfo[];
+    totalCount!: number;
+
+    constructor(data?: IPagedResultOfAppProxyEndPointInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.items = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["items"])) {
+                this.items = [] as any;
+                for (let item of _data["items"])
+                    this.items!.push(AppProxyEndPointInfo.fromJS(item));
+            }
+            else {
+                this.items = null as any;
+            }
+            this.totalCount = _data["totalCount"] !== undefined ? _data["totalCount"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): PagedResultOfAppProxyEndPointInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new PagedResultOfAppProxyEndPointInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.items)) {
+            data["items"] = [];
+            for (let item of this.items)
+                data["items"].push(item ? item.toJSON() : null as any);
+        }
+        data["totalCount"] = this.totalCount !== undefined ? this.totalCount : null as any;
+        return data;
+    }
+}
+
+export interface IPagedResultOfAppProxyEndPointInfo {
+    items: AppProxyEndPointInfo[];
+    totalCount: number;
 }
 
 export class ProxyEndPointDefaults implements IProxyEndPointDefaults {

@@ -1186,7 +1186,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return ipRanges;
 
         // set loading state
-        VerifyPremiumFeature(AppFeature.CountryFilter);
+        VerifyPremiumFeature(AppFeature.SplitByCountry);
 
         try {
             // calculate include country IPs

@@ -1,12 +1,10 @@
 ﻿using System.Net.Sockets;
 using System.Text;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
 

@@ -15,7 +15,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 {
     private const int SessionIdLength = 8;
     private const int SeqLength = 8;
-    private const int TagLength = 16;
+    private const int TagLength = 1; // minimal tag placeholder
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
     private readonly EventReporter _invalidSessionReporter = new("Invalid UDP session.", GeneralEventId.UdpSign);
 
@@ -82,15 +82,15 @@ public abstract class UdpChannelTransmitter : IDisposable
         BinaryPrimitives.WriteUInt32LittleEndian(nonce.Slice(8, 4), sessionSalt);
     }
 
-    internal async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, AesGcm aesGcm)
+    internal async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, AesCtrCryptor cryptor)
     {
         if (payload.Length + HeaderLength > MaxPacketSize)
             throw new ArgumentOutOfRangeException(nameof(payload));
 
         try {
-            // AesGcm is not thread-safe; serialize send
+            // encryption is not thread-safe; serialize send
             await _sendSemaphore.WaitAsync().Vhc();
-            await SendCoreAsync(sessionId, ipEndPoint, payload, aesGcm);
+            await SendCoreAsync(sessionId, ipEndPoint, payload, cryptor);
         }
         catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
             VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
@@ -114,7 +114,7 @@ public abstract class UdpChannelTransmitter : IDisposable
     }
 
     private async Task SendCoreAsync(ulong sessionId, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload,
-        AesGcm aesGcm)
+        AesCtrCryptor cryptor)
     {
         var currentSeq = _sendSequenceNumber++;
         var bufferSpan = _sendBuffer.Span;
@@ -125,19 +125,17 @@ public abstract class UdpChannelTransmitter : IDisposable
         // seq[8]
         BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan.Slice(8, 8), currentSeq);
 
-        // tag[16]
-        var tag = bufferSpan.Slice(16, 16);
+        // tag[16] (unused in CTR, reserved)
+        var tag = bufferSpan.Slice(16, TagLength);
+        tag.Clear();
 
-        // ciphertext
+        // ciphertext (follows sessionId + seq + tag)
         var ciphertext = bufferSpan.Slice(HeaderLength, payload.Length);
-
-        // AAD = sessionId|seq
-        var aad = bufferSpan[..16];
 
         Span<byte> nonce = stackalloc byte[12];
         BuildNonce(nonce, sessionId, currentSeq);
 
-        aesGcm.Encrypt(nonce, payload.Span, ciphertext, tag, aad);
+        cryptor.Encrypt(nonce, payload.Span, ciphertext);
 
         var totalLength = HeaderLength + payload.Length;
         var sent = await _udpClient.SendAsync(_sendBuffer[..totalLength], ipEndPoint)
@@ -175,12 +173,11 @@ public abstract class UdpChannelTransmitter : IDisposable
                 if (transport.IsServer)
                     transport.RemoteEndPoint = result.RemoteEndPoint;
 
-                var aesGcm = transport.AesGcm;
+                var cryptor = transport.Cryptor;
 
-                // Extract fields
-                var tag = span.Slice(16, 16);
+                // Extract fields (tag reserved for compatibility)
+                _ = span.Slice(16, TagLength);
                 var ciphertext = span[HeaderLength..];
-                var aad = span[..16];
                 BuildNonce(nonce, sessionId, seq);
 
                 // Decrypt
@@ -191,7 +188,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 
                 // Decrypt in a shared buffer to reduce memory allocation
                 var plainTextSpan = plainTextBuffer.AsSpan(0, length);
-                aesGcm.Decrypt(nonce, ciphertext, tag, plainTextSpan, aad);
+                cryptor.Decrypt(nonce, ciphertext, plainTextSpan);
 
                 // Copy to the already allocated result.Buffer to reduce memory copy
                 var plainTextMemory = result.Buffer.AsMemory(0, length);

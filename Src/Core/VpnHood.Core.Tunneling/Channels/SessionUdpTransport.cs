@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Security.Cryptography;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
@@ -13,7 +12,7 @@ public class SessionUdpTransport(
 {
     public bool IsServer { get; } = isServer;
     public IPEndPoint? RemoteEndPoint { get; set; } = remoteEndPoint;
-    internal AesGcm AesGcm { get; } = new(key, 16);
+    internal AesCtrCryptor Cryptor { get; } = new(key);
     public UdpChannelTransmitter ChannelTransmitter { get; set; } = channelTransmitter;
     public Action<Memory<byte>>? DataReceived { get; set; }
     public int OverheadLength => UdpChannelTransmitter.HeaderLength;
@@ -22,12 +21,12 @@ public class SessionUdpTransport(
     public Task SendAsync(Memory<byte> buffer)
     {
         return RemoteEndPoint is not null
-            ? ChannelTransmitter.SendAsync(sessionId, buffer, RemoteEndPoint, AesGcm)
+            ? ChannelTransmitter.SendAsync(sessionId, buffer, RemoteEndPoint, Cryptor)
             : throw new InvalidOperationException("RemoteEndPoint is not set.");
     }
 
     public void Dispose()
     {
-        AesGcm.Dispose();
+        Cryptor.Dispose();
     }
 }

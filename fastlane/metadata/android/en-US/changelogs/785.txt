@@ -1,0 +1,4 @@
+* Fix: UDP on android
+* Update: UDP protocol has been changed and client need to update to the latest version
+* Feature: Protocol Version 11, UDP protocol has been changed
+* Feature: Suppport for HTTP, HTTPS, SOCKS5 and SOCKS4 relay Proxies

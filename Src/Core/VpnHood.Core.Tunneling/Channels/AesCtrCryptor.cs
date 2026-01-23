@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
-// We tried AesGcm & ChaCha20Poly1305, but they were significantly slower than AesCtr for our use case.
 internal sealed class AesCtrCryptor : IChannelCryptor
 {
     private readonly Aes _aes;

@@ -1,9 +1,9 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 
-namespace VpnHood.Core.Tunneling.Channels;
+namespace VpnHood.Core.Tunneling.Cryptography;
 
-internal sealed class AesCtrCryptor : IChannelCryptor
+internal sealed class AesCtrCryptor : ICryptor
 {
     private readonly Aes _aes;
     private readonly ICryptoTransform _encryptor;

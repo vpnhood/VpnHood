@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using VpnHood.Core.Tunneling.Cryptography;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
@@ -12,8 +13,8 @@ public class SessionUdpTransport(
 {
     public bool IsServer { get; } = isServer;
     public IPEndPoint? RemoteEndPoint { get; set; } = remoteEndPoint;
-    internal IChannelCryptor SendCryptor { get; } = new AesGcmCryptor(key, UdpChannelTransmitter.TagLength);
-    internal IChannelCryptor ReceiveCryptor { get; } = new AesGcmCryptor(key, UdpChannelTransmitter.TagLength);
+    private ICryptor SendCryptor { get; } = new AesGcmCryptor(key, UdpChannelTransmitter.TagLength);
+    internal ICryptor ReceiveCryptor { get; } = new AesGcmCryptor(key, UdpChannelTransmitter.TagLength);
     public UdpChannelTransmitter ChannelTransmitter { get; set; } = channelTransmitter;
     public Action<Memory<byte>>? DataReceived { get; set; }
     public int OverheadLength => UdpChannelTransmitter.HeaderLength;

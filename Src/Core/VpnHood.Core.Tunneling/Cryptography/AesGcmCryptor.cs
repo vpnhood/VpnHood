@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 
-namespace VpnHood.Core.Tunneling.Channels;
+namespace VpnHood.Core.Tunneling.Cryptography;
 
-internal sealed class AesGcmCryptor(ReadOnlySpan<byte> key, int tagLength) : IChannelCryptor
+internal sealed class AesGcmCryptor(ReadOnlySpan<byte> key, int tagLength) : ICryptor
 {
     private readonly AesGcm _aesGcm = new(key, tagLength);
 

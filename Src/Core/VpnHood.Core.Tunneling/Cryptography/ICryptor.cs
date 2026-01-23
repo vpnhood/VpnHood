@@ -1,6 +1,6 @@
-namespace VpnHood.Core.Tunneling.Channels;
+namespace VpnHood.Core.Tunneling.Cryptography;
 
-internal interface IChannelCryptor : IDisposable
+internal interface ICryptor : IDisposable
 {
     void Encrypt(ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> plainText, Span<byte> cipherText, Span<byte> tag,
         ReadOnlySpan<byte> associatedData);

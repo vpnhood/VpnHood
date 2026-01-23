@@ -7,6 +7,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling.Cryptography;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
@@ -90,7 +91,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         BinaryPrimitives.WriteUInt32LittleEndian(nonce.Slice(8, 4), sessionSalt);
     }
 
-    internal async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, IChannelCryptor cryptor)
+    internal async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, ICryptor cryptor)
     {
         if (payload.Length + HeaderLength > MaxPacketSize)
             throw new ArgumentOutOfRangeException(nameof(payload));
@@ -122,7 +123,7 @@ public abstract class UdpChannelTransmitter : IDisposable
     }
 
     private async Task SendCoreAsync(ulong sessionId, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload,
-        IChannelCryptor cryptor)
+        ICryptor cryptor)
     {
         var currentSeq = _sendSequenceNumber++;
         var bufferSpan = _sendBuffer.Span;
@@ -187,8 +188,6 @@ public abstract class UdpChannelTransmitter : IDisposable
                 if (transport.IsServer)
                     transport.RemoteEndPoint = result.RemoteEndPoint;
 
-                var cryptor = transport.ReceiveCryptor;
-
                 // Extract fields
                 _ = span[VersionOffset];
                 var tag = span.Slice(TagOffset, TagLength);
@@ -204,7 +203,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 
                 // Decrypt in a shared buffer to reduce memory allocation
                 var plainTextSpan = plainTextBuffer.AsSpan(0, length);
-                cryptor.Decrypt(nonce, ciphertext, tag, plainTextSpan, associatedData);
+                transport.ReceiveCryptor.Decrypt(nonce, ciphertext, tag, plainTextSpan, associatedData);
 
                 // Copy to the already allocated result.Buffer to reduce memory copy
                 var plainTextMemory = result.Buffer.AsMemory(0, length);

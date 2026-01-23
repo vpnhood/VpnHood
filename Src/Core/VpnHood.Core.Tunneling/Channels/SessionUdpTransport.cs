@@ -12,7 +12,8 @@ public class SessionUdpTransport(
 {
     public bool IsServer { get; } = isServer;
     public IPEndPoint? RemoteEndPoint { get; set; } = remoteEndPoint;
-    internal AesCtrCryptor Cryptor { get; } = new(key);
+    internal IChannelCryptor SendCryptor { get; } = new AesGcmCryptor(key, UdpChannelTransmitter.TagLength);
+    internal IChannelCryptor ReceiveCryptor { get; } = new AesGcmCryptor(key, UdpChannelTransmitter.TagLength);
     public UdpChannelTransmitter ChannelTransmitter { get; set; } = channelTransmitter;
     public Action<Memory<byte>>? DataReceived { get; set; }
     public int OverheadLength => UdpChannelTransmitter.HeaderLength;
@@ -21,12 +22,13 @@ public class SessionUdpTransport(
     public Task SendAsync(Memory<byte> buffer)
     {
         return RemoteEndPoint is not null
-            ? ChannelTransmitter.SendAsync(sessionId, buffer, RemoteEndPoint, Cryptor)
+            ? ChannelTransmitter.SendAsync(sessionId, buffer, RemoteEndPoint, SendCryptor)
             : throw new InvalidOperationException("RemoteEndPoint is not set.");
     }
 
     public void Dispose()
     {
-        Cryptor.Dispose();
+        SendCryptor.Dispose();
+        ReceiveCryptor.Dispose();
     }
 }

@@ -13,12 +13,20 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public abstract class UdpChannelTransmitter : IDisposable
 {
+    // Packet format: version(1) | sessionId(8) | seq(8) | tag(16) | ciphertext
+    // AAD: sessionId | seq
+
+    private const int VersionOffset = 0;
+    private const int VersionLength = 1;
+    private const int SessionIdOffset = VersionOffset + VersionLength;
     private const int SessionIdLength = 8;
+    private const int SeqOffset = SessionIdOffset + SessionIdLength;
     private const int SeqLength = 8;
-    private const int TagLength = 1; // minimal tag placeholder
+    private const int TagOffset = SeqOffset + SeqLength;
+    public const int TagLength = 16;
+
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
     private readonly EventReporter _invalidSessionReporter = new("Invalid UDP session.", GeneralEventId.UdpSign);
-
     private readonly Memory<byte> _sendBuffer = new byte[TunnelDefaults.MaxPacketSize];
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
@@ -30,7 +38,7 @@ public abstract class UdpChannelTransmitter : IDisposable
     protected abstract SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId);
 
     public int MaxPacketSize { get; set; } = TunnelDefaults.MaxPacketSize;
-    public const int HeaderLength = SessionIdLength + SeqLength + TagLength;
+    public const int HeaderLength = TagOffset + TagLength;
     public IPEndPoint LocalEndPoint { get; }
     public bool Connected => !_disposed;
 
@@ -82,7 +90,7 @@ public abstract class UdpChannelTransmitter : IDisposable
         BinaryPrimitives.WriteUInt32LittleEndian(nonce.Slice(8, 4), sessionSalt);
     }
 
-    internal async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, AesCtrCryptor cryptor)
+    internal async Task SendAsync(ulong sessionId, ReadOnlyMemory<byte> payload, IPEndPoint ipEndPoint, IChannelCryptor cryptor)
     {
         if (payload.Length + HeaderLength > MaxPacketSize)
             throw new ArgumentOutOfRangeException(nameof(payload));
@@ -114,28 +122,34 @@ public abstract class UdpChannelTransmitter : IDisposable
     }
 
     private async Task SendCoreAsync(ulong sessionId, IPEndPoint ipEndPoint, ReadOnlyMemory<byte> payload,
-        AesCtrCryptor cryptor)
+        IChannelCryptor cryptor)
     {
         var currentSeq = _sendSequenceNumber++;
         var bufferSpan = _sendBuffer.Span;
 
         // sessionId[8]
-        BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan[..8], sessionId);
+        BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan.Slice(SessionIdOffset, SessionIdLength), sessionId);
 
         // seq[8]
-        BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan.Slice(8, 8), currentSeq);
+        BinaryPrimitives.WriteUInt64LittleEndian(bufferSpan.Slice(SeqOffset, SeqLength), currentSeq);
 
-        // tag[16] (unused in CTR, reserved)
-        var tag = bufferSpan.Slice(16, TagLength);
+        // reserved[1]
+        bufferSpan[VersionOffset] = 0;
+
+        // tag[16]
+        var tag = bufferSpan.Slice(TagOffset, TagLength);
         tag.Clear();
 
-        // ciphertext (follows sessionId + seq + tag)
+        // ciphertext (follows header)
         var ciphertext = bufferSpan.Slice(HeaderLength, payload.Length);
+
+        // AAD = sessionId|seq
+        var associatedData = bufferSpan.Slice(SessionIdOffset, SessionIdLength + SeqLength);
 
         Span<byte> nonce = stackalloc byte[12];
         BuildNonce(nonce, sessionId, currentSeq);
 
-        cryptor.Encrypt(nonce, payload.Span, ciphertext);
+        cryptor.Encrypt(nonce, payload.Span, ciphertext, tag, associatedData);
 
         var totalLength = HeaderLength + payload.Length;
         var sent = await _udpClient.SendAsync(_sendBuffer[..totalLength], ipEndPoint)
@@ -159,8 +173,8 @@ public abstract class UdpChannelTransmitter : IDisposable
                 }
 
                 var span = data.AsSpan();
-                var sessionId = BinaryPrimitives.ReadUInt64LittleEndian(span[..8]);
-                var seq = BinaryPrimitives.ReadUInt64LittleEndian(span.Slice(8, 8));
+                var sessionId = BinaryPrimitives.ReadUInt64LittleEndian(span.Slice(SessionIdOffset, SessionIdLength));
+                var seq = BinaryPrimitives.ReadUInt64LittleEndian(span.Slice(SeqOffset, SeqLength));
 
                 // Find transport
                 var transport = SessionIdToUdpTransport(sessionId);
@@ -173,11 +187,13 @@ public abstract class UdpChannelTransmitter : IDisposable
                 if (transport.IsServer)
                     transport.RemoteEndPoint = result.RemoteEndPoint;
 
-                var cryptor = transport.Cryptor;
+                var cryptor = transport.ReceiveCryptor;
 
-                // Extract fields (tag reserved for compatibility)
-                _ = span.Slice(16, TagLength);
+                // Extract fields
+                _ = span[VersionOffset];
+                var tag = span.Slice(TagOffset, TagLength);
                 var ciphertext = span[HeaderLength..];
+                var associatedData = span.Slice(SessionIdOffset, SessionIdLength + SeqLength);
                 BuildNonce(nonce, sessionId, seq);
 
                 // Decrypt
@@ -188,7 +204,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 
                 // Decrypt in a shared buffer to reduce memory allocation
                 var plainTextSpan = plainTextBuffer.AsSpan(0, length);
-                cryptor.Decrypt(nonce, ciphertext, plainTextSpan);
+                cryptor.Decrypt(nonce, ciphertext, tag, plainTextSpan, associatedData);
 
                 // Copy to the already allocated result.Buffer to reduce memory copy
                 var plainTextMemory = result.Buffer.AsMemory(0, length);

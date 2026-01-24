@@ -54,9 +54,9 @@ public class ServerFinder(
             return serverTokens
                 .SelectMany(serverToken => customServerEndpoints.Select(ep =>
                     new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash)))
-                .Where(x => 
+                .Where(x =>
                     includeIpV6 || // accept any IPv6 if allowed
-                    x.TcpEndPoint.IsV4() || 
+                    x.TcpEndPoint.IsV4() ||
                     x.TcpEndPoint.Address.IsLoopback())// loopback addresses are for tests
                 .ToArray();
         }
@@ -81,9 +81,9 @@ public class ServerFinder(
 
         // flatten the results into a single enumerable
         var results = resolved.SelectMany(x => x)
-            .Where(x => 
+            .Where(x =>
                 includeIpV6 || // accept any IPv6 if allowed
-                x.TcpEndPoint.IsV4() || 
+                x.TcpEndPoint.IsV4() ||
                 x.TcpEndPoint.Address.IsLoopback()) // loopback addresses are for tests
             .ToArray();
 
@@ -183,18 +183,9 @@ public class ServerFinder(
         if (proxyEndPointManager is { IsEnabled: true, Status.IsAnySucceeded: false })
             throw new UnreachableProxyServerException();
 
-        throw new UnreachableServerLocationException(BuildExceptionMessage(ServerLocation));
+        // throw unreachable server location exception
+        throw UnreachableServerLocationException.Create(ServerLocation);
     }
-
-    private static string BuildExceptionMessage(string? serverLocation)
-    {
-        var location = serverLocation is null || !ServerLocationInfo.IsAutoLocation(serverLocation)
-            ? "Auto"
-            : serverLocation;
-
-        return $"There is no reachable server at this moment. Please try again later. Location: {location}";
-    }
-
 
     private Task TryTrackEndPointsAvailability(HostStatus[] oldStatuses, HostStatus[] newStatuses)
     {
@@ -228,7 +219,7 @@ public class ServerFinder(
 
         // Initialize time-based progress tracking
         // as we check the first server separately in unparallel mode, we add maxDegreeOfParallelism to total
-        _progressMonitor = new ProgressMonitor(hostStatuses.Length + maxDegreeOfParallelism, 
+        _progressMonitor = new ProgressMonitor(hostStatuses.Length + maxDegreeOfParallelism,
             serverQueryTimeout,
             maxDegreeOfParallelism);
 

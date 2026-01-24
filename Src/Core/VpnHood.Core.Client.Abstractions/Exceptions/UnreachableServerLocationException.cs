@@ -1,14 +1,20 @@
-﻿namespace VpnHood.Core.Client.Abstractions.Exceptions;
+﻿using VpnHood.Core.Common.Tokens;
 
-public class UnreachableServerLocationException : UnreachableServerException
+namespace VpnHood.Core.Client.Abstractions.Exceptions;
+
+public class UnreachableServerLocationException(string? message = null, Exception? innerException = null)
+    : UnreachableServerException(message, innerException)
 {
-    public UnreachableServerLocationException(string message)
-        : base(message)
+    public static UnreachableServerLocationException Create(string? serverLocation)
     {
-    }
-
-    public UnreachableServerLocationException(string message, Exception innerException)
-        : base(message, innerException)
-    {
+        var isAutoLocation = ServerLocationInfo.IsAutoLocation(serverLocation);
+        var msg = isAutoLocation
+            ? "There is no reachable server at this moment. Please try again later."
+            : $"There is no reachable server at this moment. Please try again later. Location: {serverLocation}";
+        
+        var ex = new UnreachableServerLocationException(msg);
+        ex.Data.Add("ServerLocation", serverLocation);
+        ex.Data.Add("IsAutoLocation", ServerLocationInfo.IsAutoLocation(serverLocation));
+        return ex;
     }
 }

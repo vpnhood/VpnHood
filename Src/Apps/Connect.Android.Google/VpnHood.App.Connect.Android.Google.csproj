@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.App.Connect.Droid.Google</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android</ApplicationId>
-		<ApplicationVersion>780</ApplicationVersion>
-		<ApplicationDisplayVersion>7.5.780</ApplicationDisplayVersion>
+		<ApplicationVersion>785</ApplicationVersion>
+		<ApplicationDisplayVersion>7.6.785</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
@@ -41,7 +41,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>7.5.780</Version>
+		<Version>7.6.785</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -87,12 +87,8 @@
 
 	<!--Fix SDK Built Error 1/17/2026-->
 	<ItemGroup>
-		<PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.JVM"
-		                  Version="1.10.0.1"
-		                  ExcludeAssets="all"/>
-		<PackageReference Include="Xamarin.AndroidX.Datastore.Preferences.Core.JVM"
-		                  Version="1.2.0.1"
-		                  ExcludeAssets="all"/>
+		<PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.JVM" Version="1.10.0.1" ExcludeAssets="all" />
+		<PackageReference Include="Xamarin.AndroidX.Datastore.Preferences.Core.JVM" Version="1.2.0.1" ExcludeAssets="all" />
 	</ItemGroup>
 
 </Project>

@@ -162,7 +162,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             .QueryProductDetailsAsync(productDetailsParams)
             .Vhc();
 
-        return productDetailsResult.ProductDetailsList.ToArray();
+        // productDetailsResult.ProductDetailsList is obsolete and return null
+        return productDetailsResult.ProductDetails.ToArray();
     }
 
     public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, CancellationToken cancellationToken)

@@ -173,8 +173,8 @@ public class ServerFinder(
 
         // track new endpoints availability 
         _ = TryTrackEndPointsAvailability(_hostEndPointStatuses, endpointStatuses).Vhc();
-        //if (res != null)
-          //  return res;
+        if (res != null)
+            return res;
 
         _ = tracker?.TryTrack(ClientTrackerBuilder.BuildConnectionFailed(serverLocation: ServerLocation,
             isIpV6Supported: IncludeIpV6, hasRedirected: true));

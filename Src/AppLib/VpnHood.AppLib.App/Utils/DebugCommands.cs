@@ -12,7 +12,6 @@ public static class DebugCommands
     public const string WinDivert = "/windivert";
     public const string UserReview = "/user-review";
     public const string RemoteAccess = "/remote-access";
-    public const string ClientProxy = "/client-proxy";
 
     public static string[] All => [
         CaptureContext,
@@ -24,7 +23,6 @@ public static class DebugCommands
         NullCapture,
         UserReview,
         WinDivert,
-        RemoteAccess,
-        ClientProxy
+        RemoteAccess
     ];
 }

@@ -29,10 +29,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.719" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.720" />
 	</ItemGroup>
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==false">
-		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="7.5.790" />
+		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="7.5.797" />
 	</ItemGroup>
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==true">
 		<Reference Include="VpnHood.AppLib.Assets.ClassicSpa">

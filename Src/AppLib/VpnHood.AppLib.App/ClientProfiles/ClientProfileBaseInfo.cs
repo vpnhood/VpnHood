@@ -12,8 +12,10 @@ public class ClientProfileBaseInfo
     public required string? CustomData { get; init; }
     public required bool IsPremiumLocationSelected { get; init; }
     public required bool IsPremiumAccount { get; init; }
+    public required bool HasAccessCode { get; init; }
+    public required bool CanGoPremium { get; init; }
+    public required bool CanTryPremium { get; init; }
     public required ClientServerLocationInfo? SelectedLocationInfo { get; init; }
-    public required bool HasAccessCode { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]

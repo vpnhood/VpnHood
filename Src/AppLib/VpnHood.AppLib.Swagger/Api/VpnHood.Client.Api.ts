@@ -3027,6 +3027,7 @@ export class AppFeatures implements IAppFeatures {
     isDebugMode!: boolean;
     debugCommands!: string[];
     isLocalNetworkSupported!: boolean;
+    isProxySupported!: boolean;
     adjustForSystemBars!: boolean;
     allowEndPointStrategy!: boolean;
     autoRemoveExpiredPremium!: boolean;
@@ -3078,6 +3079,7 @@ export class AppFeatures implements IAppFeatures {
                 this.debugCommands = null as any;
             }
             this.isLocalNetworkSupported = _data["isLocalNetworkSupported"] !== undefined ? _data["isLocalNetworkSupported"] : null as any;
+            this.isProxySupported = _data["isProxySupported"] !== undefined ? _data["isProxySupported"] : null as any;
             this.adjustForSystemBars = _data["adjustForSystemBars"] !== undefined ? _data["adjustForSystemBars"] : null as any;
             this.allowEndPointStrategy = _data["allowEndPointStrategy"] !== undefined ? _data["allowEndPointStrategy"] : null as any;
             this.autoRemoveExpiredPremium = _data["autoRemoveExpiredPremium"] !== undefined ? _data["autoRemoveExpiredPremium"] : null as any;
@@ -3135,6 +3137,7 @@ export class AppFeatures implements IAppFeatures {
                 data["debugCommands"].push(item);
         }
         data["isLocalNetworkSupported"] = this.isLocalNetworkSupported !== undefined ? this.isLocalNetworkSupported : null as any;
+        data["isProxySupported"] = this.isProxySupported !== undefined ? this.isProxySupported : null as any;
         data["adjustForSystemBars"] = this.adjustForSystemBars !== undefined ? this.adjustForSystemBars : null as any;
         data["allowEndPointStrategy"] = this.allowEndPointStrategy !== undefined ? this.allowEndPointStrategy : null as any;
         data["autoRemoveExpiredPremium"] = this.autoRemoveExpiredPremium !== undefined ? this.autoRemoveExpiredPremium : null as any;
@@ -3175,6 +3178,7 @@ export interface IAppFeatures {
     isDebugMode: boolean;
     debugCommands: string[];
     isLocalNetworkSupported: boolean;
+    isProxySupported: boolean;
     adjustForSystemBars: boolean;
     allowEndPointStrategy: boolean;
     autoRemoveExpiredPremium: boolean;
@@ -4225,8 +4229,10 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
     customData?: string | null;
     isPremiumLocationSelected!: boolean;
     isPremiumAccount!: boolean;
-    selectedLocationInfo?: ClientServerLocationInfo | null;
     hasAccessCode!: boolean;
+    canGoPremium!: boolean;
+    canTryPremium!: boolean;
+    selectedLocationInfo?: ClientServerLocationInfo | null;
     customServerEndpoints?: string[] | null;
 
     constructor(data?: IClientProfileBaseInfo) {
@@ -4246,8 +4252,10 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
             this.customData = _data["customData"] !== undefined ? _data["customData"] : null as any;
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] !== undefined ? _data["isPremiumLocationSelected"] : null as any;
             this.isPremiumAccount = _data["isPremiumAccount"] !== undefined ? _data["isPremiumAccount"] : null as any;
-            this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : null as any;
             this.hasAccessCode = _data["hasAccessCode"] !== undefined ? _data["hasAccessCode"] : null as any;
+            this.canGoPremium = _data["canGoPremium"] !== undefined ? _data["canGoPremium"] : null as any;
+            this.canTryPremium = _data["canTryPremium"] !== undefined ? _data["canTryPremium"] : null as any;
+            this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : null as any;
             if (Array.isArray(_data["customServerEndpoints"])) {
                 this.customServerEndpoints = [] as any;
                 for (let item of _data["customServerEndpoints"])
@@ -4274,8 +4282,10 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
         data["customData"] = this.customData !== undefined ? this.customData : null as any;
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected !== undefined ? this.isPremiumLocationSelected : null as any;
         data["isPremiumAccount"] = this.isPremiumAccount !== undefined ? this.isPremiumAccount : null as any;
-        data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : null as any;
         data["hasAccessCode"] = this.hasAccessCode !== undefined ? this.hasAccessCode : null as any;
+        data["canGoPremium"] = this.canGoPremium !== undefined ? this.canGoPremium : null as any;
+        data["canTryPremium"] = this.canTryPremium !== undefined ? this.canTryPremium : null as any;
+        data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : null as any;
         if (Array.isArray(this.customServerEndpoints)) {
             data["customServerEndpoints"] = [];
             for (let item of this.customServerEndpoints)
@@ -4292,8 +4302,10 @@ export interface IClientProfileBaseInfo {
     customData?: string | null;
     isPremiumLocationSelected: boolean;
     isPremiumAccount: boolean;
-    selectedLocationInfo?: ClientServerLocationInfo | null;
     hasAccessCode: boolean;
+    canGoPremium: boolean;
+    canTryPremium: boolean;
+    selectedLocationInfo?: ClientServerLocationInfo | null;
     customServerEndpoints?: string[] | null;
 }
 
@@ -5067,11 +5079,11 @@ export class ClientProfileInfo implements IClientProfileInfo {
     isForAccount!: boolean;
     accessCode?: string | null;
     locationInfos!: ClientServerLocationInfo[];
-    purchaseUrl?: string | null;
-    canGoPremiumByCode!: boolean;
-    purchaseUrlMode!: PurchaseUrlMode;
+    canGoPremium!: boolean;
+    canTryPremium!: boolean;
     customServerEndpoints?: string[] | null;
     selectedLocationInfo?: ClientServerLocationInfo | null;
+    clientPolicy?: ClientPolicy | null;
 
     constructor(data?: IClientProfileInfo) {
         if (data) {
@@ -5115,9 +5127,8 @@ export class ClientProfileInfo implements IClientProfileInfo {
             else {
                 this.locationInfos = null as any;
             }
-            this.purchaseUrl = _data["purchaseUrl"] !== undefined ? _data["purchaseUrl"] : null as any;
-            this.canGoPremiumByCode = _data["canGoPremiumByCode"] !== undefined ? _data["canGoPremiumByCode"] : null as any;
-            this.purchaseUrlMode = _data["purchaseUrlMode"] !== undefined ? _data["purchaseUrlMode"] : null as any;
+            this.canGoPremium = _data["canGoPremium"] !== undefined ? _data["canGoPremium"] : null as any;
+            this.canTryPremium = _data["canTryPremium"] !== undefined ? _data["canTryPremium"] : null as any;
             if (Array.isArray(_data["customServerEndpoints"])) {
                 this.customServerEndpoints = [] as any;
                 for (let item of _data["customServerEndpoints"])
@@ -5127,6 +5138,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
                 this.customServerEndpoints = null as any;
             }
             this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : null as any;
+            this.clientPolicy = _data["clientPolicy"] ? ClientPolicy.fromJS(_data["clientPolicy"]) : null as any;
         }
     }
 
@@ -5160,15 +5172,15 @@ export class ClientProfileInfo implements IClientProfileInfo {
             for (let item of this.locationInfos)
                 data["locationInfos"].push(item ? item.toJSON() : null as any);
         }
-        data["purchaseUrl"] = this.purchaseUrl !== undefined ? this.purchaseUrl : null as any;
-        data["canGoPremiumByCode"] = this.canGoPremiumByCode !== undefined ? this.canGoPremiumByCode : null as any;
-        data["purchaseUrlMode"] = this.purchaseUrlMode !== undefined ? this.purchaseUrlMode : null as any;
+        data["canGoPremium"] = this.canGoPremium !== undefined ? this.canGoPremium : null as any;
+        data["canTryPremium"] = this.canTryPremium !== undefined ? this.canTryPremium : null as any;
         if (Array.isArray(this.customServerEndpoints)) {
             data["customServerEndpoints"] = [];
             for (let item of this.customServerEndpoints)
                 data["customServerEndpoints"].push(item);
         }
         data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : null as any;
+        data["clientPolicy"] = this.clientPolicy ? this.clientPolicy.toJSON() : null as any;
         return data;
     }
 }
@@ -5187,11 +5199,120 @@ export interface IClientProfileInfo {
     isForAccount: boolean;
     accessCode?: string | null;
     locationInfos: ClientServerLocationInfo[];
-    purchaseUrl?: string | null;
-    canGoPremiumByCode: boolean;
-    purchaseUrlMode: PurchaseUrlMode;
+    canGoPremium: boolean;
+    canTryPremium: boolean;
     customServerEndpoints?: string[] | null;
     selectedLocationInfo?: ClientServerLocationInfo | null;
+    clientPolicy?: ClientPolicy | null;
+}
+
+export class ClientPolicy implements IClientPolicy {
+    ccs!: string[];
+    free?: string[] | null;
+    ao!: boolean;
+    uo!: boolean;
+    n?: number | null;
+    pbt?: number | null;
+    pbtdl?: string | null;
+    pbr?: number | null;
+    pbe!: boolean;
+    pbp!: boolean;
+    pbc!: boolean;
+    pur_url?: string | null;
+    pur_url_f!: PurchaseUrlMode;
+
+    constructor(data?: IClientPolicy) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.ccs = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["ccs"])) {
+                this.ccs = [] as any;
+                for (let item of _data["ccs"])
+                    this.ccs!.push(item);
+            }
+            else {
+                this.ccs = null as any;
+            }
+            if (Array.isArray(_data["free"])) {
+                this.free = [] as any;
+                for (let item of _data["free"])
+                    this.free!.push(item);
+            }
+            else {
+                this.free = null as any;
+            }
+            this.ao = _data["ao"] !== undefined ? _data["ao"] : null as any;
+            this.uo = _data["uo"] !== undefined ? _data["uo"] : null as any;
+            this.n = _data["n"] !== undefined ? _data["n"] : null as any;
+            this.pbt = _data["pbt"] !== undefined ? _data["pbt"] : null as any;
+            this.pbtdl = _data["pbtdl"] !== undefined ? _data["pbtdl"] : null as any;
+            this.pbr = _data["pbr"] !== undefined ? _data["pbr"] : null as any;
+            this.pbe = _data["pbe"] !== undefined ? _data["pbe"] : null as any;
+            this.pbp = _data["pbp"] !== undefined ? _data["pbp"] : null as any;
+            this.pbc = _data["pbc"] !== undefined ? _data["pbc"] : null as any;
+            this.pur_url = _data["pur_url"] !== undefined ? _data["pur_url"] : null as any;
+            this.pur_url_f = _data["pur_url_f"] !== undefined ? _data["pur_url_f"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): ClientPolicy {
+        data = typeof data === 'object' ? data : {};
+        let result = new ClientPolicy();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.ccs)) {
+            data["ccs"] = [];
+            for (let item of this.ccs)
+                data["ccs"].push(item);
+        }
+        if (Array.isArray(this.free)) {
+            data["free"] = [];
+            for (let item of this.free)
+                data["free"].push(item);
+        }
+        data["ao"] = this.ao !== undefined ? this.ao : null as any;
+        data["uo"] = this.uo !== undefined ? this.uo : null as any;
+        data["n"] = this.n !== undefined ? this.n : null as any;
+        data["pbt"] = this.pbt !== undefined ? this.pbt : null as any;
+        data["pbtdl"] = this.pbtdl !== undefined ? this.pbtdl : null as any;
+        data["pbr"] = this.pbr !== undefined ? this.pbr : null as any;
+        data["pbe"] = this.pbe !== undefined ? this.pbe : null as any;
+        data["pbp"] = this.pbp !== undefined ? this.pbp : null as any;
+        data["pbc"] = this.pbc !== undefined ? this.pbc : null as any;
+        data["pur_url"] = this.pur_url !== undefined ? this.pur_url : null as any;
+        data["pur_url_f"] = this.pur_url_f !== undefined ? this.pur_url_f : null as any;
+        return data;
+    }
+}
+
+export interface IClientPolicy {
+    ccs: string[];
+    free?: string[] | null;
+    ao: boolean;
+    uo: boolean;
+    n?: number | null;
+    pbt?: number | null;
+    pbtdl?: string | null;
+    pbr?: number | null;
+    pbe: boolean;
+    pbp: boolean;
+    pbc: boolean;
+    pur_url?: string | null;
+    pur_url_f: PurchaseUrlMode;
 }
 
 export enum PurchaseUrlMode {

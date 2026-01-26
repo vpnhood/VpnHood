@@ -18,7 +18,9 @@ public static class ClientProfileExtensions
             IsPremiumAccount = clientProfileInfo.IsPremiumAccount,
             SelectedLocationInfo = clientProfileInfo.SelectedLocationInfo,
             HasAccessCode = !string.IsNullOrEmpty(clientProfileInfo.AccessCode),
-            CustomServerEndpoints = clientProfileInfo.CustomServerEndpoints
+            CustomServerEndpoints = clientProfileInfo.CustomServerEndpoints,
+            CanGoPremium = clientProfileInfo.CanGoPremium,
+            CanTryPremium = clientProfileInfo.CanTryPremium
         };
     }
 }

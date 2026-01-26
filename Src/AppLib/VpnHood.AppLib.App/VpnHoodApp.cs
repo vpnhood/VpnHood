@@ -183,7 +183,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsDebugMode = options.IsDebugMode,
             CustomData = options.CustomData,
             PremiumFeatures = options.PremiumFeatures,
-            IsAdSupported = options.AdProviderItems.Length > 0
+            IsAdSupported = options.AdProviderItems.Length > 0,
+            IsProxySupported = true
         };
 
         // create tracker
@@ -1333,8 +1334,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task<AppPurchaseOptions> GetPurchaseOptions(CancellationToken cancellationToken)
     {
         var profileInfo = CurrentClientProfileInfo;
-        var purchaseUrlMode = profileInfo?.PurchaseUrlMode;
-        var purchaseUrl = profileInfo?.PurchaseUrl;
+        var clientPolicy = profileInfo?.ClientPolicy;
+        var purchaseUrlMode = clientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore;
+        var purchaseUrl = clientPolicy?.PurchaseUrl;
 
         // get subscription plans from the store
         var subscriptionPlans = Array.Empty<SubscriptionPlan>();
@@ -1369,7 +1371,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             SubscriptionPlans = subscriptionPlans,
             StoreError = apiError, // no error if purchaseUrl is set
             PurchaseUrl = externalUrl,
-            CanGoPremiumByCode = profileInfo?.CanGoPremiumByCode == true
+            CanGoPremiumByCode = clientPolicy?.PremiumByCode == true
         };
 
         return purchaseOptions;

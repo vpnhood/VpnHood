@@ -24,6 +24,7 @@ public class AppFeatures
     public required bool IsDebugMode { get; init; }
     public required string[] DebugCommands { get; init; }
     public required bool IsLocalNetworkSupported { get; init; }
+    public required bool IsProxySupported { get; init; }
     public required bool AdjustForSystemBars { get; init; }
     public required bool AllowEndPointStrategy { get; init; }
     public required bool AutoRemoveExpiredPremium { get; set; }

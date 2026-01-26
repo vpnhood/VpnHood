@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
@@ -21,9 +22,8 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public bool IsForAccount => clientProfile.IsForAccount;
     public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
     public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);
-    public Uri? PurchaseUrl => ClientPolicy?.PurchaseUrl;
-    public bool CanGoPremiumByCode => ClientPolicy?.PremiumByCode == true;
-    public PurchaseUrlMode PurchaseUrlMode => ClientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore;
+    public bool CanGoPremium => ClientPolicy?.PremiumByCode == true || ClientPolicy?.PremiumByPurchase == true;
+    public bool CanTryPremium => ClientPolicy?.PremiumByTrial != null;
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? CustomServerEndpoints => clientProfile.CustomServerEndpoints;
@@ -38,15 +38,14 @@ public class ClientProfileInfo(ClientProfile clientProfile)
             return ret;
         }
     }
+    public ClientPolicy? ClientPolicy => _clientPolicy.Value;
 
-    private ClientPolicy? ClientPolicy {
-        get {
-            var countryCode = VpnHoodApp.Instance.GetClientCountryCode(allowVpnServer: true);
-            return clientProfile.Token.ClientPolicies?.FirstOrDefault(x =>
-                       x.ClientCountries.Any(y => y.Equals(countryCode, StringComparison.OrdinalIgnoreCase))) ??
-                   clientProfile.Token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
-        }
-    }
+    private readonly Lazy<ClientPolicy?> _clientPolicy = new(() => {
+        var countryCode = VpnHoodApp.Instance.GetClientCountryCode(allowVpnServer: true);
+        return clientProfile.Token.ClientPolicies?.FirstOrDefault(x =>
+                   x.ClientCountries.Any(y => y.Equals(countryCode, StringComparison.OrdinalIgnoreCase))) ??
+               clientProfile.Token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
+    });
 
     private string GetTitle()
     {

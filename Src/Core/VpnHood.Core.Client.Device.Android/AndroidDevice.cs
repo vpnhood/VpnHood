@@ -1,4 +1,5 @@
 ﻿using Android.Content;
+using Android.Content.PM;
 using Android.Net;
 using Android.OS;
 using Microsoft.Extensions.Logging;
@@ -39,31 +40,62 @@ public class AndroidDevice : IDevice
             var deviceAppInfos = new List<DeviceAppInfo>();
             var packageManager = Application.Context.PackageManager ??
                                  throw new Exception("Could not acquire PackageManager!");
-            var intent = new Intent(Intent.ActionMain);
-            intent.AddCategory(Intent.CategoryLauncher);
-            var resolveInfoList = packageManager.QueryIntentActivities(intent, 0);
 
+            // Get all apps
+            var applications = packageManager.GetInstalledApplications(PackageInfoFlags.MetaData);
             var currentAppId = Application.Context.PackageName;
-            foreach (var resolveInfo in resolveInfoList) {
-                if (resolveInfo.ActivityInfo == null)
+
+            foreach (var appInfo in applications) {
+                if (appInfo.PackageName == currentAppId)
                     continue;
 
-                var appName = resolveInfo.LoadLabel(packageManager);
-                var appId = resolveInfo.ActivityInfo.PackageName;
-                var icon = resolveInfo.LoadIcon(packageManager);
-                if (appName is "" or null || appId is "" or null || icon == null || appId == currentAppId)
+                if (!IsVisibleApp(packageManager, appInfo))
                     continue;
 
-                var deviceAppInfo = new DeviceAppInfo {
-                    AppId = appId,
+                // 4. Load metadata
+                var appName = appInfo.LoadLabel(packageManager);
+                if (string.IsNullOrWhiteSpace(appName) || appName == appInfo.PackageName)
+                    continue;
+
+                var icon = appInfo.LoadIcon(packageManager);
+                if (icon is null)
+                    continue;
+
+                deviceAppInfos.Add(new DeviceAppInfo {
+                    AppId = appInfo.PackageName!,
                     AppName = appName,
                     IconPng = icon.DrawableEncodeToBase64(100)
-                };
-                deviceAppInfos.Add(deviceAppInfo);
+                });
             }
 
-            return deviceAppInfos.ToArray();
+            return deviceAppInfos.OrderBy(a => a.AppName).ToArray();
         }
+    }
+
+    private static bool IsVisibleApp(PackageManager packageManager, ApplicationInfo appInfo)
+    {
+        var appId = appInfo.PackageName;
+
+        if (!appInfo.Enabled || string.IsNullOrWhiteSpace(appId))
+            return false;
+
+        // Does it have a Launcher icon? (Most user apps)
+        if (packageManager.GetLaunchIntentForPackage(appId) != null)
+            return true;
+
+        // Is it an updated system app? (e.g., Chrome, Maps, YouTube)
+        if ((appInfo.Flags & ApplicationInfoFlags.UpdatedSystemApp) != 0)
+            return true;
+
+        // Is it a known "Core" tool like Android Auto?
+        if (appId == "com.google.android.projection.gearhead")
+            return true;
+
+        // Is it a non-system app?
+        if ((appInfo.Flags & ApplicationInfoFlags.System) == 0)
+            return true;
+
+        return false;
     }
 
     private async Task PrepareVpnService(IActivityEvent? activityEvent, TimeSpan userIntentTimeout,

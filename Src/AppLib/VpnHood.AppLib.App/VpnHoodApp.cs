@@ -116,11 +116,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                           (options.IsDebugMode ? new NullTrackerFactory() : new BuiltInTrackerFactory());
         
         var locationService = new LocationService(SettingsService, 
-            useExternalLocationService: options.UseInternalLocationService,
-            useInternalLocationService: options.UseExternalLocationService,
+            useExternalLocationService: options.UseExternalLocationService,
+            useInternalLocationService: options.UseInternalLocationService,
             locationServiceTimeout: options.LocationServiceTimeout,
-            ipLocationZipData: options.Resources.IpLocationZipData
-            );
+            ipLocationZipData: options.Resources.IpLocationZipData);
         locationService.StateChanged += LocationService_StateChanged;
 
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));

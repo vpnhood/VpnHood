@@ -1,5 +1,4 @@
 using System.Net;
-using Namotion.Reflection;
 using NJsonSchema;
 using NJsonSchema.Generation.TypeMappers;
 using VpnHood.Core.Toolkit.Net;

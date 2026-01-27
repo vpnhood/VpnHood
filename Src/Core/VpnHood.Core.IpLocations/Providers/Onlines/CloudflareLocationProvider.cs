@@ -4,13 +4,8 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.IpLocations.Providers.Onlines;
 
-public class CloudflareLocationProvider(HttpClient httpClient, string userAgent) : IIpLocationProvider
+public class CloudflareLocationProvider(HttpClient httpClient, string userAgent) : ICurrentIpLocationProvider
 {
-    public Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
-    {
-        throw new NotSupportedException();
-    }
-
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
         const string url = "https://cloudflare.com/cdn-cgi/trace";

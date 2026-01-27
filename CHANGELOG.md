@@ -1,4 +1,4 @@
-# v7.6.783
+# Upcoming
 * Fix: Android: UDP on android
 * Update: UDP protocol has been changed and client need to update to the latest version
 * Feature: Protocol Version 11, UDP protocol has been changed

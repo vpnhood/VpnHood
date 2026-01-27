@@ -2,8 +2,7 @@
 
 namespace VpnHood.Core.IpLocations;
 
-public interface IIpLocationProvider : IDisposable
+public interface IIpLocationProvider : ICurrentIpLocationProvider
 {
     Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken);
-    Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken);
 }

@@ -9,9 +9,12 @@ public class CompositeIpLocationProvider(
     TimeSpan? providerTimeout = null)
     : IIpLocationProvider
 {
+    CompositeCurrentIpLocationProvider _currentIpLocationProviders = 
+        new(logger, providers, providerTimeout);
+    
     public async Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
-        foreach (var provider in providers)
+        foreach (var provider in providers.Where(x=>x is IIpLocationProvider))
             try {
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 if (providerTimeout.HasValue)
@@ -31,24 +34,11 @@ public class CompositeIpLocationProvider(
 
     public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
-        foreach (var provider in providers)
-            try {
-                using var providerTimeoutCts = new CancellationTokenSource(providerTimeout ?? TimeSpan.FromSeconds(5));
-                using var linkedToken =
-                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, providerTimeoutCts.Token);
-                return await provider.GetCurrentLocation(linkedToken.Token);
-            }
-            catch (NotSupportedException) {
-                // no log
-            }
-            catch (Exception ex) {
-                logger.LogError(ex, "Failed to get current location. Provider: {Provider}.", provider.GetType().Name);
-            }
-
-        throw new KeyNotFoundException("No location provider could resolve the current IP address.");
+        return await _currentIpLocationProviders.GetCurrentLocation(cancellationToken);
     }
 
     public void Dispose()
     {
+        _currentIpLocationProviders.Dispose();
     }
 }

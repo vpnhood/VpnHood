@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;

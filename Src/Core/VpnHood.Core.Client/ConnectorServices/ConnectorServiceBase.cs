@@ -55,12 +55,25 @@ internal class ConnectorServiceBase : IDisposable
         _useWebSocket = useWebSocket;
     }
 
+    private static string BuildRequestPath(string? pathBase)
+    {
+        // the URL is /{pathBase}/{guid}
+        var urlBuilder = new StringBuilder("/");
+        if (!string.IsNullOrEmpty(pathBase)) {
+            urlBuilder.Append(pathBase.Trim('/'));
+            urlBuilder.Append('/');
+        }
+        urlBuilder.Append(Guid.NewGuid());
+        return urlBuilder.ToString();
+    }
+
     private static string BuildPostRequest(
-        string hostName, TunnelStreamType streamType, int protocolVersion, int contentLength)
+        string hostName, string? pathBase, 
+        TunnelStreamType streamType, int protocolVersion, int contentLength)
     {
         // write HTTP request
         var headerBuilder = new StringBuilder()
-            .Append($"POST /{Guid.NewGuid()} HTTP/1.1\r\n")
+            .Append($"POST {BuildRequestPath(pathBase)} HTTP/1.1\r\n")
             .Append($"Host: {hostName}\r\n")
             .Append($"Content-Length: {contentLength}\r\n")
             .Append("Content-Type: application/octet-stream\r\n")
@@ -81,7 +94,7 @@ internal class ConnectorServiceBase : IDisposable
 
         // write HTTP request
         var headerBuilder = new StringBuilder()
-            .Append($"GET /{Guid.NewGuid()} HTTP/1.1\r\n")
+            .Append($"GET /{BuildRequestPath(VpnEndPoint.PathBase)} HTTP/1.1\r\n")
             .Append($"Host: {VpnEndPoint.HostName}\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
@@ -118,7 +131,8 @@ internal class ConnectorServiceBase : IDisposable
         int contentLength, string streamId, CancellationToken cancellationToken)
     {
         // write HTTP request
-        var header = BuildPostRequest(VpnEndPoint.HostName, TunnelStreamType.None, ProtocolVersion, contentLength);
+        var header = BuildPostRequest(hostName: VpnEndPoint.HostName, pathBase: VpnEndPoint.PathBase,
+            TunnelStreamType.None, ProtocolVersion, contentLength);
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
@@ -134,8 +148,9 @@ internal class ConnectorServiceBase : IDisposable
         int contentLength, string streamId, CancellationToken cancellationToken)
     {
         // write HTTP request
-        var header = BuildPostRequest(VpnEndPoint.HostName, TunnelStreamType.Standard, ProtocolVersion,
-            contentLength: contentLength);
+        var header = BuildPostRequest(
+            hostName: VpnEndPoint.HostName, pathBase: VpnEndPoint.PathBase,
+            TunnelStreamType.Standard, ProtocolVersion, contentLength: contentLength);
 
         // Send header and wait for its response
         await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();

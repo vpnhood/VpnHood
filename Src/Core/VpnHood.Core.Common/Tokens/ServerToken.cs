@@ -47,6 +47,10 @@ public class ServerToken
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? HostEndPoints { get; set; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    [JsonPropertyName("path")]
+    public string? PathBase { get; set; } // such as /servers/serverId
+
     [JsonPropertyName("ep_st")]
     [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
     public EndPointStrategy EndPointsStrategy { get; set; }

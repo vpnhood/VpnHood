@@ -1,6 +1,6 @@
-﻿using System.Net;
-using Ga4.Trackers;
+﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
@@ -53,7 +53,7 @@ public class ServerFinder(
             // select forced endpoints for each server token
             return serverTokens
                 .SelectMany(serverToken => customServerEndpoints.Select(ep =>
-                    new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash)))
+                    new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase)))
                 .Where(x =>
                     includeIpV6 || // accept any IPv6 if allowed
                     x.TcpEndPoint.IsV4() ||
@@ -68,7 +68,8 @@ public class ServerFinder(
                 var endpoints = await EndPointResolver.ResolveHostEndPoints(
                     serverToken, endPointStrategy, cancellationToken);
 
-                return endpoints.Select(ep => new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash));
+                return endpoints.Select(ep => new VpnEndPoint(
+                    ep, serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase));
             }
             catch (Exception ex) {
                 itemExceptions.Add((ex, serverToken));

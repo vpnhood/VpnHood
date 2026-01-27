@@ -44,6 +44,9 @@ public static class VpnHoodAppExtensions
                 CityName = null,
                 RegionName = null
             };
+
+            // Reload client profile service to apply changes as region may be cached due to lazy load
+            app.ClientProfileService.Reload();
         }
     }
 }

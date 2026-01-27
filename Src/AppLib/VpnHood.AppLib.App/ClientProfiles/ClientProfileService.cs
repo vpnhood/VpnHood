@@ -329,6 +329,7 @@ public class ClientProfileService
     public void Reload()
     {
         _clientProfiles = Load().ToList();
+        _cashInfo = null;
     }
 
     private IEnumerable<ClientProfile> Load()

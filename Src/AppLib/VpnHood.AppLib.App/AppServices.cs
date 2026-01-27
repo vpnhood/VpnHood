@@ -1,18 +1,25 @@
 ﻿using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Services.Proxies;
 using VpnHood.AppLib.Services.Updaters;
 
 namespace VpnHood.AppLib;
 
-public class AppServices
+public class AppServices : IDisposable
 {
     public required AppAccountService? AccountService { get; init; }
     public required AppUpdaterService? UpdaterService { get; init; }
     public required AppProxyEndPointService ProxyEndPointService { get; init; }
+    public required LocationService LocationService { get; init; }
     public required IDeviceUiProvider DeviceUiProvider { get; init; }
     public required IAppCultureProvider CultureProvider { get; init; }
     public required IAppUserReviewProvider? UserReviewProvider { get; init; }
     public required ITracker Tracker { get; set; }
+    public void Dispose()
+    {
+        UpdaterService?.Dispose();
+        LocationService.Dispose();
+    }
 }

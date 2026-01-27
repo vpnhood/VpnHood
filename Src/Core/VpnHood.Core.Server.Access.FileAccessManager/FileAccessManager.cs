@@ -132,7 +132,7 @@ public class FileAccessManager : IAccessManager
                 using var cancellationTokenSource = new CancellationTokenSource(5000);
                 using var httpClient = new HttpClient();
                 const string userAgent = "VpnHood-File-AccessManager";
-                var ipLocationProvider = new CompositeIpLocationProvider(VhLogger.Instance,
+                var ipLocationProvider = new CompositeCurrentIpLocationProvider(VhLogger.Instance,
                 [
                     new CloudflareLocationProvider(httpClient, userAgent),
                     new IpLocationIoProvider(httpClient, userAgent, apiKey: null),

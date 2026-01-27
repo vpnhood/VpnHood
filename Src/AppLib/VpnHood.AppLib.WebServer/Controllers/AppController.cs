@@ -1,6 +1,7 @@
 ﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
+using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
@@ -319,11 +320,11 @@ internal class AppController : ControllerBase, IAppController
     public Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        return Task.FromResult(App.GetCountries());
+        return Task.FromResult(LocationService.GetCountries());
     }
 
     public Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken)
     {
-        return App.GetSupportedSplitByCountries(cancellationToken);
+        return App.Services.LocationService.GetSupportedSplitByCountries(cancellationToken);
     }
 }

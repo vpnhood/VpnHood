@@ -40,8 +40,8 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public ClientPolicy? ClientPolicy => _clientPolicy.Value;
 
     private readonly Lazy<ClientPolicy?> _clientPolicy = new(() => {
-        var countryCode = VpnHoodApp.Instance.GetClientCountryCode(allowVpnServer: true);
-        return clientProfile.Token.ClientPolicies?.FirstOrDefault(x =>
+        var countryCode = VpnHoodApp.Instance.Services.LocationService.GetClientCountryCode(allowVpnServer: true);
+        return clientProfile.Token.ClientPolicies?.FirstOrDefault(x => 
                    x.ClientCountries.Any(y => y.Equals(countryCode, StringComparison.OrdinalIgnoreCase))) ??
                clientProfile.Token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
     });

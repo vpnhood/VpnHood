@@ -94,11 +94,12 @@ public class IpLocationTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UseInternalLocationService = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        var countryCodes = await app.IpRangeLocationProvider.GetCountryCodes(TestCancellationToken);
+        Assert.IsNotNull(app.Services.LocationService.IpRangeLocationProvider);
+        var countryCodes = await app.Services.LocationService.IpRangeLocationProvider.GetCountryCodes(TestCancellationToken);
         Assert.IsTrue(countryCodes.Any(x => x == "US"),
             "Countries has not been extracted.");
 
         // make sure GetIpRange works
-        Assert.IsTrue((await app.IpRangeLocationProvider.GetIpRanges("US", TestCancellationToken)).Any());
+        Assert.IsTrue((await app.Services.LocationService.IpRangeLocationProvider.GetIpRanges("US", TestCancellationToken)).Any());
     }
 }

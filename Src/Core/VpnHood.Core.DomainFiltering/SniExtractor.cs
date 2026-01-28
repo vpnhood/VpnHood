@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Tunneling.Utils;
+namespace VpnHood.Core.DomainFiltering;
 
 public static class SniExtractor
 {
@@ -13,7 +13,7 @@ public static class SniExtractor
         public required byte[] ReadData { get; init; }
     }
 
-    public static async Task<SniData> ExtractSni(Stream tcpStream, CancellationToken cancellationToken)
+    public static async Task<SniData> ExtractSni(Stream tcpStream, EventId eventId, CancellationToken cancellationToken)
     {
         // extract SNI
         var initBuffer = new byte[1000];
@@ -22,18 +22,18 @@ public static class SniExtractor
             .Vhc();
 
         return new SniData {
-            Sni = ExtractSni(initBuffer[..bufCount]),
+            Sni = ExtractSni(initBuffer[..bufCount], eventId),
             ReadData = initBuffer[..bufCount]
         };
     }
 
-    public static string? ExtractSni(byte[] payloadData)
+    public static string? ExtractSni(byte[] payloadData, EventId eventId)
     {
         try {
             return GetSniFromStreamInternal(payloadData);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogDebug(GeneralEventId.Sni, ex, "Could not extract sni.");
+            VhLogger.Instance.LogDebug(eventId, ex, "Could not extract sni.");
             return null;
         }
     }

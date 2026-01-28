@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Client.DomainFiltering;
+﻿namespace VpnHood.Core.DomainFiltering;
 
 public class DomainFilterResult
 {

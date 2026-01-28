@@ -9,12 +9,12 @@ public class CompositeIpLocationProvider(
     TimeSpan? providerTimeout = null)
     : IIpLocationProvider
 {
-    CompositeCurrentIpLocationProvider _currentIpLocationProviders = 
+    private readonly CompositeCurrentIpLocationProvider _currentIpLocationProviders = 
         new(logger, providers, providerTimeout);
     
     public async Task<IpLocation> GetLocation(IPAddress ipAddress, CancellationToken cancellationToken)
     {
-        foreach (var provider in providers.Where(x=>x is IIpLocationProvider))
+        foreach (var provider in providers)
             try {
                 using var linkedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 if (providerTimeout.HasValue)

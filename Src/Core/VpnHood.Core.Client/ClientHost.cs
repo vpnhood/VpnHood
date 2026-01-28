@@ -2,8 +2,8 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;

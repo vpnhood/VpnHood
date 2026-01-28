@@ -6,7 +6,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace VpnHood.Core.Tunneling.Quic;
+namespace VpnHood.Core.DomainFiltering.Quic;
 
 public static class QuicSniExtractorStateful
 {

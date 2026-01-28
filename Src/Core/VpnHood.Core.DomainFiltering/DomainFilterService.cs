@@ -1,14 +1,11 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Utils;
 
-namespace VpnHood.Core.Client.DomainFiltering;
+namespace VpnHood.Core.DomainFiltering;
 
-public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
+public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni, EventId eventId)
 {
     public bool IsEnabled =>
         forceLogSni ||
@@ -26,8 +23,8 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni)
             };
 
         // extract SNI
-        var sniData = await SniExtractor.ExtractSni(tlsStream, cancellationToken).Vhc();
-        VhLogger.Instance.LogInformation(GeneralEventId.Sni,
+        var sniData = await SniExtractor.ExtractSni(tlsStream, eventId, cancellationToken).Vhc();
+        VhLogger.Instance.LogInformation(eventId,
             "Domain: {Domain}, DestEp: {IP}",
             VhLogger.FormatHostName(sniData.Sni), VhLogger.Format(remoteAddress));
 

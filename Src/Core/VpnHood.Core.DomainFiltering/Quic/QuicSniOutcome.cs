@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Tunneling.Quic;
+﻿namespace VpnHood.Core.DomainFiltering.Quic;
 
 public enum QuicSniOutcome
 {

@@ -6,12 +6,12 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
-using VpnHood.Core.Client.DomainFiltering;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
+using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Proxies.EndPointManagement;
@@ -30,6 +30,7 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using DomainFilter = VpnHood.Core.DomainFiltering.DomainFilter;
 
 namespace VpnHood.Core.Client;
 
@@ -83,9 +84,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IPEndPoint? HostTcpEndPoint => _connectorService?.VpnEndPoint.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
 
-    public byte[] SessionKey =>
-        _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
-
+    public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     public SessionInfo? SessionInfo { get; private set; }
@@ -182,7 +181,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
 
         // SNI is sensitive, must be explicitly enabled
-        DomainFilterService = new DomainFilterService(options.DomainFilter, forceLogSni: options.ForceLogSni);
+        DomainFilterService = new DomainFilterService(
+            new DomainFilter {
+                Blocks = options.DomainFilter.Blocks,
+                Excludes = options.DomainFilter.Excludes,
+                Includes = options.DomainFilter.Includes
+            }, 
+            forceLogSni: options.ForceLogSni, 
+            eventId : GeneralEventId.Sni);
 
         // Tunnel
         _tunnel = new Tunnel(new TunnelOptions {

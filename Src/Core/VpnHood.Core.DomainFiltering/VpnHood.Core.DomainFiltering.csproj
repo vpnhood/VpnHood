@@ -1,9 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+		<Description>Provides packet-level domain filtering usig SNI.</Description>
 		<TargetFramework>net10.0</TargetFramework>
-		<Description>Establish a connection to a VpnHood server. If you need to create a VpnApp client, we recommend using VpnHood.AppLib</Description>
-		<RootNamespace>VpnHood.Core.Client</RootNamespace>
-		<OutputType>Library</OutputType>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -30,22 +28,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.DomainFiltering\VpnHood.Core.DomainFiltering.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Proxies.EndPointManagement\VpnHood.Core.Proxies.EndPointManagement.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Packets\VpnHood.Core.Packets.csproj" />
 	</ItemGroup>
 
 </Project>

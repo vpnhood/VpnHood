@@ -2,6 +2,7 @@
 // ReSharper disable CommentTypo
 // ReSharper disable StringLiteralTypo
 
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
@@ -22,6 +23,9 @@ public static class QuicSniExtractorStateful
     ];
 
     private const uint V2Version = 0x6b3343cf;
+    
+    // Shared timeout ticks to avoid repeated TimeSpan allocation
+    private static readonly long TimeoutTicks300Ms = TimeSpan.FromMilliseconds(300).Ticks;
 
     /// <summary>
     /// Feed a single UDP payload (datagram body, no UDP/IP headers).
@@ -32,7 +36,7 @@ public static class QuicSniExtractorStateful
         QuicSniState? state = null,
         long nowTicks = 0)
     {
-        if (nowTicks == 0) nowTicks = DateTime.UtcNow.Ticks;
+        if (nowTicks == 0) nowTicks = Environment.TickCount64 * TimeSpan.TicksPerMillisecond;
 
         // bootstrap state from first Initial we see
         if (state == null) {
@@ -43,7 +47,7 @@ public static class QuicSniExtractorStateful
                 IsV2 = isV2,
                 Dcid = dcid.ToArray(),
                 PacketBudget = 3,
-                DeadlineTicks = nowTicks + TimeSpan.FromMilliseconds(300).Ticks,
+                DeadlineTicks = nowTicks + TimeoutTicks300Ms,
                 MaxBytes = 64 * 1024
             };
             DeriveInitialSecrets(state);
@@ -226,15 +230,29 @@ public static class QuicSniExtractorStateful
         var sampleOffset = pnOffset + 4;
         if (b.Length < sampleOffset + 16) return false;
 
-        var sample = b.Slice(sampleOffset, 16).ToArray();
-        var mask = new byte[16];
+        // Use stackalloc for small fixed-size buffers
+        //todo: use allocated object and lock the AES encryptor for better performance if this becomes a bottleneck
+        Span<byte> sample = stackalloc byte[16];
+        Span<byte> mask = stackalloc byte[16];
+        b.Slice(sampleOffset, 16).CopyTo(sample);
 
         using (var aes = Aes.Create()) {
             aes.Mode = CipherMode.ECB;
             aes.Padding = PaddingMode.None;
             aes.Key = st.Hp;
             using var enc = aes.CreateEncryptor();
-            enc.TransformBlock(sample, 0, 16, mask, 0);
+            // TransformBlock requires arrays, rent from pool
+            var sampleArr = ArrayPool<byte>.Shared.Rent(16);
+            var maskArr = ArrayPool<byte>.Shared.Rent(16);
+            try {
+                sample.CopyTo(sampleArr);
+                enc.TransformBlock(sampleArr, 0, 16, maskArr, 0);
+                maskArr.AsSpan(0, 16).CopyTo(mask);
+            }
+            finally {
+                ArrayPool<byte>.Shared.Return(sampleArr);
+                ArrayPool<byte>.Shared.Return(maskArr);
+            }
         }
 
         var first = b[off];
@@ -243,13 +261,14 @@ public static class QuicSniExtractorStateful
 
         if (pnLen < 1 || pnLen > 4 || b.Length < pnOffset + pnLen) return false;
 
-        // unmask PN
-        var pnField = new byte[pnLen];
+        // unmask PN using stackalloc
+        Span<byte> pnField = stackalloc byte[4];
         for (var i = 0; i < pnLen; i++)
             pnField[i] = (byte)(b[pnOffset + i] ^ mask[1 + i]);
 
         // AAD = header (to PN) with first byte unmasked + PN
-        var aad = new byte[headerLenUpToPn + pnLen];
+        var aadLen = headerLenUpToPn + pnLen;
+        var aad = aadLen <= 128 ? stackalloc byte[aadLen] : new byte[aadLen];
         b.Slice(off, headerLenUpToPn).CopyTo(aad);
         aad[0] = unmaskedFirst;
         for (var i = 0; i < pnLen; i++) aad[headerLenUpToPn + i] = pnField[i];
@@ -257,7 +276,9 @@ public static class QuicSniExtractorStateful
         // Nonce = iv XOR packet_number (left-padded)
         ulong pnVal = 0;
         for (var i = 0; i < pnLen; i++) pnVal = (pnVal << 8) | pnField[i];
-        var nonce = (byte[])st.Iv.Clone();
+        
+        Span<byte> nonce = stackalloc byte[12];
+        st.Iv.CopyTo(nonce);
         for (var i = 0; i < 8; i++)
             nonce[nonce.Length - 1 - i] ^= (byte)(pnVal >> (8 * i));
 
@@ -267,17 +288,27 @@ public static class QuicSniExtractorStateful
         if (ctLen <= 16 || b.Length < ctOffset + ctLen) return false;
 
         var ptLen = ctLen - 16;
-        var ciphertext = b.Slice(ctOffset, ptLen).ToArray();
-        var tag = b.Slice(ctOffset + ptLen, 16).ToArray();
-        plaintext = new byte[ptLen];
-
+        
+        // Rent buffers for ciphertext and plaintext
+        var ciphertext = ArrayPool<byte>.Shared.Rent(ptLen);
+        var tag = ArrayPool<byte>.Shared.Rent(16);
+        plaintext = new byte[ptLen]; // This must be returned to caller
+        
         try {
-            using var aead = new AesGcm(st.Key, 16); // tagSizeInBytes = 16
-            aead.Decrypt(nonce, ciphertext, tag, plaintext, aad);
+            b.Slice(ctOffset, ptLen).CopyTo(ciphertext);
+            b.Slice(ctOffset + ptLen, 16).CopyTo(tag);
+
+            using var aead = new AesGcm(st.Key, 16);
+            aead.Decrypt(nonce, ciphertext.AsSpan(0, ptLen), tag.AsSpan(0, 16), plaintext, aad);
             return true;
         }
         catch {
+            plaintext = [];
             return false;
+        }
+        finally {
+            ArrayPool<byte>.Shared.Return(ciphertext);
+            ArrayPool<byte>.Shared.Return(tag);
         }
     }
 
@@ -338,21 +369,36 @@ public static class QuicSniExtractorStateful
         if (segments.Count == 0) return [];
         segments.Sort((a, b) => a.Off.CompareTo(b.Off));
 
-        var buf = new List<byte>(Math.Min(maxBytes, 16384));
+        // Calculate required size first to avoid reallocations
+        ulong totalSize = 0;
         ulong cur = 0;
-
         foreach (var s in segments) {
-            if (s.Off > cur) break; // gap before next data → stop
+            if (s.Off > cur) break;
             var overlap = (int)Math.Max(0, (long)(cur - s.Off));
             var toCopy = Math.Min(s.Data.Length - overlap, maxBytes - (int)cur);
             if (toCopy <= 0) continue;
-
-            buf.AddRange(new ArraySegment<byte>(s.Data, overlap, toCopy));
-            cur += (ulong)toCopy;
-            if (buf.Count >= maxBytes) break;
+            totalSize = cur + (ulong)toCopy;
+            cur = totalSize;
+            if (totalSize >= (ulong)maxBytes) break;
         }
 
-        return buf.ToArray();
+        if (totalSize == 0) return [];
+        
+        var result = new byte[totalSize];
+        cur = 0;
+        
+        foreach (var s in segments) {
+            if (s.Off > cur) break;
+            var overlap = (int)Math.Max(0, (long)(cur - s.Off));
+            var toCopy = Math.Min(s.Data.Length - overlap, (int)(totalSize - cur));
+            if (toCopy <= 0) continue;
+
+            Buffer.BlockCopy(s.Data, overlap, result, (int)cur, toCopy);
+            cur += (ulong)toCopy;
+            if (cur >= totalSize) break;
+        }
+
+        return result;
     }
 
     private static string? TryParseSniFromClientHelloPartial(ReadOnlySpan<byte> buf)
@@ -464,26 +510,47 @@ public static class QuicSniExtractorStateful
     private static byte[] HkdfExtract(byte[] salt, ReadOnlySpan<byte> ikm)
     {
         using var hmac = new HMACSHA256(salt);
-        return hmac.ComputeHash(ikm.ToArray());
+        // Rent buffer for ikm to avoid ToArray allocation
+        var ikmArr = ArrayPool<byte>.Shared.Rent(ikm.Length);
+        try {
+            ikm.CopyTo(ikmArr);
+            return hmac.ComputeHash(ikmArr, 0, ikm.Length);
+        }
+        finally {
+            ArrayPool<byte>.Shared.Return(ikmArr);
+        }
     }
 
     private static byte[] HkdfExpand(byte[] prk, ReadOnlySpan<byte> info, int len)
     {
         using var hmac = new HMACSHA256(prk);
-        List<byte> okm = [];
-        byte[] T = [];
+        var result = new byte[len];
+        var resultOffset = 0;
+        
+        Span<byte> T = [];
         byte ctr = 1;
-
-        while (okm.Count < len) {
-            var input = new byte[T.Length + info.Length + 1];
-            Buffer.BlockCopy(T, 0, input, 0, T.Length);
-            Buffer.BlockCopy(info.ToArray(), 0, input, T.Length, info.Length);
-            input[^1] = ctr++;
-            T = hmac.ComputeHash(input);
-            okm.AddRange(T);
+        
+        // Rent buffer for input construction
+        var inputArr = ArrayPool<byte>.Shared.Rent(32 + info.Length + 1); // max T size + info + counter
+        try {
+            while (resultOffset < len) {
+                var inputLen = T.Length + info.Length + 1;
+                T.CopyTo(inputArr);
+                info.CopyTo(inputArr.AsSpan(T.Length));
+                inputArr[T.Length + info.Length] = ctr++;
+                
+                var hash = hmac.ComputeHash(inputArr, 0, inputLen);
+                var toCopy = Math.Min(hash.Length, len - resultOffset);
+                Buffer.BlockCopy(hash, 0, result, resultOffset, toCopy);
+                resultOffset += toCopy;
+                T = hash;
+            }
+        }
+        finally {
+            ArrayPool<byte>.Shared.Return(inputArr);
         }
 
-        return okm.GetRange(0, len).ToArray();
+        return result;
     }
 
     private static byte[] HkdfExpandLabel(byte[] secret, string label, int len)

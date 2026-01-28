@@ -12,7 +12,7 @@ namespace VpnHood.Core.DomainFiltering;
 /// Since SNI may span multiple packets, this class buffers packets until SNI is determined.
 /// All buffered packets are then routed together based on the filter decision.
 /// </summary>
-public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IDisposable
+public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IPacketDomainFilter
 {
     private readonly ConcurrentDictionary<FlowKey, QuicFlowState> _flows = new();
     private readonly TimeSpan _flowTimeout = TimeSpan.FromMilliseconds(500);
@@ -29,22 +29,22 @@ public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IDi
     /// Process a UDP packet that might be QUIC.
     /// Returns the routing decision and any buffered packets that should be sent together.
     /// </summary>
-    public QuicFilterResult Process(IpPacket ipPacket)
+    public PacketFilterResult Process(IpPacket ipPacket)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(QuicDomainFilter));
 
         // Only process UDP packets on port 443
         if (ipPacket.Protocol != IpProtocol.Udp)
-            return QuicFilterResult.NotQuic(ipPacket);
+            return PacketFilterResult.Passthrough(ipPacket);
 
         var udpPacket = ipPacket.ExtractUdp();
         if (udpPacket.DestinationPort != 443)
-            return QuicFilterResult.NotQuic(ipPacket);
+            return PacketFilterResult.Passthrough(ipPacket);
 
         // If domain filtering is disabled, pass through
         if (!IsEnabled)
-            return QuicFilterResult.NotQuic(ipPacket);
+            return PacketFilterResult.Passthrough(ipPacket);
 
         var flowKey = new FlowKey(
             ipPacket.SourceAddress,
@@ -55,7 +55,7 @@ public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IDi
         // Check if we already have a decision for this flow
         if (_flows.TryGetValue(flowKey, out var existingState) && existingState.Decision != null) {
             existingState.LastUsedTime = FastDateTime.Now;
-            return new QuicFilterResult(
+            return new PacketFilterResult(
                 existingState.Decision.Value,
                 existingState.DomainName,
                 [ipPacket]);
@@ -71,24 +71,24 @@ public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IDi
             QuicSniOutcome.Found => HandleSniFound(flowKey, ipPacket, existingState, result.Sni!),
             QuicSniOutcome.NeedMore => HandleNeedMore(flowKey, ipPacket, existingState, result.SniState!),
             QuicSniOutcome.GiveUp => HandleGiveUp(flowKey, ipPacket, existingState),
-            _ => QuicFilterResult.NotQuic(ipPacket)
+            _ => PacketFilterResult.Passthrough(ipPacket)
         };
     }
 
-    private QuicFilterResult HandleNotInitial(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState)
+    private PacketFilterResult HandleNotInitial(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState)
     {
         // Not a QUIC Initial packet - if we have buffered packets, release them all
         if (existingState != null) {
             var packets = existingState.BufferedPackets;
             packets.Add(ipPacket);
             _flows.TryRemove(flowKey, out _);
-            return new QuicFilterResult(DomainFilterAction.None, null, packets);
+            return new PacketFilterResult(DomainFilterAction.None, null, packets);
         }
 
-        return QuicFilterResult.NotQuic(ipPacket);
+        return PacketFilterResult.Passthrough(ipPacket);
     }
 
-    private QuicFilterResult HandleSniFound(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState, string sni)
+    private PacketFilterResult HandleSniFound(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState, string sni)
     {
         var action = DomainFilterService.ProcessInternal(sni, domainFilter);
 
@@ -105,10 +105,10 @@ public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IDi
         state.LastUsedTime = FastDateTime.Now;
         _flows[flowKey] = state;
 
-        return new QuicFilterResult(action, sni, packets);
+        return new PacketFilterResult(action, sni, packets);
     }
 
-    private QuicFilterResult HandleNeedMore(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState, QuicSniState sniState)
+    private PacketFilterResult HandleNeedMore(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState, QuicSniState sniState)
     {
         // Buffer this packet and wait for more
         var state = existingState ?? new QuicFlowState();
@@ -121,10 +121,10 @@ public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IDi
         CleanupExpiredFlows();
 
         // Return empty result - packets are buffered
-        return QuicFilterResult.Buffered();
+        return PacketFilterResult.Buffered();
     }
 
-    private QuicFilterResult HandleGiveUp(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState)
+    private PacketFilterResult HandleGiveUp(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState)
     {
         // Could not extract SNI - release all buffered packets with None action
         var packets = existingState?.BufferedPackets ?? [];
@@ -138,7 +138,7 @@ public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IDi
         state.LastUsedTime = FastDateTime.Now;
         _flows[flowKey] = state;
 
-        return new QuicFilterResult(DomainFilterAction.None, null, packets);
+        return new PacketFilterResult(DomainFilterAction.None, null, packets);
     }
 
     private void CleanupExpiredFlows()
@@ -190,56 +190,4 @@ public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IDi
         public List<IpPacket> BufferedPackets { get; set; } = [];
         public DateTime LastUsedTime { get; set; } = FastDateTime.Now;
     }
-}
-
-/// <summary>
-/// Result of QUIC domain filtering
-/// </summary>
-public readonly struct QuicFilterResult
-{
-    /// <summary>
-    /// The filter action to take
-    /// </summary>
-    public DomainFilterAction Action { get; }
-
-    /// <summary>
-    /// The extracted domain name (if found)
-    /// </summary>
-    public string? DomainName { get; }
-
-    /// <summary>
-    /// Packets to send (may include buffered packets from previous calls)
-    /// </summary>
-    public IReadOnlyList<IpPacket> Packets { get; }
-
-    /// <summary>
-    /// True if packets are being buffered (waiting for more data to extract SNI)
-    /// </summary>
-    public bool IsBuffered { get; }
-
-    /// <summary>
-    /// True if this is not a QUIC packet that needs filtering
-    /// </summary>
-    public bool IsNotQuic { get; }
-
-    public QuicFilterResult(DomainFilterAction action, string? domainName, IReadOnlyList<IpPacket> packets)
-    {
-        Action = action;
-        DomainName = domainName;
-        Packets = packets;
-        IsBuffered = false;
-        IsNotQuic = false;
-    }
-
-    private QuicFilterResult(bool isBuffered, bool isNotQuic, IpPacket? packet)
-    {
-        Action = DomainFilterAction.None;
-        DomainName = null;
-        Packets = packet != null ? [packet] : [];
-        IsBuffered = isBuffered;
-        IsNotQuic = isNotQuic;
-    }
-
-    public static QuicFilterResult Buffered() => new(isBuffered: true, isNotQuic: false, packet: null);
-    public static QuicFilterResult NotQuic(IpPacket packet) => new(isBuffered: false, isNotQuic: true, packet: packet);
 }

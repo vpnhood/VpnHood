@@ -1,8 +1,10 @@
 # Upcoming
-* Fix: Android: UDP on android
-* Update: UDP protocol has been changed and client need to update to the latest version
-* Feature: Protocol Version 11, UDP protocol has been changed
-* Feature: Suppport for HTTP, HTTPS, SOCKS5 and SOCKS4 relay Proxies
+* Fix: Android: UDP issue on Android
+* Fix: Android: Added "Android Auto" to the supported apps list
+* Update: UDP protocol updated; clients must upgrade to the latest version
+* Feature: Split Countries by Exclusion List
+* Feature: Protocol Version 11 – updated UDP protocol
+* Feature: Support for HTTP, HTTPS, SOCKS5, and SOCKS4 relay proxies
 
 # v7.5.780
 * Fix: Unable to connect to some servers when the client has IPv6 enabled

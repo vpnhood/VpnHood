@@ -4950,13 +4950,13 @@ export interface IDomainFilter {
 }
 
 export enum EndPointStrategy {
-    Auto = "Auto",
-    DnsFirst = "DnsFirst",
-    IpFirst = "IpFirst",
-    TokenFirst = "IpFirst",
-    DnsOnly = "DnsOnly",
-    IpOnly = "IpOnly",
-    TokenOnly = "IpOnly",
+    Auto = 0,
+    DnsFirst = 1,
+    IpFirst = 2,
+    TokenFirst = 2,
+    DnsOnly = 3,
+    IpOnly = 4,
+    TokenOnly = 4,
 }
 
 export enum DnsMode {

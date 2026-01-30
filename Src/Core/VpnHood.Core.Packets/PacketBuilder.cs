@@ -112,6 +112,15 @@ public static class PacketBuilder
         return ipPacket;
     }
 
+    public static IpPacket BuildTcp(IpEndPointValue sourceEndPoint, IpEndPointValue destinationEndPoint,
+        ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
+    {
+        return BuildTcp(
+            sourceEndPoint.Address, destinationEndPoint.Address,
+            sourceEndPoint.Port, destinationEndPoint.Port,
+            options, payload);
+    }
+
     public static IpPacket BuildTcp(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
         ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
     {

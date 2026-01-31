@@ -33,4 +33,5 @@ public class VpnHoodClientConfig
     public required bool UseTcpProxy { get; set; }
     public required bool DropUdp { get; set; }
     public required bool DropQuic { get; set; }
+    public required bool UseWebSocket { get; set; }
 }

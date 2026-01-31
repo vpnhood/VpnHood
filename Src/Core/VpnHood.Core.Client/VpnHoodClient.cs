@@ -136,7 +136,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             UseTcpProxy = options.UseTcpProxy,
             DropUdp = options.DropUdp,
             DropQuic = options.DropQuic,
-            UserReview = options.UserReview
+            UserReview = options.UserReview,
+            UseWebSocket = options.DebugData1?
+                .Contains("/disable-WebSocket", StringComparison.OrdinalIgnoreCase) is null or false
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
@@ -186,9 +188,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 Blocks = options.DomainFilter.Blocks,
                 Excludes = options.DomainFilter.Excludes,
                 Includes = options.DomainFilter.Includes
-            }, 
-            forceLogSni: options.ForceLogSni, 
-            eventId : GeneralEventId.Sni);
+            },
+            forceLogSni: options.ForceLogSni,
+            eventId: GeneralEventId.Sni);
 
         // Tunnel
         _tunnel = new Tunnel(new TunnelOptions {
@@ -735,7 +737,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),
                 tcpReuseTimeout: helloResponse.TcpReuseTimeout,
                 serverSecret: helloResponse.ServerSecret,
-                useWebSocket: true);
+                useWebSocket: Config.UseWebSocket);
 
             // get session id
             _sessionId = helloResponse.SessionId;

@@ -87,8 +87,9 @@ public class AndroidDevice : IDevice
         if ((appInfo.Flags & ApplicationInfoFlags.UpdatedSystemApp) != 0)
             return true;
 
-        // Is it a known "Core" tool like Android Auto?
-        if (appId == "com.google.android.projection.gearhead")
+        // Is it a known "Core" tool ?
+        if (appId == "com.google.android.projection.gearhead" || // Android Auto
+            appId == "com.google.android.embedded.projection") // Embedded Projection
             return true;
 
         // Is it a non-system app?

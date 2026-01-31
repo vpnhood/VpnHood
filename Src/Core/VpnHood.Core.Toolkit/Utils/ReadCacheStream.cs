@@ -9,10 +9,19 @@ public class ReadCacheStream : AsyncStreamDecorator
     private readonly Memory<byte> _cache;
     private int _cacheRemain;
     private int _cacheOffset;
+    private const int DefaultCacheSize = 1024;
 
     public override bool CanSeek => false;
+    public bool AllowCacheRefill { get; set; } = true;
 
-    public ReadCacheStream(Stream sourceStream, bool leaveOpen, int cacheSize = 1024,
+    public ReadCacheStream(Stream sourceStream, bool leaveOpen, ReadOnlySpan<byte> cacheData)
+        : this(sourceStream, leaveOpen, cacheData.Length, cacheData)
+    {
+        if (cacheData.Length == 0)
+            throw new ArgumentException("Cache data cannot be empty when using this constructor.", nameof(cacheData));
+    }
+
+    public ReadCacheStream(Stream sourceStream, bool leaveOpen, int cacheSize = DefaultCacheSize,
         ReadOnlySpan<byte> cacheData = default)
         : base(sourceStream, leaveOpen)
     {
@@ -35,7 +44,7 @@ public class ReadCacheStream : AsyncStreamDecorator
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         // read directly to user buffer if there is no buffer, and it is larger than cache
-        if (_cacheRemain == 0 && buffer.Length > _cache.Length)
+        if (_cacheRemain == 0 && (buffer.Length > _cache.Length || !AllowCacheRefill))
             return await base.ReadAsync(buffer, cancellationToken).Vhc();
 
         // fill cache

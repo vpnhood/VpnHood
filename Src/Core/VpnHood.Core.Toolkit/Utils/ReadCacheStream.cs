@@ -28,7 +28,7 @@ public class ReadCacheStream : AsyncStreamDecorator
     }
 
     public override long Position {
-        get => base.Position - _cacheOffset;
+        get => base.Position - _cacheRemain;
         set => throw new NotSupportedException();
     }
 

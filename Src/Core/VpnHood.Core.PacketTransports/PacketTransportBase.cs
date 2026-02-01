@@ -50,8 +50,7 @@ public abstract class PacketTransportBase : IPacketTransport
     protected virtual void OnPacketReceived(IpPacket ipPacket)
     {
         try {
-            if (IsDisposed || IsDisposing) 
-                throw new InvalidOperationException("Packet received packet after disposal. Dropping packet.");
+            ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
 
             _stat.LastReceivedTime = FastDateTime.Now;
             _stat.ReceivedBytes += ipPacket.PacketLength;
@@ -68,8 +67,7 @@ public abstract class PacketTransportBase : IPacketTransport
 
     private async ValueTask SendPacketQueuedPassthroughAsync(IpPacket ipPacket)
     {
-        if (IsDisposed || IsDisposing)
-            throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
 
         _singlePacketBuffer[0] = ipPacket;
         await SendPacketsInternalAsync(_singlePacketBuffer);
@@ -77,8 +75,7 @@ public abstract class PacketTransportBase : IPacketTransport
 
     public ValueTask SendPacketQueuedAsync(IpPacket ipPacket)
     {
-        if (IsDisposed || IsDisposing)
-            throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
 
         return _passthrough ? SendPacketQueuedPassthroughAsync(ipPacket) : _sendChannel.Writer.WriteAsync(ipPacket);
     }
@@ -87,8 +84,7 @@ public abstract class PacketTransportBase : IPacketTransport
 
     public bool SendPacketQueued(IpPacket ipPacket)
     {
-        if (IsDisposed || IsDisposing)
-            throw new ObjectDisposedException(GetType().Name);
+        ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
 
         LogPacket(ipPacket, "Sending a packet to queue.");
         if (_passthrough) {

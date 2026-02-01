@@ -199,8 +199,7 @@ public class Session : IDisposable
 
     private void Proxy_PacketReceived(IpPacket ipPacket)
     {
-        if (IsDisposed)
-            return;
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
         ipPacket = _netFilter.ProcessReply(ipPacket);
@@ -209,8 +208,7 @@ public class Session : IDisposable
 
     private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket)
     {
-        if (IsDisposed)
-            return;
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         // filter requests
         var virtualIp = GetClientVirtualIp(ipPacket.Version);

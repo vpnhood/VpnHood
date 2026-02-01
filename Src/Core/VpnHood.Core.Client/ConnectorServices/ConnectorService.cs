@@ -1,12 +1,12 @@
-﻿using System.Net;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 
@@ -72,51 +72,52 @@ internal class ConnectorService(
         where T : SessionResponse
     {
         // try reuse
-        var clientStream = GetFreeClientStream();
-        if (clientStream != null) {
+        var reusableConnection = GetFreeConnection();
+        if (reusableConnection != null) {
             try {
                 VhLogger.Instance.LogDebug(GeneralEventId.Stream,
-                    "A shared ClientStream has been reused. ClientStreamId: {ClientStreamId}, LocalEp: {LocalEp}",
-                    clientStream.ClientStreamId, clientStream.IpEndPointPair.LocalEndPoint);
+                    "A shared Connection has been reused. ConnectionId: {ConnectionId}, LocalEp: {LocalEp}",
+                    reusableConnection.Id, reusableConnection.LocalEndPoint);
 
                 // send the request
-                await clientStream.Stream.WriteAsync(request, cancellationToken).Vhc();
-                var response = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).Vhc();
+                await reusableConnection.Stream.WriteAsync(request, cancellationToken).Vhc();
+                var response = await ReadSessionResponse<T>(reusableConnection.Stream, cancellationToken).Vhc();
                 lock (Status) Status.ReusedConnectionSucceededCount++;
                 return new ConnectorRequestResult<T> {
                     Response = response,
-                    ClientStream = clientStream
+                    Connection = reusableConnection
                 };
             }
             catch (SessionException) {
                 // let the caller handle the exception. there is no error in connection
-                clientStream.Dispose();
+                await reusableConnection.DisposeAsync();
                 throw;
             }
             catch (Exception ex) {
                 // dispose the connection and retry with new connection
                 lock (Status) Status.ReusedConnectionFailedCount++;
-                clientStream.DisposeWithoutReuse();
+                reusableConnection.PreventReuse();
+                await reusableConnection.DisposeAsync();
                 VhLogger.Instance.LogError(GeneralEventId.Stream, ex,
-                    "Error in reusing the ClientStream. Try a new connection. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",
-                    clientStream.ClientStreamId, requestId);
+                    "Error in reusing the Connection. Try a new connection. ConnectionId: {ConnectionId}, RequestId: {requestId}",
+                    reusableConnection.Id, requestId);
             }
         }
 
         // create a new connection
-        clientStream = await GetTlsConnectionToServer(requestId + ":tunnel", request.Length,
+        var connection = await GetTlsConnectionToServer(requestId + ":tunnel", request.Length,
             onAttempt, cancellationToken).Vhc();
 
         // send request
         try {
             // send the request
-            await clientStream.Stream.WriteAsync(request, cancellationToken).Vhc();
-            await clientStream.Stream.FlushAsync(cancellationToken);
+            await connection.Stream.WriteAsync(request, cancellationToken).Vhc();
+            await connection.Stream.FlushAsync(cancellationToken);
 
             // parse the HTTP request
-            if (clientStream.RequireHttpResponse) {
-                clientStream.RequireHttpResponse = false;
-                var responseMessage = await HttpUtils.ReadResponse(clientStream.Stream, cancellationToken).Vhc();
+            if (connection.RequireHttpResponse) {
+                connection.RequireHttpResponse = false;
+                var responseMessage = await HttpUtils.ReadResponse(connection.Stream, cancellationToken).Vhc();
                 if (responseMessage.StatusCode == HttpStatusCode.Unauthorized)
                     throw new UnauthorizedAccessException();
 
@@ -124,23 +125,25 @@ internal class ConnectorService(
             }
 
             // read the response
-            var response2 = await ReadSessionResponse<T>(clientStream.Stream, cancellationToken).Vhc();
+            var response2 = await ReadSessionResponse<T>(connection.Stream, cancellationToken).Vhc();
             return new ConnectorRequestResult<T> {
                 Response = response2,
-                ClientStream = clientStream
+                Connection = connection
             };
         }
         catch (SessionException) {
             // let the caller handle the exception. there is no error in connection
-            clientStream.Dispose();
+            connection.Dispose();
             throw;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
-                "Error in sending a request. ClientStreamId: {ClientStreamId}, RequestId: {requestId}",
-                clientStream.ClientStreamId, requestId);
+                "Error in sending a request. ConnectionId: {ConnectionId}, RequestId: {requestId}",
+                connection.Id, requestId);
 
-            clientStream.DisposeWithoutReuse();
+            // dispose the connection
+            (connection as ReusableConnection)?.PreventReuse();
+            connection.Dispose();
             throw;
         }
     }

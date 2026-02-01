@@ -1,5 +1,4 @@
-﻿using System.Net;
-using VpnHood.Core.Packets;
+﻿using VpnHood.Core.Packets;
 
 namespace VpnHood.Core.Client;
 

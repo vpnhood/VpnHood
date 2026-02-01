@@ -1,10 +1,10 @@
 ﻿using System.Net;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 
 namespace VpnHood.Core.Server;
 
-internal struct ServerConnection
+internal class ServerConnection(IConnection connection) : ConnectionDecorator(connection)
 {
-    public required IClientStream ClientStream { get; init; }
+    // it may be different from RemoteEndPoint.Address due to proxying
     public required IPAddress ClientIp { get; init; }
 }

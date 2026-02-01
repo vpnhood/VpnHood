@@ -17,7 +17,7 @@ using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
@@ -286,11 +286,11 @@ public class Session : IDisposable
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
-    public async Task ProcessTcpPacketChannelRequest(TcpPacketChannelRequest request, IClientStream clientStream,
+    public async Task ProcessTcpPacketChannelRequest(TcpPacketChannelRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
         // send OK reply
-        await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
+        await connection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
 
         // add channel
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
@@ -300,7 +300,7 @@ public class Session : IDisposable
             BufferSize = TunnelDefaults.ServerStreamPacketBufferSize,
             Blocking = false,
             AutoDisposePackets = true,
-            ClientStream = clientStream,
+            Connection = connection,
             ChannelId = request.RequestId,
             Lifespan = null
         });
@@ -338,31 +338,31 @@ public class Session : IDisposable
         }
     }
 
-    public Task ProcessUdpPacketRequest(UdpPacketRequest request, IClientStream clientStream,
+    public Task ProcessUdpPacketRequest(UdpPacketRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
         _ = request;
-        _ = clientStream;
+        _ = connection;
         _ = cancellationToken;
         throw new NotImplementedException();
     }
 
-    public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IClientStream clientStream,
+    public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
         _ = request;
-        await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
+        await connection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 
-    public async Task ProcessRewardedAdRequest(RewardedAdRequest request, IClientStream clientStream,
+    public async Task ProcessRewardedAdRequest(RewardedAdRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
         SessionResponseEx = await _accessManager
             .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData, cancellationToken).Vhc();
-        await clientStream.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
+        await connection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 
-    public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IClientStream clientStream,
+    public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
         if (!AllowTcpProxy)
@@ -376,7 +376,7 @@ public class Session : IDisposable
         var isTcpConnectIncreased = false;
 
         TcpClient? tcpClientHost = null;
-        TcpClientStream? tcpClientStreamHost = null;
+        IConnection? tcpConnectionHost = null;
         ProxyChannel? proxyChannel = null;
         try {
             // connect to requested site
@@ -385,7 +385,7 @@ public class Session : IDisposable
                 VhLogger.Format(request.DestinationEndPoint));
 
             // Apply limitation and update endpoint if needed
-            VerifyTcpChannelRequest(clientStream, request);
+            VerifyTcpChannelRequest(connection, request);
 
             // prepare client
             Interlocked.Increment(ref _tcpConnectWaitCount);
@@ -400,6 +400,7 @@ public class Session : IDisposable
             // connect to requested destination
             isRequestedEpException = true;
             await tcpClientHost.ConnectAsync(request.DestinationEndPoint, cancellationToken).Vhc();
+            tcpConnectionHost = new TcpConnection(tcpClientHost, request.RequestId + ":host");
             isRequestedEpException = false;
 
             //tracking
@@ -410,21 +411,18 @@ public class Session : IDisposable
 
             // send response, using original cancellation token without timeout
             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-            await clientStream.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
+            await connection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
 
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
-
-            tcpClientStreamHost =
-                new TcpClientStream(tcpClientHost, tcpClientHost.GetStream(), request.RequestId + ":host");
-            proxyChannel = new ProxyChannel(request.RequestId, tcpClientStreamHost, clientStream,
+            proxyChannel = new ProxyChannel(request.RequestId, tcpConnectionHost, connection,
                 _streamProxyBufferSize);
 
             Tunnel.AddChannel(proxyChannel);
         }
         catch (Exception ex) {
             tcpClientHost?.Dispose();
-            tcpClientStreamHost?.Dispose();
+            tcpConnectionHost?.Dispose();
             proxyChannel?.Dispose();
 
             // throw session exception if there is a problem with connection to requested endpoint
@@ -433,7 +431,7 @@ public class Session : IDisposable
                     ? "Could not connect to the requested destination in given time."
                     : ex.Message;
                 message +=
-                    $" RemoteEndPoint: {clientStream.IpEndPointPair.RemoteEndPoint}, RequestId: {request.RequestId}";
+                    $" RemoteEndPoint: {connection.RemoteEndPoint}, RequestId: {request.RequestId}";
                 throw new SessionException(SessionErrorCode.GeneralError, message);
             }
 
@@ -458,7 +456,7 @@ public class Session : IDisposable
         return newEndPoint;
     }
 
-    private void VerifyTcpChannelRequest(IClientStream clientStream, StreamProxyChannelRequest request)
+    private void VerifyTcpChannelRequest(IConnection connection, StreamProxyChannelRequest request)
     {
         // filter
         request.DestinationEndPoint = ValidateDestination(IpProtocol.Tcp, request.DestinationEndPoint);
@@ -471,14 +469,14 @@ public class Session : IDisposable
             if (TcpChannelCount >= _maxTcpChannelCount) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint, false, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raise();
-                throw new MaxTcpChannelException(clientStream.IpEndPointPair.RemoteEndPoint, this, request.RequestId);
+                throw new MaxTcpChannelException(connection.RemoteEndPoint, this, request.RequestId);
             }
 
             // Check tcp wait limit
             if (TcpConnectWaitCount >= _maxTcpConnectWaitCount) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint, false, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raise();
-                throw new MaxTcpConnectWaitException(clientStream.IpEndPointPair.RemoteEndPoint, this,
+                throw new MaxTcpConnectWaitException(connection.RemoteEndPoint, this,
                     request.RequestId);
             }
         }

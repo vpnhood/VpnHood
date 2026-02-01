@@ -4,15 +4,15 @@ using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels.Streams;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
 public class ProxyChannel : IProxyChannel
 {
     private int _isDisposed;
-    private readonly IClientStream _hostClientStream;
-    private readonly IClientStream _tunnelClientStream;
+    private readonly IConnection _hostConnection;
+    private readonly IConnection _tunnelConnection;
     private readonly TransferBufferSize _tunnelBufferSize;
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 2048;
@@ -27,11 +27,11 @@ public class ProxyChannel : IProxyChannel
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
 
-    public ProxyChannel(string channelId, IClientStream orgClientStream, IClientStream tunnelClientStream,
+    public ProxyChannel(string channelId, IConnection orgConnection, IConnection tunnelConnection,
         TransferBufferSize tunnelBufferSize)
     {
-        _hostClientStream = orgClientStream ?? throw new ArgumentNullException(nameof(orgClientStream));
-        _tunnelClientStream = tunnelClientStream ?? throw new ArgumentNullException(nameof(tunnelClientStream));
+        _hostConnection = orgConnection;
+        _tunnelConnection = tunnelConnection;
         _tunnelBufferSize = tunnelBufferSize;
 
         if (_tunnelBufferSize.Receive is < BufferSizeMin or > BufferSizeMax)
@@ -82,20 +82,20 @@ public class ProxyChannel : IProxyChannel
             _started = true;
 
             var tunnelReadTask = CopyFromTunnelAsync(
-                _tunnelClientStream.Stream, _hostClientStream.Stream, _tunnelBufferSize.Receive,
+                _tunnelConnection.Stream, _hostConnection.Stream, _tunnelBufferSize.Receive,
                 cancellationToken, cancellationToken); // tunnel => host
 
             var tunnelWriteTask = CopyToTunnelAsync(
-                _hostClientStream.Stream, _tunnelClientStream.Stream, _tunnelBufferSize.Send,
+                _hostConnection.Stream, _tunnelConnection.Stream, _tunnelBufferSize.Send,
                 cancellationToken, cancellationToken); // host => tunnel
 
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).Vhc();
             _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
 
-            // just to ensure that both tasks are completed gracefully, ClientStream should also handle it
+            // just to ensure that both tasks are completed gracefully, Connection should also handle it
             await Task.WhenAll(
-                    _hostClientStream.Stream.DisposeAsync().AsTask(),
-                    _tunnelClientStream.Stream.DisposeAsync().AsTask())
+                    _hostConnection.Stream.DisposeAsync().AsTask(),
+                    _tunnelConnection.Stream.DisposeAsync().AsTask())
                 .Vhc();
         }
         catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
@@ -200,7 +200,6 @@ public class ProxyChannel : IProxyChannel
         }
     }
 
-
     private ValueTask CheckAlive(CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
@@ -209,7 +208,7 @@ public class ProxyChannel : IProxyChannel
             return default;
 
         // check tcp states
-        if (_hostClientStream.Connected && _tunnelClientStream.Connected)
+        if (_hostConnection.Connected && _tunnelConnection.Connected)
             return default;
 
         VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel,
@@ -228,7 +227,7 @@ public class ProxyChannel : IProxyChannel
         _cancellationTokenSource.Dispose();
         _checkAliveJob.Dispose();
         _started = false;
-        _hostClientStream.Dispose();
-        _tunnelClientStream.Dispose();
+        _hostConnection.Dispose();
+        _tunnelConnection.Dispose();
     }
 }

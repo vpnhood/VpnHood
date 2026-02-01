@@ -24,7 +24,7 @@ using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
@@ -208,7 +208,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             tunnel: _tunnel,
             catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4,
             catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6,
-            streamProxyBufferSize: options.StreamProxySendBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize);
+            streamProxyBufferSize: options.StreamProxySendBufferSize ?? TunnelDefaults.ConnectionProxyBufferSize);
 
         _clientHost.PacketReceived += ClientHost_PacketReceived;
 
@@ -311,8 +311,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }, CancellationToken.None);
     }
 
-    internal async Task AddPassthruTcpStream(IClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
-        string channelId, byte[] initBuffer, CancellationToken cancellationToken)
+    internal async Task AddPassthruTcpStream(IConnection orgConnection, IPEndPoint hostEndPoint, byte[] initBuffer, CancellationToken cancellationToken)
     {
         // set timeout
         using var timeoutCts = new CancellationTokenSource(ConnectorService.RequestTimeout);
@@ -321,20 +320,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // connect to host
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint);
         await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
-
-        // create and add the channel
-        var channel = new ProxyChannel(channelId, orgTcpClientStream,
-            new TcpClientStream(tcpClient, tcpClient.GetStream(), channelId + ":host"),
-            _clientHost.StreamProxyBufferSize);
-
-        // flush initBuffer
-        await tcpClient.GetStream().WriteAsync(initBuffer, connectCts.Token);
+        var connection = new TcpConnection(tcpClient, orgConnection.Id.Replace(":incoming", ":host"));
+        ProxyChannel? channel = null;
 
         try {
+            // create and add the channel
+            orgConnection.Id = orgConnection.Id.Replace(":incoming", ":app");
+            var channelId = orgConnection.Id.Replace(":incoming", ":passthru");
+            channel = new ProxyChannel(channelId, orgConnection, connection, _clientHost.StreamProxyBufferSize);
+
+            // flush initBuffer
+            await connection.Stream.WriteAsync(initBuffer, connectCts.Token);
             _proxyManager.AddChannel(channel);
         }
         catch {
-            channel.Dispose();
+            await connection.DisposeAsync();
+            channel?.Dispose();
             throw;
         }
     }
@@ -379,7 +380,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 "ClientVersion: {ClientVersion}, " +
                 "ClientMinProtocolVersion: {ClientMinProtocolVersion}, ClientMaxProtocolVersion: {ClientMaxProtocolVersion}, " +
                 "ClientId: {ClientId}",
-                Config.Version, Config.MinProtocolVersion, Config.MaxProtocolVersion,
+                Config.Version, VpnHoodClientConfig.MinProtocolVersion, VpnHoodClientConfig.MaxProtocolVersion,
                 VhLogger.FormatId(Config.ClientId));
 
             // validate proxy servers
@@ -678,7 +679,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ClientId = Config.ClientId,
                 ClientVersion = Config.Version.ToString(3),
                 MinProtocolVersion = _connectorService.ProtocolVersion,
-                MaxProtocolVersion = Config.MaxProtocolVersion,
+                MaxProtocolVersion = VpnHoodClientConfig.MaxProtocolVersion,
                 UserAgent = Config.UserAgent
             };
 
@@ -696,7 +697,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             };
 
             using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
-            requestResult.ClientStream.PreventReuse(); // lets hello request stream not to be reused
+            requestResult.Connection.PreventReuse(); // lets hello request stream not to be reused
             _connectorService.AllowTcpReuse =
                 Config.AllowTcpReuse; // after hello, we can reuse, as the other connections can use websocket
 
@@ -976,12 +977,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // PacketChannel should not be reused, otherwise its timespan will be meaningless
             if (lifespan != null)
-                requestResult.ClientStream.PreventReuse();
+                requestResult.Connection.PreventReuse();
 
             // add the new channel
             channel = new StreamPacketChannel(new StreamPacketChannelOptions {
-                ClientStream = requestResult.ClientStream,
-                BufferSize = TunnelDefaults.ClientStreamPacketBufferSize,
+                Connection = requestResult.Connection,
+                BufferSize = TunnelDefaults.ConnectionPacketBufferSize,
                 ChannelId = request.RequestId,
                 Blocking = true,
                 AutoDisposePackets = true,
@@ -1192,7 +1193,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                         byteCts.Token)
                     .Vhc();
 
-                requestResult.ClientStream.DisposeWithoutReuse();
+                requestResult.Connection.PreventReuse();
+                requestResult.Connection.Dispose();
                 VhLogger.Instance.LogInformation("Session has been closed on the server successfully.");
             }
             catch (Exception ex) {

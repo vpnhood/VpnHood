@@ -2,6 +2,7 @@
 
 namespace VpnHood.Core.Toolkit.Net;
 
+// ReSharper disable once InconsistentNaming
 public static class IPEndPointExtensions
 {
     extension(IPEndPoint ipEndPoint)

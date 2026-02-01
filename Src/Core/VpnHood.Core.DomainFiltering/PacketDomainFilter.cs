@@ -8,30 +8,21 @@ namespace VpnHood.Core.DomainFiltering;
 /// Composite packet domain filter that handles both QUIC (UDP) and TCP protocols.
 /// Delegates to protocol-specific filters and provides unified result handling.
 /// </summary>
-public class PacketDomainFilter : IDisposable
+public class PacketDomainFilter(DomainFilter domainFilter, bool forceLogSni, EventId eventId)
+    : IDisposable
 {
-    private readonly QuicDomainFilter _quicFilter;
-    private readonly DomainFilter _domainFilter;
-    private readonly bool _forceLogSni;
-    private readonly EventId _eventId;
+    private readonly QuicDomainFilter _quicFilter = new(domainFilter, forceLogSni);
     private bool _disposed;
 
     /// <summary>
     /// Whether domain filtering is enabled for any protocol.
     /// </summary>
-    public bool IsEnabled =>
-        _forceLogSni ||
-        _domainFilter.Includes.Length > 0 ||
-        _domainFilter.Excludes.Length > 0 ||
-        _domainFilter.Blocks.Length > 0;
-
-    public PacketDomainFilter(DomainFilter domainFilter, bool forceLogSni, EventId eventId)
-    {
-        _domainFilter = domainFilter;
-        _forceLogSni = forceLogSni;
-        _eventId = eventId;
-        _quicFilter = new QuicDomainFilter(domainFilter, forceLogSni);
-    }
+    public bool IsEnabled {
+        get => field ||
+               domainFilter.Includes.Length > 0 ||
+               domainFilter.Excludes.Length > 0 ||
+               domainFilter.Blocks.Length > 0;
+    } = forceLogSni;
 
     /// <summary>
     /// Process any IP packet for domain filtering.
@@ -78,12 +69,12 @@ public class PacketDomainFilter : IDisposable
         if (string.IsNullOrEmpty(domain))
             return DomainFilterAction.None;
 
-        return DomainFilterService.ProcessInternal(domain, _domainFilter);
+        return DomainFilterService.ProcessInternal(domain, domainFilter);
     }
 
     private void LogSni(string domain, System.Net.IPAddress destinationAddress, string protocol)
     {
-        VhLogger.Instance.LogInformation(_eventId,
+        VhLogger.Instance.LogInformation(eventId,
             "{Protocol} Domain: {Domain}, DestIp: {IP}",
             protocol, VhLogger.FormatHostName(domain), VhLogger.Format(destinationAddress));
     }

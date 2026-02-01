@@ -11,7 +11,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
@@ -95,8 +95,11 @@ internal class ClientHost(
 
         try {
             while (!_cancellationTokenSource.IsCancellationRequested) {
+                // config tcpOrgClient
                 var tcpClient = await tcpListener.AcceptTcpClientAsync().Vhc();
-                _ = ProcessClient(tcpClient, _cancellationTokenSource.Token);
+                VhUtils.ConfigTcpClient(tcpClient, null, null);
+                var tcpConnection = new TcpConnection(tcpClient, UniqueIdFactory.Create() + ":client:incoming");
+                _ = ProcessClient(tcpConnection, _cancellationTokenSource.Token);
             }
         }
         catch (Exception ex) {
@@ -200,9 +203,9 @@ internal class ClientHost(
             throw new Exception("IPv6 is not supported by the client.");
     }
 
-    private async Task ProcessClient(TcpClient orgTcpClient, CancellationToken cancellationToken)
+    private async Task ProcessClient(IConnection orgConnection, CancellationToken cancellationToken)
     {
-        if (orgTcpClient is null) throw new ArgumentNullException(nameof(orgTcpClient));
+        if (orgConnection is null) throw new ArgumentNullException(nameof(orgConnection));
         ConnectorRequestResult<SessionResponse>? requestResult = null;
         ProxyChannel? channel = null;
         var ipVersion = IpVersion.IPv4;
@@ -212,13 +215,10 @@ internal class ClientHost(
             Interlocked.Increment(ref _processingCount);
             cancellationToken.ThrowIfCancellationRequested();
 
-            // config tcpOrgClient
-            VhUtils.ConfigTcpClient(orgTcpClient, null, null);
-
             // get original remote from NAT
             var orgRemoteEndPoint =
-                orgTcpClient.TryGetRemoteEndPoint() ??
-                throw new Exception("Could not get original remote endpoint from TcpClient.");
+                orgConnection.RemoteEndPoint ??
+                throw new Exception("Could not get original remote endpoint.");
 
             ipVersion = orgRemoteEndPoint.IpVersion();
             var natItem =
@@ -240,7 +240,7 @@ internal class ClientHost(
 
             // Filter by SNI
             var filterResult = await domainFilterService
-                .Process(orgTcpClient.GetStream(), natItem.DestinationAddress, cancellationToken)
+                .Process(orgConnection.Stream, natItem.DestinationAddress, cancellationToken)
                 .Vhc();
 
             if (filterResult.Action == DomainFilterAction.Block) {
@@ -256,11 +256,10 @@ internal class ClientHost(
                               vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
             if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
-                var channelId = UniqueIdFactory.Create() + ":client:passthrough";
                 await vpnHoodClient.AddPassthruTcpStream(
-                        new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(), channelId + ":tunnel"),
-                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                        channelId, filterResult.ReadData, cancellationToken)
+                        orgConnection,
+                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), 
+                        filterResult.ReadData, cancellationToken)
                     .Vhc();
 
                 _stat.TcpPassthruCount++;
@@ -277,20 +276,18 @@ internal class ClientHost(
 
             // read the response
             requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken).Vhc();
-            var proxyClientStream = requestResult.ClientStream;
+            var proxyConnection = requestResult.Connection;
 
             // create a ProxyChannel
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
-            var orgTcpClientStream =
-                new TcpClientStream(orgTcpClient, orgTcpClient.GetStream(),
-                    proxyClientStream.ClientStreamId.Replace(":tunnel", ":app"));
+            orgConnection.Id = proxyConnection.Id.Replace(":tunnel", ":app");
 
             // flush initBuffer
-            await proxyClientStream.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
+            await proxyConnection.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
-            channel = new ProxyChannel(request.RequestId, orgTcpClientStream, proxyClientStream, streamProxyBufferSize);
+            channel = new ProxyChannel(request.RequestId, orgConnection, proxyConnection, streamProxyBufferSize);
             tunnel.AddChannel(channel);
             _stat.TcpTunnelledCount++;
         }
@@ -302,7 +299,7 @@ internal class ClientHost(
 
             channel?.Dispose();
             requestResult?.Dispose();
-            orgTcpClient.Dispose();
+            orgConnection.Dispose();
             VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "");
         }
         finally {

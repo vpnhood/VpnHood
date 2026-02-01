@@ -2,7 +2,7 @@
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
@@ -11,7 +11,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
 {
     private readonly int _receiveBufferSize = options.BufferSize.Receive;
     private readonly Memory<byte> _sendBuffer = new byte[options.BufferSize.Send];
-    private readonly IClientStream _clientStream = options.ClientStream;
+    private readonly IConnection _connection = options.Connection;
     public override int OverheadLength => 0;
 
     protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
@@ -30,14 +30,14 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
 
             // flush current buffer if this packet does not fit
             if (bufferIndex > 0 && bufferIndex + packetBytes.Length > buffer.Length) {
-                await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).Vhc();
+                await _connection.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).Vhc();
                 bufferIndex = 0;
             }
 
             // Write the packet directly if it does not fit in the buffer or there is only one packet
             if (packetBytes.Length > buffer.Length || ipPackets.Count == 1) {
                 // send packet
-                await _clientStream.Stream.WriteAsync(packetBytes, cancellationToken).Vhc();
+                await _connection.Stream.WriteAsync(packetBytes, cancellationToken).Vhc();
                 continue;
             }
 
@@ -47,7 +47,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
 
         // send remaining buffer
         if (bufferIndex > 0) {
-            await _clientStream.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).Vhc();
+            await _connection.Stream.WriteAsync(buffer[..bufferIndex], cancellationToken).Vhc();
         }
     }
 
@@ -56,7 +56,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
         var cancellationToken = CancellationToken;
 
         using var streamPacketReader =
-            new StreamPacketReader(_clientStream.Stream, _receiveBufferSize);
+            new StreamPacketReader(_connection.Stream, _receiveBufferSize);
 
         // stop reading if State is not Connected (Such as getting the close request)
         while (!cancellationToken.IsCancellationRequested) {
@@ -73,7 +73,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
     protected override void DisposeManaged()
     {
         Stop();
-        _clientStream.Dispose();
+        _connection.Dispose();
 
         base.DisposeManaged();
     }

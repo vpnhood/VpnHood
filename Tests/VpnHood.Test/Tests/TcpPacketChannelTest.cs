@@ -5,7 +5,7 @@ using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.DatagramMessaging;
 
 namespace VpnHood.Test.Tests;
@@ -39,10 +39,9 @@ public class TcpPacketChannelTest : TestBase
 
         // create server channel
         var serverTcpClient = await listenerTask;
-        using var serverStream =
-            new TcpClientStream(serverTcpClient, serverTcpClient.GetStream(), Guid.NewGuid() + ":server");
+        await using var serverStream = new TcpConnection(serverTcpClient, Guid.NewGuid() + ":server");
         using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
-            ClientStream = serverStream,
+            Connection = serverStream,
             Blocking = false,
             AutoDisposePackets = true,
             Lifespan = null,
@@ -55,10 +54,9 @@ public class TcpPacketChannelTest : TestBase
         serverTunnel.PacketReceived += (_, ipPacket) => { lastServerReceivedPacket = ipPacket; };
 
         // create client channel
-        using var clientStream =
-            new TcpClientStream(tcpClient, tcpClient.GetStream(), Guid.NewGuid() + ":client:tunnel");
+        await using var connection = new TcpConnection(tcpClient, Guid.NewGuid() + ":client:tunnel");
         using var clientChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
-            ClientStream = clientStream,
+            Connection = connection,
             AutoDisposePackets = true,
             Lifespan = TimeSpan.FromMilliseconds(1000),
             Blocking = false,

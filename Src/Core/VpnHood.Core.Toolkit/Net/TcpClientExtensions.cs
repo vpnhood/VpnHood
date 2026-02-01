@@ -28,5 +28,17 @@ public static class TcpClientExtensions
                 return null;
             }
         }
+
+        public IPEndPoint GetLocalEndPoint()
+        {
+            ArgumentNullException.ThrowIfNull(tcpClient.Client, nameof(tcpClient.Client));
+            return tcpClient.Client.GetLocalEndPoint();
+        }
+
+        public IPEndPoint GetRemoteEndPoint()
+        {
+            ArgumentNullException.ThrowIfNull(tcpClient.Client, nameof(tcpClient.Client));
+            return tcpClient.Client.GetRemoteEndPoint();
+        }
     }
 }

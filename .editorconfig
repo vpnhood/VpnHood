@@ -22,6 +22,7 @@ csharp_space_around_binary_operators = before_and_after
 csharp_style_allow_blank_lines_between_consecutive_braces_experimental = true:silent
 csharp_new_line_before_open_brace = types,methods
 csharp_prefer_system_threading_lock = true:suggestion
+csharp_style_prefer_simple_property_accessors = true:suggestion
 
 [*.{cs,vb}]
 #### Naming styles ####

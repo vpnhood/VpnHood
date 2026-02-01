@@ -7,8 +7,8 @@ public class VpnHoodClientConfig
 {
     // 10: Support RedirectHostServerTokens (7.5.770)
     // 11: New UDP AesGcm encryption 
-    public int MaxProtocolVersion => 11;
-    public int MinProtocolVersion => 4;
+    public static int MaxProtocolVersion => 11;
+    public static int MinProtocolVersion => 8;
     public required Version Version { get; init; }
     public required bool AutoDisposeVpnAdapter { get; init; }
     public required int MaxPacketChannelCount { get; init; }

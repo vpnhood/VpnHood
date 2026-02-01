@@ -1,11 +1,11 @@
-﻿using System.Collections.Concurrent;
+﻿using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
@@ -13,7 +13,7 @@ using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels.Streams;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client.ConnectorServices;
@@ -22,8 +22,8 @@ internal class ConnectorServiceBase : IDisposable
 {
     private const bool UseBuffer = true;
     private readonly ISocketFactory _socketFactory;
-    private readonly ConcurrentQueue<ClientStreamItem> _freeClientStreams = new();
-    private readonly HashSet<IClientStream> _sharedClientStream = new(50); // for preventing reuse
+    private readonly ConcurrentQueue<ReusableConnectionItem> _freeReusableConnectionItems = new();
+    private readonly HashSet<ReusableConnection> _sharedConnections = new(50); // for preventing reuse
     private readonly Job _cleanupJob;
     private int _isDisposed;
     private bool _useWebSocket;
@@ -68,7 +68,7 @@ internal class ConnectorServiceBase : IDisposable
     }
 
     private static string BuildPostRequest(
-        string hostName, string? pathBase, 
+        string hostName, string? pathBase,
         TunnelStreamType streamType, int protocolVersion, int contentLength)
     {
         // write HTTP request
@@ -87,8 +87,8 @@ internal class ConnectorServiceBase : IDisposable
         return header;
     }
 
-    private async Task<IClientStream> CreateWebSocketClientStream(TcpClient tcpClient, Stream sslStream,
-        string streamId, CancellationToken cancellationToken)
+    private async Task<IConnection> CreateWebSocketConnection(IConnection connection,
+        CancellationToken cancellationToken)
     {
         var webSocketKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
 
@@ -105,81 +105,51 @@ internal class ConnectorServiceBase : IDisposable
             .Append("\r\n");
 
         // Send header and wait for its response
-        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(headerBuilder.ToString()), cancellationToken).Vhc();
+        await connection.Stream.WriteAsync(Encoding.UTF8.GetBytes(headerBuilder.ToString()), cancellationToken).Vhc();
 
         // wait for response and websocket upgrade if needed before sending any data because GET can not have body
-        var responseMessage = await HttpUtils.ReadResponse(sslStream, cancellationToken).Vhc();
+        var responseMessage = await HttpUtils.ReadResponse(connection.Stream, cancellationToken).Vhc();
         if (responseMessage.StatusCode != HttpStatusCode.SwitchingProtocols)
             throw new Exception("Unexpected response.");
 
         // create a client stream
-        var webSocketStream = new WebSocketStream(sslStream, streamId, UseBuffer, isServer: false);
-        var clientStream = new TcpClientStream(tcpClient, webSocketStream, streamId,
-            AllowTcpReuse ? ClientStreamReuseCallback : null);
-        clientStream.RequireHttpResponse = false;
+        var webSocketStream = new WebSocketStream(connection.Stream, connection.Id, UseBuffer, isServer: false);
+        var webSocketConnection = new ConnectionDecorator(connection, webSocketStream) {
+            RequireHttpResponse = false
+        };
+
+        // create a reusable connection
+        if (!AllowTcpReuse)
+            return webSocketConnection;
 
         // If reuse is allowed, add the client stream to the shared collection
-        if (AllowTcpReuse) {
-            lock (_sharedClientStream)
-                _sharedClientStream.Add(clientStream);
-        }
-
-        return clientStream;
+        var reusableConnection = new ReusableConnection(webSocketConnection, ConnectionReuseCallback);
+        lock (_sharedConnections)
+            _sharedConnections.Add(reusableConnection);
+        return reusableConnection;
     }
 
-    private async Task<IClientStream> CreateSimpleClientStream(TcpClient tcpClient, Stream sslStream,
-        int contentLength, string streamId, CancellationToken cancellationToken)
+    private async Task<IConnection> CreateSimpleConnection(IConnection connection, int contentLength,
+        CancellationToken cancellationToken)
     {
         // write HTTP request
         var header = BuildPostRequest(hostName: VpnEndPoint.HostName, pathBase: VpnEndPoint.PathBase,
             TunnelStreamType.None, ProtocolVersion, contentLength);
 
         // Send header and wait for its response
-        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
-
-        // create a client stream
-        var clientStream = new TcpClientStream(tcpClient, sslStream, streamId);
-        clientStream.RequireHttpResponse = true;
-        return clientStream;
+        await connection.Stream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
+        connection.RequireHttpResponse = true;
+        return connection;
     }
 
-    [Obsolete("Obsolete")]
-    private async Task<IClientStream> CreateStandardClientStream(TcpClient tcpClient, Stream sslStream,
-        int contentLength, string streamId, CancellationToken cancellationToken)
+    private Task<IConnection> CreateHttpConnection(IConnection connection, int contentLength, CancellationToken cancellationToken)
     {
-        // write HTTP request
-        var header = BuildPostRequest(
-            hostName: VpnEndPoint.HostName, pathBase: VpnEndPoint.PathBase,
-            TunnelStreamType.Standard, ProtocolVersion, contentLength: contentLength);
-
-        // Send header and wait for its response
-        await sslStream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
-
-        // create a client stream
-        var standardStream = new BinaryStreamStandard(sslStream, streamId, UseBuffer);
-        var clientStream = new TcpClientStream(tcpClient, standardStream, streamId, ClientStreamReuseCallback);
-        clientStream.RequireHttpResponse = true;
-        return clientStream;
+        return _useWebSocket
+            ? CreateWebSocketConnection(connection, cancellationToken) // WebSocket connection
+            : CreateSimpleConnection(connection, contentLength, cancellationToken); // Simple HTTP connection
     }
 
-
-    private async Task<IClientStream> CreateClientStream(string streamId, TcpClient tcpClient, Stream sslStream,
-        int contentLength, CancellationToken cancellationToken)
-    {
-        // WebSocket
-        if (_useWebSocket)
-            return await CreateWebSocketClientStream(tcpClient, sslStream, streamId, cancellationToken);
-
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (AllowTcpReuse)
-            return await CreateStandardClientStream(tcpClient, sslStream, contentLength, streamId, cancellationToken);
-#pragma warning restore CS0618 // Type or member is obsolete
-
-        // Simple
-        return await CreateSimpleClientStream(tcpClient, sslStream, contentLength, streamId, cancellationToken);
-    }
-
-    protected async Task<IClientStream> GetTlsConnectionToServer(string streamId, int contentLength,
+    protected async Task<IConnection> GetTlsConnectionToServer(string streamId, int contentLength,
         Action? onConnectAttempt, CancellationToken cancellationToken)
     {
         var tcpEndPoint = VpnEndPoint.TcpEndPoint;
@@ -210,7 +180,7 @@ internal class ConnectorServiceBase : IDisposable
         }
     }
 
-    private async Task<IClientStream> GetTlsConnectionToServer(string streamId, TcpClient tcpClient,
+    private async Task<IConnection> GetTlsConnectionToServer(string streamId, TcpClient tcpClient,
         int contentLength, CancellationToken cancellationToken)
     {
         // Establish a TLS connection
@@ -223,13 +193,13 @@ internal class ConnectorServiceBase : IDisposable
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
                 TargetHost = hostName,
                 EnabledSslProtocols = SslProtocols.None // auto
-            }, cancellationToken)
-                .Vhc();
+            }, cancellationToken).Vhc();
 
-            var clientStream =
-                await CreateClientStream(streamId, tcpClient, sslStream, contentLength, cancellationToken).Vhc();
+            // create TcpConnection
+            var tcpConnection = new TcpConnection(tcpClient, streamId, sslStream);
+            var connection = await CreateHttpConnection(tcpConnection, contentLength, cancellationToken).Vhc();
             lock (Status) Status.CreatedConnectionCount++;
-            return clientStream;
+            return connection;
         }
         catch {
             await sslStream.SafeDisposeAsync();
@@ -237,32 +207,37 @@ internal class ConnectorServiceBase : IDisposable
         }
     }
 
-    protected IClientStream? GetFreeClientStream()
+    protected ReusableConnection? GetFreeConnection()
     {
         // Kill all expired client streams
-        var now = FastDateTime.Now;
-        while (_freeClientStreams.TryDequeue(out var queueItem)) {
-            if (queueItem.EnqueueTime + TcpReuseTimeout > now && queueItem.ClientStream.Connected)
-                return queueItem.ClientStream;
+        while (_freeReusableConnectionItems.TryDequeue(out var queueItem)) {
+            if (!queueItem.IsExpired)
+                return queueItem.Connection;
 
-            queueItem.ClientStream.DisposeWithoutReuse();
+            queueItem.Connection.PreventReuse();
+            queueItem.Connection.Dispose();
         }
 
         return null;
     }
 
-    private void ClientStreamReuseCallback(IClientStream clientStream)
+    private void ConnectionReuseCallback(ReusableConnection connection)
     {
         // Check if the connector service is disposed
         if (_isDisposed != 0 || !AllowTcpReuse) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Disposing the reused client stream because the connector service is either disposed or reuse is no longer allowed. " +
-                "ClientStreamId: {ClientStreamId}", clientStream.ClientStreamId);
-            clientStream.DisposeWithoutReuse();
+                "ConnectionId: {ConnectionId}", connection.Id);
+
+            connection.PreventReuse();
+            connection.Dispose();
             return;
         }
 
-        _freeClientStreams.Enqueue(new ClientStreamItem { ClientStream = clientStream });
+        _freeReusableConnectionItems.Enqueue(new ReusableConnectionItem {
+            IdleTimeout = TcpReuseTimeout,
+            Connection = connection
+        });
     }
 
     public Task RunJob()
@@ -273,31 +248,34 @@ internal class ConnectorServiceBase : IDisposable
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         // Kill all expired client streams
-        var now = FastDateTime.Now;
-        while (_freeClientStreams.TryPeek(out var queueItem) && queueItem.EnqueueTime + TcpReuseTimeout <= now) {
-            if (_freeClientStreams.TryDequeue(out queueItem))
-                queueItem.ClientStream.DisposeWithoutReuse();
+        while (_freeReusableConnectionItems.TryPeek(out var queueItem) && queueItem.IsExpired) {
+            if (_freeReusableConnectionItems.TryDequeue(out queueItem)) {
+                queueItem.Connection.PreventReuse();
+                queueItem.Connection.Dispose();
+            }
         }
 
-        // remove unconnected client streams from shared collection
-        // it is just for preventing reuse of unconnected streams.
+        // remove unconnected client streams from shared collection to reduce memory usage
+        // it is just clearing the references, not disposing the streams.
         // The owner of the stream is responsible for disposing it
-        lock (_sharedClientStream)
-            _sharedClientStream.RemoveWhere(x => x.Connected);
+        lock (_sharedConnections)
+            _sharedConnections.RemoveWhere(x => !x.Connected);
 
-        return default;
+        return ValueTask.CompletedTask;
     }
 
-    private void PreventReuseSharedClients()
+    private void PreventReuseSharedConnections()
     {
-        lock (_sharedClientStream) {
-            foreach (var clientStream in _sharedClientStream)
-                clientStream.PreventReuse();
+        lock (_sharedConnections) {
+            foreach (var connection in _sharedConnections)
+                connection.PreventReuse();
 
             // release all free client streams
-            while (_freeClientStreams.TryDequeue(out var queueItem))
-                queueItem.ClientStream.DisposeWithoutReuse();
-            _freeClientStreams.Clear();
+            while (_freeReusableConnectionItems.TryDequeue(out var queueItem)) {
+                queueItem.Connection.PreventReuse();
+                queueItem.Connection.Dispose();
+            }
+            _freeReusableConnectionItems.Clear();
         }
     }
 
@@ -305,7 +283,7 @@ internal class ConnectorServiceBase : IDisposable
         get;
         set {
             if (!value)
-                PreventReuseSharedClients();
+                PreventReuseSharedConnections();
             field = value;
         }
     }
@@ -326,23 +304,26 @@ internal class ConnectorServiceBase : IDisposable
 
     protected virtual void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 0) {
-            if (disposing) {
-                // Stop the cleanup job
-                _cleanupJob.Dispose();
+        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+            return;
 
-                // Prevent reuse of client streams
-                PreventReuseSharedClients();
+        if (disposing) {
+            // Stop the cleanup job
+            _cleanupJob.Dispose();
 
-                // Kill and remove all owned client streams
-                while (_freeClientStreams.TryDequeue(out var queueItem))
-                    queueItem.ClientStream.DisposeWithoutReuse();
-                _freeClientStreams.Clear();
+            // Prevent reuse of client streams
+            PreventReuseSharedConnections();
 
-                // remove all shared client streams
-                lock (_sharedClientStream)
-                    _sharedClientStream.Clear();
+            // Kill and remove all owned client streams
+            while (_freeReusableConnectionItems.TryDequeue(out var queueItem)) {
+                queueItem.Connection.PreventReuse();
+                queueItem.Connection.Dispose();
             }
+            _freeReusableConnectionItems.Clear();
+
+            // remove all shared client streams
+            lock (_sharedConnections)
+                _sharedConnections.Clear();
         }
     }
 
@@ -352,16 +333,20 @@ internal class ConnectorServiceBase : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private class ClientStreamItem
+    private class ReusableConnectionItem
     {
-        public required IClientStream ClientStream { get; init; }
-        public DateTime EnqueueTime { get; } = FastDateTime.Now;
+        public required TimeSpan IdleTimeout { get; init; }
+        public required ReusableConnection Connection { get; init; }
+        private DateTime EnqueueTime { get; } = FastDateTime.Now;
+        public bool IsExpired =>
+            EnqueueTime + IdleTimeout <= FastDateTime.Now ||
+            !Connection.Connected;
     }
 
     internal class ClientConnectorStatusImpl(ConnectorServiceBase connectorServiceBase)
         : ClientConnectorStatus
     {
         // Note: Count is an approximate snapshot; not synchronized with actual queue operations.
-        public override int FreeConnectionCount => connectorServiceBase._freeClientStreams.Count;
+        public override int FreeConnectionCount => connectorServiceBase._freeReusableConnectionItems.Count;
     }
 }

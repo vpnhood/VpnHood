@@ -1,10 +1,10 @@
 ﻿using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Tunneling.ClientStreams;
+using VpnHood.Core.Tunneling.Connections;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
 public class StreamPacketChannelOptions : PacketChannelOptions
 {
-    public required IClientStream ClientStream { get; init; }
-    public TransferBufferSize BufferSize { get; set; } = TunnelDefaults.ClientStreamPacketBufferSize;
+    public required IConnection Connection { get; init; }
+    public TransferBufferSize BufferSize { get; set; } = TunnelDefaults.ConnectionPacketBufferSize;
 }

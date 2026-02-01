@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Net;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels.Streams;
@@ -10,7 +9,7 @@ public delegate void ReuseConnectionCallback(ReusableConnection reusableConnecti
 public class ReusableConnection : ConnectionDecorator
 {
     private readonly Lock _reuseLock = new();
-    private ReuseConnectionCallback _reuseConnectionCallback;
+    private readonly ReuseConnectionCallback _reuseConnectionCallback;
     private bool _allowReuse = true;
     private bool _reusing;
 

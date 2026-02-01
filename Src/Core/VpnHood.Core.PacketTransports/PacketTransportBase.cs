@@ -50,6 +50,9 @@ public abstract class PacketTransportBase : IPacketTransport
     protected virtual void OnPacketReceived(IpPacket ipPacket)
     {
         try {
+            if (IsDisposed || IsDisposing) 
+                throw new InvalidOperationException("Packet received packet after disposal. Dropping packet.");
+
             _stat.LastReceivedTime = FastDateTime.Now;
             _stat.ReceivedBytes += ipPacket.PacketLength;
             _stat.ReceivedPackets++;

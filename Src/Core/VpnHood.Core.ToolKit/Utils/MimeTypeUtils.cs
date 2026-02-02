@@ -2,12 +2,13 @@ using System.Collections.Frozen;
 
 // ReSharper disable StringLiteralTypo
 
-namespace VpnHood.AppLib.WebServer.Helpers;
+namespace VpnHood.Core.Toolkit.Utils;
+
 
 /// <summary>
 /// Helper class for determining MIME content types based on file extensions
 /// </summary>
-public static class MimeTypeHelper
+public static class MimeTypeUtils
 {
     private static readonly FrozenDictionary<string, string> MimeTypes = new Dictionary<string, string> {
         // Text files

@@ -142,7 +142,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private static Task ServeFile(HttpContextBase context, string fullPath)
     {
-        var contentType = MimeTypeHelper.GetContentType(fullPath);
+        var contentType = MimeTypeUtils.GetContentType(fullPath);
         context.Response.ContentType = contentType;
         return context.Response.Send(File.ReadAllBytes(fullPath));
     }

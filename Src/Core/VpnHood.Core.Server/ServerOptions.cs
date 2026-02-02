@@ -22,6 +22,7 @@ public class ServerOptions
     public bool AutoDisposeAccessManager { get; init; } = true;
     public TimeSpan ConfigureInterval { get; init; } = TimeSpan.FromSeconds(60);
     public string StoragePath { get; init; } = Directory.GetCurrentDirectory();
+    public string? DownloadsPath { get; init; }
     public bool PublicIpDiscovery { get; init; } = true;
     public ServerConfig? Config { get; init; }
     public TimeSpan DeadSessionTimeout { get; init; } = TimeSpan.FromMinutes(5);

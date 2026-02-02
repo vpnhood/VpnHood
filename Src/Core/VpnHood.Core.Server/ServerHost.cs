@@ -23,15 +23,16 @@ namespace VpnHood.Core.Server;
 
 public class ServerHost : IDisposable, IAsyncDisposable
 {
-    private readonly HashSet<IConnection> _connections = [];
-    private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private readonly SessionManager _sessionManager;
-    private readonly List<TcpListener> _tcpListeners;
-    private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
-    private readonly List<Task> _tcpListenerTasks = [];
-    private readonly Job _cleanupConnectionsJob;
-    private readonly AsyncLock _configureLock = new();
-    private bool _disposed;
+private readonly HashSet<IConnection> _connections = [];
+private readonly CancellationTokenSource _cancellationTokenSource = new();
+private readonly SessionManager _sessionManager;
+private readonly DownloadService _downloadService;
+private readonly List<TcpListener> _tcpListeners;
+private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
+private readonly List<Task> _tcpListenerTasks = [];
+private readonly Job _cleanupConnectionsJob;
+private readonly AsyncLock _configureLock = new();
+private bool _disposed;
 
     public const int MaxProtocolVersion = 11;
     public const int MinProtocolVersion = 8;
@@ -44,10 +45,11 @@ public class ServerHost : IDisposable, IAsyncDisposable
     public IPEndPoint[] TcpEndPoints => _tcpListeners.Select(x => (IPEndPoint)x.LocalEndpoint).ToArray();
     public bool Started => !_disposed && !_cancellationTokenSource.IsCancellationRequested;
 
-    public ServerHost(SessionManager sessionManager)
+    public ServerHost(SessionManager sessionManager, string? downloadsPath)
     {
         _tcpListeners = [];
         _sessionManager = sessionManager;
+        _downloadService = new DownloadService(downloadsPath);
         _cleanupConnectionsJob = new Job(CleanupConnections, TimeSpan.FromMinutes(5), nameof(ServerHost));
         UniqueIdFactory.DebugInitId = 5000;
     }
@@ -247,11 +249,16 @@ public class ServerHost : IDisposable, IAsyncDisposable
             int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
             var connectionId = headers.GetValueOrDefault("X-ConnectionId", connection.ConnectionId);
             var webSocketKey = headers.GetValueOrDefault("Sec-WebSocket-Key", "");
-            var httpMethod = headers.GetValueOrDefault(HttpUtils.HttpRequestKey, "").Split(" ").FirstOrDefault();
+            var httpRequestLine = headers.GetValueOrDefault(HttpUtils.HttpRequestKey, "");
+            var httpMethod = httpRequestLine.Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
             var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ??
                            connection.RemoteEndPoint.Address;
+
+            // Try to serve download file if requested
+            if (await _downloadService.TryServeDownloadAsync(connection, httpRequestLine, cancellationToken).Vhc())
+                throw new RequestHandledException(); // Should not reach here, but just in case
 
             if (upgrade.Equals("websocket", StringComparison.OrdinalIgnoreCase))
                 streamType = TunnelStreamType.WebSocket;
@@ -351,6 +358,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
     {
         try {
             await ProcessTcpClient(tcpClient, cancellationToken).Vhc();
+        }
+        catch (RequestHandledException) {
+            // Request was handled (e.g., file download), no further action needed
+            tcpClient.Dispose();
         }
         catch (Exception ex) {
             if (ex is ISelfLog loggable) loggable.Log();

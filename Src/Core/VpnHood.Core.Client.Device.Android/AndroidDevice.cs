@@ -45,33 +45,25 @@ public class AndroidDevice : IDevice
             var applications = packageManager.GetInstalledApplications(PackageInfoFlags.MetaData);
             var currentAppId = Application.Context.PackageName;
 
-            foreach (var appInfo in applications) {
-                if (appInfo.PackageName == currentAppId)
-                    continue;
+            // Ignore apps that are not related to the current user environment.
+            // Optimization: Filter and Group by Name BEFORE loading icons or encoding.
+            var mainApps = applications
+                .Where(appInfo => appInfo.PackageName != currentAppId && IsVisibleApp(packageManager, appInfo))
+                .Select(appInfo => new { appInfo, appName = appInfo.LoadLabel(packageManager) })
+                .Where(x => !string.IsNullOrWhiteSpace(x.appName) && x.appName != x.appInfo.PackageName)
+                .GroupBy(x => x.appName)
+                .Select(g => g.OrderBy(x => x.appInfo.Uid).First())
+                .ToList();
 
-                if (!IsVisibleApp(packageManager, appInfo))
-                    continue;
-
-                // 4. Load metadata
-                var appName = appInfo.LoadLabel(packageManager);
-                if (string.IsNullOrWhiteSpace(appName) || appName == appInfo.PackageName)
-                    continue;
-
-                // Check if the app belongs to a secondary profile (Secure Folder/Work Profile)
-                // User ID is derived from UID by dividing by 100000 (PER_USER_RANGE)
-                var appUserId = appInfo.Uid / 100000;
-                var currentUserId = Process.MyUid() / 100000;
-                if (appUserId != currentUserId)
-                    appName = $"{appName} (secure)";
-
-                // Load icon
-                var icon = appInfo.LoadIcon(packageManager);
+            foreach (var app in mainApps)
+            {
+                var icon = app.appInfo.LoadIcon(packageManager);
                 if (icon is null)
                     continue;
 
                 deviceAppInfos.Add(new DeviceAppInfo {
-                    AppId = appInfo.PackageName!,
-                    AppName = appName,
+                    AppId = app.appInfo.PackageName!,
+                    AppName = app.appName,
                     IconPng = icon.DrawableEncodeToBase64(100)
                 });
             }
@@ -84,8 +76,7 @@ public class AndroidDevice : IDevice
     {
         var appId = appInfo.PackageName;
 
-        // do not use IsEnabled as app may just suspend by the system
-
+        // DO NOT use IsEnabled as an app may just suspend by the system
         if (string.IsNullOrWhiteSpace(appId))
             return false;
 

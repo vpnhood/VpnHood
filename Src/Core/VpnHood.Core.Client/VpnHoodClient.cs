@@ -320,14 +320,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // connect to host
         var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint);
         await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
-        var connection = new TcpConnection(tcpClient, orgConnection.ConnectionId.Replace(":incoming", ":host"));
+        var connection = new TcpConnection(tcpClient, connectionId: orgConnection.ConnectionId, connectionName: "host", isServer: false);
         ProxyChannel? channel = null;
 
         try {
             // create and add the channel
-            orgConnection.ConnectionId = orgConnection.ConnectionId.Replace(":incoming", ":app");
-            var channelId = orgConnection.ConnectionId.Replace(":incoming", ":passthru");
-            channel = new ProxyChannel(channelId, orgConnection, connection, _clientHost.StreamProxyBufferSize);
+            channel = new ProxyChannel(connection.ToString(), orgConnection, connection, _clientHost.StreamProxyBufferSize);
 
             // flush initBuffer
             await connection.Stream.WriteAsync(initBuffer, connectCts.Token);

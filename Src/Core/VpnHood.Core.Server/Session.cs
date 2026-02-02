@@ -398,7 +398,8 @@ public class Session : IDisposable
             // connect to requested destination
             isRequestedEpException = true;
             await tcpClientHost.ConnectAsync(request.DestinationEndPoint, cancellationToken).Vhc();
-            tcpConnectionHost = new TcpConnection(tcpClientHost, request.RequestId + ":host");
+            tcpConnectionHost = new TcpConnection(tcpClientHost, connectionId: request.RequestId, 
+                connectionName: "host", isServer: true);
             isRequestedEpException = false;
 
             //tracking
@@ -413,7 +414,7 @@ public class Session : IDisposable
 
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
-            proxyChannel = new ProxyChannel(request.RequestId, tcpConnectionHost, connection,
+            proxyChannel = new ProxyChannel(connection.ToString()!, tcpConnectionHost, connection,
                 _streamProxyBufferSize);
 
             Tunnel.AddChannel(proxyChannel);

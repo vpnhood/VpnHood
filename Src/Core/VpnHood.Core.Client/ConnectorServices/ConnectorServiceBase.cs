@@ -199,7 +199,8 @@ internal class ConnectorServiceBase : IDisposable
             }, cancellationToken).Vhc();
 
             // create TcpConnection
-            var tcpConnection = new TcpConnection(tcpClient, streamId, sslStream);
+            var tcpConnection = new TcpConnection(tcpClient, sslStream, 
+                connectionId: streamId, connectionName: "tunnel", isServer: false);
             var connection = await CreateHttpConnection(tcpConnection, contentLength, cancellationToken).Vhc();
             lock (Status) Status.CreatedConnectionCount++;
             return connection;

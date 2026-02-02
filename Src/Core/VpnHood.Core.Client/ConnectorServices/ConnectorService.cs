@@ -41,7 +41,6 @@ internal class ConnectorService(
 
         try {
             var eventId = GetRequestEventId(request);
-            request.RequestId += ":client";
             VhLogger.Instance.LogDebug(eventId,
                 "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
                 (RequestCode)request.RequestCode, request.RequestId);

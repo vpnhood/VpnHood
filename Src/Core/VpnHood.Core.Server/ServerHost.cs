@@ -222,7 +222,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var rest = await connection.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (rest == 0) {
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
-                "Connection has been closed. ConnectionId: {ConnectionId}",connection.ConnectionId);
+                "Connection has been closed. ConnectionId: {ConnectionId}", connection.ConnectionId);
             connection.PreventReuse();
             await connection.DisposeAsync();
             return -1;
@@ -272,8 +272,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
 
                 case TunnelStreamType.WebSocketNoHandshake: {
-                    if (httpMethod != "POST")
-                        throw new Exception("Bad request");
+                        if (httpMethod != "POST")
+                            throw new Exception("Bad request");
 
                         // create WebSocket stream without handshake
                         var websocketStream = new WebSocketStream(
@@ -337,8 +337,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 cancellationToken).Vhc();
 
             // create client stream
-            var connectionId = UniqueIdFactory.Create() + ":server:tunnel:incoming";
-            var tcpConnection = new TcpConnection(tcpClient, connectionId, sslStream);
+            var tcpConnection = new TcpConnection(tcpClient, sslStream, connectionName: "tunnel", isServer: true);
             var connection = await CreateHttpConnection(tcpConnection, cancellationToken).Vhc();
             return connection;
         }
@@ -398,7 +397,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
                 // create a new CancellationTokenSource for close timeout
                 using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
-                using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token,_cancellationTokenSource.Token);
+                using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token);
                 await VhUtils.TryInvokeAsync("Write unauthorized response.",
                     () => connection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), closeCts.Token)).Vhc();
             }
@@ -558,12 +557,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var request = await StreamUtils.ReadObjectAsync<T>(connection.Stream, cancellationToken).Vhc();
 
         // check request id to server
-        request.RequestId = request.RequestId.Replace(":client", ":server");
-
-        // change and log request
-        // change ConnectionId if it was incoming
-        if (connection.ConnectionId.Contains(":incoming"))
-            connection.ConnectionId = request.RequestId + ":tunnel";
+        connection.ConnectionId = request.RequestId;
 
         VhLogger.Instance.LogDebug(GeneralEventId.Request,
             "Request has been read. RequestType: {RequestType}. RequestId: {RequestId}",

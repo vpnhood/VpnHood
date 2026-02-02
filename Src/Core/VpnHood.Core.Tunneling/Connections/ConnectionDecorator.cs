@@ -12,6 +12,8 @@ public class ConnectionDecorator(IConnection connection, Stream? stream = null)
     public Stream Stream => stream ?? _innerConnection.Stream;
     public IPEndPoint LocalEndPoint => _innerConnection.LocalEndPoint;
     public IPEndPoint RemoteEndPoint => _innerConnection.RemoteEndPoint;
+    public bool IsServer => _innerConnection.IsServer;
+    public string ConnectionName  => _innerConnection.ConnectionName;
 
     public string ConnectionId {
         get => _innerConnection.ConnectionId;

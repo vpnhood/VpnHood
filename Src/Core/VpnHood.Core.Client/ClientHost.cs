@@ -98,7 +98,7 @@ internal class ClientHost(
                 // config tcpOrgClient
                 var tcpClient = await tcpListener.AcceptTcpClientAsync().Vhc();
                 VhUtils.ConfigTcpClient(tcpClient, null, null);
-                var tcpConnection = new TcpConnection(tcpClient, UniqueIdFactory.Create() + ":client:incoming");
+                var tcpConnection = new TcpConnection(tcpClient, isServer: false, connectionName: "app");
                 _ = ProcessClient(tcpConnection, _cancellationTokenSource.Token);
             }
         }
@@ -268,7 +268,7 @@ internal class ClientHost(
 
             // Create the Request
             var request = new StreamProxyChannelRequest {
-                RequestId = UniqueIdFactory.Create(),
+                RequestId = orgConnection.ConnectionId,
                 SessionId = vpnHoodClient.SessionId,
                 SessionKey = vpnHoodClient.SessionKey,
                 DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort)
@@ -281,13 +281,12 @@ internal class ClientHost(
             // create a ProxyChannel
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
-            orgConnection.ConnectionId = proxyConnection.ConnectionId.Replace(":tunnel", ":app");
 
             // flush initBuffer
             await proxyConnection.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
-            channel = new ProxyChannel(request.RequestId, orgConnection, proxyConnection, streamProxyBufferSize);
+            channel = new ProxyChannel(proxyConnection.ToString()!, orgConnection, proxyConnection, streamProxyBufferSize);
             tunnel.AddChannel(channel);
             _stat.TcpTunnelledCount++;
         }

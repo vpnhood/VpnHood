@@ -36,6 +36,7 @@ public class ServerApp : IDisposable
     private VpnHoodServer? _vpnHoodServer;
     private FileStream? _lockStream;
     private bool _disposed;
+    private readonly string? _downloadsPath;
 
     public IAccessManager AccessManager { get; }
     public FileAccessManager? FileAccessManager => AccessManager as FileAccessManager;
@@ -72,6 +73,11 @@ public class ServerApp : IDisposable
         AppSettings = File.Exists(appSettingsFilePath)
             ? JsonUtils.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();
+
+        // set downloads path and create folder if it is our defaults
+        _downloadsPath = AppSettings.DownloadsPath ?? Path.Combine(storagePath, "downloads");
+        if (string.IsNullOrWhiteSpace(AppSettings.DownloadsPath))
+            Directory.CreateDirectory(_downloadsPath);
 
         // Init File Logger before starting server
         VhLogger.MinLogLevel = AppSettings.LogLevel;
@@ -268,6 +274,7 @@ public class ServerApp : IDisposable
                 ? new LinuxSwapMemoryProvider(VhLogger.Instance)
                 : null;
 
+
             // run server
             var virtualIpNetworkV4 = TunnelDefaults.VirtualIpNetworkV4;
             var virtualIpNetworkV6 = TunnelDefaults.VirtualIpNetworkV6;
@@ -279,6 +286,7 @@ public class ServerApp : IDisposable
                 SwapMemoryProvider = swapMemoryProvider,
                 StoragePath = InternalStoragePath,
                 Config = AppSettings.ServerConfig,
+                DownloadsPath = _downloadsPath,
                 VirtualIpNetworkV4 = virtualIpNetworkV4,
                 VirtualIpNetworkV6 = virtualIpNetworkV6
             });

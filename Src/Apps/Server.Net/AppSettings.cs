@@ -44,6 +44,7 @@ public class AppSettings
 
     public bool AllowAnonymousTracker { get; set; } = true;
 
+    public string? DownloadsPath { get; set; }
     public string? ManagementSecret { get; set; }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]

@@ -69,7 +69,8 @@ internal class ConnectorServiceBase : IDisposable
 
     private static string BuildPostRequest(
         string hostName, string? pathBase,
-        TunnelStreamType streamType, int protocolVersion, int contentLength)
+        TunnelStreamType streamType, int protocolVersion, 
+        int contentLength, string connectionId)
     {
         // write HTTP request
         var headerBuilder = new StringBuilder()
@@ -80,6 +81,7 @@ internal class ConnectorServiceBase : IDisposable
             .Append("User-Agent: Hood\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {protocolVersion}\r\n")
+            .Append($"X-ConnectionId: {connectionId}\r\n")
             .Append($"X-BinaryStream: {streamType}\r\n")
             .Append("\r\n");
 
@@ -98,6 +100,7 @@ internal class ConnectorServiceBase : IDisposable
             .Append($"Host: {VpnEndPoint.HostName}\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
+            .Append($"X-ConnectionId: {connection.Id}\r\n")
             .Append("Upgrade: websocket\r\n")
             .Append("Connection: Upgrade\r\n")
             .Append("Sec-WebSocket-Version: 13\r\n")
@@ -134,7 +137,7 @@ internal class ConnectorServiceBase : IDisposable
     {
         // write HTTP request
         var header = BuildPostRequest(hostName: VpnEndPoint.HostName, pathBase: VpnEndPoint.PathBase,
-            TunnelStreamType.None, ProtocolVersion, contentLength);
+            TunnelStreamType.None, ProtocolVersion, contentLength: contentLength, connectionId: connection.Id);
 
         // Send header and wait for its response
         await connection.Stream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();

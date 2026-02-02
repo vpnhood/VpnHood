@@ -20,7 +20,7 @@ public class ReusableConnection : ConnectionDecorator
 
         VhLogger.Instance.LogDebug(GeneralEventId.Stream,
             "A ReusableConnection has been created. ConnectionId: {ConnectionId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-            Id, connection.Stream.GetType().Name, VhLogger.Format(LocalEndPoint),
+            ConnectionId, connection.Stream.GetType().Name, VhLogger.Format(LocalEndPoint),
             VhLogger.Format(RemoteEndPoint));
     }
 
@@ -40,7 +40,7 @@ public class ReusableConnection : ConnectionDecorator
         try {
             _reusing = true;
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
-                "Reusing a connection. ConnectionId: {ConnectionId}", Id);
+                "Reusing a connection. ConnectionId: {ConnectionId}", ConnectionId);
 
             // verify if we can reuse the stream
             if (Stream is not ChunkStream chunkStream)
@@ -50,7 +50,7 @@ public class ReusableConnection : ConnectionDecorator
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
-                "Could not reuse the connection. ConnectionId: {ConnectionId}", Id);
+                "Could not reuse the connection. ConnectionId: {ConnectionId}", ConnectionId);
 
             // dispose and we should not try to reuse the stream
             PreventReuse();
@@ -73,7 +73,7 @@ public class ReusableConnection : ConnectionDecorator
             var reusableConnection = new ReusableConnection(connectionDecorator, reuseConnectionCallback);
             Task.Run(() => reuseConnectionCallback(reusableConnection))
                 .ContinueWith(task => VhLogger.Instance.LogError(GeneralEventId.Stream, task.Exception,
-                        "Reuse callback failed. ConnectionId: {ConnectionId}", Id),
+                        "Reuse callback failed. ConnectionId: {ConnectionId}", ConnectionId),
                     TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
             
             _disposed = true;

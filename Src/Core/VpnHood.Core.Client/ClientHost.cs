@@ -281,7 +281,7 @@ internal class ClientHost(
             // create a ProxyChannel
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
-            orgConnection.Id = proxyConnection.Id.Replace(":tunnel", ":app");
+            orgConnection.ConnectionId = proxyConnection.ConnectionId.Replace(":tunnel", ":app");
 
             // flush initBuffer
             await proxyConnection.Stream.WriteAsync(filterResult.ReadData, cancellationToken);

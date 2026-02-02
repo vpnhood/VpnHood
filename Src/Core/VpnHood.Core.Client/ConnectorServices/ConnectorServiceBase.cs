@@ -100,7 +100,7 @@ internal class ConnectorServiceBase : IDisposable
             .Append($"Host: {VpnEndPoint.HostName}\r\n")
             .Append($"X-Buffered: {UseBuffer}\r\n")
             .Append($"X-ProtocolVersion: {ProtocolVersion}\r\n")
-            .Append($"X-ConnectionId: {connection.Id}\r\n")
+            .Append($"X-ConnectionId: {connection.ConnectionId}\r\n")
             .Append("Upgrade: websocket\r\n")
             .Append("Connection: Upgrade\r\n")
             .Append("Sec-WebSocket-Version: 13\r\n")
@@ -116,7 +116,7 @@ internal class ConnectorServiceBase : IDisposable
             throw new Exception("Unexpected response.");
 
         // create a client stream
-        var webSocketStream = new WebSocketStream(connection.Stream, connection.Id, UseBuffer, isServer: false);
+        var webSocketStream = new WebSocketStream(connection.Stream, connection.ConnectionId, UseBuffer, isServer: false);
         var webSocketConnection = new ConnectionDecorator(connection, webSocketStream) {
             RequireHttpResponse = false
         };
@@ -137,7 +137,7 @@ internal class ConnectorServiceBase : IDisposable
     {
         // write HTTP request
         var header = BuildPostRequest(hostName: VpnEndPoint.HostName, pathBase: VpnEndPoint.PathBase,
-            TunnelStreamType.None, ProtocolVersion, contentLength: contentLength, connectionId: connection.Id);
+            TunnelStreamType.None, ProtocolVersion, contentLength: contentLength, connectionId: connection.ConnectionId);
 
         // Send header and wait for its response
         await connection.Stream.WriteAsync(Encoding.UTF8.GetBytes(header), cancellationToken).Vhc();
@@ -230,7 +230,7 @@ internal class ConnectorServiceBase : IDisposable
         if (_isDisposed != 0 || !AllowTcpReuse) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Disposing the reused client stream because the connector service is either disposed or reuse is no longer allowed. " +
-                "ConnectionId: {ConnectionId}", connection.Id);
+                "ConnectionId: {ConnectionId}", connection.ConnectionId);
 
             connection.PreventReuse();
             connection.Dispose();

@@ -4,7 +4,7 @@ namespace VpnHood.Core.Tunneling.Connections;
 
 public interface IConnection : IDisposable, IAsyncDisposable
 {
-    string Id { get; set; }
+    string ConnectionId { get; set; }
     bool Connected { get; }
     Stream Stream { get; }
     IPEndPoint LocalEndPoint { get; }

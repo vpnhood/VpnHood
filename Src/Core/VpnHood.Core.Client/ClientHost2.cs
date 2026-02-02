@@ -307,7 +307,7 @@ internal class ClientHost2(
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
             var orgTcpConnection =
                 new ReusableConnection(connection, connection.GetStream(),
-                    proxyConnection.Id.Replace(":tunnel", ":app"));
+                    proxyConnection.ConnectionId.Replace(":tunnel", ":app"));
 
             // flush initBuffer
             await proxyConnection.Stream.WriteAsync(filterResult.ReadData, cancellationToken);

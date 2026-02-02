@@ -222,7 +222,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var rest = await connection.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (rest == 0) {
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
-                "Connection has been closed. ConnectionId: {ConnectionId}",connection.Id);
+                "Connection has been closed. ConnectionId: {ConnectionId}",connection.ConnectionId);
             connection.PreventReuse();
             await connection.DisposeAsync();
             return -1;
@@ -245,6 +245,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
+            var connectionId = headers.GetValueOrDefault("X-ConnectionId", connection.ConnectionId);
             var webSocketKey = headers.GetValueOrDefault("Sec-WebSocket-Key", "");
             var httpMethod = headers.GetValueOrDefault(HttpUtils.HttpRequestKey, "").Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
@@ -276,10 +277,11 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
                         // create WebSocket stream without handshake
                         var websocketStream = new WebSocketStream(
-                            connection.Stream, connection.Id, useBuffer: useBuffer, isServer: true);
+                            connection.Stream, connection.ConnectionId, useBuffer: useBuffer, isServer: true);
                         var websocketConnection = new ConnectionDecorator(connection, websocketStream);
                         var reusableConnection = new ReusableConnection(websocketConnection, ReuseConnection);
                         return new ServerConnection(reusableConnection) {
+                            ConnectionId = connectionId,
                             ClientIp = clientIp,
                             RequireHttpResponse = true // same as simple use WebSocket stream
                         };
@@ -294,10 +296,11 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         await connection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
                         var websocketStream = new WebSocketStream(
-                            connection.Stream, connection.Id, useBuffer: useBuffer, isServer: true);
+                            connection.Stream, connection.ConnectionId, useBuffer: useBuffer, isServer: true);
                         var websocketConnection = new ConnectionDecorator(connection, websocketStream);
                         var reusableConnection = new ReusableConnection(websocketConnection, ReuseConnection);
                         return new ServerConnection(reusableConnection) {
+                            ConnectionId = connectionId,
                             ClientIp = clientIp,
                             RequireHttpResponse = false // Upgrade response has been already sent
                         };
@@ -372,7 +375,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             connection = await CreateHttpConnection(tcpClient, connectCts.Token).Vhc();
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
                 "ServerHost has created a new connection. ConnectionId: {ConnectionId}, RemoteEp: {RemoteEp}, ClientIp: {ClientIp}",
-                connection.Id, VhLogger.Format(connection.RemoteEndPoint),
+                connection.ConnectionId, VhLogger.Format(connection.RemoteEndPoint),
                 VhLogger.Format(connection.ClientIp));
 
             // read request version
@@ -391,7 +394,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 !VhUtils.IsSocketClosedException(ex)) {
                 VhLogger.Instance.LogDebug(GeneralEventId.Request,
                     "ServerHost is writing unauthorized response. ConnectionId: {ConnectionId}",
-                    connection.Id);
+                    connection.ConnectionId);
 
                 // create a new CancellationTokenSource for close timeout
                 using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
@@ -404,7 +407,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             if (connection != null) {
                 connection.PreventReuse();
                 await connection.DisposeAsync();
-                ex.Data["ConnectionId"] = connection.Id;
+                ex.Data["ConnectionId"] = connection.ConnectionId;
                 ex.Data["ClientIp"] = VhLogger.Format(connection.ClientIp);
             }
             tcpClient.Dispose();
@@ -430,7 +433,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "ServerHost is pending a shared Connection for reuse. ConnectionId: {ConnectionId}",
-                connection.Id);
+                connection.ConnectionId);
 
             // wait for reuse timeout by reading the request version
             var requestVersion = await ReadRequestVersion(connection, reusedCts.Token).Vhc();
@@ -443,7 +446,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "ServerHost has reused a shared Connection. ConnectionId: {ConnectionId}",
-                connection.Id);
+                connection.ConnectionId);
         }
         catch (Exception ex) {
             connection.PreventReuse();
@@ -452,14 +455,14 @@ public class ServerHost : IDisposable, IAsyncDisposable
             else
                 VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
                     "ServerHost could not process this request on reused stream. ConnectionId: {ConnectionId}",
-                    connection.Id);
+                    connection.ConnectionId);
         }
     }
 
     private async Task ProcessConnection(IConnection connection, int requestVersion, IPAddress? clientIp,
         CancellationToken cancellationToken)
     {
-        using var scope = VhLogger.Instance.BeginScope($"ConnectionId: {connection.Id}");
+        using var scope = VhLogger.Instance.BeginScope($"ConnectionId: {connection.ConnectionId}");
 
         try {
             // Take ownership: stream is added here and removed in finally
@@ -474,7 +477,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             else
                 VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
                     "Could not process this request. SessionErrorCode: {SessionErrorCode}, ConnectionId: {ConnectionId}",
-                    ex.SessionResponse.ErrorCode, connection.Id);
+                    ex.SessionResponse.ErrorCode, connection.ConnectionId);
 
             // reply the error to caller if it is SessionException
             // create a new CancellationTokenSource for close timeout
@@ -559,8 +562,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
         // change and log request
         // change ConnectionId if it was incoming
-        if (connection.Id.Contains(":incoming"))
-            connection.Id = request.RequestId + ":tunnel";
+        if (connection.ConnectionId.Contains(":incoming"))
+            connection.ConnectionId = request.RequestId + ":tunnel";
 
         VhLogger.Instance.LogDebug(GeneralEventId.Request,
             "Request has been read. RequestType: {RequestType}. RequestId: {RequestId}",
@@ -778,7 +781,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var state = new StringBuilder();
         if (request is RequestBase requestBase)
             state.Append($"SessionId: {VhLogger.FormatSessionId(requestBase.SessionId)}, ");
-        state.Append($"StreamId: {connection.Id}, RequestId: {request.RequestId}");
+        state.Append($"StreamId: {connection.ConnectionId}, RequestId: {request.RequestId}");
         return VhLogger.Instance.BeginScope(state.ToString());
     }
 

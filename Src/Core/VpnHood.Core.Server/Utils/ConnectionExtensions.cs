@@ -36,7 +36,7 @@ public static class ConnectionExtensions
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                     "Could not dispose a Connection gracefully. ConnectionId: {ConnectionId}",
-                    connection.Id);
+                    connection.ConnectionId);
 
                 connection.Dispose();
             }

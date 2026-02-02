@@ -17,7 +17,7 @@ public sealed class TcpConnection(TcpClient tcpClient, string id, Stream? stream
     public IPEndPoint RemoteEndPoint => tcpClient.GetRemoteEndPoint();
     public bool RequireHttpResponse { get; set; }
 
-    public string Id {
+    public string ConnectionId {
         get;
         set {
             if (field != value)

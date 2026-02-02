@@ -77,7 +77,7 @@ internal class ConnectorService(
             try {
                 VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                     "A shared Connection has been reused. ConnectionId: {ConnectionId}, LocalEp: {LocalEp}",
-                    reusableConnection.Id, reusableConnection.LocalEndPoint);
+                    reusableConnection.ConnectionId, reusableConnection.LocalEndPoint);
 
                 // send the request
                 await reusableConnection.Stream.WriteAsync(request, cancellationToken).Vhc();
@@ -100,7 +100,7 @@ internal class ConnectorService(
                 await reusableConnection.DisposeAsync();
                 VhLogger.Instance.LogError(GeneralEventId.Stream, ex,
                     "Error in reusing the Connection. Try a new connection. ConnectionId: {ConnectionId}, RequestId: {requestId}",
-                    reusableConnection.Id, requestId);
+                    reusableConnection.ConnectionId, requestId);
             }
         }
 
@@ -139,7 +139,7 @@ internal class ConnectorService(
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                 "Error in sending a request. ConnectionId: {ConnectionId}, RequestId: {requestId}",
-                connection.Id, requestId);
+                connection.ConnectionId, requestId);
 
             // dispose the connection
             (connection as ReusableConnection)?.PreventReuse();

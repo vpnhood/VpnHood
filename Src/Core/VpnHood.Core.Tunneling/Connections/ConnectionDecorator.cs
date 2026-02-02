@@ -13,9 +13,9 @@ public class ConnectionDecorator(IConnection connection, Stream? stream = null)
     public IPEndPoint LocalEndPoint => _innerConnection.LocalEndPoint;
     public IPEndPoint RemoteEndPoint => _innerConnection.RemoteEndPoint;
 
-    public string Id {
-        get => _innerConnection.Id;
-        set => _innerConnection.Id = value;
+    public string ConnectionId {
+        get => _innerConnection.ConnectionId;
+        set => _innerConnection.ConnectionId = value;
     }
 
     public bool RequireHttpResponse {

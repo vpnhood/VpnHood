@@ -218,6 +218,11 @@ public class ProxyChannel : IProxyChannel
         return default;
     }
 
+    public override string ToString()
+    {
+        return ChannelId;
+    }
+
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _isDisposed, 1) == 1)

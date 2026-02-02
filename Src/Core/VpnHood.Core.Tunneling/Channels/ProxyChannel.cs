@@ -53,7 +53,6 @@ public class ProxyChannel : IProxyChannel
         }
     }
 
-
     public PacketChannelState State {
         get {
             if (IsDisposed)
@@ -64,7 +63,6 @@ public class ProxyChannel : IProxyChannel
                 : PacketChannelState.NotStarted;
         }
     }
-
 
     public void Start()
     {

@@ -57,6 +57,14 @@ public class AndroidDevice : IDevice
                 if (string.IsNullOrWhiteSpace(appName) || appName == appInfo.PackageName)
                     continue;
 
+                // Check if the app belongs to a secondary profile (Secure Folder/Work Profile)
+                // User ID is derived from UID by dividing by 100000 (PER_USER_RANGE)
+                var appUserId = appInfo.Uid / 100000;
+                var currentUserId = Process.MyUid() / 100000;
+                if (appUserId != currentUserId)
+                    appName = $"{appName} (secure)";
+
+                // Load icon
                 var icon = appInfo.LoadIcon(packageManager);
                 if (icon is null)
                     continue;
@@ -76,7 +84,9 @@ public class AndroidDevice : IDevice
     {
         var appId = appInfo.PackageName;
 
-        if (!appInfo.Enabled || string.IsNullOrWhiteSpace(appId))
+        // do not use IsEnabled as app may just suspend by the system
+
+        if (string.IsNullOrWhiteSpace(appId))
             return false;
 
         // Does it have a Launcher icon? (Most user apps)

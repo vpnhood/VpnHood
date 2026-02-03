@@ -44,6 +44,7 @@ private bool _disposed;
     public CertificateHostName[] Certificates { get; private set; } = [];
     public IPEndPoint[] TcpEndPoints => _tcpListeners.Select(x => (IPEndPoint)x.LocalEndpoint).ToArray();
     public bool Started => !_disposed && !_cancellationTokenSource.IsCancellationRequested;
+    public string? DownloadPath => _downloadService.DownloadPath;
 
     public ServerHost(SessionManager sessionManager, string? downloadsPath)
     {
@@ -253,8 +254,7 @@ private bool _disposed;
             var httpMethod = httpRequestLine.Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
-            var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ??
-                           connection.RemoteEndPoint.Address;
+            var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ?? connection.RemoteEndPoint.Address;
 
             // Try to serve download file if requested
             if (await _downloadService.TryServeDownloadAsync(connection, httpRequestLine, cancellationToken).Vhc())

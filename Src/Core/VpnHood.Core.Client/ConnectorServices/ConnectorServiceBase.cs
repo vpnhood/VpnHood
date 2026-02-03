@@ -69,7 +69,7 @@ internal class ConnectorServiceBase : IDisposable
 
     private static string BuildPostRequest(
         string hostName, string? pathBase,
-        TunnelStreamType streamType, int protocolVersion, 
+        TunnelStreamType streamType, int protocolVersion,
         int contentLength, string connectionId)
     {
         // write HTTP request
@@ -89,7 +89,8 @@ internal class ConnectorServiceBase : IDisposable
         return header;
     }
 
-    private async Task<IConnection> CreateWebSocketConnection(IConnection connection,
+    private async Task<IConnection> CreateWebSocketConnection(
+        IConnection connection,
         CancellationToken cancellationToken)
     {
         var webSocketKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
@@ -199,7 +200,7 @@ internal class ConnectorServiceBase : IDisposable
             }, cancellationToken).Vhc();
 
             // create TcpConnection
-            var tcpConnection = new TcpConnection(tcpClient, sslStream, 
+            var tcpConnection = new TcpConnection(tcpClient, sslStream,
                 connectionId: streamId, connectionName: "tunnel", isServer: false);
             var connection = await CreateHttpConnection(tcpConnection, contentLength, cancellationToken).Vhc();
             lock (Status) Status.CreatedConnectionCount++;

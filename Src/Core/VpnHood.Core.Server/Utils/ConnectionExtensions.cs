@@ -19,8 +19,7 @@ public static class ConnectionExtensions
             // If the client stream requires an HTTP response, write it to the client stream
             if (connection.RequireHttpResponse) {
                 connection.RequireHttpResponse = false;
-                await connection.Stream.WriteAsync(HttpResponseBuilder.Ok(responseData.Length), cancellationToken)
-                    .Vhc();
+                await connection.Stream.WriteAsync(HttpResponseBuilder.Ok(responseData.Length), cancellationToken).Vhc();
             }
 
             // Write the session response to the client stream

@@ -52,19 +52,11 @@ public class AndroidDevice : IDevice
                 if (!IsVisibleApp(packageManager, appInfo))
                     continue;
 
-                // 4. Load metadata
                 var appName = appInfo.LoadLabel(packageManager);
                 if (string.IsNullOrWhiteSpace(appName) || appName == appInfo.PackageName)
                     continue;
 
-                // Check if the app belongs to a secondary profile (Secure Folder/Work Profile)
-                // User ID is derived from UID by dividing by 100000 (PER_USER_RANGE)
-                var appUserId = appInfo.Uid / 100000;
-                var currentUserId = Process.MyUid() / 100000;
-                if (appUserId != currentUserId)
-                    appName = $"{appName} (secure)";
-
-                // Load icon
+               // Load icon
                 var icon = appInfo.LoadIcon(packageManager);
                 if (icon is null)
                     continue;
@@ -76,7 +68,12 @@ public class AndroidDevice : IDevice
                 });
             }
 
-            return deviceAppInfos.OrderBy(a => a.AppName).ToArray();
+            var result = deviceAppInfos
+                .OrderBy(a => a.AppName)
+                .DistinctBy(x => x.AppId)
+                .ToArray();
+
+            return result;
         }
     }
 

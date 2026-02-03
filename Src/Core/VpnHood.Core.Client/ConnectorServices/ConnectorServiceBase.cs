@@ -166,7 +166,7 @@ internal class ConnectorServiceBase : IDisposable
 
             // Client.SessionTimeout does not affect in ConnectAsync
             if (_proxyEndPointManager.IsEnabled)
-                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken);
+                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
             else {
                 tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();

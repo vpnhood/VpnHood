@@ -6,7 +6,9 @@ namespace VpnHood.Core.Toolkit.Utils;
 
 public static class StreamUtils
 {
-    public static T ReadObject<T>(Stream stream, int maxLength = 0xFFFF)
+    public const int MaxMessageLength = 1024 * 512; // 512 KB
+
+    public static T ReadObject<T>(Stream stream, int maxLength = MaxMessageLength)
     {
         // read length
         Span<byte> lengthBuffer = stackalloc byte[4];
@@ -32,7 +34,7 @@ public static class StreamUtils
 
     public static Task<T> ReadObjectAsync<T>(Stream stream, CancellationToken cancellationToken)
     {
-        return ReadObjectAsync<T>(stream, 0xFFFF, cancellationToken);
+        return ReadObjectAsync<T>(stream, MaxMessageLength, cancellationToken);
     }
 
     public static async Task<T> ReadObjectAsync<T>(Stream stream, int maxLength, CancellationToken cancellationToken)
@@ -44,7 +46,7 @@ public static class StreamUtils
 
     public static Task<string> ReadMessageAsync(Stream stream, CancellationToken cancellationToken)
     {
-        return ReadMessageAsync(stream, 0xFFFF, cancellationToken);
+        return ReadMessageAsync(stream, MaxMessageLength, cancellationToken);
     }
 
     public static async Task<string> ReadMessageAsync(Stream stream, int maxLength, CancellationToken cancellationToken)

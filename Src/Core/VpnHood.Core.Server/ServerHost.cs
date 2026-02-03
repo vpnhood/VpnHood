@@ -34,7 +34,7 @@ private readonly Job _cleanupConnectionsJob;
 private readonly AsyncLock _configureLock = new();
 private bool _disposed;
 
-    public const int MaxProtocolVersion = 11;
+    public const int MaxProtocolVersion = 12;
     public const int MinProtocolVersion = 8;
     public int MinClientProtocolVersion { get; set; } = 8;
     public bool IsIpV6Supported { get; set; }

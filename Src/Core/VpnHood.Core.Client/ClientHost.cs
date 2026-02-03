@@ -42,6 +42,7 @@ internal class ClientHost(
     public TransferBufferSize StreamProxyBufferSize => streamProxyBufferSize;
     public IClientHostStat Stat => _stat;
     public event EventHandler<IpPacket>? PacketReceived;
+    public bool UseProxyInitBuffer { get; set; }
 
     public void DropCurrentConnections()
     {
@@ -266,12 +267,48 @@ internal class ClientHost(
                 return;
             }
 
+            // add filterResult.ReadData and read init buffer from orgConnection of max 256KB and append to memory
+            var initContents = Array.Empty<byte>();
+            if (UseProxyInitBuffer) {
+                var memory = new Memory<byte>(new byte[256 * 1024]);
+                var copiedCount = Math.Min(filterResult.ReadData.Length, memory.Length);
+                if (copiedCount > 0) {
+                    filterResult.ReadData.AsSpan(0, copiedCount).CopyTo(memory.Span);
+                }
+
+                var stream = orgConnection.Stream;
+                var position = copiedCount;
+                if (stream is NetworkStream networkStream) {
+                    while (position < memory.Length && networkStream.DataAvailable) {
+                        var bytesRead = await stream.ReadAsync(memory[position..], cancellationToken).Vhc();
+                        if (bytesRead == 0)
+                            break;
+
+                        position += bytesRead;
+                    }
+                }
+                else {
+                    while (position < memory.Length) {
+                        var bytesRead = await stream.ReadAsync(memory[position..], cancellationToken).Vhc();
+                        if (bytesRead == 0)
+                            break;
+
+                        position += bytesRead;
+                        if (bytesRead < memory.Length - position)
+                            break;
+                    }
+                }
+
+                initContents = memory[..position].ToArray();
+            }
+
             // Create the Request
             var request = new StreamProxyChannelRequest {
                 RequestId = orgConnection.ConnectionId,
                 SessionId = vpnHoodClient.SessionId,
                 SessionKey = vpnHoodClient.SessionKey,
-                DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort)
+                DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+                InitContents = initContents
             };
 
             // read the response
@@ -283,7 +320,8 @@ internal class ClientHost(
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
 
             // flush initBuffer
-            await proxyConnection.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
+            if (!UseProxyInitBuffer && filterResult.ReadData.Length > 0)
+                await proxyConnection.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
             channel = new ProxyChannel(proxyConnection.ToString()!, orgConnection, proxyConnection, streamProxyBufferSize);

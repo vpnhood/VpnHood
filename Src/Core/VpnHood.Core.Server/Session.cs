@@ -408,6 +408,10 @@ public class Session : IDisposable
                 destinationEndPoint: request.DestinationEndPoint,
                 isNewLocal: true, isNewRemote: true, failReason: null);
 
+            // flush initial contents if any
+            if (request.InitContents.Length > 0)
+                await tcpConnectionHost.Stream.WriteAsync(request.InitContents, cancellationToken).Vhc();
+
             // send response, using original cancellation token without timeout
             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
             await connection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();

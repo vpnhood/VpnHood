@@ -9,5 +9,5 @@ public class StreamProxyChannelRequest()
 {
     [JsonConverter(typeof(IPEndPointConverter))]
     public required IPEndPoint DestinationEndPoint { get; set; }
-    public required byte[] InitContents { get; set; } // supported in protocol v12+
+    public required ReadOnlyMemory<byte> InitContents { get; set; } // supported in protocol v12+
 }

@@ -8,6 +8,7 @@ using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -241,9 +242,7 @@ internal class ClientHost(
 
             // Filter by SNI
             var filterResult = await domainFilterService
-                .Process(orgConnection.Stream, natItem.DestinationAddress, cancellationToken)
-                .Vhc();
-
+                .Process(orgConnection.Stream, natItem.DestinationAddress, cancellationToken).Vhc();
             if (filterResult.Action == DomainFilterAction.Block) {
                 VhLogger.Instance.LogInformation(GeneralEventId.Sni,
                     "Domain has been blocked. Domain: {Domain}",
@@ -252,6 +251,13 @@ internal class ClientHost(
                 throw new Exception($"Domain has been blocked. Domain: {filterResult.DomainName}");
             }
 
+            // update connection stream with ReadBufferedStream to pre-append the read data
+            if (filterResult.ReadData.Length > 0)
+                orgConnection = new ConnectionDecorator(orgConnection,
+                    new ReadBufferedStream(orgConnection.Stream, leaveOpen: false, filterResult.ReadData) {
+                        AllowBufferRefill = false
+                    });
+
             // Filter by IP
             var isInIpRange = syncCustomData?.IsInIpRange ??
                               vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
@@ -259,47 +265,19 @@ internal class ClientHost(
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
                 await vpnHoodClient.AddPassthruTcpStream(
                         orgConnection,
-                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), 
-                        filterResult.ReadData, cancellationToken)
+                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), cancellationToken)
                     .Vhc();
 
                 _stat.TcpPassthruCount++;
                 return;
             }
 
-            // add filterResult.ReadData and read init buffer from orgConnection of max 256KB and append to memory
-            var initContents = Array.Empty<byte>();
+            //handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
+            var initContents = new Memory<byte>();
             if (UseProxyInitBuffer) {
-                var memory = new Memory<byte>(new byte[256 * 1024]);
-                var copiedCount = Math.Min(filterResult.ReadData.Length, memory.Length);
-                if (copiedCount > 0) {
-                    filterResult.ReadData.AsSpan(0, copiedCount).CopyTo(memory.Span);
-                }
-
-                var stream = orgConnection.Stream;
-                var position = copiedCount;
-                if (stream is NetworkStream networkStream) {
-                    while (position < memory.Length && networkStream.DataAvailable) {
-                        var bytesRead = await stream.ReadAsync(memory[position..], cancellationToken).Vhc();
-                        if (bytesRead == 0)
-                            break;
-
-                        position += bytesRead;
-                    }
-                }
-                else {
-                    while (position < memory.Length) {
-                        var bytesRead = await stream.ReadAsync(memory[position..], cancellationToken).Vhc();
-                        if (bytesRead == 0)
-                            break;
-
-                        position += bytesRead;
-                        if (bytesRead < memory.Length - position)
-                            break;
-                    }
-                }
-
-                initContents = memory[..position].ToArray();
+                var memory = new Memory<byte>(new byte[4 * 1024]);
+                var read = await orgConnection.Stream.ReadAsync(memory, cancellationToken);
+                initContents = memory[..read];
             }
 
             // Create the Request
@@ -318,10 +296,6 @@ internal class ClientHost(
             // create a ProxyChannel
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
-
-            // flush initBuffer
-            if (!UseProxyInitBuffer && filterResult.ReadData.Length > 0)
-                await proxyConnection.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
             channel = new ProxyChannel(proxyConnection.ToString()!, orgConnection, proxyConnection, streamProxyBufferSize);

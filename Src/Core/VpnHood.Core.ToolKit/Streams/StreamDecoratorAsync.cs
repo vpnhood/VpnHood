@@ -1,7 +1,9 @@
-﻿namespace VpnHood.Core.Toolkit.Utils;
+﻿using System.Net.Sockets;
 
-public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
-    where T : Stream
+namespace VpnHood.Core.Toolkit.Streams;
+
+public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen)
+    : Stream, IDataStream where T : Stream
 {
     protected readonly T SourceStream = sourceStream;
     protected bool IsDisposed { get; private set; }
@@ -168,7 +170,13 @@ public class AsyncStreamDecorator<T>(T sourceStream, bool leaveOpen) : Stream
     {
         throw new NotSupportedException("Use WriteAsync.");
     }
+
+    public virtual bool? DataAvailable => SourceStream switch {
+        IDataStream dataStream => dataStream.DataAvailable,
+        NetworkStream networkStream => networkStream.DataAvailable,
+        _ => null
+    };
 }
 
-public class AsyncStreamDecorator(Stream sourceStream, bool leaveOpen)
+public class StreamDecoratorAsync(Stream sourceStream, bool leaveOpen)
     : AsyncStreamDecorator<Stream>(sourceStream, leaveOpen);

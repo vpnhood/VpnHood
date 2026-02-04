@@ -5,43 +5,43 @@ namespace VpnHood.Core.Tunneling.Connections;
 public class ConnectionDecorator(IConnection connection, Stream? stream = null) 
     : IConnection
 {
-    protected bool _disposed;
-    protected IConnection _innerConnection = connection;
+    protected bool Disposed;
+    protected IConnection InnerConnection = connection;
 
-    public virtual bool Connected => !_disposed && _innerConnection.Connected;
-    public Stream Stream => stream ?? _innerConnection.Stream;
-    public IPEndPoint LocalEndPoint => _innerConnection.LocalEndPoint;
-    public IPEndPoint RemoteEndPoint => _innerConnection.RemoteEndPoint;
-    public bool IsServer => _innerConnection.IsServer;
-    public string ConnectionName  => _innerConnection.ConnectionName;
+    public virtual bool Connected => !Disposed && InnerConnection.Connected;
+    public Stream Stream => stream ?? InnerConnection.Stream;
+    public IPEndPoint LocalEndPoint => InnerConnection.LocalEndPoint;
+    public IPEndPoint RemoteEndPoint => InnerConnection.RemoteEndPoint;
+    public bool IsServer => InnerConnection.IsServer;
+    public string ConnectionName  => InnerConnection.ConnectionName;
 
     public string ConnectionId {
-        get => _innerConnection.ConnectionId;
-        set => _innerConnection.ConnectionId = value;
+        get => InnerConnection.ConnectionId;
+        set => InnerConnection.ConnectionId = value;
     }
 
     public bool RequireHttpResponse {
-        get => _innerConnection.RequireHttpResponse;
-        set => _innerConnection.RequireHttpResponse = value;
+        get => InnerConnection.RequireHttpResponse;
+        set => InnerConnection.RequireHttpResponse = value;
     }
 
     public virtual void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Disposed) return;
+        Disposed = true;
 
         stream?.Dispose();
-        _innerConnection.Dispose();
+        InnerConnection.Dispose();
     }
 
     public virtual async ValueTask DisposeAsync()
     {
-        if (_disposed) return;
-        _disposed = true;
+        if (Disposed) return;
+        Disposed = true;
 
         if (stream != null) 
             await stream.DisposeAsync();
 
-        await _innerConnection.DisposeAsync();
+        await InnerConnection.DisposeAsync();
     }
 }

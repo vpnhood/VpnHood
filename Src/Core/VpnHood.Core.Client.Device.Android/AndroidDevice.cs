@@ -56,7 +56,7 @@ public class AndroidDevice : IDevice
                 if (string.IsNullOrWhiteSpace(appName) || appName == appInfo.PackageName)
                     continue;
 
-               // Load icon
+                // Load icon
                 var icon = appInfo.LoadIcon(packageManager);
                 if (icon is null)
                     continue;

@@ -1,12 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Streams;
 
 namespace VpnHood.Core.Tunneling.Utils;
 
 // ReSharper disable once UnusedType.Global
-public class AsyncStreamTracker(Stream sourceStream, bool leaveOpen)
-    : AsyncStreamDecorator(sourceStream, leaveOpen)
+public class StreamDecoratorAsyncStreamTracker(Stream sourceStream, bool leaveOpen)
+    : StreamDecoratorAsync(sourceStream, leaveOpen)
 {
     public string LogPrefix { get; set; } = "";
 

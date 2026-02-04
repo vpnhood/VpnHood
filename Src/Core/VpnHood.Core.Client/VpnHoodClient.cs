@@ -311,7 +311,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }, CancellationToken.None);
     }
 
-    internal async Task AddPassthruTcpStream(IConnection orgConnection, IPEndPoint hostEndPoint, byte[] initBuffer, CancellationToken cancellationToken)
+    internal async Task AddPassthruTcpStream(IConnection orgConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
         // set timeout
         using var timeoutCts = new CancellationTokenSource(ConnectorService.RequestTimeout);
@@ -326,9 +326,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try {
             // create and add the channel
             channel = new ProxyChannel(connection.ToString(), orgConnection, connection, _clientHost.StreamProxyBufferSize);
-
-            // flush initBuffer
-            await connection.Stream.WriteAsync(initBuffer, connectCts.Token);
             _proxyManager.AddChannel(channel);
         }
         catch {

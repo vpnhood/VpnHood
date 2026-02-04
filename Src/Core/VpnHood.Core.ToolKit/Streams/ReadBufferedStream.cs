@@ -1,10 +1,12 @@
-﻿namespace VpnHood.Core.Toolkit.Utils;
+﻿using VpnHood.Core.Toolkit.Utils;
+
+namespace VpnHood.Core.Toolkit.Streams;
 
 /// <summary>
 /// Caches read operations for small-sized requests to reduce overhead.
 /// Write operations are delegated to the underlying source stream.
 /// </summary>
-public class ReadCacheStream : AsyncStreamDecorator
+public class ReadBufferedStream : StreamDecoratorAsync
 {
     private readonly Memory<byte> _cache;
     private int _cacheRemain;
@@ -12,16 +14,17 @@ public class ReadCacheStream : AsyncStreamDecorator
     private const int DefaultCacheSize = 1024;
 
     public override bool CanSeek => false;
-    public bool AllowCacheRefill { get; set; } = true;
+    public bool AllowBufferRefill { get; set; } = true;
+    public override bool? DataAvailable => _cacheRemain > 0 ? true : base.DataAvailable;
 
-    public ReadCacheStream(Stream sourceStream, bool leaveOpen, ReadOnlySpan<byte> cacheData)
+    public ReadBufferedStream(Stream sourceStream, bool leaveOpen, ReadOnlySpan<byte> cacheData)
         : this(sourceStream, leaveOpen, cacheData.Length, cacheData)
     {
         if (cacheData.Length == 0)
             throw new ArgumentException("Cache data cannot be empty when using this constructor.", nameof(cacheData));
     }
 
-    public ReadCacheStream(Stream sourceStream, bool leaveOpen, int cacheSize = DefaultCacheSize,
+    public ReadBufferedStream(Stream sourceStream, bool leaveOpen, int cacheSize = DefaultCacheSize,
         ReadOnlySpan<byte> cacheData = default)
         : base(sourceStream, leaveOpen)
     {
@@ -44,7 +47,7 @@ public class ReadCacheStream : AsyncStreamDecorator
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         // read directly to user buffer if there is no buffer, and it is larger than cache
-        if (_cacheRemain == 0 && (buffer.Length > _cache.Length || !AllowCacheRefill))
+        if (_cacheRemain == 0 && (buffer.Length > _cache.Length || !AllowBufferRefill))
             return await base.ReadAsync(buffer, cancellationToken).Vhc();
 
         // fill cache

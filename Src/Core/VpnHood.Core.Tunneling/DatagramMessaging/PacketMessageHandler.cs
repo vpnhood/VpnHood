@@ -2,7 +2,7 @@
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Streams;
 
 namespace VpnHood.Core.Tunneling.DatagramMessaging;
 

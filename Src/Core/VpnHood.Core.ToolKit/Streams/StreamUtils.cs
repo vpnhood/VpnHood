@@ -1,8 +1,9 @@
 ﻿using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
+using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Toolkit.Utils;
+namespace VpnHood.Core.Toolkit.Streams;
 
 public static class StreamUtils
 {

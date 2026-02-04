@@ -30,8 +30,16 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.720" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.722" />
 		<PackageReference Include="VpnHood.Core.Proxies" Version="7.4.768" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="MSTest.TestAdapter" Version="4.1.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="MSTest.TestFramework" Version="4.1.0" />
 	</ItemGroup>
 
 </Project>

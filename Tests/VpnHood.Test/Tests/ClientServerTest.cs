@@ -507,7 +507,7 @@ public class ClientServerTest : TestBase
         _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4443");
         _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4445");
 
-        await Task.Delay(1000);
+        await Task.Delay(500);
         var session = server.SessionManager.GetSessionById(client.SessionId);
         Assert.AreEqual(fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount, session?.TcpConnectWaitCount);
     }

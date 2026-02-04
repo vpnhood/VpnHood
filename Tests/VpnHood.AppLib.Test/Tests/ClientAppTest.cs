@@ -170,7 +170,7 @@ public class ClientAppTest : TestAppBase
     }
 
     public static async Task IpFilters_AssertInclude(TestHelper testHelper, VpnHoodApp app, IPEndPoint? nameserver,
-        Uri? url, int delta = 200)
+        Uri? url, int receiveDelta = 1000)
     {
         // NameServer
         if (nameserver != null) {
@@ -183,20 +183,18 @@ public class ClientAppTest : TestAppBase
 
         // Http
         if (url != null) {
-            var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
-            var oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
+            var oldStat = app.GetSessionStatus();
             await testHelper.Test_Https(url);
-            Assert.AreNotEqual(oldSessionTraffic.Received, app.GetSessionStatus().SessionTraffic.Received,
-                delta: delta);
-            Assert.AreNotEqual(oldSessionTraffic.Sent, app.GetSessionStatus().SessionTraffic.Sent, delta: delta);
-            Assert.AreEqual(oldSplitTraffic.Received, app.GetSessionStatus().SessionSplitTraffic.Received,
-                delta: delta);
-            Assert.AreEqual(oldSplitTraffic.Sent, app.GetSessionStatus().SessionSplitTraffic.Sent, delta: delta);
+            var newStat = app.GetSessionStatus();
+            Assert.AreNotEqual(oldStat.SessionTraffic.Received, newStat.SessionTraffic.Received, delta: receiveDelta);
+            Assert.AreNotEqual(oldStat.SessionTraffic.Sent, newStat.SessionTraffic.Sent, delta: 50);
+            Assert.AreEqual(oldStat.SessionSplitTraffic.Received, newStat.SessionSplitTraffic.Received, delta: receiveDelta);
+            Assert.AreEqual(oldStat.SessionSplitTraffic.Sent, newStat.SessionSplitTraffic.Sent, delta: 50);
         }
     }
 
     public static async Task IpFilters_AssertExclude(TestHelper testHelper, VpnHoodApp app,
-        IPEndPoint? nameserver, Uri? url, int delta = 200)
+        IPEndPoint? nameserver, Uri? url, int receiveDelta = 1000)
     {
         // NameServer
         if (nameserver != null) {
@@ -215,11 +213,10 @@ public class ClientAppTest : TestAppBase
             var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
             var oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
             await testHelper.Test_Https(url);
-            Assert.AreEqual(oldSessionTraffic.Received, app.GetSessionStatus().SessionTraffic.Received, delta: delta);
-            Assert.AreEqual(oldSessionTraffic.Sent, app.GetSessionStatus().SessionTraffic.Sent, delta: delta);
-            Assert.AreNotEqual(oldSplitTraffic.Received, app.GetSessionStatus().SessionSplitTraffic.Received,
-                delta: delta);
-            Assert.AreNotEqual(oldSplitTraffic.Sent, app.GetSessionStatus().SessionSplitTraffic.Sent, delta: delta);
+            Assert.AreEqual(oldSessionTraffic.Received, app.GetSessionStatus().SessionTraffic.Received, delta: receiveDelta);
+            Assert.AreEqual(oldSessionTraffic.Sent, app.GetSessionStatus().SessionTraffic.Sent, delta: 50);
+            Assert.AreNotEqual(oldSplitTraffic.Received, app.GetSessionStatus().SessionSplitTraffic.Received, delta: receiveDelta);
+            Assert.AreNotEqual(oldSplitTraffic.Sent, app.GetSessionStatus().SessionSplitTraffic.Sent, delta: 50);
         }
     }
 

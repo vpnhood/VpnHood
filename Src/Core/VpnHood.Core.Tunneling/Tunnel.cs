@@ -18,7 +18,6 @@ public class Tunnel : PassthroughPacketTransport
     private readonly Lock _speedLock = new();
     private readonly Job? _speedometerJob;
 
-    public void AddChannel(IChannel channel) => _channelManager.AddChannel(channel);
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public Traffic Traffic => _channelManager.Traffic;
     public int PacketChannelCount => _channelManager.PacketChannelCount;
@@ -54,6 +53,18 @@ public class Tunnel : PassthroughPacketTransport
             ? new Job(UpdateSpeedJob, _speedometerThreshold, "TunnelSpeedometer")
             : null;
     }
+
+    public void AddChannel(IChannel channel, bool disposeIfFailed = false)
+    {
+        try {
+            _channelManager.AddChannel(channel);
+        }
+        catch when (disposeIfFailed) {
+            channel.Dispose();
+            throw;
+        }
+    }
+
 
     private ValueTask UpdateSpeedJob(CancellationToken arg)
     {

@@ -8,63 +8,63 @@ namespace VpnHood.Core.Toolkit.Streams;
 /// </summary>
 public class ReadBufferedStream : StreamDecoratorAsync
 {
-    private readonly Memory<byte> _cache;
-    private int _cacheRemain;
-    private int _cacheOffset;
-    private const int DefaultCacheSize = 1024;
+    private readonly Memory<byte> _buffer;
+    private int _bufferRemain;
+    private int _bufferOffset;
+    private const int DefaultBufferSize = 1024;
 
     public override bool CanSeek => false;
     public bool AllowBufferRefill { get; set; } = true;
-    public override bool? DataAvailable => _cacheRemain > 0 ? true : base.DataAvailable;
+    public override bool? DataAvailable => _bufferRemain > 0 ? true : base.DataAvailable;
 
-    public ReadBufferedStream(Stream sourceStream, bool leaveOpen, ReadOnlySpan<byte> cacheData)
-        : this(sourceStream, leaveOpen, cacheData.Length, cacheData)
+    public ReadBufferedStream(Stream sourceStream, bool leaveOpen, ReadOnlySpan<byte> initData)
+        : this(sourceStream, leaveOpen, initData.Length, initData)
     {
-        if (cacheData.Length == 0)
-            throw new ArgumentException("Cache data cannot be empty when using this constructor.", nameof(cacheData));
+        if (initData.Length == 0)
+            throw new ArgumentException("Cache data cannot be empty when using this constructor.", nameof(initData));
     }
 
-    public ReadBufferedStream(Stream sourceStream, bool leaveOpen, int cacheSize = DefaultCacheSize,
-        ReadOnlySpan<byte> cacheData = default)
+    public ReadBufferedStream(Stream sourceStream, bool leaveOpen, int bufferSize = DefaultBufferSize,
+        ReadOnlySpan<byte> initData = default)
         : base(sourceStream, leaveOpen)
     {
-        if (cacheSize <= 0)
-            throw new ArgumentOutOfRangeException(nameof(cacheSize), "Cache size must be greater than zero.");
+        if (bufferSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(bufferSize), "Cache size must be greater than zero.");
 
-        if (!cacheData.IsEmpty && cacheData.Length > cacheSize)
-            throw new ArgumentOutOfRangeException(nameof(cacheData), "Initial cache data exceeds cache size.");
+        if (!initData.IsEmpty && initData.Length > bufferSize)
+            throw new ArgumentOutOfRangeException(nameof(initData), "Initial cache data exceeds cache size.");
 
-        _cache = new byte[cacheSize];
-        cacheData.CopyTo(_cache.Span);
-        _cacheRemain = cacheData.Length;
+        _buffer = new byte[bufferSize];
+        initData.CopyTo(_buffer.Span);
+        _bufferRemain = initData.Length;
     }
 
     public override long Position {
-        get => base.Position - _cacheRemain;
+        get => base.Position - _bufferRemain;
         set => throw new NotSupportedException();
     }
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         // read directly to user buffer if there is no buffer, and it is larger than cache
-        if (_cacheRemain == 0 && (buffer.Length > _cache.Length || !AllowBufferRefill))
+        if (_bufferRemain == 0 && (buffer.Length > _buffer.Length || !AllowBufferRefill))
             return await base.ReadAsync(buffer, cancellationToken).Vhc();
 
         // fill cache
-        if (_cacheRemain == 0 && buffer.Length <= _cache.Length) {
-            _cacheRemain = await base.ReadAsync(_cache, cancellationToken).Vhc();
-            if (_cacheRemain == 0)
+        if (_bufferRemain == 0 && buffer.Length <= _buffer.Length) {
+            _bufferRemain = await base.ReadAsync(_buffer, cancellationToken).Vhc();
+            if (_bufferRemain == 0)
                 return 0; // end of stream
 
-            _cacheOffset = 0;
+            _bufferOffset = 0;
         }
 
         // Warning: if there is data in cache we are not allowed to fill the cache again
         // because it may go to read blocking
-        var cacheRead = Math.Min(buffer.Length, _cacheRemain);
-        _cache.Slice(_cacheOffset, cacheRead).CopyTo(buffer);
-        _cacheOffset += cacheRead;
-        _cacheRemain -= cacheRead;
+        var cacheRead = Math.Min(buffer.Length, _bufferRemain);
+        _buffer.Slice(_bufferOffset, cacheRead).CopyTo(buffer);
+        _bufferOffset += cacheRead;
+        _bufferRemain -= cacheRead;
         return cacheRead;
     }
 }

@@ -2,7 +2,7 @@
 
 public class DomainFilterResult
 {
-    public DomainFilterAction Action { get; init; }
-    public string? DomainName { get; init; }
-    public byte[] ReadData { get; init; } = [];
+    public required DomainFilterAction Action { get; init; }
+    public required string? DomainName { get; init; }
+    public required Memory<byte> ReadData { get; init; }
 }

@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.DomainFiltering;
 
-public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni, EventId eventId)
+public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni, EventId eventId, int bufferSize)
 {
     public bool IsEnabled =>
         forceLogSni ||
@@ -19,11 +19,13 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni, Ev
         // none if domain filter is empty
         if (!IsEnabled)
             return new DomainFilterResult {
-                Action = DomainFilterAction.None
+                Action = DomainFilterAction.None,
+                DomainName = null,
+                ReadData = Memory<byte>.Empty
             };
 
         // extract SNI
-        var sniData = await SniExtractor.ExtractSni(tlsStream, eventId, cancellationToken).Vhc();
+        var sniData = await SniExtractor.ExtractSni(tlsStream, eventId, bufferSize, cancellationToken).Vhc();
         VhLogger.Instance.LogInformation(eventId,
             "Domain: {Domain}, DestEp: {IP}",
             VhLogger.FormatHostName(sniData.Sni), VhLogger.Format(remoteAddress));
@@ -74,7 +76,7 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni, Ev
         return domains.Contains(domain);
     }
 
-    private static string[] ExtractTopDomains(string? domain)
+    private static IEnumerable<string> ExtractTopDomains(string? domain)
     {
         if (string.IsNullOrEmpty(domain))
             return [];
@@ -86,6 +88,6 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni, Ev
             topDomains.Add(topDomain);
         }
 
-        return topDomains.ToArray();
+        return topDomains;
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Test.Tests;
+﻿using VpnHood.Core.Client.Abstractions;
+
+namespace VpnHood.Test.Tests;
 
 [TestClass]
 public class NetProtectTest : TestBase
@@ -36,7 +38,10 @@ public class NetProtectTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token);
+        var clientOptions = TestHelper.CreateClientOptions(token);
+        clientOptions.ChannelProtocol = ChannelProtocol.Udp;
+        clientOptions.UseTcpProxy = true;
+        await using var client = await TestHelper.CreateClient(clientOptions);
 
         await TestHelper.Test_Https();
         await TestHelper.Test_Https();

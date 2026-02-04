@@ -29,7 +29,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
     public WebSocketStream(Stream sourceStream, string streamId, bool useBuffer, bool isServer)
         : base(useBuffer
-            ? new ReadBufferedStream(sourceStream, leaveOpen: false, cacheSize: TunnelDefaults.StreamSmallReadCacheSize)
+            ? new ReadBufferedStream(sourceStream, leaveOpen: false, bufferSize: TunnelDefaults.StreamSmallReadCacheSize)
             : sourceStream, streamId)
     {
         _isServer = isServer;

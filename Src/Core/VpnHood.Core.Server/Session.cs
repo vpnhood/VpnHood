@@ -287,6 +287,10 @@ public class Session : IDisposable
     public async Task ProcessTcpPacketChannelRequest(TcpPacketChannelRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
+        // manage wait count
+        Interlocked.Increment(ref _tcpConnectWaitCount);
+        using var autoDispose = new AutoDispose(() => Interlocked.Decrement(ref _tcpConnectWaitCount));
+
         // send OK reply
         await connection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
 
@@ -303,14 +307,8 @@ public class Session : IDisposable
             Lifespan = null
         });
 
-        try {
-            Tunnel.AddChannel(channel);
-            UseUdpChannel = false;
-        }
-        catch {
-            channel.Dispose();
-            throw;
-        }
+        Tunnel.AddChannel(channel, disposeIfFailed: true);
+        UseUdpChannel = false;
     }
 
     public bool UseUdpChannel {
@@ -366,28 +364,22 @@ public class Session : IDisposable
         if (!AllowTcpProxy)
             throw new SessionException(SessionErrorCode.GeneralError, "TcpProxy is not allowed in this session.");
 
-        // filter
-        request.DestinationEndPoint = ValidateDestination(IpProtocol.Tcp, request.DestinationEndPoint);
-
-        // process request
-        var isRequestedEpException = false;
-        var isTcpConnectIncreased = false;
-
         TcpClient? tcpClientHost = null;
         IConnection? tcpConnectionHost = null;
-        ProxyChannel? proxyChannel = null;
         try {
-            // connect to requested site
+            // manage wait count
+            Interlocked.Increment(ref _tcpConnectWaitCount);
+
+            // filter
+            request.DestinationEndPoint = ValidateDestination(IpProtocol.Tcp, request.DestinationEndPoint);
+
+            // log with new destination
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Connecting to the requested endpoint. RequestedEP: {Format}",
                 VhLogger.Format(request.DestinationEndPoint));
 
-            // Apply limitation and update endpoint if needed
+            // Apply limitation before create connection to host
             VerifyTcpChannelRequest(connection, request);
-
-            // prepare client
-            Interlocked.Increment(ref _tcpConnectWaitCount);
-            isTcpConnectIncreased = true;
 
             //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint);
@@ -396,11 +388,16 @@ public class Session : IDisposable
                 receiveBufferSize: _tcpKernelBufferSize?.Receive);
 
             // connect to requested destination
-            isRequestedEpException = true;
-            await tcpClientHost.ConnectAsync(request.DestinationEndPoint, cancellationToken).Vhc();
-            tcpConnectionHost = new TcpConnection(tcpClientHost, connectionId: request.RequestId, 
-                connectionName: "host", isServer: true);
-            isRequestedEpException = false;
+            try {
+                await tcpClientHost.ConnectAsync(request.DestinationEndPoint, cancellationToken).Vhc();
+                tcpConnectionHost = new TcpConnection(tcpClientHost, connectionId: request.RequestId,
+                    connectionName: "host", isServer: true);
+            }
+            catch (Exception ex) {
+                var message =
+                    $"{ex.Message} RequestEndPoint: {VhLogger.Format(request.DestinationEndPoint)}, RequestId: {request.RequestId}";
+                throw new SessionException(SessionErrorCode.GeneralError, message);
+            }
 
             //tracking
             LogTrack(IpProtocol.Tcp,
@@ -418,31 +415,18 @@ public class Session : IDisposable
 
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
-            proxyChannel = new ProxyChannel(connection.ToString()!, tcpConnectionHost, connection,
+            var proxyChannel = new ProxyChannel(connection.ToString()!, tcpConnectionHost, connection,
                 _streamProxyBufferSize);
 
-            Tunnel.AddChannel(proxyChannel);
+            Tunnel.AddChannel(proxyChannel, disposeIfFailed: true);
         }
-        catch (Exception ex) {
+        catch {
             tcpClientHost?.Dispose();
             tcpConnectionHost?.Dispose();
-            proxyChannel?.Dispose();
-
-            // throw session exception if there is a problem with connection to requested endpoint
-            if (isRequestedEpException) {
-                var message = cancellationToken.IsCancellationRequested
-                    ? "Could not connect to the requested destination in given time."
-                    : ex.Message;
-                message +=
-                    $" RemoteEndPoint: {connection.RemoteEndPoint}, RequestId: {request.RequestId}";
-                throw new SessionException(SessionErrorCode.GeneralError, message);
-            }
-
             throw;
         }
         finally {
-            if (isTcpConnectIncreased)
-                Interlocked.Decrement(ref _tcpConnectWaitCount);
+            Interlocked.Decrement(ref _tcpConnectWaitCount);
         }
     }
 
@@ -461,22 +445,19 @@ public class Session : IDisposable
 
     private void VerifyTcpChannelRequest(IConnection connection, StreamProxyChannelRequest request)
     {
-        // filter
-        request.DestinationEndPoint = ValidateDestination(IpProtocol.Tcp, request.DestinationEndPoint);
-
         lock (_verifyRequestLock) {
             // NetScan limit
             VerifyNetScan(IpProtocol.Tcp, request.DestinationEndPoint, request.RequestId);
 
             // Channel Count limit
-            if (TcpChannelCount >= _maxTcpChannelCount) {
+            if (TcpChannelCount + _tcpConnectWaitCount  > _maxTcpChannelCount) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint, false, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raise();
                 throw new MaxTcpChannelException(connection.RemoteEndPoint, this, request.RequestId);
             }
 
             // Check tcp wait limit
-            if (TcpConnectWaitCount >= _maxTcpConnectWaitCount) {
+            if (TcpConnectWaitCount > _maxTcpConnectWaitCount) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint, false, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raise();
                 throw new MaxTcpConnectWaitException(connection.RemoteEndPoint, this,

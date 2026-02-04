@@ -254,7 +254,7 @@ internal class ClientHost(
             // update connection stream with ReadBufferedStream to pre-append the read data
             if (filterResult.ReadData.Length > 0)
                 orgConnection = new ConnectionDecorator(orgConnection,
-                    new ReadBufferedStream(orgConnection.Stream, leaveOpen: false, filterResult.ReadData) {
+                    new ReadBufferedStream(orgConnection.Stream, leaveOpen: false, filterResult.ReadData.Span) {
                         AllowBufferRefill = false
                     });
 
@@ -263,9 +263,10 @@ internal class ClientHost(
                               vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
             if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
-                await vpnHoodClient.AddPassthruTcpStream(
-                        orgConnection,
-                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), cancellationToken)
+                await vpnHoodClient
+                    .AddPassthruTcpStream(orgConnection,
+                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), 
+                        cancellationToken)
                     .Vhc();
 
                 _stat.TcpPassthruCount++;

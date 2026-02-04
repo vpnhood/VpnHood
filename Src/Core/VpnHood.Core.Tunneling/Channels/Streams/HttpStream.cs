@@ -29,7 +29,7 @@ public class HttpStream : ChunkStream
     private bool IsServer => _host == null;
 
     public HttpStream(Stream sourceStream, string streamId, string? host, bool keepSourceOpen = false)
-        : base(new ReadBufferedStream(sourceStream, keepSourceOpen, cacheSize: TunnelDefaults.StreamSmallReadCacheSize),
+        : base(new ReadBufferedStream(sourceStream, keepSourceOpen, bufferSize: TunnelDefaults.StreamSmallReadCacheSize),
             streamId)
     {
         _host = host;

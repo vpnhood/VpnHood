@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using VpnHood.Core.Server;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Test.Extensions;
 
 namespace VpnHood.Test.Tests;
 
@@ -21,19 +22,23 @@ public class NetScanTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token);
 
+        var session = server.GetSession(client);
+
         var tcpClient1 = new TcpClient();
-        await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1);
-        try {
-            await VhUtils.RunTask(tcpClient1.GetStream().ReadAsync(new byte[100]).AsTask(), TimeSpan.FromSeconds(2));
-        }
-        catch (Exception ex) {
-            Assert.AreEqual(nameof(TimeoutException), ex.GetType().Name);
-        }
+        await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1, TestCancellationToken);
+        tcpClient1.GetStream().WriteByte(1); // send some data otherwise client may not create the channel
+        await VhTestUtil.AssertEqualsWait(1, () => session.TcpChannelCount, cancellationToken: TestCancellationToken);
 
         // NetScan error
+        Log("Creating the second connection");
         var tcpClient2 = new TcpClient();
-        await tcpClient2.ConnectAsync(TestConstants.TcpEndPoint2);
-        var res = await tcpClient2.GetStream().ReadAsync(new byte[100]);
+        await tcpClient2.ConnectAsync(TestConstants.TcpEndPoint2, TestCancellationToken);
+
+        Log( "Sending data on the second connection");
+        tcpClient2.GetStream().WriteByte(1); // send some data otherwise client may not create the channel
+        
+        Log("Waiting for the second connection to be closed by server");
+        var res = await tcpClient2.GetStream().ReadAsync(new byte[100], TestCancellationToken);
         Assert.AreEqual(0, res, "NetScan should close this request.");
     }
 

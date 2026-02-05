@@ -43,7 +43,6 @@ internal class ClientHost(
     public TransferBufferSize StreamProxyBufferSize => streamProxyBufferSize;
     public IClientHostStat Stat => _stat;
     public event EventHandler<IpPacket>? PacketReceived;
-    public bool UseProxyInitBuffer { get; set; }
 
     public void DropCurrentConnections()
     {
@@ -265,7 +264,7 @@ internal class ClientHost(
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
                 await vpnHoodClient
                     .AddPassthruTcpStream(orgConnection,
-                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), 
+                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                         cancellationToken)
                     .Vhc();
 
@@ -274,24 +273,21 @@ internal class ClientHost(
             }
 
             //handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
-            var initContents = new Memory<byte>();
-            if (UseProxyInitBuffer) {
-                var memory = new Memory<byte>(new byte[4 * 1024]);
-                var read = await orgConnection.Stream.ReadAsync(memory, cancellationToken);
-                initContents = memory[..read];
-            }
+            var memory = new Memory<byte>(new byte[TunnelDefaults.PrefetchStreamBufferSize]);
+            var read = await orgConnection.Stream.ReadAsync(memory, cancellationToken);
+            var initContents = memory[..read];
 
             // Create the Request
             var request = new StreamProxyChannelRequest {
                 RequestId = orgConnection.ConnectionId,
                 SessionId = vpnHoodClient.SessionId,
                 SessionKey = vpnHoodClient.SessionKey,
-                DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                InitContents = initContents
+                DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort)
             };
 
             // read the response
-            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken).Vhc();
+            var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
+            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();
             var proxyConnection = requestResult.Connection;
 
             // create a ProxyChannel

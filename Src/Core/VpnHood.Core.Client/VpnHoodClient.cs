@@ -830,7 +830,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // set session status
             _sessionStatus = new ClientSessionStatus(this, helloResponse.AccessUsage ?? new AccessUsage());
             _channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, SessionInfo);
-            _clientHost.UseProxyInitBuffer = helloResponse.ProtocolVersion >= 12;
 
             // usage trackers
             if (Config.AllowAnonymousTracker) {
@@ -994,7 +993,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
+    internal Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
+        CancellationToken cancellationToken)
+        where T : SessionResponse
+    {
+        return SendRequest<T>(new ClientRequestEx { Request = request}, cancellationToken);
+    }
+
+    internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequestEx request,
         CancellationToken cancellationToken)
         where T : SessionResponse
     {

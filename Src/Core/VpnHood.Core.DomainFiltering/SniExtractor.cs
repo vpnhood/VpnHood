@@ -10,24 +10,24 @@ public static class SniExtractor
     public class SniData
     {
         public required string? Sni { get; init; }
-        public required byte[] ReadData { get; init; }
+        public required Memory<byte> ReadData { get; init; }
     }
 
-    public static async Task<SniData> ExtractSni(Stream tcpStream, EventId eventId, CancellationToken cancellationToken)
+    public static async Task<SniData> ExtractSni(Stream tcpStream, EventId eventId, int streamHeaderBufferSize,
+        CancellationToken cancellationToken)
     {
         // extract SNI
-        var initBuffer = new byte[1000];
-        var bufCount = await tcpStream
-            .ReadAsync(initBuffer, 0, initBuffer.Length, cancellationToken)
-            .Vhc();
+        var initBuffer = new Memory<byte>(new byte[streamHeaderBufferSize]);
+        var bufCount = await tcpStream.ReadAsync(initBuffer, cancellationToken).Vhc();
+        var readData = initBuffer[..bufCount];
 
         return new SniData {
-            Sni = ExtractSni(initBuffer[..bufCount], eventId),
-            ReadData = initBuffer[..bufCount]
+            Sni = ExtractSni(readData.Span, eventId),
+            ReadData = readData
         };
     }
 
-    public static string? ExtractSni(byte[] payloadData, EventId eventId)
+    public static string? ExtractSni(ReadOnlySpan<byte> payloadData, EventId eventId)
     {
         try {
             return GetSniFromStreamInternal(payloadData);
@@ -38,7 +38,7 @@ public static class SniExtractor
         }
     }
 
-    public static string? GetSniFromStreamInternal(byte[] payloadData)
+    public static string? GetSniFromStreamInternal(ReadOnlySpan<byte> payloadData)
     {
         if (payloadData.Length == 0)
             return null;
@@ -107,7 +107,7 @@ public static class SniExtractor
                 if (currentPos + serverNameLength > payloadData.Length)
                     return null; // Server name length is out of bounds
 
-                var sni = Encoding.ASCII.GetString(payloadData, currentPos, serverNameLength);
+                var sni = Encoding.ASCII.GetString(payloadData.Slice(currentPos, serverNameLength));
                 return sni;
             }
 

@@ -45,30 +45,35 @@ public class AndroidDevice : IDevice
             var applications = packageManager.GetInstalledApplications(PackageInfoFlags.MetaData);
             var currentAppId = Application.Context.PackageName;
 
-            // Ignore apps that are not related to the current user environment.
-            // Optimization: Filter and Group by Name BEFORE loading icons or encoding.
-            var mainApps = applications
-                .Where(appInfo => appInfo.PackageName != currentAppId && IsVisibleApp(packageManager, appInfo))
-                .Select(appInfo => new { appInfo, appName = appInfo.LoadLabel(packageManager) })
-                .Where(x => !string.IsNullOrWhiteSpace(x.appName) && x.appName != x.appInfo.PackageName)
-                .GroupBy(x => x.appName)
-                .Select(g => g.OrderBy(x => x.appInfo.Uid).First())
-                .ToList();
+            foreach (var appInfo in applications) {
+                if (appInfo.PackageName == currentAppId)
+                    continue;
 
-            foreach (var app in mainApps)
-            {
-                var icon = app.appInfo.LoadIcon(packageManager);
+                if (!IsVisibleApp(packageManager, appInfo))
+                    continue;
+
+                var appName = appInfo.LoadLabel(packageManager);
+                if (string.IsNullOrWhiteSpace(appName) || appName == appInfo.PackageName)
+                    continue;
+
+                // Load icon
+                var icon = appInfo.LoadIcon(packageManager);
                 if (icon is null)
                     continue;
 
                 deviceAppInfos.Add(new DeviceAppInfo {
-                    AppId = app.appInfo.PackageName!,
-                    AppName = app.appName,
+                    AppId = appInfo.PackageName!,
+                    AppName = appName,
                     IconPng = icon.DrawableEncodeToBase64(100)
                 });
             }
 
-            return deviceAppInfos.OrderBy(a => a.AppName).ToArray();
+            var result = deviceAppInfos
+                .OrderBy(a => a.AppName)
+                .DistinctBy(x => x.AppId)
+                .ToArray();
+
+            return result;
         }
     }
 
@@ -76,7 +81,8 @@ public class AndroidDevice : IDevice
     {
         var appId = appInfo.PackageName;
 
-        // DO NOT use IsEnabled as an app may just suspend by the system
+        // do not use IsEnabled as app may just suspend by the system
+
         if (string.IsNullOrWhiteSpace(appId))
             return false;
 

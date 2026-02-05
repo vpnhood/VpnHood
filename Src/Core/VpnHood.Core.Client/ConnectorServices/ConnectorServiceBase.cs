@@ -10,6 +10,7 @@ using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels.Streams;
@@ -69,7 +70,7 @@ internal class ConnectorServiceBase : IDisposable
 
     private static string BuildPostRequest(
         string hostName, string? pathBase,
-        TunnelStreamType streamType, int protocolVersion, 
+        TunnelStreamType streamType, int protocolVersion,
         int contentLength, string connectionId)
     {
         // write HTTP request
@@ -89,7 +90,8 @@ internal class ConnectorServiceBase : IDisposable
         return header;
     }
 
-    private async Task<IConnection> CreateWebSocketConnection(IConnection connection,
+    private async Task<IConnection> CreateWebSocketConnection(
+        IConnection connection,
         CancellationToken cancellationToken)
     {
         var webSocketKey = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
@@ -165,7 +167,7 @@ internal class ConnectorServiceBase : IDisposable
 
             // Client.SessionTimeout does not affect in ConnectAsync
             if (_proxyEndPointManager.IsEnabled)
-                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken);
+                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
             else {
                 tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
@@ -199,7 +201,7 @@ internal class ConnectorServiceBase : IDisposable
             }, cancellationToken).Vhc();
 
             // create TcpConnection
-            var tcpConnection = new TcpConnection(tcpClient, sslStream, 
+            var tcpConnection = new TcpConnection(tcpClient, sslStream,
                 connectionId: streamId, connectionName: "tunnel", isServer: false);
             var connection = await CreateHttpConnection(tcpConnection, contentLength, cancellationToken).Vhc();
             lock (Status) Status.CreatedConnectionCount++;

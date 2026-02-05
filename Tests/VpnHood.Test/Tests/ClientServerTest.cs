@@ -10,6 +10,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
+using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
 using ClientState = VpnHood.Core.Client.Abstractions.ClientState;
 
@@ -290,10 +291,11 @@ public class ClientServerTest : TestBase
         await TestHelper.Test_Https();
 
         // stop server
+        Log("Disposing the server...");
         await server.DisposeAsync();
 
         // failed
-        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Waiting for client to be disposed.");
+        Log("Waiting for client to be disposed.");
         await Assert.ThrowsAsync<Exception>(() => TestHelper.Test_Https());
         await Task.Delay(1000); // wait to finish session time after first error
         await Assert.ThrowsAsync<Exception>(() => TestHelper.Test_Https());
@@ -505,7 +507,7 @@ public class ClientServerTest : TestBase
         _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4443");
         _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4445");
 
-        await Task.Delay(1000);
+        await Task.Delay(500);
         var session = server.SessionManager.GetSessionById(client.SessionId);
         Assert.AreEqual(fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount, session?.TcpConnectWaitCount);
     }
@@ -520,21 +522,28 @@ public class ClientServerTest : TestBase
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token);
+
+        var clientOptions = TestHelper.CreateClientOptions(token);
+        clientOptions.ChannelProtocol = ChannelProtocol.Udp;
+        clientOptions.UseTcpProxy = true;
+        await using var client = await TestHelper.CreateClient(clientOptions);
 
         using var tcpClient1 = new TcpClient();
         using var tcpClient2 = new TcpClient();
         using var tcpClient3 = new TcpClient();
         using var tcpClient4 = new TcpClient();
 
-        await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1);
-        await Task.Delay(300);
-        await tcpClient2.ConnectAsync(TestConstants.TcpEndPoint1);
-        await Task.Delay(300);
-        await tcpClient3.ConnectAsync(TestConstants.TcpEndPoint2);
-        await Task.Delay(300);
-        await tcpClient4.ConnectAsync(TestConstants.TcpEndPoint2);
-        await Task.Delay(300);
+        await Task.WhenAll(
+            tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1, TestCancellationToken).AsTask(),
+            tcpClient2.ConnectAsync(TestConstants.TcpEndPoint1, TestCancellationToken).AsTask(),
+            tcpClient3.ConnectAsync(TestConstants.TcpEndPoint2, TestCancellationToken).AsTask(),
+            tcpClient4.ConnectAsync(TestConstants.TcpEndPoint2, TestCancellationToken).AsTask());
+
+        tcpClient1.GetStream().WriteByte((byte)'G');
+        tcpClient2.GetStream().WriteByte((byte)'G');
+        tcpClient3.GetStream().WriteByte((byte)'G');
+        tcpClient4.GetStream().WriteByte((byte)'G');
+        await Task.Delay(500, TestCancellationToken); // wait till channel added
 
         var session = server.SessionManager.GetSessionById(client.SessionId);
         Assert.AreEqual(fileAccessManagerOptions.SessionOptions.MaxTcpChannelCount, session?.TcpChannelCount);
@@ -595,6 +604,9 @@ public class ClientServerTest : TestBase
             await tcpClient1.ConnectAsync(TestConstants.HttpsEndPoint1);
             await tcpClient2.ConnectAsync(TestConstants.HttpsEndPoint1);
             await tcpClient3.ConnectAsync(TestConstants.HttpsEndPoint1);
+            tcpClient1.GetStream().WriteByte(1);
+            tcpClient2.GetStream().WriteByte(1);
+            tcpClient3.GetStream().WriteByte(1);
 
             await VhTestUtil.AssertEqualsWait(lastCreatedConnectionCount + 2,
                 () => client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount);
@@ -613,6 +625,8 @@ public class ClientServerTest : TestBase
         using (var tcpClient5 = new TcpClient()) {
             await tcpClient4.ConnectAsync(TestConstants.HttpsEndPoint1);
             await tcpClient5.ConnectAsync(TestConstants.HttpsEndPoint2);
+            tcpClient4.GetStream().WriteByte(1);
+            tcpClient5.GetStream().WriteByte(1);
             await VhTestUtil.AssertEqualsWait(lastCreatedConnectionCount,
                 () => client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount);
             await VhTestUtil.AssertEqualsWait(lastReusedConnectionSucceededCount + 2,

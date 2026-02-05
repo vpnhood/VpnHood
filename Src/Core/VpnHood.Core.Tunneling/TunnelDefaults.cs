@@ -16,6 +16,7 @@ public static class TunnelDefaults
     public const int TunnelPacketQueueCapacity = 200;
     public const int MaxUdpClientCount = 500;
     public const int MaxPingClientCount = 10;
+    public const int PrefetchStreamBufferSize = 1024 * 4;
 
     public static TransferBufferSize ConnectionProxyBufferSize { get; } =
         new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive

@@ -14,6 +14,7 @@ internal class DownloadService(string? downloadsPath)
 {
     private const string RandomFileName = "random";
     private const int DefaultRandomSizeMb = 50;
+    public string? DownloadPath => downloadsPath;
 
     /// <summary>
     /// Tries to serve a download file from the specified URL path.

@@ -6,6 +6,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.Device;
+using VpnHood.Test.Extensions;
 
 namespace VpnHood.Test.Tests;
 

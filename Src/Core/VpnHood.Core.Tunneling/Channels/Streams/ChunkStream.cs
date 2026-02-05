@@ -1,8 +1,8 @@
-﻿using VpnHood.Core.Toolkit.Utils;
+﻿using VpnHood.Core.Toolkit.Streams;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
-public abstract class ChunkStream : AsyncStreamDecorator
+public abstract class ChunkStream : StreamDecoratorAsync
 {
     protected bool AllowReuse = true;
 

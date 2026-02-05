@@ -1,12 +1,12 @@
 ﻿using System.Buffers;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Streams;
 
 namespace VpnHood.Core.Tunneling;
 
 public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
 {
-    private readonly ReadCacheStream _stream = new(stream, true, bufferSize);
+    private readonly ReadBufferedStream _stream = new(stream, true, bufferSize);
     private readonly Memory<byte> _minHeader = new byte[20];
 
     /// <returns>null if read nothing</returns>

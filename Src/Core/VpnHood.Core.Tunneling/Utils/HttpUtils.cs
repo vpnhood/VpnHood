@@ -8,9 +8,10 @@ namespace VpnHood.Core.Tunneling.Utils;
 public static class HttpUtils
 {
     public const string HttpRequestKey = "HTTP_REQUEST";
+    public const int MaxHeaderSize = 128 * 1024; // 128 KB
 
     public static async Task<MemoryStream> ReadHeadersAsync(Stream stream,
-        CancellationToken cancellationToken, int maxLength = 8192)
+        CancellationToken cancellationToken, int maxLength = MaxHeaderSize)
     {
         // read header
         var memStream = new MemoryStream(1024);
@@ -45,7 +46,7 @@ public static class HttpUtils
     }
 
     public static async Task<HttpResponseMessage> ReadResponse(Stream stream, CancellationToken cancellationToken,
-        int maxLength = 8192)
+        int maxLength = MaxHeaderSize)
     {
         using var headerStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
         using var reader = new StreamReader(headerStream, Encoding.UTF8);
@@ -64,7 +65,7 @@ public static class HttpUtils
 
 
     public static async Task<Dictionary<string, string>?> ParseHeadersAsync(Stream stream,
-        CancellationToken cancellationToken, int maxLength = 8192)
+        CancellationToken cancellationToken, int maxLength = MaxHeaderSize) //128 KB 
     {
         using var memStream = await ReadHeadersAsync(stream, cancellationToken, maxLength);
         if (memStream.Length == 0)
@@ -91,6 +92,11 @@ public static class HttpUtils
                 headers[headerField] = headerValue;
             }
         }
+
+        // ignore start padding
+        var paddingStart = headers.GetValueOrDefault("X-StartPadding");
+        if (int.TryParse(paddingStart, out var paddingLength) && paddingLength > 0) 
+            await stream.CopyToAsync(Stream.Null, paddingLength, cancellationToken);
 
         return headers;
     }

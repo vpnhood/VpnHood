@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.Core.Toolkit.Utils;
+namespace VpnHood.Core.Toolkit.Streams;
 
 public static class StreamExtensions
 {

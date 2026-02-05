@@ -4,7 +4,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Test;
+namespace VpnHood.Test.Extensions;
 
 public static class VpnHoodClientExtensions
 {

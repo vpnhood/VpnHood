@@ -2,6 +2,7 @@
 using VpnHood.Core.Server;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
+using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test.Tests;

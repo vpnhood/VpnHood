@@ -4,6 +4,7 @@ using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
@@ -27,10 +28,20 @@ internal class ConnectorService(
         base.Init(protocolVersion, serverSecret, tcpReuseTimeout, useWebSocket && protocolVersion >= 9);
     }
 
-    public async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
+    public Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
         CancellationToken cancellationToken)
         where T : SessionResponse
     {
+        var requestEx = new ClientRequestEx { Request = request, PostBuffer = Memory<byte>.Empty };
+        return SendRequest<T>(requestEx, cancellationToken);
+    }
+    
+
+    public async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequestEx requestEx,
+        CancellationToken cancellationToken)
+        where T : SessionResponse
+    {
+        var request = requestEx.Request;
         using var timeoutCts = new CancellationTokenSource(RequestTimeout);
         using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(
             timeoutCts.Token, cancellationToken, _cancellationTokenSource.Token);
@@ -45,13 +56,17 @@ internal class ConnectorService(
                 "Sending a request. RequestCode: {RequestCode}, RequestId: {RequestId}",
                 (RequestCode)request.RequestCode, request.RequestId);
 
-            await using var mem = new MemoryStream();
-            mem.WriteByte(1);
-            mem.WriteByte(request.RequestCode);
-            await StreamUtils.WriteObjectAsync(mem, request, requestCts.Token).Vhc();
+            // build the payload
+            var requestBuffer = StreamUtils.ObjectToJsonBuffer(request);
+            var payloadLength = 2 + requestBuffer.Length + requestEx.PostBuffer.Length;
+            var payload = new byte[payloadLength];
+            payload[0] = 1; // version
+            payload[1] = request.RequestCode; // request code
+            requestBuffer.Span.CopyTo(payload.AsSpan(2)); // request buffer
+            requestEx.PostBuffer.Span.CopyTo(payload.AsSpan(2 + requestBuffer.Length)); // post buffer
 
             // ReSharper disable once AccessToDisposedClosure
-            var ret = await SendRequest<T>(mem.ToArray(), request.RequestId, OnAttempt, requestCts.Token).Vhc();
+            var ret = await SendRequest<T>(payload, request.RequestId, OnAttempt, requestCts.Token).Vhc();
 
             // log the response
             VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.",

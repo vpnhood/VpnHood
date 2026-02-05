@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using System.Text;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
 
@@ -28,7 +29,7 @@ public class HttpStream : ChunkStream
     private bool IsServer => _host == null;
 
     public HttpStream(Stream sourceStream, string streamId, string? host, bool keepSourceOpen = false)
-        : base(new ReadCacheStream(sourceStream, keepSourceOpen, cacheSize: TunnelDefaults.StreamSmallReadCacheSize),
+        : base(new ReadBufferedStream(sourceStream, keepSourceOpen, bufferSize: TunnelDefaults.StreamSmallReadCacheSize),
             streamId)
     {
         _host = host;

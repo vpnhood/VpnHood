@@ -190,7 +190,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 Includes = options.DomainFilter.Includes
             },
             forceLogSni: options.ForceLogSni,
-            eventId: GeneralEventId.Sni);
+            eventId: GeneralEventId.Sni,
+            bufferSize: TunnelDefaults.PrefetchStreamBufferSize);
 
         // Tunnel
         _tunnel = new Tunnel(new TunnelOptions {
@@ -311,7 +312,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }, CancellationToken.None);
     }
 
-    internal async Task AddPassthruTcpStream(IConnection orgConnection, IPEndPoint hostEndPoint, byte[] initBuffer, CancellationToken cancellationToken)
+    internal async Task AddPassthruTcpStream(IConnection orgConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
         // set timeout
         using var timeoutCts = new CancellationTokenSource(ConnectorService.RequestTimeout);
@@ -326,9 +327,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try {
             // create and add the channel
             channel = new ProxyChannel(connection.ToString(), orgConnection, connection, _clientHost.StreamProxyBufferSize);
-
-            // flush initBuffer
-            await connection.Stream.WriteAsync(initBuffer, connectCts.Token);
             _proxyManager.AddChannel(channel);
         }
         catch {
@@ -696,13 +694,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
             requestResult.Connection.PreventReuse(); // lets hello request stream not to be reused
-            _connectorService.AllowTcpReuse =
+            _connectorService.AllowTcpReuse = 
                 Config.AllowTcpReuse; // after hello, we can reuse, as the other connections can use websocket
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)
                 throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
-
+            
             // sort out server IncludeIpRanges
             var serverIncludeIpRanges = helloResponse.IncludeIpRanges?.ToOrderedList();
             var serverVpnAdapterIncludeIpRanges = helloResponse.VpnAdapterIncludeIpRanges?.ToOrderedList();
@@ -804,7 +802,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             if (!helloResponse.IsTcpProxySupported && Config.UseTcpProxy)
                 VhLogger.Instance.LogWarning("TCP Proxy disabled because the server does not support it.");
-
 
             // set the session info
             SessionInfo = new SessionInfo {
@@ -996,7 +993,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
+    internal Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
+        CancellationToken cancellationToken)
+        where T : SessionResponse
+    {
+        return SendRequest<T>(new ClientRequestEx { Request = request}, cancellationToken);
+    }
+
+    internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequestEx request,
         CancellationToken cancellationToken)
         where T : SessionResponse
     {

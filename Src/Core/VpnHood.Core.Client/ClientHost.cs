@@ -8,6 +8,7 @@ using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -240,9 +241,7 @@ internal class ClientHost(
 
             // Filter by SNI
             var filterResult = await domainFilterService
-                .Process(orgConnection.Stream, natItem.DestinationAddress, cancellationToken)
-                .Vhc();
-
+                .Process(orgConnection.Stream, natItem.DestinationAddress, cancellationToken).Vhc();
             if (filterResult.Action == DomainFilterAction.Block) {
                 VhLogger.Instance.LogInformation(GeneralEventId.Sni,
                     "Domain has been blocked. Domain: {Domain}",
@@ -251,20 +250,32 @@ internal class ClientHost(
                 throw new Exception($"Domain has been blocked. Domain: {filterResult.DomainName}");
             }
 
+            // update connection stream with ReadBufferedStream to pre-append the read data
+            if (filterResult.ReadData.Length > 0)
+                orgConnection = new ConnectionDecorator(orgConnection,
+                    new ReadBufferedStream(orgConnection.Stream, leaveOpen: false, filterResult.ReadData.Span) {
+                        AllowBufferRefill = false
+                    });
+
             // Filter by IP
             var isInIpRange = syncCustomData?.IsInIpRange ??
                               vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
             if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
-                await vpnHoodClient.AddPassthruTcpStream(
-                        orgConnection,
-                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), 
-                        filterResult.ReadData, cancellationToken)
+                await vpnHoodClient
+                    .AddPassthruTcpStream(orgConnection,
+                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+                        cancellationToken)
                     .Vhc();
 
                 _stat.TcpPassthruCount++;
                 return;
             }
+
+            //handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
+            var memory = new Memory<byte>(new byte[TunnelDefaults.PrefetchStreamBufferSize]);
+            var read = await orgConnection.Stream.ReadAsync(memory, cancellationToken);
+            var initContents = memory[..read];
 
             // Create the Request
             var request = new StreamProxyChannelRequest {
@@ -275,15 +286,13 @@ internal class ClientHost(
             };
 
             // read the response
-            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(request, cancellationToken).Vhc();
+            var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
+            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();
             var proxyConnection = requestResult.Connection;
 
             // create a ProxyChannel
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
-
-            // flush initBuffer
-            await proxyConnection.Stream.WriteAsync(filterResult.ReadData, cancellationToken);
 
             // add stream proxy
             channel = new ProxyChannel(proxyConnection.ToString()!, orgConnection, proxyConnection, streamProxyBufferSize);

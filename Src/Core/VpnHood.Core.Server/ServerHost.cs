@@ -11,6 +11,7 @@ using VpnHood.Core.Server.Utils;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
@@ -34,7 +35,7 @@ private readonly Job _cleanupConnectionsJob;
 private readonly AsyncLock _configureLock = new();
 private bool _disposed;
 
-    public const int MaxProtocolVersion = 11;
+    public const int MaxProtocolVersion = 12;
     public const int MinProtocolVersion = 8;
     public int MinClientProtocolVersion { get; set; } = 8;
     public bool IsIpV6Supported { get; set; }
@@ -44,6 +45,7 @@ private bool _disposed;
     public CertificateHostName[] Certificates { get; private set; } = [];
     public IPEndPoint[] TcpEndPoints => _tcpListeners.Select(x => (IPEndPoint)x.LocalEndpoint).ToArray();
     public bool Started => !_disposed && !_cancellationTokenSource.IsCancellationRequested;
+    public string? DownloadPath => _downloadService.DownloadPath;
 
     public ServerHost(SessionManager sessionManager, string? downloadsPath)
     {
@@ -253,8 +255,7 @@ private bool _disposed;
             var httpMethod = httpRequestLine.Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
-            var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ??
-                           connection.RemoteEndPoint.Address;
+            var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ?? connection.RemoteEndPoint.Address;
 
             // Try to serve download file if requested
             if (await _downloadService.TryServeDownloadAsync(connection, httpRequestLine, cancellationToken).Vhc())

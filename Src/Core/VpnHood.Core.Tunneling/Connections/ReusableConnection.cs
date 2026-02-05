@@ -65,18 +65,18 @@ public class ReusableConnection : ConnectionDecorator
     {
         var newStream = await chunkStream.CreateReuse().Vhc();
         lock (_reuseLock) {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            ObjectDisposedException.ThrowIf(Disposed, this);
 
             // we don't call SuppressFlow on debug to allow MsTest shows console output in nested task
             using IDisposable? suppressFlow = IsDebug ? null : ExecutionContext.SuppressFlow();
-            var connectionDecorator = new ConnectionDecorator(_innerConnection, newStream);
+            var connectionDecorator = new ConnectionDecorator(InnerConnection, newStream);
             var reusableConnection = new ReusableConnection(connectionDecorator, reuseConnectionCallback);
             Task.Run(() => reuseConnectionCallback(reusableConnection))
                 .ContinueWith(task => VhLogger.Instance.LogError(GeneralEventId.Stream, task.Exception,
                         "Reuse callback failed. ConnectionId: {ConnectionId}", ConnectionId),
                     TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
             
-            _disposed = true;
+            Disposed = true;
         }
     }
 
@@ -84,7 +84,7 @@ public class ReusableConnection : ConnectionDecorator
     {
         // prevent dispose when reuse is almost done. the owner is going to change soon 
         lock (_reuseLock) {
-            if (_disposed)
+            if (Disposed)
                 return;
 
             // If reuse is allowed, and we're not currently reusing, start reuse.
@@ -106,7 +106,7 @@ public class ReusableConnection : ConnectionDecorator
 
             // close stream and let cancel reuse if it is in progress
             base.Dispose();
-            _disposed = true;
+            Disposed = true;
         }
     }
 

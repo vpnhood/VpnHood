@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.DomainFiltering.Tls;
+﻿namespace VpnHood.Core.DomainFiltering.SniExtractors.Tls;
 
 public class TlsSniData
 {

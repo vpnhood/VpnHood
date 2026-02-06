@@ -1,10 +1,13 @@
-﻿using System.Text;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.DomainFiltering.Tls;
+namespace VpnHood.Core.DomainFiltering.SniExtractors.Tls;
 
+/// <summary>
+/// Stream-based TLS SNI extractor for TCP connections.
+/// Reads from a stream and extracts SNI from TLS ClientHello.
+/// </summary>
 public static class TlsSniExtractor
 {
     public static async Task<TlsSniData> ExtractSni(Stream tcpStream, EventId eventId, int streamHeaderBufferSize,
@@ -24,90 +27,11 @@ public static class TlsSniExtractor
     public static string? ExtractSni(ReadOnlySpan<byte> payloadData, EventId eventId)
     {
         try {
-            return GetSniFromStreamInternal(payloadData);
+            return TlsClientHelloParser.ExtractSni(payloadData, hasRecordHeader: true);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(eventId, ex, "Could not extract sni.");
             return null;
         }
-    }
-
-    public static string? GetSniFromStreamInternal(ReadOnlySpan<byte> payloadData)
-    {
-        if (payloadData.Length == 0)
-            return null;
-
-        // Check if it's a TLS ClientHello (0x16 is Handshake, 0x01 is ClientHello)
-        if (payloadData[0] != 0x16 || payloadData[5] != 0x01)
-            return null;
-
-        var currentPos = 43; // Position of SessionID length
-        if (currentPos >= payloadData.Length)
-            return null;
-
-        var sessionIdLength = payloadData[currentPos];
-        currentPos += 1 + sessionIdLength; // Move past the SessionID
-
-        if (currentPos + 2 > payloadData.Length)
-            return null; // Ensure there's enough data for cipher suites length
-
-        var cipherSuitesLength = (payloadData[currentPos] << 8) | payloadData[currentPos + 1];
-        currentPos += 2 + cipherSuitesLength; // Move past the Cipher Suites
-
-        if (currentPos + 1 > payloadData.Length)
-            return null; // Ensure there's enough data for compression methods length
-
-        var compressionMethodsLength = payloadData[currentPos];
-        currentPos += 1 + compressionMethodsLength; // Move past the Compression Methods
-
-        if (currentPos + 2 > payloadData.Length)
-            return null; // Extensions start position is out of bounds
-
-        var extensionsLength = (payloadData[currentPos] << 8) | payloadData[currentPos + 1];
-        currentPos += 2; // Move past the extensions length
-
-        // Ensure the extensions length does not exceed the remaining payload length
-        if (currentPos + extensionsLength > payloadData.Length)
-            extensionsLength =
-                payloadData.Length -
-                currentPos; //Extensions length exceeds payload length. Adjusting to payload boundary
-
-        while (currentPos < payloadData.Length && currentPos < extensionsLength + currentPos) {
-            if (currentPos + 4 > payloadData.Length)
-                return null; // Extension header is out of bounds.
-
-            var extensionType = (payloadData[currentPos] << 8) | payloadData[currentPos + 1];
-            var extensionLength = (payloadData[currentPos + 2] << 8) | payloadData[currentPos + 3];
-            currentPos += 4; // Move past the extension header
-
-            if (currentPos + extensionLength > payloadData.Length)
-                return null; // Extension length is out of bounds.
-
-            if (extensionType == 0x0000) // SNI extension type
-            {
-                if (currentPos + 2 > payloadData.Length)
-                    return null; // Server name list length is out of bounds
-
-                var serverNameListLength = (payloadData[currentPos] << 8) | payloadData[currentPos + 1];
-                currentPos += 2; // Move past the server name list length
-
-                if (currentPos + serverNameListLength > payloadData.Length)
-                    return null; // Server name list length is out of bounds
-
-                // var serverNameType = payloadData[currentPos];
-                var serverNameLength = (payloadData[currentPos + 1] << 8) | payloadData[currentPos + 2];
-                currentPos += 3; // Move past the server name type and length
-
-                if (currentPos + serverNameLength > payloadData.Length)
-                    return null; // Server name length is out of bounds
-
-                var sni = Encoding.ASCII.GetString(payloadData.Slice(currentPos, serverNameLength));
-                return sni;
-            }
-
-            currentPos += extensionLength; // Move to the next extension
-        }
-
-        return null;
     }
 }

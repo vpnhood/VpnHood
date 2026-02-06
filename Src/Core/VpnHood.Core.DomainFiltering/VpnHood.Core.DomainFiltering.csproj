@@ -38,8 +38,4 @@
 		<ProjectReference Include="..\VpnHood.Core.Packets\VpnHood.Core.Packets.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="SniExtractors\Tcp\" />
-	</ItemGroup>
-
 </Project>

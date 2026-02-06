@@ -30,6 +30,11 @@ public readonly struct PacketFilterResult
     /// </summary>
     public bool NeedMore { get; }
 
+    /// <summary>
+    /// True if the packet should be passed through without domain filtering.
+    /// </summary>
+    public bool IsPassthrough { get; }
+
     public PacketFilterResult(DomainFilterAction action, string? domainName, IReadOnlyList<IpPacket> packets)
     {
         Action = action;
@@ -37,9 +42,20 @@ public readonly struct PacketFilterResult
         Packets = packets;
     }
 
-    private PacketFilterResult(bool needMore)
+    public PacketFilterResult(bool needMore)
     {
         NeedMore = needMore;
     }
-    internal PacketFilterResult CreateNeedMore() => new PacketFilterResult(true);
+
+    private PacketFilterResult(IpPacket packet, bool isPassthrough)
+    {
+        IsPassthrough = isPassthrough;
+        Packets = [packet];
+    }
+    
+    public static PacketFilterResult CreateNeedMore() => new PacketFilterResult(true);
+    
+    public static PacketFilterResult Passthrough(IpPacket packet) => new PacketFilterResult(packet, true);
+    
+    public static PacketFilterResult Buffered() => new PacketFilterResult(true);
 }

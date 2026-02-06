@@ -70,7 +70,8 @@ public class PacketDomainFilter(DomainFilter domainFilter, bool forceLogSni, Eve
         if (string.IsNullOrEmpty(domain))
             return DomainFilterAction.None;
 
-        return DomainFilterService.ProcessInternal(domain, domainFilter);
+        var resolver = new DomainFilterResolver(domainFilter);
+        return resolver.Process(domain);
     }
 
     private void LogSni(string domain, System.Net.IPAddress destinationAddress, string protocol)

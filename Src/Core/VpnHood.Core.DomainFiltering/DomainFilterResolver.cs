@@ -2,7 +2,7 @@
 
 public class DomainFilterResolver(DomainFilter domainFilter)
 {
-    private DomainFilterAction Process(string? domain)
+    public DomainFilterAction Process(string? domain)
     {
         var topDomains = ExtractTopDomains(domain);
         foreach (var topDomain in topDomains) {

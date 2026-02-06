@@ -454,7 +454,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
-    private void Process(IpPacket ipPacket)
+    private void Process2(IpPacket ipPacket)
     {
         // process domain filters
         // _packetDomainFilter.Process(ipPacket);

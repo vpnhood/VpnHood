@@ -65,31 +65,20 @@ public class QuicDomainFilter(DomainFilter domainFilter, bool forceLogSni) : IPa
         var sniState = existingState?.SniState;
         var result = QuicSniExtractorStateful.TryExtractSniFromUdpPayload(udpPayload, sniState);
 
-        return result.Outcome switch {
-            QuicSniOutcome.NotInitial => HandleNotInitial(flowKey, ipPacket, existingState),
-            QuicSniOutcome.Found => HandleSniFound(flowKey, ipPacket, existingState, result.Sni!),
-            QuicSniOutcome.NeedMore => HandleNeedMore(flowKey, ipPacket, existingState, result.SniState!),
-            QuicSniOutcome.GiveUp => HandleGiveUp(flowKey, ipPacket, existingState),
-            _ => PacketFilterResult.Passthrough(ipPacket)
-        };
-    }
+        if (result.DomainName != null)
+            return HandleSniFound(flowKey, ipPacket, existingState, result.DomainName);
 
-    private PacketFilterResult HandleNotInitial(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState)
-    {
-        // Not a QUIC Initial packet - if we have buffered packets, release them all
-        if (existingState != null) {
-            var packets = existingState.BufferedPackets;
-            packets.Add(ipPacket);
-            _flows.TryRemove(flowKey, out _);
-            return new PacketFilterResult(DomainFilterAction.None, null, packets);
-        }
+        if (result.NeedMore && result.State != null)
+            return HandleNeedMore(flowKey, ipPacket, existingState, result.State);
 
-        return PacketFilterResult.Passthrough(ipPacket);
+        // Not initial or give up: release buffered if any, otherwise passthrough
+        return HandleGiveUp(flowKey, ipPacket, existingState);
     }
 
     private PacketFilterResult HandleSniFound(FlowKey flowKey, IpPacket ipPacket, QuicFlowState? existingState, string sni)
     {
-        var action = DomainFilterService.ProcessInternal(sni, domainFilter);
+        var resolver = new DomainFilterResolver(domainFilter);
+        var action = resolver.Process(sni);
 
         // Collect all buffered packets plus current one
         var packets = existingState?.BufferedPackets ?? [];

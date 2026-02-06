@@ -6,6 +6,7 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
+using VpnHood.Core.DomainFiltering.SniExtractors;
 
 namespace VpnHood.Core.DomainFiltering.SniExtractors.Quic;
 
@@ -31,7 +32,7 @@ public static class QuicSniExtractorStateful
     /// Feed a single UDP payload (datagram body, no UDP/IP headers).
     /// Pass back the returned State on the next packet for this flow if Outcome==NeedMore.
     /// </summary>
-    public static QuicSniResult TryExtractSniFromUdpPayload(
+    public static QuicSniResultNew TryExtractSniFromUdpPayload(
         ReadOnlySpan<byte> udpPayload,
         QuicSniState? state = null,
         long nowTicks = 0)
@@ -41,7 +42,7 @@ public static class QuicSniExtractorStateful
         // bootstrap state from first Initial we see
         if (state == null) {
             if (!LooksLikeInitial(udpPayload, out var isV2, out var dcid))
-                return new QuicSniResult(QuicSniOutcome.NotInitial, null, null);
+                return new QuicSniResultNew { DomainName = null, NeedMore = false, State = null };
 
             state = new QuicSniState {
                 IsV2 = isV2,
@@ -55,7 +56,7 @@ public static class QuicSniExtractorStateful
 
         // budget / timeout
         if (state.PacketBudget <= 0 || nowTicks > state.DeadlineTicks)
-            return new QuicSniResult(QuicSniOutcome.GiveUp, null, null);
+            return new QuicSniResultNew { DomainName = null, NeedMore = false, State = null };
 
         // walk coalesced QUIC packets
         var off = 0;
@@ -103,14 +104,14 @@ public static class QuicSniExtractorStateful
         if (assembled.Length != 0) {
             var sni = TryParseSniFromClientHelloPartial(assembled);
             if (sni != null)
-                return new QuicSniResult(QuicSniOutcome.Found, sni, null);
+                return new QuicSniResultNew { DomainName = sni, NeedMore = false, State = null };
         }
 
         // still need more?
         if (state.PacketBudget <= 0 || nowTicks > state.DeadlineTicks)
-            return new QuicSniResult(QuicSniOutcome.GiveUp, null, null);
+            return new QuicSniResultNew { DomainName = null, NeedMore = false, State = null };
 
-        return new QuicSniResult(QuicSniOutcome.NeedMore, null, state);
+        return new QuicSniResultNew { DomainName = null, NeedMore = true, State = state };
     }
 
     // ---------- Fast checks & header parsing ----------

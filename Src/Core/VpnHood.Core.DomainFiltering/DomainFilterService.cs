@@ -32,10 +32,11 @@ public class DomainFilterService(DomainFilter domainFilter, bool forceLogSni, Ev
             VhLogger.FormatHostName(sniData.Sni), VhLogger.Format(remoteAddress));
 
         // no SNI
+        var resolver = new DomainFilterResolver(domainFilter);
         var res = new DomainFilterResult {
             DomainName = sniData.Sni,
             ReadData = sniData.ReadData,
-            Action = Process(sniData.Sni)
+            Action = resolver.Process(sniData.Sni)
         };
 
         return res;

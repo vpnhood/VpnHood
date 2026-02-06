@@ -11,11 +11,13 @@ namespace VpnHood.Core.DomainFiltering;
 
 public class DomainFilterService
 {
+    private static readonly TimeSpan QuicFlowTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan TcpFlowTimeout = TimeSpan.FromSeconds(3);
+
     private readonly DomainFilterResolver _domainFilterResolver;
     private readonly TcpSniService _tcpSniService;
     private readonly QuicSniService _quicSniService;
     private readonly DomainFilter _domainFilter;
-    private readonly bool _forceLogSni;
     private readonly EventId _sniEventId;
     private readonly int _bufferSize;
 
@@ -24,17 +26,18 @@ public class DomainFilterService
         int bufferSize)
     {
         _domainFilter = domainFilter;
-        _forceLogSni = forceLogSni;
+        ForceLogSni = forceLogSni;
         _sniEventId = sniEventId;
         _bufferSize = bufferSize;
         _domainFilterResolver = new DomainFilterResolver(domainFilter);
-        _quicSniService = new QuicSniService(_domainFilterResolver, sniEventId: sniEventId);
-        _tcpSniService = new TcpSniService(_domainFilterResolver, sniEventId: sniEventId);
+        _quicSniService = new QuicSniService(_domainFilterResolver, sniEventId: sniEventId, connectionTimeout: QuicFlowTimeout);
+        _tcpSniService = new TcpSniService(_domainFilterResolver, sniEventId: sniEventId, connectionTimeout: TcpFlowTimeout);
     }
 
-
+    public bool ForceLogSni { get; set; }
+    
     public bool IsEnabled =>
-        _forceLogSni ||
+        ForceLogSni ||
         _domainFilter.Includes.Length > 0 ||
         _domainFilter.Excludes.Length > 0 ||
         _domainFilter.Blocks.Length > 0;
@@ -86,5 +89,4 @@ public class DomainFilterService
 
         return res;
     }
-
 }

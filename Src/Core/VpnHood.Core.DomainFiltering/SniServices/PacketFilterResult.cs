@@ -1,6 +1,6 @@
 using VpnHood.Core.Packets;
 
-namespace VpnHood.Core.DomainFiltering;
+namespace VpnHood.Core.DomainFiltering.SniServices;
 
 /// <summary>
 /// Result of packet domain filtering.

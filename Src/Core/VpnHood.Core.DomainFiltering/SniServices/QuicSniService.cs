@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.SniExtractors;
 using VpnHood.Core.DomainFiltering.SniExtractors.Quic;
@@ -18,6 +17,7 @@ public class QuicSniService(
     : PacketSniService(domainFilterResolver, connectionTimeout, sniEventId)
 {
     protected override string ProtocolName => "QUIC";
+
 
     protected override bool TryValidateAndExtractPayload(
         IpPacket ipPacket,

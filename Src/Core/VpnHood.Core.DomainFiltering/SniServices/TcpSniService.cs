@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.SniExtractors;
 using VpnHood.Core.DomainFiltering.SniExtractors.Tcp;

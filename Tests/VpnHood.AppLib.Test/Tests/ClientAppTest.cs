@@ -174,11 +174,11 @@ public class ClientAppTest : TestAppBase
     {
         // NameServer
         if (nameserver != null) {
-            var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
-            var oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
+            var oldStat = app.GetSessionStatus();
             await testHelper.Test_UdpByDNS(nameserver);
-            Assert.AreNotEqual(oldSessionTraffic, app.GetSessionStatus().SessionTraffic);
-            Assert.AreEqual(oldSplitTraffic, app.GetSessionStatus().SessionSplitTraffic);
+            var newStat = app.GetSessionStatus();
+            Assert.AreNotEqual(oldStat.SessionTraffic, newStat.SessionTraffic);
+            Assert.AreEqual(oldStat.SessionSplitTraffic, newStat.SessionSplitTraffic);
         }
 
         // Http
@@ -198,25 +198,26 @@ public class ClientAppTest : TestAppBase
     {
         // NameServer
         if (nameserver != null) {
-            var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
-            var oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
+            var oldStat = app.GetSessionStatus();
             await testHelper.Test_UdpByDNS(nameserver);
-            Assert.AreEqual(oldSessionTraffic, app.GetSessionStatus().SessionTraffic,
+            var newStat = app.GetSessionStatus();
+
+            Assert.AreEqual(oldStat.SessionTraffic, newStat.SessionTraffic,
                 $"Udp to {nameserver} should go to tunnel.");
 
-            Assert.AreNotEqual(oldSplitTraffic, app.GetSessionStatus().SessionSplitTraffic,
+            Assert.AreNotEqual(oldStat.SessionSplitTraffic, newStat.SessionSplitTraffic,
                 $"Udp to {nameserver} should not be split.");
         }
 
         // Http
         if (url != null) {
-            var oldSessionTraffic = app.GetSessionStatus().SessionTraffic;
-            var oldSplitTraffic = app.GetSessionStatus().SessionSplitTraffic;
+            var oldStat = app.GetSessionStatus();
             await testHelper.Test_Https(url);
-            Assert.AreEqual(oldSessionTraffic.Received, app.GetSessionStatus().SessionTraffic.Received, delta: receiveDelta);
-            Assert.AreEqual(oldSessionTraffic.Sent, app.GetSessionStatus().SessionTraffic.Sent, delta: 50);
-            Assert.AreNotEqual(oldSplitTraffic.Received, app.GetSessionStatus().SessionSplitTraffic.Received, delta: receiveDelta);
-            Assert.AreNotEqual(oldSplitTraffic.Sent, app.GetSessionStatus().SessionSplitTraffic.Sent, delta: 50);
+            var newStat = app.GetSessionStatus();
+            Assert.AreEqual(oldStat.SessionTraffic.Received, newStat.SessionTraffic.Received, delta: receiveDelta);
+            Assert.AreEqual(oldStat.SessionTraffic.Sent, newStat.SessionTraffic.Sent, delta: 50);
+            Assert.AreNotEqual(oldStat.SessionSplitTraffic.Received, newStat.SessionSplitTraffic.Received, delta: receiveDelta);
+            Assert.AreNotEqual(oldStat.SessionSplitTraffic.Sent, newStat.SessionSplitTraffic.Sent, delta: 50);
         }
     }
 
@@ -434,18 +435,18 @@ public class ClientAppTest : TestAppBase
         await app.WaitForState(AppConnectionState.Connected);
 
         // text include
-        var oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
-        var oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
+        var oldStat = app.GetSessionStatus();
         await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri1);
-        Assert.AreEqual(oldTcpTunnelledCount, app.GetSessionStatus().TcpTunnelledCount);
-        Assert.AreEqual(oldTcpPassthruCount + 1, app.GetSessionStatus().TcpPassthruCount);
+        var newStat = app.GetSessionStatus();
+        Assert.AreEqual(oldStat.TcpTunnelledCount, newStat.TcpTunnelledCount);
+        Assert.AreEqual(oldStat.TcpPassthruCount + 1, newStat.TcpPassthruCount);
 
         // text exclude
-        oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
-        oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
+        oldStat = app.GetSessionStatus();
         await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri2);
-        Assert.AreEqual(oldTcpTunnelledCount + 1, app.GetSessionStatus().TcpTunnelledCount);
-        Assert.AreEqual(oldTcpPassthruCount, app.GetSessionStatus().TcpPassthruCount);
+        newStat = app.GetSessionStatus();
+        Assert.AreEqual(oldStat.TcpTunnelledCount + 1, newStat.TcpTunnelledCount);
+        Assert.AreEqual(oldStat.TcpPassthruCount, newStat.TcpPassthruCount);
     }
 
     [TestMethod]
@@ -469,18 +470,18 @@ public class ClientAppTest : TestAppBase
         await app.WaitForState(AppConnectionState.Connected);
 
         // text include
-        var oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
-        var oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
+        var oldStat = app.GetSessionStatus();
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
-        Assert.AreEqual(oldTcpTunnelledCount + 1, app.GetSessionStatus().TcpTunnelledCount);
-        Assert.AreEqual(oldTcpPassthruCount, app.GetSessionStatus().TcpPassthruCount);
+        var newStat = app.GetSessionStatus();
+        Assert.AreEqual(oldStat.TcpTunnelledCount + 1, newStat.TcpTunnelledCount);
+        Assert.AreEqual(oldStat.TcpPassthruCount, newStat.TcpPassthruCount);
 
         // text exclude
-        oldTcpTunnelledCount = app.GetSessionStatus().TcpTunnelledCount;
-        oldTcpPassthruCount = app.GetSessionStatus().TcpPassthruCount;
+        oldStat = app.GetSessionStatus();
         await TestHelper.Test_Https(uri: TestConstants.HttpsExternalUri1);
-        Assert.AreEqual(oldTcpTunnelledCount, app.GetSessionStatus().TcpTunnelledCount);
-        Assert.AreEqual(oldTcpPassthruCount + 1, app.GetSessionStatus().TcpPassthruCount);
+        newStat = app.GetSessionStatus();
+        Assert.AreEqual(oldStat.TcpTunnelledCount, newStat.TcpTunnelledCount);
+        Assert.AreEqual(oldStat.TcpPassthruCount + 1, newStat.TcpPassthruCount);
     }
 
     [TestMethod]

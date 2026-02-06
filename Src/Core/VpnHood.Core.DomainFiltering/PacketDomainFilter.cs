@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.DomainFiltering.SniExtractors.Quic;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 
@@ -7,23 +6,26 @@ namespace VpnHood.Core.DomainFiltering;
 
 /// <summary>
 /// Composite packet domain filter that handles both QUIC (UDP) and TCP protocols.
-/// Delegates to protocol-specific filters and provides unified result handling.
+/// Uses PacketSniService for QUIC/UDP and provides unified result handling.
 /// </summary>
-public class PacketDomainFilter(DomainFilter domainFilter, bool forceLogSni, EventId eventId)
-    : IDisposable
+public class PacketDomainFilter : IDisposable
 {
-    private readonly QuicDomainFilter _quicFilter = new(domainFilter, forceLogSni);
+    private readonly DomainFilter _domainFilter;
+    private readonly EventId _eventId;
+    private readonly PacketSniService _packetSniService;
     private bool _disposed;
+
+    public PacketDomainFilter(DomainFilter domainFilter, bool forceLogSni, EventId eventId, TimeSpan? connectionTimeout = null)
+    {
+        _domainFilter = domainFilter;
+        _eventId = eventId;
+        _packetSniService = new PacketSniService(domainFilter, connectionTimeout ?? TimeSpan.FromMilliseconds(500), forceLogSni);
+    }
 
     /// <summary>
     /// Whether domain filtering is enabled for any protocol.
     /// </summary>
-    public bool IsEnabled {
-        get => field ||
-               domainFilter.Includes.Length > 0 ||
-               domainFilter.Excludes.Length > 0 ||
-               domainFilter.Blocks.Length > 0;
-    } = forceLogSni;
+    public bool IsEnabled => _packetSniService.IsEnabled;
 
     /// <summary>
     /// Process any IP packet for domain filtering.
@@ -44,9 +46,9 @@ public class PacketDomainFilter(DomainFilter domainFilter, bool forceLogSni, Eve
         if (!IsEnabled)
             return PacketFilterResult.Passthrough(ipPacket);
 
-        // Try QUIC filter first (UDP:443)
+        // Process QUIC (UDP:443) via PacketSniService
         if (ipPacket.Protocol == IpProtocol.Udp) {
-            var result = _quicFilter.Process(ipPacket);
+            var result = _packetSniService.ProcessPacket(ipPacket);
 
             // Log SNI if found
             if (result is { IsPassthrough: false, NeedMore: false, DomainName: not null }) {
@@ -70,13 +72,13 @@ public class PacketDomainFilter(DomainFilter domainFilter, bool forceLogSni, Eve
         if (string.IsNullOrEmpty(domain))
             return DomainFilterAction.None;
 
-        var resolver = new DomainFilterResolver(domainFilter);
+        var resolver = new DomainFilterResolver(_domainFilter);
         return resolver.Process(domain);
     }
 
     private void LogSni(string domain, System.Net.IPAddress destinationAddress, string protocol)
     {
-        VhLogger.Instance.LogInformation(eventId,
+        VhLogger.Instance.LogInformation(_eventId,
             "{Protocol} Domain: {Domain}, DestIp: {IP}",
             protocol, VhLogger.FormatHostName(domain), VhLogger.Format(destinationAddress));
     }
@@ -87,6 +89,6 @@ public class PacketDomainFilter(DomainFilter domainFilter, bool forceLogSni, Eve
             return;
 
         _disposed = true;
-        _quicFilter.Dispose();
+        _packetSniService.Dispose();
     }
 }

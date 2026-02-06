@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.DomainFiltering.SniExtractors.Quic;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 
@@ -48,7 +49,7 @@ public class PacketDomainFilter(DomainFilter domainFilter, bool forceLogSni, Eve
             var result = _quicFilter.Process(ipPacket);
 
             // Log SNI if found
-            if (result is { IsPassthrough: false, IsBuffered: false, DomainName: not null }) {
+            if (result is { IsPassthrough: false, NeedMore: false, DomainName: not null }) {
                 LogSni(result.DomainName, ipPacket.DestinationAddress, "QUIC");
             }
 

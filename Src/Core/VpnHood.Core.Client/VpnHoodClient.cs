@@ -454,6 +454,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
+    private void Process(IpPacket ipPacket)
+    {
+        // process domain filters
+        // _packetDomainFilter.Process(ipPacket);
+        // return if need more
+        // set excluded or included
+        // flush held packets does not need more
+
+    }
+
     // WARNING: Performance Critical! Mango Section
     private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
@@ -495,7 +505,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             return;
         }
 
-        // tcp already check for InInRange and IpV6 and Proxy
+        // tcp already check for InIpRange and IpV6 and Proxy
         if (ipPacket.Protocol == IpProtocol.Tcp) {
             var tcpPacket = ipPacket.ExtractTcp();
             _isDnsOverTlsDetected |= tcpPacket.DestinationPort == 853;

@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.DomainFiltering.Quic;
+﻿namespace VpnHood.Core.DomainFiltering.SniExtractors.Quic;
 
 // ReSharper disable NotAccessedPositionalProperty.Global
 public readonly record struct QuicSniResult(

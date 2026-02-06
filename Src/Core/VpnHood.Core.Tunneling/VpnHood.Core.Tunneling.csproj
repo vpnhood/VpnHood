@@ -28,6 +28,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="ClientStreams\**" />
+	  <EmbeddedResource Remove="ClientStreams\**" />
+	  <None Remove="ClientStreams\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>

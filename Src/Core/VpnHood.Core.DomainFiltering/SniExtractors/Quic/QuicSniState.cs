@@ -1,9 +1,9 @@
-﻿namespace VpnHood.Core.DomainFiltering.Quic;
+﻿namespace VpnHood.Core.DomainFiltering.SniExtractors.Quic;
 
 // ReSharper disable IdentifierTypo
 // ReSharper disable GrammarMistakeInComment
 // ReSharper disable FieldCanBeMadeReadOnly.Global
-public sealed class QuicSniState
+internal sealed class QuicSniState
 {
     // Secrets
     public bool IsV2;

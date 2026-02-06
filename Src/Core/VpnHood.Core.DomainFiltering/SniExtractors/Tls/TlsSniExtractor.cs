@@ -3,17 +3,11 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.DomainFiltering;
+namespace VpnHood.Core.DomainFiltering.Tls;
 
-public static class SniExtractor
+public static class TlsSniExtractor
 {
-    public class SniData
-    {
-        public required string? Sni { get; init; }
-        public required Memory<byte> ReadData { get; init; }
-    }
-
-    public static async Task<SniData> ExtractSni(Stream tcpStream, EventId eventId, int streamHeaderBufferSize,
+    public static async Task<TlsSniData> ExtractSni(Stream tcpStream, EventId eventId, int streamHeaderBufferSize,
         CancellationToken cancellationToken)
     {
         // extract SNI
@@ -21,7 +15,7 @@ public static class SniExtractor
         var bufCount = await tcpStream.ReadAsync(initBuffer, cancellationToken).Vhc();
         var readData = initBuffer[..bufCount];
 
-        return new SniData {
+        return new TlsSniData {
             Sni = ExtractSni(readData.Span, eventId),
             ReadData = readData
         };

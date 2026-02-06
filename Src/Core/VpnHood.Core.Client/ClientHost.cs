@@ -100,7 +100,7 @@ internal class ClientHost(
                 var tcpClient = await tcpListener.AcceptTcpClientAsync().Vhc();
                 VhUtils.ConfigTcpClient(tcpClient, null, null);
                 var tcpConnection = new TcpConnection(tcpClient, isServer: false, connectionName: "app");
-                _ = ProcessClient(tcpConnection, _cancellationTokenSource.Token);
+                _ = ProcessConnection(tcpConnection, _cancellationTokenSource.Token);
             }
         }
         catch (Exception ex) {
@@ -204,7 +204,7 @@ internal class ClientHost(
             throw new Exception("IPv6 is not supported by the client.");
     }
 
-    private async Task ProcessClient(IConnection orgConnection, CancellationToken cancellationToken)
+    private async Task ProcessConnection(IConnection orgConnection, CancellationToken cancellationToken)
     {
         if (orgConnection is null) throw new ArgumentNullException(nameof(orgConnection));
         ConnectorRequestResult<SessionResponse>? requestResult = null;

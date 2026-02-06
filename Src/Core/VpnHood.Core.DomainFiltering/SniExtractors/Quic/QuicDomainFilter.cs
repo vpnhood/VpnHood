@@ -1,11 +1,10 @@
 using System.Collections.Concurrent;
 using System.Net;
-using VpnHood.Core.DomainFiltering.Quic;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.DomainFiltering;
+namespace VpnHood.Core.DomainFiltering.SniExtractors.Quic;
 
 /// <summary>
 /// Handles QUIC SNI extraction for domain filtering.

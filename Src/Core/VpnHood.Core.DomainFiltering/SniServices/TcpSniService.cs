@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.SniExtractors;
 using VpnHood.Core.DomainFiltering.SniExtractors.Tcp;
@@ -10,17 +11,13 @@ namespace VpnHood.Core.DomainFiltering.SniServices;
 /// <summary>
 /// SNI extraction service for TCP (TLS on port 443) traffic.
 /// </summary>
-public class TcpSniService : PacketSniService
+public class TcpSniService(
+    DomainFilterResolver domainFilterResolver,
+    TimeSpan connectionTimeout,
+    EventId? sniEventId)
+    : PacketSniService(domainFilterResolver, connectionTimeout, sniEventId)
 {
     protected override string ProtocolName => "TLS";
-
-    public TcpSniService(
-        DomainFilterResolver domainFilterResolver,
-        TimeSpan connectionTimeout,
-        EventId? sniEventId)
-        : base(domainFilterResolver, connectionTimeout, sniEventId)
-    {
-    }
 
     protected override bool TryValidateAndExtractPayload(
         IpPacket ipPacket,

@@ -2,6 +2,6 @@
 
 public class TlsSniData
 {
-    public required string? Sni { get; init; }
+    public required string? DomainName { get; init; }
     public required Memory<byte> ReadData { get; init; }
 }

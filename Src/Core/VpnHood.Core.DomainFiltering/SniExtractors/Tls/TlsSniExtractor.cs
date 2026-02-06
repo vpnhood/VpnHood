@@ -19,7 +19,7 @@ public static class TlsSniExtractor
         var readData = initBuffer[..bufCount];
 
         return new TlsSniData {
-            Sni = ExtractSni(readData.Span, eventId),
+            DomainName = ExtractSni(readData.Span, eventId),
             ReadData = readData
         };
     }

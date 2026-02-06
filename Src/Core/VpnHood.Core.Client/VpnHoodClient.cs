@@ -190,8 +190,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 Includes = options.DomainFilter.Includes
             },
             forceLogSni: options.ForceLogSni,
-            eventId: GeneralEventId.Sni,
-            bufferSize: TunnelDefaults.PrefetchStreamBufferSize);
+            sniEventId: GeneralEventId.Sni,
+            tlsBufferSize: TunnelDefaults.PrefetchStreamBufferSize);
 
         // Tunnel
         _tunnel = new Tunnel(new TunnelOptions {

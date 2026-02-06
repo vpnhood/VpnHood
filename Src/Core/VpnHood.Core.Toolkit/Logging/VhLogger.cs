@@ -43,6 +43,11 @@ public static class VhLogger
         return endPoint is IPEndPoint ipEndPoint ? Format(ipEndPoint) : endPoint.ToString() ?? "<null>";
     }
 
+    public static string Format(IpEndPointValue? endPoint)
+    {
+        return Format(endPoint?.ToIPEndPoint());
+    }
+
     public static string Format(IPEndPoint? endPoint)
     {
         if (endPoint == null) return "<null>";

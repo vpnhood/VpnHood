@@ -1,3 +1,4 @@
+using System;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.SniServices;
 using VpnHood.Core.Packets;
@@ -10,28 +11,25 @@ namespace VpnHood.Core.DomainFiltering;
 /// </summary>
 public class PacketDomainFilter : IDisposable
 {
+    // Tuned flow timeouts for collecting SNI across packets.
+    // QUIC Initial reassembly is fast; TCP TLS handshakes may span a few RTTs.
+    private static readonly TimeSpan QuicFlowTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan TcpFlowTimeout = TimeSpan.FromSeconds(3);
+
     private readonly DomainFilter _domainFilter;
     private readonly QuicSniService _quicSniService;
     private readonly TcpSniService _tcpSniService;
     private bool _disposed;
 
-    public PacketDomainFilter(DomainFilter domainFilter, EventId? sniEventId, TimeSpan? connectionTimeout = null)
+    public PacketDomainFilter(DomainFilter domainFilter, EventId? sniEventId)
     {
         _domainFilter = domainFilter;
         var resolver = new DomainFilterResolver(domainFilter);
-        var timeout = connectionTimeout ?? TimeSpan.FromMilliseconds(500);
-        
-        _quicSniService = new QuicSniService(resolver, timeout, sniEventId);
-        _tcpSniService = new TcpSniService(resolver, timeout, sniEventId);
+
+        _quicSniService = new QuicSniService(resolver, QuicFlowTimeout, sniEventId);
+        _tcpSniService = new TcpSniService(resolver, TcpFlowTimeout, sniEventId);
     }
 
-    /// <summary>
-    /// Whether domain filtering is enabled for any protocol.
-    /// </summary>
-    public bool IsEnabled =>
-        _domainFilter.Includes.Length > 0 ||
-        _domainFilter.Excludes.Length > 0 ||
-        _domainFilter.Blocks.Length > 0;
 
     /// <summary>
     /// Process any IP packet for domain filtering.
@@ -46,10 +44,6 @@ public class PacketDomainFilter : IDisposable
     /// </returns>
     public PacketFilterResult Process(IpPacket ipPacket)
     {
-        ObjectDisposedException.ThrowIf(_disposed, nameof(PacketDomainFilter));
-
-        if (!IsEnabled)
-            return PacketFilterResult.Passthrough(ipPacket);
 
         // Route to appropriate service based on protocol
         return ipPacket.Protocol switch {

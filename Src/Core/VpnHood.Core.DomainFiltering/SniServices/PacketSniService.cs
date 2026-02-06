@@ -42,14 +42,14 @@ public abstract class PacketSniService : IDisposable
 
         // Validate packet protocol and get payload
         if (!TryValidateAndExtractPayload(ipPacket, out var flowKey, out var payload))
-            return PacketFilterResult.Passthrough(ipPacket);
+            return PacketFilterResult.Passthrough(DomainFilterResolver.DefaultAction);
 
         var nowTicks = Environment.TickCount64 * TimeSpan.TicksPerMillisecond;
 
         // Check if we already have a decision for this flow
         if (_flowCache.TryGetValue(flowKey, out var flowInfo) && flowInfo.Decision != null) {
             flowInfo.LastSeenTicks = nowTicks;
-            return new PacketFilterResult(flowInfo.Decision.Value, flowInfo.DomainName, [ipPacket]);
+            return new PacketFilterResult(flowInfo.Decision.Value, flowInfo.DomainName, null, false);
         }
 
         // Extract SNI from payload
@@ -66,7 +66,7 @@ public abstract class PacketSniService : IDisposable
             return HandleNeedMore(flowKey, ipPacket, flowInfo, sniResult.State, nowTicks);
 
         // Could not extract SNI - release all buffered packets
-        return HandleGiveUp(flowKey, ipPacket, flowInfo, nowTicks);
+        return HandleGiveUp(flowKey, flowInfo, nowTicks);
     }
 
     /// <summary>
@@ -114,7 +114,7 @@ public abstract class PacketSniService : IDisposable
         state.LastSeenTicks = nowTicks;
         _flowCache[flowKey] = state;
 
-        return new PacketFilterResult(action, domainName, packets);
+        return new PacketFilterResult(action, domainName, packets, true);
     }
 
     private PacketFilterResult HandleNeedMore(
@@ -128,25 +128,22 @@ public abstract class PacketSniService : IDisposable
         state.LastSeenTicks = nowTicks;
         _flowCache[flowKey] = state;
 
-        return PacketFilterResult.Buffered();
+        return PacketFilterResult.Pending();
     }
 
     private PacketFilterResult HandleGiveUp(
-        IpEndPointValue flowKey, IpPacket ipPacket, FlowInfo? flowInfo, long nowTicks)
+        IpEndPointValue flowKey, FlowInfo? flowInfo, long nowTicks)
     {
-        // Release all buffered packets with None action
-        var packets = flowInfo?.BufferedPackets ?? [];
-        packets.Add(ipPacket);
-
         // Mark flow as decided (None = pass through)
         var state = flowInfo ?? new FlowInfo();
-        state.Decision = DomainFilterAction.None;
+        state.Decision = DomainFilterResolver.DefaultAction;
         state.BufferedPackets = [];
         state.SniState = null;
         state.LastSeenTicks = nowTicks;
         _flowCache[flowKey] = state;
 
-        return new PacketFilterResult(DomainFilterAction.None, null, packets);
+        // Release all buffered packets with None action
+        return new PacketFilterResult(DomainFilterResolver.DefaultAction, null, flowInfo?.BufferedPackets, false);
     }
 
     private static void CleanupExpiredFlows(object? state)
@@ -158,13 +155,15 @@ public abstract class PacketSniService : IDisposable
         var timeoutTicks = service.ConnectionTimeout.Ticks;
 
         foreach (var kvp in service._flowCache) {
-            if (nowTicks - kvp.Value.LastSeenTicks > timeoutTicks) {
-                if (service._flowCache.TryRemove(kvp.Key, out var flowInfo)) {
-                    // Dispose buffered packets
-                    foreach (var packet in flowInfo.BufferedPackets)
-                        packet.Dispose();
-                }
-            }
+            if (nowTicks - kvp.Value.LastSeenTicks <= timeoutTicks) 
+                continue;
+
+            if (!service._flowCache.TryRemove(kvp.Key, out var flowInfo)) 
+                continue;
+            
+            // Dispose buffered packets
+            foreach (var packet in flowInfo.BufferedPackets)
+                packet.Dispose();
         }
     }
 

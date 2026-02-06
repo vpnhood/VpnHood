@@ -2,24 +2,20 @@
 
 public class DomainFilterResolver(DomainFilter domainFilter)
 {
+    public DomainFilterAction DefaultAction { get; } = BuildDefaultAction(domainFilter);
+
+    private static DomainFilterAction BuildDefaultAction(DomainFilter domainFilter)
+    {
+        return domainFilter.Includes.Any()
+            ? DomainFilterAction.Exclude  // Default to exclude if includes are specified
+            : DomainFilterAction.Include;
+    }
+
     public DomainFilterAction Process(string? domain)
     {
         var topDomains = ExtractTopDomains(domain);
         foreach (var topDomain in topDomains) {
-            var res = ProcessInternal(topDomain, domainFilter);
-            if (res != DomainFilterAction.None)
-                return res;
-        }
 
-        return domainFilter.Includes.Length == 0
-            ? DomainFilterAction.None
-            : DomainFilterAction.Exclude;
-    }
-
-    private static DomainFilterAction ProcessInternal(string domain, DomainFilter domainFilter)
-    {
-        var topDomains = ExtractTopDomains(domain);
-        foreach (var topDomain in topDomains) {
             if (IsMatch(topDomain, domainFilter.Blocks))
                 return DomainFilterAction.Block;
 
@@ -30,7 +26,7 @@ public class DomainFilterResolver(DomainFilter domainFilter)
                 return DomainFilterAction.Include;
         }
 
-        return DomainFilterAction.None;
+        return DefaultAction;
     }
 
     private static bool IsMatch(string domain, string[] domains)

@@ -19,16 +19,16 @@ public class DomainFilterService
     private readonly QuicSniService _quicSniService;
     private readonly DomainFilter _domainFilter;
     private readonly EventId _sniEventId;
-    private readonly int _bufferSize;
+    private readonly int _tlsBufferSize;
 
     public DomainFilterService(DomainFilter domainFilter,
         bool forceLogSni, EventId sniEventId,
-        int bufferSize)
+        int tlsBufferSize)
     {
         _domainFilter = domainFilter;
         ForceLogSni = forceLogSni;
         _sniEventId = sniEventId;
-        _bufferSize = bufferSize;
+        _tlsBufferSize = tlsBufferSize;
         _domainFilterResolver = new DomainFilterResolver(domainFilter);
         _quicSniService = new QuicSniService(_domainFilterResolver, sniEventId: sniEventId, connectionTimeout: QuicFlowTimeout);
         _tcpSniService = new TcpSniService(_domainFilterResolver, sniEventId: sniEventId, connectionTimeout: TcpFlowTimeout);
@@ -72,7 +72,7 @@ public class DomainFilterService
             };
 
         // extract SNI
-        var sniData = await TlsSniExtractor.ExtractSni(tlsStream, _sniEventId, _bufferSize, cancellationToken).Vhc();
+        var sniData = await TlsSniExtractor.ExtractSni(tlsStream, _sniEventId, _tlsBufferSize, cancellationToken).Vhc();
         if (!string.IsNullOrEmpty(sniData.DomainName)) {
             VhLogger.Instance.LogInformation(_sniEventId,
                 "Domain: {Domain}, DestEp: {IP}",

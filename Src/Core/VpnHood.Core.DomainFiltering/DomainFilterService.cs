@@ -35,7 +35,12 @@ public class DomainFilterService
     }
 
     public bool ForceLogSni { get; set; }
-    
+
+    public DomainFilter DomainFilter {
+        get=> _domainFilterResolver.DomainFilter; 
+        set=> _domainFilterResolver.DomainFilter = value;
+    }
+
     public bool IsEnabled =>
         ForceLogSni ||
         _domainFilter.Includes.Length > 0 ||

@@ -47,7 +47,7 @@ public class DomainFilterService
         var result = ipPacket.Protocol switch {
             IpProtocol.Tcp => _tcpSniService.ProcessPacket(ipPacket),
             IpProtocol.Udp => _quicSniService.ProcessPacket(ipPacket),
-            _ => PacketFilterResult.Passthrough(_domainFilterResolver.DefaultAction)
+            _ => PacketFilterResult.Passthrough()
         };
 
         // Force log SNI if enabled
@@ -66,7 +66,7 @@ public class DomainFilterService
         // none if domain filter is empty
         if (!IsEnabled)
             return new DomainStreamFilterResult {
-                Action = DomainFilterAction.Include,
+                Action = DomainFilterAction.None,
                 DomainName = null,
                 ReadData = Memory<byte>.Empty
             };

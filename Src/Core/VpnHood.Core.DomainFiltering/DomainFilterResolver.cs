@@ -2,14 +2,6 @@
 
 public class DomainFilterResolver(DomainFilter domainFilter)
 {
-    public DomainFilterAction DefaultAction { get; } = BuildDefaultAction(domainFilter);
-
-    private static DomainFilterAction BuildDefaultAction(DomainFilter domainFilter)
-    {
-        return domainFilter.Includes.Any()
-            ? DomainFilterAction.Exclude  // Default to exclude if includes are specified
-            : DomainFilterAction.Include;
-    }
 
     public DomainFilterAction Process(string? domain)
     {
@@ -26,7 +18,7 @@ public class DomainFilterResolver(DomainFilter domainFilter)
                 return DomainFilterAction.Include;
         }
 
-        return DefaultAction;
+        return DomainFilterAction.None;
     }
 
     private static bool IsMatch(string domain, string[] domains)

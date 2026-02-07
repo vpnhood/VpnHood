@@ -57,6 +57,6 @@ public readonly struct PacketFilterResult
     }
 
     public static PacketFilterResult Pending() => new(true);
-    public static PacketFilterResult Passthrough(DomainFilterAction action) => new(action);
+    public static PacketFilterResult Passthrough() => new(DomainFilterAction.None);
 
 }

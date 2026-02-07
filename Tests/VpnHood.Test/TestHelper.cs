@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
@@ -93,13 +94,39 @@ public class TestHelper : IDisposable
         return ping.SendPingAsync(ipAddress ?? TestConstants.PingV4Address1, timeout.Value, buffer);
     }
 
-    private async Task<bool> SendHttpGet(Uri uri, TimeSpan? timeout = null)
+    private Task<bool> SendHttpGet(Uri uri, TimeSpan? timeout = null)
     {
-        using var httpClient = new HttpClient(new HttpClientHandler {
-            CheckCertificateRevocationList = false,
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        });
+        return SendHttpGet(uri, null, timeout);
+    }
 
+    private async Task<bool> SendHttpGet(Uri uri, IPAddress? ipAddress, TimeSpan? timeout = null)
+    {
+        // SocketsHttpHandler is the modern, high-performance handler
+        using var handler = new SocketsHttpHandler();
+
+        // Equivalent to your existing certificate bypass
+        handler.SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
+            RemoteCertificateValidationCallback = (_, _, _, _) => true,
+            CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+        };
+
+        // This intercepts the DNS resolution
+        if (ipAddress != null) {
+            handler.ConnectCallback = async (_, cancellationToken) => {
+                var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                try {
+                    // Force connection to the specific IP, but use the port from the URI
+                    await socket.ConnectAsync(new IPEndPoint(ipAddress, uri.Port), cancellationToken);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch {
+                    socket.Dispose();
+                    throw;
+                }
+            };
+        }
+
+        using var httpClient = new HttpClient(handler);
         return await SendHttpGet(httpClient, uri, timeout);
     }
 
@@ -169,7 +196,7 @@ public class TestHelper : IDisposable
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
-    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null, 
+    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         timeout ??= TestConstants.DefaultUdpTimeout;

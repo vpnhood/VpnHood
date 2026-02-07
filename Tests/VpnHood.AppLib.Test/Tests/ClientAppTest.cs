@@ -581,7 +581,7 @@ public class ClientAppTest : TestAppBase
 
         // Connect again then access manager should receive result
         Assert.IsNull(accessManager.UserReview);
-        await app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCancellationToken);
         Assert.IsNotNull(accessManager.UserReview);
         Assert.AreEqual(3, accessManager.UserReview.Rating);
         Assert.AreEqual(app.Features.Version, accessManager.UserReview.AppVersion);

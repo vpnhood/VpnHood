@@ -42,7 +42,7 @@ public abstract class PacketSniService : IDisposable
 
         // Validate packet protocol and get payload
         if (!TryValidateAndExtractPayload(ipPacket, out var flowKey, out var payload))
-            return PacketFilterResult.Passthrough(DomainFilterResolver.DefaultAction);
+            return PacketFilterResult.Passthrough();
 
         var nowTicks = Environment.TickCount64 * TimeSpan.TicksPerMillisecond;
 
@@ -136,14 +136,14 @@ public abstract class PacketSniService : IDisposable
     {
         // Mark flow as decided (None = pass through)
         var state = flowInfo ?? new FlowInfo();
-        state.Decision = DomainFilterResolver.DefaultAction;
+        state.Decision = DomainFilterAction.None;
         state.BufferedPackets = [];
         state.SniState = null;
         state.LastSeenTicks = nowTicks;
         _flowCache[flowKey] = state;
 
         // Release all buffered packets with None action
-        return new PacketFilterResult(DomainFilterResolver.DefaultAction, null, flowInfo?.BufferedPackets, false);
+        return new PacketFilterResult(DomainFilterAction.None, null, flowInfo?.BufferedPackets, false);
     }
 
     private static void CleanupExpiredFlows(object? state)

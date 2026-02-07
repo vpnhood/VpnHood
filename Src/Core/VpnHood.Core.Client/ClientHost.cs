@@ -258,8 +258,9 @@ internal class ClientHost(
                     });
 
             // Filter by IP
-            var isInIpRange = syncCustomData?.IsInIpRange ??
-                              vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
+            var isInIpRange = syncCustomData?.IsInIpRange 
+                              ?? vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
+
             if (filterResult.Action == DomainFilterAction.Exclude ||
                 (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
                 await vpnHoodClient

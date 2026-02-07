@@ -1,12 +1,12 @@
+using VpnHood.Core.SniFiltering;
 using VpnHood.Core.Packets;
 
-namespace VpnHood.Core.DomainFiltering.SniServices;
+namespace VpnHood.Core.SniFiltering;
 
 /// <summary>
-/// Result of packet domain filtering.
 /// Used for both QUIC (UDP) and TCP-based protocols.
 /// </summary>
-public readonly struct PacketFilterResult
+public readonly struct PacketSniFilterResult
 {
     /// <summary>
     /// The filter action to take for these packets.
@@ -19,7 +19,7 @@ public readonly struct PacketFilterResult
     public string? DomainName { get; }
 
     /// <summary>
-    /// Is the domain filter decision for a new flow (first packet) or an existing flow.
+    /// Is the sni filter decision for a new flow (first packet) or an existing flow.
     /// </summary>
     public bool IsNewFlow { get; }
 
@@ -35,7 +35,7 @@ public readonly struct PacketFilterResult
     /// </summary>
     public IReadOnlyList<IpPacket> Packets { get; init; } = [];
 
-    public PacketFilterResult(DomainFilterAction action, string? domainName,
+    public PacketSniFilterResult(DomainFilterAction action, string? domainName,
         IReadOnlyList<IpPacket>? packets, bool isNewFlow)
     {
         Action = action;
@@ -45,18 +45,18 @@ public readonly struct PacketFilterResult
 
     }
 
-    public PacketFilterResult(DomainFilterAction action)
+    public PacketSniFilterResult(DomainFilterAction action)
     {
         Action = action;
     }
 
-    public PacketFilterResult(bool needMore)
+    public PacketSniFilterResult(bool needMore)
     {
         Action = DomainFilterAction.Block;
         NeedMore = needMore;
     }
 
-    public static PacketFilterResult Pending() => new(true);
-    public static PacketFilterResult Passthrough() => new(DomainFilterAction.None);
+    public static PacketSniFilterResult Pending() => new(true);
+    public static PacketSniFilterResult Passthrough() => new(DomainFilterAction.None);
 
 }

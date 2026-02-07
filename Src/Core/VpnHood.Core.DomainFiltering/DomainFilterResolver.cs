@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.DomainFiltering;
+﻿namespace VpnHood.Core.SniFiltering;
 
 public class DomainFilterResolver
 {
@@ -19,11 +19,11 @@ public class DomainFilterResolver
         }
     }
 
-    private void UpdateInvertedArrays(DomainFilterPolicy domainFilterPolicy)
+    private void UpdateInvertedArrays(DomainFilterPolicy sniFilterPolicy)
     {
-        _invertedBlocks = BuildSortedInvertedArray(domainFilterPolicy.Blocks);
-        _invertedExcludes = BuildSortedInvertedArray(domainFilterPolicy.Excludes);
-        _invertedIncludes = BuildSortedInvertedArray(domainFilterPolicy.Includes);
+        _invertedBlocks = BuildSortedInvertedArray(sniFilterPolicy.Blocks);
+        _invertedExcludes = BuildSortedInvertedArray(sniFilterPolicy.Excludes);
+        _invertedIncludes = BuildSortedInvertedArray(sniFilterPolicy.Includes);
     }
 
     private static string[] BuildSortedInvertedArray(string[] domains)

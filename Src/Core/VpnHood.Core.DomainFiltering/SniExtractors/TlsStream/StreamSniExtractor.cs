@@ -1,16 +1,17 @@
 ﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.SniFiltering.SniExtractors;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.DomainFiltering.SniExtractors.Tls;
+namespace VpnHood.Core.SniFiltering.SniExtractors.Tls;
 
 /// <summary>
 /// Stream-based TLS SNI extractor for TCP connections.
 /// Reads from a stream and extracts SNI from TLS ClientHello.
 /// </summary>
-public static class TlsSniExtractor
+public static class StreamSniExtractor
 {
-    public static async Task<TlsSniData> ExtractSni(Stream tcpStream, EventId eventId, int streamHeaderBufferSize,
+    public static async Task<StreamSniResult> ExtractSni(Stream tcpStream, EventId eventId, int streamHeaderBufferSize,
         CancellationToken cancellationToken)
     {
         // extract SNI
@@ -18,7 +19,7 @@ public static class TlsSniExtractor
         var bufCount = await tcpStream.ReadAsync(initBuffer, cancellationToken).Vhc();
         var readData = initBuffer[..bufCount];
 
-        return new TlsSniData {
+        return new StreamSniResult {
             DomainName = ExtractSni(readData.Span, eventId),
             ReadData = readData
         };

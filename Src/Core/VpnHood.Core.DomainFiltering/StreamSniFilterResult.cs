@@ -1,6 +1,6 @@
-﻿namespace VpnHood.Core.DomainFiltering;
+﻿namespace VpnHood.Core.SniFiltering;
 
-public class DomainStreamFilterResult
+public class StreamSniFilterResult
 {
     public required DomainFilterAction Action { get; init; }
     public required string? DomainName { get; init; }

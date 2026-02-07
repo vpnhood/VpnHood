@@ -1,13 +1,15 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.DomainFiltering.SniExtractors.Tls;
-using VpnHood.Core.DomainFiltering.SniServices;
+using VpnHood.Core.SniFiltering.SniExtractors.Tls;
+using VpnHood.Core.SniFiltering.SniServices;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.SniFiltering;
+using VpnHood.Core.SniFiltering.Observation;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.DomainFiltering;
+namespace VpnHood.Core.SniFiltering;
 
 public class DomainFilterService
 {
@@ -15,27 +17,27 @@ public class DomainFilterService
     private static readonly TimeSpan TcpFlowTimeout = TimeSpan.FromSeconds(3);
 
     private readonly DomainFilterResolver _domainFilterResolver;
-    private readonly TcpSniService _tcpSniService;
-    private readonly QuicSniService _quicSniService;
-    private readonly DomainFilterPolicy _domainFilterPolicy;
+    private readonly TcpSniFilteringService _tcpSniService;
+    private readonly QuicSniFilteringService _quicSniService;
+    private readonly DomainFilterPolicy _sniFilterPolicy;
     private readonly EventId _sniEventId;
     private readonly int _tlsBufferSize;
     private readonly bool _trackObservations;
-    private readonly List<DomainObservation> _observations = [];
+    private readonly DomainObserver _observationTracker = new();
 
-    public DomainFilterService(DomainFilterPolicy domainFilterPolicy,
+    public DomainFilterService(DomainFilterPolicy sniFilterPolicy,
         bool forceLogSni, EventId sniEventId,
         int tlsBufferSize, 
         bool trackObservations = false)
     {
-        _domainFilterPolicy = domainFilterPolicy;
+        _sniFilterPolicy = sniFilterPolicy;
         ForceLogSni = forceLogSni;
         _sniEventId = sniEventId;
         _tlsBufferSize = tlsBufferSize;
         _trackObservations = trackObservations;
-        _domainFilterResolver = new DomainFilterResolver(domainFilterPolicy);
-        _quicSniService = new QuicSniService(_domainFilterResolver, sniEventId: sniEventId, connectionTimeout: QuicFlowTimeout);
-        _tcpSniService = new TcpSniService(_domainFilterResolver, sniEventId: sniEventId, connectionTimeout: TcpFlowTimeout);
+        _domainFilterResolver = new DomainFilterResolver(sniFilterPolicy);
+        _quicSniService = new QuicSniFilteringService(_domainFilterResolver, sniEventId: sniEventId, connectionTimeout: QuicFlowTimeout);
+        _tcpSniService = new TcpSniFilteringService(_domainFilterResolver, sniEventId: sniEventId, connectionTimeout: TcpFlowTimeout);
     }
 
     public bool ForceLogSni { get; set; }
@@ -45,20 +47,20 @@ public class DomainFilterService
         set=> _domainFilterResolver.DomainFilterPolicy = value;
     }
 
-    public IReadOnlyList<DomainObservation> Observations => _observations;
+    public IReadOnlyList<DomainObservation> Observations => _observationTracker.Observations;
 
     public bool IsEnabled =>
         ForceLogSni ||
-        _domainFilterPolicy.Includes.Length > 0 ||
-        _domainFilterPolicy.Excludes.Length > 0 ||
-        _domainFilterPolicy.Blocks.Length > 0;
+        _sniFilterPolicy.Includes.Length > 0 ||
+        _sniFilterPolicy.Excludes.Length > 0 ||
+        _sniFilterPolicy.Blocks.Length > 0;
 
-    public PacketFilterResult Process(IpPacket ipPacket)
+    public PacketSniFilterResult Process(IpPacket ipPacket)
     {
         var result = ipPacket.Protocol switch {
             IpProtocol.Tcp => _tcpSniService.ProcessPacket(ipPacket),
             IpProtocol.Udp => _quicSniService.ProcessPacket(ipPacket),
-            _ => PacketFilterResult.Passthrough()
+            _ => PacketSniFilterResult.Passthrough()
         };
 
         // Force log SNI if enabled
@@ -68,26 +70,30 @@ public class DomainFilterService
                 VhLogger.FormatHostName(result.DomainName), VhLogger.Format(ipPacket.GetDestinationEndPoint()));
         
         // Track observation if enabled
-        if (_trackObservations && result.IsNewFlow && !string.IsNullOrEmpty(result.DomainName))
-            _observations.Add(new DomainObservation(result.DomainName, result.Action, FastDateTime.Now));
+        if (_trackObservations && result.IsNewFlow && !string.IsNullOrEmpty(result.DomainName)) {
+            var protocol = ipPacket.Protocol == IpProtocol.Tcp 
+                ? domainObservationProtocol.Tcp 
+                : domainObservationProtocol.Quic;
+            _observationTracker.Track(result.DomainName, result.Action, protocol, FastDateTime.Now);
+        }
         
         return result;
     }
 
 
-    public async Task<DomainStreamFilterResult> Process(Stream tlsStream, IPAddress remoteAddress,
+    public async Task<StreamSniFilterResult> Process(Stream tlsStream, IPAddress remoteAddress,
         CancellationToken cancellationToken)
     {
         // none if domain filter is empty
         if (!IsEnabled)
-            return new DomainStreamFilterResult {
+            return new StreamSniFilterResult {
                 Action = DomainFilterAction.None,
                 DomainName = null,
                 ReadData = Memory<byte>.Empty
             };
 
         // extract SNI
-        var sniData = await TlsSniExtractor.ExtractSni(tlsStream, _sniEventId, _tlsBufferSize, cancellationToken).Vhc();
+        var sniData = await StreamSniExtractor.ExtractSni(tlsStream, _sniEventId, _tlsBufferSize, cancellationToken).Vhc();
         if (!string.IsNullOrEmpty(sniData.DomainName)) {
             VhLogger.Instance.LogInformation(_sniEventId,
                 "Domain: {Domain}, DestEp: {IP}",
@@ -95,8 +101,8 @@ public class DomainFilterService
         }
 
         // no SNI
-        var resolver = new DomainFilterResolver(_domainFilterPolicy);
-        var res = new DomainStreamFilterResult {
+        var resolver = new DomainFilterResolver(_sniFilterPolicy);
+        var res = new StreamSniFilterResult {
             DomainName = sniData.DomainName,
             ReadData = sniData.ReadData,
             Action = resolver.Process(sniData.DomainName)
@@ -104,7 +110,7 @@ public class DomainFilterService
 
         // Track observation if enabled
         if (_trackObservations && !string.IsNullOrEmpty(res.DomainName))
-            _observations.Add(new DomainObservation(res.DomainName, res.Action, FastDateTime.Now));
+            _observationTracker.Track(res.DomainName, res.Action, domainObservationProtocol.Tcp, FastDateTime.Now);
 
         return res;
     }

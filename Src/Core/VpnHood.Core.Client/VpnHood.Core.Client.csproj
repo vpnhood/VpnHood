@@ -39,7 +39,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.DomainFiltering\VpnHood.Core.DomainFiltering.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Proxies.EndPointManagement\VpnHood.Core.Proxies.EndPointManagement.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />

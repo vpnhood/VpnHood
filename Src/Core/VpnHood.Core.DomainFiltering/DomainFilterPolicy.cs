@@ -1,4 +1,4 @@
-namespace VpnHood.Core.DomainFiltering;
+namespace VpnHood.Core.SniFiltering;
 
 public class DomainFilterPolicy
 {

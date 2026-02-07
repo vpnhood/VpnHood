@@ -1,20 +1,20 @@
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.DomainFiltering.SniExtractors;
-using VpnHood.Core.DomainFiltering.SniExtractors.Quic;
+using VpnHood.Core.SniFiltering.SniExtractors;
+using VpnHood.Core.SniFiltering.SniExtractors.Quic;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.DomainFiltering.SniServices;
+namespace VpnHood.Core.SniFiltering.SniServices;
 
 /// <summary>
 /// SNI extraction service for QUIC (UDP port 443) traffic.
 /// </summary>
-public class QuicSniService(
+public class QuicSniFilteringService(
     DomainFilterResolver domainFilterResolver,
     TimeSpan connectionTimeout,
     EventId? sniEventId)
-    : PacketSniService(domainFilterResolver, connectionTimeout, sniEventId)
+    : PacketSniFilteringService(domainFilterResolver, connectionTimeout, sniEventId)
 {
     protected override string ProtocolName => "QUIC";
 
@@ -37,7 +37,7 @@ public class QuicSniService(
         return true;
     }
 
-    protected override SniExtractionResult ExtractSni(
+    protected override PacketSniResult ExtractSni(
         ReadOnlySpan<byte> payload,
         object? state,
         long nowTicks)
@@ -46,11 +46,11 @@ public class QuicSniService(
         var result = QuicSniExtractor.TryExtractSniFromUdpPayload(payload, quicState, nowTicks);
 
         if (result.DomainName != null)
-            return SniExtractionResult.Found(result.DomainName);
+            return PacketSniResult.Found(result.DomainName);
 
         if (result is { NeedMore: true, State: not null })
-            return SniExtractionResult.Pending(result.State);
+            return PacketSniResult.Pending(result.State);
 
-        return SniExtractionResult.NotFound;
+        return PacketSniResult.NotFound;
     }
 }

@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Threading.Channels;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.DomainFiltering;
+using VpnHood.Core.SniFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
@@ -266,7 +266,7 @@ internal class ClientHost2(
                 .Process(connection.Stream, connection.RemoteEndPoint.Address, cancellationToken)
                 .Vhc();
 
-            if (filterResult.Action == DomainFilterAction.Block) {
+            if (filterResult.Action == SniFilterAction.Block) {
                 VhLogger.Instance.LogInformation(GeneralEventId.Sni,
                     "Domain has been blocked. Domain: {Domain}",
                     VhLogger.FormatHostName(filterResult.DomainName));
@@ -277,8 +277,8 @@ internal class ClientHost2(
             // Filter by IP
             var isInIpRange = syncCustomData?.IsInIpRange ??
                               vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
-            if (filterResult.Action == DomainFilterAction.Exclude ||
-                (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
+            if (filterResult.Action == SniFilterAction.Exclude ||
+                (!isInIpRange && filterResult.Action != SniFilterAction.Include)) {
                 var channelId = UniqueIdFactory.Create() + ":client:passthrough";
                 await vpnHoodClient.AddPassthruTcpStream(
                         new ReusableConnection(connection, connection.GetStream(), channelId + ":tunnel"),

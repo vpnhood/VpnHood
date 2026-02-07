@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace VpnHood.Core.DomainFiltering.SniExtractors;
+namespace VpnHood.Core.SniFiltering.SniExtractors;
 
 /// <summary>
 /// Shared TLS ClientHello parser for extracting SNI from TLS handshake data.

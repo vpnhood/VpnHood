@@ -1,6 +1,6 @@
-﻿namespace VpnHood.Core.DomainFiltering.SniExtractors.Tls;
+﻿namespace VpnHood.Core.SniFiltering.SniExtractors;
 
-public class TlsSniData
+public class StreamSniResult
 {
     public required string? DomainName { get; init; }
     public required Memory<byte> ReadData { get; init; }

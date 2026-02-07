@@ -1,4 +1,4 @@
-namespace VpnHood.Core.DomainFiltering.SniExtractors.Quic;
+namespace VpnHood.Core.SniFiltering.SniExtractors.Quic;
 
 internal struct QuicSniResult
 {

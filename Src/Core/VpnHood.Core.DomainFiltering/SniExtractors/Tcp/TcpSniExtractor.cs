@@ -1,4 +1,4 @@
-namespace VpnHood.Core.DomainFiltering.SniExtractors.Tcp;
+namespace VpnHood.Core.SniFiltering.SniExtractors.Tcp;
 
 /// <summary>
 /// Extracts SNI from TCP packets containing TLS ClientHello.
@@ -15,7 +15,7 @@ internal static class TcpSniExtractor
     /// <param name="state">State from previous call, or null for first packet.</param>
     /// <param name="nowTicks">Current time in ticks.</param>
     /// <returns>Extraction result with SNI, need-more, or not-found status.</returns>
-    public static SniExtractionResult TryExtractSniFromTcpPayload(
+    public static PacketSniResult TryExtractSniFromTcpPayload(
         ReadOnlySpan<byte> tcpPayload,
         object? state = null,
         long nowTicks = 0)
@@ -28,7 +28,7 @@ internal static class TcpSniExtractor
         // First packet - check if it looks like TLS ClientHello
         if (tcpState == null) {
             if (!LooksLikeClientHello(tcpPayload))
-                return SniExtractionResult.NotFound;
+                return PacketSniResult.NotFound;
 
             tcpState = new TcpSniState {
                 PacketBudget = 3,
@@ -39,14 +39,14 @@ internal static class TcpSniExtractor
 
         // Check budget/timeout
         if (tcpState.PacketBudget <= 0 || nowTicks > tcpState.DeadlineTicks)
-            return SniExtractionResult.NotFound;
+            return PacketSniResult.NotFound;
 
         tcpState.PacketBudget--;
 
         // Append new data to buffer
         var totalLength = tcpState.BufferLength + tcpPayload.Length;
         if (totalLength > tcpState.MaxBytes)
-            return SniExtractionResult.NotFound; // Too much data
+            return PacketSniResult.NotFound; // Too much data
 
         if (totalLength > tcpState.Buffer.Length) {
             var newBuffer = new byte[Math.Min(totalLength * 2, tcpState.MaxBytes)];
@@ -63,17 +63,17 @@ internal static class TcpSniExtractor
         var sni = TlsClientHelloParser.ExtractSni(bufferSpan, hasRecordHeader: true);
         
         if (sni != null)
-            return SniExtractionResult.Found(sni);
+            return PacketSniResult.Found(sni);
 
         // Check if we have enough data to determine there's no SNI
         if (HasCompleteClientHello(bufferSpan))
-            return SniExtractionResult.NotFound;
+            return PacketSniResult.NotFound;
 
         // Need more data
         if (tcpState.PacketBudget <= 0 || nowTicks > tcpState.DeadlineTicks)
-            return SniExtractionResult.NotFound;
+            return PacketSniResult.NotFound;
 
-        return SniExtractionResult.Pending(tcpState);
+        return PacketSniResult.Pending(tcpState);
     }
 
     private static bool LooksLikeClientHello(ReadOnlySpan<byte> data)

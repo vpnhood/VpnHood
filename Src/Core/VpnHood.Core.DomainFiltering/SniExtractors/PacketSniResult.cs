@@ -1,9 +1,9 @@
-namespace VpnHood.Core.DomainFiltering.SniExtractors;
+namespace VpnHood.Core.SniFiltering.SniExtractors;
 
 /// <summary>
 /// Result of SNI extraction from a packet.
 /// </summary>
-public readonly struct SniExtractionResult
+public readonly struct PacketSniResult
 {
     /// <summary>
     /// The extracted domain name, null if not found.
@@ -20,7 +20,7 @@ public readonly struct SniExtractionResult
     /// </summary>
     public object? State { get; init; }
 
-    public static SniExtractionResult NotFound => new() { DomainName = null, NeedMore = false, State = null };
-    public static SniExtractionResult Found(string domainName) => new() { DomainName = domainName, NeedMore = false, State = null };
-    public static SniExtractionResult Pending(object state) => new() { DomainName = null, NeedMore = true, State = state };
+    public static PacketSniResult NotFound => new() { DomainName = null, NeedMore = false, State = null };
+    public static PacketSniResult Found(string domainName) => new() { DomainName = domainName, NeedMore = false, State = null };
+    public static PacketSniResult Pending(object state) => new() { DomainName = null, NeedMore = true, State = state };
 }

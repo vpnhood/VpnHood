@@ -11,7 +11,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
-using VpnHood.Core.SniFiltering;
+using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Proxies.EndPointManagement;
@@ -71,7 +71,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public event EventHandler? StateChanged;
     public Token Token { get; }
     public VpnHoodClientConfig Config { get; }
-    public SniFilterService DomainFilterService { get; }
+    public DomainFilteringService DomainFilteringService { get; }
     public ProxyEndPointManager ProxyEndPointManager { get; }
     public ISocketFactory SocketFactory { get; }
     public ISessionStatus? SessionStatus => _sessionStatus;
@@ -182,8 +182,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
 
         // SNI is sensitive, must be explicitly enabled
-        DomainFilterService = new SniFilterService(
-            new SniFilterPolicy {
+        DomainFilteringService = new DomainFilteringService(
+            new DomainFilteringPolicy {
                 Blocks = options.DomainFilter.Blocks,
                 Excludes = options.DomainFilter.Excludes,
                 Includes = options.DomainFilter.Includes
@@ -204,7 +204,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // create proxy host
         _clientHost = new ClientHost(
             this,
-            domainFilterService: DomainFilterService,
+            domainFilterService: DomainFilteringService,
             tunnel: _tunnel,
             catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4,
             catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6,

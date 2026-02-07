@@ -1,6 +1,6 @@
-﻿namespace VpnHood.Core.SniFiltering.Observation;
+﻿namespace VpnHood.Core.DomainFiltering.Observation;
 
-public enum domainObservationProtocol
+public enum DomainObservationProtocol
 {
     Tcp,
     Quic

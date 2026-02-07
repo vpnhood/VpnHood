@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.Core.SniFiltering.SniExtractors;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.SniFiltering.SniExtractors.Tls;
+namespace VpnHood.Core.DomainFiltering.SniExtractors.TlsStream;
 
 /// <summary>
 /// Stream-based TLS SNI extractor for TCP connections.

@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.SniFiltering.SniExtractors.Quic;
+﻿namespace VpnHood.Core.DomainFiltering.SniExtractors.Quic;
 
 // ReSharper disable IdentifierTypo
 // ReSharper disable GrammarMistakeInComment

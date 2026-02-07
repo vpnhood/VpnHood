@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.SniFiltering;
+using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
@@ -21,7 +21,7 @@ namespace VpnHood.Core.Client;
 
 internal class ClientHost(
     VpnHoodClient vpnHoodClient,
-    SniFilterService domainFilterService,
+    DomainFilteringService domainFilterService,
     Tunnel tunnel,
     IPAddress catcherAddressIpV4,
     IPAddress catcherAddressIpV6,
@@ -242,7 +242,7 @@ internal class ClientHost(
             // Filter by SNI
             var filterResult = await domainFilterService
                 .Process(orgConnection.Stream, natItem.DestinationAddress, cancellationToken).Vhc();
-            if (filterResult.Action == SniFilterAction.Block) {
+            if (filterResult.Action == DomainFilterAction.Block) {
                 VhLogger.Instance.LogInformation(GeneralEventId.Sni,
                     "Domain has been blocked. Domain: {Domain}",
                     VhLogger.FormatHostName(filterResult.DomainName));
@@ -261,8 +261,8 @@ internal class ClientHost(
             var isInIpRange = syncCustomData?.IsInIpRange 
                               ?? vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
 
-            if (filterResult.Action == SniFilterAction.Exclude ||
-                (!isInIpRange && filterResult.Action != SniFilterAction.Include)) {
+            if (filterResult.Action == DomainFilterAction.Exclude ||
+                (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
                 await vpnHoodClient
                     .AddPassthruTcpStream(orgConnection,
                         new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),

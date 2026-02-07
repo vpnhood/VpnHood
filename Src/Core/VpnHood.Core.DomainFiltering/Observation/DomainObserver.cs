@@ -1,6 +1,4 @@
-using VpnHood.Core.SniFiltering;
-
-namespace VpnHood.Core.SniFiltering.Observation;
+namespace VpnHood.Core.DomainFiltering.Observation;
 
 public class DomainObserver
 {
@@ -15,7 +13,7 @@ public class DomainObserver
         }
     }
 
-    public void Track(string domainName, DomainFilterAction action, domainObservationProtocol protocol, DateTime observedTime)
+    public void Track(string domainName, DomainFilterAction action, DomainObservationProtocol protocol, DateTime observedTime)
     {
         if (string.IsNullOrEmpty(domainName))
             return;

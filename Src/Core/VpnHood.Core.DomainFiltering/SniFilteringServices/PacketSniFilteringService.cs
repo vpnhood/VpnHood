@@ -1,12 +1,11 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.SniFiltering.SniExtractors;
+using VpnHood.Core.DomainFiltering.SniExtractors;
 using VpnHood.Core.Packets;
-using VpnHood.Core.SniFiltering;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.SniFiltering.SniServices;
+namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
 
 /// <summary>
 /// Base class for protocol-specific SNI extraction services.

@@ -1,7 +1,6 @@
-using VpnHood.Core.SniFiltering;
 using VpnHood.Core.Packets;
 
-namespace VpnHood.Core.SniFiltering;
+namespace VpnHood.Core.DomainFiltering;
 
 /// <summary>
 /// Used for both QUIC (UDP) and TCP-based protocols.

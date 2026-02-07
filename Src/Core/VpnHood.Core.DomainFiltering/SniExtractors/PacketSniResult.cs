@@ -1,4 +1,4 @@
-namespace VpnHood.Core.SniFiltering.SniExtractors;
+namespace VpnHood.Core.DomainFiltering.SniExtractors;
 
 /// <summary>
 /// Result of SNI extraction from a packet.

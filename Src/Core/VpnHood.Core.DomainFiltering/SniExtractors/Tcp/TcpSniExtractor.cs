@@ -1,4 +1,4 @@
-namespace VpnHood.Core.SniFiltering.SniExtractors.Tcp;
+namespace VpnHood.Core.DomainFiltering.SniExtractors.Tcp;
 
 /// <summary>
 /// Extracts SNI from TCP packets containing TLS ClientHello.

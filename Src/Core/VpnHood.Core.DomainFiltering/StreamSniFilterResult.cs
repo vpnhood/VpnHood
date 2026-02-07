@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.SniFiltering;
+﻿namespace VpnHood.Core.DomainFiltering;
 
 public class StreamSniFilterResult
 {

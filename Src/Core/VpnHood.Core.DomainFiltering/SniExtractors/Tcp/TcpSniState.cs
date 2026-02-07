@@ -1,4 +1,4 @@
-namespace VpnHood.Core.SniFiltering.SniExtractors.Tcp;
+namespace VpnHood.Core.DomainFiltering.SniExtractors.Tcp;
 
 /// <summary>
 /// State for TCP SNI extraction when data spans multiple packets.

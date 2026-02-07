@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.SniFiltering.SniExtractors;
-using VpnHood.Core.SniFiltering.SniExtractors.Quic;
+using VpnHood.Core.DomainFiltering.SniExtractors;
+using VpnHood.Core.DomainFiltering.SniExtractors.Quic;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.SniFiltering.SniServices;
+namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
 
 /// <summary>
 /// SNI extraction service for QUIC (UDP port 443) traffic.

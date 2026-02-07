@@ -7,7 +7,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace VpnHood.Core.SniFiltering.SniExtractors.Quic;
+namespace VpnHood.Core.DomainFiltering.SniExtractors.Quic;
 
 /// <summary>
 /// Extracts SNI from QUIC Initial packets.

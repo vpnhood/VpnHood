@@ -1,12 +1,10 @@
-﻿using VpnHood.Core.SniFiltering;
-
-namespace VpnHood.Core.SniFiltering.Observation;
+﻿namespace VpnHood.Core.DomainFiltering.Observation;
 
 public class DomainObservation
 {
     public required string DomainName { get; init; }
     public DomainFilterAction Action { get; set; }
-    public domainObservationProtocol Protocol { get; set; }
+    public DomainObservationProtocol Protocol { get; set; }
     public DateTime LastObservedTime { get; set; } = DateTime.Now;
     public int Count { get; set; } = 1;
 }

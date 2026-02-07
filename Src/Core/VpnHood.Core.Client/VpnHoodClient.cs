@@ -30,7 +30,6 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using DomainFilter = VpnHood.Core.DomainFiltering.DomainFilter;
 
 namespace VpnHood.Core.Client;
 
@@ -184,7 +183,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // SNI is sensitive, must be explicitly enabled
         DomainFilterService = new DomainFilterService(
-            new DomainFilter {
+            new DomainFilterPolicy {
                 Blocks = options.DomainFilter.Blocks,
                 Excludes = options.DomainFilter.Excludes,
                 Includes = options.DomainFilter.Includes

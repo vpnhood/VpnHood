@@ -8,7 +8,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_EmptyFilter_ReturnsNone()
     {
-        var domainFilter = new DomainFilter();
+        var domainFilter = new DomainFilterPolicy();
         var resolver = new DomainFilterResolver(domainFilter);
 
         Assert.AreEqual(DomainFilterAction.None, resolver.Process("example.com"));
@@ -21,7 +21,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_ExactMatch_ReturnsCorrectAction()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["block.com"],
             Excludes = ["exclude.com"],
             Includes = ["include.com"]
@@ -36,7 +36,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_CaseInsensitive_ReturnsCorrectAction()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["Block.COM"],
             Excludes = ["EXCLUDE.com"],
             Includes = ["InClUdE.CoM"]
@@ -57,7 +57,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_WildcardDomain_MatchesSubdomains()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["*.block.com"],
             Excludes = ["*.exclude.com"],
             Includes = ["*.include.com"]
@@ -84,7 +84,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_WildcardDomain_DoesNotMatchParentDomain()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["*.sub.example.com"]
         };
         var resolver = new DomainFilterResolver(domainFilter);
@@ -102,7 +102,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_PriorityOrder_BlockBeforeExclude()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["example.com"],
             Excludes = ["example.com"]
         };
@@ -115,7 +115,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_PriorityOrder_ExcludeBeforeInclude()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Excludes = ["example.com"],
             Includes = ["example.com"]
         };
@@ -128,7 +128,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_PriorityOrder_BlockBeforeExcludeBeforeInclude()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["example.com"],
             Excludes = ["example.com"],
             Includes = ["example.com"]
@@ -142,7 +142,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_WhitespaceHandling_TrimsAndProcesses()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["  block.com  "],
             Excludes = [" exclude.com"],
             Includes = ["include.com "]
@@ -159,7 +159,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_MultipleWildcards_MatchesCorrectly()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["*.google.com", "*.facebook.com", "*.twitter.com"]
         };
         var resolver = new DomainFilterResolver(domainFilter);
@@ -180,7 +180,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void DomainFilter_Setter_UpdatesInternalArrays()
     {
-        var domainFilter1 = new DomainFilter {
+        var domainFilter1 = new DomainFilterPolicy {
             Blocks = ["block1.com"]
         };
         var resolver = new DomainFilterResolver(domainFilter1);
@@ -189,10 +189,10 @@ public class DomainFilterResolverTest : TestBase
         Assert.AreEqual(DomainFilterAction.None, resolver.Process("block2.com"));
 
         // Update the domain filter
-        var domainFilter2 = new DomainFilter {
+        var domainFilter2 = new DomainFilterPolicy {
             Blocks = ["block2.com"]
         };
-        resolver.DomainFilter = domainFilter2;
+        resolver.DomainFilterPolicy = domainFilter2;
 
         Assert.AreEqual(DomainFilterAction.None, resolver.Process("block1.com"));
         Assert.AreEqual(DomainFilterAction.Block, resolver.Process("block2.com"));
@@ -201,7 +201,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_ComplexScenario_ReturnsCorrectActions()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["*.ads.com", "tracker.example.com"],
             Excludes = ["*.internal.company.com", "localhost"],
             Includes = ["*.cdn.cloudflare.com", "api.service.com"]
@@ -231,7 +231,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_DeepSubdomains_MatchesWildcard()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["*.example.com"]
         };
         var resolver = new DomainFilterResolver(domainFilter);
@@ -246,7 +246,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_SpecificAndWildcard_BothWork()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["specific.example.com", "*.wildcard.com"]
         };
         var resolver = new DomainFilterResolver(domainFilter);
@@ -264,7 +264,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_EmptyStringInArray_IgnoredCorrectly()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["", "  ", "block.com", ""]
         };
         var resolver = new DomainFilterResolver(domainFilter);
@@ -276,7 +276,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_NullAndEmptyInput_ReturnsNone()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["block.com"]
         };
         var resolver = new DomainFilterResolver(domainFilter);
@@ -290,7 +290,7 @@ public class DomainFilterResolverTest : TestBase
     [TestMethod]
     public void Process_SingleLabelDomain_WorksCorrectly()
     {
-        var domainFilter = new DomainFilter {
+        var domainFilter = new DomainFilterPolicy {
             Blocks = ["localhost", "*.local"]
         };
         var resolver = new DomainFilterResolver(domainFilter);

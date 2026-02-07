@@ -1,6 +1,6 @@
 namespace VpnHood.Core.DomainFiltering;
 
-public class DomainFilter
+public class DomainFilterPolicy
 {
     public string[] Blocks { get; set; } = [];
     public string[] Excludes { get; set; } = [];

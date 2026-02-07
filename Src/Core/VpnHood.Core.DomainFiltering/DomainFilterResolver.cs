@@ -6,12 +6,12 @@ public class DomainFilterResolver
     private string[] _invertedExcludes = [];
     private string[] _invertedIncludes = [];
 
-    public DomainFilterResolver(DomainFilter domainFilter)
+    public DomainFilterResolver(DomainFilterPolicy domainFilterPolicy)
     {
-        DomainFilter = domainFilter;
+        DomainFilterPolicy = domainFilterPolicy;
     }
 
-    public DomainFilter DomainFilter {
+    public DomainFilterPolicy DomainFilterPolicy {
         get;
         set {
             field = value;
@@ -19,11 +19,11 @@ public class DomainFilterResolver
         }
     }
 
-    private void UpdateInvertedArrays(DomainFilter domainFilter)
+    private void UpdateInvertedArrays(DomainFilterPolicy domainFilterPolicy)
     {
-        _invertedBlocks = BuildSortedInvertedArray(domainFilter.Blocks);
-        _invertedExcludes = BuildSortedInvertedArray(domainFilter.Excludes);
-        _invertedIncludes = BuildSortedInvertedArray(domainFilter.Includes);
+        _invertedBlocks = BuildSortedInvertedArray(domainFilterPolicy.Blocks);
+        _invertedExcludes = BuildSortedInvertedArray(domainFilterPolicy.Excludes);
+        _invertedIncludes = BuildSortedInvertedArray(domainFilterPolicy.Includes);
     }
 
     private static string[] BuildSortedInvertedArray(string[] domains)

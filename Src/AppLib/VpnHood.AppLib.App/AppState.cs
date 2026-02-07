@@ -21,14 +21,13 @@ public class AppState
     public required bool PromptForLog { get; init; }
     public required bool LogExists { get; init; }
     public required bool HasDiagnoseRequested { get; init; }
-    public required string? ClientCountryCode { get; init; }
-    public required string? ClientCountryName { get; init; }
     public required AppUpdaterStatus? UpdaterStatus { get; init; }
     public required bool CanDisconnect { get; init; }
     public required bool CanConnect { get; init; }
     public required bool CanDiagnose { get; init; }
     public required int UserReviewRecommended { get; init; }
     public required bool IsQuickLaunchRecommended { get; init; }
+    public required CountryInfo? ClientCountryInfo { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
     public required BillingPurchaseState? PurchaseState { get; init; }

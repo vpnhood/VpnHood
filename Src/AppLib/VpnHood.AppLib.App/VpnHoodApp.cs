@@ -389,8 +389,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LogExists = _logService.Exists,
                 IsDiagnosing = _appPersistState.HasDiagnoseRequested && !IsIdle,
                 HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
-                ClientCountryCode = Services.LocationService.GetClientCountryCode(false), // split country don't follow server location
-                ClientCountryName = VhUtils.TryGetCountryName(Services.LocationService.GetClientCountryCode(false)), // split country don't follow server location
+                ClientCountryInfo = Services.LocationService.GetClientCountryInfo(),
                 ConnectRequestTime = _appPersistState.ConnectRequestTime,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
                 SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),

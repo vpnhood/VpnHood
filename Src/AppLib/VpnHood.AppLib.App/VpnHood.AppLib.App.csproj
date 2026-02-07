@@ -36,6 +36,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="Nager.Country" Version="4.3.5" />
+	  <PackageReference Include="Nager.Country.Translation" Version="4.3.5" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\..\Core\VpnHood.Core.IpLocations\VpnHood.Core.IpLocations.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />

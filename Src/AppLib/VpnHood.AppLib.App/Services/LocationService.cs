@@ -18,6 +18,7 @@ public class LocationService : IRegionProvider
     private readonly AppSettingsService _settingsService;
     private readonly bool _useExternalLocationService;
     private readonly TimeSpan _locationServiceTimeout;
+    private readonly CountryInfoService _countryInfoService = new();
     public event EventHandler? StateChanged;
 
     public bool IsFindingCountryCode { get; private set; }
@@ -51,6 +52,20 @@ public class LocationService : IRegionProvider
         // try by client service providers
         return _settingsService.Settings.ClientIpLocation?.CountryCode
                ?? RegionInfo.CurrentRegion.Name;
+    }
+
+    public CountryInfo GetClientCountryInfo()
+    {
+        return GetCountryInfo(RegionInfo.CurrentRegion.Name);
+    }
+
+    public CountryInfo GetCountryInfo(string countryCode)
+    {
+        var cultureInfo = CultureInfo.CurrentUICulture;
+        if (!string.IsNullOrEmpty(_settingsService.UserSettings.CultureCode))
+            cultureInfo = new CultureInfo(_settingsService.UserSettings.CultureCode);
+
+        return _countryInfoService.GetCountryInfo(countryCode, cultureInfo);
     }
 
     public Task<string> GetClientCountryCodeAsync(bool allowVpnServer, CancellationToken cancellationToken)
@@ -134,18 +149,16 @@ public class LocationService : IRegionProvider
         }
     }
 
-    public static CountryInfo[] GetCountries()
+    public CountryInfo[] GetCountries()
     {
         var countryInfos = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
             .Select(culture => new RegionInfo(culture.Name))
             .Where(region => !string.IsNullOrEmpty(region.Name))
             .DistinctBy(region => region.Name)
-            .OrderBy(region => region.EnglishName)
-            .Select(region => new CountryInfo {
-                CountryCode = region.Name,
-                EnglishName = region.EnglishName
-            })
+            .Select(region => GetCountryInfo(region.Name))
+            .OrderBy(countryInfo => countryInfo.TranslatedName)
             .ToArray();
+
         return countryInfos;
     }
 
@@ -224,6 +237,7 @@ public class LocationService : IRegionProvider
             FireConnectionStateChanged();
         }
     }
+
 
     private void FireConnectionStateChanged()
     {

@@ -453,17 +453,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
-    private void Process2(IpPacket ipPacket)
-    {
-        // process domain filters
-        // _packetDomainFilter.Process(ipPacket);
-        // return if need more
-        // set excluded or included
-        // flush held packets does not need more
-
-    }
-
-    // WARNING: Performance Critical! Mango Section
     private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
         // stop traffic if the client has been disposed
@@ -484,6 +473,49 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (ShouldManagePacketChannels && !_packetChannelLock.IsLocked)
             _ = ManagePacketChannels(_cancellationTokenSource.Token);
 
+        // use domain filtering
+        if (DomainFilteringService.IsEnabled) {
+            ProcessOutgoingPacketWithDomainFilter(ipPacket);
+            return;
+        }
+
+        // simple process if domain filtering is not enabled to improve performance
+        ProcessOutgoingPacket(ipPacket, null);
+    }
+
+    private void ProcessOutgoingPacketWithDomainFilter(IpPacket ipPacket)
+    {
+        // process domain filtering
+        var result = DomainFilteringService.ProcessPacket(ipPacket);
+        if (result.NeedMore)
+            return;
+
+        // block packet if the result is block. The packet and all pending packets will be disposed in this case.
+        if (result.Action == DomainFilterAction.Block) {
+            foreach (var blockedPacket in result.Packets)
+                blockedPacket.Dispose();
+            ipPacket.Dispose();
+            return;
+        }
+
+        // determine forceInRange based on the filter action to override the normal IP range check for these packets. 
+        bool? forceInRange = result.Action switch {
+            DomainFilterAction.Include => true,
+            DomainFilterAction.Exclude => false,
+            _ => null
+        };
+
+        // flush pending packets if there are any. 
+        foreach (var pendingPackets in result.Packets)
+            ProcessOutgoingPacket(pendingPackets, forceInRange);
+
+        // process the current packet
+        ProcessOutgoingPacket(ipPacket, forceInRange);
+    }
+
+    // WARNING: Performance Critical! Mango Section
+    private void ProcessOutgoingPacket(IpPacket ipPacket, bool? forceInRange)
+    {
         // Multicast packets are not supported (Already excluded by adapter filter)
         if (ipPacket.IsMulticast()) {
             PacketLogger.LogPacket(ipPacket, "A multicast packet has been dropped.");
@@ -500,47 +532,64 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // TcpHost has to manage its own packets
         if (_clientHost.IsOwnPacket(ipPacket)) {
-            _clientHost.ProcessOutgoingPacket(ipPacket);
+            _clientHost.ProcessOutgoingPacket(ipPacket, null);
             return;
         }
 
-        // tcp already check for InIpRange and IpV6 and Proxy
-        if (ipPacket.Protocol == IpProtocol.Tcp) {
-            var tcpPacket = ipPacket.ExtractTcp();
-            _isDnsOverTlsDetected |= tcpPacket.DestinationPort == 853;
-            if (IsTcpProxy || !IsInEpRange(ipPacket))
-                _clientHost.ProcessOutgoingPacket(ipPacket);
-            else
-                _tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
-            return;
+        // detect DoT
+        _isDnsOverTlsDetected |= ipPacket.Protocol is IpProtocol.Tcp && ipPacket.ExtractTcp().DestinationPort == 853;
+
+        // check is the packet in the range. 
+        var isInRange = IsInEpRange(ipPacket, forceInRange);
+        if (isInRange) {
+            if (ipPacket.IsV6() && !IsIpV6SupportedByServer)
+                throw new PacketDropException("A protected IPv6 packet is dropped because server can not handle it.");
+
+            // Tcp
+            if (ipPacket.Protocol == IpProtocol.Tcp) {
+                if (IsTcpProxy)
+                    _clientHost.ProcessOutgoingPacket(ipPacket, isInRange);
+                else
+                    _tunnel.SendPacketQueued(ipPacket);
+
+                return;
+            }
+
+            // Udp
+            if (ipPacket.Protocol == IpProtocol.Udp) {
+                if (!ShouldTunnelUdpPacket(ipPacket.ExtractUdp()))
+                    throw new PacketDropException("A UDP packet is dropped because it is blocked by the configuration.");
+
+                _tunnel.SendPacketQueued(ipPacket);
+                return;
+            }
+
+            throw new PacketDropException("Packet has been dropped because no one handle it.");
         }
+        else {
+            if (ipPacket.IsV6() && !IsIpV6SupportedByClient)
+                throw new PacketDropException("An unprotected IPv6 packet is dropped because client can not handle it.");
 
-        // use local proxy if the packet is not in the range and not ICMP.
-        // ICMP is not supported by the local proxy for split tunnel
-        if (!IsInEpRange(ipPacket) && !ipPacket.IsIcmpEcho()) {
-            _proxyManager.SendPacketQueued(ipPacket);
-            return;
+            // Tcp
+            if (ipPacket.Protocol == IpProtocol.Tcp) {
+                _clientHost.ProcessOutgoingPacket(ipPacket, isInRange);
+                return;
+            }
+
+            // Udp
+            if (ipPacket.Protocol == IpProtocol.Udp) {
+                _proxyManager.SendPacketQueued(ipPacket);
+                return;
+            }
+
+            // Icmp is not supported by the local proxy for split tunneling
+            if (ipPacket.IsIcmpEcho()) {
+                _tunnel.SendPacketQueued(ipPacket);
+                return;
+            }
+
+            throw new PacketDropException("Packet has been dropped because no one handle it.");
         }
-
-        // Drop IPv6 if not support
-        if (ipPacket.IsV6() && !IsIpV6SupportedByServer)
-            throw new PacketDropException("IPv6 packet has been dropped because server does not support IPv6.");
-
-        // ICMP packet must go through tunnel because PingProxy does not support protect socket
-        if (ipPacket.IsIcmpEcho()) {
-            // ICMP can not be proxied so we don't need to check InRange
-            _tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
-            return;
-        }
-
-        // Udp
-        if (ipPacket.Protocol == IpProtocol.Udp && ShouldTunnelUdpPacket(ipPacket.ExtractUdp())) {
-            _tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
-            return;
-        }
-
-        // Drop packet
-        throw new PacketDropException("Packet has been dropped because no one handle it.");
     }
 
     private bool ShouldTunnelUdpPacket(UdpPacket udpPacket)
@@ -554,24 +603,32 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         return true;
     }
 
-    public bool IsInEpRange(IpPacket ipPacket)
+    public bool IsInEpRange(IpPacket ipPacket, bool? force)
     {
         var destinationPort = 0;
         if (ipPacket.Protocol == IpProtocol.Tcp) destinationPort = ipPacket.ExtractTcp().DestinationPort;
         if (ipPacket.Protocol == IpProtocol.Udp) destinationPort = ipPacket.ExtractUdp().DestinationPort;
-        return IsInEpRange(ipPacket.DestinationAddress, destinationPort);
+        return IsInEpRange(ipPacket.DestinationAddress, destinationPort, force);
     }
 
-    public bool IsInEpRange(IPAddress ipAddress, int port)
+    public bool IsInEpRange(IPAddress ipAddress, int port, bool? force)
     {
         if (_isPassthroughForAd)
             return port is 53 or 853;
 
-        return IsInIpRange(ipAddress);
+        return IsInIpRange(ipAddress, force);
     }
 
     public bool IsInIpRange(IPAddress ipAddress)
     {
+        return IsInIpRange(ipAddress, null);
+    }
+
+    public bool IsInIpRange(IPAddress ipAddress, bool? force)
+    {
+        if (force != null)
+            return force.Value;
+
         // only dns servers are tunneled if IsWaitingForAd is set
         if (_isPassthroughForAd)
             return _dnsServers.Contains(ipAddress);
@@ -703,13 +760,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
             requestResult.Connection.PreventReuse(); // lets hello request stream not to be reused
-            _connectorService.AllowTcpReuse = 
+            _connectorService.AllowTcpReuse =
                 Config.AllowTcpReuse; // after hello, we can reuse, as the other connections can use websocket
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)
                 throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
-            
+
             // sort out server IncludeIpRanges
             var serverIncludeIpRanges = helloResponse.IncludeIpRanges?.ToOrderedList();
             var serverVpnAdapterIncludeIpRanges = helloResponse.VpnAdapterIncludeIpRanges?.ToOrderedList();
@@ -1006,7 +1063,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        return SendRequest<T>(new ClientRequestEx { Request = request}, cancellationToken);
+        return SendRequest<T>(new ClientRequestEx { Request = request }, cancellationToken);
     }
 
     internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequestEx request,
@@ -1234,8 +1291,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _isPassthroughForAd = false;
 
         // stop reusing tcp connections for faster disposal
-        if (_connectorService != null)
-            _connectorService.AllowTcpReuse = false;
+        _connectorService?.AllowTcpReuse = false;
 
         // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;

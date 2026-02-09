@@ -10,6 +10,8 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.DomainFiltering;
 
+
+//todo add tests
 public class DomainFilteringService
 {
     private static readonly TimeSpan QuicFlowTimeout = TimeSpan.FromSeconds(1);
@@ -54,7 +56,7 @@ public class DomainFilteringService
         _filteringPolicy.Excludes.Length > 0 ||
         _filteringPolicy.Blocks.Length > 0;
 
-    public PacketSniFilterResult Process(IpPacket ipPacket)
+    public PacketSniFilterResult ProcessPacket(IpPacket ipPacket)
     {
         var result = ipPacket.Protocol switch {
             IpProtocol.Tcp => _tcpSniService.ProcessPacket(ipPacket),
@@ -63,6 +65,7 @@ public class DomainFilteringService
         };
 
         // Force log SNI if enabled
+        //todo: move logging to observer
         if (result.IsNewFlow &&  !string.IsNullOrEmpty(result.DomainName))
             VhLogger.Instance.LogDebug(_sniEventId,
                 "Domain: {Domain}, DestEp: {IP}",
@@ -80,7 +83,7 @@ public class DomainFilteringService
     }
 
 
-    public async Task<StreamSniFilterResult> Process(Stream tlsStream, IPAddress remoteAddress,
+    public async Task<StreamSniFilterResult> ProcessStream(Stream tlsStream, IPAddress remoteAddress,
         CancellationToken cancellationToken)
     {
         // none if domain filter is empty

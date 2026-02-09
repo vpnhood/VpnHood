@@ -12,14 +12,10 @@ internal class CountryInfoService
 
     public CountryInfo GetCountryInfo(string countryCode, CultureInfo cultureInfo)
     {
-        if (!Enum.TryParse<LanguageCode>(cultureInfo.TwoLetterISOLanguageName, out var languageCode))
-            languageCode = LanguageCode.EN;
-
         var countryInfo = _countryProvider.GetCountry(countryCode);
-        var translation = _translationProvider.GetCountryTranslation(countryInfo.Alpha2Code);
-        var translatedName = translation?.Translations.FirstOrDefault(t => t.LanguageCode == languageCode)?.Name;
+        var translatedName = _translationProvider.GetCountryTranslatedName(countryInfo.Alpha2Code, cultureInfo);
         return new CountryInfo {
-            EnglishName = translatedName, //countryInfo.CommonName,
+            EnglishName = countryInfo.CommonName,
             TranslatedName = translatedName ?? countryInfo.CommonName,
             CountryCode = countryCode.ToUpper()
         };

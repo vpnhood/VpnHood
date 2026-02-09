@@ -113,7 +113,7 @@ internal class ClientHost(
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    public void ProcessOutgoingPacket(IpPacket ipPacket)
+    public void ProcessOutgoingPacket(IpPacket ipPacket, bool? isInRange)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         PacketLogger.LogPacket(ipPacket, "Processing a ClientHost packet...");
@@ -147,7 +147,10 @@ internal class ClientHost(
 
             // Redirect outbound to the local address
             else {
-                var syncCustomData = ProcessOutgoingSyncPacket(ipPacket, tcpPacket);
+                var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
+                var syncCustomData = sync && isInRange !=null 
+                    ? new SyncCustomData { IsInIpRange = isInRange.Value } 
+                    : (SyncCustomData?)null;
 
                 // add to nat if it is sync packet
                 var natItem = syncCustomData != null
@@ -173,35 +176,6 @@ internal class ClientHost(
             PacketReceived?.Invoke(this, resultPacket);
             throw new PacketDropException("Packet dropped and TCP reset sent.", ex);
         }
-    }
-
-    private SyncCustomData? ProcessOutgoingSyncPacket(IpPacket ipPacket, TcpPacket tcpPacket)
-    {
-        var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
-        if (!sync)
-            return null;
-
-        var syncCustomData = new SyncCustomData {
-            IsInIpRange = vpnHoodClient.IsInEpRange(ipPacket)
-        };
-
-        if (ipPacket.Version == IpVersion.IPv6)
-            ProcessOutgoingSyncIpV6Packet(syncCustomData);
-
-        return syncCustomData;
-    }
-
-    private void ProcessOutgoingSyncIpV6Packet(SyncCustomData syncCustomData)
-    {
-        if (domainFilterService.IsEnabled &&
-            (!vpnHoodClient.IsIpV6SupportedByServer || !vpnHoodClient.IsIpV6SupportedByClient))
-            throw new Exception("DomainFilter is on but IPv6 is not fully supported.");
-
-        if (syncCustomData.IsInIpRange && !vpnHoodClient.IsIpV6SupportedByServer)
-            throw new Exception("IPv6 is not supported by the server.");
-
-        if (!syncCustomData.IsInIpRange && !vpnHoodClient.IsIpV6SupportedByClient)
-            throw new Exception("IPv6 is not supported by the client.");
     }
 
     private async Task ProcessConnection(IConnection orgConnection, CancellationToken cancellationToken)
@@ -241,7 +215,7 @@ internal class ClientHost(
 
             // Filter by SNI
             var filterResult = await domainFilterService
-                .Process(orgConnection.Stream, natItem.DestinationAddress, cancellationToken).Vhc();
+                .ProcessStream(orgConnection.Stream, natItem.DestinationAddress, cancellationToken).Vhc();
             if (filterResult.Action == DomainFilterAction.Block) {
                 VhLogger.Instance.LogInformation(GeneralEventId.Sni,
                     "Domain has been blocked. Domain: {Domain}",
@@ -258,16 +232,10 @@ internal class ClientHost(
                     });
 
             // Filter by IP
-            var isInIpRange = syncCustomData?.IsInIpRange 
-                              ?? vpnHoodClient.IsInEpRange(natItem.DestinationAddress, natItem.DestinationPort);
-
-            if (filterResult.Action == DomainFilterAction.Exclude ||
-                (!isInIpRange && filterResult.Action != DomainFilterAction.Include)) {
+            if (syncCustomData?.IsInIpRange == true) {
                 await vpnHoodClient
                     .AddPassthruTcpStream(orgConnection,
-                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                        cancellationToken)
-                    .Vhc();
+                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), cancellationToken).Vhc();
 
                 _stat.TcpPassthruCount++;
                 return;

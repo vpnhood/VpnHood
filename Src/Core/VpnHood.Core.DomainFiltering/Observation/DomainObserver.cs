@@ -1,3 +1,5 @@
+using VpnHood.Core.Toolkit.Utils;
+
 namespace VpnHood.Core.DomainFiltering.Observation;
 
 public class DomainObserver
@@ -13,7 +15,7 @@ public class DomainObserver
         }
     }
 
-    public void Track(string domainName, DomainFilterAction action, DomainObservationProtocol protocol, DateTime observedTime)
+    public void Track(string domainName, DomainFilterAction action, DomainObservationProtocol protocol)
     {
         if (string.IsNullOrEmpty(domainName))
             return;
@@ -21,7 +23,7 @@ public class DomainObserver
         lock (_lockObject) {
             if (_observations.TryGetValue(domainName, out var existing)) {
                 existing.Count++;
-                existing.LastObservedTime = observedTime;
+                existing.LastObservedTime = FastDateTime.Now;
                 existing.Action = action;
                 existing.Protocol = protocol;
             }
@@ -30,7 +32,7 @@ public class DomainObserver
                     DomainName = domainName,
                     Action = action,
                     Protocol = protocol,
-                    LastObservedTime = observedTime,
+                    LastObservedTime = FastDateTime.Now,
                 };
             }
         }

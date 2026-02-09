@@ -241,7 +241,7 @@ internal static class QuicSniExtractor
         Span<byte> mask = stackalloc byte[16];
         b.Slice(sampleOffset, 16).CopyTo(sample);
 
-        using (var aes = Aes.Create()) {
+        using (var aes = Aes.Create()) { //todo: dont create every time
             aes.Mode = CipherMode.ECB;
             aes.Padding = PaddingMode.None;
             aes.Key = st.Hp;

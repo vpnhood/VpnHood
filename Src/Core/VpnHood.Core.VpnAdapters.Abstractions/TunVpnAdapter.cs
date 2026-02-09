@@ -58,9 +58,6 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     protected abstract bool WritePacket(IpPacket ipPacket);
 
-    protected virtual void OnPrimaryAdapterIpChanged()
-    {
-    }
 
     public event EventHandler? Disposed;
     public string AdapterName { get; }
@@ -72,6 +69,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public IPAddress? GatewayIpV6 { get; private set; }
     public bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool IsStarted { get; private set; }
+    public event EventHandler? PrimaryAdapterIpChanged;
 
     // ReSharper disable once InconsistentlySynchronizedField
     private bool IsReady => IsStarted && !_isStopping && !IsDisposed && !IsDisposing;
@@ -100,8 +98,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         if (!Equals(primaryAdapterIpV4, PrimaryAdapterIpV4) || !Equals(primaryAdapterIpV6, PrimaryAdapterIpV6)) {
             PrimaryAdapterIpV4 = primaryAdapterIpV4;
             PrimaryAdapterIpV6 = primaryAdapterIpV6;
-            OnPrimaryAdapterIpChanged();
+            PrimaryAdapterIpChanged?.Invoke(this, e);
         }
+
     }
 
     public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)

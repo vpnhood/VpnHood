@@ -24,11 +24,11 @@ public class DomainFilteringService
     private readonly EventId _sniEventId;
     private readonly int _tlsBufferSize;
     private readonly bool _trackObservations;
-    private readonly DomainObserver _observationTracker = new();
+    public DomainObserver DomainObserver { get; } = new();
 
     public DomainFilteringService(DomainFilteringPolicy filteringPolicy,
         bool forceLogSni, EventId sniEventId,
-        int tlsBufferSize, 
+        int tlsBufferSize,
         bool trackObservations = false)
     {
         _filteringPolicy = filteringPolicy;
@@ -44,11 +44,11 @@ public class DomainFilteringService
     public bool ForceLogSni { get; set; }
 
     public DomainFilteringPolicy FilteringPolicy {
-        get=> _filterResolver.FilterPolicy; 
-        set=> _filterResolver.FilterPolicy = value;
+        get => _filterResolver.FilterPolicy;
+        set => _filterResolver.FilterPolicy = value;
     }
 
-    public IReadOnlyList<DomainObservation> Observations => _observationTracker.Observations;
+    public IReadOnlyList<DomainObservation> Observations => DomainObserver.Observations;
 
     public bool IsEnabled =>
         ForceLogSni ||
@@ -66,19 +66,19 @@ public class DomainFilteringService
 
         // Force log SNI if enabled
         //todo: move logging to observer
-        if (result.IsNewFlow &&  !string.IsNullOrEmpty(result.DomainName))
+        if (result.IsNewFlow && !string.IsNullOrEmpty(result.DomainName))
             VhLogger.Instance.LogDebug(_sniEventId,
                 "Domain: {Domain}, DestEp: {IP}",
                 VhLogger.FormatHostName(result.DomainName), VhLogger.Format(ipPacket.GetDestinationEndPoint()));
-        
+
         // Track observation if enabled
         if (_trackObservations && result.IsNewFlow && !string.IsNullOrEmpty(result.DomainName)) {
-            var protocol = ipPacket.Protocol == IpProtocol.Tcp 
-                ? DomainObservationProtocol.Tcp 
+            var protocol = ipPacket.Protocol == IpProtocol.Tcp
+                ? DomainObservationProtocol.Tcp
                 : DomainObservationProtocol.Quic;
-            _observationTracker.Track(result.DomainName, result.Action, protocol, FastDateTime.Now);
+            DomainObserver.Track(result.DomainName, result.Action, protocol);
         }
-        
+
         return result;
     }
 
@@ -112,7 +112,7 @@ public class DomainFilteringService
 
         // Track observation if enabled
         if (_trackObservations && !string.IsNullOrEmpty(res.DomainName))
-            _observationTracker.Track(res.DomainName, res.Action, DomainObservationProtocol.Tcp, FastDateTime.Now);
+            DomainObserver.Track(res.DomainName, res.Action, DomainObservationProtocol.Tcp);
 
         return res;
     }

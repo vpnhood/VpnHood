@@ -27,4 +27,7 @@ public interface ISessionStatus
     DateTime? SessionExpirationTime { get; }
     int? ActiveClientCount { get; }
     bool IsDnsOverTlsDetected { get; }
+    bool IsIpV6SupportedByServer { get; }
+    bool IsIpV6SupportedByClient { get; }
+
 }

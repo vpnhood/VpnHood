@@ -38,11 +38,13 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
     }
 
     public event EventHandler? Disposed;
+    public event EventHandler? PrimaryAdapterIpChanged;
     public bool IsStarted { get; private set; }
     public bool IsNatSupported => true;
     public bool CanProtectSocket => false;
     public bool ProtectSocket(Socket socket) => false;
     public bool ProtectSocket(Socket socket, IPAddress ipAddress) => false;
+    public void FirePrimaryAdapterIpChanged()=> PrimaryAdapterIpChanged?.Invoke(this, EventArgs.Empty);
 
     public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {

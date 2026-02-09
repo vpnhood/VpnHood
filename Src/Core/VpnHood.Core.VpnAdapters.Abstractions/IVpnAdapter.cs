@@ -8,6 +8,7 @@ namespace VpnHood.Core.VpnAdapters.Abstractions;
 public interface IVpnAdapter : IPacketTransport
 {
     event EventHandler? Disposed;
+    event EventHandler? PrimaryAdapterIpChanged;
     bool IsStarted { get; }
     bool IsNatSupported { get; }
     bool CanProtectSocket { get; }

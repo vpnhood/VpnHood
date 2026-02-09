@@ -183,7 +183,6 @@ internal class ClientHost(
         if (orgConnection is null) throw new ArgumentNullException(nameof(orgConnection));
         ConnectorRequestResult<SessionResponse>? requestResult = null;
         ProxyChannel? channel = null;
-        var ipVersion = IpVersion.IPv4;
 
         try {
             // check cancellation
@@ -195,7 +194,7 @@ internal class ClientHost(
                 orgConnection.RemoteEndPoint ??
                 throw new Exception("Could not get original remote endpoint.");
 
-            ipVersion = orgRemoteEndPoint.IpVersion();
+            var ipVersion = orgRemoteEndPoint.IpVersion();
             var natItem =
                 (NatItemEx?)_nat.Resolve(ipVersion, IpProtocol.Tcp, (ushort)orgRemoteEndPoint.Port) ??
                 throw new Exception(
@@ -269,11 +268,6 @@ internal class ClientHost(
             _stat.TcpTunnelledCount++;
         }
         catch (Exception ex) {
-            // disable IPv6 if detect the new network does not have IpV6
-            if (ipVersion == IpVersion.IPv6 &&
-                ex is SocketException { SocketErrorCode: SocketError.NetworkUnreachable })
-                vpnHoodClient.IsIpV6SupportedByClient = false;
-
             channel?.Dispose();
             requestResult?.Dispose();
             orgConnection.Dispose();

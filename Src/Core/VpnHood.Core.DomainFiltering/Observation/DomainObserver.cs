@@ -1,8 +1,11 @@
+using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.DomainFiltering.Observation;
 
-public class DomainObserver
+public class DomainObserver(EventId sniEventId)
 {
     private readonly Dictionary<string, DomainObservation> _observations = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lock _lockObject = new();
@@ -17,9 +20,19 @@ public class DomainObserver
 
     public void Track(string domainName, DomainFilterAction action, DomainObservationProtocol protocol)
     {
+        Track(domainName, action, protocol, destinationEndPoint: null);
+    }
+
+    public void Track(string domainName, DomainFilterAction action, DomainObservationProtocol protocol, IpEndPointValue? destinationEndPoint)
+    {
         if (string.IsNullOrEmpty(domainName))
             return;
 
+        // log new domain observation
+        VhLogger.Instance.LogDebug(sniEventId, "Domain: {Domain}, DestEp: {DestEp}, Protocol: {protocol}",
+            VhLogger.FormatHostName(domainName), VhLogger.Format(destinationEndPoint), protocol);
+
+        // update or add observation
         lock (_lockObject) {
             if (_observations.TryGetValue(domainName, out var existing)) {
                 existing.Count++;

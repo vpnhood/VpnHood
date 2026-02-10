@@ -214,7 +214,7 @@ internal class ClientHost(
 
             // Filter by SNI
             var filterResult = await domainFilterService
-                .ProcessStream(orgConnection.Stream, natItem.DestinationAddress, cancellationToken).Vhc();
+                .ProcessStream(orgConnection.Stream, new IpEndPointValue(natItem.DestinationAddress, natItem.DestinationPort), cancellationToken).Vhc();
             if (filterResult.Action == DomainFilterAction.Block) {
                 VhLogger.Instance.LogInformation(GeneralEventId.Sni,
                     "Domain has been blocked. Domain: {Domain}",

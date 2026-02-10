@@ -1,11 +1,10 @@
-﻿using System.Net;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.Observation;
 using VpnHood.Core.DomainFiltering.SniExtractors.TlsStream;
 using VpnHood.Core.DomainFiltering.SniFilteringServices;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.DomainFiltering;
@@ -24,7 +23,7 @@ public class DomainFilteringService
     private readonly EventId _sniEventId;
     private readonly int _tlsBufferSize;
     private readonly bool _trackObservations;
-    public DomainObserver DomainObserver { get; } = new();
+    public DomainObserver DomainObserver { get; }
 
     public DomainFilteringService(DomainFilteringPolicy filteringPolicy,
         bool forceLogSni, EventId sniEventId,
@@ -32,13 +31,17 @@ public class DomainFilteringService
         bool trackObservations = false)
     {
         _filteringPolicy = filteringPolicy;
-        ForceLogSni = forceLogSni;
         _sniEventId = sniEventId;
         _tlsBufferSize = tlsBufferSize;
         _trackObservations = trackObservations;
         _filterResolver = new DomainFilterResolver(filteringPolicy);
         _quicSniService = new QuicSniFilteringService(_filterResolver, sniEventId: sniEventId, connectionTimeout: QuicFlowTimeout);
         _tcpSniService = new TcpSniFilteringService(_filterResolver, sniEventId: sniEventId, connectionTimeout: TcpFlowTimeout);
+        DomainObserver = new DomainObserver(sniEventId);
+
+        // enable service by force even without any policy to make sure SNI is logged for observation
+        ForceLogSni = forceLogSni;
+
     }
 
     public bool ForceLogSni { get; set; }
@@ -64,26 +67,19 @@ public class DomainFilteringService
             _ => PacketSniFilterResult.Passthrough()
         };
 
-        // Force log SNI if enabled
-        //todo: move logging to observer
-        if (result.IsNewFlow && !string.IsNullOrEmpty(result.DomainName))
-            VhLogger.Instance.LogDebug(_sniEventId,
-                "Domain: {Domain}, DestEp: {IP}",
-                VhLogger.FormatHostName(result.DomainName), VhLogger.Format(ipPacket.GetDestinationEndPoint()));
-
         // Track observation if enabled
         if (_trackObservations && result.IsNewFlow && !string.IsNullOrEmpty(result.DomainName)) {
             var protocol = ipPacket.Protocol == IpProtocol.Tcp
                 ? DomainObservationProtocol.Tcp
                 : DomainObservationProtocol.Quic;
-            DomainObserver.Track(result.DomainName, result.Action, protocol);
+            DomainObserver.Track(result.DomainName, result.Action, protocol, ipPacket.GetDestinationEndPoint());
         }
 
         return result;
     }
 
 
-    public async Task<StreamSniFilterResult> ProcessStream(Stream tlsStream, IPAddress remoteAddress,
+    public async Task<StreamSniFilterResult> ProcessStream(Stream tlsStream, IpEndPointValue remoteEndPoint,
         CancellationToken cancellationToken)
     {
         // none if domain filter is empty
@@ -96,11 +92,6 @@ public class DomainFilteringService
 
         // extract SNI
         var sniData = await StreamSniExtractor.ExtractSni(tlsStream, _sniEventId, _tlsBufferSize, cancellationToken).Vhc();
-        if (!string.IsNullOrEmpty(sniData.DomainName)) {
-            VhLogger.Instance.LogInformation(_sniEventId,
-                "Domain: {Domain}, DestEp: {IP}",
-                VhLogger.FormatHostName(sniData.DomainName), VhLogger.Format(remoteAddress));
-        }
 
         // no SNI
         var resolver = new DomainFilterResolver(_filteringPolicy);
@@ -111,8 +102,8 @@ public class DomainFilteringService
         };
 
         // Track observation if enabled
-        if (_trackObservations && !string.IsNullOrEmpty(res.DomainName))
-            DomainObserver.Track(res.DomainName, res.Action, DomainObservationProtocol.Tcp);
+        if (_trackObservations && !string.IsNullOrEmpty(res.DomainName)) 
+            DomainObserver.Track(res.DomainName, res.Action, DomainObservationProtocol.Tcp, remoteEndPoint);
 
         return res;
     }

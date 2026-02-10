@@ -14,7 +14,6 @@ using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.DomainFiltering.Observation;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Jobs;

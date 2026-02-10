@@ -14,12 +14,11 @@ namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
 public abstract class PacketSniFilteringService : IDisposable
 {
     private readonly ConcurrentDictionary<IpEndPointValue, FlowInfo> _flowCache = new();
-    private readonly Timer _cleanupTimer;
+    private readonly FlowCacheCleanupService _cleanupService;
     private bool _disposed;
 
     protected DomainFilterResolver DomainFilterResolver { get; }
     protected EventId? SniEventId { get; }
-    protected TimeSpan FlowTimeout { get; }
     protected abstract string ProtocolName { get; }
 
     protected PacketSniFilteringService(
@@ -29,10 +28,7 @@ public abstract class PacketSniFilteringService : IDisposable
     {
         DomainFilterResolver = domainFilterResolver;
         SniEventId = sniEventId;
-        FlowTimeout = flowTimeout;
-
-        var cleanupInterval = TimeSpan.FromSeconds(Math.Min(flowTimeout.TotalSeconds, 60));
-        _cleanupTimer = new Timer(CleanupExpiredFlows, this, cleanupInterval, cleanupInterval);
+        _cleanupService = new FlowCacheCleanupService(_flowCache, flowTimeout);
     }
 
     /// <summary>
@@ -158,34 +154,13 @@ public abstract class PacketSniFilteringService : IDisposable
         return new PacketSniFilterResult(DomainFilterAction.None, null, flowInfo?.BufferedPackets, false);
     }
 
-    private static void CleanupExpiredFlows(object? state)
-    {
-        if (state is not PacketSniFilteringService service || service._disposed)
-            return;
-
-        var nowTicks = Environment.TickCount64 * TimeSpan.TicksPerMillisecond;
-        var flowTimeoutTicks = service.FlowTimeout.Ticks;
-
-        foreach (var kvp in service._flowCache) {
-            if (nowTicks - kvp.Value.LastSeenTicks <= flowTimeoutTicks) 
-                continue;
-
-            if (!service._flowCache.TryRemove(kvp.Key, out var flowInfo)) 
-                continue;
-            
-            // Dispose buffered packets
-            foreach (var packet in flowInfo.BufferedPackets)
-                packet.Dispose();
-        }
-    }
-
     public void Dispose()
     {
         if (_disposed)
             return;
 
         _disposed = true;
-        _cleanupTimer.Dispose();
+        _cleanupService.Dispose();
 
         // Dispose all buffered packets
         foreach (var kvp in _flowCache) {
@@ -195,14 +170,5 @@ public abstract class PacketSniFilteringService : IDisposable
 
         _flowCache.Clear();
         GC.SuppressFinalize(this);
-    }
-
-    private class FlowInfo
-    {
-        public object? SniState { get; set; }
-        public string? DomainName { get; set; }
-        public DomainFilterAction? Decision { get; set; }
-        public List<IpPacket> BufferedPackets { get; set; } = [];
-        public long LastSeenTicks { get; set; }
     }
 }

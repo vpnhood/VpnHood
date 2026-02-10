@@ -404,6 +404,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return true;
     }
 
+    //todo: protect socker
     private static IPAddress? DiscoverPrimaryAdapterIp(AddressFamily addressFamily)
     {
         // not matter is it reachable or not, just try to get the primary adapter IP which can route to the internet

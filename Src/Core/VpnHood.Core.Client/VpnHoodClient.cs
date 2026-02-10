@@ -215,7 +215,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // init vpnAdapter events
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
         vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
-        vpnAdapter.PrimaryAdapterIpChanged += (_, _) => Task.Run(UpdateClientIpv6Status);
+        vpnAdapter.PrimaryAdapterIpChanged += (_, _) => UpdateClientIpv6Status();
 
         _packetHandler = new ClientPacketHandler(_tunnel, _clientHost, _domainFilteringService, _ipFilterHandler, _proxyManager);
         UpdateConfig();
@@ -364,9 +364,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Connecting. Must before IsIpv6Supported
             State = ClientState.Connecting;
+            UpdateClientIpv6Status();
 
             // report config
-            await UpdateClientIpv6Status();
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             VhLogger.Instance.LogInformation(
                 "DropUdp: {DropUdp}, VpnProtocol: {VpnProtocol}, " +
@@ -413,11 +413,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task UpdateClientIpv6Status()
+    private void UpdateClientIpv6Status()
     {
         var isSupported = false;
         try {
-            isSupported = await IPAddressUtil.IsIpv6Supported().Vhc();
+            isSupported = _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not determine IPv6 support. Default to false.");

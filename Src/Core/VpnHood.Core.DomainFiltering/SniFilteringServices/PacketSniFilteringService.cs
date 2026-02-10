@@ -19,18 +19,20 @@ public abstract class PacketSniFilteringService : IDisposable
 
     protected DomainFilterResolver DomainFilterResolver { get; }
     protected EventId? SniEventId { get; }
-    protected TimeSpan ConnectionTimeout { get; }
+    protected TimeSpan FlowTimeout { get; }
     protected abstract string ProtocolName { get; }
 
     protected PacketSniFilteringService(
         DomainFilterResolver domainFilterResolver,
-        TimeSpan connectionTimeout,
+        TimeSpan flowTimeout,
         EventId? sniEventId)
     {
         DomainFilterResolver = domainFilterResolver;
         SniEventId = sniEventId;
-        ConnectionTimeout = connectionTimeout;
-        _cleanupTimer = new Timer(CleanupExpiredFlows, this, connectionTimeout, connectionTimeout);
+        FlowTimeout = flowTimeout;
+
+        var cleanupInterval = TimeSpan.FromSeconds(Math.Min(flowTimeout.TotalSeconds, 60));
+        _cleanupTimer = new Timer(CleanupExpiredFlows, this, cleanupInterval, cleanupInterval);
     }
 
     /// <summary>
@@ -48,7 +50,12 @@ public abstract class PacketSniFilteringService : IDisposable
 
         // Check if we already have a decision for this flow
         if (_flowCache.TryGetValue(flowKey, out var flowInfo) && flowInfo.Decision != null) {
-            flowInfo.LastSeenTicks = nowTicks;
+            // Remove the flow if end-of-flow signal is detected (e.g., TCP FIN/RST)
+            if (IsFlowEnd(ipPacket))
+                _flowCache.TryRemove(flowKey, out _);
+            else
+                flowInfo.LastSeenTicks = nowTicks;
+
             return new PacketSniFilterResult(flowInfo.Decision.Value, flowInfo.DomainName, null, false);
         }
 
@@ -84,6 +91,11 @@ public abstract class PacketSniFilteringService : IDisposable
         ReadOnlySpan<byte> payload,
         object? state,
         long nowTicks);
+
+    /// <summary>
+    /// Check if the packet signals the end of a flow (e.g., TCP FIN or RST).
+    /// </summary>
+    protected virtual bool IsFlowEnd(IpPacket ipPacket) => false;
 
     private void LogSni(string domainName, IpPacket ipPacket)
     {
@@ -152,10 +164,10 @@ public abstract class PacketSniFilteringService : IDisposable
             return;
 
         var nowTicks = Environment.TickCount64 * TimeSpan.TicksPerMillisecond;
-        var timeoutTicks = service.ConnectionTimeout.Ticks;
+        var flowTimeoutTicks = service.FlowTimeout.Ticks;
 
         foreach (var kvp in service._flowCache) {
-            if (nowTicks - kvp.Value.LastSeenTicks <= timeoutTicks) 
+            if (nowTicks - kvp.Value.LastSeenTicks <= flowTimeoutTicks) 
                 continue;
 
             if (!service._flowCache.TryRemove(kvp.Key, out var flowInfo)) 

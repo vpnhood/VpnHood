@@ -12,9 +12,9 @@ namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
 /// </summary>
 public class TcpSniFilteringService(
     DomainFilterResolver domainFilterResolver,
-    TimeSpan connectionTimeout,
+    TimeSpan flowTimeout,
     EventId? sniEventId)
-    : PacketSniFilteringService(domainFilterResolver, connectionTimeout, sniEventId)
+    : PacketSniFilteringService(domainFilterResolver, flowTimeout, sniEventId)
 {
     protected override string ProtocolName => "TLS";
 
@@ -41,6 +41,15 @@ public class TcpSniFilteringService(
         flowKey = new IpEndPointValue(ipPacket.SourceAddress, tcpPacket.SourcePort);
         payload = tcpPacket.Payload.Span;
         return true;
+    }
+
+    protected override bool IsFlowEnd(IpPacket ipPacket)
+    {
+        if (ipPacket.Protocol != IpProtocol.Tcp)
+            return false;
+
+        var tcpPacket = ipPacket.ExtractTcp();
+        return tcpPacket.Finish || tcpPacket.Reset;
     }
 
     protected override PacketSniResult ExtractSni(

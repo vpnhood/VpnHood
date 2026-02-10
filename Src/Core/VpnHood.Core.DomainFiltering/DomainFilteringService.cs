@@ -13,8 +13,8 @@ namespace VpnHood.Core.DomainFiltering;
 //todo add tests
 public class DomainFilteringService
 {
-    private static readonly TimeSpan QuicFlowTimeout = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan TcpFlowTimeout = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan TcpFlowTimeout = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan UdpFlowTimeout = TimeSpan.FromMinutes(2);
 
     private readonly DomainFilterResolver _filterResolver;
     private readonly TcpSniFilteringService _tcpSniService;
@@ -25,8 +25,10 @@ public class DomainFilteringService
     private readonly bool _trackObservations;
     public DomainObserver DomainObserver { get; }
 
-    public DomainFilteringService(DomainFilteringPolicy filteringPolicy,
-        bool forceLogSni, EventId sniEventId,
+    public DomainFilteringService(
+        DomainFilteringPolicy filteringPolicy,
+        bool forceLogSni, 
+        EventId sniEventId,
         int tlsBufferSize,
         bool trackObservations = false)
     {
@@ -35,8 +37,8 @@ public class DomainFilteringService
         _tlsBufferSize = tlsBufferSize;
         _trackObservations = trackObservations;
         _filterResolver = new DomainFilterResolver(filteringPolicy);
-        _quicSniService = new QuicSniFilteringService(_filterResolver, sniEventId: sniEventId, connectionTimeout: QuicFlowTimeout);
-        _tcpSniService = new TcpSniFilteringService(_filterResolver, sniEventId: sniEventId, connectionTimeout: TcpFlowTimeout);
+        _quicSniService = new QuicSniFilteringService(_filterResolver, flowTimeout: UdpFlowTimeout, sniEventId: sniEventId);
+        _tcpSniService = new TcpSniFilteringService(_filterResolver, flowTimeout: TcpFlowTimeout, sniEventId: sniEventId);
         DomainObserver = new DomainObserver(sniEventId);
 
         // enable service by force even without any policy to make sure SNI is logged for observation

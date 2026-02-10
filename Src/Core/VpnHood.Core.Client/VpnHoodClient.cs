@@ -41,6 +41,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly ProxyManager _proxyManager;
     private readonly IVpnAdapter _vpnAdapter;
     private readonly ClientHost _clientHost;
+    private readonly ClientStreamHandler _streamHandler;
     private ClientUsageTracker? _clientUsageTracker;
     private DateTime? _initConnectedTime;
     private DateTime? _lastConnectionErrorTime;
@@ -201,17 +202,21 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         });
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
-        // create proxy host
-        _clientHost = new ClientHost(
+        // Stream handler
+        _streamHandler = new ClientStreamHandler(
             this,
             domainFilterService: _domainFilteringService,
             socketFactory: socketFactory,
             tunnel: _tunnel,
             tcpConnectTimeout: Config.TcpConnectTimeout,
             proxyManager: _proxyManager,
-            catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4,
-            catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6,
             streamProxyBufferSize: options.StreamProxySendBufferSize ?? TunnelDefaults.ConnectionProxyBufferSize);
+
+        // proxy host
+        _clientHost = new ClientHost(
+            _streamHandler,
+            catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4,
+            catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6);
 
         _clientHost.PacketReceived += ClientHost_PacketReceived;
 
@@ -1188,8 +1193,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         } = accessUsage.TotalTraffic;
 
         public int SessionPacketChannelCount => client._sessionPacketChannelCount;
-        public int TcpTunnelledCount => client._clientHost.Stat.TcpTunnelledCount;
-        public int TcpPassthruCount => client._clientHost.Stat.TcpPassthruCount;
+        public int TcpTunnelledCount => client._streamHandler.Stat.TcpTunnelledCount;
+        public int TcpPassthruCount => client._streamHandler.Stat.TcpPassthruCount;
         public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
         public bool IsDropQuic => client._packetHandler.DropQuic;
         public bool IsTcpProxy => client._packetHandler.UseTcpProxy;

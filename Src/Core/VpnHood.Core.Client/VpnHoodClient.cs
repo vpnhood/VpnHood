@@ -205,7 +205,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _clientHost = new ClientHost(
             this,
             domainFilterService: _domainFilteringService,
+            socketFactory: socketFactory,
             tunnel: _tunnel,
+            tcpConnectTimeout: Config.TcpConnectTimeout,
+            proxyManager: _proxyManager,
             catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4,
             catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6,
             streamProxyBufferSize: options.StreamProxySendBufferSize ?? TunnelDefaults.ConnectionProxyBufferSize);
@@ -316,30 +319,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (State == ClientState.Disposed)
                 StateChanged = null; //no more event will be raised after disposed
         }, CancellationToken.None);
-    }
-
-    internal async Task AddPassthruTcpStream(IConnection orgConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
-    {
-        // set timeout
-        using var timeoutCts = new CancellationTokenSource(ConnectorService.RequestTimeout);
-        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
-
-        // connect to host
-        var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint);
-        await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
-        var connection = new TcpConnection(tcpClient, connectionId: orgConnection.ConnectionId, connectionName: "host", isServer: false);
-        ProxyChannel? channel = null;
-
-        try {
-            // create and add the channel
-            channel = new ProxyChannel(connection.ToString(), orgConnection, connection, _clientHost.StreamProxyBufferSize);
-            _proxyManager.AddChannel(channel);
-        }
-        catch {
-            await connection.DisposeAsync();
-            channel?.Dispose();
-            throw;
-        }
     }
 
     public async Task Connect(CancellationToken cancellationToken = default)

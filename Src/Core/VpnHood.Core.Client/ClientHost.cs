@@ -1,12 +1,13 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -14,14 +15,18 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client;
 
 internal class ClientHost(
     VpnHoodClient vpnHoodClient,
+    ISocketFactory socketFactory,
     DomainFilteringService domainFilterService,
     Tunnel tunnel,
+    TimeSpan tcpConnectTimeout,
+    ProxyManager proxyManager,
     IPAddress catcherAddressIpV4,
     IPAddress catcherAddressIpV6,
     TransferBufferSize streamProxyBufferSize)
@@ -200,7 +205,7 @@ internal class ClientHost(
     }
 
     private async Task ProcessConnection(
-        IConnection orgConnection, IPEndPoint hostEndPoint, bool isInRange, CancellationToken cancellationToken)
+        IConnection connection, IPEndPoint hostEndPoint, bool isInRange, CancellationToken cancellationToken)
     {
         try {
             // check cancellation
@@ -208,46 +213,85 @@ internal class ClientHost(
             cancellationToken.ThrowIfCancellationRequested();
 
             // create a scope for the logger
-            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, 
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "New TcpProxy Request. LocalPort: {LocalPort}, HostEp: {RemoteEp}",
-                orgConnection.RemoteEndPoint.Port, hostEndPoint);
+                connection.RemoteEndPoint.Port, hostEndPoint);
 
             // Apply SNI filtering and update connection if needed
-            (orgConnection, isInRange) = await ApplySniFiltering(orgConnection, hostEndPoint, isInRange, cancellationToken).Vhc();
+            (connection, isInRange) = await ApplySniFiltering(connection, hostEndPoint, isInRange, cancellationToken).Vhc();
 
             // Filter by IP
             if (isInRange) {
                 // Create and add to tunnel channel
-                await CreateTunnelChannel(orgConnection, hostEndPoint, cancellationToken).Vhc();
+                await AddTunnelChannel(connection, hostEndPoint, cancellationToken).Vhc();
                 _stat.TcpTunnelledCount++;
             }
             else {
                 // Create and add to exclude channel
-                await vpnHoodClient.AddPassthruTcpStream(orgConnection, hostEndPoint, cancellationToken).Vhc();
+                await AddPassthruChannel(connection, hostEndPoint, cancellationToken).Vhc();
                 _stat.TcpPassthruCount++;
             }
 
         }
         catch (Exception ex) {
-            orgConnection.Dispose();
-            VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "");
+            VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "Could not handle a tcp stream request.");
+            await connection.DisposeAsync();
         }
         finally {
             Interlocked.Decrement(ref _processingCount);
         }
     }
 
-    private async Task CreateTunnelChannel(
-        IConnection orgConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
+    private async Task AddPassthruChannel(IConnection connection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
+        if (hostEndPoint.IsV6() && vpnHoodClient.SessionStatus?.IsIpV6SupportedByClient is null or false)
+            throw new Exception("IPv6 is not supported by client.");
+
+        //log
+        VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
+            "Adding a new stream channel to bypass. HostEp: {HostEp}, ConnectionId: {ConnectionId}",
+            VhLogger.Format(hostEndPoint), connection.ConnectionId);
+
+        // set timeout
+        using var timeoutCts = new CancellationTokenSource(tcpConnectTimeout);
+        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
+
+        // connect to host
+        var tcpClient = socketFactory.CreateTcpClient(hostEndPoint);
+        await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
+        var hostConnection = new TcpConnection(tcpClient, connectionId: connection.ConnectionId, connectionName: "host", isServer: false);
+
+        try {
+            // create and add the channel
+            var channel = new ProxyChannel(hostConnection.ToString(), connection, hostConnection, StreamProxyBufferSize);
+            proxyManager.AddChannel(channel, disposeOnFail: true );
+        }
+        catch {
+            await hostConnection.DisposeAsync();
+            throw;
+        }
+    }
+
+    private async Task AddTunnelChannel(
+        IConnection connection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
+    {
+        if (hostEndPoint.IsV6() && vpnHoodClient.SessionStatus?.IsIpV6SupportedByServer is null or false)
+            throw new Exception("IPv6 is not supported by server.");
+
+        //log
+        VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
+            "Adding a new stream channel to tunnel. HostEp: {HostEp}, ConnectionId: {ConnectionId}",
+            VhLogger.Format(hostEndPoint), connection.ConnectionId);
+
+
         //handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
         var memory = new Memory<byte>(new byte[TunnelDefaults.PrefetchStreamBufferSize]);
-        var read = await orgConnection.Stream.ReadAsync(memory, cancellationToken);
+        var read = await connection.Stream.ReadAsync(memory, cancellationToken);
         var initContents = memory[..read];
 
         // Create the Request
         var request = new StreamProxyChannelRequest {
-            RequestId = orgConnection.ConnectionId,
+            RequestId = connection.ConnectionId,
             SessionId = vpnHoodClient.SessionId,
             SessionKey = vpnHoodClient.SessionKey,
             DestinationEndPoint = hostEndPoint
@@ -259,18 +303,14 @@ internal class ClientHost(
         try {
             var proxyConnection = requestResult.Connection;
 
-            // create a ProxyChannel
-            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
-                "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
-
             // add stream proxy
-            var channel = new ProxyChannel(proxyConnection.ToString()!, orgConnection, proxyConnection, 
+            var channel = new ProxyChannel(proxyConnection.ToString()!, connection, proxyConnection,
                 streamProxyBufferSize);
             tunnel.AddChannel(channel, disposeIfFailed: true);
         }
-        catch (Exception ex) {
+        catch {
             requestResult.Dispose();
-            VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "Could not add a ProxyChannel.");
+            throw;
         }
     }
 

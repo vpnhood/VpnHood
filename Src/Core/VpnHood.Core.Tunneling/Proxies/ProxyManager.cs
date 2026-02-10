@@ -99,14 +99,22 @@ public class ProxyManager : PassthroughPacketTransport
         }
     }
 
-    public void AddChannel(ProxyChannel channel)
+    public void AddChannel(ProxyChannel channel, bool disposeOnFail)
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(nameof(ProxyManager));
+        try {
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(ProxyManager));
 
-        lock (_streamProxyChannels)
-            _streamProxyChannels.Add(channel);
-        channel.Start();
+            lock (_streamProxyChannels)
+                _streamProxyChannels.Add(channel);
+            channel.Start();
+        }
+        catch {
+            if (disposeOnFail)
+                channel.Dispose();
+            throw;
+        }
     }
 
     protected override void DisposeManaged()

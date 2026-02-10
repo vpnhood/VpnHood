@@ -19,12 +19,12 @@ public static class StreamSniExtractor
         var readData = initBuffer[..bufCount];
 
         return new StreamSniResult {
-            DomainName = ExtractSni(readData.Span, eventId),
+            DomainName = TryExtractSni(readData.Span, eventId),
             ReadData = readData
         };
     }
 
-    public static string? ExtractSni(ReadOnlySpan<byte> payloadData, EventId eventId)
+    private static string? TryExtractSni(ReadOnlySpan<byte> payloadData, EventId eventId)
     {
         try {
             return TlsClientHelloParser.ExtractSni(payloadData, hasRecordHeader: true);

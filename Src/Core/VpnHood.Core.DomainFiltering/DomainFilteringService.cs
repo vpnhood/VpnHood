@@ -11,14 +11,15 @@ namespace VpnHood.Core.DomainFiltering;
 
 
 //todo add tests
+/// Note: TCP extraction by packet is useless service, because TCP SNI is come after TCP handshake, and it will be too late to exclude connection
+/// evan if we establish our own handshake, we can not simulate the rest
+/// Use TcpStreamSniFilteringService instead as proxy
 public class DomainFilteringService
 {
-    private static readonly TimeSpan TcpFlowTimeout = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan UdpFlowTimeout = TimeSpan.FromMinutes(2);
 
     private readonly DomainFilterResolver _filterResolver;
-    private readonly TcpSniFilteringService _tcpSniService;
-    private readonly QuicSniFilteringService _quicSniService;
+    private readonly QuicSniFilteringService _quicSniService; // Quic only, don't try Tcp SNI extraction by packet
     private readonly DomainFilteringPolicy _filteringPolicy;
     private readonly EventId _sniEventId;
     private readonly int _tlsBufferSize;
@@ -38,7 +39,6 @@ public class DomainFilteringService
         _trackObservations = trackObservations;
         _filterResolver = new DomainFilterResolver(filteringPolicy);
         _quicSniService = new QuicSniFilteringService(_filterResolver, flowTimeout: UdpFlowTimeout, sniEventId: sniEventId);
-        _tcpSniService = new TcpSniFilteringService(_filterResolver, flowTimeout: TcpFlowTimeout, sniEventId: sniEventId);
         DomainObserver = new DomainObserver(sniEventId);
 
         // enable service by force even without any policy to make sure SNI is logged for observation
@@ -64,17 +64,13 @@ public class DomainFilteringService
     public PacketSniFilterResult ProcessPacket(IpPacket ipPacket)
     {
         var result = ipPacket.Protocol switch {
-            IpProtocol.Tcp => _tcpSniService.ProcessPacket(ipPacket),
             IpProtocol.Udp => _quicSniService.ProcessPacket(ipPacket),
             _ => PacketSniFilterResult.Passthrough()
         };
 
         // Track observation if enabled
         if (_trackObservations && result.IsNewFlow && !string.IsNullOrEmpty(result.DomainName)) {
-            var protocol = ipPacket.Protocol == IpProtocol.Tcp
-                ? DomainObservationProtocol.Tcp
-                : DomainObservationProtocol.Quic;
-            DomainObserver.Track(result.DomainName, result.Action, protocol, ipPacket.GetDestinationEndPoint());
+            DomainObserver.Track(result.DomainName, result.Action, DomainObservationProtocol.Quic, ipPacket.GetDestinationEndPoint());
         }
 
         return result;

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Net;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.Observation;
 using VpnHood.Core.DomainFiltering.SniExtractors.TlsStream;
 using VpnHood.Core.DomainFiltering.SniFilteringServices;
@@ -77,7 +78,7 @@ public class DomainFilteringService
     }
 
 
-    public async Task<StreamSniFilterResult> ProcessStream(Stream tlsStream, IpEndPointValue remoteEndPoint,
+    public async Task<StreamSniFilterResult> ProcessStream(Stream tlsStream, IPEndPoint remoteEndPoint,
         CancellationToken cancellationToken)
     {
         // none if domain filter is empty
@@ -101,7 +102,7 @@ public class DomainFilteringService
 
         // Track observation if enabled
         if (_trackObservations && !string.IsNullOrEmpty(res.DomainName)) 
-            DomainObserver.Track(res.DomainName, res.Action, DomainObservationProtocol.Tcp, remoteEndPoint);
+            DomainObserver.Track(res.DomainName, res.Action, DomainObservationProtocol.Tcp, remoteEndPoint.ToIpEndPointValue());
 
         return res;
     }

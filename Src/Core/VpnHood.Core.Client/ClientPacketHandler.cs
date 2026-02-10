@@ -28,7 +28,7 @@ internal class ClientPacketHandler(
     public void ProcessOutgoingPacket(IpPacket ipPacket)
     {
 
-        if (domainFilteringService.IsEnabled)
+        if (ipPacket.Protocol is IpProtocol.Udp && domainFilteringService.IsEnabled)
             ProcessOutgoingPacketWithDomainFilter(ipPacket);
         else
             ProcessOutgoingPacket(ipPacket, null);

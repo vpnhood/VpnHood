@@ -148,8 +148,8 @@ internal class ClientHost(
             // Redirect outbound to the local address
             else {
                 var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
-                var syncCustomData = sync && isInRange !=null 
-                    ? new SyncCustomData { IsInIpRange = isInRange.Value } 
+                var syncCustomData = sync && isInRange != null
+                    ? new SyncCustomData { IsInIpRange = isInRange.Value }
                     : (SyncCustomData?)null;
 
                 // add to nat if it is sync packet
@@ -162,6 +162,7 @@ internal class ClientHost(
                 if (syncCustomData != null)
                     natItem.CustomData = syncCustomData;
 
+                // rewrite packet by changing source/destination address and port
                 tcpPacket.SourcePort = natItem.NatId; // 1
                 ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
                 ipPacket.SourceAddress = catcherAddress; //3
@@ -178,9 +179,30 @@ internal class ClientHost(
         }
     }
 
-    private async Task ProcessConnection(IConnection orgConnection, CancellationToken cancellationToken)
+    private Task ProcessConnection(IConnection connection, CancellationToken cancellationToken)
     {
-        if (orgConnection is null) throw new ArgumentNullException(nameof(orgConnection));
+        // get original remote from NAT
+        var remoteEndPoint = connection.RemoteEndPoint;
+        var ipVersion = remoteEndPoint.IpVersion();
+        var natItem =
+            (NatItemEx?)_nat.Resolve(ipVersion, IpProtocol.Tcp, (ushort)remoteEndPoint.Port) ??
+            throw new Exception(
+                $"Could not resolve original remote from NAT! RemotePort: {remoteEndPoint.Port}");
+
+        // check invalid income
+        var catcherAddress = ipVersion == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
+        if (!Equals(connection.RemoteEndPoint.Address, catcherAddress))
+            throw new Exception("TcpProxy rejected an outbound connection!");
+
+        var syncCustomData = natItem.CustomData as SyncCustomData?;
+        var isInRange = syncCustomData?.IsInIpRange ?? true; // default to true if no custom data
+        var hostEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort);
+        return ProcessConnection(connection, hostEndPoint, isInRange, cancellationToken);
+    }
+
+    private async Task ProcessConnection(
+        IConnection orgConnection, IPEndPoint hostEndPoint, bool isInRange, CancellationToken cancellationToken)
+    {
         ConnectorRequestResult<SessionResponse>? requestResult = null;
         ProxyChannel? channel = null;
 
@@ -189,53 +211,17 @@ internal class ClientHost(
             Interlocked.Increment(ref _processingCount);
             cancellationToken.ThrowIfCancellationRequested();
 
-            // get original remote from NAT
-            var orgRemoteEndPoint =
-                orgConnection.RemoteEndPoint ??
-                throw new Exception("Could not get original remote endpoint.");
-
-            var ipVersion = orgRemoteEndPoint.IpVersion();
-            var natItem =
-                (NatItemEx?)_nat.Resolve(ipVersion, IpProtocol.Tcp, (ushort)orgRemoteEndPoint.Port) ??
-                throw new Exception(
-                    $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(orgRemoteEndPoint)}");
-
-            var syncCustomData = natItem.CustomData as SyncCustomData?;
-
             // create a scope for the logger
-            using var scope = VhLogger.Instance.BeginScope("LocalPort: {LocalPort}, RemoteEp: {RemoteEp}",
-                natItem.SourcePort, VhLogger.Format(natItem.DestinationAddress) + ":" + natItem.DestinationPort);
-            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "New TcpProxy Request.");
+            VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, 
+                "New TcpProxy Request. LocalPort: {LocalPort}, HostEp: {RemoteEp}",
+                orgConnection.RemoteEndPoint.Port, hostEndPoint);
 
-            // check invalid income
-            var catcherAddress = ipVersion == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
-            if (!Equals(orgRemoteEndPoint.Address, catcherAddress))
-                throw new Exception("TcpProxy rejected an outbound connection!");
-
-            // Filter by SNI
-            var filterResult = await domainFilterService
-                .ProcessStream(orgConnection.Stream, new IpEndPointValue(natItem.DestinationAddress, natItem.DestinationPort), cancellationToken).Vhc();
-            if (filterResult.Action == DomainFilterAction.Block) {
-                VhLogger.Instance.LogInformation(GeneralEventId.Sni,
-                    "Domain has been blocked. Domain: {Domain}",
-                    VhLogger.FormatHostName(filterResult.DomainName));
-
-                throw new Exception($"Domain has been blocked. Domain: {filterResult.DomainName}");
-            }
-
-            // update connection stream with ReadBufferedStream to pre-append the read data
-            if (filterResult.ReadData.Length > 0)
-                orgConnection = new ConnectionDecorator(orgConnection,
-                    new ReadBufferedStream(orgConnection.Stream, leaveOpen: false, filterResult.ReadData.Span) {
-                        AllowBufferRefill = false
-                    });
+            // Apply SNI filtering and update connection if needed
+            (orgConnection, isInRange) = await ApplySniFiltering(orgConnection, hostEndPoint, isInRange, cancellationToken).Vhc();
 
             // Filter by IP
-            if (syncCustomData?.IsInIpRange == false) {
-                await vpnHoodClient
-                    .AddPassthruTcpStream(orgConnection,
-                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort), cancellationToken).Vhc();
-
+            if (!isInRange) {
+                await vpnHoodClient.AddPassthruTcpStream(orgConnection,hostEndPoint, cancellationToken).Vhc();
                 _stat.TcpPassthruCount++;
                 return;
             }
@@ -250,7 +236,7 @@ internal class ClientHost(
                 RequestId = orgConnection.ConnectionId,
                 SessionId = vpnHoodClient.SessionId,
                 SessionKey = vpnHoodClient.SessionKey,
-                DestinationEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort)
+                DestinationEndPoint = hostEndPoint
             };
 
             // read the response
@@ -292,6 +278,51 @@ internal class ClientHost(
         PacketReceived = null;
 
         _disposed = true;
+    }
+
+    private async Task<(IConnection Connection, bool IsInRange)> ApplySniFiltering(
+        IConnection connection, IPEndPoint hostEndPoint, bool isInRange, CancellationToken cancellationToken)
+    {
+        // Filter by SNI
+        var filterResult = await domainFilterService.ProcessStream(
+            connection.Stream, hostEndPoint, cancellationToken).Vhc();
+
+        switch (filterResult.Action) {
+            case DomainFilterAction.Block:
+                VhLogger.Instance.LogInformation(GeneralEventId.Sni,
+                    "Domain has been blocked. Domain: {Domain}",
+                    VhLogger.FormatHostName(filterResult.DomainName));
+
+                throw new Exception($"Domain has been blocked. Domain: {filterResult.DomainName}");
+
+            case DomainFilterAction.Exclude:
+                VhLogger.Instance.LogDebug(GeneralEventId.Sni,
+                    "Domain has been excluded from VPN. Domain: {Domain}",
+                    VhLogger.FormatHostName(filterResult.DomainName));
+                isInRange = false;
+                break;
+
+            case DomainFilterAction.Include:
+                VhLogger.Instance.LogDebug(GeneralEventId.Sni,
+                    "Domain has been included in VPN. Domain: {Domain}",
+                    VhLogger.FormatHostName(filterResult.DomainName));
+                isInRange = true;
+                break;
+
+            case DomainFilterAction.None:
+            default:
+                // default isInRange
+                break;
+        }
+
+        // update connection stream with ReadBufferedStream to pre-append the read data
+        if (filterResult.ReadData.Length > 0)
+            connection = new ConnectionDecorator(connection,
+                new ReadBufferedStream(connection.Stream, leaveOpen: false, filterResult.ReadData.Span) {
+                    AllowBufferRefill = false
+                });
+
+        return (connection, isInRange);
     }
 
     private class ClientHostStat : IClientHostStat

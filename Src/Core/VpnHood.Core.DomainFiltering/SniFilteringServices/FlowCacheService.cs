@@ -4,22 +4,34 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
 
-internal class FlowCacheCleanupService : IDisposable
+internal class FlowCacheService : IDisposable
 {
-    private readonly ConcurrentDictionary<IpEndPointValue, FlowInfo> _flowCache;
+    private readonly ConcurrentDictionary<IpEndPointValue, FlowInfo> _flowCache = new();
     private readonly TimeSpan _flowTimeout;
     private readonly Job _cleanupJob;
     private bool _disposed;
 
-    public FlowCacheCleanupService(
-        ConcurrentDictionary<IpEndPointValue, FlowInfo> flowCache,
-        TimeSpan flowTimeout)
+    public FlowCacheService(TimeSpan flowTimeout)
     {
-        _flowCache = flowCache;
         _flowTimeout = flowTimeout;
 
         var cleanupInterval = TimeSpan.FromSeconds(Math.Min(flowTimeout.TotalSeconds, 60));
         _cleanupJob = new Job(CleanupExpiredFlows, cleanupInterval, "FlowCacheCleanup");
+    }
+
+    public bool TryGetValue(IpEndPointValue key, out FlowInfo value)
+    {
+        return _flowCache.TryGetValue(key, out value!);
+    }
+
+    public bool TryRemove(IpEndPointValue key, out FlowInfo? value)
+    {
+        return _flowCache.TryRemove(key, out value);
+    }
+
+    public void Set(IpEndPointValue key, FlowInfo value)
+    {
+        _flowCache[key] = value;
     }
 
     private ValueTask CleanupExpiredFlows(CancellationToken cancellationToken)
@@ -55,5 +67,14 @@ internal class FlowCacheCleanupService : IDisposable
 
         _disposed = true;
         _cleanupJob.Dispose();
+
+        // Dispose all buffered packets
+        foreach (var kvp in _flowCache) {
+            foreach (var packet in kvp.Value.BufferedPackets)
+                packet.Dispose();
+        }
+
+        _flowCache.Clear();
+        GC.SuppressFinalize(this);
     }
 }

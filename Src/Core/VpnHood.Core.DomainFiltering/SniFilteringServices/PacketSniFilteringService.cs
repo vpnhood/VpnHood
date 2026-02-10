@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.SniExtractors;
 using VpnHood.Core.Packets;
@@ -11,25 +10,18 @@ namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
 /// Base class for protocol-specific SNI extraction services.
 /// Handles flow management, packet buffering, and domain filtering.
 /// </summary>
-public abstract class PacketSniFilteringService : IDisposable
+public abstract class PacketSniFilteringService(
+    DomainFilterResolver domainFilterResolver,
+    TimeSpan flowTimeout,
+    EventId? sniEventId)
+    : IDisposable
 {
-    private readonly ConcurrentDictionary<IpEndPointValue, FlowInfo> _flowCache = new();
-    private readonly FlowCacheCleanupService _cleanupService;
+    private readonly FlowCacheService _flowCacheService = new(flowTimeout);
     private bool _disposed;
 
-    protected DomainFilterResolver DomainFilterResolver { get; }
-    protected EventId? SniEventId { get; }
+    protected DomainFilterResolver DomainFilterResolver { get; } = domainFilterResolver;
+    protected EventId? SniEventId { get; } = sniEventId;
     protected abstract string ProtocolName { get; }
-
-    protected PacketSniFilteringService(
-        DomainFilterResolver domainFilterResolver,
-        TimeSpan flowTimeout,
-        EventId? sniEventId)
-    {
-        DomainFilterResolver = domainFilterResolver;
-        SniEventId = sniEventId;
-        _cleanupService = new FlowCacheCleanupService(_flowCache, flowTimeout);
-    }
 
     /// <summary>
     /// Process an IP packet for SNI extraction and domain filtering.
@@ -45,10 +37,10 @@ public abstract class PacketSniFilteringService : IDisposable
         var nowTicks = Environment.TickCount64 * TimeSpan.TicksPerMillisecond;
 
         // Check if we already have a decision for this flow
-        if (_flowCache.TryGetValue(flowKey, out var flowInfo) && flowInfo.Decision != null) {
+        if (_flowCacheService.TryGetValue(flowKey, out var flowInfo) && flowInfo.Decision != null) {
             // Remove the flow if end-of-flow signal is detected (e.g., TCP FIN/RST)
             if (IsFlowEnd(ipPacket))
-                _flowCache.TryRemove(flowKey, out _);
+                _flowCacheService.TryRemove(flowKey, out _);
             else
                 flowInfo.LastSeenTicks = nowTicks;
 
@@ -56,7 +48,7 @@ public abstract class PacketSniFilteringService : IDisposable
         }
 
         // Extract SNI from payload
-        var sniResult = ExtractSni(payload, flowInfo?.SniState, nowTicks);
+        var sniResult = ExtractSni(payload, flowInfo.SniState, nowTicks);
 
         // SNI found
         if (sniResult.DomainName != null) {
@@ -120,7 +112,7 @@ public abstract class PacketSniFilteringService : IDisposable
         state.BufferedPackets = []; // Clear buffer since we're releasing them
         state.SniState = null;
         state.LastSeenTicks = nowTicks;
-        _flowCache[flowKey] = state;
+        _flowCacheService.Set(flowKey, state);
 
         return new PacketSniFilterResult(action, domainName, packets, true);
     }
@@ -134,7 +126,7 @@ public abstract class PacketSniFilteringService : IDisposable
         state.SniState = sniState;
         state.BufferedPackets.Add(ipPacket);
         state.LastSeenTicks = nowTicks;
-        _flowCache[flowKey] = state;
+        _flowCacheService.Set(flowKey, state);
 
         return PacketSniFilterResult.Pending();
     }
@@ -148,7 +140,7 @@ public abstract class PacketSniFilteringService : IDisposable
         state.BufferedPackets = [];
         state.SniState = null;
         state.LastSeenTicks = nowTicks;
-        _flowCache[flowKey] = state;
+        _flowCacheService.Set(flowKey, state);
 
         // Release all buffered packets with None action
         return new PacketSniFilterResult(DomainFilterAction.None, null, flowInfo?.BufferedPackets, false);
@@ -160,15 +152,7 @@ public abstract class PacketSniFilteringService : IDisposable
             return;
 
         _disposed = true;
-        _cleanupService.Dispose();
-
-        // Dispose all buffered packets
-        foreach (var kvp in _flowCache) {
-            foreach (var packet in kvp.Value.BufferedPackets)
-                packet.Dispose();
-        }
-
-        _flowCache.Clear();
+        _flowCacheService.Dispose();
         GC.SuppressFinalize(this);
     }
 }

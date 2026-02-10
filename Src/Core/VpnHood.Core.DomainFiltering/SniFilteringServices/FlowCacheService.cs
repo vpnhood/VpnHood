@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Net;
 
@@ -19,9 +20,9 @@ internal class FlowCacheService : IDisposable
         _cleanupJob = new Job(CleanupExpiredFlows, cleanupInterval, "FlowCacheCleanup");
     }
 
-    public bool TryGetValue(IpEndPointValue key, out FlowInfo value)
+    public bool TryGetValue(IpEndPointValue key, [NotNullWhen(true)] out FlowInfo? value)
     {
-        return _flowCache.TryGetValue(key, out value!);
+        return _flowCache.TryGetValue(key, out value);
     }
 
     public bool TryRemove(IpEndPointValue key, out FlowInfo? value)

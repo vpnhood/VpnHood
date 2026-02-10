@@ -18,7 +18,6 @@ public abstract class PacketSniFilteringService(
 {
     private readonly FlowCacheService _flowCacheService = new(flowTimeout);
     private bool _disposed;
-
     protected DomainFilterResolver DomainFilterResolver { get; } = domainFilterResolver;
     protected EventId? SniEventId { get; } = sniEventId;
     protected abstract string ProtocolName { get; }
@@ -48,7 +47,7 @@ public abstract class PacketSniFilteringService(
         }
 
         // Extract SNI from payload
-        var sniResult = ExtractSni(payload, flowInfo.SniState, nowTicks);
+        var sniResult = ExtractSni(payload, flowInfo?.SniState, nowTicks);
 
         // SNI found
         if (sniResult.DomainName != null) {

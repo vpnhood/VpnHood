@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.Packets;
@@ -203,9 +202,6 @@ internal class ClientHost(
     private async Task ProcessConnection(
         IConnection orgConnection, IPEndPoint hostEndPoint, bool isInRange, CancellationToken cancellationToken)
     {
-        ConnectorRequestResult<SessionResponse>? requestResult = null;
-        ProxyChannel? channel = null;
-
         try {
             // check cancellation
             Interlocked.Increment(ref _processingCount);
@@ -220,28 +216,47 @@ internal class ClientHost(
             (orgConnection, isInRange) = await ApplySniFiltering(orgConnection, hostEndPoint, isInRange, cancellationToken).Vhc();
 
             // Filter by IP
-            if (!isInRange) {
-                await vpnHoodClient.AddPassthruTcpStream(orgConnection,hostEndPoint, cancellationToken).Vhc();
+            if (isInRange) {
+                // Create and add to tunnel channel
+                await CreateTunnelChannel(orgConnection, hostEndPoint, cancellationToken).Vhc();
+                _stat.TcpTunnelledCount++;
+            }
+            else {
+                // Create and add to exclude channel
+                await vpnHoodClient.AddPassthruTcpStream(orgConnection, hostEndPoint, cancellationToken).Vhc();
                 _stat.TcpPassthruCount++;
-                return;
             }
 
-            //handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
-            var memory = new Memory<byte>(new byte[TunnelDefaults.PrefetchStreamBufferSize]);
-            var read = await orgConnection.Stream.ReadAsync(memory, cancellationToken);
-            var initContents = memory[..read];
+        }
+        catch (Exception ex) {
+            orgConnection.Dispose();
+            VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "");
+        }
+        finally {
+            Interlocked.Decrement(ref _processingCount);
+        }
+    }
 
-            // Create the Request
-            var request = new StreamProxyChannelRequest {
-                RequestId = orgConnection.ConnectionId,
-                SessionId = vpnHoodClient.SessionId,
-                SessionKey = vpnHoodClient.SessionKey,
-                DestinationEndPoint = hostEndPoint
-            };
+    private async Task CreateTunnelChannel(
+        IConnection orgConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
+    {
+        //handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
+        var memory = new Memory<byte>(new byte[TunnelDefaults.PrefetchStreamBufferSize]);
+        var read = await orgConnection.Stream.ReadAsync(memory, cancellationToken);
+        var initContents = memory[..read];
 
-            // read the response
-            var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
-            requestResult = await vpnHoodClient.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();
+        // Create the Request
+        var request = new StreamProxyChannelRequest {
+            RequestId = orgConnection.ConnectionId,
+            SessionId = vpnHoodClient.SessionId,
+            SessionKey = vpnHoodClient.SessionKey,
+            DestinationEndPoint = hostEndPoint
+        };
+
+        // read the response
+        var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
+        var requestResult = await vpnHoodClient.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();
+        try {
             var proxyConnection = requestResult.Connection;
 
             // create a ProxyChannel
@@ -249,18 +264,13 @@ internal class ClientHost(
                 "Adding a channel to session. SessionId: {SessionId}...", VhLogger.FormatId(request.SessionId));
 
             // add stream proxy
-            channel = new ProxyChannel(proxyConnection.ToString()!, orgConnection, proxyConnection, streamProxyBufferSize);
-            tunnel.AddChannel(channel);
-            _stat.TcpTunnelledCount++;
+            var channel = new ProxyChannel(proxyConnection.ToString()!, orgConnection, proxyConnection, 
+                streamProxyBufferSize);
+            tunnel.AddChannel(channel, disposeIfFailed: true);
         }
         catch (Exception ex) {
-            channel?.Dispose();
-            requestResult?.Dispose();
-            orgConnection.Dispose();
-            VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "");
-        }
-        finally {
-            Interlocked.Decrement(ref _processingCount);
+            requestResult.Dispose();
+            VhLogger.LogError(GeneralEventId.ProxyChannel, ex, "Could not add a ProxyChannel.");
         }
     }
 

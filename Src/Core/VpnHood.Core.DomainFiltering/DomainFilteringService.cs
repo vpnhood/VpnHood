@@ -54,8 +54,6 @@ public class DomainFilteringService
         set => _filterResolver.FilterPolicy = value;
     }
 
-    public IReadOnlyList<DomainObservation> Observations => DomainObserver.Observations;
-
     public bool IsEnabled =>
         ForceLogSni ||
         _filteringPolicy.Includes.Length > 0 ||

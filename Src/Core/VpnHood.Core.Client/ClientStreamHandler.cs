@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.DomainFiltering;
+using VpnHood.Core.DomainFiltering.Observation;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
@@ -137,29 +138,20 @@ internal class ClientStreamHandler(
     private async Task<(IConnection Connection, bool IsInIpRange)> ApplySniFiltering(
         IConnection connection, IPEndPoint hostEndPoint, bool isInIpRange, CancellationToken cancellationToken)
     {
-        // Filter by SNI
+        // Filter by SNI (it log by its own observer, no need to log here)
         var filterResult = await domainFilterService.ProcessStream(
             connection.Stream, hostEndPoint, cancellationToken).Vhc();
 
         switch (filterResult.Action) {
             case DomainFilterAction.Block:
-                VhLogger.Instance.LogInformation(GeneralEventId.Sni,
-                    "Domain has been blocked. Domain: {Domain}",
-                    VhLogger.FormatHostName(filterResult.DomainName));
-
                 throw new Exception($"Domain has been blocked. Domain: {filterResult.DomainName}");
 
             case DomainFilterAction.Exclude:
-                VhLogger.Instance.LogDebug(GeneralEventId.Sni,
-                    "Domain has been excluded from VPN. Domain: {Domain}",
-                    VhLogger.FormatHostName(filterResult.DomainName));
+                domainFilterService.DomainObserver.Track(filterResult.DomainName!, DomainFilterAction.Block, DomainObservationProtocol.Tcp);
                 isInIpRange = false;
                 break;
 
             case DomainFilterAction.Include:
-                VhLogger.Instance.LogDebug(GeneralEventId.Sni,
-                    "Domain has been included in VPN. Domain: {Domain}",
-                    VhLogger.FormatHostName(filterResult.DomainName));
                 isInIpRange = true;
                 break;
 

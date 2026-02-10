@@ -23,7 +23,7 @@ public class DomainObserver(EventId sniEventId)
         Track(domainName, action, protocol, destinationEndPoint: null);
     }
 
-    public void Track(string domainName, DomainFilterAction action, DomainObservationProtocol protocol, IpEndPointValue? destinationEndPoint)
+    public void Track(string? domainName, DomainFilterAction action, DomainObservationProtocol protocol, IpEndPointValue? destinationEndPoint)
     {
         if (string.IsNullOrEmpty(domainName))
             return;

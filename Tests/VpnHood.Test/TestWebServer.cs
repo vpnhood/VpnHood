@@ -1,11 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.NetTester.Testers.QuicTesters;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
@@ -39,6 +41,13 @@ public class TestWebServer : IDisposable
         IPEndPoint.Parse("[::1]:20103")
     ];
 
+    public IPEndPoint[] QuicEndPoints { get; } = [
+        IPEndPoint.Parse("127.10.11.1:25001"),
+        IPEndPoint.Parse("127.10.11.1:25002")
+    ];
+
+    public IPEndPoint QuicEndPoint1 => QuicEndPoints[0];
+    public IPEndPoint QuicEndPoint2 => QuicEndPoints[1];
     public IPEndPoint HttpsV4RefusedEndPoint1 => new(HttpsV4EndPoint1.Address, 9999);
     public IPEndPoint HttpsV4EndPoint1 => HttpsV4EndPoints[0];
     public IPEndPoint HttpsV4EndPoint2 => HttpsV4EndPoints[1];
@@ -68,6 +77,7 @@ public class TestWebServer : IDisposable
     public Uri FileHttpUrl2 => new($"http://{HttpV4EndPoints.First()}/file2");
 
     private UdpClient[] UdpClients { get; }
+    private readonly List<QuicTesterServer> _quicServers = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
@@ -125,6 +135,10 @@ public class TestWebServer : IDisposable
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting UDP...");
         StartUdpEchoServer();
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer started UDP...");
+
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting QUIC...");
+        StartQuicEchoServer();
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer started QUIC...");
         return Task.CompletedTask;
     }
 
@@ -151,6 +165,16 @@ public class TestWebServer : IDisposable
         }
     }
 
+    private void StartQuicEchoServer()
+    {
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile("Assets/VpnHood.UnitTest.pfx", null, X509KeyStorageFlags.Exportable);
+        foreach (var endpoint in QuicEndPoints) {
+            var quicServer = new QuicTesterServer(endpoint, certificate, CancellationToken);
+            _quicServers.Add(quicServer);
+            _ = quicServer.Start();
+        }
+    }
+
     private static async Task DefaultRoute(HttpContextBase ctx)
     {
         ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -165,6 +189,9 @@ public class TestWebServer : IDisposable
 
         foreach (var udpClient in UdpClients)
             udpClient.Dispose();
+
+        foreach (var quicServer in _quicServers)
+            quicServer.Dispose();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test Server Disposed.");
         _cancellationTokenSource.Dispose();

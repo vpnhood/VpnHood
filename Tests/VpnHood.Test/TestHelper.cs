@@ -1,9 +1,9 @@
-﻿using System.Net;
+﻿using Ga4.Trackers;
+using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using Ga4.Trackers;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
@@ -22,6 +22,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.NetTester.Testers.QuicTesters;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
@@ -59,6 +60,8 @@ public class TestHelper : IDisposable
             Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
             Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
             Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
+            Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint1, WebServer.QuicEndPoint1),
+            Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint2, WebServer.QuicEndPoint2),
             Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
             Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
             Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
@@ -203,6 +206,24 @@ public class TestHelper : IDisposable
         var result =
             await DnsResolver.GetHostEntry("www.google.com", udpEndPoint, timeout.Value, cancellationToken);
         Assert.IsNotEmpty(result.AddressList);
+    }
+
+    public async Task<bool> Test_Quic(string domain, IPEndPoint ipEndPoint, bool throwError = true)
+    {
+        var quicTesterClient = new QuicTesterClient(ipEndPoint, domain, TestConstants.DefaultQuicTimeout);
+        var data = new byte[1024 * 1024 * 10]; // 1 MB
+        Random.Shared.NextBytes(data);
+        try {
+            var response = await quicTesterClient.SendAndReceive(data, CancellationToken.None);
+            if (!throwError)
+                return data.SequenceEqual(response);
+
+            CollectionAssert.AreEquivalent(data, response);
+            return true;
+        }
+        catch when (!throwError) {
+            return false;
+        }
     }
 
 

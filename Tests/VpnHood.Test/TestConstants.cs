@@ -8,6 +8,7 @@ public static class TestConstants
     public static TimeSpan DefaultHttpTimeout => TimeSpan.FromSeconds(3).WhenNoDebugger();
     public static TimeSpan DefaultUdpTimeout => DefaultHttpTimeout;
     public static TimeSpan DefaultPingTimeout => DefaultUdpTimeout;
+    public static TimeSpan? DefaultQuicTimeout => DefaultUdpTimeout;
 
     public static Uri HttpsUri1 => new($"https://{HttpsEndPoint1}/file1");
     public static Uri HttpsUri2 => new($"https://{HttpsEndPoint2}/file2");
@@ -25,6 +26,8 @@ public static class TestConstants
     public static IPEndPoint HttpsEndPoint2 => IPEndPoint.Parse("198.18.0.2:3030");
     public static IPEndPoint UdpV4EndPoint1 => IPEndPoint.Parse("198.18.10.1:63100");
     public static IPEndPoint UdpV4EndPoint2 => IPEndPoint.Parse("198.18.10.2:63101");
+    public static IPEndPoint QuicEndPoint1 => IPEndPoint.Parse("198.18.11.1:4030");
+    public static IPEndPoint QuicEndPoint2 => IPEndPoint.Parse("198.18.11.2:4030");
     public static IPEndPoint UdpV6EndPoint1 => IPEndPoint.Parse("[2001:4860:4866::2223]:63100");
     public static IPEndPoint UdpV6EndPoint2 => IPEndPoint.Parse("[2001:4860:4866::2223]:63101");
     public static IPAddress PingV4Address1 => IPAddress.Parse("198.18.20.1");
@@ -34,4 +37,5 @@ public static class TestConstants
     public static IPAddress InvalidIp => IPAddress.Parse("198.51.100.1");
     public static IPEndPoint InvalidEp => IPEndPoint.Parse("198.51.100.2:9999");
     public static IPAddress BlockedIp => IPAddress.Parse("198.18.255.3");
+
 }

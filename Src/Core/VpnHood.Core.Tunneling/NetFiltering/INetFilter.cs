@@ -2,7 +2,7 @@
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Server.Abstractions;
+namespace VpnHood.Core.Tunneling.NetFiltering;
 
 public interface INetFilter
 {

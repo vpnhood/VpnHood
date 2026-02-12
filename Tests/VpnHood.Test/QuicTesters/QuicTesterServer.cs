@@ -6,7 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.NetTester.Testers.QuicTesters;
+namespace VpnHood.Test.QuicTesters;
 
 public class QuicTesterServer(
     IPEndPoint quicEndPoint,

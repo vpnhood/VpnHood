@@ -15,7 +15,7 @@ public static class TunnelUtils
     public static IPAddress LocalTestIpV6 = IPAddress.IPv6Loopback;
 
 
-    // conver TestNetwork IPs to loopback IPs, such as 198.18.x.x to 127.10.x.x,
+    // convert TestNetwork IPs to loopback IPs, such as 198.18.x.x to 127.10.x.x,
     // to make sure the packets can be captured and return correctly in the test environment.
     public static IPAddress MapTestNetworkToLoopback(IPAddress ipAddress)
     {

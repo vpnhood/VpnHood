@@ -22,10 +22,10 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.NetTester.Testers.QuicTesters;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
+using VpnHood.Test.QuicTesters;
 
 namespace VpnHood.Test;
 
@@ -41,7 +41,7 @@ public class TestHelper : IDisposable
 
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());
     public TestWebServer WebServer { get; }
-    public TestNetFilter NetFilter { get; }
+    public TestNetFilterServer NetFilter { get; }
     private bool? _isIpV6Supported;
     private int _accessTokenIndex;
 
@@ -52,7 +52,7 @@ public class TestHelper : IDisposable
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create();
-        NetFilter = new TestNetFilter();
+        NetFilter = new TestNetFilterServer();
         NetFilter.Init([TestConstants.BlockedIp],
         [
             Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
@@ -524,7 +524,8 @@ public class TestHelper : IDisposable
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
-            new TestSocketFactory(),
+            socketFactory: new TestSocketFactory(),
+            netFilter: null,
             storageFolder: Path.Combine(WorkingPath, "ClientCore"),
             new TestTracker(), clientOptions);
 

@@ -3,43 +3,42 @@ using System.Net;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Server;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Tunneling.NetFiltering;
 
 namespace VpnHood.Test.Providers;
 
-public class TestNetFilter : NetFilter
+public class TestNetFilterClient : NetFilter
 {
-    private ConcurrentDictionary<Tuple<IpProtocol, IPEndPoint>, IPEndPoint> NetMap { get; } = new();
-    private ConcurrentDictionary<Tuple<IpProtocol, IPEndPoint>, IPEndPoint> NetMapR { get; } = new();
-    private IPAddress[] _blockedAddresses = [];
+    private readonly TestNetFilterIps _filterIps;
 
-    public TestNetFilter()
+    protected override bool IsIpAddressBlocked(IPAddress ipAddress)
     {
-        BlockLoopback = false;
+        return
+            _filterIps.BlockedIpAddresses.Contains(ipAddress) || 
+            base.IsIpAddressBlocked(ipAddress);
     }
 
-    public void Init(IPAddress[] blockedAddresses, Tuple<IpProtocol, IPEndPoint, IPEndPoint>[] items)
+    public TestNetFilterClient(TestNetFilterIps filterIps)
     {
-        NetMap.Clear();
-        NetMapR.Clear();
-        _blockedAddresses = blockedAddresses;
-
-        foreach (var tuple in items) {
-            Assert.IsTrue(NetMap.TryAdd(Tuple.Create(tuple.Item1, tuple.Item2), tuple.Item3));
-            Assert.IsTrue(NetMapR.TryAdd(Tuple.Create(tuple.Item1, tuple.Item3), tuple.Item2));
-        }
+        _filterIps = filterIps;
+        BlockLoopback = false;
     }
 
     public override IPEndPoint? ProcessRequest(IpProtocol protocol, IPEndPoint requestEndPoint)
     {
-        var ipEndPoint = base.ProcessRequest(protocol, requestEndPoint);
-        if (ipEndPoint == null)
-            return null;
+        // map IPv4
+        for (var i = 0; i < _filterIps.RemoteTestIpV4s.Count; i++) {
+            if (requestEndPoint.Address.Equals(_filterIps.RemoteTestIpV4s[i])) 
+                return new IPEndPoint(_filterIps.LocalTestIpV4s[i], requestEndPoint.Port);
+        }
 
-        // check if the destination address is blocked
-        if (_blockedAddresses.Contains(requestEndPoint.Address))
-            return null;
+        // map IPv6
+        if (requestEndPoint.Address.Equals(_filterIps.RemoteTestIpV6)) {
+            return new IPEndPoint(IPAddress.IPv6Loopback, requestEndPoint.Port);
+        }
 
-        return NetMap.GetValueOrDefault(Tuple.Create(protocol, requestEndPoint), requestEndPoint);
+        return base.ProcessRequest(protocol, requestEndPoint);
     }
 
     public override IpPacket? ProcessRequest(IpPacket ipPacket)

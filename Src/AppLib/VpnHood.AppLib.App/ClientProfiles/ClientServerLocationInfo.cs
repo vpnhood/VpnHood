@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.ClientProfiles;

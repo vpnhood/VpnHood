@@ -3,7 +3,7 @@
 namespace VpnHood.Core.DomainFiltering;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum DomainFilterAction
+public enum DomainFilterAction //todo: rename to FilterAction
 {
     None, // means domain is unknown or not in any list
     Block,

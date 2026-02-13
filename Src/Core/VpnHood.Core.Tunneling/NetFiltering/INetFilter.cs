@@ -11,3 +11,23 @@ public interface INetFilter
     IPEndPoint? ProcessRequest(IpProtocol protocol, IPEndPoint requestEndPoint);
     IpPacket? ProcessReply(IpPacket ipPacket);
 }
+
+public enum FilterAction
+{
+    Default, 
+    Block,
+    Exclude,
+    Include
+}
+
+public interface IClientNetFilter
+{
+    FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint);
+    FilterAction Process(string domainName);
+}
+
+public interface INetMapper
+{
+    bool ToHost(IpProtocol protocol, IpEndPointValue requestEndPoint, out IpEndPointValue newEndPoint);
+    bool FromHost(IpProtocol protocol, IpEndPointValue requestEndPoint, out IpEndPointValue newEndPoint);
+}

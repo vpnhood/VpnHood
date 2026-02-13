@@ -69,7 +69,7 @@ public class LocationService : IRegionProvider
             return _countryInfoService.GetCountryInfo(countryCode, cultureInfo);
         }
         catch {
-            var regionInfo = new RegionInfo(cultureInfo.Name);
+            var regionInfo = new RegionInfo(countryCode);
             return new CountryInfo {
                 CountryCode = countryCode,
                 EnglishName = regionInfo.EnglishName,

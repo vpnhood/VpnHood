@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Client;
 
-internal class IpFilterHandler
+internal class IpRangeHandler
 {
     private readonly Dictionary<IPAddress, bool> _includeIps = new();
     public IpRangeOrderedList IncludeIpRanges { get; set; } = [];

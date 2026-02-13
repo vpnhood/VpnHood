@@ -5,7 +5,6 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;
@@ -20,6 +19,7 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -202,7 +202,9 @@ public class Session : IDisposable
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
-        ipPacket = _netFilter.ProcessReply(ipPacket);
+        ipPacket = _netFilter.ProcessReply(ipPacket) 
+                   ?? throw new PacketDropException("Packet discarded due to the NetFilter's policies.");
+
         Tunnel.SendPacketQueued(ipPacket); // PacketEnqueue will dispose packets
     }
 

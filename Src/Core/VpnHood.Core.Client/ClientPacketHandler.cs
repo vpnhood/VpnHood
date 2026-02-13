@@ -4,8 +4,8 @@ using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Exceptions;
+using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.Tunneling.Proxies;
-using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client;
 
@@ -13,7 +13,8 @@ internal class ClientPacketHandler(
     Tunnel tunnel,
     ClientHost clientHost,
     DomainFilteringService domainFilteringService,
-    IpFilterHandler ipFilterHandler,
+    INetFilter netFilter,
+    IpRangeHandler ipRangeHandler,
     ProxyManager proxyManager)
 {
     public IPAddress[] DnsServers { get; set; } = [];
@@ -67,19 +68,17 @@ internal class ClientPacketHandler(
     // WARNING: Performance Critical! Mango Section
     private void ProcessOutgoingPacket(IpPacket ipPacket, bool? forceInRange)
     {
+        // apply net filter
+        ipPacket = netFilter.ProcessRequest(ipPacket) 
+            ?? throw new PacketDropException("The packet has been dropped by net filter.");
+
         // Multicast packets are not supported (Already excluded by adapter filter)
-        if (ipPacket.IsMulticast()) {
-            PacketLogger.LogPacket(ipPacket, "A multicast packet has been dropped.");
-            ipPacket.Dispose();
-            return;
-        }
+        if (ipPacket.IsMulticast())
+            throw new PacketDropException("A multicast packet has been dropped.");
 
         // Broadcast packets are not supported (Already excluded by adapter filter)
-        if (ipPacket.IsBroadcast()) {
-            PacketLogger.LogPacket(ipPacket, "A broad packet has been dropped.");
-            ipPacket.Dispose();
-            return;
-        }
+        if (ipPacket.IsBroadcast())
+            throw new PacketDropException("A broadcast packet has been dropped.");
 
         // TcpHost has to manage its own packets
         if (clientHost.IsOwnPacket(ipPacket)) {
@@ -190,6 +189,6 @@ internal class ClientPacketHandler(
             return force.Value;
 
         // normal IP range check
-        return ipFilterHandler.IsInIpRange(ipAddress);
+        return ipRangeHandler.IsInIpRange(ipAddress);
     }
 }

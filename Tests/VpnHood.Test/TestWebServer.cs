@@ -7,7 +7,8 @@ using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.NetTester.Testers.QuicTesters;
+using VpnHood.Test.Providers;
+using VpnHood.Test.QuicTesters;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
@@ -18,33 +19,10 @@ public class TestWebServer : IDisposable
 {
     private readonly List<WebserverLite> _webServers = [];
 
-    public IPEndPoint[] HttpsV4EndPoints { get; } = [
-        IPEndPoint.Parse("127.10.1.1:15001"),
-        IPEndPoint.Parse("127.10.1.1:15002"),
-        IPEndPoint.Parse("127.10.1.1:15003"),
-        IPEndPoint.Parse("127.10.1.1:15004")
-    ];
-
-    public IPEndPoint[] HttpV4EndPoints { get; } = [
-        IPEndPoint.Parse("127.10.1.1:15005"),
-        IPEndPoint.Parse("127.10.1.1:15006"),
-        IPEndPoint.Parse("127.10.1.1:15007"),
-        IPEndPoint.Parse("127.10.1.1:15008")
-    ];
-
-    public IPEndPoint[] UdpEndPoints { get; } = [
-        IPEndPoint.Parse("127.10.1.1:20101"),
-        IPEndPoint.Parse("127.10.1.1:20102"),
-        IPEndPoint.Parse("127.10.1.1:20103"),
-        IPEndPoint.Parse("[::1]:20101"),
-        IPEndPoint.Parse("[::1]:20102"),
-        IPEndPoint.Parse("[::1]:20103")
-    ];
-
-    public IPEndPoint[] QuicEndPoints { get; } = [
-        IPEndPoint.Parse("127.10.11.1:25001"),
-        IPEndPoint.Parse("127.10.11.1:25002")
-    ];
+    public IPEndPoint[] HttpsV4EndPoints { get; }
+    public IPEndPoint[] HttpV4EndPoints { get; }
+    public IPEndPoint[] UdpEndPoints { get; }
+    public IPEndPoint[] QuicEndPoints { get; }
 
     public IPEndPoint QuicEndPoint1 => QuicEndPoints[0];
     public IPEndPoint QuicEndPoint2 => QuicEndPoints[1];
@@ -81,8 +59,36 @@ public class TestWebServer : IDisposable
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
-    private TestWebServer()
+    private TestWebServer(TestNetFilterIps filterIps)
     {
+        HttpsV4EndPoints = [
+            new IPEndPoint(filterIps.LocalTestIpV4, 15001),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15002),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15003),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15004)
+        ];
+
+        HttpV4EndPoints = [
+            new IPEndPoint(filterIps.LocalTestIpV4, 15005),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15006),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15007),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15008)
+        ];
+
+        UdpEndPoints = [
+            new IPEndPoint(filterIps.LocalTestIpV4, 20101),
+            new IPEndPoint(filterIps.LocalTestIpV4, 20102),
+            new IPEndPoint(filterIps.LocalTestIpV4, 20103),
+            new IPEndPoint(filterIps.LocalTestIpV6, 20101),
+            new IPEndPoint(filterIps.LocalTestIpV6, 20102),
+            new IPEndPoint(filterIps.LocalTestIpV6, 20103)
+        ];
+
+        QuicEndPoints = [
+            new IPEndPoint(filterIps.LocalTestIpV4, 25001),
+            new IPEndPoint(filterIps.LocalTestIpV4, 25002)
+        ];
+
         HttpUrls = HttpV4EndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
         HttpsUrls = HttpsV4EndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray();
         UdpClients = UdpEndPoints.Select(x => new UdpClient(x)).ToArray();
@@ -142,9 +148,9 @@ public class TestWebServer : IDisposable
         return Task.CompletedTask;
     }
 
-    public static TestWebServer Create()
+    public static TestWebServer Create(TestNetFilterIps filterIps)
     {
-        var ret = new TestWebServer();
+        var ret = new TestWebServer(filterIps);
         ret.Start();
         return ret;
     }

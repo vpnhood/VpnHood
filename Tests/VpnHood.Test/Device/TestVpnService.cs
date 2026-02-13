@@ -1,5 +1,6 @@
 ﻿using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
+using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.Providers;
 
@@ -16,10 +17,16 @@ public class TestVpnService
     // config folder should be read from static place in read environment, because service can be started independently
     public TestVpnService(
         string configFolder,
+        INetFilter netFilter,
         Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory)
     {
         _vpnAdapterFactory = vpnAdapterFactory;
-        _vpnServiceHost = new VpnServiceHost(configFolder, this, new TestSocketFactory(), withLogger: false);
+        _vpnServiceHost = new VpnServiceHost(
+            configFolder, 
+            this, 
+            socketFactory: new TestSocketFactory(), 
+            netFilter: netFilter,
+            withLogger: false);
     }
 
     // it is not async to simulate real environment

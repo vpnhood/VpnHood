@@ -15,7 +15,12 @@ public class WinVpnService : IVpnServiceHandler, IDisposable
     public WinVpnService(
         string configFolder)
     {
-        _vpnServiceHost = new VpnServiceHost(configFolder, this, new SocketFactory(), withLogger: false);
+        _vpnServiceHost = new VpnServiceHost(
+            configFolder, 
+            netFilter: null,
+            vpnServiceHandler: this, 
+            socketFactory: new SocketFactory(), 
+            withLogger: false);
     }
 
     public void OnConnect()

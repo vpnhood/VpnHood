@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.ClientProfiles;
@@ -9,7 +8,6 @@ public class ClientServerLocationInfo : ServerLocationInfo
     public required bool IsNestedCountry { get; init; }
     public required bool IsDefault { get; init; }
     public ServerLocationOptions Options { get; set; } = new() { Normal = 0 };
-    public CountryInfo CountryInfo => VpnHoodApp.Instance.Services.LocationService.GetCountryInfo(CountryCode);
 
     public static ClientServerLocationInfo[] CreateFromToken(ClientProfile clientProfile)
     {

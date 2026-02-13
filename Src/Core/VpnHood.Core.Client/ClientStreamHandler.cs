@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.DomainFiltering.Observation;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
@@ -12,6 +13,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.Tunneling.Proxies;
 
 namespace VpnHood.Core.Client;
@@ -23,11 +25,12 @@ internal class ClientStreamHandler(
     Tunnel tunnel,
     ProxyManager proxyManager,
     TimeSpan tcpConnectTimeout,
+    INetFilter netFilter,
     TransferBufferSize streamProxyBufferSize)
 {
     private int _processingCount;
     private readonly ClientHostStat _stat = new();
-    
+
     public IClientHostStat Stat => _stat;
 
     public async Task ProcessConnection(
@@ -37,6 +40,10 @@ internal class ClientStreamHandler(
             // check cancellation
             Interlocked.Increment(ref _processingCount);
             cancellationToken.ThrowIfCancellationRequested();
+
+            hostEndPoint =
+                netFilter.ProcessRequest(IpProtocol.Tcp, hostEndPoint)
+                ?? throw new Exception($"Host endpoint has been blocked by net filter. HostEp: {VhLogger.Format(hostEndPoint)}");
 
             // create a scope for the logger
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,

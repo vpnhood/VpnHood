@@ -15,7 +15,7 @@ public static class TunnelUtils
     public static IPAddress LocalTestIpV6 = IPAddress.IPv6Loopback;
 
 
-    // conver TestNetwork IPs to loopback IPs, such as 198.18.x.x to 127.10.x.x,
+    // convert TestNetwork IPs to loopback IPs, such as 198.18.x.x to 127.10.x.x,
     // to make sure the packets can be captured and return correctly in the test environment.
     public static IPAddress MapTestNetworkToLoopback(IPAddress ipAddress)
     {
@@ -60,32 +60,19 @@ public static class TunnelUtils
         return ipEndPoint;
     }
 
-    public static IpPacket MapTestNetworkToLoopback(IpPacket ipPacket)
+    public static IpPacket MapDestinationTestNetworkToLoopback(IpPacket ipPacket)
     {
         if (!IsRemoteTestAddress(ipPacket.SourceAddress) && !IsRemoteTestAddress(ipPacket.DestinationAddress))
             return ipPacket;
 
-        var isUpdated = false;
-        if (ipPacket.SourceAddress.Equals(RemoteTestIpV4)) {
-            ipPacket.SourceAddress = LocalTestIpV4;
-            isUpdated = true;
-        }
-        else if (ipPacket.SourceAddress.Equals(RemoteTestIpV6)) {
-            ipPacket.SourceAddress = LocalTestIpV6;
-            isUpdated = true;
-        }
-
         if (ipPacket.DestinationAddress.Equals(RemoteTestIpV4)) {
             ipPacket.DestinationAddress = LocalTestIpV4;
-            isUpdated = true;
+            ipPacket.UpdateAllChecksums();
         }
         else if (ipPacket.DestinationAddress.Equals(RemoteTestIpV6)) {
             ipPacket.DestinationAddress = LocalTestIpV6;
-            isUpdated = true;
-        }
-
-        if (isUpdated)
             ipPacket.UpdateAllChecksums();
+        }
 
         return ipPacket;
     }

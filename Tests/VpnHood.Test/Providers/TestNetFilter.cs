@@ -3,43 +3,26 @@ using System.Net;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Server;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Tunneling.NetFiltering;
 
 namespace VpnHood.Test.Providers;
 
 public class TestNetFilter : NetFilter
 {
-    private ConcurrentDictionary<Tuple<IpProtocol, IPEndPoint>, IPEndPoint> NetMap { get; } = new();
-    private ConcurrentDictionary<Tuple<IpProtocol, IPEndPoint>, IPEndPoint> NetMapR { get; } = new();
-    private IPAddress[] _blockedAddresses = [];
+    private readonly TestNetFilterIps _filterIps;
 
-    public TestNetFilter()
+    protected override bool IsIpAddressBlocked(IPAddress ipAddress)
     {
+        return
+            _filterIps.BlockedIpAddresses.Contains(ipAddress) ||
+            base.IsIpAddressBlocked(ipAddress);
+    }
+
+    public TestNetFilter(TestNetFilterIps filterIps)
+    {
+        _filterIps = filterIps;
         BlockLoopback = false;
-    }
-
-    public void Init(IPAddress[] blockedAddresses, Tuple<IpProtocol, IPEndPoint, IPEndPoint>[] items)
-    {
-        NetMap.Clear();
-        NetMapR.Clear();
-        _blockedAddresses = blockedAddresses;
-
-        foreach (var tuple in items) {
-            Assert.IsTrue(NetMap.TryAdd(Tuple.Create(tuple.Item1, tuple.Item2), tuple.Item3));
-            Assert.IsTrue(NetMapR.TryAdd(Tuple.Create(tuple.Item1, tuple.Item3), tuple.Item2));
-        }
-    }
-
-    public override IPEndPoint? ProcessRequest(IpProtocol protocol, IPEndPoint requestEndPoint)
-    {
-        var ipEndPoint = base.ProcessRequest(protocol, requestEndPoint);
-        if (ipEndPoint == null)
-            return null;
-
-        // check if the destination address is blocked
-        if (_blockedAddresses.Contains(requestEndPoint.Address))
-            return null;
-
-        return NetMap.GetValueOrDefault(Tuple.Create(protocol, requestEndPoint), requestEndPoint);
     }
 
     public override IpPacket? ProcessRequest(IpPacket ipPacket)
@@ -48,79 +31,69 @@ public class TestNetFilter : NetFilter
         if (result == null) return null;
         ipPacket = result;
 
-        switch (ipPacket.Protocol) {
-            case IpProtocol.Udp: {
-                var udpPacket = ipPacket.ExtractUdp();
-                var newEndPoint = ProcessRequest(ipPacket.Protocol,
-                    new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort));
-                if (newEndPoint == null) return null;
-                ipPacket.DestinationAddress = newEndPoint.Address;
-                udpPacket.DestinationPort = (ushort)newEndPoint.Port;
-                ipPacket.UpdateAllChecksums();
-                return ipPacket;
-            }
-            case IpProtocol.Tcp: {
-                var tcpPacket = ipPacket.ExtractTcp();
-                var newEndPoint = ProcessRequest(ipPacket.Protocol,
-                    new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
-                if (newEndPoint == null) return null;
-                ipPacket.DestinationAddress = newEndPoint.Address;
-                tcpPacket.DestinationPort = (ushort)newEndPoint.Port;
-                ipPacket.UpdateAllChecksums();
-                return ipPacket;
-            }
-            case IpProtocol.IcmpV4 or IpProtocol.IcmpV6: {
-                var newEndPoint = ProcessRequest(ipPacket.Protocol, new IPEndPoint(ipPacket.DestinationAddress, 0));
-                if (newEndPoint == null) return null;
-                ipPacket.DestinationAddress = newEndPoint.Address;
-                ipPacket.UpdateAllChecksums();
-                return ipPacket;
-            }
-            default:
-                return ipPacket;
-        }
-    }
-
-    public override IpPacket ProcessReply(IpPacket ipPacket)
-    {
-        switch (ipPacket.Protocol) {
-            case IpProtocol.Udp: {
-                var udpPacket = ipPacket.ExtractUdp();
-                if (NetMapR.TryGetValue(
-                        Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)),
-                        out var newEndPoint1)) {
-                    ipPacket.SourceAddress = newEndPoint1.Address;
-                    udpPacket.SourcePort = (ushort)newEndPoint1.Port;
-                    ipPacket.UpdateAllChecksums();
-                }
-
-                break;
-            }
-
-            case IpProtocol.Tcp: {
-                var tcpPacket = ipPacket.ExtractTcp();
-                if (NetMapR.TryGetValue(
-                        Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort)),
-                        out var tcpEndPoint)) {
-                    ipPacket.SourceAddress = tcpEndPoint.Address;
-                    tcpPacket.SourcePort = (ushort)tcpEndPoint.Port;
-                    ipPacket.UpdateAllChecksums();
-                }
-
-                break;
-            }
-
-            case IpProtocol.IcmpV4 or IpProtocol.IcmpV6:
-                if (NetMapR.TryGetValue(
-                        Tuple.Create(ipPacket.Protocol, new IPEndPoint(ipPacket.SourceAddress, 0)),
-                        out var icmpEndPoint)) {
-                    ipPacket.SourceAddress = icmpEndPoint.Address;
-                    ipPacket.UpdateAllChecksums();
-                }
-
-                break;
+        var oldEndPoint = ipPacket.GetDestinationEndPoint().ToIPEndPoint();
+        var newEndPoint = ProcessRequest(ipPacket.Protocol, oldEndPoint);
+        if (newEndPoint == null) return null;
+        if (!newEndPoint.Equals(oldEndPoint)) {
+            ipPacket.SetDestinationEndPoint(new IpEndPointValue(newEndPoint.Address, newEndPoint.Port));
+            ipPacket.UpdateAllChecksums();
         }
 
         return ipPacket;
+    }
+
+    public override IpPacket? ProcessReply(IpPacket ipPacket)
+    {
+        var oldEndPoint = ipPacket.GetSourceEndPoint();
+        var newٍEndPoint = ProcessReply(ipPacket.GetSourceEndPoint());
+        if (newٍEndPoint == null) return null;
+        if (newٍEndPoint != oldEndPoint) {
+            ipPacket.SetSourceEndPoint(newٍEndPoint.Value);
+            ipPacket.UpdateAllChecksums();
+        }
+
+        return ipPacket;
+    }
+
+    public override IPEndPoint? ProcessRequest(IpProtocol protocol, IPEndPoint requestEndPoint)
+    {
+        // map IPv6
+        if (requestEndPoint.Address.Equals(_filterIps.RemoteTestIpV4)) {
+            return new IPEndPoint(_filterIps.LocalTestIpV4, requestEndPoint.Port);
+        }
+
+        // map IPv6
+        if (requestEndPoint.Address.Equals(_filterIps.RemoteTestIpV6)) {
+            return new IPEndPoint(_filterIps.LocalTestIpV6, requestEndPoint.Port);
+        }
+
+        // map IPv4s
+        for (var i = 0; i < _filterIps.RemoteTestIpV4s.Count; i++) {
+            if (requestEndPoint.Address.Equals(_filterIps.RemoteTestIpV4s[i]))
+                return new IPEndPoint(_filterIps.LocalTestIpV4s[i], requestEndPoint.Port);
+        }
+
+        return base.ProcessRequest(protocol, requestEndPoint);
+    }
+
+    private IpEndPointValue? ProcessReply(IpEndPointValue replyEndPoint)
+    {
+        // map IPv6
+        if (replyEndPoint.Address.Equals(_filterIps.LocalTestIpV6)) {
+            return replyEndPoint with { Address = _filterIps.RemoteTestIpV6 };
+        }
+
+        // map IPv4 
+        if (replyEndPoint.Address.Equals(_filterIps.LocalTestIpV4)) {
+            return replyEndPoint with { Address = _filterIps.RemoteTestIpV4 };
+        }
+
+        // map IPv4s
+        for (var i = 0; i < _filterIps.LocalTestIpV4s.Count; i++) {
+            if (replyEndPoint.Address.Equals(_filterIps.LocalTestIpV4s[i]))
+                return replyEndPoint with { Address = _filterIps.RemoteTestIpV4s[i] };
+        }
+
+        return replyEndPoint;
     }
 }

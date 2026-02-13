@@ -22,10 +22,10 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.NetTester.Testers.QuicTesters;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
+using VpnHood.Test.QuicTesters;
 
 namespace VpnHood.Test;
 
@@ -39,6 +39,7 @@ public class TestHelper : IDisposable
         public Task<bool> IsDestroyed() => Task.FromResult(false);
     }
 
+    public TestNetFilterIps NetFilterIps { get; } = new TestNetFilterIps();
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());
     public TestWebServer WebServer { get; }
     public TestNetFilter NetFilter { get; }
@@ -51,28 +52,28 @@ public class TestHelper : IDisposable
         VhLogger.Instance = VhLogger.CreateConsoleLogger(); // min level is controlled by VhLogger.MinLevel
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
-        WebServer = TestWebServer.Create();
-        NetFilter = new TestNetFilter();
-        NetFilter.Init([TestConstants.BlockedIp],
-        [
-            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint1, WebServer.QuicEndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint2, WebServer.QuicEndPoint2),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
-            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address1, 0),
-                IPEndPoint.Parse("127.0.0.1:0")),
-            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address2, 0),
-                IPEndPoint.Parse("127.0.0.2:0")),
-            Tuple.Create(IpProtocol.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
-                IPEndPoint.Parse("[::1]:0"))
-        ]);
+        WebServer = TestWebServer.Create(new TestNetFilterIps());
+        NetFilter = new TestNetFilter(NetFilterIps);
+        //NetFilter.Init([TestConstants.BlockedIp],
+        //[
+            //Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint1, WebServer.QuicEndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint2, WebServer.QuicEndPoint2),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
+        //    Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address1, 0),
+        //        IPEndPoint.Parse("127.0.0.1:0")),
+        //    Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address2, 0),
+        //        IPEndPoint.Parse("127.0.0.2:0")),
+        //    Tuple.Create(IpProtocol.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
+        //        IPEndPoint.Parse("[::1]:0"))
+        //]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobOptions.DefaultInterval = TimeSpan.FromMilliseconds(1000);
         JobRunner.SlowInstance.Interval = TimeSpan.FromMilliseconds(200);
@@ -230,7 +231,7 @@ public class TestHelper : IDisposable
     public async Task<bool> Test_Https(Uri? uri = null,
         TimeSpan? timeout = null, bool throwError = true)
     {
-        uri ??= TestConstants.HttpsUri1;
+        uri ??= NetFilterIps.MapToRemote(WebServer.HttpsUrls[0]);
 
         if (throwError) {
             VhLogger.Instance.LogInformation(GeneralEventId.Test, "Fetching a test uri. Url: {uri}", uri);
@@ -268,6 +269,12 @@ public class TestHelper : IDisposable
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri2.Host));
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsExternalUri1.Host));
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsExternalUri2.Host));
+
+            addresses.Clear(); //todo
+            addresses.Add(NetFilterIps.RemoteTestIpV6);
+            addresses.Add(NetFilterIps.RemoteTestIpV4);
+            addresses.AddRange(NetFilterIps.RemoteTestIpV4s);
+
             return addresses.ToArray();
         }
     }
@@ -524,9 +531,11 @@ public class TestHelper : IDisposable
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
-            new TestSocketFactory(),
+            socketFactory: new TestSocketFactory(),
+            netFilter: null,
             storageFolder: Path.Combine(WorkingPath, "ClientCore"),
-            new TestTracker(), clientOptions);
+            new TestTracker(), 
+            clientOptions);
 
         // test starting the client
         if (autoConnect)

@@ -6,7 +6,6 @@ using System.Text.Json;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;
@@ -18,6 +17,7 @@ using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
+using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 

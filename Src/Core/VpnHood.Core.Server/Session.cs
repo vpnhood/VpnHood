@@ -202,7 +202,9 @@ public class Session : IDisposable
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
-        ipPacket = _netFilter.ProcessReply(ipPacket);
+        ipPacket = _netFilter.ProcessReply(ipPacket) 
+                   ?? throw new PacketDropException("Packet discarded due to the NetFilter's policies.");
+
         Tunnel.SendPacketQueued(ipPacket); // PacketEnqueue will dispose packets
     }
 

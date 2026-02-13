@@ -116,6 +116,48 @@ public static class IpPacketExtensions
             };
         }
 
+        public void SetSourceEndPoint(IpEndPointValue value)
+        {
+            ipPacket.SourceAddress = value.Address;
+
+            switch (ipPacket.Protocol) {
+                case IpProtocol.Tcp:
+                    ipPacket.ExtractTcp().SourcePort = (ushort)value.Port;
+                    break;
+
+                case IpProtocol.Udp:
+                    ipPacket.ExtractUdp().SourcePort = (ushort)value.Port;
+                    break;
+
+                default:
+                    if (value.Port != 0)
+                        throw new InvalidOperationException(
+                            $"Cannot set non-zero port {value.Port} for protocol {ipPacket.Protocol}. Only TCP and UDP support ports.");
+                    break;
+            }
+        }
+
+        public void SetDestinationEndPoint(IpEndPointValue value)
+        {
+            ipPacket.DestinationAddress = value.Address;
+
+            switch (ipPacket.Protocol) {
+                case IpProtocol.Tcp:
+                    ipPacket.ExtractTcp().DestinationPort = (ushort)value.Port;
+                    break;
+
+                case IpProtocol.Udp:
+                    ipPacket.ExtractUdp().DestinationPort = (ushort)value.Port;
+                    break;
+
+                default:
+                    if (value.Port != 0)
+                        throw new InvalidOperationException(
+                            $"Cannot set non-zero port {value.Port} for protocol {ipPacket.Protocol}. Only TCP and UDP support ports.");
+                    break;
+            }
+        }
+
         public IPEndPointPair GetEndPoints()
         {
             return new IPEndPointPair(

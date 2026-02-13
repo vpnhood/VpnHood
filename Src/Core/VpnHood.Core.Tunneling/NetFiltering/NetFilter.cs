@@ -56,7 +56,7 @@ public class NetFilter : INetFilter
         return IsIpAddressBlocked(requestEndPoint.Address) ? null : requestEndPoint;
     }
 
-    public virtual IpPacket ProcessReply(IpPacket ipPacket)
+    public virtual IpPacket? ProcessReply(IpPacket ipPacket)
     {
         return ipPacket;
     }

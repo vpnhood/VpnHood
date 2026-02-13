@@ -39,9 +39,10 @@ public class TestHelper : IDisposable
         public Task<bool> IsDestroyed() => Task.FromResult(false);
     }
 
+    public TestNetFilterIps NetFilterIps { get; } = new TestNetFilterIps();
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());
     public TestWebServer WebServer { get; }
-    public TestNetFilterServer NetFilter { get; }
+    public TestNetFilter NetFilter { get; }
     private bool? _isIpV6Supported;
     private int _accessTokenIndex;
 
@@ -52,27 +53,27 @@ public class TestHelper : IDisposable
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create();
-        NetFilter = new TestNetFilterServer();
-        NetFilter.Init([TestConstants.BlockedIp],
-        [
-            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint1, WebServer.QuicEndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint2, WebServer.QuicEndPoint2),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
-            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address1, 0),
-                IPEndPoint.Parse("127.0.0.1:0")),
-            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address2, 0),
-                IPEndPoint.Parse("127.0.0.2:0")),
-            Tuple.Create(IpProtocol.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
-                IPEndPoint.Parse("[::1]:0"))
-        ]);
+        NetFilter = new TestNetFilter(NetFilterIps);
+        //NetFilter.Init([TestConstants.BlockedIp],
+        //[
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint1, WebServer.QuicEndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint2, WebServer.QuicEndPoint2),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
+        //    Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address1, 0),
+        //        IPEndPoint.Parse("127.0.0.1:0")),
+        //    Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address2, 0),
+        //        IPEndPoint.Parse("127.0.0.2:0")),
+        //    Tuple.Create(IpProtocol.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
+        //        IPEndPoint.Parse("[::1]:0"))
+        //]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobOptions.DefaultInterval = TimeSpan.FromMilliseconds(1000);
         JobRunner.SlowInstance.Interval = TimeSpan.FromMilliseconds(200);

@@ -7,6 +7,7 @@ using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Test.Providers;
 using VpnHood.Test.QuicTesters;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
@@ -16,10 +17,11 @@ namespace VpnHood.Test;
 
 public class TestWebServer : IDisposable
 {
+    private readonly TestNetFilterIps _filterIps;
     private readonly List<WebserverLite> _webServers = [];
 
     public IPEndPoint[] HttpsV4EndPoints { get; } = [
-        IPEndPoint.Parse("127.10.1.1:15001"),
+        new IPEndPoint(_filterIps.LocalTestIpV4, 15001),
         IPEndPoint.Parse("127.10.1.1:15002"),
         IPEndPoint.Parse("127.10.1.1:15003"),
         IPEndPoint.Parse("127.10.1.1:15004")
@@ -81,8 +83,9 @@ public class TestWebServer : IDisposable
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
-    private TestWebServer()
+    private TestWebServer(TestNetFilterIps filterIps)
     {
+        _filterIps = filterIps;
         HttpUrls = HttpV4EndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
         HttpsUrls = HttpsV4EndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray();
         UdpClients = UdpEndPoints.Select(x => new UdpClient(x)).ToArray();
@@ -142,9 +145,9 @@ public class TestWebServer : IDisposable
         return Task.CompletedTask;
     }
 
-    public static TestWebServer Create()
+    public static TestWebServer Create(TestNetFilterIps filterIps)
     {
-        var ret = new TestWebServer();
+        var ret = new TestWebServer(filterIps);
         ret.Start();
         return ret;
     }

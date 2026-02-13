@@ -19,7 +19,7 @@ public class VpnServiceHost : IDisposable
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
-    private readonly INetFilter _netFilter;
+    private readonly INetFilter? _netFilter;
     private readonly LogService? _logService;
     private CancellationTokenSource _connectCts = new();
     private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(3);
@@ -37,7 +37,7 @@ public class VpnServiceHost : IDisposable
     public VpnServiceHost(string configFolder,
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,
-        INetFilter netFilter,
+        INetFilter? netFilter,
         bool withLogger = true)
     {
         Context = new VpnServiceContext(configFolder);

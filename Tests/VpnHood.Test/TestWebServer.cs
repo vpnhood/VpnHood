@@ -17,36 +17,12 @@ namespace VpnHood.Test;
 
 public class TestWebServer : IDisposable
 {
-    private readonly TestNetFilterIps _filterIps;
     private readonly List<WebserverLite> _webServers = [];
 
-    public IPEndPoint[] HttpsV4EndPoints { get; } = [
-        new IPEndPoint(_filterIps.LocalTestIpV4, 15001),
-        IPEndPoint.Parse("127.10.1.1:15002"),
-        IPEndPoint.Parse("127.10.1.1:15003"),
-        IPEndPoint.Parse("127.10.1.1:15004")
-    ];
-
-    public IPEndPoint[] HttpV4EndPoints { get; } = [
-        IPEndPoint.Parse("127.10.1.1:15005"),
-        IPEndPoint.Parse("127.10.1.1:15006"),
-        IPEndPoint.Parse("127.10.1.1:15007"),
-        IPEndPoint.Parse("127.10.1.1:15008")
-    ];
-
-    public IPEndPoint[] UdpEndPoints { get; } = [
-        IPEndPoint.Parse("127.10.1.1:20101"),
-        IPEndPoint.Parse("127.10.1.1:20102"),
-        IPEndPoint.Parse("127.10.1.1:20103"),
-        IPEndPoint.Parse("[::1]:20101"),
-        IPEndPoint.Parse("[::1]:20102"),
-        IPEndPoint.Parse("[::1]:20103")
-    ];
-
-    public IPEndPoint[] QuicEndPoints { get; } = [
-        IPEndPoint.Parse("127.10.11.1:25001"),
-        IPEndPoint.Parse("127.10.11.1:25002")
-    ];
+    public IPEndPoint[] HttpsV4EndPoints { get; }
+    public IPEndPoint[] HttpV4EndPoints { get; }
+    public IPEndPoint[] UdpEndPoints { get; }
+    public IPEndPoint[] QuicEndPoints { get; }
 
     public IPEndPoint QuicEndPoint1 => QuicEndPoints[0];
     public IPEndPoint QuicEndPoint2 => QuicEndPoints[1];
@@ -85,7 +61,34 @@ public class TestWebServer : IDisposable
 
     private TestWebServer(TestNetFilterIps filterIps)
     {
-        _filterIps = filterIps;
+        HttpsV4EndPoints = [
+            new IPEndPoint(filterIps.LocalTestIpV4, 15001),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15002),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15003),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15004)
+        ];
+
+        HttpV4EndPoints = [
+            new IPEndPoint(filterIps.LocalTestIpV4, 15005),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15006),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15007),
+            new IPEndPoint(filterIps.LocalTestIpV4, 15008)
+        ];
+
+        UdpEndPoints = [
+            new IPEndPoint(filterIps.LocalTestIpV4, 20101),
+            new IPEndPoint(filterIps.LocalTestIpV4, 20102),
+            new IPEndPoint(filterIps.LocalTestIpV4, 20103),
+            new IPEndPoint(filterIps.LocalTestIpV6, 20101),
+            new IPEndPoint(filterIps.LocalTestIpV6, 20102),
+            new IPEndPoint(filterIps.LocalTestIpV6, 20103)
+        ];
+
+        QuicEndPoints = [
+            new IPEndPoint(filterIps.LocalTestIpV4, 25001),
+            new IPEndPoint(filterIps.LocalTestIpV4, 25002)
+        ];
+
         HttpUrls = HttpV4EndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
         HttpsUrls = HttpsV4EndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray();
         UdpClients = UdpEndPoints.Select(x => new UdpClient(x)).ToArray();

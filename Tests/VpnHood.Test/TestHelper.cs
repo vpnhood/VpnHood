@@ -52,11 +52,11 @@ public class TestHelper : IDisposable
         VhLogger.Instance = VhLogger.CreateConsoleLogger(); // min level is controlled by VhLogger.MinLevel
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
-        WebServer = TestWebServer.Create();
+        WebServer = TestWebServer.Create(new TestNetFilterIps());
         NetFilter = new TestNetFilter(NetFilterIps);
         //NetFilter.Init([TestConstants.BlockedIp],
         //[
-        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
+            //Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
         //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
         //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
         //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
@@ -231,7 +231,7 @@ public class TestHelper : IDisposable
     public async Task<bool> Test_Https(Uri? uri = null,
         TimeSpan? timeout = null, bool throwError = true)
     {
-        uri ??= TestConstants.HttpsUri1;
+        uri ??= NetFilterIps.MapToRemote(WebServer.HttpsUrls[0]);
 
         if (throwError) {
             VhLogger.Instance.LogInformation(GeneralEventId.Test, "Fetching a test uri. Url: {uri}", uri);
@@ -269,6 +269,12 @@ public class TestHelper : IDisposable
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri2.Host));
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsExternalUri1.Host));
             addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsExternalUri2.Host));
+
+            addresses.Clear(); //todo
+            addresses.Add(NetFilterIps.RemoteTestIpV6);
+            addresses.Add(NetFilterIps.RemoteTestIpV4);
+            addresses.AddRange(NetFilterIps.RemoteTestIpV4s);
+
             return addresses.ToArray();
         }
     }
@@ -528,7 +534,8 @@ public class TestHelper : IDisposable
             socketFactory: new TestSocketFactory(),
             netFilter: null,
             storageFolder: Path.Combine(WorkingPath, "ClientCore"),
-            new TestTracker(), clientOptions);
+            new TestTracker(), 
+            clientOptions);
 
         // test starting the client
         if (autoConnect)

@@ -36,4 +36,38 @@ public class TestNetFilterIps
         LocalTestIpV4s = localIpV4s;
     }
 
+    public IPAddress MapToRemote(IPAddress address)
+    {
+        if (address.Equals(LocalTestIpV4))
+            return RemoteTestIpV4;
+
+        if (address.Equals(LocalTestIpV6))
+            return RemoteTestIpV6;
+
+        for (var i = 0; i < LocalTestIpV4s.Count; i++) {
+            if (LocalTestIpV4s[i].Equals(address))
+                return RemoteTestIpV4s[i];
+        }
+
+        return address;
+    }
+
+    public IPEndPoint MapToRemote(IPEndPoint ipEndPoint)
+    {
+        var remoteAddress = MapToRemote(ipEndPoint.Address);
+        return new IPEndPoint(remoteAddress, ipEndPoint.Port);
+    }
+
+    public Uri MapToRemote(Uri uri)
+    {
+        if (!IPAddress.TryParse(uri.Host, out var ipAddress))
+            throw new ArgumentException($"URI host '{uri.Host}' is not a valid IP address.", nameof(uri));
+
+        var remoteAddress = MapToRemote(ipAddress);
+        var builder = new UriBuilder(uri) {
+            Host = remoteAddress.ToString()
+        };
+        return builder.Uri;
+    }
+
 }

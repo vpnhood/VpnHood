@@ -65,7 +65,17 @@ public class LocationService : IRegionProvider
         if (!string.IsNullOrEmpty(_settingsService.UserSettings.CultureCode))
             cultureInfo = new CultureInfo(_settingsService.UserSettings.CultureCode);
 
-        return _countryInfoService.GetCountryInfo(countryCode, cultureInfo);
+        try {
+            return _countryInfoService.GetCountryInfo(countryCode, cultureInfo);
+        }
+        catch {
+            var regionInfo = new RegionInfo(cultureInfo.Name);
+            return new CountryInfo {
+                CountryCode = countryCode,
+                EnglishName = regionInfo.EnglishName,
+                TranslatedName = regionInfo.EnglishName
+            };
+        }
     }
 
     public Task<string> GetClientCountryCodeAsync(bool allowVpnServer, CancellationToken cancellationToken)

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -18,12 +19,12 @@ public class DomainObserver(EventId sniEventId)
         }
     }
 
-    public void Track(string domainName, DomainFilterAction action, DomainObservationProtocol protocol)
+    public void Track(string domainName, FilterAction action, DomainObservationProtocol protocol)
     {
         Track(domainName, action, protocol, destinationEndPoint: null);
     }
 
-    public void Track(string? domainName, DomainFilterAction action, DomainObservationProtocol protocol, IpEndPointValue? destinationEndPoint)
+    public void Track(string? domainName, FilterAction action, DomainObservationProtocol protocol, IpEndPointValue? destinationEndPoint)
     {
         if (string.IsNullOrEmpty(domainName))
             return;

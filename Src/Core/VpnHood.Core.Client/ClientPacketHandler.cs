@@ -1,10 +1,11 @@
 ﻿using System.Net;
 using VpnHood.Core.DomainFiltering;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Exceptions;
-using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.Tunneling.Proxies;
 
 namespace VpnHood.Core.Client;
@@ -13,8 +14,7 @@ internal class ClientPacketHandler(
     Tunnel tunnel,
     ClientHost clientHost,
     DomainFilteringService domainFilteringService,
-    INetFilter netFilter,
-    IpRangeHandler ipRangeHandler,
+    NetFilter netFilter,
     ProxyManager proxyManager)
 {
     public IPAddress[] DnsServers { get; set; } = [];
@@ -28,11 +28,10 @@ internal class ClientPacketHandler(
 
     public void ProcessOutgoingPacket(IpPacket ipPacket)
     {
-
         if (ipPacket.Protocol is IpProtocol.Udp && domainFilteringService.IsEnabled)
             ProcessOutgoingPacketWithDomainFilter(ipPacket);
         else
-            ProcessOutgoingPacket(ipPacket, null);
+            ProcessOutgoingPacket(ipPacket, FilterAction.Default);
     }
 
     private void ProcessOutgoingPacketWithDomainFilter(IpPacket ipPacket)
@@ -43,41 +42,40 @@ internal class ClientPacketHandler(
             return;
 
         // block packet if the result is block. The packet and all pending packets will be disposed in this case.
-        if (result.Action == DomainFilterAction.Block) {
+        if (result.Action == FilterAction.Block) {
             foreach (var blockedPacket in result.Packets)
                 blockedPacket.Dispose();
             ipPacket.Dispose();
             return;
         }
 
-        // determine forceInRange based on the filter action to override the normal IP range check for these packets. 
-        bool? forceInRange = result.Action switch {
-            DomainFilterAction.Include => true,
-            DomainFilterAction.Exclude => false,
-            _ => null
-        };
-
         // flush pending packets if there are any. 
         foreach (var pendingPackets in result.Packets)
-            ProcessOutgoingPacket(pendingPackets, forceInRange);
+            ProcessOutgoingPacket(pendingPackets, result.Action);
 
         // process the current packet
-        ProcessOutgoingPacket(ipPacket, forceInRange);
+        ProcessOutgoingPacket(ipPacket, result.Action);
     }
 
     // WARNING: Performance Critical! Mango Section
-    private void ProcessOutgoingPacket(IpPacket ipPacket, bool? forceInRange)
+    private void ProcessOutgoingPacket(IpPacket ipPacket, FilterAction filterAction)
     {
+        // mapper
+        if (netFilter.IpMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
+            ipPacket.SetDestinationEndPoint(newEndPoint);
+            ipPacket.UpdateAllChecksums();
+        }
+
         // apply net filter
-        ipPacket = netFilter.ProcessRequest(ipPacket) 
-            ?? throw new PacketDropException("The packet has been dropped by net filter.");
+        if (filterAction == FilterAction.Default && netFilter.IpFilter != null)
+            filterAction = netFilter.IpFilter.Process(ipPacket.Protocol, ipPacket.GetDestinationEndPoint());
 
         // Multicast packets are not supported (Already excluded by adapter filter)
-        if (ipPacket.IsMulticast())
+        if (ipPacket.IsMulticast()) //todo: move to ipFilter
             throw new PacketDropException("A multicast packet has been dropped.");
 
         // Broadcast packets are not supported (Already excluded by adapter filter)
-        if (ipPacket.IsBroadcast())
+        if (ipPacket.IsBroadcast()) //todo: move to ipFilter
             throw new PacketDropException("A broadcast packet has been dropped.");
 
         // TcpHost has to manage its own packets
@@ -86,14 +84,23 @@ internal class ClientPacketHandler(
             return;
         }
 
+        // block
+        if (filterAction == FilterAction.Block)
+            throw new PacketDropException("A packet has been dropped by the domain filter.");
+
+        // force by passthrough for ad setting. The packet will be forced to exclude regardless of the domain filter result and net filter result.
+        // PassthroughForAd is enabled, DNS packets should go through the tunnel and ad traffic should not go 
+        // through the tunnel, to prevent trigger red flags on ad providers
+        if (ShouldPassthroughForAd(ipPacket))
+            filterAction = FilterAction.Exclude;
+
         // detect DoT
         IsDnsOverTlsDetected |= ipPacket.Protocol is IpProtocol.Tcp && ipPacket.ExtractTcp().DestinationPort == 853;
 
         // check is the packet in the range. 
-        var isInRange = IsInEpRange(ipPacket, forceInRange);
-        if (isInRange)
+        if (filterAction is FilterAction.Include)
             ProcessOutgoingPacketInclude(ipPacket);
-        else
+        else // default or exclude
             ProcessOutgoingPacketExclude(ipPacket);
     }
 
@@ -114,7 +121,7 @@ internal class ClientPacketHandler(
 
         // Udp
         if (ipPacket.Protocol == IpProtocol.Udp) {
-            if (!ShouldTunnelUdpPacket(ipPacket.ExtractUdp()))
+            if (ShouldDropUdpPacket(ipPacket.ExtractUdp()))
                 throw new PacketDropException("A UDP packet is dropped because it is blocked by the configuration.");
 
             tunnel.SendPacketQueued(ipPacket);
@@ -157,38 +164,18 @@ internal class ClientPacketHandler(
     }
 
 
-    private bool ShouldTunnelUdpPacket(UdpPacket udpPacket)
+    private bool ShouldDropUdpPacket(UdpPacket udpPacket)
     {
-        if (DropUdp)
-            return false;
+        if (DropUdp) 
+            return true;
 
-        if (udpPacket.DestinationPort is 80 or 443 && DropQuic)
-            return false;
-
-        return true;
+        return DropQuic && udpPacket.DestinationPort is 80 or 443;
     }
 
-    private bool IsInEpRange(IpPacket ipPacket, bool? force)
+    private bool ShouldPassthroughForAd(IpPacket ipPacket)
     {
-        var destinationPort = 0;
-        if (ipPacket.Protocol == IpProtocol.Tcp) destinationPort = ipPacket.ExtractTcp().DestinationPort;
-        if (ipPacket.Protocol == IpProtocol.Udp) destinationPort = ipPacket.ExtractUdp().DestinationPort;
-        return IsInEpRange(ipPacket.DestinationAddress, destinationPort, force);
-    }
-
-    private bool IsInEpRange(IPAddress ipAddress, int port, bool? force)
-    {
-        // PassthroughForAd is enabled, DNS packets should go through the tunnel and ad traffic should not go 
-        // through the tunnel, to prevent trigger red flags on ad providers
-        if (PassthroughForAd)
-            return port is 53 or 853 || DnsServers.Contains(ipAddress);
-
-        // force is not null means the domain filter has determined the packet should be included or excluded,
-        // so we can skip the normal IP range check.
-        if (force != null)
-            return force.Value;
-
-        // normal IP range check
-        return ipRangeHandler.IsInIpRange(ipAddress);
+        if (!PassthroughForAd) return false;
+        return ipPacket.GetDestinationEndPoint().Port is 53 or 853 ||
+               DnsServers.Contains(ipPacket.DestinationAddress);
     }
 }

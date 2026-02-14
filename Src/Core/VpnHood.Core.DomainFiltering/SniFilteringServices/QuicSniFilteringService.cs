@@ -1,8 +1,9 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.SniExtractors;
 using VpnHood.Core.DomainFiltering.SniExtractors.Quic;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
@@ -11,10 +12,10 @@ namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
 /// SNI extraction service for QUIC (UDP port 443) traffic.
 /// </summary>
 public class QuicSniFilteringService(
-DomainFilterResolver domainFilterResolver,
-TimeSpan flowTimeout,
-EventId? sniEventId)
-: PacketSniFilteringService(domainFilterResolver, flowTimeout, sniEventId)
+    IDomainFilter domainFilter,
+    TimeSpan flowTimeout,
+    EventId? sniEventId)
+    : PacketSniFilteringService(domainFilter, flowTimeout, sniEventId)
 {
     protected override string ProtocolName => "QUIC";
 

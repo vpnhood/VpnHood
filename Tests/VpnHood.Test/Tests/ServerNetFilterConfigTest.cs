@@ -30,7 +30,7 @@ public class ServerNetFilterConfigTest : TestBase
         Assert.IsTrue(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.200")));
         Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.220")));
 
-        Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")));
+        Assert.IsTrue(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")));
     }
 
     [TestMethod]
@@ -56,8 +56,8 @@ public class ServerNetFilterConfigTest : TestBase
         Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.200")));
 
         Assert.IsFalse(client.VpnAdapterIncludeIpRanges.IsInRange(IPAddress.Parse("230.0.0.220"))); //block by client
-        Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")));
-        Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.220")));
+        Assert.IsFalse(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")));
+        Assert.IsTrue(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.220")));
     }
 
     [TestMethod]
@@ -92,10 +92,10 @@ public class ServerNetFilterConfigTest : TestBase
 
         // server
         Assert.AreNotEqual(serverAllowLocalNetworks,
-            server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("192.168.0.100")));
-        Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.110")));
-        Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")));
-        Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.254")));
+            server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("192.168.0.100")));
+        Assert.IsTrue(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.110")));
+        Assert.IsFalse(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.50")));
+        Assert.IsTrue(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("230.0.0.254")));
     }
 
     [TestMethod]
@@ -120,8 +120,8 @@ public class ServerNetFilterConfigTest : TestBase
         Assert.IsFalse(client.IncludeIpRanges.IsInRange(IPAddress.Parse("130.0.0.240")), "Includes failed");
         Assert.IsFalse(client.IncludeIpRanges.IsInRange(IPAddress.Parse("130.0.0.254")), "Includes & Excludes failed");
 
-        Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("130.0.0.110")));
-        Assert.IsFalse(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("130.0.0.50")));
-        Assert.IsTrue(server.SessionManager.NetFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("130.0.0.254")));
+        Assert.IsTrue(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("130.0.0.110")));
+        Assert.IsFalse(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("130.0.0.50")));
+        Assert.IsTrue(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(IPAddress.Parse("130.0.0.254")));
     }
 }

@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.DomainFiltering.Observation;
-using VpnHood.Core.Packets;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
@@ -15,6 +15,7 @@ using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.Tunneling.Proxies;
+using FilterAction = VpnHood.Core.DomainFiltering.FilterAction;
 
 namespace VpnHood.Core.Client;
 
@@ -25,7 +26,7 @@ internal class ClientStreamHandler(
     Tunnel tunnel,
     ProxyManager proxyManager,
     TimeSpan tcpConnectTimeout,
-    INetFilter netFilter,
+    NetFilter netFilter,
     TransferBufferSize streamProxyBufferSize)
 {
     private int _processingCount;
@@ -41,10 +42,6 @@ internal class ClientStreamHandler(
             Interlocked.Increment(ref _processingCount);
             cancellationToken.ThrowIfCancellationRequested();
 
-            hostEndPoint =
-                netFilter.ProcessRequest(IpProtocol.Tcp, hostEndPoint)
-                ?? throw new Exception($"Host endpoint has been blocked by net filter. HostEp: {VhLogger.Format(hostEndPoint)}");
-
             // create a scope for the logger
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "New TcpProxy Request. LocalPort: {LocalPort}, HostEp: {RemoteEp}",
@@ -52,6 +49,11 @@ internal class ClientStreamHandler(
 
             // Apply SNI filtering and update connection if needed
             (connection, isInIpRange) = await ApplySniFiltering(connection, hostEndPoint, isInIpRange, cancellationToken).Vhc();
+
+            if (isInIpRange == null)
+                VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Host is in IP range. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
+            else
+                VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Host is NOT in IP range. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
 
             // Filter by IP
             if (isInIpRange) {
@@ -142,31 +144,12 @@ internal class ClientStreamHandler(
         }
     }
 
-    private async Task<(IConnection Connection, bool IsInIpRange)> ApplySniFiltering(
+    private async Task<(IConnection Connection, FilterAction filterAction)> ApplySniFiltering(
         IConnection connection, IPEndPoint hostEndPoint, bool isInIpRange, CancellationToken cancellationToken)
     {
         // Filter by SNI (it log by its own observer, no need to log here)
         var filterResult = await domainFilterService.ProcessStream(
             connection.Stream, hostEndPoint, cancellationToken).Vhc();
-
-        switch (filterResult.Action) {
-            case DomainFilterAction.Block:
-                throw new Exception($"Domain has been blocked. Domain: {filterResult.DomainName}");
-
-            case DomainFilterAction.Exclude:
-                domainFilterService.DomainObserver.Track(filterResult.DomainName!, DomainFilterAction.Block, DomainObservationProtocol.Tcp);
-                isInIpRange = false;
-                break;
-
-            case DomainFilterAction.Include:
-                isInIpRange = true;
-                break;
-
-            case DomainFilterAction.None:
-            default:
-                // default isInIpRange
-                break;
-        }
 
         // update connection stream with ReadBufferedStream to pre-append the read data
         if (filterResult.ReadData.Length > 0)
@@ -175,7 +158,7 @@ internal class ClientStreamHandler(
                     AllowBufferRefill = false
                 });
 
-        return (connection, isInIpRange);
+        return (connection, filterResult.Action);
     }
 
     private class ClientHostStat : IClientHostStat

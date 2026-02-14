@@ -6,7 +6,7 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Tunneling.NetFiltering;
 
-public class NetFilter : INetFilter
+public class NetFilter2 : INetFilter
 {
     public bool BlockBroadcast { get; set; } = true;
     public bool BlockMulticast { get; set; } = true;

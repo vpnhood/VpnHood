@@ -187,7 +187,7 @@ public class VpnServiceHost : IDisposable
                     ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
                     : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1),
                 storageFolder: Context.ConfigFolder,
-                netFilter: _netFilter,
+                ipFilter: _netFilter,
                 tracker: tracker,
                 socketFactory: _socketFactory,
                 options: clientOptions

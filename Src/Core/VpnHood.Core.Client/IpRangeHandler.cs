@@ -5,6 +5,8 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Client;
 
+//todo
+safsaf
 internal class IpRangeHandler
 {
     private readonly Dictionary<IPAddress, bool> _includeIps = new();

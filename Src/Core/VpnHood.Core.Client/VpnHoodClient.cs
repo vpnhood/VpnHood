@@ -13,6 +13,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.DomainFiltering.Observation;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
@@ -64,7 +65,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private TaskCompletionSource? _waitForAdCts;
     private IPAddress[] _dnsServers;
     private ChannelProtocol _channelProtocol;
-    private readonly INetFilter _netFilter;
+    private readonly StaticIpFilter _ipFilter;
+    private readonly IIpMapper? _ipMapper;
     private readonly ClientPacketHandler _packetHandler;
     private readonly IpRangeHandler _ipRangeHandler;
     private readonly DomainFilteringService _domainFilteringService;
@@ -93,7 +95,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
         ISocketFactory socketFactory,
-        INetFilter? netFilter,
+        IIpFilter? ipFilter,
+        IIpMapper? ipMapper,
         string? storageFolder,
         ITracker? tracker,
         ClientOptions options)
@@ -113,7 +116,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             storageFolder = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath!)!, "vpn-service");
 
         // make sure the netfilter exists
-        _netFilter = netFilter ?? new NetFilter();
+        _ipFilter = new StaticIpFilter(ipFilter);
 
         // build config
         Config = new VpnHoodClientConfig {
@@ -217,7 +220,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             tunnel: _tunnel,
             tcpConnectTimeout: Config.TcpConnectTimeout,
             proxyManager: _proxyManager,
-            netFilter: _netFilter,
+            netFilter: _ipFilter,
             streamProxyBufferSize: options.StreamProxySendBufferSize ?? TunnelDefaults.ConnectionProxyBufferSize);
 
         // proxy host

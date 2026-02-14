@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.SniExtractors;
 using VpnHood.Core.DomainFiltering.SniExtractors.Tcp;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
@@ -14,10 +14,10 @@ namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
 /// Use TcpStreamSniFilteringService instead as proxy
 /// </summary>
 public class TcpSniFilteringService(
-    DomainFilterResolver domainFilterResolver,
+    DomainFilterResolver domainFilter,
     TimeSpan flowTimeout,
     EventId? sniEventId)
-    : PacketSniFilteringService(domainFilterResolver, flowTimeout, sniEventId)
+    : PacketSniFilteringService(domainFilter, flowTimeout, sniEventId)
 {
     protected override string ProtocolName => "TLS";
 

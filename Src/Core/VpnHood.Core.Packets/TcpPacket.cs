@@ -1,6 +1,6 @@
 ﻿using System.Buffers.Binary;
 
-namespace VpnHood.Core.Packets;
+namespace VpnHood.Core.Toolkit.Net;
 
 public class TcpPacket : IChecksumPayloadPacket
 {

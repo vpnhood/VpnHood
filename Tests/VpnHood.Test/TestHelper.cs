@@ -8,7 +8,6 @@ using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Packets;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -420,7 +419,7 @@ public class TestHelper : IDisposable
             ConfigureInterval = configureInterval ?? new ServerOptions().ConfigureInterval,
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
-            NetFilter = NetFilter,
+            IpFilter = NetFilter,
             NetConfigurationProvider = netConfigurationProvider,
             SwapMemoryProvider = swapMemoryProvider,
             VpnAdapter = vpnAdapter,
@@ -532,7 +531,7 @@ public class TestHelper : IDisposable
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
             socketFactory: new TestSocketFactory(),
-            netFilter: null,
+            ipFilter: null,
             storageFolder: Path.Combine(WorkingPath, "ClientCore"),
             new TestTracker(), 
             clientOptions);

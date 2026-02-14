@@ -1,6 +1,8 @@
-﻿namespace VpnHood.Core.DomainFiltering;
+﻿using VpnHood.Core.Filtering.Abstractions;
 
-public class DomainFilterResolver
+namespace VpnHood.Core.DomainFiltering;
+
+public class DomainFilterResolver : IDomainFilter
 {
     private string[] _invertedBlocks = [];
     private string[] _invertedExcludes = [];
@@ -59,24 +61,24 @@ public class DomainFilterResolver
     }
 
     // it accepts wildcard such as *.example.com, which will match example.com, sub.example.com, etc.
-    public DomainFilterAction Process(string? domain)
+    public FilterAction Process(string? domain)
     {
         var normalizedDomain = NormalizeDomain(domain);
         if (normalizedDomain.Length == 0)
-            return DomainFilterAction.None;
+            return FilterAction.Default;
 
         var invertedDomain = InvertDomain(normalizedDomain);
 
         if (IsMatch(invertedDomain, _invertedBlocks))
-            return DomainFilterAction.Block;
+            return FilterAction.Block;
 
         if (IsMatch(invertedDomain, _invertedExcludes))
-            return DomainFilterAction.Exclude;
+            return FilterAction.Exclude;
 
         if (IsMatch(invertedDomain, _invertedIncludes))
-            return DomainFilterAction.Include;
+            return FilterAction.Include;
 
-        return DomainFilterAction.None;
+        return FilterAction.Default;
     }
 
     // Binary search to find exact match or prefix match (for wildcard support)

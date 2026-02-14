@@ -32,6 +32,19 @@ public static class IPAddressExtensions
         }
     }
 
+    extension(IpEndPointValue ipEndPoint)
+    {
+        public bool IsV4()
+        {
+            return ipEndPoint.Address.AddressFamily == AddressFamily.InterNetwork;
+        }
+
+        public bool IsV6()
+        {
+            return ipEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6;
+        }
+    }
+
     extension(AddressFamily addressFamily)
     {
         public bool IsV4()

@@ -5,6 +5,7 @@ using System.Net;
 using System.Text.Json;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
@@ -17,7 +18,6 @@ using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
-using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
@@ -36,7 +36,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
     private byte[] _serverSecret;
 
     public string ApiKey { get; private set; }
-    public INetFilter NetFilter { get; }
+    public IIpFilter? IpFilter { get; set; }
+    public IIpMapper? IpMapper { get; }
     public Version ServerVersion { get; }
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
@@ -56,7 +57,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     internal SessionManager(
         IAccessManager accessManager,
-        INetFilter netFilter,
+        IIpFilter? ipFilter,
+        IIpMapper? ipMapper,
         ISocketFactory socketFactory,
         ITracker? tracker,
         IVpnAdapter? vpnAdapter,
@@ -75,7 +77,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
         Tracker = tracker;
         ApiKey = HttpUtils.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
-        NetFilter = netFilter;
+        IpFilter = ipFilter;
+        IpMapper = ipMapper;
         ServerVersion = serverVersion;
         if (_vpnAdapter != null)
             _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
@@ -117,7 +120,8 @@ public class SessionManager : IAsyncDisposable, IDisposable
         var session = new Session(
             accessManager: _accessManager,
             vpnAdapter: _vpnAdapter,
-            netFilter: NetFilter,
+            ipFilter: IpFilter,
+            ipMapper: IpMapper,
             socketFactory: _socketFactory,
             options: SessionOptions,
             trackingOptions: TrackingOptions,

@@ -8,6 +8,7 @@ using System.Text.Json;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Access.Configurations;
@@ -20,7 +21,6 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.NetFiltering;
 
 namespace VpnHood.Core.Server;
 
@@ -39,6 +39,7 @@ public class VpnHoodServer : IAsyncDisposable
     private readonly NetConfigurationService? _netConfigurationService;
     private readonly ISystemInfoProvider _systemInfoProvider;
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
+    private readonly IIpFilter? _ipFilter;
     private string? _tcpCongestionControl;
     private bool _isRestarted = true;
     private readonly Job _configureAndSendStatusJob;
@@ -58,11 +59,13 @@ public class VpnHoodServer : IAsyncDisposable
             throw new InvalidProgramException("VpnAdapter must support NAT to work with VpnServer.");
 
         AccessManager = accessManager;
+        _ipFilter = options.IpFilter;
         _systemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         SessionManager = new SessionManager(accessManager,
-            options.NetFilter,
-            options.SocketFactory,
-            options.Tracker,
+            ipFilter: options.IpFilter,
+            ipMapper: options.IpMapper,
+            socketFactory: options.SocketFactory,
+            tracker: options.Tracker,
             vpnAdapter: options.VpnAdapter,
             serverVersion: ServerVersion,
             storagePath: options.StoragePath,
@@ -217,7 +220,7 @@ public class VpnHoodServer : IAsyncDisposable
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? []);
 
-            ConfigNetFilter(SessionManager.NetFilter, ServerHost, serverConfig.NetFilterOptions,
+            SessionManager.IpFilter = ConfigIpFilter(_ipFilter, ServerHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps,
                 isIpV6Supported: serverInfo.PublicIpAddresses.Any(x => x.IsV6()),
                 dnsServers: serverConfig.DnsServersValue,
@@ -321,7 +324,7 @@ public class VpnHoodServer : IAsyncDisposable
         }
     }
 
-    private static void ConfigNetFilter(INetFilter netFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
+    private static StaticIpFilter ConfigIpFilter(IIpFilter? ipFilter, ServerHost serverHost, NetFilterOptions netFilterOptions,
         IEnumerable<IPAddress> privateAddresses, bool isIpV6Supported, IEnumerable<IPAddress> dnsServers,
         IpNetwork virtualIpNetworkV4, IpNetwork virtualIpNetworkV6)
     {
@@ -339,24 +342,29 @@ public class VpnHoodServer : IAsyncDisposable
             .ToArray();
 
         serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
-        netFilter.BlockedIpRanges = netFilterOptions.GetBlockedIpRanges().Exclude(dnsServerIpRanges);
 
+        var blockedIpRanges = netFilterOptions.GetBlockedIpRanges().Exclude(dnsServerIpRanges);
+        
         // exclude virtual ip if network isolation is enabled
         if (netFilterOptions.NetworkIsolationValue) {
-            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges
+            blockedIpRanges = blockedIpRanges
                 .Union(virtualIpNetworkV4.ToIpRange())
                 .Union(virtualIpNetworkV6.ToIpRange());
         }
 
         // exclude listening ip
         if (!netFilterOptions.IncludeLocalNetworkValue)
-            netFilter.BlockedIpRanges = netFilter.BlockedIpRanges
+            blockedIpRanges = blockedIpRanges
                 .Union(privateAddresses.Select(x => new IpRange(x)))
                 .Union(IpNetwork.LocalNetworks.ToIpRanges());
 
         // log blocked ranges
         VhLogger.Instance.LogDebug("BlockedIpRanges: {BlockedIpRanges}",
-            string.Join(",", netFilter.BlockedIpRanges));
+            string.Join(",", blockedIpRanges));
+
+        return new StaticIpFilter(ipFilter) {
+            BlockedIpRanges = blockedIpRanges
+        };
     }
 
     private static TransferBufferSize GetBestStreamBufferSize(long? totalMemory, TransferBufferSize? configValue)
@@ -424,7 +432,7 @@ public class VpnHoodServer : IAsyncDisposable
             var serverConfig = await AccessManager.Server_Configure(serverInfo, cancellationToken).Vhc();
             _isRestarted = false; // is restarted should send once
             try {
-                await File.WriteAllTextAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig), 
+                await File.WriteAllTextAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig),
                         cancellationToken)
                     .Vhc();
             }

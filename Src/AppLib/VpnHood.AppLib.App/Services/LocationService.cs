@@ -54,27 +54,22 @@ public class LocationService : IRegionProvider
                ?? RegionInfo.CurrentRegion.Name;
     }
 
-    public CountryInfo GetClientCountryInfo()
+    public CountryInfo? TryGetClientCountryInfo()
     {
-        return GetCountryInfo(RegionInfo.CurrentRegion.Name);
+        return TryGetCountryInfo(RegionInfo.CurrentRegion.Name);
     }
 
-    public CountryInfo GetCountryInfo(string countryCode)
+    public CountryInfo? TryGetCountryInfo(string countryCode)
     {
-        var cultureInfo = CultureInfo.CurrentUICulture;
-        if (!string.IsNullOrEmpty(_settingsService.UserSettings.CultureCode))
-            cultureInfo = new CultureInfo(_settingsService.UserSettings.CultureCode);
-
         try {
+            var cultureInfo = CultureInfo.CurrentUICulture;
+            if (!string.IsNullOrEmpty(_settingsService.UserSettings.CultureCode))
+                cultureInfo = new CultureInfo(_settingsService.UserSettings.CultureCode);
             return _countryInfoService.GetCountryInfo(countryCode, cultureInfo);
         }
-        catch {
-            var regionInfo = new RegionInfo(countryCode);
-            return new CountryInfo {
-                CountryCode = countryCode,
-                EnglishName = regionInfo.EnglishName,
-                TranslatedName = regionInfo.EnglishName
-            };
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(ex, "Could not get country info for country code: {CountryCode}", countryCode);
+            return null;
         }
     }
 
@@ -161,15 +156,18 @@ public class LocationService : IRegionProvider
 
     public CountryInfo[] GetCountries()
     {
+        // region my return 001 for word, but it is not a valid country code, so filter it out,
+        // and also filter out any region with numeric name, just in case
         var countryInfos = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
             .Select(culture => new RegionInfo(culture.Name))
-            .Where(region => !string.IsNullOrEmpty(region.Name))
+            .Where(region => !string.IsNullOrEmpty(region.Name) && !int.TryParse(region.Name, out _) )
             .DistinctBy(region => region.Name)
-            .Select(region => GetCountryInfo(region.Name))
-            .OrderBy(countryInfo => countryInfo.TranslatedName)
+            .Select(region => TryGetCountryInfo(region.Name))
+            .Where(countryInfo => countryInfo != null)
+            .OrderBy(countryInfo => countryInfo!.TranslatedName)
             .ToArray();
 
-        return countryInfos;
+        return countryInfos!;
     }
 
     public async Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken)

@@ -1,10 +1,11 @@
 ﻿using System.Net;
 using System.Runtime.InteropServices;
+using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Net;
 
 // ReSharper disable OutParameterValueIsAlwaysDiscarded.Global
 
-namespace VpnHood.Core.Packets.Extensions;
+namespace VpnHood.Core.Toolkit.Net.Extensions;
 
 public static class IpPacketExtensions
 {

@@ -1,4 +1,6 @@
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.DomainFiltering;
 
@@ -10,7 +12,7 @@ public readonly struct PacketSniFilterResult
     /// <summary>
     /// The filter action to take for these packets.
     /// </summary>
-    public DomainFilterAction Action { get; }
+    public FilterAction Action { get; }
 
     /// <summary>
     /// The extracted domain name (if found).
@@ -34,7 +36,7 @@ public readonly struct PacketSniFilterResult
     /// </summary>
     public IReadOnlyList<IpPacket> Packets { get; init; } = [];
 
-    public PacketSniFilterResult(DomainFilterAction action, string? domainName,
+    public PacketSniFilterResult(FilterAction action, string? domainName,
         IReadOnlyList<IpPacket>? packets, bool isNewFlow)
     {
         Action = action;
@@ -44,18 +46,18 @@ public readonly struct PacketSniFilterResult
 
     }
 
-    public PacketSniFilterResult(DomainFilterAction action)
+    public PacketSniFilterResult(FilterAction action)
     {
         Action = action;
     }
 
     public PacketSniFilterResult(bool needMore)
     {
-        Action = DomainFilterAction.Block;
+        Action = FilterAction.Block;
         NeedMore = needMore;
     }
 
     public static PacketSniFilterResult Pending() => new(true);
-    public static PacketSniFilterResult Passthrough() => new(DomainFilterAction.None);
+    public static PacketSniFilterResult Passthrough() => new(FilterAction.Default);
 
 }

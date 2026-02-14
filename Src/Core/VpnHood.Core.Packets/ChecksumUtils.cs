@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Packets;
+﻿namespace VpnHood.Core.Toolkit.Net;
 
 public static class ChecksumUtils
 {

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.DomainFiltering.SniExtractors;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -11,14 +12,14 @@ namespace VpnHood.Core.DomainFiltering.SniFilteringServices;
 /// Handles flow management, packet buffering, and domain filtering.
 /// </summary>
 public abstract class PacketSniFilteringService(
-    DomainFilterResolver domainFilterResolver,
+    IDomainFilter domainFilter,
     TimeSpan flowTimeout,
     EventId? sniEventId)
     : IDisposable
 {
     private readonly FlowCacheService _flowCacheService = new(flowTimeout);
     private bool _disposed;
-    protected DomainFilterResolver DomainFilterResolver { get; } = domainFilterResolver;
+    protected IDomainFilter DomainFilter { get; } = domainFilter;
     protected EventId? SniEventId { get; } = sniEventId;
     protected abstract string ProtocolName { get; }
 
@@ -98,7 +99,7 @@ public abstract class PacketSniFilteringService(
         IpEndPointValue flowKey, IpPacket ipPacket, FlowInfo? flowInfo,
         string domainName, long nowTicks)
     {
-        var action = DomainFilterResolver.Process(domainName);
+        var action = DomainFilter.Process(domainName);
 
         // Collect all buffered packets plus current one
         var packets = flowInfo?.BufferedPackets ?? [];
@@ -135,14 +136,14 @@ public abstract class PacketSniFilteringService(
     {
         // Mark flow as decided (None = pass through)
         var state = flowInfo ?? new FlowInfo();
-        state.Decision = DomainFilterAction.None;
+        state.Decision = FilterAction.Default;
         state.BufferedPackets = [];
         state.SniState = null;
         state.LastSeenTicks = nowTicks;
         _flowCacheService.Set(flowKey, state);
 
         // Release all buffered packets with None action
-        return new PacketSniFilterResult(DomainFilterAction.None, null, flowInfo?.BufferedPackets, false);
+        return new PacketSniFilterResult(FilterAction.Default, null, flowInfo?.BufferedPackets, false);
     }
 
     public void Dispose()

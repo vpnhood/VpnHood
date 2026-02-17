@@ -99,7 +99,7 @@ public class ClientTunnelTest : TestBase
         // HttpsBlockedUri is faster than HttpsRefusedUri. 
         // In windows HttpsRefusedUri takes 2 seconds to return error
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
-            httpClient.GetStringAsync(TestConstants.HttpsBlockedUri));
+            httpClient.GetStringAsync(MockEps.HttpsBlockedUri));
 
         Assert.AreEqual(HttpRequestError.SecureConnectionError, ex.HttpRequestError);
         Assert.AreEqual(ClientState.Unstable, clientServer.Client.State);

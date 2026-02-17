@@ -66,7 +66,7 @@ public class UdpProxyTest : TestBase
         proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
 
         // Test
-        var udpEndPoint = MockIps.UdpV4EndPoint1;
+        var udpEndPoint = MockEps.UdpV4EndPoint1;
         var ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
@@ -74,7 +74,7 @@ public class UdpProxyTest : TestBase
         Assert.AreEqual(1, proxyPool.ClientCount);
 
         // Test
-        udpEndPoint = MockIps.UdpV4EndPoint1;
+        udpEndPoint = MockEps.UdpV4EndPoint1;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
@@ -82,7 +82,7 @@ public class UdpProxyTest : TestBase
         Assert.AreEqual(2, proxyPool.ClientCount);
 
         // Test
-        udpEndPoint = MockIps.UdpV4EndPoint1;
+        udpEndPoint = MockEps.UdpV4EndPoint1;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
@@ -92,7 +92,7 @@ public class UdpProxyTest : TestBase
 
         // Test
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.30:2000"),
-            MockIps.UdpV4EndPoint2, Guid.NewGuid().ToByteArray());
+            MockEps.UdpV4EndPoint2, Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
         Assert.AreEqual(3, proxyPool.ClientCount, "New source should create a new worker.");
@@ -103,7 +103,7 @@ public class UdpProxyTest : TestBase
         proxyPool = new UdpProxyPool(proxyPoolOptions);
 
         proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
-        udpEndPoint = MockIps.UdpV4EndPoint1;
+        udpEndPoint = MockEps.UdpV4EndPoint1;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
@@ -111,7 +111,7 @@ public class UdpProxyTest : TestBase
         await VhTestUtil.AssertEqualsWait(0, () => proxyPool.ClientCount);
 
         // test ip6
-        ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[::1]:2000"), MockIps.UdpV6EndPoint1,
+        ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[::1]:2000"), MockEps.UdpV6EndPoint1,
             Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
@@ -125,7 +125,7 @@ public class UdpProxyTest : TestBase
         var proxyPoolOptions = TestHelper.CreateUdpProxyPoolOptions(myPacketProxyCallbacks);
         var proxyPool = new UdpProxyPoolEx(proxyPoolOptions);
         proxyPool.PacketReceived += myPacketProxyCallbacks.PacketReceived;
-        var udpEndPoint = MockIps.UdpV4EndPoint1;
+        var udpEndPoint = MockEps.UdpV4EndPoint1;
         var ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint,
             Guid.NewGuid().ToByteArray());
 
@@ -149,7 +149,7 @@ public class UdpProxyTest : TestBase
         // Test
         // -------------
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.30:2000"),
-            MockIps.UdpV4EndPoint2, Guid.NewGuid().ToByteArray());
+            MockEps.UdpV4EndPoint2, Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);
         Assert.AreEqual(2, proxyPool.ClientCount,
@@ -158,7 +158,7 @@ public class UdpProxyTest : TestBase
         // -------------
         // Test
         // -------------
-        var udpEndPoint2 = MockIps.UdpV4EndPoint1;
+        var udpEndPoint2 = MockEps.UdpV4EndPoint1;
         ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint2,
             Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
@@ -181,7 +181,7 @@ public class UdpProxyTest : TestBase
         await VhTestUtil.AssertEqualsWait(0, () => proxyPool.ClientCount);
 
         // test ip6
-        ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[::1]:2000"), MockIps.UdpV6EndPoint1,
+        ipPacket = PacketBuilder.BuildUdp(IPEndPoint.Parse("[::1]:2000"), MockEps.UdpV6EndPoint1,
             Guid.NewGuid().ToByteArray());
         proxyPool.SendPacketQueued(ipPacket);
         await myPacketProxyCallbacks.WaitForUdpPacket(ipPacket);

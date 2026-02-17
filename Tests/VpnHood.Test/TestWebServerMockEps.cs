@@ -33,5 +33,6 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public Uri HttpUrl2 => MapToRemote(localEps.HttpUrls[1]);
     public Uri FileHttpUrl1 => MapToRemote(localEps.FileHttpUrl1);
     public Uri FileHttpUrl2 => MapToRemote(localEps.FileHttpUrl2);
-
+    public IPAddress PingV4Address1 => testIps.RemoteTestIpV4;
+    public IPAddress PingV6Address1 => testIps.RemoteTestIpV6;
 }

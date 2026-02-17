@@ -91,16 +91,11 @@ public class TestHelper : IDisposable
         return _isIpV6Supported.Value;
     }
 
-    private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null,
-        TimeSpan? timeout = null)
+    private static Task<PingReply> SendPing(Ping ping , IPAddress ipAddress,TimeSpan timeout)
     {
-        timeout ??= TestConstants.DefaultPingTimeout;
-
-        using var pingT = new Ping();
-        ping ??= pingT;
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
-        return ping.SendPingAsync(ipAddress ?? TestConstants.PingV4Address1, timeout.Value, buffer);
+        return ping.SendPingAsync(ipAddress, timeout, buffer);
     }
 
     private Task<bool> SendHttpGet(Uri uri, TimeSpan? timeout = null)
@@ -157,7 +152,13 @@ public class TestHelper : IDisposable
 
     public async Task Test_Ping(Ping? ping = null, IPAddress? ipAddress = null, TimeSpan? timeout = null)
     {
-        var pingReply = await SendPing(ping, ipAddress, timeout);
+        using var pingTmp = new Ping();
+
+        ipAddress ??= WebServer.MockEps.PingV4Address1;
+        timeout ??= TestConstants.DefaultHttpTimeout;
+        ping ??= pingTmp;
+
+        var pingReply = await SendPing(ping, ipAddress, timeout.Value);
         if (pingReply.Status != IPStatus.Success)
             throw new PingException($"Ping failed. Status: {pingReply.Status}");
     }

@@ -134,7 +134,7 @@ public class ClientTunnelTest : TestBase
         clientServer.Collect();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv4");
-        await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
+        await TestHelper.Test_Ping(ipAddress: MockEps.PingV4Address1);
 
         clientServer.AssertTransfer();
     }
@@ -147,7 +147,7 @@ public class ClientTunnelTest : TestBase
         clientServer.Collect();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Ping IPv6");
-        await TestHelper.Test_Ping(ipAddress: TestConstants.PingV6Address1);
+        await TestHelper.Test_Ping(ipAddress: MockEps.PingV6Address1);
 
         clientServer.AssertTransfer();
     }

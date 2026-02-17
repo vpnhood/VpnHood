@@ -26,6 +26,6 @@ public abstract class TestBase
         VhLogger.Instance.LogInformation(GeneralEventId.Test, message);
     }
 
-    protected TestWebServerMockEps MockIps => TestHelper.WebServer.MockEps;
+    protected TestWebServerMockEps MockEps => TestHelper.WebServer.MockEps;
     protected virtual TestHelper CreateTestHelper() => new();
 }

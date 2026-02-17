@@ -54,6 +54,9 @@ public class TestHelper : IDisposable
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create(new TestNetFilterIps());
         NetFilter = new NetFilter {
+            IpFilter = new StaticIpFilter(null) {
+                BlockedRanges = new[]{TestConstants.BlockedIp}.ToOrderedIpRanges()
+            },
             IpMapper = new TestIpMapper(NetFilterIps)
         };
         //NetFilter.Init([TestConstants.BlockedIp],

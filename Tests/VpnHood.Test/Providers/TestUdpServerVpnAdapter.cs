@@ -89,11 +89,12 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
         OnPacketReceived(ipPacket);
     }
 
-    public void OnConnectionRequested(IpProtocol protocolType, IPEndPoint remoteEndPoint)
+    public void OnConnectionRequested(IpProtocol protocolType, IpEndPointValue remoteEndPoint)
     {
     }
 
-    public void OnConnectionEstablished(IpProtocol protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+    public void OnConnectionEstablished(IpProtocol protocolType, 
+        IpEndPointValue localEndPoint, IpEndPointValue remoteEndPoint,
         bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
     {
     }

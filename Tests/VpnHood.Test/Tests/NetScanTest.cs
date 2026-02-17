@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Server;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Test.Extensions;
 
@@ -47,22 +48,22 @@ public class NetScanTest : TestBase
     public async Task Detect_by_UnitTest()
     {
         var netScanDetector = new NetScanDetector(3, TimeSpan.FromSeconds(1));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.1")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.1")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.2")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.3")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.3")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:441")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:442")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:443")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:443")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("100.10.11.1:443")));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.1").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.1").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.2").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.3").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.3").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:441").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:442").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:443").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:443").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("100.10.11.1:443").ToValue()));
 
-        Assert.IsFalse(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4")));
-        Assert.IsFalse(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444")));
+        Assert.IsFalse(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4").ToValue()));
+        Assert.IsFalse(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444").ToValue()));
 
-        await Task.Delay(TimeSpan.FromSeconds(1));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4")));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444")));
+        await Task.Delay(TimeSpan.FromSeconds(1), TestCancellationToken);
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4").ToValue()));
+        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444").ToValue()));
     }
 }

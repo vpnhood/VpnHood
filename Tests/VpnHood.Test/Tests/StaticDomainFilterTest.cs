@@ -34,12 +34,11 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_CaseInsensitive_ReturnsCorrectAction()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["Block.COM"],
             Excludes = ["EXCLUDE.com"],
             Includes = ["InClUdE.CoM"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         Assert.AreEqual(FilterAction.Block, resolver.Process("block.com"));
         Assert.AreEqual(FilterAction.Block, resolver.Process("BLOCK.COM"));
@@ -55,12 +54,11 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_WildcardDomain_MatchesSubdomains()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["*.block.com"],
             Excludes = ["*.exclude.com"],
             Includes = ["*.include.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         // Exact match (wildcard means *.domain.com includes domain.com itself)
         Assert.AreEqual(FilterAction.Block, resolver.Process("block.com"));
@@ -82,10 +80,9 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_WildcardDomain_DoesNotMatchParentDomain()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["*.sub.example.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         // Should match
         Assert.AreEqual(FilterAction.Block, resolver.Process("sub.example.com"));
@@ -100,11 +97,10 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_PriorityOrder_BlockBeforeExclude()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["example.com"],
             Excludes = ["example.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         // Block takes priority
         Assert.AreEqual(FilterAction.Block, resolver.Process("example.com"));
@@ -113,11 +109,10 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_PriorityOrder_ExcludeBeforeInclude()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Excludes = ["example.com"],
             Includes = ["example.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         // Exclude takes priority
         Assert.AreEqual(FilterAction.Exclude, resolver.Process("example.com"));
@@ -126,12 +121,11 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_PriorityOrder_BlockBeforeExcludeBeforeInclude()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["example.com"],
             Excludes = ["example.com"],
             Includes = ["example.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         // Block takes priority over all
         Assert.AreEqual(FilterAction.Block, resolver.Process("example.com"));
@@ -140,12 +134,11 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_WhitespaceHandling_TrimsAndProcesses()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["  block.com  "],
             Excludes = [" exclude.com"],
             Includes = ["include.com "]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         Assert.AreEqual(FilterAction.Block, resolver.Process("block.com"));
         Assert.AreEqual(FilterAction.Block, resolver.Process("  block.com  "));
@@ -157,10 +150,9 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_MultipleWildcards_MatchesCorrectly()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["*.google.com", "*.facebook.com", "*.twitter.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         Assert.AreEqual(FilterAction.Block, resolver.Process("google.com"));
         Assert.AreEqual(FilterAction.Block, resolver.Process("www.google.com"));
@@ -178,19 +170,15 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void DomainFilter_Setter_UpdatesInternalArrays()
     {
-        var domainFilter1 = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["block1.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter1);
 
         Assert.AreEqual(FilterAction.Block, resolver.Process("block1.com"));
         Assert.AreEqual(FilterAction.Default, resolver.Process("block2.com"));
 
-        // Update the domain filter
-        var domainFilter2 = new DomainFilteringPolicy {
-            Blocks = ["block2.com"]
-        };
-        resolver.FilterPolicy = domainFilter2;
+        // Update the blocks
+        resolver.Blocks = ["block2.com"];
 
         Assert.AreEqual(FilterAction.Default, resolver.Process("block1.com"));
         Assert.AreEqual(FilterAction.Block, resolver.Process("block2.com"));
@@ -199,12 +187,11 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_ComplexScenario_ReturnsCorrectActions()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["*.ads.com", "tracker.example.com"],
             Excludes = ["*.internal.company.com", "localhost"],
             Includes = ["*.cdn.cloudflare.com", "api.service.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         // Blocks
         Assert.AreEqual(FilterAction.Block, resolver.Process("ads.com"));
@@ -229,10 +216,9 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_DeepSubdomains_MatchesWildcard()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["*.example.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         Assert.AreEqual(FilterAction.Block, resolver.Process("example.com"));
         Assert.AreEqual(FilterAction.Block, resolver.Process("www.example.com"));
@@ -244,10 +230,9 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_SpecificAndWildcard_BothWork()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["specific.example.com", "*.wildcard.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         // Specific match
         Assert.AreEqual(FilterAction.Block, resolver.Process("specific.example.com"));
@@ -262,10 +247,9 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_EmptyStringInArray_IgnoredCorrectly()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["", "  ", "block.com", ""]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         Assert.AreEqual(FilterAction.Block, resolver.Process("block.com"));
         Assert.AreEqual(FilterAction.Default, resolver.Process("example.com"));
@@ -274,10 +258,9 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_NullAndEmptyInput_ReturnsNone()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["block.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         Assert.AreEqual(FilterAction.Default, resolver.Process(null));
         Assert.AreEqual(FilterAction.Default, resolver.Process(""));
@@ -288,10 +271,9 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_SingleLabelDomain_WorksCorrectly()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["localhost", "*.local"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         Assert.AreEqual(FilterAction.Block, resolver.Process("localhost"));
         Assert.AreEqual(FilterAction.Block, resolver.Process("LOCALHOST"));

@@ -505,7 +505,7 @@ public class TestHelper : IDisposable
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
             MaxPacketChannelCount = 1,
-            VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
+            IncludeIpRangesByDevice = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
             ChannelProtocol = channelProtocol,

@@ -7,6 +7,6 @@ public static class IPEndPointExtensions
 {
     extension(IPEndPoint ipEndPoint)
     {
-        public IpEndPointValue ToIpEndPointValue() => new(ipEndPoint.Address, ipEndPoint.Port);
+        public IpEndPointValue ToValue() => new(ipEndPoint.Address, ipEndPoint.Port);
     }
 }

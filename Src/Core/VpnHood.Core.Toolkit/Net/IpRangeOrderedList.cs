@@ -98,7 +98,7 @@ public class IpRangeOrderedList :
             .SequenceEqual(this);
     }
 
-    public bool IsInRange(IPAddress ipAddress)
+    public bool Contains(IPAddress ipAddress)
     {
         if (ipAddress.IsIPv4MappedToIPv6) ipAddress = ipAddress.MapToIPv4();
         var res = _orderedList.BinarySearch(new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());

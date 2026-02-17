@@ -12,8 +12,8 @@ public class VpnAdapterOptions
     public required string? SessionName { get; init; }
     public IpNetwork? VirtualIpNetworkV4 { get; init; }
     public IpNetwork? VirtualIpNetworkV6 { get; init; }
-    public IPAddress[] DnsServers { get; init; } = [];
-    public IpNetwork[] IncludeNetworks { get; init; } = [];
+    public IEnumerable<IPAddress> DnsServers { get; init; } = [];
+    public IEnumerable<IpNetwork> IncludeNetworks { get; init; } = [];
     public string[]? ExcludeApps { get; init; }
     public string[]? IncludeApps { get; init; }
     public bool UseNat { get; init; }

@@ -2,27 +2,27 @@
 
 namespace VpnHood.Core.Filtering.Abstractions;
 
-public class StaticIpFilter(IIpFilter? ipFilter) : IIpFilter
+public class StaticIpFilter(IIpFilter? nextFilter) : IIpFilter
 {
-    public IpRangeOrderedList BlockedIpRanges { get; set; } = [];
+    public IpRangeOrderedList BlockedRanges { get; set; } = [];
     public IpRangeOrderedList ExcludeRanges { get; set; } = [];
     public IpRangeOrderedList IncludeRanges { get; set; } = [];
 
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
         // blocked IP ranges
-        if (BlockedIpRanges.Count > 0 && BlockedIpRanges.IsInRange(endPoint.Address))
+        if (BlockedRanges.Count > 0 && BlockedRanges.Contains(endPoint.Address))
             return FilterAction.Block;
 
         // excluded IP ranges
-        if (ExcludeRanges.Count > 0 && ExcludeRanges.IsInRange(endPoint.Address))
+        if (ExcludeRanges.Count > 0 && ExcludeRanges.Contains(endPoint.Address))
             return FilterAction.Exclude;
 
         // included IP ranges
-        if (IncludeRanges.Count > 0 && IncludeRanges.IsInRange(endPoint.Address))
+        if (IncludeRanges.Count > 0 && IncludeRanges.Contains(endPoint.Address))
             return FilterAction.Include;
 
-        return ipFilter?.Process(protocol, endPoint) ?? FilterAction.Default;
+        return nextFilter?.Process(protocol, endPoint) ?? FilterAction.Default;
     }
 
     public void Dispose()

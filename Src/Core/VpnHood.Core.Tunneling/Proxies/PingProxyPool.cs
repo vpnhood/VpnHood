@@ -89,7 +89,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
             return new TimeoutItem<bool>(true);
         });
         if (isNewRemoteEndPoint)
-            _packetProxyCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint);
+            _packetProxyCallbacks?.OnConnectionRequested(ipPacket.Protocol, destinationEndPoint.ToValue());
 
         // send to a ping proxy
         var pingProxy = GetFreePingProxy(out var isNewLocalEndPoint);
@@ -98,7 +98,7 @@ public class PingProxyPool : PassthroughPacketTransport, IPacketProxyPool
         // raise new endpoint event
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
             _packetProxyCallbacks?.OnConnectionEstablished(ipPacket.Protocol,
-                new IPEndPoint(ipPacket.SourceAddress, 0), new IPEndPoint(ipPacket.DestinationAddress, 0),
+                new IpEndPointValue(ipPacket.SourceAddress, 0), new IpEndPointValue(ipPacket.DestinationAddress, 0),
                 isNewLocalEndPoint, isNewRemoteEndPoint);
     }
 

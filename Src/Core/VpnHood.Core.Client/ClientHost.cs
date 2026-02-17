@@ -29,6 +29,8 @@ internal class ClientHost(
 
     public IPAddress CatcherAddressIpV4 => catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 => catcherAddressIpV6;
+    public IReadOnlyList<IPAddress> CatcherAddressIps = [catcherAddressIpV4, catcherAddressIpV6];
+
     public event EventHandler<IpPacket>? PacketReceived;
 
     public void DropCurrentConnections()
@@ -98,7 +100,7 @@ internal class ClientHost(
     }
 
     // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-    public void ProcessOutgoingPacket(IpPacket ipPacket, bool? isInIpRange)
+    public void ProcessOutgoingPacket(IpPacket ipPacket)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         PacketLogger.LogPacket(ipPacket, "Processing a ClientHost packet...");
@@ -133,20 +135,13 @@ internal class ClientHost(
             // Redirect outbound to the local address
             else {
                 var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
-                var syncCustomData = sync && isInIpRange != null
-                    ? new SyncCustomData { IsInIpRange = isInIpRange.Value }
-                    : (SyncCustomData?)null;
 
                 // add to nat if it is sync packet
-                var natItem = syncCustomData != null
+                var natItem = sync
                     ? _nat.Add(ipPacket, true)
                     : _nat.Get(ipPacket) ??
                       throw new NatEndpointNotFoundException("Could not find outgoing tcp destination in NAT.");
-
-                // set customData
-                if (syncCustomData != null)
-                    natItem.CustomData = syncCustomData;
-
+    
                 // rewrite packet by changing source/destination address and port
                 tcpPacket.SourcePort = natItem.NatId; // 1
                 ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
@@ -180,10 +175,8 @@ internal class ClientHost(
             if (!Equals(connection.RemoteEndPoint.Address, catcherAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
-            var syncCustomData = natItem.CustomData as SyncCustomData?;
-            var isInIpRange = syncCustomData?.IsInIpRange ?? true; // default to true if no custom data
             var hostEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort);
-            await streamHandler.ProcessConnection(connection, hostEndPoint, isInIpRange, cancellationToken).Vhc();
+            await streamHandler.ProcessConnection(connection, hostEndPoint, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Stream, ex, "Could not process a tcp stream request.");
@@ -206,12 +199,5 @@ internal class ClientHost(
         PacketReceived = null;
 
         _disposed = true;
-    }
-
-    
-
-    public struct SyncCustomData
-    {
-        public required bool IsInIpRange { get; init; }
     }
 }

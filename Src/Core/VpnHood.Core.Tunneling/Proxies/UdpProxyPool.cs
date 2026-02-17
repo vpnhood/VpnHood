@@ -61,7 +61,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
             return new TimeoutItem<bool>(true);
         });
         if (isNewRemoteEndPoint)
-            _packetProxyCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint);
+            _packetProxyCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint.ToValue());
 
         // find the proxy for the sourceEndPoint
         var udpProxy = _udpProxies.GetOrAdd(sourceEndPoint, key => {
@@ -80,8 +80,8 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         // Raise new endpoint
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
             _packetProxyCallbacks?.OnConnectionEstablished(IpProtocol.Udp,
-                localEndPoint: udpProxy.LocalEndPoint,
-                remoteEndPoint: destinationEndPoint,
+                localEndPoint: udpProxy.LocalEndPoint.ToValue(),
+                remoteEndPoint: destinationEndPoint.ToValue(),
                 isNewLocalEndPoint: isNewLocalEndPoint,
                 isNewRemoteEndPoint: isNewRemoteEndPoint);
 

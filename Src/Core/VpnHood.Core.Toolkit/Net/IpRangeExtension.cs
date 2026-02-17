@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Core.Toolkit.Net;
+﻿using System.Net;
+
+namespace VpnHood.Core.Toolkit.Net;
 
 public static class IpRangeExtension
 {
@@ -20,6 +22,19 @@ public static class IpRangeExtension
         public string ToText()
         {
             return string.Join(Environment.NewLine, ipRanges.Select(x => x.ToString()));
+        }
+    }
+
+    extension(IEnumerable<IPAddress> iPAddresses)
+    {
+        public IEnumerable<IpRange> ToIpRanges()
+        {
+            return iPAddresses.Select(x => new IpRange(x));
+        }
+
+        public IpRangeOrderedList ToOrderedIpRanges()
+        {
+            return new IpRangeOrderedList(iPAddresses.ToIpRanges());
         }
     }
 }

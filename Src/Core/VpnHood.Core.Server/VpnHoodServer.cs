@@ -363,7 +363,7 @@ public class VpnHoodServer : IAsyncDisposable
             string.Join(",", blockedIpRanges));
 
         return new StaticIpFilter(ipFilter) {
-            BlockedIpRanges = blockedIpRanges
+            BlockedRanges = blockedIpRanges
         };
     }
 

@@ -17,7 +17,7 @@ public class DomainFilteringTest : TestAppBase
 
         // create app
         await using var app = TestAppHelper.CreateClientApp(device: device);
-        app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsExternalUri1.Host];
+        app.UserSettings.DomainFilterPolicy.Excludes = [TestConstants.HttpsExternalUri1.Host];
 
         // connect
         var token = TestHelper.CreateAccessToken(server);
@@ -52,7 +52,7 @@ public class DomainFilteringTest : TestAppBase
 
         // create app
         await using var app = TestAppHelper.CreateClientApp(device: device);
-        app.UserSettings.DomainFilter.Excludes = [TestConstants.HttpsExternalUri1.Host];
+        app.UserSettings.DomainFilterPolicy.Excludes = [TestConstants.HttpsExternalUri1.Host];
 
         // connect
         var token = TestHelper.CreateAccessToken(server);

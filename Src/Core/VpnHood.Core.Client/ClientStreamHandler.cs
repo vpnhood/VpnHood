@@ -1,9 +1,8 @@
-﻿using System.Net;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using System.Net;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.DomainFiltering;
-using VpnHood.Core.DomainFiltering.Observation;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
@@ -12,10 +11,9 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
+using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
-using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.Tunneling.Proxies;
-using FilterAction = VpnHood.Core.DomainFiltering.FilterAction;
 
 namespace VpnHood.Core.Client;
 
@@ -34,8 +32,8 @@ internal class ClientStreamHandler(
 
     public IClientHostStat Stat => _stat;
 
-    public async Task ProcessConnection(
-        IConnection connection, IPEndPoint hostEndPoint, bool isInIpRange, CancellationToken cancellationToken)
+    public async Task ProcessConnection(IConnection connection, IPEndPoint hostEndPoint, 
+        CancellationToken cancellationToken)
     {
         try {
             // check cancellation
@@ -47,24 +45,34 @@ internal class ClientStreamHandler(
                 "New TcpProxy Request. LocalPort: {LocalPort}, HostEp: {RemoteEp}",
                 connection.RemoteEndPoint.Port, hostEndPoint);
 
+            var filterAction = FilterAction.Default;
+
             // Apply SNI filtering and update connection if needed
-            (connection, isInIpRange) = await ApplySniFiltering(connection, hostEndPoint, isInIpRange, cancellationToken).Vhc();
+            if (domainFilterService.IsEnabled)
+                (connection, filterAction) = await ApplySniFiltering(connection, hostEndPoint, cancellationToken).Vhc();
 
-            if (isInIpRange == null)
-                VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Host is in IP range. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
-            else
-                VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Host is NOT in IP range. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
+            // Filter by IP if SNI filtering result is default
+            if (filterAction != FilterAction.Default && netFilter.IpFilter != null)
+                filterAction = netFilter.IpFilter.Process(IpProtocol.Tcp, hostEndPoint.ToValue());
 
-            // Filter by IP
-            if (isInIpRange) {
-                // Create and add to tunnel channel
-                await AddTunnelChannel(connection, hostEndPoint, cancellationToken).Vhc();
-                _stat.TcpTunnelledCount++;
-            }
-            else {
-                // Create and add to exclude channel
-                await AddPassthruChannel(connection, hostEndPoint, cancellationToken).Vhc();
-                _stat.TcpPassthruCount++;
+            switch (filterAction)
+            {
+                case FilterAction.Block:
+                    throw new NetFilterException("A host has been blocked.");
+
+                case FilterAction.Include:
+                    // Create and add to tunnel channel
+                    VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Include a Host to VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
+                    await AddTunnelChannel(connection, hostEndPoint, cancellationToken).Vhc();
+                    _stat.TcpTunnelledCount++;
+                    break;
+
+                default: // default or exclude
+                    // Create and add to exclude channel
+                    VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Exclude a Host from VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
+                    await AddPassthruChannel(connection, hostEndPoint, cancellationToken).Vhc();
+                    _stat.TcpPassthruCount++;
+                    break;
             }
         }
         finally {
@@ -74,6 +82,11 @@ internal class ClientStreamHandler(
 
     private async Task AddPassthruChannel(IConnection connection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
+        // apply NetMapper
+        if (netFilter.IpMapper?.ToHost(IpProtocol.Tcp, hostEndPoint.ToValue(), out var newEndPoint) == true)
+            hostEndPoint = newEndPoint.ToIPEndPoint();
+
+        // check IPv6 support
         if (hostEndPoint.IsV6() && vpnHoodClient.SessionStatus?.IsIpV6SupportedByClient is null or false)
             throw new Exception("IPv6 is not supported by client.");
 
@@ -145,7 +158,7 @@ internal class ClientStreamHandler(
     }
 
     private async Task<(IConnection Connection, FilterAction filterAction)> ApplySniFiltering(
-        IConnection connection, IPEndPoint hostEndPoint, bool isInIpRange, CancellationToken cancellationToken)
+        IConnection connection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
         // Filter by SNI (it log by its own observer, no need to log here)
         var filterResult = await domainFilterService.ProcessStream(

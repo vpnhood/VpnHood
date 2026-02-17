@@ -224,7 +224,7 @@ public class Session : IDisposable
         // reject if packet source does not match client internal ip
         if (!ipPacket.SourceAddress.Equals(virtualIp)) {
             var ipeEndPointPair = ipPacket.GetEndPoints();
-            LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint.ToIpEndPointValue(), false, true, "NetFilter");
+            LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint.ToValue(), false, true, "NetFilter");
             _filterReporter.Raise();
             throw new NetFilterException(
                 $"Invalid tunnel packet source ip. SourceIp: {VhLogger.Format(ipPacket.SourceAddress)}");
@@ -383,8 +383,8 @@ public class Session : IDisposable
             Interlocked.Increment(ref _tcpConnectWaitCount);
 
             // filter
-            if (_ipFilter?.Process(IpProtocol.Tcp, request.DestinationEndPoint.ToIpEndPointValue()) == FilterAction.Block) {
-                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToIpEndPointValue(), false, true, "NetFilter");
+            if (_ipFilter?.Process(IpProtocol.Tcp, request.DestinationEndPoint.ToValue()) == FilterAction.Block) {
+                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "NetFilter");
                 _filterReporter.Raise();
                 throw new NetFilterException(
                     $"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(request.DestinationEndPoint)}");
@@ -418,8 +418,8 @@ public class Session : IDisposable
 
             //tracking
             LogTrack(IpProtocol.Tcp,
-                localEndPoint: tcpClientHost.TryGetLocalEndPoint()?.ToIpEndPointValue(),
-                destinationEndPoint: request.DestinationEndPoint.ToIpEndPointValue(),
+                localEndPoint: tcpClientHost.TryGetLocalEndPoint()?.ToValue(),
+                destinationEndPoint: request.DestinationEndPoint.ToValue(),
                 isNewLocal: true, isNewRemote: true, failReason: null);
 
             // send response, using original cancellation token without timeout
@@ -447,18 +447,18 @@ public class Session : IDisposable
     {
         lock (_verifyRequestLock) {
             // NetScan limit
-            VerifyNetScan(IpProtocol.Tcp, request.DestinationEndPoint.ToIpEndPointValue(), request.RequestId);
+            VerifyNetScan(IpProtocol.Tcp, request.DestinationEndPoint.ToValue(), request.RequestId);
 
             // Channel Count limit
             if (TcpChannelCount + _tcpConnectWaitCount > _maxTcpChannelCount) {
-                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToIpEndPointValue(), false, true, "MaxTcp");
+                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raise();
                 throw new MaxTcpChannelException(connection.RemoteEndPoint, this, request.RequestId);
             }
 
             // Check tcp wait limit
             if (TcpConnectWaitCount > _maxTcpConnectWaitCount) {
-                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToIpEndPointValue(), false, true, "MaxTcpWait");
+                LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raise();
                 throw new MaxTcpConnectWaitException(connection.RemoteEndPoint, this,
                     request.RequestId);

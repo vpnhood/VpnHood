@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using VpnHood.Core.DomainFiltering;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Net.Extensions;
@@ -17,7 +17,7 @@ internal class ClientPacketHandler(
     NetFilter netFilter,
     ProxyManager proxyManager)
 {
-    public IPAddress[] DnsServers { get; set; } = [];
+    public IReadOnlyList<IPAddress> DnsServers { get; set; } = [];
     public bool PassthroughForAd { get; set; }
     public bool IsDnsOverTlsDetected { get; private set; }
     public bool DropQuic { get; set; }
@@ -80,13 +80,13 @@ internal class ClientPacketHandler(
 
         // TcpHost has to manage its own packets
         if (clientHost.IsOwnPacket(ipPacket)) {
-            clientHost.ProcessOutgoingPacket(ipPacket, null);
+            clientHost.ProcessOutgoingPacket(ipPacket);
             return;
         }
 
         // block
         if (filterAction == FilterAction.Block)
-            throw new PacketDropException("A packet has been dropped by the domain filter.");
+            throw new NetFilterException("A packet has been dropped by the domain filter.");
 
         // force by passthrough for ad setting. The packet will be forced to exclude regardless of the domain filter result and net filter result.
         // PassthroughForAd is enabled, DNS packets should go through the tunnel and ad traffic should not go 
@@ -112,7 +112,7 @@ internal class ClientPacketHandler(
         // Tcp
         if (ipPacket.Protocol == IpProtocol.Tcp) {
             if (UseTcpProxy)
-                clientHost.ProcessOutgoingPacket(ipPacket, true);
+                clientHost.ProcessOutgoingPacket(ipPacket);
             else
                 tunnel.SendPacketQueued(ipPacket);
 
@@ -144,7 +144,7 @@ internal class ClientPacketHandler(
 
         // Tcp
         if (ipPacket.Protocol == IpProtocol.Tcp) {
-            clientHost.ProcessOutgoingPacket(ipPacket, false);
+            clientHost.ProcessOutgoingPacket(ipPacket);
             return;
         }
 

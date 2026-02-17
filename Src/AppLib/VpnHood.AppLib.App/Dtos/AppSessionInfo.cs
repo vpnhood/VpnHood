@@ -10,14 +10,11 @@ namespace VpnHood.AppLib.Dtos;
 public class AppSessionInfo
 {
     public required AccessInfo? AccessInfo { get; init; }
-    public required bool IsDnsServersAccepted { get; init; }
+    public required DnsStatus DnsStatus { get; init; }
     public required bool IsLocalNetworkAllowed { get; set; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsPremiumSession { get; init; }
     public required SessionSuppressType SuppressedTo { get; init; }
-
-    [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
-    public required IPAddress[] DnsServers { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]
     public required Version ServerVersion { get; init; }

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -219,7 +220,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         await ExecuteCommandAsync(command, cancellationToken).Vhc();
     }
 
-    private async Task SetDnsServersByResolvectl(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    private async Task SetDnsServersByResolvectl(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         var allDns = string.Join(" ", dnsServers.Select(x => x.ToString()));
         var command = $"resolvectl dns {AdapterName} {allDns}";
@@ -227,14 +228,15 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         await ExecuteCommandAsync($"resolvectl domain {AdapterName} \"~.\"", cancellationToken).Vhc();
     }
 
-    private async Task SetDnsServersByResolvconf(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    private async Task SetDnsServersByResolvconf(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         var dnsPayload = string.Join("\n", dnsServers.Select(x => $"nameserver {x}")) + "\n";
         var command = $"echo \"{dnsPayload}\" | resolvconf -a {AdapterName}";
         await ExecuteCommandAsync(command, cancellationToken).Vhc();
     }
 
-    protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
+    protected override async Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         if (!dnsServers.Any())
             return;

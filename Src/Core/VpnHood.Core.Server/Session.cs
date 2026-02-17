@@ -28,11 +28,10 @@ namespace VpnHood.Core.Server;
 
 public class Session : IDisposable
 {
-    private readonly IIpFilter? _ipFilter;
-    private readonly IIpMapper? _ipMapper;
     private readonly IAccessManager _accessManager;
     private readonly IVpnAdapter? _vpnAdapter;
     private readonly ISocketFactory _socketFactory;
+    private readonly NetFilter _netFilter;
     private readonly ProxyManager _proxyManager;
     private readonly Lock _verifyRequestLock = new();
     private readonly int _maxTcpConnectWaitCount;
@@ -79,9 +78,8 @@ public class Session : IDisposable
 
     internal Session(IAccessManager accessManager,
         IVpnAdapter? vpnAdapter,
-        IIpFilter? ipFilter,
-        IIpMapper? ipMapper,
         ISocketFactory socketFactory,
+        NetFilter netFilter,
         SessionResponseEx sessionResponseEx,
         SessionOptions options,
         TrackingOptions trackingOptions,
@@ -114,8 +112,7 @@ public class Session : IDisposable
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
         _streamProxyBufferSize = options.StreamProxyBufferSize ?? TunnelDefaults.ServerStreamProxyBufferSize;
         _tcpKernelBufferSize = options.TcpKernelBufferSize;
-        _ipFilter = ipFilter;
-        _ipMapper = ipMapper;
+        _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpConnectWaitExceptionReporter.LogScope.Data.AddRange(logScope.Data);
         _maxTcpChannelExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -205,7 +202,7 @@ public class Session : IDisposable
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
-        if (_ipMapper?.FromHost(ipPacket.Protocol, ipPacket.GetSourceEndPoint(), out var newEndPoint) == true) {
+        if (_netFilter.IpMapper?.FromHost(ipPacket.Protocol, ipPacket.GetSourceEndPoint(), out var newEndPoint) == true) {
             ipPacket.SetDestinationEndPoint(newEndPoint);
             ipPacket.UpdateAllChecksums();
         }
@@ -235,13 +232,13 @@ public class Session : IDisposable
             throw new NetFilterException("TcpPacket is not allowed in this session.");
 
         // Map destination
-        if (_ipMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
+        if (_netFilter.IpMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
             ipPacket.SetDestinationEndPoint(newEndPoint);
             ipPacket.UpdateAllChecksums();
         }
 
         // filter
-        if (_ipFilter?.Process(ipPacket.Protocol, ipPacket.GetDestinationEndPoint()) == FilterAction.Block) {
+        if (_netFilter.IpFilter?.Process(ipPacket.Protocol, ipPacket.GetDestinationEndPoint()) == FilterAction.Block) {
             LogTrack(ipPacket.Protocol, null, ipPacket.GetDestinationEndPoint(), false, true, "NetFilter");
             _filterReporter.Raise();
             throw new NetFilterException(
@@ -383,7 +380,7 @@ public class Session : IDisposable
             Interlocked.Increment(ref _tcpConnectWaitCount);
 
             // filter
-            if (_ipFilter?.Process(IpProtocol.Tcp, request.DestinationEndPoint.ToValue()) == FilterAction.Block) {
+            if (_netFilter.IpFilter?.Process(IpProtocol.Tcp, request.DestinationEndPoint.ToValue()) == FilterAction.Block) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "NetFilter");
                 _filterReporter.Raise();
                 throw new NetFilterException(

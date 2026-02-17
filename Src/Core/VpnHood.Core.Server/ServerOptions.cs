@@ -16,8 +16,7 @@ public class ServerOptions
     public ISocketFactory SocketFactory { get; init; } = new SocketFactory();
     public ITracker? Tracker { get; init; }
     public ISystemInfoProvider? SystemInfoProvider { get; init; }
-    public IIpFilter? IpFilter { get; init; }
-    public IIpMapper? IpMapper { get; init; }
+    public NetFilter NetFilter { get; init; } = new();
     public INetConfigurationProvider? NetConfigurationProvider { get; init; }
     public ISwapMemoryProvider? SwapMemoryProvider { get; init; }
     public IVpnAdapter? VpnAdapter { get; init; }

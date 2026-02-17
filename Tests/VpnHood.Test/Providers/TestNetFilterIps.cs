@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Tunneling.NetFiltering;
 
 namespace VpnHood.Test.Providers;
 

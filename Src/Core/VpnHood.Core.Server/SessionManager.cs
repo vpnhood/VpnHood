@@ -36,8 +36,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     private byte[] _serverSecret;
 
     public string ApiKey { get; private set; }
-    public IIpFilter? IpFilter { get; set; }
-    public IIpMapper? IpMapper { get; }
+    public NetFilter NetFilter { get; set; }
     public Version ServerVersion { get; }
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
@@ -57,11 +56,10 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     internal SessionManager(
         IAccessManager accessManager,
-        IIpFilter? ipFilter,
-        IIpMapper? ipMapper,
         ISocketFactory socketFactory,
         ITracker? tracker,
         IVpnAdapter? vpnAdapter,
+        NetFilter netFilter,
         Version serverVersion,
         string storagePath,
         SessionManagerOptions options)
@@ -77,8 +75,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
         Tracker = tracker;
         ApiKey = HttpUtils.GetApiKey(_serverSecret, TunnelDefaults.HttpPassCheck);
-        IpFilter = ipFilter;
-        IpMapper = ipMapper;
+        NetFilter = netFilter;
         ServerVersion = serverVersion;
         if (_vpnAdapter != null)
             _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
@@ -120,8 +117,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         var session = new Session(
             accessManager: _accessManager,
             vpnAdapter: _vpnAdapter,
-            ipFilter: IpFilter,
-            ipMapper: IpMapper,
+            netFilter: NetFilter,
             socketFactory: _socketFactory,
             options: SessionOptions,
             trackingOptions: TrackingOptions,

@@ -8,6 +8,7 @@ using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -41,7 +42,7 @@ public class TestHelper : IDisposable
     public TestNetFilterIps NetFilterIps { get; } = new TestNetFilterIps();
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());
     public TestWebServer WebServer { get; }
-    public TestNetFilter NetFilter { get; }
+    public NetFilter NetFilter { get; }
     private bool? _isIpV6Supported;
     private int _accessTokenIndex;
 
@@ -52,10 +53,12 @@ public class TestHelper : IDisposable
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create(new TestNetFilterIps());
-        NetFilter = new TestNetFilter(NetFilterIps);
+        NetFilter = new NetFilter {
+            IpMapper = new TestIpMapper(NetFilterIps)
+        };
         //NetFilter.Init([TestConstants.BlockedIp],
         //[
-            //Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
+        //Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
         //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
         //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
         //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
@@ -140,8 +143,9 @@ public class TestHelper : IDisposable
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
 
         // fix TLS host; it may map by NetFilter.ProcessRequest
-        if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint))
-            requestMessage.Headers.Host = NetFilter.ProcessRequest(IpProtocol.Tcp, ipEndPoint)!.Address.ToString();
+        if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint) &&
+            NetFilter.IpMapper?.ToHost(IpProtocol.Tcp, ipEndPoint.ToValue(), out var newEndPoint) == true)
+            requestMessage.Headers.Host = newEndPoint.Address.ToString();
 
         var response = await httpClient.SendAsync(requestMessage, cancellationTokenSource.Token);
         var res = await response.Content.ReadAsStringAsync(cancellationTokenSource.Token);
@@ -419,7 +423,7 @@ public class TestHelper : IDisposable
             ConfigureInterval = configureInterval ?? new ServerOptions().ConfigureInterval,
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
-            IpFilter = NetFilter,
+            NetFilter = NetFilter,
             NetConfigurationProvider = netConfigurationProvider,
             SwapMemoryProvider = swapMemoryProvider,
             VpnAdapter = vpnAdapter,
@@ -531,7 +535,7 @@ public class TestHelper : IDisposable
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
             socketFactory: new TestSocketFactory(),
-            ipFilter: null,
+            netFilter: NetFilter,
             storageFolder: Path.Combine(WorkingPath, "ClientCore"),
             new TestTracker(), 
             clientOptions);

@@ -1,6 +1,6 @@
 ﻿using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
-using VpnHood.Core.Tunneling.NetFiltering;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.Providers;
 
@@ -17,7 +17,7 @@ public class TestVpnService
     // config folder should be read from static place in read environment, because service can be started independently
     public TestVpnService(
         string configFolder,
-        INetFilter netFilter,
+        NetFilter netFilter,
         Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory)
     {
         _vpnAdapterFactory = vpnAdapterFactory;

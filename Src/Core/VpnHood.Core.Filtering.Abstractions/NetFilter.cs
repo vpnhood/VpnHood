@@ -2,9 +2,9 @@
 
 public class NetFilter : IDisposable
 {
-    public required IIpMapper? IpMapper { get; init; }
-    public required IIpFilter? IpFilter { get; init; }
-    public required IDomainFilter? DomainFilter { get; init; }
+    public IIpMapper? IpMapper { get; init; }
+    public IIpFilter? IpFilter { get; init; }
+    public IDomainFilter? DomainFilter { get; init; }
     public void Dispose()
     {
         IpMapper?.Dispose();

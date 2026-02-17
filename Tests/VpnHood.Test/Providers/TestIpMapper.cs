@@ -1,14 +1,14 @@
 ﻿using System.Collections.Concurrent;
 using System.Net;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.Server;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Tunneling.NetFiltering;
 
 namespace VpnHood.Test.Providers;
 
-public class TestNetFilter : NetFilter
+public class TestIpMapper : IIpMapper
 {
     private readonly TestNetFilterIps _filterIps;
 
@@ -19,7 +19,7 @@ public class TestNetFilter : NetFilter
             base.IsIpAddressBlocked(ipAddress);
     }
 
-    public TestNetFilter(TestNetFilterIps filterIps)
+    public TestIpMapper(TestNetFilterIps filterIps)
     {
         _filterIps = filterIps;
         BlockLoopback = false;

@@ -1,4 +1,4 @@
-using VpnHood.Core.DomainFiltering;
+using VpnHood.Core.Filtering.Abstractions;
 
 namespace VpnHood.Test.Tests;
 
@@ -8,8 +8,7 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_EmptyFilter_ReturnsNone()
     {
-        var domainFilter = new DomainFilteringPolicy();
-        var resolver = new StaticDomainFilter(domainFilter);
+        var resolver = new StaticDomainFilter(null);
 
         Assert.AreEqual(FilterAction.Default, resolver.Process("example.com"));
         Assert.AreEqual(FilterAction.Default, resolver.Process("www.example.com"));
@@ -21,12 +20,11 @@ public class StaticDomainFilterTest : TestBase
     [TestMethod]
     public void Process_ExactMatch_ReturnsCorrectAction()
     {
-        var domainFilter = new DomainFilteringPolicy {
+        var resolver = new StaticDomainFilter(null) {
             Blocks = ["block.com"],
             Excludes = ["exclude.com"],
             Includes = ["include.com"]
         };
-        var resolver = new StaticDomainFilter(domainFilter);
 
         Assert.AreEqual(FilterAction.Block, resolver.Process("block.com"));
         Assert.AreEqual(FilterAction.Exclude, resolver.Process("exclude.com"));

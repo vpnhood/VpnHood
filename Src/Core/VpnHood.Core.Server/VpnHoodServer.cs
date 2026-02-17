@@ -39,7 +39,7 @@ public class VpnHoodServer : IAsyncDisposable
     private readonly NetConfigurationService? _netConfigurationService;
     private readonly ISystemInfoProvider _systemInfoProvider;
     private readonly ISwapMemoryProvider? _swapMemoryProvider;
-    private readonly IIpFilter? _ipFilter;
+    private readonly NetFilter _netFilter;
     private string? _tcpCongestionControl;
     private bool _isRestarted = true;
     private readonly Job _configureAndSendStatusJob;
@@ -59,17 +59,16 @@ public class VpnHoodServer : IAsyncDisposable
             throw new InvalidProgramException("VpnAdapter must support NAT to work with VpnServer.");
 
         AccessManager = accessManager;
-        _ipFilter = options.IpFilter;
+        _netFilter = options.NetFilter;
         _systemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         SessionManager = new SessionManager(accessManager,
-            ipFilter: options.IpFilter,
-            ipMapper: options.IpMapper,
             socketFactory: options.SocketFactory,
             tracker: options.Tracker,
             vpnAdapter: options.VpnAdapter,
+            netFilter: options.NetFilter,
             serverVersion: ServerVersion,
             storagePath: options.StoragePath,
-            new SessionManagerOptions {
+            options: new SessionManagerOptions {
                 DeadSessionTimeout = options.DeadSessionTimeout,
                 HeartbeatInterval = options.HeartbeatInterval,
                 VirtualIpNetworkV4 = options.VirtualIpNetworkV4,
@@ -220,12 +219,17 @@ public class VpnHoodServer : IAsyncDisposable
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? []);
 
-            SessionManager.IpFilter = ConfigIpFilter(_ipFilter, ServerHost, serverConfig.NetFilterOptions,
+            var ipFilter = ConfigIpFilter(_netFilter.IpFilter, ServerHost, serverConfig.NetFilterOptions,
                 privateAddresses: allServerIps,
                 isIpV6Supported: serverInfo.PublicIpAddresses.Any(x => x.IsV6()),
                 dnsServers: serverConfig.DnsServersValue,
                 virtualIpNetworkV4: SessionManager.VirtualIpNetworkV4,
                 virtualIpNetworkV6: SessionManager.VirtualIpNetworkV6);
+            SessionManager.NetFilter = new NetFilter {
+                IpFilter = ipFilter,
+                DomainFilter = _netFilter.DomainFilter,
+                IpMapper = _netFilter.IpMapper
+            };
 
             // Add listener ip addresses to the ip address manager if requested
             if (_netConfigurationService != null) {
@@ -344,7 +348,7 @@ public class VpnHoodServer : IAsyncDisposable
         serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
 
         var blockedIpRanges = netFilterOptions.GetBlockedIpRanges().Exclude(dnsServerIpRanges);
-        
+
         // exclude virtual ip if network isolation is enabled
         if (netFilterOptions.NetworkIsolationValue) {
             blockedIpRanges = blockedIpRanges

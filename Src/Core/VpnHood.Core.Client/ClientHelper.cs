@@ -30,6 +30,7 @@ internal static class ClientHelper
         IIpFilter clientIpFilter)
     {
         IEnumerable<IPAddress>? results;
+        var isUserSupressed = false;
 
         // Try to use user DNS servers
         if (userDnsAddresses?.Any() == true) {
@@ -42,6 +43,7 @@ internal static class ClientHelper
                 return new DnsStatus {
                     DnsServers = results.ToArray(),
                     IsIncludedInVpn = false,
+                    IsUserSupressed = isUserSupressed, // user override is false because they are not explicitly excluded by filters, but just not included in server routing
                     DnsSelection = DnsSelection.UserDns
                 };
             }
@@ -56,11 +58,13 @@ internal static class ClientHelper
                 return new DnsStatus {
                     DnsServers = results.ToArray(),
                     IsIncludedInVpn = true,
+                    IsUserSupressed = isUserSupressed,
                     DnsSelection = DnsSelection.UserDns
                 };
             }
 
             // Log warning because user DNS servers are not routable
+            isUserSupressed = true;
             VhLogger.Instance.LogWarning(
                 "Client DNS servers have been ignored because the server does not route them.");
         }
@@ -76,6 +80,7 @@ internal static class ClientHelper
                 return new DnsStatus {
                     DnsServers = results.ToArray(),
                     IsIncludedInVpn = true,
+                    IsUserSupressed = isUserSupressed,
                     DnsSelection = DnsSelection.ServerDns
                 };
             }
@@ -93,6 +98,7 @@ internal static class ClientHelper
             return new DnsStatus {
                 DnsServers = results.ToArray(),
                 IsIncludedInVpn = true,
+                IsUserSupressed = isUserSupressed,
                 DnsSelection = DnsSelection.GoogleDns
             };
         }
@@ -105,6 +111,7 @@ internal static class ClientHelper
         return new DnsStatus {
             DnsServers = results.ToArray(),
             IsIncludedInVpn = false,
+            IsUserSupressed = isUserSupressed,
             DnsSelection = DnsSelection.GoogleDns
         };
     }

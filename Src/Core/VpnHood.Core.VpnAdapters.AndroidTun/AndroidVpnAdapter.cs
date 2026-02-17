@@ -162,7 +162,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         return Task.CompletedTask;
     }
 
-    protected override Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    protected override Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(_builder);
         foreach (var dnsServer in dnsServers)

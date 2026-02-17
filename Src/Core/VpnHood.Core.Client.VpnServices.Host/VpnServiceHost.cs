@@ -4,12 +4,12 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.NetFiltering;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
@@ -19,7 +19,7 @@ public class VpnServiceHost : IDisposable
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
-    private readonly INetFilter? _netFilter;
+    private readonly NetFilter? _netFilter;
     private readonly LogService? _logService;
     private CancellationTokenSource _connectCts = new();
     private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(3);
@@ -37,7 +37,7 @@ public class VpnServiceHost : IDisposable
     public VpnServiceHost(string configFolder,
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,
-        INetFilter? netFilter,
+        NetFilter? netFilter,
         bool withLogger = true)
     {
         Context = new VpnServiceContext(configFolder);
@@ -187,7 +187,7 @@ public class VpnServiceHost : IDisposable
                     ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
                     : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1),
                 storageFolder: Context.ConfigFolder,
-                ipFilter: _netFilter,
+                netFilter: _netFilter,
                 tracker: tracker,
                 socketFactory: _socketFactory,
                 options: clientOptions

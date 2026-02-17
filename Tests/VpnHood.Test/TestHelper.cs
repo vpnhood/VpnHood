@@ -39,7 +39,7 @@ public class TestHelper : IDisposable
         public Task<bool> IsDestroyed() => Task.FromResult(false);
     }
 
-    public TestNetFilterIps NetFilterIps { get; } = new TestNetFilterIps();
+    public TestIps TestIps { get; } = new();
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());
     public TestWebServer WebServer { get; }
     public NetFilter NetFilter { get; }
@@ -52,12 +52,12 @@ public class TestHelper : IDisposable
         VhLogger.Instance = VhLogger.CreateConsoleLogger(); // min level is controlled by VhLogger.MinLevel
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
-        WebServer = TestWebServer.Create(new TestNetFilterIps());
+        WebServer = TestWebServer.Create(new TestIps());
         NetFilter = new NetFilter {
             IpFilter = new StaticIpFilter(null) {
                 BlockedRanges = new[]{TestConstants.BlockedIp}.ToOrderedIpRanges()
             },
-            IpMapper = new TestIpMapper(NetFilterIps)
+            IpMapper = new TestIpMapper(TestIps)
         };
         //NetFilter.Init([TestConstants.BlockedIp],
         //[
@@ -166,7 +166,7 @@ public class TestHelper : IDisposable
         CancellationToken cancellationToken = default)
     {
         timeout ??= TimeSpan.FromSeconds(3);
-        var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1,
+        var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? WebServer.MockEps.UdpV4EndPoint1,
             timeout.Value, cancellationToken);
         Assert.IsNotNull(hostEntry);
         Assert.IsNotEmpty(hostEntry.AddressList);
@@ -174,7 +174,7 @@ public class TestHelper : IDisposable
 
     public Task Test_Udp(TimeSpan? timeout = null)
     {
-        return Test_Udp(TestConstants.UdpV4EndPoint1, timeout);
+        return Test_Udp(WebServer.MockEps.UdpV4EndPoint1, timeout);
     }
 
     public async Task Test_Udp(IPEndPoint udpEndPoint, TimeSpan? timeout = null)
@@ -237,7 +237,7 @@ public class TestHelper : IDisposable
     public async Task<bool> Test_Https(Uri? uri = null,
         TimeSpan? timeout = null, bool throwError = true)
     {
-        uri ??= NetFilterIps.MapToRemote(WebServer.HttpsUrls[0]);
+        uri ??= TestIps.MapToRemote(WebServer.LocalEps.HttpsUrls[0]);
 
         if (throwError) {
             VhLogger.Instance.LogInformation(GeneralEventId.Test, "Fetching a test uri. Url: {uri}", uri);
@@ -250,38 +250,6 @@ public class TestHelper : IDisposable
         }
         catch {
             return false;
-        }
-    }
-
-    public IPAddress[] TestIpAddresses {
-        get {
-            var addresses = new List<IPAddress> {
-                TestConstants.NsEndPoint1.Address,
-                TestConstants.NsEndPoint2.Address,
-                TestConstants.PingV4Address1,
-                TestConstants.PingV4Address2,
-                TestConstants.PingV6Address1,
-                TestConstants.TcpEndPoint1.Address,
-                TestConstants.TcpEndPoint2.Address,
-                TestConstants.HttpsEndPoint1.Address,
-                TestConstants.HttpsEndPoint1.Address,
-                TestConstants.UdpV4EndPoint1.Address,
-                TestConstants.UdpV4EndPoint2.Address,
-                ClientOptions.Default.TcpProxyCatcherAddressIpV4,
-                TestConstants.InvalidIp,
-                TestConstants.BlockedIp
-            };
-            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri1.Host));
-            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri2.Host));
-            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsExternalUri1.Host));
-            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsExternalUri2.Host));
-
-            addresses.Clear(); //todo
-            addresses.Add(NetFilterIps.RemoteTestIpV6);
-            addresses.Add(NetFilterIps.RemoteTestIpV4);
-            addresses.AddRange(NetFilterIps.RemoteTestIpV4s);
-
-            return addresses.ToArray();
         }
     }
 
@@ -512,7 +480,7 @@ public class TestHelper : IDisposable
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
             MaxPacketChannelCount = 1,
-            IncludeIpRangesByDevice = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
+            IncludeIpRangesByDevice = TestIps.AllRemoteTestIps.ToIpRanges().ToArray(),
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
             ChannelProtocol = channelProtocol,

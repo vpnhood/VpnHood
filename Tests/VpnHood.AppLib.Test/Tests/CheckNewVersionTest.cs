@@ -15,7 +15,7 @@ public class CheckNewVersionTest : TestAppBase
 
         var publishInfo = new PublishInfo {
             Version = version,
-            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.FileHttpUrl1,
             PackageUrl = new Uri("https://localhost/package.msi"),
             GooglePlayUrl = null,
             InstallationPageUrl = new Uri("https://localhost/page.html"),
@@ -50,7 +50,7 @@ public class CheckNewVersionTest : TestAppBase
 
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.FileHttpUrl1,
             CheckInterval = TimeSpan.FromMilliseconds(500)
         };
 
@@ -68,7 +68,7 @@ public class CheckNewVersionTest : TestAppBase
 
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.FileHttpUrl1,
             CheckInterval = TimeSpan.FromMilliseconds(500)
         };
 
@@ -88,7 +88,7 @@ public class CheckNewVersionTest : TestAppBase
         // create client
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.FileHttpUrl1,
             CheckInterval = TimeSpan.FromMilliseconds(10)
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
@@ -114,7 +114,7 @@ public class CheckNewVersionTest : TestAppBase
 
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.FileHttpUrl1,
             CheckInterval = TimeSpan.FromMilliseconds(500)
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
@@ -131,7 +131,7 @@ public class CheckNewVersionTest : TestAppBase
 
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.FileHttpUrl1,
             CheckInterval = TimeSpan.FromMilliseconds(500)
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
@@ -152,7 +152,7 @@ public class CheckNewVersionTest : TestAppBase
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.UpdaterOptions = new AppUpdaterOptions {
-            UpdateInfoUrl = TestHelper.WebServer.FileHttpUrl1,
+            UpdateInfoUrl = TestHelper.WebServer.LocalEps.FileHttpUrl1,
             CheckInterval = TimeSpan.FromMilliseconds(500)
         };
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);

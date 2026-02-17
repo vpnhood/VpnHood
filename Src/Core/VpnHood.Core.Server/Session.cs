@@ -343,7 +343,7 @@ public class Session : IDisposable
         }
     }
 
-    public Task ProcessUdpPacketRequest(UdpPacketRequest request, IConnection connection,
+    internal Task ProcessUdpPacketRequest(UdpPacketRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
         _ = request;
@@ -352,14 +352,14 @@ public class Session : IDisposable
         throw new NotImplementedException();
     }
 
-    public async Task ProcessSessionStatusRequest(SessionStatusRequest request, IConnection connection,
+    internal async Task ProcessSessionStatusRequest(SessionStatusRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
         _ = request;
         await connection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 
-    public async Task ProcessRewardedAdRequest(RewardedAdRequest request, IConnection connection,
+    internal async Task ProcessRewardedAdRequest(RewardedAdRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
         SessionResponseEx = await _accessManager
@@ -367,7 +367,7 @@ public class Session : IDisposable
         await connection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 
-    public async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IConnection connection,
+    internal async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IConnection connection,
         CancellationToken cancellationToken)
     {
         if (!AllowTcpProxy)
@@ -378,6 +378,11 @@ public class Session : IDisposable
         try {
             // manage wait count
             Interlocked.Increment(ref _tcpConnectWaitCount);
+
+            // IpMapper
+            if (_netFilter.IpMapper?.ToHost(IpProtocol.Tcp, request.DestinationEndPoint.ToValue(), out var newEndPoint) == true) {
+                request.DestinationEndPoint = newEndPoint.ToIPEndPoint();
+            }
 
             // filter
             if (_netFilter.IpFilter?.Process(IpProtocol.Tcp, request.DestinationEndPoint.ToValue()) == FilterAction.Block) {

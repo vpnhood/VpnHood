@@ -52,7 +52,7 @@ internal class ClientStreamHandler(
                 (connection, filterAction) = await ApplySniFiltering(connection, hostEndPoint, cancellationToken).Vhc();
 
             // Filter by IP if SNI filtering result is default
-            if (filterAction != FilterAction.Default && netFilter.IpFilter != null)
+            if (filterAction is FilterAction.Default && netFilter.IpFilter != null)
                 filterAction = netFilter.IpFilter.Process(IpProtocol.Tcp, hostEndPoint.ToValue());
 
             switch (filterAction)
@@ -60,6 +60,7 @@ internal class ClientStreamHandler(
                 case FilterAction.Block:
                     throw new NetFilterException("A host has been blocked.");
 
+                case FilterAction.Default:
                 case FilterAction.Include:
                     // Create and add to tunnel channel
                     VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Include a Host to VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
@@ -67,7 +68,7 @@ internal class ClientStreamHandler(
                     _stat.TcpTunnelledCount++;
                     break;
 
-                default: // default or exclude
+                default: // exclude
                     // Create and add to exclude channel
                     VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Exclude a Host from VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
                     await AddPassthruChannel(connection, hostEndPoint, cancellationToken).Vhc();

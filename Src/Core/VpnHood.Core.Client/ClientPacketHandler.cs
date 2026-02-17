@@ -60,23 +60,9 @@ internal class ClientPacketHandler(
     // WARNING: Performance Critical! Mango Section
     private void ProcessOutgoingPacket(IpPacket ipPacket, FilterAction filterAction)
     {
-        // mapper
-        if (netFilter.IpMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
-            ipPacket.SetDestinationEndPoint(newEndPoint);
-            ipPacket.UpdateAllChecksums();
-        }
-
         // apply net filter
         if (filterAction == FilterAction.Default && netFilter.IpFilter != null)
             filterAction = netFilter.IpFilter.Process(ipPacket.Protocol, ipPacket.GetDestinationEndPoint());
-
-        // Multicast packets are not supported (Already excluded by adapter filter)
-        if (ipPacket.IsMulticast()) //todo: move to ipFilter
-            throw new PacketDropException("A multicast packet has been dropped.");
-
-        // Broadcast packets are not supported (Already excluded by adapter filter)
-        if (ipPacket.IsBroadcast()) //todo: move to ipFilter
-            throw new PacketDropException("A broadcast packet has been dropped.");
 
         // TcpHost has to manage its own packets
         if (clientHost.IsOwnPacket(ipPacket)) {
@@ -139,6 +125,11 @@ internal class ClientPacketHandler(
 
     private void ProcessOutgoingPacketExclude(IpPacket ipPacket)
     {
+        if (netFilter.IpMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
+            ipPacket.SetDestinationEndPoint(newEndPoint);
+            ipPacket.UpdateAllChecksums();
+        }
+
         if (ipPacket.IsV6() && !IsIpV6SupportedByClient)
             throw new PacketDropException("An unprotected IPv6 packet is dropped because client can not handle it.");
 

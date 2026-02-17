@@ -534,10 +534,10 @@ public class ClientServerTest : TestBase
         using var tcpClient4 = new TcpClient();
 
         await Task.WhenAll(
-            tcpClient1.ConnectAsync(MockIp(TestHelper.WebServer.HttpV4EndPoint1), TestCancellationToken).AsTask(),
-            tcpClient2.ConnectAsync(MockIp(TestHelper.WebServer.HttpV4EndPoint1), TestCancellationToken).AsTask(),
-            tcpClient3.ConnectAsync(MockIp(TestHelper.WebServer.HttpV4EndPoint2), TestCancellationToken).AsTask(),
-            tcpClient4.ConnectAsync(MockIp(TestHelper.WebServer.HttpV4EndPoint2), TestCancellationToken).AsTask());
+            tcpClient1.ConnectAsync(MockIps.HttpV4EndPoint1, TestCancellationToken).AsTask(),
+            tcpClient2.ConnectAsync(MockIps.HttpV4EndPoint1, TestCancellationToken).AsTask(),
+            tcpClient3.ConnectAsync(MockIps.HttpV4EndPoint2, TestCancellationToken).AsTask(),
+            tcpClient4.ConnectAsync(MockIps.HttpV4EndPoint2, TestCancellationToken).AsTask());
 
         tcpClient1.GetStream().WriteByte((byte)'G');
         tcpClient2.GetStream().WriteByte((byte)'G');

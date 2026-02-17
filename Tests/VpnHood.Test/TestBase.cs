@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 
@@ -27,9 +26,6 @@ public abstract class TestBase
         VhLogger.Instance.LogInformation(GeneralEventId.Test, message);
     }
 
-    protected IPAddress MockIp(IPAddress ipAddress) => TestHelper.NetFilterIps.MapToRemote(ipAddress);
-    protected IPEndPoint MockIp(IPEndPoint endPoint) => TestHelper.NetFilterIps.MapToRemote(endPoint);
-    protected Uri MockIp(Uri endPoint) => TestHelper.NetFilterIps.MapToRemote(endPoint);
-
+    protected TestWebServerMockEps MockIps => TestHelper.WebServer.MockEps;
     protected virtual TestHelper CreateTestHelper() => new();
 }

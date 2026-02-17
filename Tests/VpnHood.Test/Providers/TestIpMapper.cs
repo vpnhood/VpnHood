@@ -3,7 +3,7 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Test.Providers;
 
-public class TestIpMapper(TestNetFilterIps filterIps) : IIpMapper
+public class TestIpMapper(TestIps filterIps) : IIpMapper
 {
     public bool ToHost(IpProtocol protocol, IpEndPointValue hostEndPoint, out IpEndPointValue newEndPoint)
     {
@@ -18,9 +18,9 @@ public class TestIpMapper(TestNetFilterIps filterIps) : IIpMapper
         }
 
         // map IPv4s
-        for (var i = 0; i < filterIps.RemoteTestIpV4s.Count; i++) {
-            if (hostEndPoint.Address.Equals(filterIps.RemoteTestIpV4s[i])){
-                newEndPoint =  hostEndPoint with { Address = filterIps.LocalTestIpV4s[i] };
+        for (var i = 0; i < filterIps.RemoteTestIpV4List.Count; i++) {
+            if (hostEndPoint.Address.Equals(filterIps.RemoteTestIpV4List[i])){
+                newEndPoint =  hostEndPoint with { Address = filterIps.LocalTestIpV4List[i] };
                 return  true;
             }
         }
@@ -43,9 +43,9 @@ public class TestIpMapper(TestNetFilterIps filterIps) : IIpMapper
         }
 
         // map IPv4s
-        for (var i = 0; i < filterIps.LocalTestIpV4s.Count; i++) {
-            if (hostEndPoint.Address.Equals(filterIps.LocalTestIpV4s[i])) {
-                newEndPoint = hostEndPoint with { Address = filterIps.RemoteTestIpV4s[i] };
+        for (var i = 0; i < filterIps.LocalTestIpV4List.Count; i++) {
+            if (hostEndPoint.Address.Equals(filterIps.LocalTestIpV4List[i])) {
+                newEndPoint = hostEndPoint with { Address = filterIps.RemoteTestIpV4List[i] };
                 return true;
             }
         }

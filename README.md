@@ -78,6 +78,6 @@ Windows|Linux
 ## Special Thanks
 * [Advanced Installer](https://www.advancedinstaller.com): Installer tools for Windows.
 * [ReSharper](https://www.jetbrains.com/resharper/): Write, improve, and maintain C# code.
-
+* [BrowserStack](https://www.browserstack.com/): This project is tested with BrowserStack
 ---
 Enjoy VpnHood! Contributions, feedback and, stars are welcome.

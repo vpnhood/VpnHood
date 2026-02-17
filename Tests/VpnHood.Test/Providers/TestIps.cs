@@ -3,7 +3,7 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Test.Providers;
 
-public class TestNetFilterIps 
+public class TestIps 
 {
     public IPAddress RemoteTestIpV6 { get; } = IPAddress.Parse("2001:db8::1");
     public IPAddress LocalTestIpV6 => IPAddress.IPv6Loopback;
@@ -11,28 +11,35 @@ public class TestNetFilterIps
     public IPAddress LocalTestIpV4 => IPAddress.Loopback;
 
     public IReadOnlyList<IPAddress> BlockedIpAddresses => [IPAddress.IPv6Loopback];
-    public IReadOnlyList<IPAddress> RemoteTestIpV4s { get; } // additional ipV4
-    public IReadOnlyList<IPAddress> LocalTestIpV4s { get; } // additional ipV4
+    public IReadOnlyList<IPAddress> RemoteTestIpV4List { get; } // additional ipV4
+    public IReadOnlyList<IPAddress> LocalTestIpV4List { get; } // additional ipV4
 
-    public TestNetFilterIps()
+    public IReadOnlyList<IPAddress> AllRemoteTestIps {
+        get => new[] {RemoteTestIpV6, RemoteTestIpV4}
+            .Concat(RemoteTestIpV4List)
+            .Concat(BlockedIpAddresses) // should be routed then blocked by filter
+            .ToList();
+    }
+
+    public TestIps()
     {
         // remote test addresses
-        var removeIpV4s = new List<IPAddress>();
+        var removeIpV4S = new List<IPAddress>();
         var startIp = IPAddress.Parse("198.18.11.2");
         for (var i = 0; i < 100; i++) {
             startIp = IPAddressUtil.Increment(startIp);
-            removeIpV4s.Add(IPAddressUtil.Increment(startIp));
+            removeIpV4S.Add(IPAddressUtil.Increment(startIp));
         }
-        RemoteTestIpV4s = removeIpV4s;
+        RemoteTestIpV4List = removeIpV4S;
 
         // local test addresses
-        var localIpV4s = new List<IPAddress>();
+        var localIpV4S = new List<IPAddress>();
         startIp = IPAddress.Loopback;
         for (var i = 0; i < 100; i++) {
             startIp = IPAddressUtil.Increment(startIp);
-            localIpV4s.Add(IPAddressUtil.Increment(startIp));
+            localIpV4S.Add(IPAddressUtil.Increment(startIp));
         }
-        LocalTestIpV4s = localIpV4s;
+        LocalTestIpV4List = localIpV4S;
     }
 
     public IPAddress MapToRemote(IPAddress address)
@@ -43,9 +50,9 @@ public class TestNetFilterIps
         if (address.Equals(LocalTestIpV6))
             return RemoteTestIpV6;
 
-        for (var i = 0; i < LocalTestIpV4s.Count; i++) {
-            if (LocalTestIpV4s[i].Equals(address))
-                return RemoteTestIpV4s[i];
+        for (var i = 0; i < LocalTestIpV4List.Count; i++) {
+            if (LocalTestIpV4List[i].Equals(address))
+                return RemoteTestIpV4List[i];
         }
 
         return address;
@@ -57,13 +64,13 @@ public class TestNetFilterIps
         return new IPEndPoint(remoteAddress, ipEndPoint.Port);
     }
 
-    public Uri MapToRemote(Uri uri)
+    public Uri MapToRemote(Uri url)
     {
-        if (!IPAddress.TryParse(uri.Host, out var ipAddress))
-            throw new ArgumentException($"URI host '{uri.Host}' is not a valid IP address.", nameof(uri));
+        if (!IPAddress.TryParse(url.Host, out var ipAddress))
+            throw new ArgumentException($"URI host '{url.Host}' is not a valid IP address.", nameof(url));
 
         var remoteAddress = MapToRemote(ipAddress);
-        var builder = new UriBuilder(uri) {
+        var builder = new UriBuilder(url) {
             Host = remoteAddress.ToString()
         };
         return builder.Uri;

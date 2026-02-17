@@ -752,8 +752,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             VhLogger.Instance.LogInformation(
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
                 SessionInfo.DnsStatus, VhLogger.Format(SessionIncludeIpRangesByDevice.ToIpNetworks()));
-
-
+            var z = SessionIncludeIpRangesByDevice.Contains(IPAddress.Parse("198.18.10.1"));
+            
             // wait for ad before adapter
             if (helloResponse.AdRequirement != AdRequirement.None) {
                 _packetHandler.PassthroughForAd = true; // set passthrough mode

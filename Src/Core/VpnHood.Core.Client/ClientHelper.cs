@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -22,7 +23,7 @@ internal static class ClientHelper
     /// <param name="serverIncludeIpRanges">IP ranges that the server routes through the tunnel</param>
     /// <param name="clientIpFilter">IP filter to determine if a DNS server is routable by the client</param>
     /// <returns>Selected DNS server addresses</returns>
-    public static IEnumerable<IPAddress> GetDnsServers(
+    public static DnsStatus GetDnsServers(
         IReadOnlyList<IPAddress>? userDnsAddresses,
         IReadOnlyList<IPAddress> serverDnsAddresses,
         IpRangeOrderedList serverIncludeIpRanges,
@@ -38,7 +39,11 @@ internal static class ClientHelper
                 VhLogger.Instance.LogInformation(
                     "Using User's DNS servers, but they are not excluded from VPN because of IP filters. DnsServers: {DnsServers}",
                     VhLogger.Format(results));
-                return results;
+                return new DnsStatus {
+                    DnsServers = results.ToArray(),
+                    IsIncludedInVpn = false,
+                    DnsSelection = DnsSelection.UserDns
+                };
             }
 
             // Use user DNS servers if they are routable by the server
@@ -47,7 +52,12 @@ internal static class ClientHelper
                 VhLogger.Instance.LogInformation(
                     "Using User's DNS servers. DnsServers: {DnsServers}",
                     VhLogger.Format(results));
-                return results;
+
+                return new DnsStatus {
+                    DnsServers = results.ToArray(),
+                    IsIncludedInVpn = true,
+                    DnsSelection = DnsSelection.UserDns
+                };
             }
 
             // Log warning because user DNS servers are not routable
@@ -62,7 +72,12 @@ internal static class ClientHelper
                 VhLogger.Instance.LogInformation(
                     "Using Server default DNS servers. DnsServers: {DnsServers}",
                     VhLogger.Format(results));
-                return results;
+
+                return new DnsStatus {
+                    DnsServers = results.ToArray(),
+                    IsIncludedInVpn = true,
+                    DnsSelection = DnsSelection.ServerDns
+                };
             }
         }
 
@@ -74,7 +89,12 @@ internal static class ClientHelper
             VhLogger.Instance.LogInformation(
                 "Using Google DNS servers as default. DnsServers: {DnsServers}",
                 VhLogger.Format(results));
-            return results;
+
+            return new DnsStatus {
+                DnsServers = results.ToArray(),
+                IsIncludedInVpn = true,
+                DnsSelection = DnsSelection.GoogleDns
+            };
         }
 
         // Fallback: use Google DNS even if not routable
@@ -82,7 +102,11 @@ internal static class ClientHelper
         VhLogger.Instance.LogWarning(
             "Using Google DNS servers, but they are not excluded from VPN because of IP filters. DnsServers: {DnsServers}",
             VhLogger.Format(results));
-        return results;
+        return new DnsStatus {
+            DnsServers = results.ToArray(),
+            IsIncludedInVpn = false,
+            DnsSelection = DnsSelection.GoogleDns
+        };
     }
 
     public static IpRangeOrderedList BuildIncludeIpRangesByDevice(

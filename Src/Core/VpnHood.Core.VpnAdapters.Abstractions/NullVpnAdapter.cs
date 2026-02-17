@@ -26,7 +26,7 @@ public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
         return Task.CompletedTask;
     }
 
-    protected override Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    protected override Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

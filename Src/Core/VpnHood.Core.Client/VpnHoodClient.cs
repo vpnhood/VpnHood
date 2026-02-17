@@ -53,7 +53,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ConnectorService? _connectorService;
     private DateTime? _autoWaitTime;
     private readonly ServerFinder _serverFinder;
-    private bool _isDnsServersAccepted;
     private ulong? _sessionId;
     private ClientUdpChannelTransmitter? _udpTransmitter;
     private ClientSessionStatus? _sessionStatus;
@@ -62,7 +61,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly AsyncLock _disposeLock = new();
     private readonly Job _cleanupJob;
     private readonly Tunnel _tunnel;
-    private IReadOnlyList<IPAddress> _sessionDnsServers;
+    private DnsStatus? _sessionDnsStatus;
     private TaskCompletionSource? _waitForAdCts;
     private ChannelProtocol _channelProtocol;
     private readonly NetFilter _netFilter;
@@ -150,7 +149,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         socketFactory = new AdapterSocketFactory(vpnAdapter, socketFactory);
         SocketFactory = socketFactory;
         Tracker = tracker;
-        _sessionDnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
         _channelProtocol = options.ChannelProtocol;
 
@@ -280,7 +278,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _packetHandler.UseTcpProxy = CanUseTcpProxy();
         _packetHandler.DropQuic = Config.DropQuic && CanUseTcpProxy(); // DropQUIC is useless if we don't use tcp proxy
         _packetHandler.DropUdp = Config.DropUdp;
-        _packetHandler.DnsServers = _sessionDnsServers;
+        _packetHandler.DnsServers = _sessionDnsStatus?.DnsServers ?? [];
     }
 
     private bool CanUseTcpProxy()
@@ -631,12 +629,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _staticIpFilter.IncludeRanges = Config.IncludeIpRangesByApp.ToOrderedList();
 
             // set DNS after setting IpFilters
-            _sessionDnsServers = ClientHelper
+            _sessionDnsStatus = ClientHelper
                 .GetDnsServers(Config.DnsServers,
                 serverDnsAddresses: helloResponse.DnsServers ?? [],
                 serverIncludeIpRanges: serverIncludeIpRangesByApp,
-                clientIpFilter: _staticIpFilter)
-                .ToList();
+                clientIpFilter: _staticIpFilter);
 
             // Build the IncludeIpRanges for the VpnAdapter
             SessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
@@ -683,9 +680,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ClientPublicIpAddress = helloResponse.ClientPublicAddress,
                 ClientCountry = helloResponse.ClientCountry,
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
-                IsDnsServersAccepted = _isDnsServersAccepted, //todo
                 IsLocalNetworkAllowed = serverAllowedLocalNetworks.Any(),
-                DnsServers = _sessionDnsServers.ToArray(),
+                DnsStatus = _sessionDnsStatus,
                 IsPremiumSession = helloResponse.AccessUsage?.IsPremium ?? false,
                 IsUdpChannelSupported = HostUdpEndPoint != null,
                 AccessKey = helloResponse.AccessKey,
@@ -755,7 +751,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             var networkV6 = helloResponse.VirtualIpNetworkV6 ?? new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
             VhLogger.Instance.LogInformation(
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
-                SessionInfo.DnsServers, VhLogger.Format(SessionIncludeIpRangesByDevice.ToIpNetworks()));
+                SessionInfo.DnsStatus, VhLogger.Format(SessionIncludeIpRangesByDevice.ToIpNetworks()));
 
 
             // wait for ad before adapter
@@ -773,7 +769,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Start the VpnAdapter
             var adapterOptions = new VpnAdapterOptions {
-                DnsServers = _sessionDnsServers,
+                DnsServers = _sessionDnsStatus.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
                 Mtu = helloResponse.Mtu - TunnelDefaults.MtuOverhead,

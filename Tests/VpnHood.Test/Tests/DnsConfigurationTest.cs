@@ -20,7 +20,7 @@ public class DnsConfigurationTest : TestBase
         var token = TestHelper.CreateAccessToken(server);
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
 
-        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsServers);
+        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsStatus);
         Assert.IsTrue(client.SessionInfo?.IsDnsServersAccepted);
     }
 
@@ -39,7 +39,7 @@ public class DnsConfigurationTest : TestBase
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
-        CollectionAssert.AreEqual(clientOptions.DnsServers, client.SessionInfo?.DnsServers);
+        CollectionAssert.AreEqual(clientOptions.DnsServers, client.SessionInfo?.DnsStatus);
         Assert.IsTrue(client.SessionInfo?.IsDnsServersAccepted);
     }
 
@@ -64,7 +64,7 @@ public class DnsConfigurationTest : TestBase
             clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
-        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsServers);
+        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsStatus);
         Assert.IsFalse(client.SessionInfo?.IsDnsServersAccepted);
     }
 
@@ -87,6 +87,6 @@ public class DnsConfigurationTest : TestBase
 
         foreach (var serverDnsServer in serverDnsServers)
             Assert.IsFalse(server.SessionManager.IpFilter.BlockedIpRanges.IsInRange(serverDnsServer));
-        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsServers);
+        CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsStatus);
     }
 }

@@ -203,7 +203,7 @@ public class Session : IDisposable
 
         PacketLogger.LogPacket(ipPacket, "Delegating a packet to client...");
         if (_netFilter.IpMapper?.FromHost(ipPacket.Protocol, ipPacket.GetSourceEndPoint(), out var newEndPoint) == true) {
-            ipPacket.SetDestinationEndPoint(newEndPoint);
+            ipPacket.SetSourceEndPoint(newEndPoint);
             ipPacket.UpdateAllChecksums();
         }
 

@@ -9,28 +9,28 @@ public class TestIps
     public IPAddress LocalTestIpV6 => IPAddress.IPv6Loopback;
     public IPAddress RemoteTestIpV4 { get; } = IPAddress.Parse("198.18.11.1");
     public IPAddress LocalTestIpV4 => IPAddress.Loopback;
-
-    public IReadOnlyList<IPAddress> BlockedIpAddresses => [IPAddress.IPv6Loopback];
     public IReadOnlyList<IPAddress> RemoteTestIpV4List { get; } // additional ipV4
     public IReadOnlyList<IPAddress> LocalTestIpV4List { get; } // additional ipV4
+    public IPAddress InvalidRemoteTestIpV4 { get; } = IPAddress.Parse("198.18.12.1");
+    public IPAddress LocalBlockedClientIpAddress { get; }
+    public IPAddress LocalBlockedServerIpAddress { get; }
 
     public IReadOnlyList<IPAddress> AllRemoteTestIps {
         get => new[] {RemoteTestIpV6, RemoteTestIpV4}
             .Concat(RemoteTestIpV4List)
-            .Concat(BlockedIpAddresses) // should be routed then blocked by filter
             .ToList();
     }
 
     public TestIps()
     {
         // remote test addresses
-        var removeIpV4S = new List<IPAddress>();
+        var remoteIpV4S = new List<IPAddress>();
         var startIp = IPAddress.Parse("198.18.11.2");
         for (var i = 0; i < 100; i++) {
             startIp = IPAddressUtil.Increment(startIp);
-            removeIpV4S.Add(IPAddressUtil.Increment(startIp));
+            remoteIpV4S.Add(IPAddressUtil.Increment(startIp));
         }
-        RemoteTestIpV4List = removeIpV4S;
+        RemoteTestIpV4List = remoteIpV4S;
 
         // local test addresses
         var localIpV4S = new List<IPAddress>();
@@ -40,6 +40,8 @@ public class TestIps
             localIpV4S.Add(IPAddressUtil.Increment(startIp));
         }
         LocalTestIpV4List = localIpV4S;
+        LocalBlockedServerIpAddress = localIpV4S[^1];
+        LocalBlockedClientIpAddress = localIpV4S[^2];
     }
 
     public IPAddress MapToRemote(IPAddress address)

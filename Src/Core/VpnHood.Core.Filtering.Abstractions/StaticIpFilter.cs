@@ -10,6 +10,10 @@ public class StaticIpFilter(IIpFilter? nextFilter) : IIpFilter
 
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
+        var result = nextFilter?.Process(protocol, endPoint) ?? FilterAction.Default;
+        if (result != FilterAction.Default)
+            return result;
+
         // blocked IP ranges
         if (BlockedRanges.Count > 0 && BlockedRanges.Contains(endPoint.Address))
             return FilterAction.Block;
@@ -22,7 +26,7 @@ public class StaticIpFilter(IIpFilter? nextFilter) : IIpFilter
         if (IncludeRanges.Count > 0 && IncludeRanges.Contains(endPoint.Address))
             return FilterAction.Include;
 
-        return nextFilter?.Process(protocol, endPoint) ?? FilterAction.Default;
+        return FilterAction.Default;
     }
 
     public void Dispose()

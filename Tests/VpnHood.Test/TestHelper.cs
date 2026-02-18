@@ -42,7 +42,8 @@ public class TestHelper : IDisposable
     public TestIps TestIps { get; } = new();
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());
     public TestWebServer WebServer { get; }
-    public NetFilter NetFilter { get; }
+    public NetFilter ClientNetFilter { get; }
+    public NetFilter ServerNetFilter { get; }
     private bool? _isIpV6Supported;
     private int _accessTokenIndex;
 
@@ -53,12 +54,19 @@ public class TestHelper : IDisposable
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
         WebServer = TestWebServer.Create(new TestIps());
-        NetFilter = new NetFilter {
+        ClientNetFilter = new NetFilter {
             IpFilter = new StaticIpFilter(null) {
-                BlockedRanges = new[]{TestConstants.BlockedIp}.ToOrderedIpRanges()
+                BlockedRanges = new[] { WebServer.MockEps.HttpV4EndPointBlockedClient.Address }.ToOrderedIpRanges()
             },
             IpMapper = new TestIpMapper(TestIps)
         };
+        ServerNetFilter = new NetFilter {
+            IpFilter = new StaticIpFilter(null) {
+                BlockedRanges = new[] { WebServer.MockEps.HttpV4EndPointBlockedServer.Address }.ToOrderedIpRanges()
+            },
+            IpMapper = new TestIpMapper(TestIps)
+        };
+
         //NetFilter.Init([TestConstants.BlockedIp],
         //[
         //Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
@@ -142,7 +150,7 @@ public class TestHelper : IDisposable
 
         // fix TLS host; it may map by NetFilter.ProcessRequest
         if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint) &&
-            NetFilter.IpMapper?.ToHost(IpProtocol.Tcp, ipEndPoint.ToValue(), out var newEndPoint) == true)
+            ClientNetFilter.IpMapper?.ToHost(IpProtocol.Tcp, ipEndPoint.ToValue(), out var newEndPoint) == true)
             requestMessage.Headers.Host = newEndPoint.Address.ToString();
 
         var response = await httpClient.SendAsync(requestMessage, cancellationTokenSource.Token);
@@ -395,7 +403,7 @@ public class TestHelper : IDisposable
             ConfigureInterval = configureInterval ?? new ServerOptions().ConfigureInterval,
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
-            NetFilter = NetFilter,
+            NetFilter = ServerNetFilter,
             NetConfigurationProvider = netConfigurationProvider,
             SwapMemoryProvider = swapMemoryProvider,
             VpnAdapter = vpnAdapter,
@@ -507,7 +515,7 @@ public class TestHelper : IDisposable
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
             socketFactory: new TestSocketFactory(),
-            netFilter: NetFilter,
+            netFilter: ClientNetFilter,
             storageFolder: Path.Combine(WorkingPath, "ClientCore"),
             new TestTracker(), 
             clientOptions);

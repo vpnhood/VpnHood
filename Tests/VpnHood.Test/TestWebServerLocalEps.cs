@@ -10,6 +10,9 @@ public class TestWebServerLocalEps
     public IPEndPoint[] HttpV4EndPoints { get; }
     public IPEndPoint[] UdpEndPoints { get; }
     public IPEndPoint[] QuicEndPoints { get; }
+    public IPEndPoint HttpV4EndPointBlockedClient { get; }
+    public IPEndPoint HttpV4EndPointBlockedServer { get; }
+    public IPEndPoint HttpV4EndPointRefused => new IPEndPoint(HttpV4EndPoints[0].Address, 9999);
     public IPEndPoint[] UdpV4EndPoints => UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
     public IPEndPoint[] UdpV6EndPoints => UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
     public Uri[] HttpUrls { get; }
@@ -19,18 +22,23 @@ public class TestWebServerLocalEps
 
     public TestWebServerLocalEps(TestIps testIps)
     {
+        HttpV4EndPointBlockedClient = new IPEndPoint(testIps.LocalBlockedClientIpAddress, 15009);
+        HttpV4EndPointBlockedServer = new IPEndPoint(testIps.LocalBlockedServerIpAddress, 15010);
+
         HttpsV4EndPoints = [
             new IPEndPoint(testIps.LocalTestIpV4, 15001),
             new IPEndPoint(testIps.LocalTestIpV4, 15002),
             new IPEndPoint(testIps.LocalTestIpV4, 15003),
-            new IPEndPoint(testIps.LocalTestIpV4, 15004)
+            new IPEndPoint(testIps.LocalTestIpV4, 15004),
         ];
 
         HttpV4EndPoints = [
             new IPEndPoint(testIps.LocalTestIpV4, 15005),
             new IPEndPoint(testIps.LocalTestIpV4, 15006),
             new IPEndPoint(testIps.LocalTestIpV4, 15007),
-            new IPEndPoint(testIps.LocalTestIpV4, 15008)
+            new IPEndPoint(testIps.LocalTestIpV4, 15008),
+            HttpV4EndPointBlockedClient, 
+            HttpV4EndPointBlockedServer
         ];
 
         UdpEndPoints = [

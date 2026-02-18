@@ -61,7 +61,7 @@ public class TestDevice(
 
         // create service
         if (VpnService == null || VpnService.IsDisposed)
-            VpnService = new TestVpnService(VpnServiceConfigFolder, testHelper.NetFilter, vpnAdapterFactory);
+            VpnService = new TestVpnService(VpnServiceConfigFolder, testHelper.ClientNetFilter, vpnAdapterFactory);
 
         VpnService.OnConnect();
     }

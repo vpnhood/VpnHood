@@ -53,7 +53,7 @@ public class ClientTunnelTest : TestBase
 
         await AssertTunnel(clientServerDom);
         await VhTestUtil.AssertEqualsWait(ChannelProtocol.Tcp,
-            () => clientServerDom.Client.GetSessionStatus().ChannelProtocol, 
+            () => clientServerDom.Client.GetSessionStatus().ChannelProtocol,
             cancellationToken: TestCancellationToken);
 
         Assert.AreEqual(ChannelProtocol.Tcp, clientServerDom.Client.ChannelProtocol);
@@ -63,12 +63,12 @@ public class ClientTunnelTest : TestBase
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Switch back to UdpChannel.");
         clientServerDom.Client.ChannelProtocol = ChannelProtocol.Udp;
         await VhTestUtil.AssertEqualsWait(true,
-            () => clientServerDom.Client.SessionStatus?.ActivePacketChannelCount > 0, 
+            () => clientServerDom.Client.SessionStatus?.ActivePacketChannelCount > 0,
             cancellationToken: TestCancellationToken);
 
         await AssertTunnel(clientServerDom);
         await VhTestUtil.AssertEqualsWait(ChannelProtocol.Udp,
-            () => clientServerDom.Client.GetSessionStatus().ChannelProtocol, 
+            () => clientServerDom.Client.GetSessionStatus().ChannelProtocol,
             cancellationToken: TestCancellationToken);
 
         Assert.AreEqual(ChannelProtocol.Udp, clientServerDom.Client.ChannelProtocol);
@@ -99,7 +99,7 @@ public class ClientTunnelTest : TestBase
         // HttpsBlockedUri is faster than HttpsRefusedUri. 
         // In windows HttpsRefusedUri takes 2 seconds to return error
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
-            httpClient.GetStringAsync(MockEps.HttpsBlockedUri));
+            httpClient.GetStringAsync(MockEps.HttpBlockedServerUri));
 
         Assert.AreEqual(HttpRequestError.SecureConnectionError, ex.HttpRequestError);
         Assert.AreEqual(ClientState.Unstable, clientServer.Client.State);

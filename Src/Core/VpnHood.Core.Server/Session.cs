@@ -231,18 +231,18 @@ public class Session : IDisposable
         if (!AllowTcpPacket && ipPacket.Protocol == IpProtocol.Tcp)
             throw new NetFilterException("TcpPacket is not allowed in this session.");
 
-        // Map destination
-        if (_netFilter.IpMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
-            ipPacket.SetDestinationEndPoint(newEndPoint);
-            ipPacket.UpdateAllChecksums();
-        }
-
-        // filter
+        // filter before mapper because it supposes to filter user requests
         if (_netFilter.IpFilter?.Process(ipPacket.Protocol, ipPacket.GetDestinationEndPoint()) == FilterAction.Block) {
             LogTrack(ipPacket.Protocol, null, ipPacket.GetDestinationEndPoint(), false, true, "NetFilter");
             _filterReporter.Raise();
             throw new NetFilterException(
                 $"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(ipPacket.DestinationAddress)}");
+        }
+
+        // Map destination
+        if (_netFilter.IpMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
+            ipPacket.SetDestinationEndPoint(newEndPoint);
+            ipPacket.UpdateAllChecksums();
         }
 
         // send using tunnel or proxy
@@ -379,17 +379,17 @@ public class Session : IDisposable
             // manage wait count
             Interlocked.Increment(ref _tcpConnectWaitCount);
 
-            // IpMapper
-            if (_netFilter.IpMapper?.ToHost(IpProtocol.Tcp, request.DestinationEndPoint.ToValue(), out var newEndPoint) == true) {
-                request.DestinationEndPoint = newEndPoint.ToIPEndPoint();
-            }
-
-            // filter
+            // filter before mapper because it supposes to filter user requests
             if (_netFilter.IpFilter?.Process(IpProtocol.Tcp, request.DestinationEndPoint.ToValue()) == FilterAction.Block) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "NetFilter");
                 _filterReporter.Raise();
                 throw new NetFilterException(
                     $"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(request.DestinationEndPoint)}");
+            }
+
+            // IpMapper
+            if (_netFilter.IpMapper?.ToHost(IpProtocol.Tcp, request.DestinationEndPoint.ToValue(), out var newEndPoint) == true) {
+                request.DestinationEndPoint = newEndPoint.ToIPEndPoint();
             }
 
             // log with new destination

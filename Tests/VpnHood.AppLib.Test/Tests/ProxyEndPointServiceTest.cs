@@ -73,7 +73,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         await TestHelper.Test_Https();
 
         // make sure new status is fetched from core
-        await dom.App.ForceUpdateState(TestCancellationToken);
+        await dom.App.ForceUpdateState(TestCt);
         var endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies().Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), endPointInfos[0].EndPoint.Host);
@@ -83,7 +83,7 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         // disconnect 
         await dom.App.Disconnect();
-        await dom.App.ForceUpdateState(TestCancellationToken);
+        await dom.App.ForceUpdateState(TestCt);
         endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies().Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), endPointInfos[0].EndPoint.Host);
@@ -94,7 +94,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         // reconnect and make sure status is restored
         await dom.App.Connect();
         await dom.App.WaitForState(AppConnectionState.Connected);
-        await dom.App.ForceUpdateState(TestCancellationToken);
+        await dom.App.ForceUpdateState(TestCt);
         endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies().Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), endPointInfos[0].EndPoint.Host);
@@ -104,11 +104,11 @@ public class ProxyEndPointServiceTest : TestAppBase
         // use more connection
         await TestAppHelper.Test_Https();
         await TestAppHelper.Test_Https();
-        await dom.App.ForceUpdateState(TestCancellationToken);
+        await dom.App.ForceUpdateState(TestCt);
 
         // clear status
         dom.App.Services.ProxyEndPointService.ResetStates();
-        await dom.App.ForceUpdateState(TestCancellationToken);
+        await dom.App.ForceUpdateState(TestCt);
         endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies().Items;
         Assert.HasCount(1, endPointInfos);
         Assert.AreEqual(httpProxyServer.ListenerEndPoint.Address.ToString(), endPointInfos[0].EndPoint.Host);
@@ -310,7 +310,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         await TestHelper.Test_Https();
 
         // get info
-        await dom.App.ForceUpdateState(TestCancellationToken);
+        await dom.App.ForceUpdateState(TestCt);
         var endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies().Items;
         Assert.IsGreaterThan(0, endPointInfos[0].Status.SucceededCount);
     }
@@ -336,7 +336,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         await Assert.ThrowsAsync<UnreachableProxyServerException>(() => dom.App.Connect());
 
         // get info
-        await dom.App.ForceUpdateState(TestCancellationToken);
+        await dom.App.ForceUpdateState(TestCt);
         var endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies().Items;
         Assert.AreEqual(0, endPointInfos[0].Status.SucceededCount);
         Assert.IsGreaterThan(0, endPointInfos[0].Status.FailedCount);
@@ -546,7 +546,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         await dom.App.Connect();
 
         // force sync with core
-        await dom.App.ForceUpdateState(TestCancellationToken);
+        await dom.App.ForceUpdateState(TestCt);
 
         // check is proxies are added
         var endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies().Items;
@@ -590,7 +590,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         };
 
         // check is proxies are added
-        await dom.App.Services.ProxyEndPointService.ReloadUrl(TestCancellationToken);
+        await dom.App.Services.ProxyEndPointService.ReloadUrl(TestCt);
         var endPointInfos = dom.App.Services.ProxyEndPointService.ListProxies().Items;
         Assert.HasCount(2, endPointInfos);
         Assert.HasCount(1,

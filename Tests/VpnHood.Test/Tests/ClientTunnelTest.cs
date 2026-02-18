@@ -49,12 +49,12 @@ public class ClientTunnelTest : TestBase
         clientServerDom.Client.ChannelProtocol = ChannelProtocol.Tcp;
         await VhTestUtil.AssertEqualsWait(true,
             () => clientServerDom.Client.SessionStatus?.ActivePacketChannelCount > 0,
-            cancellationToken: TestCancellationToken);
+            cancellationToken: TestCt);
 
         await AssertTunnel(clientServerDom);
         await VhTestUtil.AssertEqualsWait(ChannelProtocol.Tcp,
             () => clientServerDom.Client.GetSessionStatus().ChannelProtocol,
-            cancellationToken: TestCancellationToken);
+            cancellationToken: TestCt);
 
         Assert.AreEqual(ChannelProtocol.Tcp, clientServerDom.Client.ChannelProtocol);
         Assert.IsTrue(clientServerDom.Client.SessionStatus?.IsTcpProxy);
@@ -64,12 +64,12 @@ public class ClientTunnelTest : TestBase
         clientServerDom.Client.ChannelProtocol = ChannelProtocol.Udp;
         await VhTestUtil.AssertEqualsWait(true,
             () => clientServerDom.Client.SessionStatus?.ActivePacketChannelCount > 0,
-            cancellationToken: TestCancellationToken);
+            cancellationToken: TestCt);
 
         await AssertTunnel(clientServerDom);
         await VhTestUtil.AssertEqualsWait(ChannelProtocol.Udp,
             () => clientServerDom.Client.GetSessionStatus().ChannelProtocol,
-            cancellationToken: TestCancellationToken);
+            cancellationToken: TestCt);
 
         Assert.AreEqual(ChannelProtocol.Udp, clientServerDom.Client.ChannelProtocol);
         Assert.IsTrue(clientServerDom.Client.SessionStatus?.IsTcpProxy);
@@ -85,7 +85,7 @@ public class ClientTunnelTest : TestBase
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
         await VhTestUtil.AssertEqualsWait(true, async () => {
             await VhUtils.TryInvokeAsync(null,
-                () => TestHelper.Test_Udp(TimeSpan.FromMilliseconds(500))); // just try transfer
+                () => TestHelper.Test_Udp(timeout: TimeSpan.FromMilliseconds(500))); // just try transfer
             return clientServerDom.Client.SessionStatus?.SessionPacketChannelCount >= 3;
         }, timeout: 6000);
     }

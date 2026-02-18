@@ -288,7 +288,7 @@ public class TunnelTest : TestBase
         for (var i = 0; i < 0xFFFF + 100; i++) {
             WebSocketUtils.BuildWebSocketFrameHeader(writeBuffer.Span[..14], i, new byte[4]);
             using var memStream = new MemoryStream(writeBuffer[..14].ToArray());
-            var header = await WebSocketUtils.ReadWebSocketHeader(memStream, readBuffer, TestCancellationToken);
+            var header = await WebSocketUtils.ReadWebSocketHeader(memStream, readBuffer, TestCt);
             Assert.AreEqual(i, header.PayloadLength);
             Assert.IsTrue(header.IsBinary);
 
@@ -311,7 +311,7 @@ public class TunnelTest : TestBase
         for (var i = 0; i < 0xFFFF + 100; i++) {
             WebSocketUtils.BuildWebSocketFrameHeader(writeBuffer.Span[..14], i);
             using var memStream = new MemoryStream(writeBuffer[..14].ToArray());
-            var header = await WebSocketUtils.ReadWebSocketHeader(memStream, readBuffer, TestCancellationToken);
+            var header = await WebSocketUtils.ReadWebSocketHeader(memStream, readBuffer, TestCt);
             Assert.AreEqual(i, header.PayloadLength);
             Assert.IsTrue(header.IsBinary);
 

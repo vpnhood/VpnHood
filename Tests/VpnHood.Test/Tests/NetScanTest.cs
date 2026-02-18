@@ -26,20 +26,20 @@ public class NetScanTest : TestBase
         var session = server.GetSession(client);
 
         var tcpClient1 = new TcpClient();
-        await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1, TestCancellationToken);
+        await tcpClient1.ConnectAsync(TestConstants.TcpEndPoint1, TestCt);
         tcpClient1.GetStream().WriteByte(1); // send some data otherwise client may not create the channel
-        await VhTestUtil.AssertEqualsWait(1, () => session.TcpChannelCount, cancellationToken: TestCancellationToken);
+        await VhTestUtil.AssertEqualsWait(1, () => session.TcpChannelCount, cancellationToken: TestCt);
 
         // NetScan error
         Log("Creating the second connection");
         var tcpClient2 = new TcpClient();
-        await tcpClient2.ConnectAsync(TestConstants.TcpEndPoint2, TestCancellationToken);
+        await tcpClient2.ConnectAsync(TestConstants.TcpEndPoint2, TestCt);
 
         Log( "Sending data on the second connection");
         tcpClient2.GetStream().WriteByte(1); // send some data otherwise client may not create the channel
         
         Log("Waiting for the second connection to be closed by server");
-        var res = await tcpClient2.GetStream().ReadAsync(new byte[100], TestCancellationToken);
+        var res = await tcpClient2.GetStream().ReadAsync(new byte[100], TestCt);
         Assert.AreEqual(0, res, "NetScan should close this request.");
     }
 
@@ -62,7 +62,7 @@ public class NetScanTest : TestBase
         Assert.IsFalse(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4").ToValue()));
         Assert.IsFalse(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444").ToValue()));
 
-        await Task.Delay(TimeSpan.FromSeconds(1), TestCancellationToken);
+        await Task.Delay(TimeSpan.FromSeconds(1), TestCt);
         Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4").ToValue()));
         Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444").ToValue()));
     }

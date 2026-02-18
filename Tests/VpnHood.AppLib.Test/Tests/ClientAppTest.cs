@@ -490,11 +490,11 @@ public class ClientAppTest : TestAppBase
 
         await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
         await VhTestUtil.AssertEqualsWait(1, () => 
-            server.SessionManager.Sync(true, TestCancellationToken));
+            server.SessionManager.Sync(true, TestCt));
         await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
         await VhTestUtil.AssertEqualsWait(1, 
-            () => server.SessionManager.Sync(true, TestCancellationToken));
-        await app.ForceUpdateState(TestCancellationToken);
+            () => server.SessionManager.Sync(true, TestCt));
+        await app.ForceUpdateState(TestCt);
 
         // after client disconnect it should see rating recommended
         await app.Disconnect();
@@ -512,7 +512,7 @@ public class ClientAppTest : TestAppBase
 
         // Connect again then access manager should receive result
         Assert.IsNull(accessManager.UserReview);
-        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCancellationToken);
+        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
         Assert.IsNotNull(accessManager.UserReview);
         Assert.AreEqual(3, accessManager.UserReview.Rating);
         Assert.AreEqual(app.Features.Version, accessManager.UserReview.AppVersion);

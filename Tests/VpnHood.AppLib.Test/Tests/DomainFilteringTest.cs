@@ -61,9 +61,9 @@ public class DomainFilteringTest : TestAppBase
         await app.WaitForState(AppConnectionState.Connected);
 
         // text include
-        var oldStat = app.GetSessionStatus();
+        var oldStat = app.GetSessionStatus(TestCt);
         await TestHelper.Test_Https(uri: TestConstants.HttpsUri2);
-        var newStat = app.GetSessionStatus();
+        var newStat = app.GetSessionStatus(TestCt);
         Assert.AreEqual(oldStat.TcpTunnelledCount + 1, newStat.TcpTunnelledCount);
         Assert.AreEqual(oldStat.TcpPassthruCount, newStat.TcpPassthruCount);
 

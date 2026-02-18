@@ -181,13 +181,10 @@ public class TestHelper : IDisposable
         Assert.IsNotEmpty(hostEntry.AddressList);
     }
 
-    public Task Test_Udp(TimeSpan? timeout = null)
+    public async Task Test_Udp(IPEndPoint? udpEndPoint = null, TimeSpan? timeout = null)
     {
-        return Test_Udp(WebServer.MockEps.UdpV4EndPoint1, timeout);
-    }
+        udpEndPoint ??= WebServer.MockEps.UdpV4EndPoint1;
 
-    public async Task Test_Udp(IPEndPoint udpEndPoint, TimeSpan? timeout = null)
-    {
         if (udpEndPoint.IsV4()) {
             using var udpClientIpV4 = new UdpClient(AddressFamily.InterNetwork);
             await Test_Udp(udpClientIpV4, udpEndPoint, timeout);
@@ -199,9 +196,10 @@ public class TestHelper : IDisposable
         }
     }
 
-    public async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint, TimeSpan? timeout = null)
+    public async Task Test_Udp(UdpClient udpClient, IPEndPoint? udpEndPoint = null, TimeSpan? timeout = null)
     {
         timeout ??= TestConstants.DefaultUdpTimeout;
+        udpEndPoint ??= WebServer.MockEps.UdpV4EndPoint1;
 
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);

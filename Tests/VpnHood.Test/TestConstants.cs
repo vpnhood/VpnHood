@@ -11,9 +11,7 @@ public static class TestConstants
     public static TimeSpan DefaultPingTimeout => DefaultUdpTimeout;
     public static TimeSpan? DefaultQuicTimeout => DefaultUdpTimeout;
 
-    public static Uri HttpsUri1 => new($"https://{HttpsEndPoint1}/file1");
     public static Uri HttpsUri2 => new($"https://{HttpsEndPoint2}/file2");
-    public static Uri HttpsRefusedUri => new($"https://{TcpRefusedEndPoint}/file2");
     public static Uri HttpsExternalUri1 => new("https://www.wireshark.org/"); //make sure always return same ips
     public static Uri HttpsExternalUri2 => new("https://ip4.me/"); //make sure always return same ips
     public static IPEndPoint NsEndPoint1 => IPEndPoint.Parse("1.1.1.1:53");

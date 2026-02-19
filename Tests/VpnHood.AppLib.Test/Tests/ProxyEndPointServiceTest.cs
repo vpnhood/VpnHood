@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions.Exceptions;

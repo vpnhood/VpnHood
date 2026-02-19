@@ -4,6 +4,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
@@ -12,7 +13,6 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Test;
-using VpnHood.Test.Device;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -257,27 +257,18 @@ public class AdTest : TestAppBase
     [TestMethod]
     public async Task SplitAll_must_on_while_playing_ad_ex()
     {
-        var device = TestHelper.CreateDevice(new TestVpnAdapterOptions {
-            SimulateDns = false
-        });
-
-        // create manager and server
-        using var accessManager = TestHelper.CreateAccessManager();
-        await using var server = await TestHelper.CreateServer(accessManager, socketFactory: device.SocketFactory);
-
-        // create access token after server
-        var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
-        var token = accessManager.GetToken(accessToken);
+        using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        var app = appDom.App;
 
         // add url2 and endpoint 2 to include list
-        var httpsExternalUriIps = await Dns.GetHostAddressesAsync(TestConstants.HttpsExternalUri1.Host);
-        var customIps = httpsExternalUriIps.Select(x => new IpRange(x)).ToList();
-        customIps.Add(new IpRange(TestConstants.UdpV4EndPoint1.Address));
-        customIps.Add(new IpRange(TestConstants.NsEndPoint1.Address));
+        // target1
+        var httpsUrl1 = MockEps.HttpsUrl1;
+        var udpEchoEndPoint1 = MockEps.UdpV4EndPoint1;
+        var targetIps1 = new[] { new IpRange(IPAddress.Parse(MockEps.HttpUrl1.Host)), new IpRange(udpEchoEndPoint1.Address) };
 
         // add provider
         var showAdCompletionSource = new TaskCompletionSource<ShowAdResult>();
-        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        var adProvider = new TestAdProvider(appDom.AccessManager, AppAdType.InterstitialAd);
         adProvider.ShowAdCompletionSource = showAdCompletionSource;
         adProvider.LoadAdCallback = () => {
             if (adProvider.LoadAdCount == 1) // fail first time to use after adapter load
@@ -293,29 +284,24 @@ public class AdTest : TestAppBase
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdProviderItems = [adProviderItem];
 
-        // create app
-        await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         // we add to exclude but all ip should be split by ad
-        app.SettingsService.SplitByIpSettings.AppIncludes = customIps.ToText();
-        _ = app.Connect(clientProfile.ClientProfileId);
+        _ = appDom.Connect(cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.WaitingForAd);
-        await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);
+        await AssertEqualsWait(2, () => adProvider.LoadAdCount);
 
         // all included ips should be split now
         await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, null, TestConstants.HttpsExternalUri1);
-        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1,
-            null); // all dns should be included
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1, null); // all dns should be included
 
         // finish showing ad
         showAdCompletionSource.SetResult(ShowAdResult.Closed);
         await app.WaitForState(AppConnectionState.Connected);
-        await Task.Delay(appOptions.AdOptions.ShowAdPostDelay); // make sure ad post delay is finished
-        await Task.Delay(200); // make sure ad post delay is finished
+        await Task.Delay(appOptions.AdOptions.ShowAdPostDelay, TestCt); // make sure ad post delay is finished
+        await Task.Delay(200, TestCt); // make sure ad post delay is finished
 
         // all included ips should be split now
-        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1,
-            TestConstants.HttpsExternalUri1);
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, 
+            TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
     }
 
     [TestMethod]

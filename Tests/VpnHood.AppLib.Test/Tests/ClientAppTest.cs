@@ -1,18 +1,15 @@
 ﻿using System.Net;
-using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
+using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Core.Tunneling;
 using VpnHood.Test;
-using VpnHood.Test.Device;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
@@ -119,9 +116,7 @@ public class ClientAppTest : TestAppBase
     [TestMethod]
     public async Task IpFilters_IncludeExclude()
     {
-        using var appDom = await AppClientServerDom.Create(TestAppHelper, new TestVpnAdapterOptions {
-            SimulateDns = false
-        });
+        using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
 
         // target1

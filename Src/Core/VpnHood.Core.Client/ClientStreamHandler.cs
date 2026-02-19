@@ -60,7 +60,6 @@ internal class ClientStreamHandler(
                 case FilterAction.Block:
                     throw new NetFilterException("A host has been blocked.");
 
-                case FilterAction.Default:
                 case FilterAction.Include:
                     // Create and add to tunnel channel
                     VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Include a Host to VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));

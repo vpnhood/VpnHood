@@ -117,65 +117,56 @@ public class ClientAppTest : TestAppBase
     }
 
     [TestMethod]
-    [DataRow(true)]
-    [DataRow(false)]
-    public async Task IpFilters(bool include)
+    public async Task IpFilters_IncludeExclude()
     {
-        var device = TestHelper.CreateDevice(new TestVpnAdapterOptions {
+        using var appDom = await AppClientServerDom.Create(TestAppHelper, new TestVpnAdapterOptions {
             SimulateDns = false
         });
+        var app = appDom.App;
 
-        // Create Server
-        await using var server = await TestHelper.CreateServer(socketFactory: device.SocketFactory);
-        var token = TestHelper.CreateAccessToken(server);
+        // target1
+        var httpsUrl1 = MockEps.HttpsUrl1;
+        var udpEchoEndPoint1 = MockEps.UdpV4EndPoint1;
+        var targetIps1 = new[] { new IpRange(IPAddress.Parse(MockEps.HttpUrl1.Host)), new IpRange(udpEchoEndPoint1.Address) };
 
-        // create app
-        await using var app = TestAppHelper.CreateClientApp(device: device);
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-
-        // add url2 and endpoint 2
-        var httpsExternalUriIps = await Dns.GetHostAddressesAsync(TestConstants.HttpsExternalUri1.Host);
-        var customIps = httpsExternalUriIps.Select(x => new IpRange(x)).ToList();
-        customIps.Add(new IpRange(TestConstants.NsEndPoint1.Address));
-        customIps.Add(new IpRange(TestConstants.PingV4Address1));
+        // target1
+        var httpsUrl2 = MockEps.HttpsUrl2;
+        var udpEchoEndPoint2 = MockEps.UdpV4EndPoint2;
+        var targetIps2 = new[] { new IpRange(IPAddress.Parse(MockEps.HttpUrl2.Host)), new IpRange(udpEchoEndPoint2.Address) };
 
         // ************
         // *** TEST ***: Test Include ip filter
-        if (include) {
-            app.SettingsService.SplitByIpSettings.AppIncludes = customIps.ToText();
-            app.SettingsService.SplitByIpSettings.AppExcludes = "";
-            await app.Connect(clientProfile.ClientProfileId);
-            await app.WaitForState(AppConnectionState.Connected);
-            await TestHelper.Test_Ping(ipAddress: TestConstants.PingV4Address1);
+        app.SettingsService.SplitByIpSettings.AppIncludes = targetIps1.ToText();
+        app.SettingsService.SplitByIpSettings.AppExcludes = targetIps2.ToText();
+        await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+        await TestHelper.Test_Ping(ipAddress: MockEps.PingV4Address1);
 
-            VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestInclude...");
-            await IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
-            await IpFilters_AssertExclude(TestHelper, app, TestConstants.NsEndPoint2, TestConstants.HttpsExternalUri2);
-            await app.Disconnect();
-        }
+        Log("Starting IpFilters_TestInclude...");
+        await IpFilters_AssertExclude(TestHelper, app, udpEchoEndPoint2, httpsUrl2);
+        await IpFilters_AssertInclude(TestHelper, app, udpEchoEndPoint1, httpsUrl1);
+        await app.Disconnect();
 
         // ************
-        // *** TEST ***: Test Exclude ip filters
-        if (!include) {
-            app.SettingsService.SplitByIpSettings.AppIncludes = "";
-            app.SettingsService.SplitByIpSettings.AppExcludes = customIps.ToText();
-            await app.Connect(clientProfile.ClientProfileId);
-            await app.WaitForState(AppConnectionState.Connected);
+        // *** TEST ***: Reverse include/exclude list, then target1 should be excluded and target2 should be included.
+        app.SettingsService.SplitByIpSettings.AppIncludes = targetIps2.ToText();
+        app.SettingsService.SplitByIpSettings.AppExcludes = targetIps1.ToText();
+        await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
 
-            VhLogger.Instance.LogDebug(GeneralEventId.Test, "Starting IpFilters_TestExclude...");
-            await IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint2, TestConstants.HttpsExternalUri2);
-            await IpFilters_AssertExclude(TestHelper, app, TestConstants.NsEndPoint1, TestConstants.HttpsExternalUri1);
-            await app.Disconnect();
-        }
+        Log("Starting IpFilters_TestExclude...");
+        await IpFilters_AssertInclude(TestHelper, app, udpEchoEndPoint2, httpsUrl2);
+        await IpFilters_AssertExclude(TestHelper, app, udpEchoEndPoint1, httpsUrl1);
+        await app.Disconnect();
     }
 
-    public static async Task IpFilters_AssertInclude(TestHelper testHelper, VpnHoodApp app, IPEndPoint? nameserver,
-        Uri? url, int receiveDelta = 1000)
+    public static async Task IpFilters_AssertInclude(TestHelper testHelper, VpnHoodApp app,
+        IPEndPoint? udpEchoEndPint, Uri? url, int receiveDelta = 1000)
     {
         // NameServer
-        if (nameserver != null) {
+        if (udpEchoEndPint != null) {
             var oldStat = app.GetSessionStatus();
-            await testHelper.Test_UdpByDNS(nameserver);
+            await testHelper.Test_UdpEcho(udpEchoEndPint);
             var newStat = app.GetSessionStatus();
             Assert.AreNotEqual(oldStat.SessionTraffic, newStat.SessionTraffic);
             Assert.AreEqual(oldStat.SessionSplitTraffic, newStat.SessionSplitTraffic);
@@ -194,19 +185,19 @@ public class ClientAppTest : TestAppBase
     }
 
     public static async Task IpFilters_AssertExclude(TestHelper testHelper, VpnHoodApp app,
-        IPEndPoint? nameserver, Uri? url, int receiveDelta = 1000)
+        IPEndPoint? udpEchoEndPint, Uri? url, int receiveDelta = 1000)
     {
         // NameServer
-        if (nameserver != null) {
+        if (udpEchoEndPint != null) {
             var oldStat = app.GetSessionStatus();
-            await testHelper.Test_UdpByDNS(nameserver);
+            await testHelper.Test_UdpEcho(udpEchoEndPint);
             var newStat = app.GetSessionStatus();
 
             Assert.AreEqual(oldStat.SessionTraffic, newStat.SessionTraffic,
-                $"Udp to {nameserver} should go to tunnel.");
+                $"Udp to {udpEchoEndPint} should go to tunnel.");
 
             Assert.AreNotEqual(oldStat.SessionSplitTraffic, newStat.SessionSplitTraffic,
-                $"Udp to {nameserver} should not be split.");
+                $"Udp to {udpEchoEndPint} should not be split.");
         }
 
         // Http
@@ -489,10 +480,10 @@ public class ClientAppTest : TestAppBase
         accessManager.UserReviewRecommended = 2;
 
         await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
-        await VhTestUtil.AssertEqualsWait(1, () => 
+        await VhTestUtil.AssertEqualsWait(1, () =>
             server.SessionManager.Sync(true, TestCt));
         await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
-        await VhTestUtil.AssertEqualsWait(1, 
+        await VhTestUtil.AssertEqualsWait(1,
             () => server.SessionManager.Sync(true, TestCt));
         await app.ForceUpdateState(TestCt);
 

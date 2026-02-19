@@ -80,6 +80,10 @@ internal class ClientPacketHandler(
         if (ShouldPassthroughForAd(ipPacket))
             filterAction = FilterAction.Exclude;
 
+        // force by ICMP echo request. Some adapters can not handle protected ICMP packets, so we have to force them to bypass the tunnel.
+        if (ipPacket.IsIcmpEcho())
+            filterAction = FilterAction.Include;
+
         // detect DoT
         IsDnsOverTlsDetected |= ipPacket.Protocol is IpProtocol.Tcp && ipPacket.ExtractTcp().DestinationPort == 853;
 
@@ -125,6 +129,7 @@ internal class ClientPacketHandler(
 
     private void ProcessOutgoingPacketExclude(IpPacket ipPacket)
     {
+        // icmp can not be excluded because some adapters can not protect it
         if (netFilter.IpMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
             ipPacket.SetDestinationEndPoint(newEndPoint);
             ipPacket.UpdateAllChecksums();
@@ -146,10 +151,8 @@ internal class ClientPacketHandler(
         }
 
         // Icmp is not supported by the local proxy for split tunneling
-        if (ipPacket.IsIcmpEcho()) {
-            tunnel.SendPacketQueued(ipPacket);
-            return;
-        }
+        if (ipPacket.IsIcmpEcho())
+            throw new PacketDropException("An ICMP echo request packet is dropped because it can not be handled by the local proxy.");
 
         throw new PacketDropException("Packet has been dropped because no one handle it.");
     }
@@ -157,7 +160,7 @@ internal class ClientPacketHandler(
 
     private bool ShouldDropUdpPacket(UdpPacket udpPacket)
     {
-        if (DropUdp) 
+        if (DropUdp)
             return true;
 
         return DropQuic && udpPacket.DestinationPort is 80 or 443;

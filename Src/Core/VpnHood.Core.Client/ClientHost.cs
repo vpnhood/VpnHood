@@ -24,8 +24,8 @@ internal class ClientHost(
     private readonly Nat _nat = new(true);
     private TcpListener? _tcpListenerIpV4;
     private TcpListener? _tcpListenerIpV6;
-    private IPEndPoint? _localEndpointIpV4;
-    private IPEndPoint? _localEndpointIpV6;
+    private IPEndPoint? _localEndPointIpV4;
+    private IPEndPoint? _localEndPointIpV6;
 
     public IPAddress CatcherAddressIpV4 => catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 => catcherAddressIpV6;
@@ -56,18 +56,18 @@ internal class ClientHost(
         // IpV4
         _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
         _tcpListenerIpV4.Start();
-        _localEndpointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
+        _localEndPointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
         VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}",
-            VhLogger.Format(_localEndpointIpV4));
+            VhLogger.Format(_localEndPointIpV4));
         _ = AcceptTcpClientLoop(_tcpListenerIpV4);
 
         // IpV6
         try {
             _tcpListenerIpV6 = new TcpListener(IPAddress.IPv6Any, 0);
             _tcpListenerIpV6.Start();
-            _localEndpointIpV6 = (IPEndPoint)_tcpListenerIpV6.LocalEndpoint; //it is slow; make sure to cache it
+            _localEndPointIpV6 = (IPEndPoint)_tcpListenerIpV6.LocalEndpoint; //it is slow; make sure to cache it
             VhLogger.Instance.LogInformation("ClientHost is listening. EndPoint: {EndPoint}",
-                VhLogger.Format(_localEndpointIpV6));
+                VhLogger.Format(_localEndPointIpV6));
             _ = AcceptTcpClientLoop(_tcpListenerIpV6);
         }
         catch (Exception ex) {
@@ -106,12 +106,12 @@ internal class ClientHost(
         PacketLogger.LogPacket(ipPacket, "Processing a ClientHost packet...");
 
         // check packet type
-        if (_localEndpointIpV4 == null)
+        if (_localEndPointIpV4 == null)
             throw new InvalidOperationException(
-                $"{nameof(_localEndpointIpV4)} has not been initialized! Did you call Start!");
+                $"{nameof(_localEndPointIpV4)} has not been initialized! Did you call Start!");
 
         var catcherAddress = ipPacket.Version == IpVersion.IPv4 ? CatcherAddressIpV4 : CatcherAddressIpV6;
-        var localEndPoint = ipPacket.Version == IpVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
+        var localEndPoint = ipPacket.Version == IpVersion.IPv4 ? _localEndPointIpV4 : _localEndPointIpV6;
 
         try {
             var tcpPacket = ipPacket.ExtractTcp();
@@ -123,7 +123,7 @@ internal class ClientHost(
             // redirect to inbound
             if (catcherAddress.SpanEquals(ipPacket.DestinationAddressSpan)) {
                 var natItem = (NatItemEx?)_nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort)
-                              ?? throw new NatEndpointNotFoundException(
+                              ?? throw new NatEndPointNotFoundException(
                                   "Could not find incoming tcp destination in NAT.");
 
                 ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -140,8 +140,8 @@ internal class ClientHost(
                 var natItem = sync
                     ? _nat.Add(ipPacket, true)
                     : _nat.Get(ipPacket) ??
-                      throw new NatEndpointNotFoundException("Could not find outgoing tcp destination in NAT.");
-    
+                      throw new NatEndPointNotFoundException("Could not find outgoing tcp destination in NAT.");
+
                 // rewrite packet by changing source/destination address and port
                 tcpPacket.SourcePort = natItem.NatId; // 1
                 ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
@@ -152,7 +152,7 @@ internal class ClientHost(
             ipPacket.UpdateAllChecksums();
             PacketReceived?.Invoke(this, ipPacket);
         }
-        catch (NatEndpointNotFoundException ex) when (ipPacket.Protocol == IpProtocol.Tcp) {
+        catch (NatEndPointNotFoundException ex) when (ipPacket.Protocol == IpProtocol.Tcp) {
             var resultPacket = PacketBuilder.BuildTcpResetReply(ipPacket);
             PacketReceived?.Invoke(this, resultPacket);
             throw new PacketDropException("Packet dropped and TCP reset sent.", ex);

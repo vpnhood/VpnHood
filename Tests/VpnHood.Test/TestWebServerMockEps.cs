@@ -24,7 +24,7 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public IPEndPoint HttpV4EndPointBlockedClient => MapToRemote(localEps.HttpV4EndPointBlockedClient);
     public IPEndPoint HttpV4EndPointBlockedServer => MapToRemote(localEps.HttpV4EndPointBlockedServer);
     public IPEndPoint HttpV4EndPointRefused => MapToRemote(localEps.HttpV4EndPointRefused);
-    public IPEndPoint HttpV4EndPointInvalid => new IPEndPoint(testIps.InvalidRemoteTestIpV4, 443);
+    public IPEndPoint HttpV4EndPointInvalid => new IPEndPoint(testIps.RemoteInvalidTestIpV4, 443);
     public IPEndPoint UdpV4EndPoint1 => MapToRemote(localEps.UdpV4EndPoints[0]);
     public IPEndPoint UdpV4EndPoint2 => MapToRemote(localEps.UdpV4EndPoints[1]);
     public IPEndPoint UdpV6EndPoint1 => MapToRemote(localEps.UdpV6EndPoints[0]);
@@ -39,6 +39,6 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public Uri FileHttpUrl2 => MapToRemote(localEps.FileHttpUrl2);
     public Uri HttpRefusedUri => new($"https://{HttpV4EndPointRefused}/file2");
     public Uri HttpBlockedServerUri => new($"https://{HttpV4EndPointBlockedServer}/file2");
-    public IPAddress PingV4Address1 => testIps.RemoteTestIpV4;
+    public IPAddress PingV4Address1 => testIps.RemoteTestIps[0];
     public IPAddress PingV6Address1 => testIps.RemoteTestIpV6;
 }

@@ -85,7 +85,7 @@ public class ClientTunnelTest : TestBase
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
         await VhTestUtil.AssertEqualsWait(true, async () => {
             await VhUtils.TryInvokeAsync(null,
-                () => TestHelper.Test_Udp(timeout: TimeSpan.FromMilliseconds(500))); // just try transfer
+                () => TestHelper.Test_UdpEcho(timeout: TimeSpan.FromMilliseconds(500))); // just try transfer
             return clientServerDom.Client.SessionStatus?.SessionPacketChannelCount >= 3;
         }, timeout: 6000);
     }
@@ -124,7 +124,7 @@ public class ClientTunnelTest : TestBase
         clientServer.Collect();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: Udp");
-        await TestHelper.Test_Udp();
+        await TestHelper.Test_UdpEcho();
 
         clientServer.AssertTransfer();
     }

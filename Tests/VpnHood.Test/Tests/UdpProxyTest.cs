@@ -214,7 +214,7 @@ public class UdpProxyTest : TestBase
         for (var i = 0; i < maxUdpCount + 1; i++) {
             var udpClient = new UdpClient(AddressFamily.InterNetwork);
             udpClients.Add(udpClient);
-            tasks.Add(TestHelper.Test_Udp(udpClient, timeout: TimeSpan.FromSeconds(2)));
+            tasks.Add(TestHelper.Test_UdpEcho(udpClient, timeout: TimeSpan.FromSeconds(2)));
         }
 
         // wait for tasks to complete and not throw exceptions

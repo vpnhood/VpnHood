@@ -7,20 +7,15 @@ public class TestIpMapper(TestIps filterIps) : IIpMapper
 {
     public bool ToHost(IpProtocol protocol, IpEndPointValue hostEndPoint, out IpEndPointValue newEndPoint)
     {
-        if (hostEndPoint.Address.Equals(filterIps.RemoteTestIpV4)) {
-            newEndPoint = hostEndPoint with { Address = filterIps.LocalTestIpV4 };
-            return true;
-        }
-
         // map IPv6
         if (hostEndPoint.Address.Equals(filterIps.RemoteTestIpV6)) {
             newEndPoint = hostEndPoint with { Address = filterIps.LocalTestIpV6 };
         }
 
         // map IPv4s
-        for (var i = 0; i < filterIps.RemoteTestIpV4List.Count; i++) {
-            if (hostEndPoint.Address.Equals(filterIps.RemoteTestIpV4List[i])){
-                newEndPoint =  hostEndPoint with { Address = filterIps.LocalTestIpV4List[i] };
+        for (var i = 0; i < filterIps.RemoteTestIps.Count; i++) {
+            if (hostEndPoint.Address.Equals(filterIps.RemoteTestIps[i])){
+                newEndPoint =  hostEndPoint with { Address = filterIps.LocalTestIps[i] };
                 return  true;
             }
         }
@@ -36,16 +31,10 @@ public class TestIpMapper(TestIps filterIps) : IIpMapper
             return  true;
         }
 
-        // map IPv4 
-        if (hostEndPoint.Address.Equals(filterIps.LocalTestIpV4)) {
-            newEndPoint = hostEndPoint with { Address = filterIps.RemoteTestIpV4 };
-            return  true;
-        }
-
         // map IPv4s
-        for (var i = 0; i < filterIps.LocalTestIpV4List.Count; i++) {
-            if (hostEndPoint.Address.Equals(filterIps.LocalTestIpV4List[i])) {
-                newEndPoint = hostEndPoint with { Address = filterIps.RemoteTestIpV4List[i] };
+        for (var i = 0; i < filterIps.LocalTestIps.Count; i++) {
+            if (hostEndPoint.Address.Equals(filterIps.LocalTestIps[i])) {
+                newEndPoint = hostEndPoint with { Address = filterIps.RemoteTestIps[i] };
                 return true;
             }
         }

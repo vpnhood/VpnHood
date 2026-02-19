@@ -12,7 +12,7 @@ public class TestWebServerLocalEps
     public IPEndPoint[] QuicEndPoints { get; }
     public IPEndPoint HttpV4EndPointBlockedClient { get; }
     public IPEndPoint HttpV4EndPointBlockedServer { get; }
-    public IPEndPoint HttpV4EndPointRefused => new IPEndPoint(HttpV4EndPoints[0].Address, 9999);
+    public IPEndPoint HttpV4EndPointRefused => new(HttpV4EndPoints[0].Address, 9999);
     public IPEndPoint[] UdpV4EndPoints => UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
     public IPEndPoint[] UdpV6EndPoints => UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
     public Uri[] HttpUrls { get; }
@@ -26,33 +26,32 @@ public class TestWebServerLocalEps
         HttpV4EndPointBlockedServer = new IPEndPoint(testIps.LocalBlockedServerIpAddress, 15010);
 
         HttpsV4EndPoints = [
-            new IPEndPoint(testIps.LocalTestIpV4, 15001),
-            new IPEndPoint(testIps.LocalTestIpV4, 15002),
-            new IPEndPoint(testIps.LocalTestIpV4, 15003),
-            new IPEndPoint(testIps.LocalTestIpV4, 15004),
+            new IPEndPoint(testIps.LocalTestIps[0], 15000),
+            new IPEndPoint(testIps.LocalTestIps[1], 15001),
+            new IPEndPoint(testIps.LocalTestIps[2], 15002),
         ];
 
         HttpV4EndPoints = [
-            new IPEndPoint(testIps.LocalTestIpV4, 15005),
-            new IPEndPoint(testIps.LocalTestIpV4, 15006),
-            new IPEndPoint(testIps.LocalTestIpV4, 15007),
-            new IPEndPoint(testIps.LocalTestIpV4, 15008),
+            new IPEndPoint(testIps.LocalTestIps[0], 15010),
+            new IPEndPoint(testIps.LocalTestIps[1], 15011),
+            new IPEndPoint(testIps.LocalTestIps[2], 15012),
             HttpV4EndPointBlockedClient, 
             HttpV4EndPointBlockedServer
         ];
 
         UdpEndPoints = [
-            new IPEndPoint(testIps.LocalTestIpV4, 20101),
-            new IPEndPoint(testIps.LocalTestIpV4, 20102),
-            new IPEndPoint(testIps.LocalTestIpV4, 20103),
+            new IPEndPoint(testIps.LocalTestIps[0], 20100),
+            new IPEndPoint(testIps.LocalTestIps[1], 20101),
+            new IPEndPoint(testIps.LocalTestIps[2], 20102),
             new IPEndPoint(testIps.LocalTestIpV6, 20101),
             new IPEndPoint(testIps.LocalTestIpV6, 20102),
             new IPEndPoint(testIps.LocalTestIpV6, 20103)
         ];
 
         QuicEndPoints = [
-            new IPEndPoint(testIps.LocalTestIpV4, 25001),
-            new IPEndPoint(testIps.LocalTestIpV4, 25002)
+            new IPEndPoint(testIps.LocalTestIps[0], 25001),
+            new IPEndPoint(testIps.LocalTestIps[1], 25001),
+            new IPEndPoint(testIps.LocalTestIps[2], 25002),
         ];
 
         HttpUrls = HttpV4EndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();

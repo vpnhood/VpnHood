@@ -139,7 +139,7 @@ public class ClientServerTest : TestBase
         clientOptions.DropUdp = true;
         clientOptions.MaxPacketChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
-        await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_Udp(timeout: TimeSpan.FromSeconds(3)),
+        await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_UdpEcho(timeout: TimeSpan.FromSeconds(3)),
             "UDP must be failed.");
     }
 
@@ -165,7 +165,7 @@ public class ClientServerTest : TestBase
 
         // let channel be created gradually
         for (var i = 0; i < 6; i++) {
-            await TestHelper.Test_Udp();
+            await TestHelper.Test_UdpEcho();
             await Task.Delay(50, TestCt);
         }
 
@@ -183,7 +183,7 @@ public class ClientServerTest : TestBase
 
         // let channel be removed gradually
         for (var i = 0; i < 6; i++) {
-            await TestHelper.Test_Udp();
+            await TestHelper.Test_UdpEcho();
             await Task.Delay(50, TestCt);
         }
 
@@ -207,7 +207,7 @@ public class ClientServerTest : TestBase
 
         var tasks = new List<Task>();
         for (var i = 0; i < 50; i++)
-            tasks.Add(TestHelper.Test_Udp());
+            tasks.Add(TestHelper.Test_UdpEcho());
 
         await Task.WhenAll(tasks);
     }
@@ -228,7 +228,7 @@ public class ClientServerTest : TestBase
 
         var tasks = new List<Task>();
         for (var i = 0; i < 50; i++)
-            tasks.Add(TestHelper.Test_Udp());
+            tasks.Add(TestHelper.Test_UdpEcho());
 
         await Task.WhenAll(tasks);
     }
@@ -320,14 +320,14 @@ public class ClientServerTest : TestBase
         await using (await TestHelper.CreateClient(token, vpnAdapter: TestHelper.CreateTestVpnAdapter())) {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
-            await TestHelper.Test_Udp(udpClient);
+            await TestHelper.Test_UdpEcho(udpClient);
         }
 
         // create client
         await using (await TestHelper.CreateClient(token, vpnAdapter: TestHelper.CreateTestVpnAdapter())) {
             // test Icmp & Udp
             await TestHelper.Test_Ping(ping);
-            await TestHelper.Test_Udp(udpClient);
+            await TestHelper.Test_UdpEcho(udpClient);
         }
     }
 
@@ -679,8 +679,8 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token);
 
         // test udp
-        await TestHelper.Test_Udp(MockEps.UdpV4EndPoint1);
-        await TestHelper.Test_Udp(MockEps.UdpV4EndPoint2);
+        await TestHelper.Test_UdpEcho(MockEps.UdpV4EndPoint1);
+        await TestHelper.Test_UdpEcho(MockEps.UdpV4EndPoint2);
         Assert.IsTrue(adapterUsed);
     }
 

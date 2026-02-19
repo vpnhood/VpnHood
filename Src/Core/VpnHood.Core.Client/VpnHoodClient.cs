@@ -457,24 +457,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     }
 
     private void ClientHost_PacketReceived(object? sender, IpPacket ipPacket) =>
-        ProcessIncomingPacket(ipPacket);
+        ProcessIncomingPacket(ipPacket, true);
 
-    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket)
+    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket) =>
+        ProcessIncomingPacket(ipPacket, true);
+
+    private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket) =>
+        ProcessIncomingPacket(ipPacket, false);
+
+    // WARNING: Performance Critical!
+    private void ProcessIncomingPacket(IpPacket ipPacket, bool useMapper)
     {
-        if (_netFilter.IpMapper?.FromHost(ipPacket.Protocol,
-            ipPacket.GetSourceEndPoint(), out var newEndPoint) == true) {
+        if (useMapper && _netFilter.IpMapper?.FromHost(ipPacket.Protocol, ipPacket.GetSourceEndPoint(), out var newEndPoint) == true) {
             ipPacket.SetSourceEndPoint(newEndPoint);
             ipPacket.UpdateAllChecksums();
         }
-        ProcessIncomingPacket(ipPacket);
-    }
 
-    private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket) =>
-        ProcessIncomingPacket(ipPacket);
-
-    // WARNING: Performance Critical!
-    private void ProcessIncomingPacket(IpPacket ipPacket)
-    {
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 

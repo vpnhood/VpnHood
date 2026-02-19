@@ -7,17 +7,17 @@ public class TestIps
 {
     public IPAddress RemoteTestIpV6 { get; } = IPAddress.Parse("2001:db8::1");
     public IPAddress LocalTestIpV6 => IPAddress.IPv6Loopback;
-    public IPAddress RemoteTestIpV4 { get; } = IPAddress.Parse("198.18.11.1");
-    public IPAddress LocalTestIpV4 => IPAddress.Loopback;
-    public IReadOnlyList<IPAddress> RemoteTestIpV4List { get; } // additional ipV4
-    public IReadOnlyList<IPAddress> LocalTestIpV4List { get; } // additional ipV4
-    public IPAddress InvalidRemoteTestIpV4 { get; } = IPAddress.Parse("198.18.12.1");
+    public IReadOnlyList<IPAddress> RemoteTestIps { get; } // additional ipV4
+    public IReadOnlyList<IPAddress> LocalTestIps { get; } // additional ipV4
+    public IPAddress RemoteInvalidTestIpV4 { get; } = IPAddress.Parse("198.18.12.1");
     public IPAddress LocalBlockedClientIpAddress { get; }
     public IPAddress LocalBlockedServerIpAddress { get; }
 
     public IReadOnlyList<IPAddress> AllRemoteTestIps {
-        get => new[] {RemoteTestIpV6, RemoteTestIpV4, InvalidRemoteTestIpV4 }
-            .Concat(RemoteTestIpV4List)
+        get => RemoteTestIps
+            .Append(RemoteTestIpV6)
+            .Append(RemoteInvalidTestIpV4)
+            .Concat(RemoteTestIps)
             .ToList();
     }
 
@@ -30,7 +30,7 @@ public class TestIps
             startIp = IPAddressUtil.Increment(startIp);
             remoteIpV4S.Add(IPAddressUtil.Increment(startIp));
         }
-        RemoteTestIpV4List = remoteIpV4S;
+        RemoteTestIps = remoteIpV4S;
 
         // local test addresses
         var localIpV4S = new List<IPAddress>();
@@ -39,22 +39,19 @@ public class TestIps
             startIp = IPAddressUtil.Increment(startIp);
             localIpV4S.Add(IPAddressUtil.Increment(startIp));
         }
-        LocalTestIpV4List = localIpV4S;
+        LocalTestIps = localIpV4S;
         LocalBlockedServerIpAddress = localIpV4S[^1];
         LocalBlockedClientIpAddress = localIpV4S[^2];
     }
 
     public IPAddress MapToRemote(IPAddress address)
     {
-        if (address.Equals(LocalTestIpV4))
-            return RemoteTestIpV4;
-
         if (address.Equals(LocalTestIpV6))
             return RemoteTestIpV6;
 
-        for (var i = 0; i < LocalTestIpV4List.Count; i++) {
-            if (LocalTestIpV4List[i].Equals(address))
-                return RemoteTestIpV4List[i];
+        for (var i = 0; i < LocalTestIps.Count; i++) {
+            if (LocalTestIps[i].Equals(address))
+                return RemoteTestIps[i];
         }
 
         return address;

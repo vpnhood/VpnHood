@@ -23,7 +23,8 @@ internal class ClientServerDom : IAsyncDisposable
     public long OldServerSentByteCount { get; private set; }
     public long OldServerReceivedByteCount { get; private set; }
 
-    private ClientServerDom(Token token,
+    private ClientServerDom(
+        Token token,
         VpnHoodClient client,
         VpnHoodServer server,
         TestAccessManager accessManager,

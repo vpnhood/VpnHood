@@ -16,7 +16,7 @@ public class TestIps
     public IPAddress LocalBlockedServerIpAddress { get; }
 
     public IReadOnlyList<IPAddress> AllRemoteTestIps {
-        get => new[] {RemoteTestIpV6, RemoteTestIpV4}
+        get => new[] {RemoteTestIpV6, RemoteTestIpV4, InvalidRemoteTestIpV4 }
             .Concat(RemoteTestIpV4List)
             .ToList();
     }

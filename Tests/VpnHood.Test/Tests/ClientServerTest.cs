@@ -6,6 +6,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.AccessManagers;
@@ -335,18 +336,24 @@ public class ClientServerTest : TestBase
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
 
-        // create server
+        var externalUrl = new Uri("https://ip4.me/");
+        var httpsExternalUriIps = await Dns.GetHostAddressesAsync(externalUrl.Host);
+
+            // create server
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // connect to a host
         using TcpClient tcpClient = new();
         using var connectCts = new CancellationTokenSource(2000);
-        await tcpClient.ConnectAsync(TestConstants.HttpsExternalUri1.Host, 443, connectCts.Token);
+        await tcpClient.ConnectAsync(httpsExternalUriIps[0], 443, connectCts.Token);
         await using var stream = tcpClient.GetStream();
 
-        // create client
-        await using var client = await TestHelper.CreateClient(token);
+        // create client and make sure it routes the external host through the vpn by adding the host ip to allowed list
+        var clientOptions = TestHelper.CreateClientOptions(token);
+        clientOptions.IncludeIpRangesByDevice = clientOptions.IncludeIpRangesByDevice
+            .Union(httpsExternalUriIps.ToIpRanges()).ToArray();
+        await using var client = await TestHelper.CreateClient(clientOptions);
 
         using var cts2 = new CancellationTokenSource(2000);
         var ex = await Assert.ThrowsAsync<Exception>(async () => {
@@ -502,12 +509,12 @@ public class ClientServerTest : TestBase
 
 
         using var httpClient = new HttpClient();
-        _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4441");
-        _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4442");
-        _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4443");
-        _ = httpClient.GetStringAsync($"https://{TestConstants.InvalidIp}:4445");
+        _ = httpClient.GetStringAsync($"https://{MockEps.HttpV4EndPointInvalid.Address}:4441", TestCt);
+        _ = httpClient.GetStringAsync($"https://{MockEps.HttpV4EndPointInvalid.Address}:4442", TestCt);
+        _ = httpClient.GetStringAsync($"https://{MockEps.HttpV4EndPointInvalid.Address}:4443", TestCt);
+        _ = httpClient.GetStringAsync($"https://{MockEps.HttpV4EndPointInvalid.Address}:4445", TestCt);
 
-        await Task.Delay(500);
+        await Task.Delay(500, TestCt);
         var session = server.SessionManager.GetSessionById(client.SessionId);
         Assert.AreEqual(fileAccessManagerOptions.SessionOptions.MaxTcpConnectWaitCount, session?.TcpConnectWaitCount);
     }
@@ -672,8 +679,8 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token);
 
         // test udp
-        await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint1);
-        await TestHelper.Test_Udp(TestConstants.UdpV4EndPoint2);
+        await TestHelper.Test_Udp(MockEps.UdpV4EndPoint1);
+        await TestHelper.Test_Udp(MockEps.UdpV4EndPoint2);
         Assert.IsTrue(adapterUsed);
     }
 

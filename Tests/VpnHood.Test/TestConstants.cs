@@ -16,8 +16,6 @@ public static class TestConstants
     public static Uri HttpsExternalUri2 => new("https://ip4.me/"); //make sure always return same ips
     public static IPEndPoint NsEndPoint1 => IPEndPoint.Parse("1.1.1.1:53");
     public static IPEndPoint NsEndPoint2 => IPEndPoint.Parse("1.0.0.1:53");
-    public static IPEndPoint TcpEndPoint1 => IPEndPoint.Parse("198.18.0.1:80");
-    public static IPEndPoint TcpEndPoint2 => IPEndPoint.Parse("198.18.0.2:80");
     public static IPEndPoint HttpsEndPoint1 => IPEndPoint.Parse("198.18.0.1:3030");
     public static IPEndPoint HttpsEndPoint2 => IPEndPoint.Parse("198.18.0.2:3030");
     public static IPEndPoint UdpV4EndPoint1 => IPEndPoint.Parse("198.18.10.1:63100");

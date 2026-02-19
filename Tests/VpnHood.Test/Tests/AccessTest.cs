@@ -77,12 +77,12 @@ public class AccessTest : TestBase
             await server.SessionManager.Sync(true, TestCt);
             await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(500));
             return client.State;
-        });
+        }, cancellationToken: TestCt);
 
         Assert.AreEqual(SessionErrorCode.AccessExpired, client.GetLastSessionErrorCode());
 
         var sessionId = client.SessionId;
-        await VhTestUtil.AssertEqualsWait(true, () => {
+        await AssertEqualsWait(true, () => {
             var managerSession = accessManager.SessionService.Sessions.GetValueOrDefault(sessionId);
             return managerSession?.EndTime != null;
         });

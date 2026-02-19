@@ -55,6 +55,7 @@ public class Session : IDisposable
 
     private Traffic _prevTraffic = new();
     private int _tcpConnectWaitCount;
+    private int _netScanErrorCount;
 
     public Tunnel Tunnel { get; }
     public ulong SessionId { get; }
@@ -66,9 +67,9 @@ public class Session : IDisposable
     public SessionExtraData ExtraData { get; }
     public int ProtocolVersion { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
+    public int NetScanErrorCount => _netScanErrorCount;
+    public int TcpChannelCount => Tunnel.StreamProxyChannelCount + (_udpChannel != null ? 0 : Tunnel.PacketChannelCount);
 
-    public int TcpChannelCount =>
-        Tunnel.StreamProxyChannelCount + (_udpChannel != null ? 0 : Tunnel.PacketChannelCount);
 
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
@@ -470,10 +471,12 @@ public class Session : IDisposable
 
     private void VerifyNetScan(IpProtocol protocol, IpEndPointValue remoteEndPoint, string requestId)
     {
-        if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint)) return;
+        if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint)) 
+            return;
 
         LogTrack(protocol, null, remoteEndPoint, false, true, "NetScan");
         _netScanExceptionReporter.Raise();
+        Interlocked.Increment(ref _netScanErrorCount);
         throw new NetScanException(remoteEndPoint.ToIPEndPoint(), this, requestId);
     }
 

@@ -38,19 +38,19 @@ public class IpLocationTest : TestAppBase
             () => null);
 
         // compare ip ranges for a country
-        var sqliteRanges = await ipLocationSqliteProvider.GetIpRanges("TR", TestCancellationToken);
-        var localRanges = await localRangeProvider.GetIpRanges("TR", TestCancellationToken);
+        var sqliteRanges = await ipLocationSqliteProvider.GetIpRanges("TR", TestCt);
+        var localRanges = await localRangeProvider.GetIpRanges("TR", TestCt);
         Assert.IsTrue(sqliteRanges.SequenceEqual(localRanges), "SQLite ranges differ from local ranges for TR.");
 
         // get country by ip using provider
         var ipToCheck = IPAddress.Parse("75.63.95.93");
-        var sqliteLocation = await ipLocationSqliteProvider.GetLocation(ipToCheck, TestCancellationToken);
-        var localLocation = await localRangeProvider.GetLocation(ipToCheck, TestCancellationToken);
+        var sqliteLocation = await ipLocationSqliteProvider.GetLocation(ipToCheck, TestCt);
+        var localLocation = await localRangeProvider.GetLocation(ipToCheck, TestCt);
         Assert.AreEqual(sqliteLocation.CountryCode, localLocation.CountryCode,
             "Country code mismatch between providers.");
 
         // verify ip is in country ranges
-        var sqliteCountryRanges = await ipLocationSqliteProvider.GetIpRanges(sqliteLocation.CountryCode, TestCancellationToken);
+        var sqliteCountryRanges = await ipLocationSqliteProvider.GetIpRanges(sqliteLocation.CountryCode, TestCt);
         Assert.IsTrue(sqliteCountryRanges.Any(x => x.IsInRange(ipToCheck)),
             "SQLite provider ranges do not contain test IP.");
     }
@@ -77,9 +77,9 @@ public class IpLocationTest : TestAppBase
         // commit project and sync
         try {
             var gitBase = $"--git-dir=\"{solutionFolder}/.git\" --work-tree=\"{solutionFolder}\"";
-            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} commit -a -m Publish", TestCancellationToken);
-            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} pull", TestCancellationToken);
-            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} push", TestCancellationToken);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} commit -a -m Publish", TestCt);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} pull", TestCt);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} push", TestCt);
         }
         catch (ExternalException ex) when (ex.ErrorCode == 1) {
             VhLogger.Instance.LogInformation("Nothing has been updated.");
@@ -95,11 +95,11 @@ public class IpLocationTest : TestAppBase
         appOptions.UseInternalLocationService = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         Assert.IsNotNull(app.Services.LocationService.IpRangeLocationProvider);
-        var countryCodes = await app.Services.LocationService.IpRangeLocationProvider.GetCountryCodes(TestCancellationToken);
+        var countryCodes = await app.Services.LocationService.IpRangeLocationProvider.GetCountryCodes(TestCt);
         Assert.IsTrue(countryCodes.Any(x => x == "US"),
             "Countries has not been extracted.");
 
         // make sure GetIpRange works
-        Assert.IsTrue((await app.Services.LocationService.IpRangeLocationProvider.GetIpRanges("US", TestCancellationToken)).Any());
+        Assert.IsTrue((await app.Services.LocationService.IpRangeLocationProvider.GetIpRanges("US", TestCt)).Any());
     }
 }

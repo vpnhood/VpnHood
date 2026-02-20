@@ -94,7 +94,7 @@ public abstract class PacketTransportBase : IPacketTransport
                 if (!ret.IsCompleted)
                     throw new InvalidOperationException(
                         "A passthrough PacketTransport should not return an incomplete task.");
-                return ret.Result;
+                return ret.GetAwaiter().GetResult();
             }
         }
 

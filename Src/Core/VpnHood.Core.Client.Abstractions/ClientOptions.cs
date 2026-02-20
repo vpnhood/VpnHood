@@ -19,10 +19,10 @@ public class ClientOptions
     };
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
-    public IpRange[] IncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
+    public IpRange[] IncludeIpRangesByApp { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
-    public IpRange[] VpnAdapterIncludeIpRanges { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
+    public IpRange[] IncludeIpRangesByDevice { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
 
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
@@ -61,7 +61,7 @@ public class ClientOptions
     public bool IsTcpProxySupported { get; set; } = true;
     public string? ServerLocation { get; set; }
     public ConnectPlanId PlanId { get; set; }
-    public DomainFilter DomainFilter { get; set; } = new();
+    public DomainFilterPolicy DomainFilterPolicy { get; set; } = new();
     public bool ForceLogSni { get; set; }
     public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(10);
     public string? AccessCode { get; set; }

@@ -39,6 +39,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Filtering.Abstractions\VpnHood.Core.Filtering.Abstractions.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Server.Access\VpnHood.Core.Server.Access.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />

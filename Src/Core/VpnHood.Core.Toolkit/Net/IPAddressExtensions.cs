@@ -32,6 +32,19 @@ public static class IPAddressExtensions
         }
     }
 
+    extension(IpEndPointValue ipEndPoint)
+    {
+        public bool IsV4()
+        {
+            return ipEndPoint.Address.AddressFamily == AddressFamily.InterNetwork;
+        }
+
+        public bool IsV6()
+        {
+            return ipEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6;
+        }
+    }
+
     extension(AddressFamily addressFamily)
     {
         public bool IsV4()
@@ -94,6 +107,24 @@ public static class IPAddressExtensions
                     $"buffer is not big enough to hold the IP address. BufferLength: {buffer.Length}, IPAddress: {ipAddress}.");
 
             return buffer[..bytesWritten];
+        }
+
+        public bool IsTestNetwork()
+        {
+            Span<byte> bytes = stackalloc byte[16];
+            if (!ipAddress.TryWriteBytes(bytes, out int bytesWritten)) 
+                return false;
+
+            // IPv4
+            if (bytesWritten == 4) 
+                return bytes[0] == 198 && (bytes[1] & 254) == 18;
+
+            // IPv6
+            if (bytesWritten == 16) 
+                return bytes[0] == 0x20 && bytes[1] == 0x01 &&
+                       bytes[2] == 0x00 && bytes[3] == 0x02;
+
+            return false;
         }
     }
 }

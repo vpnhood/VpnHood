@@ -44,9 +44,9 @@ public class IpNetwork
     public static IpNetwork AllV4 { get; } = Parse("0.0.0.0/0");
 
     public static IpNetwork[] LocalNetworksV4 { get; } = [
-        Parse("10.0.0.0/8"),
-        Parse("172.16.0.0/12"),
-        Parse("192.168.0.0/16"),
+        Parse("10.0.0.0/8"), 
+        Parse("172.16.0.0/12"), 
+        Parse("192.168.0.0/16"), 
         Parse("169.254.0.0/16")
     ];
 

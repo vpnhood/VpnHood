@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using SharpPcap;
 using SharpPcap.WinDivert;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -23,7 +23,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     private WinDivertDevice? _device;
     private WinDivertHeader? _lastCaptureHeader;
     private readonly List<IpNetwork> _includeIpNetworks = [];
-    private IPAddress[] _dnsServers = [];
+    private IReadOnlyList<IPAddress> _dnsServers = [];
 
     private readonly TimeoutDictionary<ushort, TimeoutItem<IPAddress>>
         _lastDnsServersV4 = new(TimeSpan.FromSeconds(30));
@@ -115,9 +115,9 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     }
 
 
-    protected override Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    protected override Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
-        _dnsServers = dnsServers;
+        _dnsServers = dnsServers.ToList();
         return Task.CompletedTask;
     }
 
@@ -277,7 +277,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         if (!_simulateDns)
             return;
 
-        if (ipPacket.Protocol != IpProtocol.Udp || _dnsServers.Length == 0)
+        if (ipPacket.Protocol != IpProtocol.Udp || _dnsServers.Any())
             return;
 
         var udpPacket = ipPacket.ExtractUdp();

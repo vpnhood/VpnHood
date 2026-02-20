@@ -65,8 +65,7 @@ public class TestAppHelper : TestHelper
         clientApp.UserSettings.UseSplitByIpViaDevice = true;
         clientApp.UserSettings.UseSplitByIpViaApp = true;
         clientApp.UserSettings.UseTcpProxy = true;
-        clientApp.SettingsService.SplitByIpSettings.DeviceIncludes =
-            TestIpAddresses.Select(x => new IpRange(x)).ToText();
+        clientApp.SettingsService.SplitByIpSettings.DeviceIncludes = TestIps.AllRemoteTestIps.ToOrderedIpRanges().ToText();
         clientApp.UserSettings.LogAnonymous = false;
 
         AppUiContext.Context = new TestAppUiContext();

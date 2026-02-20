@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -236,7 +236,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     //    await OsUtils.ExecuteCommandAsync("netsh", commandV6, cancellationToken);
     //}
 
-    protected override async Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken)
+    protected override async Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         // remove previous DNS servers.
         // Do not log in debug mode because it is common error as the adapter is usually new

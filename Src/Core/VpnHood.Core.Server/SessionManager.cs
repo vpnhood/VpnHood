@@ -5,8 +5,8 @@ using System.Net;
 using System.Text.Json;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Trackers;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;
@@ -36,7 +36,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     private byte[] _serverSecret;
 
     public string ApiKey { get; private set; }
-    public INetFilter NetFilter { get; }
+    public NetFilter NetFilter { get; set; }
     public Version ServerVersion { get; }
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
@@ -56,10 +56,10 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     internal SessionManager(
         IAccessManager accessManager,
-        INetFilter netFilter,
         ISocketFactory socketFactory,
         ITracker? tracker,
         IVpnAdapter? vpnAdapter,
+        NetFilter netFilter,
         Version serverVersion,
         string storagePath,
         SessionManagerOptions options)

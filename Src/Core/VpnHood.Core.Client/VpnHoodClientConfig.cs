@@ -1,5 +1,7 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using System.Net;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Client;
 
@@ -21,6 +23,9 @@ public class VpnHoodClientConfig
     public required string? AccessCode { get; init; }
     public required string[]? IncludeApps { get; init; }
     public required string[]? ExcludeApps { get; init; }
+    public required IReadOnlyList<IpRange> IncludeIpRangesByDevice { get; init; }
+    public required IReadOnlyList<IpRange> IncludeIpRangesByApp { get; init; }
+    public required IReadOnlyList<IPAddress>? DnsServers { get; init; }
     public required TimeSpan SessionTimeout { get; init; }
     public required TimeSpan AutoWaitTimeout { get; init; }
     public required TimeSpan UnstableTimeout { get; init; }
@@ -30,9 +35,9 @@ public class VpnHoodClientConfig
     public required string UserAgent { get; init; }
     public required bool AllowTcpReuse { get; init; }
     public required UserReview? UserReview { get; init; }
-    public required bool IsTcpProxySupported { get; set; }
+    public required bool IsTcpProxySupported { get; init; }
+    public required bool UseWebSocket { get; init; }
     public required bool UseTcpProxy { get; set; }
     public required bool DropUdp { get; set; }
     public required bool DropQuic { get; set; }
-    public required bool UseWebSocket { get; set; }
 }

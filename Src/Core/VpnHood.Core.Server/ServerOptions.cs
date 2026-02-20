@@ -1,4 +1,5 @@
 ﻿using Ga4.Trackers;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.SystemInformation;
@@ -15,7 +16,7 @@ public class ServerOptions
     public ISocketFactory SocketFactory { get; init; } = new SocketFactory();
     public ITracker? Tracker { get; init; }
     public ISystemInfoProvider? SystemInfoProvider { get; init; }
-    public INetFilter NetFilter { get; init; } = new NetFilter();
+    public NetFilter NetFilter { get; init; } = new();
     public INetConfigurationProvider? NetConfigurationProvider { get; init; }
     public ISwapMemoryProvider? SwapMemoryProvider { get; init; }
     public IVpnAdapter? VpnAdapter { get; init; }

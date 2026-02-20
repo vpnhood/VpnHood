@@ -19,10 +19,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{7A80C94A-33D0-4B8C-BA6A-BD31FDA47C65} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{4AA2951C-7066-40E2-A02F-367C1A0849EA} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood! CLIENT"/>
-    <ROW Property="ProductVersion" Value="7.6.787" Options="20"/>
+    <ROW Property="ProductVersion" Value="7.6.790" Options="20"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
@@ -72,7 +72,7 @@
     <ROW Directory="zhHant_Dir" Directory_Parent="APPDIR" DefaultDir="zh-Hant" DirectoryOptions="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{1E9571E0-3DB6-4E30-BC7B-54FC8F05376E}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{02533FD7-F8D5-4CE5-8760-354CB04D0B22}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{21851DB9-D1F6-4B22-9844-D91CE291D8A3}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="Accessibility.dll" ComponentId="{6125235F-C8DC-42E0-BC59-0E11D956B841}" Directory_="APPDIR" Attributes="0" KeyPath="Accessibility.dll"/>
@@ -530,7 +530,7 @@
     <ROW Component="hostfxr.dll" ComponentId="{BC0967F4-7DF4-4A37-8C80-3C76828B0F66}" Directory_="APPDIR" Attributes="256" KeyPath="hostfxr.dll"/>
     <ROW Component="hostpolicy.dll" ComponentId="{37A1012B-C8BE-498A-9BD7-2CD78581BB7B}" Directory_="APPDIR" Attributes="256" KeyPath="hostpolicy.dll"/>
     <ROW Component="mscordaccore.dll" ComponentId="{EA8A69E4-1B6B-4AAD-A48D-9EB59FA6AB15}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore.dll"/>
-    <ROW Component="mscordaccore_amd64_amd64_10.0.225.61305.dll" ComponentId="{B69D3C4E-3800-4138-B709-E9A57FFAD2F6}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_10.0.225.61305.dll"/>
+    <ROW Component="mscordaccore_amd64_amd64_10.0.225.61305.dll" ComponentId="{1675D5DB-6DEF-4653-9B35-A35CC3316863}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_10.0.225.61305.dll"/>
     <ROW Component="mscordbi.dll" ComponentId="{EBA3A2AB-FBCE-495D-8012-0465D47E5B42}" Directory_="APPDIR" Attributes="256" KeyPath="mscordbi.dll"/>
     <ROW Component="mscorlib.dll" ComponentId="{5E6D16B7-22DA-4FCB-AC28-AD3A361BF6C5}" Directory_="APPDIR" Attributes="0" KeyPath="mscorlib.dll"/>
     <ROW Component="mscorrc.dll" ComponentId="{F98E0E0B-1EC3-41F4-8FC2-528E33EF3A9A}" Directory_="APPDIR" Attributes="256" KeyPath="mscorrc.dll"/>
@@ -1014,7 +1014,6 @@
     <ROW File="VpnHood.Core.PacketTransports.pdb" Component_="VpnHood.Core.PacketTransports.dll" FileName="VPNHO~15.PDB|VpnHood.Core.PacketTransports.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.PacketTransports.pdb" SelfReg="false"/>
     <ROW File="CavemanTcp.dll" Component_="CavemanTcp.dll" FileName="CAVEMA~1.DLL|CavemanTcp.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\CavemanTcp.dll" SelfReg="false"/>
     <ROW File="IpMatcher.dll" Component_="IpMatcher.dll" FileName="IPMATC~1.DLL|IpMatcher.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\IpMatcher.dll" SelfReg="false"/>
-    <ROW File="mscordaccore_amd64_amd64_10.0.225.61305.dll" Component_="mscordaccore_amd64_amd64_10.0.225.61305.dll" FileName="MSCORD~4.DLL|mscordaccore_amd64_amd64_10.0.225.61305.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\mscordaccore_amd64_amd64_10.0.225.61305.dll" SelfReg="false"/>
     <ROW File="RegexMatcher.dll" Component_="RegexMatcher.dll" FileName="REGEXM~1.DLL|RegexMatcher.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\RegexMatcher.dll" SelfReg="false"/>
     <ROW File="System.Linq.AsyncEnumerable.dll" Component_="System.Linq.AsyncEnumerable.dll" FileName="SYST~190.DLL|System.Linq.AsyncEnumerable.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\System.Linq.AsyncEnumerable.dll" SelfReg="false"/>
     <ROW File="System.Net.ServerSentEvents.dll" Component_="System.Net.ServerSentEvents.dll" FileName="SYST~191.DLL|System.Net.ServerSentEvents.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\System.Net.ServerSentEvents.dll" SelfReg="false"/>
@@ -1033,6 +1032,7 @@
     <ROW File="VpnHood.Core.Proxies.EndPointManagement.pdb" Component_="VpnHood.Core.Proxies.EndPointManag_1_ement.dll" FileName="VPNHO~26.PDB|VpnHood.Core.Proxies.EndPointManagement.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHood.Core.Proxies.EndPointManagement.pdb" SelfReg="false"/>
     <ROW File="WatsonWebserver.Core.dll" Component_="WatsonWebserver.Core.dll" FileName="WATSON~1.DLL|WatsonWebserver.Core.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\WatsonWebserver.Core.dll" SelfReg="false"/>
     <ROW File="WatsonWebserver.Lite.dll" Component_="WatsonWebserver.Lite.dll" FileName="WATSON~2.DLL|WatsonWebserver.Lite.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\WatsonWebserver.Lite.dll" SelfReg="false"/>
+    <ROW File="mscordaccore_amd64_amd64_10.0.225.61305.dll" Component_="mscordaccore_amd64_amd64_10.0.225.61305.dll" FileName="MSCORD~3.DLL|mscordaccore_amd64_amd64_10.0.225.61305.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\mscordaccore_amd64_amd64_10.0.225.61305.dll" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiRemoveFileComponent">
     <ROW RemoveFile="__1" Options="3"/>
@@ -1061,7 +1061,7 @@
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
-    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="[|ProductName]" SignOptions="7" SignTool="0" UseSha256="1" Thumbprint="B7D3B87F9BF721AAD3185FA42F0B55A8CDE7D2AD Subject: OmegaHood LLC&#10;Issuer: Sectigo Public Code Signing CA EV R36&#10;Valid from 06/01/2025 to 06/02/2026" Subject="CN=OmegaHood LLC, O=OmegaHood LLC, S=California, C=US, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=California, OID.1.3.6.1.4.1.311.60.2.1.3=US, SERIALNUMBER=202355114433" Store="User\MY"/>
+    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="[|ProductName]" SignOptions="7" SignTool="7" UseSha256="1" Subject="CN=NetFreedom Pioneers, O=NetFreedom Pioneers, S=California, C=US, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=California, OID.1.3.6.1.4.1.311.60.2.1.3=US, SERIALNUMBER=3506245" TSEndPoint="https://wus2.codesigning.azure.net/" TSAccountName="Vh-Signing" TSCertName="OmegaHood-CodeSigning"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DynamicPropertyComponent">
     <ROW Property="ProductVersion" Type="3" SourcePath="..\..\..\Pub\PubVersion.json" PathInSource="Root\Version"/>

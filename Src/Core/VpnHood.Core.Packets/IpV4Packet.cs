@@ -1,7 +1,8 @@
 ﻿using System.Buffers;
 using System.Buffers.Binary;
+using VpnHood.Core.Packets;
 
-namespace VpnHood.Core.Packets;
+namespace VpnHood.Core.Toolkit.Net;
 
 public class IpV4Packet : IpPacket
 {

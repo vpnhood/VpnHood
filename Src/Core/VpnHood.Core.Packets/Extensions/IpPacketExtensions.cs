@@ -1,10 +1,10 @@
 ﻿using System.Net;
 using System.Runtime.InteropServices;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Packets;
 
 // ReSharper disable OutParameterValueIsAlwaysDiscarded.Global
 
-namespace VpnHood.Core.Packets.Extensions;
+namespace VpnHood.Core.Toolkit.Net.Extensions;
 
 public static class IpPacketExtensions
 {
@@ -99,25 +99,70 @@ public static class IpPacketExtensions
             return IPAddress.Broadcast.SpanEquals(ipPacket.DestinationAddressSpan);
         }
 
+        public IpEndPointValue GetSourceEndPoint()
+        {
+            return ipPacket.Protocol switch {
+                IpProtocol.Tcp => new IpEndPointValue(ipPacket.SourceAddress, ipPacket.ExtractTcp().SourcePort),
+                IpProtocol.Udp => new IpEndPointValue(ipPacket.SourceAddress, ipPacket.ExtractUdp().SourcePort),
+                _ => new IpEndPointValue(ipPacket.SourceAddress, 0)
+            };
+        }
+
+        public IpEndPointValue GetDestinationEndPoint() {
+            return ipPacket.Protocol switch {
+                IpProtocol.Tcp => new IpEndPointValue(ipPacket.DestinationAddress, ipPacket.ExtractTcp().DestinationPort),
+                IpProtocol.Udp => new IpEndPointValue(ipPacket.DestinationAddress, ipPacket.ExtractUdp().DestinationPort),
+                _ => new IpEndPointValue(ipPacket.DestinationAddress, 0)
+            };
+        }
+
+        public void SetSourceEndPoint(IpEndPointValue value)
+        {
+            ipPacket.SourceAddress = value.Address;
+
+            switch (ipPacket.Protocol) {
+                case IpProtocol.Tcp:
+                    ipPacket.ExtractTcp().SourcePort = (ushort)value.Port;
+                    break;
+
+                case IpProtocol.Udp:
+                    ipPacket.ExtractUdp().SourcePort = (ushort)value.Port;
+                    break;
+
+                default:
+                    if (value.Port != 0)
+                        throw new InvalidOperationException(
+                            $"Cannot set non-zero port {value.Port} for protocol {ipPacket.Protocol}. Only TCP and UDP support ports.");
+                    break;
+            }
+        }
+
+        public void SetDestinationEndPoint(IpEndPointValue value)
+        {
+            ipPacket.DestinationAddress = value.Address;
+
+            switch (ipPacket.Protocol) {
+                case IpProtocol.Tcp:
+                    ipPacket.ExtractTcp().DestinationPort = (ushort)value.Port;
+                    break;
+
+                case IpProtocol.Udp:
+                    ipPacket.ExtractUdp().DestinationPort = (ushort)value.Port;
+                    break;
+
+                default:
+                    if (value.Port != 0)
+                        throw new InvalidOperationException(
+                            $"Cannot set non-zero port {value.Port} for protocol {ipPacket.Protocol}. Only TCP and UDP support ports.");
+                    break;
+            }
+        }
+
         public IPEndPointPair GetEndPoints()
         {
-            if (ipPacket.Protocol == IpProtocol.Tcp) {
-                var tcpPacket = ipPacket.ExtractTcp();
-                return new IPEndPointPair(
-                    new IPEndPoint(ipPacket.SourceAddress, tcpPacket.SourcePort),
-                    new IPEndPoint(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
-            }
-
-            if (ipPacket.Protocol == IpProtocol.Udp) {
-                var udpPacket = ipPacket.ExtractUdp();
-                return new IPEndPointPair(
-                    new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort),
-                    new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort));
-            }
-
             return new IPEndPointPair(
-                new IPEndPoint(ipPacket.SourceAddress, 0),
-                new IPEndPoint(ipPacket.DestinationAddress, 0));
+                ipPacket.GetSourceEndPoint().ToIPEndPoint(),
+                ipPacket.GetDestinationEndPoint().ToIPEndPoint());
         }
 
         public void UpdateAllChecksums()

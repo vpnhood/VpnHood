@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Tunneling.Channels;
@@ -99,14 +100,22 @@ public class ProxyManager : PassthroughPacketTransport
         }
     }
 
-    public void AddChannel(ProxyChannel channel)
+    public void AddChannel(ProxyChannel channel, bool disposeOnFail)
     {
-        if (IsDisposed)
-            throw new ObjectDisposedException(nameof(ProxyManager));
+        try {
+            ObjectDisposedException.ThrowIf(IsDisposed, this);
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(ProxyManager));
 
-        lock (_streamProxyChannels)
-            _streamProxyChannels.Add(channel);
-        channel.Start();
+            lock (_streamProxyChannels)
+                _streamProxyChannels.Add(channel);
+            channel.Start();
+        }
+        catch {
+            if (disposeOnFail)
+                channel.Dispose();
+            throw;
+        }
     }
 
     protected override void DisposeManaged()

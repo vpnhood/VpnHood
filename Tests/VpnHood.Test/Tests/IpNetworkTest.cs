@@ -84,13 +84,13 @@ public class IpNetworkTest : TestBase
         };
 
         var ipRangeOrderedList = ipRanges.ToOrderedList();
-        Assert.IsFalse(ipRangeOrderedList.IsInRange(IPAddress.Parse("9.9.9.7")));
-        Assert.IsTrue(ipRangeOrderedList.IsInRange(IPAddress.Parse("8.8.8.8")));
-        Assert.IsTrue(ipRangeOrderedList.IsInRange(IPAddress.Parse("9.9.9.9")));
-        Assert.IsFalse(ipRangeOrderedList.IsInRange(IPAddress.Parse("4.4.4.5")));
-        Assert.IsTrue(ipRangeOrderedList.IsInRange(IPAddress.Parse("4.4.4.3")));
-        Assert.IsTrue(ipRangeOrderedList.IsInRange(IPAddress.Parse("FF::F0")));
-        Assert.IsFalse(ipRangeOrderedList.IsInRange(IPAddress.Parse("AF::F0")));
+        Assert.IsFalse(ipRangeOrderedList.Contains(IPAddress.Parse("9.9.9.7")));
+        Assert.IsTrue(ipRangeOrderedList.Contains(IPAddress.Parse("8.8.8.8")));
+        Assert.IsTrue(ipRangeOrderedList.Contains(IPAddress.Parse("9.9.9.9")));
+        Assert.IsFalse(ipRangeOrderedList.Contains(IPAddress.Parse("4.4.4.5")));
+        Assert.IsTrue(ipRangeOrderedList.Contains(IPAddress.Parse("4.4.4.3")));
+        Assert.IsTrue(ipRangeOrderedList.Contains(IPAddress.Parse("FF::F0")));
+        Assert.IsFalse(ipRangeOrderedList.Contains(IPAddress.Parse("AF::F0")));
     }
 
     [TestMethod]

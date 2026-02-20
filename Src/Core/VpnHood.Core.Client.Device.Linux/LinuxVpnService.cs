@@ -14,7 +14,12 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
     public LinuxVpnService(
         string configFolder)
     {
-        _vpnServiceHost = new VpnServiceHost(configFolder, this, new SocketFactory(), withLogger: false);
+        _vpnServiceHost = new VpnServiceHost(
+            configFolder: configFolder, 
+            vpnServiceHandler: this, 
+            socketFactory: new SocketFactory(), 
+            netFilter: null,
+            withLogger: false);
     }
 
     public void OnConnect()

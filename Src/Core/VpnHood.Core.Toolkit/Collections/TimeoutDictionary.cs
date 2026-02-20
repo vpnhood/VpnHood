@@ -137,18 +137,27 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         if (_disposed) return;
         _disposed = true;
 
+        RemoveAll();
+    }
+
+    public void RemoveAll()
+    {
         foreach (var value in _items.Values)
             value.Dispose();
 
         _items.Clear();
     }
 
+    /// <summary>
+    /// Remove the oldest item in the dictionary. This method is useful when you want to limit
+    /// the size of the dictionary and remove the least recently used items.
+    /// </summary>
     public void RemoveOldest()
     {
         var oldestAccessedTime = DateTime.MaxValue;
         var oldestKey = default(TKey?);
         foreach (var item in _items) {
-            if (oldestAccessedTime < item.Value.LastUsedTime) {
+            if (item.Value.LastUsedTime < oldestAccessedTime) {
                 oldestAccessedTime = item.Value.LastUsedTime;
                 oldestKey = item.Key;
             }

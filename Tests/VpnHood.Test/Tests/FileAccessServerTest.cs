@@ -47,7 +47,7 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: get all tokensId
-        var accessTokenDatas = await accessManager1.AccessTokenService.List(TestCancellationToken);
+        var accessTokenDatas = await accessManager1.AccessTokenService.List(TestCt);
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token1.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
@@ -56,48 +56,48 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: token must be retrieved with TokenId
-        var sessionResponseEx1 = await accessManager1.Session_Create(sessionRequestEx1, TestCancellationToken);
+        var sessionResponseEx1 = await accessManager1.Session_Create(sessionRequestEx1, TestCt);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode, "access has not been retrieved");
 
         // ************
         // *** TEST: Get AdditionalDat
         var sessionResponse = await accessManager1.Session_Get(sessionResponseEx1.SessionId,
-            sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp, TestCancellationToken);
+            sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp, TestCt);
         Assert.AreEqual(sessionRequestEx1.ExtraData, sessionResponse.ExtraData);
         Assert.AreEqual(sessionRequestEx1.ProtocolVersion, sessionResponse.ProtocolVersion);
 
         // ************
         // *** TEST ***: Removing token
-        accessManager1.AccessTokenService.Delete(token1.TokenId, TestCancellationToken).Wait();
-        accessTokenDatas = await accessManager1.AccessTokenService.List(TestCancellationToken);
+        accessManager1.AccessTokenService.Delete(token1.TokenId, TestCt).Wait();
+        accessTokenDatas = await accessManager1.AccessTokenService.List(TestCt);
         Assert.IsFalse(accessTokenDatas.Any(x => x.AccessToken.TokenId == token1.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
         Assert.HasCount(2, accessTokenDatas);
         Assert.AreEqual(SessionErrorCode.AccessError,
-            (await accessManager1.Session_Create(sessionRequestEx1, TestCancellationToken)).ErrorCode);
+            (await accessManager1.Session_Create(sessionRequestEx1, TestCt)).ErrorCode);
 
         // ************
         // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)
         var accessManager2 = new FileAccessManager(storagePath, fileAccessManagerOptions);
 
-        accessTokenDatas = await accessManager2.AccessTokenService.List(TestCancellationToken);
+        accessTokenDatas = await accessManager2.AccessTokenService.List(TestCt);
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
         Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
         Assert.HasCount(2, accessTokenDatas);
 
         // ************
         // *** TEST ***: token must be retrieved with TokenId
-        Assert.AreEqual(SessionErrorCode.Ok, (await accessManager2.Session_Create(sessionRequestEx2, TestCancellationToken)).ErrorCode,
+        Assert.AreEqual(SessionErrorCode.Ok, (await accessManager2.Session_Create(sessionRequestEx2, TestCt)).ErrorCode,
             "Access has not been retrieved");
 
         // ************
         // *** TEST ***: token must be retrieved after reloading
         accessManager1.CreateToken();
         var accessManager3 = new FileAccessManager(storagePath, fileAccessManagerOptions);
-        accessTokenDatas = await accessManager3.AccessTokenService.List(TestCancellationToken);
+        accessTokenDatas = await accessManager3.AccessTokenService.List(TestCt);
         Assert.HasCount(3, accessTokenDatas);
-        Assert.AreEqual(SessionErrorCode.Ok, (await accessManager3.Session_Create(sessionRequestEx2, TestCancellationToken)).ErrorCode,
+        Assert.AreEqual(SessionErrorCode.Ok, (await accessManager3.Session_Create(sessionRequestEx2, TestCt)).ErrorCode,
             "access has not been retrieved");
     }
 
@@ -112,46 +112,46 @@ public class FileAccessManagerTest : TestBase
         var sessionRequestEx1 = CreateSessionRequestEx(token);
 
         // create a session
-        var sessionResponse = await accessManager1.Session_Create(sessionRequestEx1, TestCancellationToken);
+        var sessionResponse = await accessManager1.Session_Create(sessionRequestEx1, TestCt);
         Assert.IsNotNull(sessionResponse, "access has not been retrieved");
 
         // ************
         // *** TEST ***: add sent and receive bytes
         var response = await accessManager1.Session_AddUsage(sessionResponse.SessionId,
-            new Traffic { Sent = 20, Received = 10 }, null, TestCancellationToken);
+            new Traffic { Sent = 20, Received = 10 }, null, TestCt);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(20, response.AccessUsage?.CycleTraffic.Sent);
         Assert.AreEqual(10, response.AccessUsage?.CycleTraffic.Received);
 
         response = await accessManager1.Session_AddUsage(sessionResponse.SessionId,
-            new Traffic { Sent = 20, Received = 10 }, null, TestCancellationToken);
+            new Traffic { Sent = 20, Received = 10 }, null, TestCt);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(40, response.AccessUsage?.CycleTraffic.Sent);
         Assert.AreEqual(20, response.AccessUsage?.CycleTraffic.Received);
 
         response = await accessManager1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
-            sessionRequestEx1.ClientIp, TestCancellationToken);
+            sessionRequestEx1.ClientIp, TestCt);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(40, response.AccessUsage?.CycleTraffic.Sent);
         Assert.AreEqual(20, response.AccessUsage?.CycleTraffic.Received);
 
         // close session
         response = await accessManager1.Session_Close(sessionResponse.SessionId,
-            new Traffic { Sent = 20, Received = 10 }, TestCancellationToken);
+            new Traffic { Sent = 20, Received = 10 }, TestCt);
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(60, response.AccessUsage?.CycleTraffic.Sent);
         Assert.AreEqual(30, response.AccessUsage?.CycleTraffic.Received);
 
         // check is session closed
         response = await accessManager1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
-            sessionRequestEx1.ClientIp, TestCancellationToken);
+            sessionRequestEx1.ClientIp, TestCt);
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode);
         Assert.AreEqual(60, response.AccessUsage?.CycleTraffic.Sent);
         Assert.AreEqual(30, response.AccessUsage?.CycleTraffic.Received);
 
         // check restore
         var accessManager2 = TestHelper.CreateAccessManager(storagePath: storagePath);
-        response = await accessManager2.Session_Create(sessionRequestEx1, TestCancellationToken);
+        response = await accessManager2.Session_Create(sessionRequestEx1, TestCt);
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
         Assert.AreEqual(60, response.AccessUsage?.CycleTraffic.Sent);
         Assert.AreEqual(30, response.AccessUsage?.CycleTraffic.Received);

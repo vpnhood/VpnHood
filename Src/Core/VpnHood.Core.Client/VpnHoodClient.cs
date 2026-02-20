@@ -11,15 +11,17 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
-using VpnHood.Core.DomainFiltering;
+using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Filtering.DomainFiltering;
+using VpnHood.Core.Filtering.DomainFiltering.Observation;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -30,7 +32,6 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using DomainFilter = VpnHood.Core.DomainFiltering.DomainFilter;
 
 namespace VpnHood.Core.Client;
 
@@ -40,9 +41,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly ProxyManager _proxyManager;
-    private readonly Dictionary<IPAddress, bool> _includeIps = new();
     private readonly IVpnAdapter _vpnAdapter;
     private readonly ClientHost _clientHost;
+    private readonly ClientStreamHandler _streamHandler;
     private ClientUsageTracker? _clientUsageTracker;
     private DateTime? _initConnectedTime;
     private DateTime? _lastConnectionErrorTime;
@@ -52,48 +53,46 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private ConnectorService? _connectorService;
     private DateTime? _autoWaitTime;
     private readonly ServerFinder _serverFinder;
-    private bool _isDnsServersAccepted;
     private ulong? _sessionId;
     private ClientUdpChannelTransmitter? _udpTransmitter;
     private ClientSessionStatus? _sessionStatus;
-    private IPAddress[] _dnsServers;
     private int _sessionPacketChannelCount;
     private readonly AsyncLock _packetChannelLock = new();
     private readonly AsyncLock _disposeLock = new();
     private readonly Job _cleanupJob;
     private readonly Tunnel _tunnel;
+    private DnsStatus? _sessionDnsStatus;
     private TaskCompletionSource? _waitForAdCts;
-    private bool _isPassthroughForAd;
-    private bool _isDnsOverTlsDetected;
-
+    private ChannelProtocol _channelProtocol;
+    private readonly NetFilter _netFilter;
+    private readonly ClientPacketHandler _packetHandler;
+    private readonly DomainFilteringService _domainFilteringService;
+    private readonly StaticIpFilter _staticIpFilter;
 
     private ConnectorService ConnectorService => VhUtils.GetRequiredInstance(_connectorService);
-
+    public DomainObserver DomainObserver => _domainFilteringService.DomainObserver;
     public event EventHandler? StateChanged;
     public Token Token { get; }
     public VpnHoodClientConfig Config { get; }
-    public DomainFilterService DomainFilterService { get; }
     public ProxyEndPointManager ProxyEndPointManager { get; }
     public ISocketFactory SocketFactory { get; }
     public ISessionStatus? SessionStatus => _sessionStatus;
     public ITracker? Tracker { get; }
-    public bool IsIpV6SupportedByServer { get; private set; }
-    public bool IsIpV6SupportedByClient { get; internal set; }
-    public IpRangeOrderedList IncludeIpRanges { get; private set; }
-    public IpRangeOrderedList VpnAdapterIncludeIpRanges { get; private set; }
     public IPEndPoint? HostTcpEndPoint => _connectorService?.VpnEndPoint.TcpEndPoint;
     public IPEndPoint? HostUdpEndPoint { get; private set; }
-
+    public IpRangeOrderedList? SessionIncludeIpRangesByDevice { get; private set; }
+    public IpRangeOrderedList SessionIncludeIpRangesByApp => _staticIpFilter.IncludeRanges;
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public byte[]? ServerSecret { get; private set; }
     public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     public SessionInfo? SessionInfo { get; private set; }
     public Exception? LastException { get; private set; }
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
-    private ChannelProtocol _channelProtocol;
 
-    public VpnHoodClient(IVpnAdapter vpnAdapter,
+    public VpnHoodClient(
+        IVpnAdapter vpnAdapter,
         ISocketFactory socketFactory,
+        NetFilter? netFilter,
         string? storageFolder,
         ITracker? tracker,
         ClientOptions options)
@@ -112,6 +111,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (string.IsNullOrEmpty(storageFolder))
             storageFolder = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath!)!, "vpn-service");
 
+
+        // build config
         Config = new VpnHoodClientConfig {
             AllowAnonymousTracker = options.AllowAnonymousTracker,
             MinPacketChannelLifespan = options.MinPacketChannelTimespan,
@@ -123,6 +124,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             AccessCode = options.AccessCode,
             ExcludeApps = options.ExcludeApps,
             IncludeApps = options.IncludeApps,
+            IncludeIpRangesByApp = options.IncludeIpRangesByApp,
+            IncludeIpRangesByDevice = options.IncludeIpRangesByDevice,
+            DnsServers = options.DnsServers,
             SessionName = options.SessionName,
             AllowTcpReuse = options.AllowTcpReuse,
             UnstableTimeout = options.UnstableTimeout,
@@ -145,23 +149,30 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         socketFactory = new AdapterSocketFactory(vpnAdapter, socketFactory);
         SocketFactory = socketFactory;
         Tracker = tracker;
-        _dnsServers = options.DnsServers ?? [];
         _vpnAdapter = vpnAdapter;
         _channelProtocol = options.ChannelProtocol;
+
+        // Prepare filters
+        _staticIpFilter = new StaticIpFilter(netFilter?.IpFilter);
+        var staticDomainFilter = new StaticDomainFilter(netFilter?.DomainFilter) {
+            Blocks = options.DomainFilterPolicy.Blocks,
+            Excludes = options.DomainFilterPolicy.Excludes,
+            Includes = options.DomainFilterPolicy.Includes
+        };
+        _netFilter = new NetFilter {
+            IpFilter = new CachedIpFilter(_staticIpFilter, TimeSpan.FromMinutes(60)),
+            DomainFilter = new CachedDomainFilter(staticDomainFilter, TimeSpan.FromMinutes(60)),
+            IpMapper = netFilter?.IpMapper
+        };
+
+        // External Proxies
         ProxyEndPointManager = new ProxyEndPointManager(
             proxyOptions: options.ProxyOptions ?? new ProxyOptions(),
             storagePath: Path.Combine(storageFolder, "proxies"),
             socketFactory: socketFactory,
             serverCheckTimeout: options.ServerQueryTimeout);
 
-        _serverFinder = new ServerFinder(socketFactory,
-            serverLocation: options.ServerLocation,
-            serverQueryTimeout: options.ServerQueryTimeout,
-            endPointStrategy: options.EndPointStrategy,
-            customServerEndpoints: options.CustomServerEndpoints ?? [],
-            tracker: options.AllowEndPointTracker ? tracker : null,
-            proxyEndPointManager: ProxyEndPointManager);
-
+        // delegator
         _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
             IsPingSupported = false,
             PacketProxyCallbacks = null,
@@ -175,23 +186,24 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             UseUdpProxy2 = true,
             AutoDisposePackets = true
         });
-
         _proxyManager.PacketReceived += Proxy_PacketReceived;
 
-        var dnsRange = options.DnsServers?.Select(x => new IpRange(x)).ToArray() ?? [];
-        VpnAdapterIncludeIpRanges = options.VpnAdapterIncludeIpRanges.ToOrderedList().Union(dnsRange);
-        IncludeIpRanges = options.IncludeIpRanges.ToOrderedList().Union(dnsRange);
+        // server finder
+        _serverFinder = new ServerFinder(socketFactory,
+            serverLocation: options.ServerLocation,
+            serverQueryTimeout: options.ServerQueryTimeout,
+            endPointStrategy: options.EndPointStrategy,
+            customServerEndpoints: options.CustomServerEndpoints ?? [],
+            tracker: options.AllowEndPointTracker ? tracker : null,
+            proxyEndPointManager: ProxyEndPointManager);
+
 
         // SNI is sensitive, must be explicitly enabled
-        DomainFilterService = new DomainFilterService(
-            new DomainFilter {
-                Blocks = options.DomainFilter.Blocks,
-                Excludes = options.DomainFilter.Excludes,
-                Includes = options.DomainFilter.Includes
-            },
-            forceLogSni: options.ForceLogSni,
-            eventId: GeneralEventId.Sni,
-            bufferSize: TunnelDefaults.PrefetchStreamBufferSize);
+        _domainFilteringService = new DomainFilteringService(
+            _netFilter.DomainFilter,
+            sniEventId: GeneralEventId.Sni,
+            tlsBufferSize: TunnelDefaults.PrefetchStreamBufferSize);
+        _domainFilteringService.IsEnabled |= options.ForceLogSni || !staticDomainFilter.IsEmpty;
 
         // Tunnel
         _tunnel = new Tunnel(new TunnelOptions {
@@ -202,20 +214,38 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         });
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
-        // create proxy host
-        _clientHost = new ClientHost(
+        // Stream handler
+        _streamHandler = new ClientStreamHandler(
             this,
-            domainFilterService: DomainFilterService,
+            domainFilterService: _domainFilteringService,
+            socketFactory: socketFactory,
             tunnel: _tunnel,
-            catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4,
-            catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6,
+            tcpConnectTimeout: Config.TcpConnectTimeout,
+            proxyManager: _proxyManager,
+            netFilter: _netFilter,
             streamProxyBufferSize: options.StreamProxySendBufferSize ?? TunnelDefaults.ConnectionProxyBufferSize);
+
+        // proxy host
+        _clientHost = new ClientHost(
+            _streamHandler,
+            catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4,
+            catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6);
 
         _clientHost.PacketReceived += ClientHost_PacketReceived;
 
         // init vpnAdapter events
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
         vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
+        vpnAdapter.PrimaryAdapterIpChanged += (_, _) => UpdateClientIpv6Status();
+
+        _packetHandler = new ClientPacketHandler(
+            tunnel: _tunnel,
+            clientHost: _clientHost,
+            domainFilteringService: _domainFilteringService,
+            netFilter: _netFilter,
+            proxyManager: _proxyManager);
+
+        UpdateConfig();
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -243,29 +273,32 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private bool IsTcpProxy {
-        get {
-            // client does not support tcp proxy
-            if (!Config.IsTcpProxySupported)
-                return false;
-
-            // server does not support tcp proxy
-            // ReSharper disable once ConvertIfStatementToReturnStatement
-            if (SessionInfo is { IsTcpProxySupported: false })
-                return false;
-
-            // server does not support tcp packets so only tcp proxy can work
-            if (SessionInfo is { IsTcpPacketSupported: false })
-                return true;
-
-            // follow config
-            return Config.UseTcpProxy;
-        }
+    public void UpdateConfig()
+    {
+        _packetHandler.UseTcpProxy = CanUseTcpProxy();
+        _packetHandler.DropQuic = Config.DropQuic && CanUseTcpProxy(); // DropQUIC is useless if we don't use tcp proxy
+        _packetHandler.DropUdp = Config.DropUdp;
+        _packetHandler.DnsServers = _sessionDnsStatus?.DnsServers ?? [];
     }
 
-    // DropQUIC is useless if not tcp proxy
-    private bool IsDropQuic => Config.DropQuic && IsTcpProxy;
+    private bool CanUseTcpProxy()
+    {
+        // client does not support tcp proxy
+        if (!Config.IsTcpProxySupported)
+            return false;
 
+        // server does not support tcp proxy
+        // ReSharper disable once ConvertIfStatementToReturnStatement
+        if (SessionInfo is { IsTcpProxySupported: false })
+            return false;
+
+        // server does not support tcp packets so only tcp proxy can work
+        if (SessionInfo is { IsTcpPacketSupported: false })
+            return true;
+
+        // follow config
+        return Config.UseTcpProxy;
+    }
 
     public ClientState State {
         get {
@@ -277,7 +310,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 return ClientState.WaitingForAd;
 
             // waiting 
-            if (_isPassthroughForAd && field == ClientState.Connected)
+            if (_packetHandler.PassthroughForAd && field == ClientState.Connected)
                 return ClientState.WaitingForAdEx;
 
             return field;
@@ -312,30 +345,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }, CancellationToken.None);
     }
 
-    internal async Task AddPassthruTcpStream(IConnection orgConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
-    {
-        // set timeout
-        using var timeoutCts = new CancellationTokenSource(ConnectorService.RequestTimeout);
-        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
-
-        // connect to host
-        var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint);
-        await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
-        var connection = new TcpConnection(tcpClient, connectionId: orgConnection.ConnectionId, connectionName: "host", isServer: false);
-        ProxyChannel? channel = null;
-
-        try {
-            // create and add the channel
-            channel = new ProxyChannel(connection.ToString(), orgConnection, connection, _clientHost.StreamProxyBufferSize);
-            _proxyManager.AddChannel(channel);
-        }
-        catch {
-            await connection.DisposeAsync();
-            channel?.Dispose();
-            throw;
-        }
-    }
-
     public async Task Connect(CancellationToken cancellationToken = default)
     {
         if (_disposed)
@@ -358,18 +367,16 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Connecting. Must before IsIpv6Supported
             State = ClientState.Connecting;
+            UpdateClientIpv6Status();
 
             // report config
-            IsIpV6SupportedByClient = await IPAddressUtil.IsIpv6Supported();
-            _proxyManager.IsIpV6Supported = IsIpV6SupportedByClient;
-            _serverFinder.IncludeIpV6 = IsIpV6SupportedByClient;
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             VhLogger.Instance.LogInformation(
                 "DropUdp: {DropUdp}, VpnProtocol: {VpnProtocol}, " +
                 "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
                 "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}, ProcessId: {ProcessId}",
                 Config.DropUdp, _channelProtocol, Config.IncludeLocalNetwork, workerThreads, completionPortThreads,
-                IsIpV6SupportedByClient, Process.GetCurrentProcess().Id);
+                _packetHandler.IsIpV6SupportedByClient, Process.GetCurrentProcess().Id);
 
             // report version
             VhLogger.Instance.LogInformation(
@@ -409,52 +416,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
-    private IpRangeOrderedList BuildVpnAdapterIncludeIpRanges(IPAddress hostIpAddress)
+    private void UpdateClientIpv6Status()
     {
-        // Start with user VpnAdapterIncludeIpRanges
-        var includeIpRanges = VpnAdapterIncludeIpRanges;
+        var isSupported = false;
+        try {
+            isSupported = _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not determine IPv6 support. Default to false.");
+        }
 
-        // exclude server if ProtectClient is not supported to prevent loop
-        if (!_vpnAdapter.CanProtectSocket)
-            includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
-
-        // exclude local networks
-        if (!Config.IncludeLocalNetwork)
-            includeIpRanges = includeIpRanges.Exclude(IpNetwork.LocalNetworks.ToIpRanges());
-
-        // exclude multicast and broadcast
-        includeIpRanges = includeIpRanges
-            .Exclude(IpNetwork.MulticastNetworks.ToIpRanges())
-            .Exclude(IPAddress.Broadcast);
-
-        // Make sure CatcherAddress is included
-        includeIpRanges = includeIpRanges.Union([
-            new IpRange(_clientHost.CatcherAddressIpV4),
-            new IpRange(_clientHost.CatcherAddressIpV6)
-        ]);
-
-        return includeIpRanges; //sort and unify
+        _packetHandler.IsIpV6SupportedByClient = isSupported;
+        _proxyManager.IsIpV6Supported = isSupported;
+        _serverFinder.IncludeIpV6 = isSupported;
+        UpdateConfig();
     }
 
-    // WARNING: Performance Critical!
-    private void ClientHost_PacketReceived(object? sender, IpPacket ipPacket)
-    {
-        _vpnAdapter.SendPacketQueued(ipPacket);
-    }
-
-    // WARNING: Performance Critical!
-    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket)
-    {
-        _vpnAdapter.SendPacketQueued(ipPacket);
-    }
-
-    // WARNING: Performance Critical!
-    private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket)
-    {
-        _vpnAdapter.SendPacketQueued(ipPacket);
-    }
-
-    // WARNING: Performance Critical! Mango Section
     private void VpnAdapter_PacketReceived(object? sender, IpPacket ipPacket)
     {
         // stop traffic if the client has been disposed
@@ -475,123 +452,28 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         if (ShouldManagePacketChannels && !_packetChannelLock.IsLocked)
             _ = ManagePacketChannels(_cancellationTokenSource.Token);
 
-        // Multicast packets are not supported (Already excluded by adapter filter)
-        if (ipPacket.IsMulticast()) {
-            PacketLogger.LogPacket(ipPacket, "A multicast packet has been dropped.");
-            ipPacket.Dispose();
-            return;
-        }
-
-        // Broadcast packets are not supported (Already excluded by adapter filter)
-        if (ipPacket.IsBroadcast()) {
-            PacketLogger.LogPacket(ipPacket, "A broad packet has been dropped.");
-            ipPacket.Dispose();
-            return;
-        }
-
-        // TcpHost has to manage its own packets
-        if (_clientHost.IsOwnPacket(ipPacket)) {
-            _clientHost.ProcessOutgoingPacket(ipPacket);
-            return;
-        }
-
-        // tcp already check for InInRange and IpV6 and Proxy
-        if (ipPacket.Protocol == IpProtocol.Tcp) {
-            var tcpPacket = ipPacket.ExtractTcp();
-            _isDnsOverTlsDetected |= tcpPacket.DestinationPort == 853;
-            if (IsTcpProxy || !IsInEpRange(ipPacket))
-                _clientHost.ProcessOutgoingPacket(ipPacket);
-            else
-                _tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
-            return;
-        }
-
-        // use local proxy if the packet is not in the range and not ICMP.
-        // ICMP is not supported by the local proxy for split tunnel
-        if (!IsInEpRange(ipPacket) && !ipPacket.IsIcmpEcho()) {
-            _proxyManager.SendPacketQueued(ipPacket);
-            return;
-        }
-
-        // Drop IPv6 if not support
-        if (ipPacket.IsV6() && !IsIpV6SupportedByServer)
-            throw new PacketDropException("IPv6 packet has been dropped because server does not support IPv6.");
-
-        // ICMP packet must go through tunnel because PingProxy does not support protect socket
-        if (ipPacket.IsIcmpEcho()) {
-            // ICMP can not be proxied so we don't need to check InRange
-            _tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
-            return;
-        }
-
-        // Udp
-        if (ipPacket.Protocol == IpProtocol.Udp && ShouldTunnelUdpPacket(ipPacket.ExtractUdp())) {
-            _tunnel.SendPacketQueuedAsync(ipPacket).VhBlock();
-            return;
-        }
-
-        // Drop packet
-        throw new PacketDropException("Packet has been dropped because no one handle it.");
+        // simple process if domain filtering is not enabled to improve performance
+        _packetHandler.ProcessOutgoingPacket(ipPacket);
     }
 
-    private bool ShouldTunnelUdpPacket(UdpPacket udpPacket)
+    private void ClientHost_PacketReceived(object? sender, IpPacket ipPacket) =>
+        ProcessIncomingPacket(ipPacket, true);
+
+    private void Proxy_PacketReceived(object? sender, IpPacket ipPacket) =>
+        ProcessIncomingPacket(ipPacket, true);
+
+    private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket) =>
+        ProcessIncomingPacket(ipPacket, false);
+
+    // WARNING: Performance Critical!
+    private void ProcessIncomingPacket(IpPacket ipPacket, bool useMapper)
     {
-        if (Config.DropUdp)
-            return false;
-
-        if (udpPacket.DestinationPort is 80 or 443 && IsDropQuic)
-            return false;
-
-        return true;
-    }
-
-    public bool IsInEpRange(IpPacket ipPacket)
-    {
-        var destinationPort = 0;
-        if (ipPacket.Protocol == IpProtocol.Tcp) destinationPort = ipPacket.ExtractTcp().DestinationPort;
-        if (ipPacket.Protocol == IpProtocol.Udp) destinationPort = ipPacket.ExtractUdp().DestinationPort;
-        return IsInEpRange(ipPacket.DestinationAddress, destinationPort);
-    }
-
-    public bool IsInEpRange(IPAddress ipAddress, int port)
-    {
-        if (_isPassthroughForAd)
-            return port is 53 or 853;
-
-        return IsInIpRange(ipAddress);
-    }
-
-    public bool IsInIpRange(IPAddress ipAddress)
-    {
-        // only dns servers are tunneled if IsWaitingForAd is set
-        if (_isPassthroughForAd)
-            return _dnsServers.Contains(ipAddress);
-
-        // all IPs are included if there is no filter
-        if (IncludeIpRanges.Count == 0)
-            return true;
-
-        // check tcp-loopback
-        if (ipAddress.Equals(_clientHost.CatcherAddressIpV4) ||
-            ipAddress.Equals(_clientHost.CatcherAddressIpV6))
-            return true;
-
-        // check the cache
-        if (_includeIps.TryGetValue(ipAddress, out var isInRange))
-            return isInRange;
-
-        // check include
-        isInRange = IncludeIpRanges.IsInRange(ipAddress);
-
-        // cache the result
-        // we don't need to keep that much ips in the cache
-        if (_includeIps.Count > 0xFFFF) {
-            VhLogger.Instance.LogInformation("Clearing IP filter cache!");
-            _includeIps.Clear();
+        if (useMapper && _netFilter.IpMapper?.FromHost(ipPacket.Protocol, ipPacket.GetSourceEndPoint(), out var newEndPoint) == true) {
+            ipPacket.SetSourceEndPoint(newEndPoint);
+            ipPacket.UpdateAllChecksums();
         }
 
-        _includeIps.Add(ipAddress, isInRange);
-        return isInRange;
+        _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
     private bool ShouldManagePacketChannels =>
@@ -688,29 +570,24 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 PlanId = Config.PlanId,
                 AccessCode = Config.AccessCode,
                 AllowRedirect = allowRedirect,
-                IsIpV6Supported = IsIpV6SupportedByClient,
+                IsIpV6Supported = _packetHandler.IsIpV6SupportedByClient,
                 UserReview = Config.UserReview
             };
 
             using var requestResult = await SendRequest<HelloResponse>(request, cancellationToken).Vhc();
             requestResult.Connection.PreventReuse(); // lets hello request stream not to be reused
-            _connectorService.AllowTcpReuse = 
+            _connectorService.AllowTcpReuse =
                 Config.AllowTcpReuse; // after hello, we can reuse, as the other connections can use websocket
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)
                 throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
-            
-            // sort out server IncludeIpRanges
-            var serverIncludeIpRanges = helloResponse.IncludeIpRanges?.ToOrderedList();
-            var serverVpnAdapterIncludeIpRanges = helloResponse.VpnAdapterIncludeIpRanges?.ToOrderedList();
 
-            // build allowed local networks
-            var allowedLocalNetworks = IpNetwork.LocalNetworks.ToIpRanges();
-            if (serverIncludeIpRanges != null)
-                allowedLocalNetworks = allowedLocalNetworks.Intersect(serverIncludeIpRanges);
-            if (serverVpnAdapterIncludeIpRanges != null)
-                allowedLocalNetworks = allowedLocalNetworks.Intersect(serverVpnAdapterIncludeIpRanges);
+            // sort out server IncludeIpRanges
+            var serverIncludeIpRangesByApp = helloResponse.IncludeIpRanges?.ToOrderedList() ?? IpNetwork.All.ToIpRanges();
+            var serverIncludeIpRangesByDevice = helloResponse.VpnAdapterIncludeIpRanges?.ToOrderedList() ?? IpNetwork.All.ToIpRanges();
+            var serverIncludeIpRanges = serverIncludeIpRangesByApp.Intersect(serverIncludeIpRangesByDevice);
+            var serverAllowedLocalNetworks = IpNetwork.LocalNetworks.ToIpRanges().Intersect(serverIncludeIpRanges);
 
             // log response
             VhLogger.Instance.LogInformation(GeneralEventId.Session,
@@ -723,7 +600,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 $"UdpPort: {helloResponse.UdpPort}, " +
                 $"IsTcpPacketSupported: {helloResponse.IsTcpPacketSupported}, " +
                 $"IsTcpProxySupported: {helloResponse.IsTcpProxySupported}, " +
-                $"IsLocalNetworkAllowed: {allowedLocalNetworks.Any()}, " +
+                $"IsLocalNetworkAllowed: {serverAllowedLocalNetworks.Any()}, " +
                 $"NetworkV4: {helloResponse.VirtualIpNetworkV4}, " +
                 $"NetworkV6: {helloResponse.VirtualIpNetworkV6}, " +
                 $"ClientCountry: {helloResponse.ClientCountry}");
@@ -739,44 +616,36 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // get session id
             _sessionId = helloResponse.SessionId;
             _sessionKey = helloResponse.SessionKey;
+            _packetHandler.IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
             ServerSecret = helloResponse.ServerSecret;
-            IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
             if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= 11 })
                 HostUdpEndPoint = new IPEndPoint(_connectorService.VpnEndPoint.TcpEndPoint.Address,
                     helloResponse.UdpPort.Value);
 
-            // VpnAdapterIpRanges
-            if (!VhUtils.IsNullOrEmpty(serverVpnAdapterIncludeIpRanges))
-                VpnAdapterIncludeIpRanges = VpnAdapterIncludeIpRanges.Intersect(serverVpnAdapterIncludeIpRanges);
-
-            // IncludeIpRanges
-            if (serverIncludeIpRanges?.IsAll() is false)
-                IncludeIpRanges = IncludeIpRanges.Intersect(serverIncludeIpRanges);
+            // Build session ip ranges
+            _staticIpFilter.IncludeRanges = Config.IncludeIpRangesByApp.ToOrderedList();
 
             // set DNS after setting IpFilters
-            VhLogger.Instance.LogInformation("Configuring Client DNS servers... DnsServers: {DnsServers}",
-                string.Join(", ", _dnsServers.Select(x => x.ToString())));
-            _isDnsServersAccepted =
-                VhUtils.IsNullOrEmpty(_dnsServers) || _dnsServers.Any(IsInIpRange); // no servers means accept default
-            if (!_isDnsServersAccepted)
-                VhLogger.Instance.LogWarning(
-                    "Client DNS servers have been ignored because the server does not route them.");
+            _sessionDnsStatus = ClientHelper
+                .GetDnsServers(Config.DnsServers,
+                serverDnsAddresses: helloResponse.DnsServers ?? [],
+                serverIncludeIpRanges: serverIncludeIpRangesByApp,
+                clientIpFilter: _staticIpFilter);
 
-            _dnsServers = _dnsServers.Where(IsInIpRange).ToArray();
-            if (VhUtils.IsNullOrEmpty(_dnsServers)) {
-                _dnsServers = VhUtils.IsNullOrEmpty(helloResponse.DnsServers)
-                    ? IPAddressUtil.GoogleDnsServers
-                    : helloResponse.DnsServers;
-                IncludeIpRanges = IncludeIpRanges.Union(_dnsServers.Select(IpRange.FromIpAddress));
-            }
+            // Build the IncludeIpRanges for the VpnAdapter
+            SessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
+                includeIpRanges: serverIncludeIpRangesByDevice.Intersect(Config.IncludeIpRangesByDevice),
+                canProtectSocket: _vpnAdapter.CanProtectSocket,
+                includeLocalNetwork: Config.IncludeLocalNetwork,
+                catcherIps: _clientHost.CatcherAddressIps,
+                hostIpAddress: _connectorService.VpnEndPoint.TcpEndPoint.Address);
 
-            if (VhUtils.IsNullOrEmpty(_dnsServers?.Where(IsInIpRange)
-                    .ToArray())) // make sure there is at least one DNS server
-                throw new Exception("Could not specify any DNS server. The server is not configured properly.");
-
-            VhLogger.Instance.LogInformation("DnsServers: {DnsServers}",
-                string.Join(", ", _dnsServers.Select(VhLogger.Format)));
+            // add serverIncludeIpRanges to includes after determining DnsServers
+            // sometimes packet goes directly to the adapter especially on windows, so we need to make sure filter them
+            _staticIpFilter.IncludeRanges = _staticIpFilter.IncludeRanges
+                .Intersect(serverIncludeIpRanges)
+                .Intersect(SessionIncludeIpRangesByDevice);
 
             // report Suppressed
             if (helloResponse.SuppressedTo == SessionSuppressType.YourSelf)
@@ -809,9 +678,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 ClientPublicIpAddress = helloResponse.ClientPublicAddress,
                 ClientCountry = helloResponse.ClientCountry,
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
-                IsDnsServersAccepted = _isDnsServersAccepted,
-                IsLocalNetworkAllowed = allowedLocalNetworks.Any(),
-                DnsServers = _dnsServers,
+                IsLocalNetworkAllowed = serverAllowedLocalNetworks.Any(),
+                DnsStatus = _sessionDnsStatus,
                 IsPremiumSession = helloResponse.AccessUsage?.IsPremium ?? false,
                 IsUdpChannelSupported = HostUdpEndPoint != null,
                 AccessKey = helloResponse.AccessKey,
@@ -854,7 +722,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     _ = Tracker.TryTrack(
                         ClientTrackerBuilder.BuildConnectionSucceeded(
                             _serverFinder.ServerLocation,
-                            isIpV6Supported: IsIpV6SupportedByClient,
+                            isIpV6Supported: _packetHandler.IsIpV6SupportedByClient,
                             hasRedirected: !allowRedirect,
                             endPoint: _connectorService.VpnEndPoint.TcpEndPoint,
                             adNetworkName: null));
@@ -878,24 +746,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // prepare packet capture
             // Set a default to capture & drop the packets if the server does not provide a network
             var networkV4 = helloResponse.VirtualIpNetworkV4 ?? new IpNetwork(IPAddress.Parse("10.255.0.2"), 32);
-            var networkV6 = helloResponse.VirtualIpNetworkV6 ??
-                            new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
-            var longIncludeNetworks =
-                string.Join(", ", VpnAdapterIncludeIpRanges.ToIpNetworks().Select(VhLogger.Format));
+            var networkV6 = helloResponse.VirtualIpNetworkV6 ?? new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
             VhLogger.Instance.LogInformation(
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
-                SessionInfo.DnsServers, longIncludeNetworks);
-
-            // Build the IncludeIpRanges for the VpnAdapter
-            var adapterIncludeRanges =
-                BuildVpnAdapterIncludeIpRanges(_connectorService.VpnEndPoint.TcpEndPoint.Address);
-
-            // sometimes packet goes directly to the adapter especially on windows, so we need to filter them
-            IncludeIpRanges = IncludeIpRanges.Intersect(adapterIncludeRanges);
-
+                SessionInfo.DnsStatus, VhLogger.Format(SessionIncludeIpRangesByDevice.ToIpNetworks()));
+            var z = SessionIncludeIpRangesByDevice.Contains(IPAddress.Parse("198.18.10.1"));
+            
             // wait for ad before adapter
             if (helloResponse.AdRequirement != AdRequirement.None) {
-                _isPassthroughForAd = true; // set passthrough mode
+                _packetHandler.PassthroughForAd = true; // set passthrough mode
                 _waitForAdCts = new TaskCompletionSource();
                 FireStateChanged();
                 await _waitForAdCts.Task;
@@ -904,14 +763,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // Create Tcp Proxy Host
             _clientHost.Start();
+            UpdateConfig();
 
             // Start the VpnAdapter
             var adapterOptions = new VpnAdapterOptions {
-                DnsServers = SessionInfo.DnsServers,
+                DnsServers = _sessionDnsStatus.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
                 Mtu = helloResponse.Mtu - TunnelDefaults.MtuOverhead,
-                IncludeNetworks = adapterIncludeRanges.ToIpNetworks().ToArray(),
+                IncludeNetworks = SessionIncludeIpRangesByDevice.ToIpNetworks(),
                 SessionName = Config.SessionName,
                 ExcludeApps = Config.ExcludeApps,
                 IncludeApps = Config.IncludeApps
@@ -997,7 +857,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        return SendRequest<T>(new ClientRequestEx { Request = request}, cancellationToken);
+        return SendRequest<T>(new ClientRequestEx { Request = request }, cancellationToken);
     }
 
     internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequestEx request,
@@ -1088,7 +948,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public void SetWaitForAd()
     {
-        _isPassthroughForAd = true;
+        _packetHandler.PassthroughForAd = true;
         FireStateChanged();
     }
 
@@ -1099,7 +959,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // if there is no wait for ad, then we should remove passthrough flag and resume the connection
         // App is responsible to disconnect for failed ad
         if (_waitForAdCts == null)
-            _isPassthroughForAd = false;
+            _packetHandler.PassthroughForAd = false;
 
         // first step should always be accepted to jump to the next step
         _waitForAdCts?.TrySetResult();
@@ -1111,7 +971,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     {
         // make everything is ok. 
         _ = cancellationToken;
-        _isPassthroughForAd = false;
+        _packetHandler.PassthroughForAd = false;
         _clientHost.DropCurrentConnections();
         _waitForAdCts?.TrySetResult();
         FireStateChanged();
@@ -1222,11 +1082,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _cleanupJob.Dispose();
         State = ClientState.Disconnecting;
         _waitForAdCts?.TrySetCanceled();
-        _isPassthroughForAd = false;
+        _packetHandler.PassthroughForAd = false;
 
         // stop reusing tcp connections for faster disposal
-        if (_connectorService != null)
-            _connectorService.AllowTcpReuse = false;
+        _connectorService?.AllowTcpReuse = false;
 
         // stop processing tunnel & adapter packets
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;
@@ -1245,8 +1104,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         _proxyManager.Dispose();
 
-        // Make sure async resources are disposed
+        // standalone object here after stopping services
         _clientUsageTracker?.Dispose();
+        _netFilter.Dispose();
 
         // disposing VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
         // because network change events can cause problems
@@ -1305,11 +1165,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         } = accessUsage.TotalTraffic;
 
         public int SessionPacketChannelCount => client._sessionPacketChannelCount;
-        public int TcpTunnelledCount => client._clientHost.Stat.TcpTunnelledCount;
-        public int TcpPassthruCount => client._clientHost.Stat.TcpPassthruCount;
+        public int TcpTunnelledCount => client._streamHandler.Stat.TcpTunnelledCount;
+        public int TcpPassthruCount => client._streamHandler.Stat.TcpPassthruCount;
         public int ActivePacketChannelCount => client._tunnel.PacketChannelCount;
-        public bool IsDropQuic => client.IsDropQuic;
-        public bool IsTcpProxy => client.IsTcpProxy;
+        public bool IsDropQuic => client._packetHandler.DropQuic;
+        public bool IsTcpProxy => client._packetHandler.UseTcpProxy;
         public ChannelProtocol ChannelProtocol => client.ChannelProtocol;
         public int UnstableCount { get; set; }
         public int WaitingCount { get; set; }
@@ -1318,6 +1178,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         public long SessionMaxTraffic => _accessUsage.MaxTraffic;
         public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
         public int? ActiveClientCount => _accessUsage.ActiveClientCount;
-        public bool IsDnsOverTlsDetected => client._isDnsOverTlsDetected;
+        public bool IsDnsOverTlsDetected => client._packetHandler.IsDnsOverTlsDetected;
+        public bool IsIpV6SupportedByServer => client._packetHandler.IsIpV6SupportedByServer;
+        public bool IsIpV6SupportedByClient => client._packetHandler.IsIpV6SupportedByClient;
     }
 }

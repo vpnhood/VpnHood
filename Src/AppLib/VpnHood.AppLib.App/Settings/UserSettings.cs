@@ -26,7 +26,7 @@ public class UserSettings
     public bool UseTcpProxy { get; set; }
     public bool DropQuic { get; set; }
     public bool AllowAnonymousTracker { get; set; } = ClientOptions.Default.AllowAnonymousTracker;
-    public DomainFilter DomainFilter { get; set; } = new();
+    public DomainFilterPolicy DomainFilterPolicy { get; set; } = new();
     public string? DebugData1 { get; set; }
     public string? DebugData2 { get; set; }
     public bool LogAnonymous { get; set; } = true;

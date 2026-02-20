@@ -43,6 +43,11 @@ public static class VhLogger
         return endPoint is IPEndPoint ipEndPoint ? Format(ipEndPoint) : endPoint.ToString() ?? "<null>";
     }
 
+    public static string Format(IpEndPointValue? endPoint)
+    {
+        return Format(endPoint?.ToIPEndPoint());
+    }
+
     public static string Format(IPEndPoint? endPoint)
     {
         if (endPoint == null) return "<null>";
@@ -53,10 +58,20 @@ public static class VhLogger
         return endPoint.ToString();
     }
 
+    public static string Format(IEnumerable<IPAddress> ipAddresses)
+    {
+        return string.Join(", ", ipAddresses.Select(Format));
+    }
+
     public static string Format(IPAddress? ipAddress)
     {
         if (ipAddress == null) return "<null>";
         return IsAnonymousMode ? VhUtils.RedactIpAddress(ipAddress) : ipAddress.ToString();
+    }
+
+    public static string Format(IEnumerable<IpNetwork> ipNetworks)
+    {
+        return string.Join(", ", ipNetworks.Select(Format));
     }
 
     public static string Format(IpNetwork? ipNetwork)

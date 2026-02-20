@@ -1,6 +1,8 @@
 ﻿// ReSharper disable UnusedMember.Global
 
-namespace VpnHood.Core.Packets;
+using VpnHood.Core.Packets;
+
+namespace VpnHood.Core.Toolkit.Net;
 
 public static class PacketUtil
 {

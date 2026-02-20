@@ -8,14 +8,14 @@ public class NetScanDetector(int itemLimit, TimeSpan itemTimeout) : IDisposable
 {
     private readonly TimeoutDictionary<IPAddress, NetworkIpAddressItem> _networkIpAddresses = new(itemTimeout);
 
-    private static IPAddress GetNetworkIpAddress(IPEndPoint ipEndPoint)
+    private static IPAddress GetNetworkIpAddress(IpEndPointValue ipEndPoint)
     {
         var bytes = ipEndPoint.Address.GetAddressBytesFast(stackalloc byte[16]);
         bytes[3] = 0; // ipV4 only
         return new IPAddress(bytes);
     }
 
-    public bool Verify(IPEndPoint ipEndPoint)
+    public bool Verify(IpEndPointValue ipEndPoint)
     {
         if (ipEndPoint.IsV6())
             return true;
@@ -34,10 +34,10 @@ public class NetScanDetector(int itemLimit, TimeSpan itemTimeout) : IDisposable
 
     private class NetworkIpAddressItem(TimeSpan? timeout) : TimeoutItem
     {
-        public TimeoutDictionary<IPEndPoint, TimeoutItem> EndPoints { get; } = new(timeout);
+        public TimeoutDictionary<IpEndPointValue, TimeoutItem> EndPoints { get; } = new(timeout);
     }
 
-    public int GetBurstCount(IPEndPoint ipEndPoint)
+    public int GetBurstCount(IpEndPointValue ipEndPoint)
     {
         return _networkIpAddresses.TryGetValue(GetNetworkIpAddress(ipEndPoint), out var value)
             ? value.EndPoints.Count

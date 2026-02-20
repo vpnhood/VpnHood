@@ -2,7 +2,8 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
@@ -38,11 +39,13 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
     }
 
     public event EventHandler? Disposed;
+    public event EventHandler? PrimaryAdapterIpChanged;
     public bool IsStarted { get; private set; }
     public bool IsNatSupported => true;
     public bool CanProtectSocket => false;
     public bool ProtectSocket(Socket socket) => false;
     public bool ProtectSocket(Socket socket, IPAddress ipAddress) => false;
+    public void FirePrimaryAdapterIpChanged()=> PrimaryAdapterIpChanged?.Invoke(this, EventArgs.Empty);
 
     public Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
@@ -86,11 +89,12 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
         OnPacketReceived(ipPacket);
     }
 
-    public void OnConnectionRequested(IpProtocol protocolType, IPEndPoint remoteEndPoint)
+    public void OnConnectionRequested(IpProtocol protocolType, IpEndPointValue remoteEndPoint)
     {
     }
 
-    public void OnConnectionEstablished(IpProtocol protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+    public void OnConnectionEstablished(IpProtocol protocolType, 
+        IpEndPointValue localEndPoint, IpEndPointValue remoteEndPoint,
         bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
     {
     }

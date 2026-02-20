@@ -9,8 +9,8 @@ namespace VpnHood.Test.Device;
 
 public class TestDevice(
     TestHelper testHelper,
-    Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory) :
-    IDevice
+    Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory) 
+    : IDevice
 {
     private readonly CancellationTokenSource _disposeCancellationTokenSource = new();
     public TestVpnService? VpnService { get; private set; }
@@ -61,7 +61,7 @@ public class TestDevice(
 
         // create service
         if (VpnService == null || VpnService.IsDisposed)
-            VpnService = new TestVpnService(VpnServiceConfigFolder, vpnAdapterFactory);
+            VpnService = new TestVpnService(VpnServiceConfigFolder, testHelper.ClientNetFilter, vpnAdapterFactory);
 
         VpnService.OnConnect();
     }

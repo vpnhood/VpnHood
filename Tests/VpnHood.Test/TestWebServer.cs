@@ -1,11 +1,13 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Test.Providers;
+using VpnHood.Test.QuicTesters;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
@@ -14,68 +16,26 @@ namespace VpnHood.Test;
 
 public class TestWebServer : IDisposable
 {
-    private readonly List<WebserverLite> _webServers = [];
-
-    public IPEndPoint[] HttpsV4EndPoints { get; } = [
-        IPEndPoint.Parse("127.10.1.1:15001"),
-        IPEndPoint.Parse("127.10.1.1:15002"),
-        IPEndPoint.Parse("127.10.1.1:15003"),
-        IPEndPoint.Parse("127.10.1.1:15004")
-    ];
-
-    public IPEndPoint[] HttpV4EndPoints { get; } = [
-        IPEndPoint.Parse("127.10.1.1:15005"),
-        IPEndPoint.Parse("127.10.1.1:15006"),
-        IPEndPoint.Parse("127.10.1.1:15007"),
-        IPEndPoint.Parse("127.10.1.1:15008")
-    ];
-
-    public IPEndPoint[] UdpEndPoints { get; } = [
-        IPEndPoint.Parse("127.10.1.1:20101"),
-        IPEndPoint.Parse("127.10.1.1:20102"),
-        IPEndPoint.Parse("127.10.1.1:20103"),
-        IPEndPoint.Parse("[::1]:20101"),
-        IPEndPoint.Parse("[::1]:20102"),
-        IPEndPoint.Parse("[::1]:20103")
-    ];
-
-    public IPEndPoint HttpsV4RefusedEndPoint1 => new(HttpsV4EndPoint1.Address, 9999);
-    public IPEndPoint HttpsV4EndPoint1 => HttpsV4EndPoints[0];
-    public IPEndPoint HttpsV4EndPoint2 => HttpsV4EndPoints[1];
-    public IPEndPoint HttpV4EndPoint1 => HttpV4EndPoints[0];
-    public IPEndPoint HttpV4EndPoint2 => HttpV4EndPoints[1];
-    public IPEndPoint UdpV4EndPoint1 => UdpV4EndPoints[0];
-    public IPEndPoint UdpV4EndPoint2 => UdpV4EndPoints[1];
-    public IPEndPoint UdpV6EndPoint1 => UdpV6EndPoints[0];
-    public IPEndPoint UdpV6EndPoint2 => UdpV6EndPoints[1];
-
-    public IPEndPoint[] UdpV4EndPoints =>
-        UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
-
-    public IPEndPoint[] UdpV6EndPoints =>
-        UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
-
-
-    public Uri[] HttpUrls { get; }
-    public Uri[] HttpsUrls { get; }
+    public TestIps TestIps { get; }
+    public TestWebServerMockEps MockEps { get; }
+    public TestWebServerLocalEps LocalEps { get; }
 
     public string FileContent1 { get; set; }
     public string FileContent2 { get; set; }
 
-    public Uri FileHttpUrl1 => new($"http://{HttpV4EndPoints.First()}/file1");
-
-    [SuppressMessage("ReSharper", "UnusedMember.Global")]
-    public Uri FileHttpUrl2 => new($"http://{HttpV4EndPoints.First()}/file2");
-
+    private readonly List<WebserverLite> _webServers = [];
     private UdpClient[] UdpClients { get; }
+    private readonly List<QuicTesterServer> _quicServers = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
-    private TestWebServer()
+    private TestWebServer(TestIps testIps)
     {
-        HttpUrls = HttpV4EndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
-        HttpsUrls = HttpsV4EndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray();
-        UdpClients = UdpEndPoints.Select(x => new UdpClient(x)).ToArray();
+        TestIps = testIps;
+        LocalEps = new TestWebServerLocalEps(testIps);
+        MockEps = new TestWebServerMockEps(LocalEps, testIps);
+        UdpClients = LocalEps.UdpEndPoints.Append(LocalEps.UdpNsEchoEndPoint1)
+            .Select(x => new UdpClient(x)).ToArray();
 
         // Init files
         FileContent1 = string.Empty;
@@ -86,7 +46,7 @@ public class TestWebServer : IDisposable
         }
 
         // Create web servers - one per HTTP endpoint
-        foreach (var endpoint in HttpV4EndPoints) {
+        foreach (var endpoint in LocalEps.HttpV4EndPoints) {
             var settings = new WebserverSettings(endpoint.Address.ToString(), endpoint.Port);
             var webServer = new WebserverLite(settings, DefaultRoute);
             webServer
@@ -95,7 +55,7 @@ public class TestWebServer : IDisposable
             _webServers.Add(webServer);
         }
 
-        foreach (var endpoint in HttpsV4EndPoints) {
+        foreach (var endpoint in LocalEps.HttpsV4EndPoints) {
             var settings = new WebserverSettings(endpoint.Address.ToString(), endpoint.Port) {
                 Ssl = new WebserverSettings.SslSettings {
                     Enable = true,
@@ -125,12 +85,17 @@ public class TestWebServer : IDisposable
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting UDP...");
         StartUdpEchoServer();
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer started UDP...");
+
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting QUIC...");
+        StartQuicEchoServer();
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer started QUIC...");
+
         return Task.CompletedTask;
     }
 
-    public static TestWebServer Create()
+    public static TestWebServer Create(TestIps filterIps)
     {
-        var ret = new TestWebServer();
+        var ret = new TestWebServer(filterIps);
         ret.Start();
         return ret;
     }
@@ -151,6 +116,16 @@ public class TestWebServer : IDisposable
         }
     }
 
+    private void StartQuicEchoServer()
+    {
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile("Assets/VpnHood.UnitTest.pfx", null, X509KeyStorageFlags.Exportable);
+        foreach (var endpoint in LocalEps.QuicEndPoints) {
+            var quicServer = new QuicTesterServer(endpoint, certificate, CancellationToken);
+            _quicServers.Add(quicServer);
+            _ = quicServer.Start();
+        }
+    }
+
     private static async Task DefaultRoute(HttpContextBase ctx)
     {
         ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -165,6 +140,9 @@ public class TestWebServer : IDisposable
 
         foreach (var udpClient in UdpClients)
             udpClient.Dispose();
+
+        foreach (var quicServer in _quicServers)
+            quicServer.Dispose();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test Server Disposed.");
         _cancellationTokenSource.Dispose();

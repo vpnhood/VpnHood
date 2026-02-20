@@ -24,13 +24,12 @@ public static class AppDtoConverterExtensions
     {
         return new AppSessionInfo {
             AccessInfo = sessionInfo.AccessInfo,
-            IsDnsServersAccepted = sessionInfo.IsDnsServersAccepted,
+            DnsStatus = sessionInfo.DnsStatus,
             IsLocalNetworkAllowed = sessionInfo.IsLocalNetworkAllowed,
             ServerLocationInfo = sessionInfo.ServerLocationInfo,
             ServerVersion = sessionInfo.ServerVersion,
             IsPremiumSession = sessionInfo.IsPremiumSession,
             SuppressedTo = sessionInfo.SuppressedTo,
-            DnsServers = sessionInfo.DnsServers,
             ClientPublicIpAddress = sessionInfo.ClientPublicIpAddress,
             CreatedTime = sessionInfo.CreatedTime,
             ChannelProtocols = sessionInfo.ChannelProtocols,

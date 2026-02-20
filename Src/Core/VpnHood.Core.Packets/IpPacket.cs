@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Packets;
 

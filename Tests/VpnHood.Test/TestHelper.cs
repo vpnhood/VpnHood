@@ -1,13 +1,14 @@
-﻿using System.Net;
+﻿using Ga4.Trackers;
+using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using Ga4.Trackers;
-using Microsoft.Extensions.Logging;
+using System.Security.Cryptography.X509Certificates;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Packets;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -24,6 +25,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
+using VpnHood.Test.QuicTesters;
 
 namespace VpnHood.Test;
 
@@ -37,9 +39,11 @@ public class TestHelper : IDisposable
         public Task<bool> IsDestroyed() => Task.FromResult(false);
     }
 
+    public TestIps TestIps { get; } = new();
     public string WorkingPath { get; } = Path.Combine(AssemblyWorkingPath, Guid.CreateVersion7().ToString());
     public TestWebServer WebServer { get; }
-    public TestNetFilter NetFilter { get; }
+    public NetFilter ClientNetFilter { get; }
+    public NetFilter ServerNetFilter { get; }
     private bool? _isIpV6Supported;
     private int _accessTokenIndex;
 
@@ -49,26 +53,40 @@ public class TestHelper : IDisposable
         VhLogger.Instance = VhLogger.CreateConsoleLogger(); // min level is controlled by VhLogger.MinLevel
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
-        WebServer = TestWebServer.Create();
-        NetFilter = new TestNetFilter();
-        NetFilter.Init([TestConstants.BlockedIp],
-        [
-            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
-            Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
-            Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
-            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address1, 0),
-                IPEndPoint.Parse("127.0.0.1:0")),
-            Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address2, 0),
-                IPEndPoint.Parse("127.0.0.2:0")),
-            Tuple.Create(IpProtocol.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
-                IPEndPoint.Parse("[::1]:0"))
-        ]);
+        WebServer = TestWebServer.Create(new TestIps());
+        ClientNetFilter = new NetFilter {
+            IpFilter = new StaticIpFilter(null) {
+                BlockedRanges = new[] { WebServer.MockEps.HttpV4EndPointBlockedClient.Address }.ToOrderedIpRanges()
+            },
+            IpMapper = new TestIpMapper(TestIps)
+        };
+        ServerNetFilter = new NetFilter {
+            IpFilter = new StaticIpFilter(null) {
+                BlockedRanges = new[] { WebServer.MockEps.HttpV4EndPointBlockedServer.Address }.ToOrderedIpRanges()
+            },
+            IpMapper = new TestIpMapper(TestIps)
+        };
+
+        //NetFilter.Init([TestConstants.BlockedIp],
+        //[
+        //Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
+        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint1, WebServer.QuicEndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint2, WebServer.QuicEndPoint2),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
+        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
+        //    Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address1, 0),
+        //        IPEndPoint.Parse("127.0.0.1:0")),
+        //    Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address2, 0),
+        //        IPEndPoint.Parse("127.0.0.2:0")),
+        //    Tuple.Create(IpProtocol.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
+        //        IPEndPoint.Parse("[::1]:0"))
+        //]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobOptions.DefaultInterval = TimeSpan.FromMilliseconds(1000);
         JobRunner.SlowInstance.Interval = TimeSpan.FromMilliseconds(200);
@@ -81,25 +99,41 @@ public class TestHelper : IDisposable
         return _isIpV6Supported.Value;
     }
 
-    private static Task<PingReply> SendPing(Ping? ping = null, IPAddress? ipAddress = null,
-        TimeSpan? timeout = null)
+    private static Task<PingReply> SendPing(Ping ping , IPAddress ipAddress,TimeSpan timeout)
     {
-        timeout ??= TestConstants.DefaultPingTimeout;
-
-        using var pingT = new Ping();
-        ping ??= pingT;
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
-        return ping.SendPingAsync(ipAddress ?? TestConstants.PingV4Address1, timeout.Value, buffer);
+        return ping.SendPingAsync(ipAddress, timeout, buffer);
     }
 
-    private async Task<bool> SendHttpGet(Uri uri, TimeSpan? timeout = null)
+    private async Task<bool> SendHttpGet(Uri uri, IPAddress? ipAddress, TimeSpan? timeout = null)
     {
-        using var httpClient = new HttpClient(new HttpClientHandler {
-            CheckCertificateRevocationList = false,
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        });
+        // SocketsHttpHandler is the modern, high-performance handler
+        using var handler = new SocketsHttpHandler();
 
+        // Equivalent to your existing certificate bypass
+        handler.SslOptions = new System.Net.Security.SslClientAuthenticationOptions {
+            RemoteCertificateValidationCallback = (_, _, _, _) => true,
+            CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+        };
+
+        // This intercepts the DNS resolution
+        if (ipAddress != null) {
+            handler.ConnectCallback = async (_, cancellationToken) => {
+                var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                try {
+                    // Force connection to the specific IP, but use the port from the URI
+                    await socket.ConnectAsync(new IPEndPoint(ipAddress, uri.Port), cancellationToken);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch {
+                    socket.Dispose();
+                    throw;
+                }
+            };
+        }
+
+        using var httpClient = new HttpClient(handler);
         return await SendHttpGet(httpClient, uri, timeout);
     }
 
@@ -110,8 +144,9 @@ public class TestHelper : IDisposable
         var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
 
         // fix TLS host; it may map by NetFilter.ProcessRequest
-        if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint))
-            requestMessage.Headers.Host = NetFilter.ProcessRequest(IpProtocol.Tcp, ipEndPoint)!.Address.ToString();
+        if (IPEndPoint.TryParse(requestMessage.RequestUri!.Authority, out var ipEndPoint) &&
+            ClientNetFilter.IpMapper?.ToHost(IpProtocol.Tcp, ipEndPoint.ToValue(), out var newEndPoint) == true)
+            requestMessage.Headers.Host = newEndPoint.Address.ToString();
 
         var response = await httpClient.SendAsync(requestMessage, cancellationTokenSource.Token);
         var res = await response.Content.ReadAsStringAsync(cancellationTokenSource.Token);
@@ -120,7 +155,13 @@ public class TestHelper : IDisposable
 
     public async Task Test_Ping(Ping? ping = null, IPAddress? ipAddress = null, TimeSpan? timeout = null)
     {
-        var pingReply = await SendPing(ping, ipAddress, timeout);
+        using var pingTmp = new Ping();
+
+        ipAddress ??= WebServer.MockEps.PingV4Address1;
+        timeout ??= TestConstants.DefaultHttpTimeout;
+        ping ??= pingTmp;
+
+        var pingReply = await SendPing(ping, ipAddress, timeout.Value);
         if (pingReply.Status != IPStatus.Success)
             throw new PingException($"Ping failed. Status: {pingReply.Status}");
     }
@@ -129,33 +170,31 @@ public class TestHelper : IDisposable
         CancellationToken cancellationToken = default)
     {
         timeout ??= TimeSpan.FromSeconds(3);
-        var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? TestConstants.NsEndPoint1,
+        var hostEntry = await DnsResolver.GetHostEntry("www.google.com", nsEndPoint ?? WebServer.MockEps.UdpV4EndPoint1,
             timeout.Value, cancellationToken);
         Assert.IsNotNull(hostEntry);
         Assert.IsNotEmpty(hostEntry.AddressList);
     }
 
-    public Task Test_Udp(TimeSpan? timeout = null)
+    public async Task Test_UdpEcho(IPEndPoint? udpEndPoint = null, TimeSpan? timeout = null)
     {
-        return Test_Udp(TestConstants.UdpV4EndPoint1, timeout);
-    }
+        udpEndPoint ??= WebServer.MockEps.UdpV4EndPoint1;
 
-    public async Task Test_Udp(IPEndPoint udpEndPoint, TimeSpan? timeout = null)
-    {
         if (udpEndPoint.IsV4()) {
             using var udpClientIpV4 = new UdpClient(AddressFamily.InterNetwork);
-            await Test_Udp(udpClientIpV4, udpEndPoint, timeout);
+            await Test_UdpEcho(udpClientIpV4, udpEndPoint, timeout);
         }
 
         else if (udpEndPoint.IsV6()) {
             using var udpClientIpV6 = new UdpClient(AddressFamily.InterNetworkV6);
-            await Test_Udp(udpClientIpV6, udpEndPoint, timeout);
+            await Test_UdpEcho(udpClientIpV6, udpEndPoint, timeout);
         }
     }
 
-    public async Task Test_Udp(UdpClient udpClient, IPEndPoint udpEndPoint, TimeSpan? timeout = null)
+    public async Task Test_UdpEcho(UdpClient udpClient, IPEndPoint? udpEndPoint = null, TimeSpan? timeout = null)
     {
         timeout ??= TestConstants.DefaultUdpTimeout;
+        udpEndPoint ??= WebServer.MockEps.UdpV4EndPoint1;
 
         var buffer = new byte[1024];
         new Random().NextBytes(buffer);
@@ -169,7 +208,7 @@ public class TestHelper : IDisposable
         CollectionAssert.AreEquivalent(buffer, res.Buffer);
     }
 
-    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null, 
+    public async Task Test_UdpByDNS(IPEndPoint udpEndPoint, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         timeout ??= TestConstants.DefaultUdpTimeout;
@@ -178,49 +217,44 @@ public class TestHelper : IDisposable
         Assert.IsNotEmpty(result.AddressList);
     }
 
-
-    public async Task<bool> Test_Https(Uri? uri = null,
-        TimeSpan? timeout = null, bool throwError = true)
+    public async Task<bool> Test_Quic(string domain, IPEndPoint ipEndPoint, bool throwError = true)
     {
-        uri ??= TestConstants.HttpsUri1;
+        var quicTesterClient = new QuicTesterClient(ipEndPoint, domain, TestConstants.DefaultQuicTimeout);
+        var data = new byte[1024 * 1024 * 10]; // 1 MB
+        Random.Shared.NextBytes(data);
+        try {
+            var response = await quicTesterClient.SendAndReceive(data, CancellationToken.None);
+            if (!throwError)
+                return data.SequenceEqual(response);
 
-        if (throwError) {
-            VhLogger.Instance.LogInformation(GeneralEventId.Test, "Fetching a test uri. Url: {uri}", uri);
-            Assert.IsTrue(await SendHttpGet(uri, timeout), $"Could not fetch the test uri: {uri}");
+            CollectionAssert.AreEquivalent(data, response);
             return true;
         }
-
-        try {
-            return await SendHttpGet(uri, timeout);
-        }
-        catch {
+        catch when (!throwError) {
             return false;
         }
     }
 
-    public IPAddress[] TestIpAddresses {
-        get {
-            var addresses = new List<IPAddress> {
-                TestConstants.NsEndPoint1.Address,
-                TestConstants.NsEndPoint2.Address,
-                TestConstants.PingV4Address1,
-                TestConstants.PingV4Address2,
-                TestConstants.PingV6Address1,
-                TestConstants.TcpEndPoint1.Address,
-                TestConstants.TcpEndPoint2.Address,
-                TestConstants.HttpsEndPoint1.Address,
-                TestConstants.HttpsEndPoint1.Address,
-                TestConstants.UdpV4EndPoint1.Address,
-                TestConstants.UdpV4EndPoint2.Address,
-                ClientOptions.Default.TcpProxyCatcherAddressIpV4,
-                TestConstants.InvalidIp,
-                TestConstants.BlockedIp
-            };
-            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri1.Host));
-            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsUri2.Host));
-            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsExternalUri1.Host));
-            addresses.AddRange(Dns.GetHostAddresses(TestConstants.HttpsExternalUri2.Host));
-            return addresses.ToArray();
+
+    public async Task<bool> Test_Https(Uri? uri = null, TimeSpan? timeout = null, bool throwError = true)
+    {
+        uri ??= WebServer.MockEps.HttpsUrl1;
+
+        // map test domain to ips
+        IPAddress? ipAddress = null;
+        if (uri.Equals(WebServer.MockEps.HttpsUrl1))
+            ipAddress = TestIps.MapToRemote( IPAddress.Parse(WebServer.LocalEps.HttpsUrl1.Host));
+
+        if (uri.Equals(WebServer.MockEps.HttpsUrl2))
+            ipAddress = TestIps.MapToRemote(IPAddress.Parse(WebServer.LocalEps.HttpsUrl2.Host));
+
+        try {
+            VhLogger.Instance.LogInformation(GeneralEventId.Test, "Fetching a test uri. Url: {uri}", uri);
+            Assert.IsTrue(await SendHttpGet(uri, ipAddress, timeout), $"Could not fetch the test uri: {uri}");
+            return true;
+        }
+        catch when (!throwError) {
+            return false;
         }
     }
 
@@ -365,7 +399,7 @@ public class TestHelper : IDisposable
             ConfigureInterval = configureInterval ?? new ServerOptions().ConfigureInterval,
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
-            NetFilter = NetFilter,
+            NetFilter = ServerNetFilter,
             NetConfigurationProvider = netConfigurationProvider,
             SwapMemoryProvider = swapMemoryProvider,
             VpnAdapter = vpnAdapter,
@@ -451,7 +485,7 @@ public class TestHelper : IDisposable
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
             MaxPacketChannelCount = 1,
-            VpnAdapterIncludeIpRanges = TestIpAddresses.Select(IpRange.FromIpAddress).ToArray(),
+            IncludeIpRangesByDevice = TestIps.AllRemoteTestIps.ToIpRanges().ToArray(),
             IncludeLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
             ChannelProtocol = channelProtocol,
@@ -476,9 +510,11 @@ public class TestHelper : IDisposable
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
-            new TestSocketFactory(),
+            socketFactory: new TestSocketFactory(),
+            netFilter: ClientNetFilter,
             storageFolder: Path.Combine(WorkingPath, "ClientCore"),
-            new TestTracker(), clientOptions);
+            new TestTracker(), 
+            clientOptions);
 
         // test starting the client
         if (autoConnect)

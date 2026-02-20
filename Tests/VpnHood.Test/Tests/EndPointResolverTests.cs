@@ -31,7 +31,7 @@ public class EndPointResolverTests : TestBase
         var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.DnsOnly,
-            TestCancellationToken);
+            TestCt);
 
         Assert.IsFalse(results.All(ep => tokenEndPoints.Contains(ep)),
             "DnsOnly strategy should not include token-provided endpoints.");
@@ -43,7 +43,7 @@ public class EndPointResolverTests : TestBase
         var serverToken = CreateServerToken(true);
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.IpOnly,
-            TestCancellationToken);
+            TestCt);
 
         CollectionAssert.AreEqual(tokenEndPoints, results);
     }
@@ -55,7 +55,7 @@ public class EndPointResolverTests : TestBase
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.DnsFirst,
-            TestCancellationToken);
+            TestCt);
 
         var index = results.Length - tokenEndPoints.Length;
         Assert.AreEqual(tokenEndPoints[0], results[index + 0]);
@@ -70,7 +70,7 @@ public class EndPointResolverTests : TestBase
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.IpFirst,
-            TestCancellationToken);
+            TestCt);
 
         Assert.AreEqual(tokenEndPoints[0], results[0]);
         Assert.AreEqual(tokenEndPoints[1], results[1]);
@@ -84,7 +84,7 @@ public class EndPointResolverTests : TestBase
         var tokenEndPoints = serverToken.HostEndPoints ?? [];
 
         var results = await EndPointResolver.ResolveHostEndPoints(serverToken, EndPointStrategy.Auto,
-            TestCancellationToken);
+            TestCt);
 
         Assert.AreEqual(tokenEndPoints[0], results[0]);
         Assert.AreEqual(tokenEndPoints[1], results[1]);

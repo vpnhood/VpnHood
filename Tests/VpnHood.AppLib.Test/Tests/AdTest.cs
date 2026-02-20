@@ -9,10 +9,7 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Test;
-using VpnHood.Test.Device;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -177,12 +174,12 @@ public class AdTest : TestAppBase
 
         // show ad
         if (acceptAd) {
-            await app.AdManager.ExtendByRewardedAd(TestCancellationToken);
+            await app.AdManager.ExtendByRewardedAd(TestCt);
             Assert.IsNull(app.State.SessionStatus?.SessionExpirationTime);
         }
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
-                app.AdManager.ExtendByRewardedAd(TestCancellationToken));
+                app.AdManager.ExtendByRewardedAd(TestCt));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
             await Task.Delay(500);
             await app.WaitForState(AppConnectionState.Connected);
@@ -251,29 +248,18 @@ public class AdTest : TestAppBase
         // connect
         _ = app.Connect(clientProfile.ClientProfileId); // don't await as it will wait for ad to load
         await app.WaitForState(AppConnectionState.WaitingForAd);
-        await VhTestUtil.AssertEqualsWait(true, () => isAdLoadingStatusMet);
+        await AssertEqualsWait(true, () => isAdLoadingStatusMet);
     }
 
     [TestMethod]
     public async Task SplitAll_must_on_while_playing_ad_ex()
     {
-        var device = TestHelper.CreateDevice(new TestVpnAdapterOptions {
-            SimulateDns = false
-        });
+        using var accessManager = TestAppHelper.CreateAccessManager();
+        await using var server = await TestAppHelper.CreateServer(accessManager: accessManager);
 
-        // create manager and server
-        using var accessManager = TestHelper.CreateAccessManager();
-        await using var server = await TestHelper.CreateServer(accessManager, socketFactory: device.SocketFactory);
-
-        // create access token after server
+        // create the server
         var accessToken = accessManager.AccessTokenService.Create(adRequirement: AdRequirement.Flexible);
         var token = accessManager.GetToken(accessToken);
-
-        // add url2 and endpoint 2 to include list
-        var httpsExternalUriIps = await Dns.GetHostAddressesAsync(TestConstants.HttpsExternalUri1.Host);
-        var customIps = httpsExternalUriIps.Select(x => new IpRange(x)).ToList();
-        customIps.Add(new IpRange(TestConstants.UdpV4EndPoint1.Address));
-        customIps.Add(new IpRange(TestConstants.NsEndPoint1.Address));
 
         // add provider
         var showAdCompletionSource = new TaskCompletionSource<ShowAdResult>();
@@ -284,38 +270,36 @@ public class AdTest : TestAppBase
                 throw new LoadAdException("Test load failed.");
             return Task.CompletedTask;
         };
-
         var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
 
-        // configure client app for ad
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdOptions.ShowAdPostDelay = TimeSpan.FromSeconds(1);
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdProviderItems = [adProviderItem];
 
-        // create app
-        await using var app = TestAppHelper.CreateClientApp(device: device, appOptions: appOptions);
+        // create the app
+        var device = TestAppHelper.CreateDevice(); 
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+
         // we add to exclude but all ip should be split by ad
-        app.SettingsService.SplitByIpSettings.AppIncludes = customIps.ToText();
-        _ = app.Connect(clientProfile.ClientProfileId);
+        _ = app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.WaitingForAd);
-        await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);
+        await AssertEqualsWait(2, () => adProvider.LoadAdCount);
 
         // all included ips should be split now
-        await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, null, TestConstants.HttpsExternalUri1);
-        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1,
-            null); // all dns should be included
+        await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, null, MockEps.HttpsUrl1);
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, null);
 
         // finish showing ad
         showAdCompletionSource.SetResult(ShowAdResult.Closed);
         await app.WaitForState(AppConnectionState.Connected);
-        await Task.Delay(appOptions.AdOptions.ShowAdPostDelay); // make sure ad post delay is finished
-        await Task.Delay(200); // make sure ad post delay is finished
+        await Task.Delay(appOptions.AdOptions.ShowAdPostDelay, TestCt); // make sure ad post delay is finished
+        await Task.Delay(200, TestCt); // make sure ad post delay is finished
 
-        // all included ips should be split now
-        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, TestConstants.NsEndPoint1,
-            TestConstants.HttpsExternalUri1);
+        // all included ips should not be split now
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, MockEps.HttpsUrl1);
+
     }
 
     [TestMethod]
@@ -334,7 +318,7 @@ public class AdTest : TestAppBase
             // simulate adblocker
             using var tcpClient = new TcpClient();
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-            await tcpClient.ConnectAsync(new IPEndPoint(TestConstants.HttpsEndPoint1.Address, 853), timeout.Token);
+            await tcpClient.ConnectAsync(new IPEndPoint(MockEps.HttpsV4EndPoint1.Address, 853), timeout.Token);
             throw new LoadAdException("Test load failed.");
         };
 

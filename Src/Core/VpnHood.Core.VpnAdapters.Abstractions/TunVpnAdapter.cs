@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -36,7 +36,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected abstract string? AppPackageId { get; }
     protected abstract Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken);
     protected abstract Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken);
-    protected abstract Task SetDnsServers(IPAddress[] dnsServers, CancellationToken cancellationToken);
+    protected abstract Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken);
     protected abstract Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken);
@@ -58,9 +58,6 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     protected abstract bool WritePacket(IpPacket ipPacket);
 
-    protected virtual void OnPrimaryAdapterIpChanged()
-    {
-    }
 
     public event EventHandler? Disposed;
     public string AdapterName { get; }
@@ -72,6 +69,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public IPAddress? GatewayIpV6 { get; private set; }
     public bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool IsStarted { get; private set; }
+    public event EventHandler? PrimaryAdapterIpChanged;
 
     // ReSharper disable once InconsistentlySynchronizedField
     private bool IsReady => IsStarted && !_isStopping && !IsDisposed && !IsDisposing;
@@ -100,8 +98,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         if (!Equals(primaryAdapterIpV4, PrimaryAdapterIpV4) || !Equals(primaryAdapterIpV6, PrimaryAdapterIpV6)) {
             PrimaryAdapterIpV4 = primaryAdapterIpV4;
             PrimaryAdapterIpV6 = primaryAdapterIpV6;
-            OnPrimaryAdapterIpChanged();
+            PrimaryAdapterIpChanged?.Invoke(this, e);
         }
+
     }
 
     public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
@@ -405,6 +404,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return true;
     }
 
+    //todo: protect socker
     private static IPAddress? DiscoverPrimaryAdapterIp(AddressFamily addressFamily)
     {
         // not matter is it reachable or not, just try to get the primary adapter IP which can route to the internet

@@ -9,7 +9,7 @@ public class DnsStatus
 {
     public required DnsSelection DnsSelection { get; init; }
     public required bool IsIncludedInVpn { get; init; }
-    public required bool IsUserSupressed { get; init; }
+    public required bool IsUserSuppressed { get; init; }
     
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public required IPAddress[] DnsServers { get; init; }

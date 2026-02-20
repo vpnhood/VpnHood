@@ -1,7 +1,6 @@
 ﻿using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.Core.Client.Abstractions.Exceptions;
-using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -14,7 +13,7 @@ public class DiagnoserTest : TestAppBase
         // create server
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
-        token.ServerToken.HostEndPoints = [TestConstants.InvalidEp];
+        token.ServerToken.HostEndPoints = [MockEps.HttpV4EndPointInvalid];
 
         // create client
         var appOptions = TestAppHelper.CreateAppOptions();
@@ -25,9 +24,9 @@ public class DiagnoserTest : TestAppBase
 
         // ************
         // NoInternetException
-        clientApp.Diagnoser.TestHttpUris = [TestConstants.InvalidUri];
-        clientApp.Diagnoser.TestNsIpEndPoints = [TestConstants.InvalidEp];
-        clientApp.Diagnoser.TestPingIpAddresses = [TestConstants.InvalidIp];
+        clientApp.Diagnoser.TestHttpUris = [MockEps.HttpUrlInvalid];
+        clientApp.Diagnoser.TestNsIpEndPoints = [MockEps.HttpV4EndPointInvalid];
+        clientApp.Diagnoser.TestPingIpAddresses = [MockEps.IpInvalid];
         await Assert.ThrowsExactlyAsync<NoInternetException>(() =>
             clientApp.Connect(clientProfile.ClientProfileId));
 
@@ -41,7 +40,7 @@ public class DiagnoserTest : TestAppBase
 
         // change access key endpoint
         var token = dom.ClientProfile.Token;
-        token.ServerToken.HostEndPoints = [TestConstants.InvalidEp];
+        token.ServerToken.HostEndPoints = [MockEps.HttpV4EndPointInvalid];
         var clientProfile = dom.App.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // ************

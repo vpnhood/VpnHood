@@ -22,7 +22,7 @@ public class DnsConfigurationTest : TestBase
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
 
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsStatus.DnsServers);
-        Assert.IsFalse(client.SessionInfo?.DnsStatus.IsUserSupressed);
+        Assert.IsFalse(client.SessionInfo?.DnsStatus.IsUserSuppressed);
     }
 
     [TestMethod]
@@ -41,7 +41,7 @@ public class DnsConfigurationTest : TestBase
             vpnAdapter: new TestNullVpnAdapter());
 
         CollectionAssert.AreEqual(clientOptions.DnsServers, client.SessionInfo?.DnsStatus.DnsServers);
-        Assert.IsFalse(client.SessionInfo?.DnsStatus.IsUserSupressed);
+        Assert.IsFalse(client.SessionInfo?.DnsStatus.IsUserSuppressed);
     }
 
     [TestMethod]
@@ -66,7 +66,7 @@ public class DnsConfigurationTest : TestBase
             vpnAdapter: new TestNullVpnAdapter());
 
         CollectionAssert.AreEqual(fileAccessManagerOptions.DnsServers, client.SessionInfo?.DnsStatus.DnsServers);
-        Assert.IsTrue(client.SessionInfo?.DnsStatus.IsUserSupressed);
+        Assert.IsTrue(client.SessionInfo?.DnsStatus.IsUserSuppressed);
     }
 
     [TestMethod]

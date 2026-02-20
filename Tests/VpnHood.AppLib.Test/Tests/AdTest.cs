@@ -10,7 +10,6 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -319,7 +318,7 @@ public class AdTest : TestAppBase
             // simulate adblocker
             using var tcpClient = new TcpClient();
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-            await tcpClient.ConnectAsync(new IPEndPoint(TestConstants.HttpsEndPoint1.Address, 853), timeout.Token);
+            await tcpClient.ConnectAsync(new IPEndPoint(MockEps.HttpsV4EndPoint1.Address, 853), timeout.Token);
             throw new LoadAdException("Test load failed.");
         };
 

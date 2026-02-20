@@ -547,10 +547,9 @@ public class ClientServerTest : TestBase
         tcpClient2.GetStream().WriteByte((byte)'G');
         tcpClient3.GetStream().WriteByte((byte)'G');
         tcpClient4.GetStream().WriteByte((byte)'G');
-        await Task.Delay(500, TestCt); // wait till channel added
 
         var session = server.SessionManager.GetSessionById(client.SessionId);
-        Assert.AreEqual(fileAccessManagerOptions.SessionOptions.MaxTcpChannelCount, session?.TcpChannelCount);
+        await AssertEqualsWait(fileAccessManagerOptions.SessionOptions.MaxTcpChannelCount, () => session?.TcpChannelCount);
     }
 
     [TestMethod]

@@ -1,6 +1,4 @@
 ﻿using VpnHood.AppLib.Test.Dom;
-using VpnHood.Core.Toolkit.Net;
-using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
 

@@ -43,7 +43,7 @@ internal static class ClientHelper
                 return new DnsStatus {
                     DnsServers = results.ToArray(),
                     IsIncludedInVpn = false,
-                    IsUserSupressed = isUserSuppressed, // user override is false because they are not explicitly excluded by filters, but just not included in server routing
+                    IsUserSuppressed = isUserSuppressed, // user override is false because they are not explicitly excluded by filters, but just not included in server routing
                     DnsSelection = DnsSelection.UserDns
                 };
             }
@@ -58,7 +58,7 @@ internal static class ClientHelper
                 return new DnsStatus {
                     DnsServers = results.ToArray(),
                     IsIncludedInVpn = true,
-                    IsUserSupressed = isUserSuppressed,
+                    IsUserSuppressed = isUserSuppressed,
                     DnsSelection = DnsSelection.UserDns
                 };
             }
@@ -80,7 +80,7 @@ internal static class ClientHelper
                 return new DnsStatus {
                     DnsServers = results.ToArray(),
                     IsIncludedInVpn = true,
-                    IsUserSupressed = isUserSuppressed,
+                    IsUserSuppressed = isUserSuppressed,
                     DnsSelection = DnsSelection.ServerDns
                 };
             }
@@ -98,7 +98,7 @@ internal static class ClientHelper
             return new DnsStatus {
                 DnsServers = results.ToArray(),
                 IsIncludedInVpn = true,
-                IsUserSupressed = isUserSuppressed,
+                IsUserSuppressed = isUserSuppressed,
                 DnsSelection = DnsSelection.GoogleDns
             };
         }
@@ -111,7 +111,7 @@ internal static class ClientHelper
         return new DnsStatus {
             DnsServers = results.ToArray(),
             IsIncludedInVpn = false,
-            IsUserSupressed = isUserSuppressed,
+            IsUserSuppressed = isUserSuppressed,
             DnsSelection = DnsSelection.GoogleDns
         };
     }

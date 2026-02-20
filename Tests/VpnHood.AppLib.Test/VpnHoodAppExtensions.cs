@@ -2,9 +2,7 @@
 using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.IpLocations;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test;
 

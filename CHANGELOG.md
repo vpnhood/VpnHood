@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Crash on some android devices at start up
+
 # v7.6.787
 * Fix: Android: UDP issue on Android
 * Fix: Android: Added "Android Auto" to the supported apps list

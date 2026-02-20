@@ -18,6 +18,8 @@ public class TestWebServerLocalEps
     public IPEndPoint[] UdpV6EndPoints => UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
     public Uri[] HttpUrls { get; }
     public Uri[] HttpsUrls { get; }
+    public Uri HttpsUrl1 => HttpsUrls[0];
+    public Uri HttpsUrl2 => HttpsUrls[1];
     public Uri FileHttpUrl1 { get; }
     public Uri FileHttpUrl2 { get; }
 

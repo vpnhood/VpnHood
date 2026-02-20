@@ -236,21 +236,24 @@ public class TestHelper : IDisposable
     }
 
 
-    public async Task<bool> Test_Https(Uri? uri = null, IPAddress? ipAddress = null,  
-        TimeSpan? timeout = null, bool throwError = true)
+    public async Task<bool> Test_Https(Uri? uri = null, TimeSpan? timeout = null, bool throwError = true)
     {
-        uri ??= TestIps.MapToRemote(WebServer.LocalEps.HttpsUrls[0]);
+        uri ??= WebServer.MockEps.HttpsUrl1;
 
-        if (throwError) {
+        // map test domain to ips
+        IPAddress? ipAddress = null;
+        if (uri.Equals(WebServer.MockEps.HttpsUrl1))
+            ipAddress = TestIps.MapToRemote( IPAddress.Parse(WebServer.LocalEps.HttpsUrl1.Host));
+
+        if (uri.Equals(WebServer.MockEps.HttpsUrl2))
+            ipAddress = TestIps.MapToRemote(IPAddress.Parse(WebServer.LocalEps.HttpsUrl2.Host));
+
+        try {
             VhLogger.Instance.LogInformation(GeneralEventId.Test, "Fetching a test uri. Url: {uri}", uri);
             Assert.IsTrue(await SendHttpGet(uri, ipAddress, timeout), $"Could not fetch the test uri: {uri}");
             return true;
         }
-
-        try {
-            return await SendHttpGet(uri, ipAddress, timeout);
-        }
-        catch {
+        catch when (!throwError) {
             return false;
         }
     }

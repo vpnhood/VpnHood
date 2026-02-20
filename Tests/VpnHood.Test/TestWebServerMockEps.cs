@@ -30,10 +30,9 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public IPEndPoint UdpV6EndPoint1 => MapToRemote(localEps.UdpV6EndPoints[0]);
     public IPEndPoint UdpV6EndPoint2 => MapToRemote(localEps.UdpV6EndPoints[1]);
     public IPEndPoint UdpNsEchoEndPoint1 => MapToRemote(localEps.UdpNsEchoEndPoint1);
-    public IPEndPoint HttpsV4RefusedEndPoint1 =>
-        MapToRemote(new IPEndPoint(localEps.HttpsV4EndPoints[0].Address, 9999));
-    public Uri HttpsUrl1 => MapToRemote(localEps.HttpsUrls[0]);
-    public Uri HttpsUrl2 => MapToRemote(localEps.HttpsUrls[1]);
+    public IPEndPoint HttpsV4RefusedEndPoint1 => MapToRemote(new IPEndPoint(localEps.HttpsV4EndPoints[0].Address, 9999));
+    public Uri HttpsUrl1 => new UriBuilder(localEps.HttpsUrl1) { Host = "test-domain1" }.Uri;
+    public Uri HttpsUrl2 => new UriBuilder(localEps.HttpsUrl2) { Host = "foo.test-domain2" }.Uri;
     public Uri HttpUrl1 => MapToRemote(localEps.HttpUrls[0]);
     public Uri HttpUrl2 => MapToRemote(localEps.HttpUrls[1]);
     public Uri FileHttpUrl1 => MapToRemote(localEps.FileHttpUrl1);

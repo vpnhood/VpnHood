@@ -106,11 +106,6 @@ public class TestHelper : IDisposable
         return ping.SendPingAsync(ipAddress, timeout, buffer);
     }
 
-    private Task<bool> SendHttpGet(Uri uri, TimeSpan? timeout = null)
-    {
-        return SendHttpGet(uri, null, timeout);
-    }
-
     private async Task<bool> SendHttpGet(Uri uri, IPAddress? ipAddress, TimeSpan? timeout = null)
     {
         // SocketsHttpHandler is the modern, high-performance handler
@@ -241,19 +236,19 @@ public class TestHelper : IDisposable
     }
 
 
-    public async Task<bool> Test_Https(Uri? uri = null,
+    public async Task<bool> Test_Https(Uri? uri = null, IPAddress? ipAddress = null,  
         TimeSpan? timeout = null, bool throwError = true)
     {
         uri ??= TestIps.MapToRemote(WebServer.LocalEps.HttpsUrls[0]);
 
         if (throwError) {
             VhLogger.Instance.LogInformation(GeneralEventId.Test, "Fetching a test uri. Url: {uri}", uri);
-            Assert.IsTrue(await SendHttpGet(uri, timeout), $"Could not fetch the test uri: {uri}");
+            Assert.IsTrue(await SendHttpGet(uri, ipAddress, timeout), $"Could not fetch the test uri: {uri}");
             return true;
         }
 
         try {
-            return await SendHttpGet(uri, timeout);
+            return await SendHttpGet(uri, ipAddress, timeout);
         }
         catch {
             return false;

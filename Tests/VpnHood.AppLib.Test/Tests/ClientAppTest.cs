@@ -155,10 +155,32 @@ public class ClientAppTest : TestAppBase
         await app.Disconnect();
     }
 
+    public static async Task IpFilters_AssertIncludeNs(TestHelper testHelper, VpnHoodApp app, IPEndPoint ipEndPoint)
+    {
+        var oldStat = app.GetSessionStatus();
+        await testHelper.Test_UdpByDNS(ipEndPoint);
+        var newStat = app.GetSessionStatus();
+        Assert.AreNotEqual(oldStat.SessionTraffic, newStat.SessionTraffic);
+        Assert.AreEqual(oldStat.SessionSplitTraffic, newStat.SessionSplitTraffic);
+    }
+
+    public static async Task IpFilters_AssertExcludeNs(TestHelper testHelper, VpnHoodApp app, IPEndPoint ipEndPoint)
+    {
+        var oldStat = app.GetSessionStatus();
+        await testHelper.Test_UdpEcho(ipEndPoint);
+        var newStat = app.GetSessionStatus();
+
+        Assert.AreEqual(oldStat.SessionTraffic, newStat.SessionTraffic,
+            $"Udp to {ipEndPoint} should go to tunnel.");
+
+        Assert.AreNotEqual(oldStat.SessionSplitTraffic, newStat.SessionSplitTraffic,
+            $"Udp to {ipEndPoint} should not be split.");
+    }
+
     public static async Task IpFilters_AssertInclude(TestHelper testHelper, VpnHoodApp app,
         IPEndPoint? udpEchoEndPint, Uri? url, int receiveDelta = 1000)
     {
-        // NameServer
+        // Echo
         if (udpEchoEndPint != null) {
             var oldStat = app.GetSessionStatus();
             await testHelper.Test_UdpEcho(udpEchoEndPint);

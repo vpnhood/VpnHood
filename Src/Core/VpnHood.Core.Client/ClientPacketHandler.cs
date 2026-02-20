@@ -168,8 +168,15 @@ internal class ClientPacketHandler(
 
     private bool ShouldPassthroughForAd(IpPacket ipPacket)
     {
-        if (!PassthroughForAd) return false;
-        return ipPacket.GetDestinationEndPoint().Port is 53 or 853 ||
-               DnsServers.Contains(ipPacket.DestinationAddress);
+        if (!PassthroughForAd) 
+            return false;
+
+        // Passthrough for ad is enabled, DNS packets should go through the tunnel and ad traffic should not go through the tunnel,
+        // but dns packets should not be treated as ad traffic, to make sure we can resolve the domain and by pass regional ad blockers
+        var isDnsPacket = 
+            ipPacket.Protocol is IpProtocol.Udp && 
+            (ipPacket.GetDestinationEndPoint().Port is 53 || DnsServers.Contains(ipPacket.DestinationAddress));
+
+        return !isDnsPacket;
     }
 }

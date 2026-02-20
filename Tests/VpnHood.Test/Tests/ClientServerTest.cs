@@ -336,7 +336,7 @@ public class ClientServerTest : TestBase
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
 
-        var externalUrl = new Uri("https://ip4.me/");
+        var externalUrl = TestHelper.TestIps.HttpsExternalUri1;
         var httpsExternalUriIps = await Dns.GetHostAddressesAsync(externalUrl.Host);
 
             // create server

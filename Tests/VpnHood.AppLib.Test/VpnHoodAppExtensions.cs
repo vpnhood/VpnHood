@@ -2,7 +2,9 @@
 using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.IpLocations;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test;
 
@@ -48,5 +50,15 @@ public static class VpnHoodAppExtensions
             // Reload client profile service to apply changes as region may be cached due to lazy load
             app.ClientProfileService.Reload();
         }
+
+        public async Task IncludeExternalEps(TestHelper testHelper)
+        {
+            var httpsExternalUriIps = await Dns.GetHostAddressesAsync(testHelper.TestIps.HttpsExternalUri1.Host);
+            var externalIpRanges = httpsExternalUriIps
+                .ToOrderedIpRanges().Append(new IpRange(testHelper.TestIps.UdpExternalNsEndPoint1.Address));
+
+            app.SettingsService.SplitByIpSettings.AppIncludes += "\n" + externalIpRanges.ToText();
+        }
+
     }
 }

@@ -50,15 +50,5 @@ public static class VpnHoodAppExtensions
             // Reload client profile service to apply changes as region may be cached due to lazy load
             app.ClientProfileService.Reload();
         }
-
-        public async Task IncludeExternalEps(TestHelper testHelper)
-        {
-            var httpsExternalUriIps = await Dns.GetHostAddressesAsync(testHelper.TestIps.HttpsExternalUri1.Host);
-            var externalIpRanges = httpsExternalUriIps
-                .ToOrderedIpRanges().Append(new IpRange(testHelper.TestIps.UdpExternalNsAddress1));
-
-            app.SettingsService.SplitByIpSettings.DeviceIncludes += "\n" + externalIpRanges.ToText();
-        }
-
     }
 }

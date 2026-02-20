@@ -12,6 +12,7 @@ public class TestWebServerLocalEps
     public IPEndPoint[] QuicEndPoints { get; }
     public IPEndPoint HttpV4EndPointBlockedClient { get; }
     public IPEndPoint HttpV4EndPointBlockedServer { get; }
+    public IPEndPoint UdpNsEchoEndPoint1 { get; }
     public IPEndPoint HttpV4EndPointRefused => new(HttpV4EndPoints[0].Address, 9999);
     public IPEndPoint[] UdpV4EndPoints => UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
     public IPEndPoint[] UdpV6EndPoints => UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
@@ -47,6 +48,8 @@ public class TestWebServerLocalEps
             new IPEndPoint(testIps.LocalTestIpV6, 20102),
             new IPEndPoint(testIps.LocalTestIpV6, 20103)
         ];
+
+        UdpNsEchoEndPoint1 = new IPEndPoint(testIps.LocalTestIps[3], 53);
 
         QuicEndPoints = [
             new IPEndPoint(testIps.LocalTestIps[0], 25001),

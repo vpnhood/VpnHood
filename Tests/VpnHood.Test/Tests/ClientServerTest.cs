@@ -11,6 +11,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
+using VpnHood.Test.Dom;
 using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
 using ClientState = VpnHood.Core.Client.Abstractions.ClientState;
@@ -336,12 +337,8 @@ public class ClientServerTest : TestBase
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
 
-        var externalUrl = TestHelper.TestIps.HttpsExternalUri1;
-        var httpsExternalUriIps = await Dns.GetHostAddressesAsync(externalUrl.Host);
-
-            // create server
-        await using var server = await TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
+        var httpsExternalUri = new Uri("https://ip4.me/"); //make sure always return same ips
+        var httpsExternalUriIps = await Dns.GetHostAddressesAsync(httpsExternalUri.Host);
 
         // connect to a host
         using TcpClient tcpClient = new();
@@ -349,11 +346,11 @@ public class ClientServerTest : TestBase
         await tcpClient.ConnectAsync(httpsExternalUriIps[0], 443, connectCts.Token);
         await using var stream = tcpClient.GetStream();
 
-        // create client and make sure it routes the external host through the vpn by adding the host ip to allowed list
-        var clientOptions = TestHelper.CreateClientOptions(token);
+        // make sure the client routes the external host through the vpn by adding the host ip to allowed list
+        var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.IncludeIpRangesByDevice = clientOptions.IncludeIpRangesByDevice
             .Union(httpsExternalUriIps.ToIpRanges()).ToArray();
-        await using var client = await TestHelper.CreateClient(clientOptions);
+        await using var dom = await ClientServerDom.Create(TestHelper, clientOptions: clientOptions);
 
         using var cts2 = new CancellationTokenSource(2000);
         var ex = await Assert.ThrowsAsync<Exception>(async () => {

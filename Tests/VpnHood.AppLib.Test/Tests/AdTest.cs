@@ -273,7 +273,6 @@ public class AdTest : TestAppBase
         };
         var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
 
-
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdOptions.ShowAdPostDelay = TimeSpan.FromSeconds(1);
         appOptions.AdOptions.PreloadAd = false;
@@ -282,7 +281,6 @@ public class AdTest : TestAppBase
         // create the app
         var device = TestAppHelper.CreateDevice(); 
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
-        await app.IncludeExternalEps(TestAppHelper); // add to server filter too
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // we add to exclude but all ip should be split by ad
@@ -292,7 +290,7 @@ public class AdTest : TestAppBase
 
         // all included ips should be split now
         await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, null, MockEps.HttpsUrl1);
-        await ClientAppTest.IpFilters_AssertIncludeNs(TestHelper, app, MockEps.UdpExternalNsEndPoint1);
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, null);
 
         // finish showing ad
         showAdCompletionSource.SetResult(ShowAdResult.Closed);
@@ -300,9 +298,9 @@ public class AdTest : TestAppBase
         await Task.Delay(appOptions.AdOptions.ShowAdPostDelay, TestCt); // make sure ad post delay is finished
         await Task.Delay(200, TestCt); // make sure ad post delay is finished
 
-        // all included ips should be split now
-        await ClientAppTest.IpFilters_AssertIncludeNs(TestHelper, app, TestConstants.NsEndPoint1);
-        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, null, TestAppHelper.TestIps.HttpsExternalUri1);
+        // all included ips should not be split now
+        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, MockEps.HttpsUrl1);
+
     }
 
     [TestMethod]

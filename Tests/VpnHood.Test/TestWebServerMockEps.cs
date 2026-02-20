@@ -29,7 +29,7 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public IPEndPoint UdpV4EndPoint2 => MapToRemote(localEps.UdpV4EndPoints[1]);
     public IPEndPoint UdpV6EndPoint1 => MapToRemote(localEps.UdpV6EndPoints[0]);
     public IPEndPoint UdpV6EndPoint2 => MapToRemote(localEps.UdpV6EndPoints[1]);
-    public IPEndPoint UdpExternalNsEndPoint1 => new (testIps.UdpExternalNsAddress1, 53);
+    public IPEndPoint UdpNsEchoEndPoint1 => MapToRemote(localEps.UdpNsEchoEndPoint1);
     public IPEndPoint HttpsV4RefusedEndPoint1 =>
         MapToRemote(new IPEndPoint(localEps.HttpsV4EndPoints[0].Address, 9999));
     public Uri HttpsUrl1 => MapToRemote(localEps.HttpsUrls[0]);

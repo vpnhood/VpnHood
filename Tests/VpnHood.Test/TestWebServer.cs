@@ -88,6 +88,7 @@ public class TestWebServer : IDisposable
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting QUIC...");
         StartQuicEchoServer();
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer started QUIC...");
+
         return Task.CompletedTask;
     }
 

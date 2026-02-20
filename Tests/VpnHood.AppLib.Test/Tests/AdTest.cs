@@ -249,7 +249,7 @@ public class AdTest : TestAppBase
         // connect
         _ = app.Connect(clientProfile.ClientProfileId); // don't await as it will wait for ad to load
         await app.WaitForState(AppConnectionState.WaitingForAd);
-        await VhTestUtil.AssertEqualsWait(true, () => isAdLoadingStatusMet);
+        await AssertEqualsWait(true, () => isAdLoadingStatusMet);
     }
 
     [TestMethod]
@@ -282,6 +282,7 @@ public class AdTest : TestAppBase
         // create the app
         var device = TestAppHelper.CreateDevice(); 
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
+        await app.IncludeExternalEps(TestAppHelper); // add to server filter too
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // we add to exclude but all ip should be split by ad
@@ -291,7 +292,7 @@ public class AdTest : TestAppBase
 
         // all included ips should be split now
         await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, null, MockEps.HttpsUrl1);
-        await ClientAppTest.IpFilters_AssertIncludeNs(TestHelper, app, TestHelper.TestIps.UdpExternalNsEndPoint1); //todo: create webserver mock ns
+        await ClientAppTest.IpFilters_AssertIncludeNs(TestHelper, app, MockEps.UdpExternalNsEndPoint1);
 
         // finish showing ad
         showAdCompletionSource.SetResult(ShowAdResult.Closed);

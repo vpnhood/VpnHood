@@ -55,9 +55,9 @@ public static class VpnHoodAppExtensions
         {
             var httpsExternalUriIps = await Dns.GetHostAddressesAsync(testHelper.TestIps.HttpsExternalUri1.Host);
             var externalIpRanges = httpsExternalUriIps
-                .ToOrderedIpRanges().Append(new IpRange(testHelper.TestIps.UdpExternalNsEndPoint1.Address));
+                .ToOrderedIpRanges().Append(new IpRange(testHelper.TestIps.UdpExternalNsAddress1));
 
-            app.SettingsService.SplitByIpSettings.AppIncludes += "\n" + externalIpRanges.ToText();
+            app.SettingsService.SplitByIpSettings.DeviceIncludes += "\n" + externalIpRanges.ToText();
         }
 
     }

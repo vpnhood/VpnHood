@@ -6,7 +6,7 @@ namespace VpnHood.Test.Providers;
 public class TestIps 
 {
     public Uri HttpsExternalUri1 => new("https://ip4.me/"); //make sure always return same ips
-    public IPEndPoint UdpExternalNsEndPoint1 => IPEndPoint.Parse("1.1.1.1:53");
+    public IPAddress UdpExternalNsAddress1 => IPAddress.Parse("1.1.1.1");
     public IPAddress RemoteTestIpV6 { get; } = IPAddress.Parse("2001:db8::1");
     public IPAddress LocalTestIpV6 => IPAddress.IPv6Loopback;
     public IReadOnlyList<IPAddress> RemoteTestIps { get; } // additional ipV4
@@ -17,6 +17,7 @@ public class TestIps
 
     public IReadOnlyList<IPAddress> AllRemoteTestIps {
         get => RemoteTestIps
+            .Append(UdpExternalNsAddress1)
             .Append(RemoteTestIpV6)
             .Append(RemoteInvalidTestIpV4)
             .Concat(RemoteTestIps)

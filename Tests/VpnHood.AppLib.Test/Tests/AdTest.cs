@@ -288,8 +288,8 @@ public class AdTest : TestAppBase
         await AssertEqualsWait(2, () => adProvider.LoadAdCount);
 
         // all included ips should be split now
-        await ClientAppTest.IpFilters_AssertExclude(TestHelper, app, null, MockEps.HttpsUrl1);
-        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, null);
+        await FilteringTest.IpFilters_AssertExclude(TestHelper, app, null, MockEps.HttpsUrl1);
+        await FilteringTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, null);
 
         // finish showing ad
         showAdCompletionSource.SetResult(ShowAdResult.Closed);
@@ -298,7 +298,7 @@ public class AdTest : TestAppBase
         await Task.Delay(200, TestCt); // make sure ad post delay is finished
 
         // all included ips should not be split now
-        await ClientAppTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, MockEps.HttpsUrl1);
+        await FilteringTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, MockEps.HttpsUrl1);
 
     }
 

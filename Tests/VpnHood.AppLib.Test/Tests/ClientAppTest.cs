@@ -1,15 +1,12 @@
 ﻿using System.Net;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
-using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Test;
 using WatsonWebserver.Core;
 using WatsonWebserver.Lite;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;

@@ -7,7 +7,7 @@ using Android.Systems;
 using Java.IO;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Toolkit.Net.Extensions;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;

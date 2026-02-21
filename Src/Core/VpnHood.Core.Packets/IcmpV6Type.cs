@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Toolkit.Net;
+﻿namespace VpnHood.Core.Packets;
 
 // This enumeration was originally derived from PacketDotNet.
 // ReSharper disable IdentifierTypo

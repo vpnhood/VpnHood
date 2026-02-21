@@ -1,6 +1,6 @@
 ﻿using System.Buffers.Binary;
 
-namespace VpnHood.Core.Toolkit.Net;
+namespace VpnHood.Core.Packets;
 
 public static class ChecksumUtilsUnsafe
 {

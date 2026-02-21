@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Toolkit.Net;
+﻿namespace VpnHood.Core.Packets;
 
 public enum IpEcnField : byte
 {

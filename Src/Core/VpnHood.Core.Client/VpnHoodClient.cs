@@ -15,13 +15,13 @@ using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Filtering.DomainFiltering.Observation;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Net.Extensions;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -750,7 +750,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             VhLogger.Instance.LogInformation(
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
                 SessionInfo.DnsStatus, VhLogger.Format(SessionIncludeIpRangesByDevice.ToIpNetworks()));
-            var z = SessionIncludeIpRangesByDevice.Contains(IPAddress.Parse("198.18.10.1"));
             
             // wait for ad before adapter
             if (helloResponse.AdRequirement != AdRequirement.None) {

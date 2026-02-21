@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Toolkit.Net.Extensions;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -207,7 +207,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             await SetDnsServers(dnsServers, cancellationToken).Vhc();
 
             // exclude dead networks
-            var includeNetworks = options.IncludeNetworks;
+            var includeNetworks = options.IncludeNetworks.ToArray();
             if (IsSocketProtectedByBind) {
                 includeNetworks = includeNetworks
                     .ToIpRanges()

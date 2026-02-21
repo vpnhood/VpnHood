@@ -538,7 +538,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual,
             AutoUpdateOptions = new ProxyAutoUpdateOptions {
-                Url = dom.TestAppHelper.WebServer.LocalEps.FileHttpUrl1,
+                Url = dom.TestAppHelper.WebServer.LocalEps.HttpUrl1,
                 Interval = TimeSpan.FromMinutes(1)
             }
         };
@@ -585,7 +585,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual,
             AutoUpdateOptions = new ProxyAutoUpdateOptions {
-                Url = dom.TestAppHelper.WebServer.LocalEps.FileHttpUrl1,
+                Url = dom.TestAppHelper.WebServer.LocalEps.HttpUrl1,
                 Interval = TimeSpan.FromMinutes(1)
             }
         };

@@ -5,7 +5,7 @@ using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Packets;
-using VpnHood.Core.Toolkit.Net.Extensions;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.Access.Messaging;

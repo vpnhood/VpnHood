@@ -3,8 +3,8 @@ using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering.SniExtractors;
 using VpnHood.Core.Filtering.DomainFiltering.SniExtractors.Tcp;
 using VpnHood.Core.Packets;
+using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Net.Extensions;
 
 namespace VpnHood.Core.Filtering.DomainFiltering.SniFilteringServices;
 

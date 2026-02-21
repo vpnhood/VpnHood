@@ -1,67 +1,57 @@
 using System.Net;
-using System.Net.Sockets;
 using VpnHood.Test.Providers;
 
 namespace VpnHood.Test;
 
-public class TestWebServerLocalEps
+public class TestWebServerLocalEps(TestIps testIps)
 {
-    public IPEndPoint[] HttpsV4EndPoints { get; }
-    public IPEndPoint[] HttpV4EndPoints { get; }
-    public IPEndPoint[] UdpEndPoints { get; }
-    public IPEndPoint[] QuicEndPoints { get; }
-    public IPEndPoint HttpV4EndPointBlockedClient { get; }
-    public IPEndPoint HttpV4EndPointBlockedServer { get; }
-    public IPEndPoint UdpNsEchoEndPoint1 { get; }
-    public IPEndPoint HttpV4EndPointRefused => new(HttpV4EndPoints[0].Address, 9999);
-    public IPEndPoint[] UdpV4EndPoints => UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
-    public IPEndPoint[] UdpV6EndPoints => UdpEndPoints.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
-    public Uri[] HttpUrls { get; }
-    public Uri[] HttpsUrls { get; }
-    public Uri HttpsUrl1 => HttpsUrls[0];
-    public Uri HttpsUrl2 => HttpsUrls[1];
-    public Uri FileHttpUrl1 { get; }
-    public Uri FileHttpUrl2 { get; }
+    public IPEndPoint HttpsV4EndPoint1 => new(testIps.LocalTestIps[0], 15000);
+    public IPEndPoint HttpsV4EndPoint2 => new(testIps.LocalTestIps[1], 15001);
 
-    public TestWebServerLocalEps(TestIps testIps)
-    {
-        HttpV4EndPointBlockedClient = new IPEndPoint(testIps.LocalBlockedClientIpAddress, 15009);
-        HttpV4EndPointBlockedServer = new IPEndPoint(testIps.LocalBlockedServerIpAddress, 15010);
+    public IPEndPoint HttpV4EndPoint1 => new(testIps.LocalTestIps[0], 15010);
+    public IPEndPoint HttpV4EndPoint2 => new(testIps.LocalTestIps[1], 15011);
 
-        HttpsV4EndPoints = [
-            new IPEndPoint(testIps.LocalTestIps[0], 15000),
-            new IPEndPoint(testIps.LocalTestIps[1], 15001),
-            new IPEndPoint(testIps.LocalTestIps[2], 15002),
-        ];
+    public IPEndPoint UdpEchoEndPoint1 => new(testIps.LocalTestIps[0], 20100);
+    public IPEndPoint UdpEchoEndPoint2 => new(testIps.LocalTestIps[1], 20101);
+    public IPEndPoint UdpEchoEndPoint3 => new(testIps.LocalTestIps[1], 20102);
+    public IPEndPoint UdpEchoEndPoint1V6 => new(testIps.LocalTestIpV6, 20201);
+    public IPEndPoint UdpEchoEndPoint2V6 => new(testIps.LocalTestIpV6, 20202);
 
-        HttpV4EndPoints = [
-            new IPEndPoint(testIps.LocalTestIps[0], 15010),
-            new IPEndPoint(testIps.LocalTestIps[1], 15011),
-            new IPEndPoint(testIps.LocalTestIps[2], 15012),
-            HttpV4EndPointBlockedClient, 
-            HttpV4EndPointBlockedServer
-        ];
+    public IPEndPoint QuicEndPoint1 => new(testIps.LocalTestIps[0], 25001);
+    public IPEndPoint QuicEndPoint2 => new(testIps.LocalTestIps[1], 25002);
 
-        UdpEndPoints = [
-            new IPEndPoint(testIps.LocalTestIps[0], 20100),
-            new IPEndPoint(testIps.LocalTestIps[1], 20101),
-            new IPEndPoint(testIps.LocalTestIps[2], 20102),
-            new IPEndPoint(testIps.LocalTestIpV6, 20101),
-            new IPEndPoint(testIps.LocalTestIpV6, 20102),
-            new IPEndPoint(testIps.LocalTestIpV6, 20103)
-        ];
+    public IPEndPoint HttpV4EndPointBlockedClient => new(testIps.LocalBlockedClientIpAddress, 15009);
+    public IPEndPoint HttpV4EndPointBlockedServer => new(testIps.LocalBlockedServerIpAddress, 15010);
+    public IPEndPoint UdpNsEchoEndPoint1 => new(testIps.LocalTestIps[3], 53);
+    public IPEndPoint HttpV4EndPointRefused1 => new(testIps.LocalTestIps[0], 9999);
+    public Uri HttpsUrl1 => new($"https://{HttpsV4EndPoint1}/file1");
+    public Uri HttpsUrl2 => new($"https://{HttpsV4EndPoint2}/file1");
+    public Uri HttpUrl1 => new($"http://{HttpV4EndPoint1}/file1");
+    public Uri HttpUrl2 => new($"http://{HttpV4EndPoint2}/file2");
 
-        UdpNsEchoEndPoint1 = new IPEndPoint(testIps.LocalTestIps[3], 53);
+    public IReadOnlyList<IPEndPoint> AllHttpEndPoints => [
+        HttpV4EndPoint1,
+        HttpV4EndPoint2,
+        HttpV4EndPointBlockedClient,
+        HttpV4EndPointBlockedServer,
+    ];
 
-        QuicEndPoints = [
-            new IPEndPoint(testIps.LocalTestIps[0], 25001),
-            new IPEndPoint(testIps.LocalTestIps[1], 25001),
-            new IPEndPoint(testIps.LocalTestIps[2], 25002),
-        ];
+    public IReadOnlyList<IPEndPoint> AllHttpsEndPoints => [
+        HttpsV4EndPoint1, 
+        HttpsV4EndPoint2
+    ];
 
-        HttpUrls = HttpV4EndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
-        HttpsUrls = HttpsV4EndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray();
-        FileHttpUrl1 = new Uri($"http://{HttpV4EndPoints.First()}/file1");
-        FileHttpUrl2 = new Uri($"http://{HttpV4EndPoints.First()}/file2");
-    }
+    public IReadOnlyList<IPEndPoint> AllQuicEndPoints => [
+        QuicEndPoint1,
+        QuicEndPoint2
+    ];
+    
+    public IReadOnlyList<IPEndPoint> AllUdpEchoEndPoints => [
+        UdpEchoEndPoint1,
+        UdpEchoEndPoint2,
+        UdpEchoEndPoint3,
+        UdpEchoEndPoint1V6,
+        UdpEchoEndPoint2V6,
+        UdpNsEchoEndPoint1
+    ];
 }

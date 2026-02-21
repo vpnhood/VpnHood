@@ -1,6 +1,7 @@
 ﻿using System.Buffers.Binary;
+using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Toolkit.Net;
+namespace VpnHood.Core.Packets;
 
 public class IcmpV6Packet : IChecksumPayloadPacket
 {

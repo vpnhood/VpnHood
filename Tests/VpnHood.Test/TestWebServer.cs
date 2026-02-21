@@ -46,7 +46,7 @@ public class TestWebServer : IDisposable
         }
 
         // Create web servers - one per HTTP endpoint
-        foreach (var endpoint in LocalEps.HttpV4EndPoints) {
+        foreach (var endpoint in LocalEps.AllHttpEndPoints) {
             var settings = new WebserverSettings(endpoint.Address.ToString(), endpoint.Port);
             var webServer = new WebserverLite(settings, DefaultRoute);
             webServer
@@ -55,7 +55,7 @@ public class TestWebServer : IDisposable
             _webServers.Add(webServer);
         }
 
-        foreach (var endpoint in LocalEps.HttpsV4EndPoints) {
+        foreach (var endpoint in LocalEps.AllHttpsEndPoints) {
             var settings = new WebserverSettings(endpoint.Address.ToString(), endpoint.Port) {
                 Ssl = new WebserverSettings.SslSettings {
                     Enable = true,

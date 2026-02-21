@@ -24,7 +24,7 @@ public class TestWebServer : IDisposable
     public string FileContent2 { get; set; }
 
     private readonly List<WebserverLite> _webServers = [];
-    private UdpClient[] UdpClients { get; }
+    private IReadOnlyList<UdpClient> UdpClients { get; }
     private readonly List<QuicTesterServer> _quicServers = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private CancellationToken CancellationToken => _cancellationTokenSource.Token;
@@ -34,8 +34,7 @@ public class TestWebServer : IDisposable
         TestIps = testIps;
         LocalEps = new TestWebServerLocalEps(testIps);
         MockEps = new TestWebServerMockEps(LocalEps, testIps);
-        UdpClients = LocalEps.UdpEndPoints.Append(LocalEps.UdpNsEchoEndPoint1)
-            .Select(x => new UdpClient(x)).ToArray();
+        UdpClients = LocalEps.AllUdpEchoEndPoints.Select(x => new UdpClient(x)).ToArray();
 
         // Init files
         FileContent1 = string.Empty;
@@ -119,7 +118,7 @@ public class TestWebServer : IDisposable
     private void StartQuicEchoServer()
     {
         var certificate = X509CertificateLoader.LoadPkcs12FromFile("Assets/VpnHood.UnitTest.pfx", null, X509KeyStorageFlags.Exportable);
-        foreach (var endpoint in LocalEps.QuicEndPoints) {
+        foreach (var endpoint in LocalEps.AllQuicEndPoints) {
             var quicServer = new QuicTesterServer(endpoint, certificate, CancellationToken);
             _quicServers.Add(quicServer);
             _ = quicServer.Start();

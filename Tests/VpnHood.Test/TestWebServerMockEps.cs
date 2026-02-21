@@ -16,8 +16,8 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     }
 
     public IPAddress IpInvalid => testIps.RemoteInvalidTestIpV4;
-    public IPEndPoint QuicEndPoint1 => MapToRemote(localEps.QuicEndPoints[0]);
-    public IPEndPoint QuicEndPoint2 => MapToRemote(localEps.QuicEndPoints[1]);
+    public IPEndPoint QuicEndPoint1 => MapToRemote(localEps.QuicEndPoint1);
+    public IPEndPoint QuicEndPoint2 => MapToRemote(localEps.QuicEndPoint2);
     public IPEndPoint HttpsV4EndPoint1 => MapToRemote(localEps.HttpsV4EndPoint1);
     public IPEndPoint HttpsV4EndPoint2 => MapToRemote(localEps.HttpsV4EndPoint2);
     public IPEndPoint HttpV4EndPoint1 => MapToRemote(localEps.HttpV4EndPoint1);
@@ -26,13 +26,13 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public IPEndPoint HttpV4EndPointBlockedServer => MapToRemote(localEps.HttpV4EndPointBlockedServer);
     public IPEndPoint HttpV4EndPointRefused => MapToRemote(localEps.HttpV4EndPointRefused1);
     public IPEndPoint HttpV4EndPointInvalid => new(IpInvalid, 443);
-    public IPEndPoint UdpV4EndPoint1 => MapToRemote(localEps.UdpV4EndPoints[0]);
-    public IPEndPoint UdpV4EndPoint2 => MapToRemote(localEps.UdpV4EndPoints[1]);
-    public IPEndPoint UdpV6EndPoint1 => MapToRemote(localEps.UdpV6EndPoints[0]);
-    public IPEndPoint UdpV6EndPoint2 => MapToRemote(localEps.UdpV6EndPoints[1]);
+    public IPEndPoint UdpV4EndPoint1 => MapToRemote(localEps.UdpEchoEndPoint1);
+    public IPEndPoint UdpV4EndPoint2 => MapToRemote(localEps.UdpEchoEndPoint2);
+    public IPEndPoint UdpV6EndPoint1 => MapToRemote(localEps.UdpEchoEndPoint1V6);
+    public IPEndPoint UdpV6EndPoint2 => MapToRemote(localEps.UdpEchoEndPoint2V6);
     public IPEndPoint UdpNsEchoEndPoint1 => MapToRemote(localEps.UdpNsEchoEndPoint1);
     public IPEndPoint HttpsV4RefusedEndPoint1 => MapToRemote(localEps.HttpV4EndPointRefused1);
-    public Uri HttpUrlInvalid => new Uri($"https://{HttpV4EndPointInvalid}/foo");
+    public Uri HttpUrlInvalid => new($"https://{HttpV4EndPointInvalid}/foo");
     public Uri HttpsUrl1 => new UriBuilder(localEps.HttpsUrl1) { Host = "test-domain1" }.Uri;
     public Uri HttpsUrl2 => new UriBuilder(localEps.HttpsUrl2) { Host = "foo.test-domain2" }.Uri;
     public Uri HttpUrl1 => MapToRemote(localEps.HttpUrl1);

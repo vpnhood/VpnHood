@@ -7,6 +7,9 @@ public class ClientServerLocationInfo : ServerLocationInfo
 {
     public required bool IsNestedCountry { get; init; }
     public required bool IsDefault { get; init; }
+    public string TranslatedCountryName => VpnHoodApp.Instance.Services.LocationService
+        .TryGetCountryInfo(CountryCode)?.TranslatedName ?? CountryName;
+
     public ServerLocationOptions Options { get; set; } = new() { Normal = 0 };
 
     public static ClientServerLocationInfo[] CreateFromToken(ClientProfile clientProfile)

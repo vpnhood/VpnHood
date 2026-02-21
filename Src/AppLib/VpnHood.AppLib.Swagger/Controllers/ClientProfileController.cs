@@ -21,6 +21,12 @@ public class ClientProfileController : ControllerBase, IClientProfileController
         throw new SwaggerOnlyException();
     }
 
+    [HttpGet("{clientProfileId}/access-code")]
+    public Task<string> GetAccessCode(Guid clientProfileId, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
     [HttpPatch("{clientProfileId}")]
     public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams,
         CancellationToken cancellationToken)

@@ -25,6 +25,12 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
             await ctx.SendJson(res);
         });
 
+        mapper.AddParam(HttpMethod.GET, baseUrl + "{id}/access-code", async ctx => {
+            var id = ctx.GetRouteParameter<Guid>("id");
+            var res = await GetAccessCode(id, ctx.Token);
+            await ctx.SendJson(res);
+        });
+
         mapper.AddParam(HttpMethod.PATCH, baseUrl + "{id}", async ctx => {
             var id = ctx.GetRouteParameter<Guid>("id");
             var body = ctx.ReadJson<ClientProfileUpdateParams>();
@@ -49,6 +55,12 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
     {
         var clientProfile = App.ClientProfileService.Get(clientProfileId);
         return Task.FromResult(clientProfile.ToInfo());
+    }
+
+    public Task<string> GetAccessCode(Guid clientProfileId, CancellationToken cancellationToken)
+    {
+        var clientProfile = App.ClientProfileService.Get(clientProfileId);
+        return Task.FromResult(clientProfile.AccessCode ?? string.Empty);
     }
 
     public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams, CancellationToken cancellationToken)

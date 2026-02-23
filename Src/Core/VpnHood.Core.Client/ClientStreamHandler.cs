@@ -18,7 +18,9 @@ using VpnHood.Core.Tunneling.Proxies;
 namespace VpnHood.Core.Client;
 
 internal class ClientStreamHandler(
-    VpnHoodClient vpnHoodClient,
+    ClientSession session,
+    ulong sessionId,
+    byte[] sessionKey,
     ISocketFactory socketFactory,
     DomainFilteringService domainFilterService,
     Tunnel tunnel,
@@ -87,7 +89,7 @@ internal class ClientStreamHandler(
             hostEndPoint = newEndPoint.ToIPEndPoint();
 
         // check IPv6 support
-        if (hostEndPoint.IsV6() && vpnHoodClient.SessionStatus?.IsIpV6SupportedByClient is null or false)
+        if (hostEndPoint.IsV6() && !session.Status.IsIpV6SupportedByClient)
             throw new Exception("IPv6 is not supported by client.");
 
         //log
@@ -118,7 +120,7 @@ internal class ClientStreamHandler(
     private async Task AddTunnelChannel(
         IConnection connection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
-        if (hostEndPoint.IsV6() && vpnHoodClient.SessionStatus?.IsIpV6SupportedByServer is null or false)
+        if (hostEndPoint.IsV6() && !session.Status.IsIpV6SupportedByServer)
             throw new Exception("IPv6 is not supported by server.");
 
         //log
@@ -135,14 +137,14 @@ internal class ClientStreamHandler(
         // Create the Request
         var request = new StreamProxyChannelRequest {
             RequestId = connection.ConnectionId,
-            SessionId = vpnHoodClient.SessionId,
-            SessionKey = vpnHoodClient.SessionKey,
+            SessionId = sessionId,
+            SessionKey = sessionKey,
             DestinationEndPoint = hostEndPoint
         };
 
         // read the response
         var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
-        var requestResult = await vpnHoodClient.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();
+        var requestResult = await session.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();
         try {
             var proxyConnection = requestResult.Connection;
 

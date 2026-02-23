@@ -29,6 +29,8 @@ public class VpnHoodClientConfig
     public required TimeSpan SessionTimeout { get; init; }
     public required TimeSpan AutoWaitTimeout { get; init; }
     public required TimeSpan UnstableTimeout { get; init; }
+    public required TransferBufferSize StreamProxyBufferSize { get; init; }
+    public required TransferBufferSize? UdpProxyBufferSize { get; init; }
     public required string ClientId { get; init; }
     public required bool IncludeLocalNetwork { get; init; }
     public required string? SessionName { get; init; }
@@ -37,6 +39,8 @@ public class VpnHoodClientConfig
     public required UserReview? UserReview { get; init; }
     public required bool IsTcpProxySupported { get; init; }
     public required bool UseWebSocket { get; init; }
+    public required IPAddress TcpProxyCatcherAddressIpV4 { get; init; }
+    public required IPAddress TcpProxyCatcherAddressIpV6 { get; init; }
     public required bool UseTcpProxy { get; set; }
     public required bool DropUdp { get; set; }
     public required bool DropQuic { get; set; }

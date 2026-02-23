@@ -254,11 +254,6 @@ internal class ChannelManager : IDisposable
             RemoveChannel(channel);
     }
 
-    public void RemoveAllPacketChannels()
-    {
-        RemoveAllChannels<IPacketChannel>();
-    }
-
     public void Dispose()
     {
         if (_disposed)

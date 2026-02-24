@@ -10,7 +10,7 @@ namespace VpnHood.AppLib.Dtos;
 public class AppSessionInfo
 {
     public required AccessInfo? AccessInfo { get; init; }
-    public required DnsStatus DnsStatus { get; init; }
+    public required DnsConfig DnsConfig { get; init; }
     public required bool IsLocalNetworkAllowed { get; set; }
     public required ServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsPremiumSession { get; init; }

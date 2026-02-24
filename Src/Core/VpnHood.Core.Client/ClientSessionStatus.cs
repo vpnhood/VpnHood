@@ -7,12 +7,13 @@ using VpnHood.Core.Tunneling.Proxies;
 namespace VpnHood.Core.Client;
 
 internal class ClientSessionStatus(
+    ClientSession session,
     Tunnel tunnel,
-    ConnectorService connectorService, 
+    ConnectorService connectorService,
     ProxyManager proxyManager,
     ClientStreamHandler streamHandler,
     ClientPacketHandler packetHandler,
-    AccessUsage accessUsage) 
+    AccessUsage accessUsage)
     : ISessionStatus
 {
     private AccessUsage _accessUsage = accessUsage;
@@ -31,13 +32,13 @@ internal class ClientSessionStatus(
         get => field + tunnel.Traffic;
     } = accessUsage.TotalTraffic;
 
-    public int SessionPacketChannelCount => client._sessionPacketChannelCount;
+    public int SessionPacketChannelCount => session.CreatedPacketChannelCount;
     public int TcpTunnelledCount => streamHandler.Stat.TcpTunnelledCount;
     public int TcpPassthruCount => streamHandler.Stat.TcpPassthruCount;
     public int ActivePacketChannelCount => tunnel.PacketChannelCount;
-    public bool IsDropQuic => packetHandler.DropQuic;
-    public bool IsTcpProxy => packetHandler.UseTcpProxy;
-    public ChannelProtocol ChannelProtocol => client.ChannelProtocol;
+    public bool IsDropQuic => packetHandler.DropQuic; // This is current, don't use session property
+    public bool IsTcpProxy => packetHandler.UseTcpProxy; // This is current, don't use session property
+    public ChannelProtocol ChannelProtocol => session.ChannelProtocol;
     public int UnstableCount { get; set; }
     public int WaitingCount { get; set; }
     public bool CanExtendByRewardedAd => _accessUsage.CanExtendByRewardedAd;

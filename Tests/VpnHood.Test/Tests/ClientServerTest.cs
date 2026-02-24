@@ -691,6 +691,6 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         await client.WaitForState(ClientState.Connected);
 
-        Assert.IsNotEmpty(client.SessionInfo?.DnsStatus.DnsServers ?? []);
+        Assert.IsNotEmpty(client.SessionInfo?.DnsConfig.DnsServers ?? []);
     }
 }

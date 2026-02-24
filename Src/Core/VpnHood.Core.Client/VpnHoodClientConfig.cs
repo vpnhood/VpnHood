@@ -41,7 +41,7 @@ public class VpnHoodClientConfig
     public required bool UseWebSocket { get; init; }
     public required IPAddress TcpProxyCatcherAddressIpV4 { get; init; }
     public required IPAddress TcpProxyCatcherAddressIpV6 { get; init; }
-    public required bool UseTcpProxy { get; set; }
-    public required bool DropUdp { get; set; }
-    public required bool DropQuic { get; set; }
+    public required bool UseTcpProxy { get; init; }
+    public required bool DropUdp { get; init; }
+    public required bool DropQuic { get; init; }
 }

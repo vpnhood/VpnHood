@@ -23,7 +23,7 @@ internal static class ClientHelper
     /// <param name="serverIncludeIpRanges">IP ranges that the server routes through the tunnel</param>
     /// <param name="ipFilter">IP filter to determine if a DNS server is routable by the client</param>
     /// <returns>Selected DNS server addresses</returns>
-    public static DnsStatus GetDnsServers(
+    public static DnsConfig GetDnsServers(
         IReadOnlyList<IPAddress>? userDnsAddresses,
         IReadOnlyList<IPAddress> serverDnsAddresses,
         IpRangeOrderedList serverIncludeIpRanges,
@@ -40,7 +40,7 @@ internal static class ClientHelper
                 VhLogger.Instance.LogInformation(
                     "Using User's DNS servers, but they are not excluded from VPN because of IP filters. DnsServers: {DnsServers}",
                     VhLogger.Format(results));
-                return new DnsStatus {
+                return new DnsConfig {
                     DnsServers = results.ToArray(),
                     IsIncludedInVpn = false,
                     IsUserSuppressed = isUserSuppressed, // user override is false because they are not explicitly excluded by filters, but just not included in server routing
@@ -55,7 +55,7 @@ internal static class ClientHelper
                     "Using User's DNS servers. DnsServers: {DnsServers}",
                     VhLogger.Format(results));
 
-                return new DnsStatus {
+                return new DnsConfig {
                     DnsServers = results.ToArray(),
                     IsIncludedInVpn = true,
                     IsUserSuppressed = isUserSuppressed,
@@ -77,7 +77,7 @@ internal static class ClientHelper
                     "Using Server default DNS servers. DnsServers: {DnsServers}",
                     VhLogger.Format(results));
 
-                return new DnsStatus {
+                return new DnsConfig {
                     DnsServers = results.ToArray(),
                     IsIncludedInVpn = true,
                     IsUserSuppressed = isUserSuppressed,
@@ -95,7 +95,7 @@ internal static class ClientHelper
                 "Using Google DNS servers as default. DnsServers: {DnsServers}",
                 VhLogger.Format(results));
 
-            return new DnsStatus {
+            return new DnsConfig {
                 DnsServers = results.ToArray(),
                 IsIncludedInVpn = true,
                 IsUserSuppressed = isUserSuppressed,
@@ -108,7 +108,7 @@ internal static class ClientHelper
         VhLogger.Instance.LogWarning(
             "Using Google DNS servers, but they are not excluded from VPN because of IP filters. DnsServers: {DnsServers}",
             VhLogger.Format(results));
-        return new DnsStatus {
+        return new DnsConfig {
             DnsServers = results.ToArray(),
             IsIncludedInVpn = false,
             IsUserSuppressed = isUserSuppressed,

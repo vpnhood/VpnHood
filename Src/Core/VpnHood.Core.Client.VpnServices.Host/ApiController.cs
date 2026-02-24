@@ -200,9 +200,9 @@ internal class ApiController : IDisposable
     {
         _ = cancellationToken;
 
-        VpnHoodClient.Config.UseTcpProxy = request.Params.UseTcpProxy;
-        VpnHoodClient.Config.DropUdp = request.Params.DropUdp;
-        VpnHoodClient.Config.DropQuic = request.Params.DropQuic;
+        VpnHoodClient.UseTcpProxy = request.Params.UseTcpProxy;
+        VpnHoodClient.DropUdp = request.Params.DropUdp;
+        VpnHoodClient.DropQuic = request.Params.DropQuic;
         VpnHoodClient.ChannelProtocol = request.Params.ChannelProtocol;
         VpnHoodClient.ProxyEndPointManager.UpdateOptions(request.Params.ProxyOptions);
 

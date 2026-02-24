@@ -22,7 +22,7 @@ public class SessionInfo
     public required ChannelProtocol[] ChannelProtocols { get; init; }
     public required string? AccessKey { get; set; } // allow set to let clear
     public required string? ClientCountry { get; init; }
-    public required DnsStatus DnsStatus { get; init; }
+    public required DnsConfig DnsConfig { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]
     public required Version ServerVersion { get; init; }

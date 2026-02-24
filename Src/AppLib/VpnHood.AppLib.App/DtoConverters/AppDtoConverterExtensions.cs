@@ -24,7 +24,7 @@ public static class AppDtoConverterExtensions
     {
         return new AppSessionInfo {
             AccessInfo = sessionInfo.AccessInfo,
-            DnsStatus = sessionInfo.DnsStatus,
+            DnsConfig = sessionInfo.DnsConfig,
             IsLocalNetworkAllowed = sessionInfo.IsLocalNetworkAllowed,
             ServerLocationInfo = sessionInfo.ServerLocationInfo,
             ServerVersion = sessionInfo.ServerVersion,

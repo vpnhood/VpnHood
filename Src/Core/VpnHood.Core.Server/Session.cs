@@ -337,7 +337,7 @@ public class Session : IDisposable
             }
             else {
                 // disable udp channel
-                Tunnel.RemoveAllChannels<UdpChannel>();
+                Tunnel.RemoveAllPacketChannels();
             }
 
             field = value;

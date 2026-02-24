@@ -33,7 +33,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly IVpnAdapter _vpnAdapter;
-    private readonly ChannelProtocol _initChannelProtocol;
     private readonly ISocketFactory _socketFactory;
     private byte[]? _sessionKey;
     private ClientState _lastState = ClientState.None;
@@ -126,9 +125,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Token = Token.FromAccessKey(options.AccessKey);
         socketFactory = new AdapterSocketFactory(vpnAdapter, socketFactory);
         _socketFactory = socketFactory;
-        Tracker = tracker;
         _vpnAdapter = vpnAdapter;
-        _initChannelProtocol = options.ChannelProtocol;
+        Tracker = tracker;
+        ChannelProtocol = options.ChannelProtocol;
 
         // Prepare filters
         _staticIpFilter = new StaticIpFilter(netFilter?.IpFilter);
@@ -172,6 +171,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
     }
 
+    //todo: session sate update does not fire anything
     public ClientState State {
         get {
             if (field is ClientState.Disconnecting or ClientState.Disposed)
@@ -184,6 +184,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // waiting 
             if (_session?.PassthroughForAd == true && field == ClientState.Connected)
                 return ClientState.WaitingForAdEx;
+
+            // use state session
+            if (_session!=null)
+                return _session.State;
 
             return field;
         }
@@ -246,7 +250,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 "DropUdp: {DropUdp}, VpnProtocol: {VpnProtocol}, " +
                 "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
                 "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}, ProcessId: {ProcessId}",
-                Config.DropUdp, _initChannelProtocol, Config.IncludeLocalNetwork, workerThreads, completionPortThreads,
+                Config.DropUdp, ChannelProtocol, Config.IncludeLocalNetwork, workerThreads, completionPortThreads,
                 _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6), Process.GetCurrentProcess().Id);
 
             // report version
@@ -503,7 +507,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 netFilter: _netFilter,
                 passthroughForAd: passthroughForAd,
                 options: new ClientSessionOptions {
-                    ChannelProtocol = _initChannelProtocol,
+                    ChannelProtocol = ChannelProtocol,
                     TcpProxyCatcherAddressIpV4 = Config.TcpProxyCatcherAddressIpV4,
                     TcpProxyCatcherAddressIpV6 = Config.TcpProxyCatcherAddressIpV6,
                     DropQuic = Config.DropQuic,

@@ -60,7 +60,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     public ClientSessionConfig Config { get; }
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
-    public int PacketChannelCount { get; set; }
     public bool PassthroughForAd {
         get => _packetHandler.PassthroughForAd;
         set => _packetHandler.PassthroughForAd = value;
@@ -84,7 +83,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _netFilter = netFilter;
         _connectorService = connectorService;
         _channelProtocol = options.ChannelProtocol;
-        _oldChannelProtocol = _channelProtocol;
+        _oldChannelProtocol = options.ChannelProtocol;
         _useTcpProxy = options.UseTcpProxy;
         _dropQuic = options.DropQuic;
         _dropUdp = options.DropUdp;
@@ -93,7 +92,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         SessionInfo = sessionInfo;
         SessionKey = sessionKey;
         SessionId = sessionId;
-        PassthroughForAd = passthroughForAd;
 
         // init VPN adapter
         _vpnAdapter = vpnAdapter;
@@ -104,10 +102,9 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _tunnel = new Tunnel(new TunnelOptions {
             AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
-            MaxPacketChannelCount = TunnelDefaults.MaxPacketChannelCount,
+            MaxPacketChannelCount = _channelProtocol == ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
             UseSpeedometerTimer = true
         });
-        _tunnel.MaxPacketChannelCount = Config.MaxPacketChannelCount;
         _tunnel.RemoteMtu = Config.RemoteMtu;
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
@@ -155,7 +152,9 @@ internal class ClientSession : IDisposable, IAsyncDisposable
             netFilter: _netFilter,
             proxyManager: _proxyManager,
             dnsServers: Config.DnsConfig.DnsServers,
-            isIpV6SupportedByServer: Config.IsIpV6SupportedByServer);
+            isIpV6SupportedByServer: Config.IsIpV6SupportedByServer) {
+            PassthroughForAd = passthroughForAd
+        };
 
         _status = new ClientSessionStatus(
             session: this,
@@ -175,6 +174,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
         // apply config
         UpdateConfig();
+
 
         // start
         _clientHost.Start();
@@ -249,8 +249,10 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         // ChannelProtocol
         var channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, SessionInfo);
         if (channelProtocol != _oldChannelProtocol) {
-            VhLogger.Instance.LogInformation("VpnProtocol is changed to {VpnProtocol}.", _channelProtocol);
-            _tunnel.MaxPacketChannelCount = _channelProtocol == ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;
+            VhLogger.Instance.LogInformation("VpnProtocol is changed to {VpnProtocol}.", channelProtocol);
+            _tunnel.MaxPacketChannelCount = channelProtocol == ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;
+            _channelProtocol = channelProtocol;
+            _oldChannelProtocol = channelProtocol;
             _tunnel.RemoveAllPacketChannels();
             Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
         }
@@ -267,8 +269,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         // update handlers
         _packetHandler.UseTcpProxy = useTcpProxy;
         _packetHandler.DropQuic = dropQuic;
-        _channelProtocol = channelProtocol;
-        _oldChannelProtocol = channelProtocol;
         _dropQuic = dropQuic;
         _dropUdp = dropUdp;
 
@@ -364,7 +364,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         };
 
         var requestResult = await SendRequest<SessionResponse>(request, cancellationToken).Vhc();
-        StreamPacketChannel? channel = null;
         try {
             // find timespan
             var lifespan = VhUtils.IsInfinite(Config.MaxPacketChannelLifespan)
@@ -377,7 +376,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
                 requestResult.Connection.PreventReuse();
 
             // add the new channel
-            channel = new StreamPacketChannel(new StreamPacketChannelOptions {
+            var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
                 Connection = requestResult.Connection,
                 BufferSize = TunnelDefaults.ConnectionPacketBufferSize,
                 ChannelId = request.RequestId,
@@ -385,11 +384,10 @@ internal class ClientSession : IDisposable, IAsyncDisposable
                 AutoDisposePackets = true,
                 Lifespan = lifespan
             });
-            _tunnel.AddChannel(channel);
+            _tunnel.AddChannel(channel, true);
             CreatedPacketChannelCount++;
         }
         catch {
-            channel?.Dispose();
             requestResult.Dispose();
             throw;
         }

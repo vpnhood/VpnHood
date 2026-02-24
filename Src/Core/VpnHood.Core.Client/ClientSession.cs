@@ -253,7 +253,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
             _tunnel.MaxPacketChannelCount = channelProtocol == ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;
             _channelProtocol = channelProtocol;
             _oldChannelProtocol = channelProtocol;
-            _tunnel.RemoveAllPacketChannels();
+            _tunnel.RemoveChannels<IPacketChannel>();
             Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
         }
 
@@ -269,6 +269,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         // update handlers
         _packetHandler.UseTcpProxy = useTcpProxy;
         _packetHandler.DropQuic = dropQuic;
+        _packetHandler.DropUdp = dropUdp;
         _dropQuic = dropQuic;
         _dropUdp = dropUdp;
 
@@ -515,7 +516,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     public void DropCurrentConnections()
     {
         _clientHost.DropCurrentConnections();
-        _tunnel.RemoveAllProxyChannel();
+        _tunnel.RemoveChannels<IProxyChannel>();
     }
 
     public async Task UpdateStatus(CancellationToken cancellationToken)

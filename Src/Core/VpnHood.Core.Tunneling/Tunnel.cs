@@ -23,8 +23,7 @@ public class Tunnel : PassthroughPacketTransport
     public Traffic Traffic => _channelManager.Traffic;
     public int PacketChannelCount => _channelManager.PacketChannelCount;
     public int StreamProxyChannelCount => _channelManager.ProxyChannelCount;
-    public void RemoveAllPacketChannels() => _channelManager.RemoveAllChannels<IPacketChannel>();
-    public void RemoveAllProxyChannel() => _channelManager.RemoveAllChannels<IProxyChannel>();
+    public void RemoveChannels<T>() where T : IChannel => _channelManager.RemoveChannels<T>();
 
     public int MaxPacketChannelCount {
         get => _channelManager.MaxPacketChannelCount;

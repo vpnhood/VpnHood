@@ -512,7 +512,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     TcpProxyCatcherAddressIpV6 = Config.TcpProxyCatcherAddressIpV6,
                     DropQuic = Config.DropQuic,
                     UseTcpProxy = Config.UseTcpProxy,
-                    DropUdp = Config.DropUdp,
+                    DropUdp = Config.DropUdp
                 },
                 config: new ClientSessionConfig {
                     RemoteMtu = helloResponse.Mtu,

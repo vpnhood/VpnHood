@@ -154,18 +154,18 @@ internal class ChannelManager : IDisposable
         }
     }
 
-    public void RemoveChannel(IChannel channel)
+    public void RemoveChannel(IChannel channel, bool dispose = true)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         switch (channel) {
             case PacketChannel packetChannel:
                 packetChannel.PacketReceived -= _channelPacketReceived;
-                RemoveChannel(_packetChannels, packetChannel, GeneralEventId.PacketChannel);
+                RemoveChannel(_packetChannels, packetChannel, GeneralEventId.PacketChannel, dispose);
                 break;
 
             case IProxyChannel proxyChannel:
-                RemoveChannel(_proxyChannels, proxyChannel, GeneralEventId.ProxyChannel);
+                RemoveChannel(_proxyChannels, proxyChannel, GeneralEventId.ProxyChannel, dispose);
                 break;
 
             default:
@@ -173,7 +173,8 @@ internal class ChannelManager : IDisposable
         }
     }
 
-    private void RemoveChannel<T>(ICollection<T> channels, T channel, EventId eventId) where T : IChannel
+    private void RemoveChannel<T>(ICollection<T> channels, T channel, EventId eventId, bool dispose) 
+        where T : IChannel
     {
         lock (_channelListLock) {
             // remove from both channel and _disposingChannels
@@ -191,7 +192,8 @@ internal class ChannelManager : IDisposable
         }
 
         // clean up channel
-        channel.Dispose();
+        if (dispose)
+            channel.Dispose();
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
@@ -247,10 +249,10 @@ internal class ChannelManager : IDisposable
         }
     }
 
-    public void RemoveAllChannels<T>() where T : IChannel
+    public void RemoveChannels<T>(bool dispose = true) where T : IChannel
     {
         foreach (var channel in _packetChannels.Where(x => x is T).ToArray())
-            RemoveChannel(channel);
+            RemoveChannel(channel, dispose);
     }
 
     public void Dispose()

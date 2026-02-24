@@ -372,8 +372,9 @@ internal class ClientSession : IDisposable, IAsyncDisposable
                     (int)Config.MaxPacketChannelLifespan.TotalSeconds));
 
             // PacketChannel should not be reused, otherwise its timespan will be meaningless
-            if (lifespan != null)
+            if (lifespan != null) {
                 requestResult.Connection.PreventReuse();
+            }
 
             // add the new channel
             var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
@@ -434,8 +435,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     internal async Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequestEx request,
         CancellationToken cancellationToken) where T : SessionResponse
     {
-        if (_disposed)
-            throw new ObjectDisposedException(VhLogger.FormatType(this));
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         try {
             // create a connection and send the request 

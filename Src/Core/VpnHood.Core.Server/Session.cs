@@ -334,10 +334,14 @@ public class Session : IDisposable
                 // enable udp channel
                 Tunnel.RemoveAllPacketChannels();
                 Tunnel.AddChannel(_udpChannel);
+                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel, 
+                    "UdpChannel is enabled. SessionId: {SessionId}", SessionId);
             }
             else {
                 // disable udp channel
                 Tunnel.RemoveAllPacketChannels();
+                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
+                    "UdpChannel is disabled. SessionId: {SessionId}", SessionId);
             }
 
             field = value;

@@ -156,8 +156,7 @@ internal class ChannelManager : IDisposable
 
     public void RemoveChannel(IChannel channel)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(Tunnel));
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         switch (channel) {
             case PacketChannel packetChannel:

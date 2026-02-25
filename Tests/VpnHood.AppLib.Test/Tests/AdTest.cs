@@ -133,12 +133,12 @@ public class AdTest : TestAppBase
 
         // connect
         if (acceptAd) {
-            await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd);
+            await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt);
             Assert.IsNull(app.State.SessionStatus?.SessionExpirationTime);
         }
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
-                app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd));
+                app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
         }
     }

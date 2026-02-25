@@ -67,6 +67,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool DropUdp { get; set { field = value; _session?.DropUdp = value; } }
     public bool DropQuic { get; set { field = value; _session?.DropQuic = value; } }
     public ChannelProtocol ChannelProtocol { get; set { field = value; _session?.ChannelProtocol = value; } }
+    public Exception? LastException {get=> field ?? _session?.LastException; private set; }
 
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
@@ -222,6 +223,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await Connect2(cancellationToken);
         }
         catch (Exception ex) {
+            LastException = ex;
             await DisposeAsync();
             throw;
         }

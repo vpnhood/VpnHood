@@ -62,7 +62,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     public SessionInfo? SessionInfo { get; private set; }
-    public Exception? LastException => _session?.LastException;
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
     public bool UseTcpProxy { get; set { field = value; _session?.UseTcpProxy = value; } }
     public bool DropUdp { get; set { field = value; _session?.DropUdp = value; } }

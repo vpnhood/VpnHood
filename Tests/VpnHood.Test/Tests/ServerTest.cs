@@ -292,7 +292,7 @@ public class ServerTest : TestBase
             await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
             return client.State;
         });
-        Assert.AreEqual(SessionErrorCode.AccessError, client.GetLastSessionErrorCode());
+        Assert.AreEqual(SessionErrorCode.AccessError, client.GetSessionErrorCode());
     }
 
     [TestMethod]

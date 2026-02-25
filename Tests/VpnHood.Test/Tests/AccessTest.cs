@@ -53,8 +53,8 @@ public class AccessTest : TestBase
 
         // create client and connect
         await using var client = await TestHelper.CreateClient(token, autoConnect: false);
-        await Assert.ThrowsExactlyAsync<SessionException>(() => client.Connect());
-        Assert.AreEqual(SessionErrorCode.AccessExpired, client.GetLastSessionErrorCode());
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => client.Connect(TestCt));
+        Assert.AreEqual(SessionErrorCode.AccessExpired, ex.SessionResponse.ErrorCode);
     }
 
     [TestMethod]
@@ -212,7 +212,6 @@ public class AccessTest : TestBase
         await client1.DisposeAsync();
         await client1.WaitForState(ClientState.Disposed);
 
-
         // suppress by yourself
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: token, clientId: client1.Config.ClientId);
@@ -236,7 +235,6 @@ public class AccessTest : TestBase
             await client1.WaitForState(ClientState.Connected);
         }
 
-        await server.SessionManager.Sync(true, TestCt);
         await Task.Delay(1000, TestCt);
         // remove milliseconds from time for comparison
         var time = DateTime.UtcNow;
@@ -256,8 +254,7 @@ public class AccessTest : TestBase
             Assert.IsTrue(accessInfo.LastUsedTime <= time, $"Diff: {(time - accessInfo.LastUsedTime).TotalSeconds}sec");
         }
 
-        await server.SessionManager.Sync(true, TestCt);
-        await Task.Delay(200);
+        await Task.Delay(200, TestCt);
 
         // create a new client with the same token, it should not suppress
         await using (var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {

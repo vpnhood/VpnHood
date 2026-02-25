@@ -462,15 +462,10 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
             // close session if server has ended the session
             if (ex.SessionResponse.ErrorCode != SessionErrorCode.GeneralError &&
-                ex.SessionResponse.ErrorCode != SessionErrorCode.RedirectHost &&
                 ex.SessionResponse.ErrorCode != SessionErrorCode.RewardedAdRejected) {
                 await DisposeAsync(ex);
             }
 
-            throw;
-        }
-        catch (UnauthorizedAccessException ex) {
-            await DisposeAsync(ex);
             throw;
         }
         catch (Exception ex) {
@@ -566,10 +561,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogInformation("Session is closing...");
         State = ClientState.Disconnecting;
 
-        // save the state before disposal
-        var shouldSendBye = LastException == null && State == ClientState.Connected;
-
-        // stop adapter and events before sending bye request
+        // stop adapter and events before sending bye request to free client from VPN as fast as possible and 
         // Do not dispose VpnAdapter. It must be at the end of the disposal process so channels can be disposed properly
         // network change events can cause problems too
         if (_vpnAdapter.IsStarted)
@@ -578,6 +570,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         // dispose async resources
 
         // Sending Bye if the session was active before disposal
+        var shouldSendBye = LastException == null;
         if (shouldSendBye) {
             VhLogger.Instance.LogInformation("Sending bye to the server...");
             try {

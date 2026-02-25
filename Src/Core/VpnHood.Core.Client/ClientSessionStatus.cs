@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
 
@@ -49,4 +50,5 @@ internal class ClientSessionStatus(
     public bool IsDnsOverTlsDetected => packetHandler.IsDnsOverTlsDetected;
     public bool IsIpV6SupportedByServer => packetHandler.IsIpV6SupportedByServer;
     public bool IsIpV6SupportedByClient => packetHandler.IsIpV6SupportedByClient;
+    public ApiError? Error => session.LastException?.ToApiError();
 }

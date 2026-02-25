@@ -273,6 +273,9 @@ public class FileAccessManager : IAccessManager
             : null;
         ret.ServerLocation = locationInfo?.ServerLocation;
 
+        // Update usage such as LastUsedTime
+        await AccessTokenService.AddUsage(accessTokenData.AccessToken.TokenId, new Traffic(), cancellationToken);
+
         // update accesskey
         if (ServerConfig.ReplyAccessKey)
             ret.AccessKey = GetToken(accessTokenDataOrg.AccessToken).ToAccessKey();

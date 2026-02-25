@@ -62,7 +62,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized.");
     public ulong SessionId => _sessionId ?? throw new InvalidOperationException("SessionId has not been initialized.");
     public SessionInfo? SessionInfo { get; private set; }
-    public Exception? LastException { get; private set; }
+    public Exception? LastException => _session?.LastException;
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
     public bool UseTcpProxy { get; set { field = value; _session?.UseTcpProxy = value; } }
     public bool DropUdp { get; set { field = value; _session?.DropUdp = value; } }
@@ -186,7 +186,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 return ClientState.WaitingForAdEx;
 
             // use state session
-            if (_session!=null)
+            if (_session != null)
                 return _session.State;
 
             return field;
@@ -223,70 +223,74 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public async Task Connect(CancellationToken cancellationToken = default)
     {
+        try {
+            await Connect2(cancellationToken);
+        }
+        catch {
+            await DisposeAsync();
+            throw;
+        }
+
+    }
+
+    public async Task Connect2(CancellationToken cancellationToken = default)
+    {
         if (_disposed)
             throw new ObjectDisposedException(VhLogger.FormatType(this));
 
-        // Connect
-        try {
-            // merge cancellation tokens
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                _cancellationTokenSource.Token, cancellationToken);
+        // merge cancellation tokens
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            _cancellationTokenSource.Token, cancellationToken);
 
-            // create connection log scope
-            using var scope = VhLogger.Instance.BeginScope("Client");
-            if (State != ClientState.None)
-                throw new Exception("Connection is already in progress.");
+        // create connection log scope
+        using var scope = VhLogger.Instance.BeginScope("Client");
+        if (State != ClientState.None)
+            throw new Exception("Connection is already in progress.");
 
-            // Preparing device;
-            if (_vpnAdapter.IsStarted) //make sure it is not a shared packet capture
-                throw new InvalidOperationException("VpnAdapter should not be started before connect.");
+        // Preparing device;
+        if (_vpnAdapter.IsStarted) //make sure it is not a shared packet capture
+            throw new InvalidOperationException("VpnAdapter should not be started before connect.");
 
-            // Connecting. Must before IsIpv6Supported
-            State = ClientState.Connecting;
+        // Connecting. Must before IsIpv6Supported
+        State = ClientState.Connecting;
 
-            // report config
-            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-            VhLogger.Instance.LogInformation(
-                "DropUdp: {DropUdp}, VpnProtocol: {VpnProtocol}, " +
-                "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
-                "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}, ProcessId: {ProcessId}",
-                Config.DropUdp, ChannelProtocol, Config.IncludeLocalNetwork, workerThreads, completionPortThreads,
-                _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6), Process.GetCurrentProcess().Id);
+        // report config
+        ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
+        VhLogger.Instance.LogInformation(
+            "DropUdp: {DropUdp}, VpnProtocol: {VpnProtocol}, " +
+            "IncludeLocalNetwork: {IncludeLocalNetwork}, MinWorkerThreads: {WorkerThreads}, " +
+            "CompletionPortThreads: {CompletionPortThreads}, ClientIpV6: {ClientIpV6}, ProcessId: {ProcessId}",
+            Config.DropUdp, ChannelProtocol, Config.IncludeLocalNetwork, workerThreads, completionPortThreads,
+            _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6), Process.GetCurrentProcess().Id);
 
-            // report version
-            VhLogger.Instance.LogInformation(
-                "ClientVersion: {ClientVersion}, " +
-                "ClientMinProtocolVersion: {ClientMinProtocolVersion}, ClientMaxProtocolVersion: {ClientMaxProtocolVersion}, " +
-                "ClientId: {ClientId}",
-                Config.Version, VpnHoodClientConfig.MinProtocolVersion, VpnHoodClientConfig.MaxProtocolVersion,
-                VhLogger.FormatId(Config.ClientId));
+        // report version
+        VhLogger.Instance.LogInformation(
+            "ClientVersion: {ClientVersion}, " +
+            "ClientMinProtocolVersion: {ClientMinProtocolVersion}, ClientMaxProtocolVersion: {ClientMaxProtocolVersion}, " +
+            "ClientId: {ClientId}",
+            Config.Version, VpnHoodClientConfig.MinProtocolVersion, VpnHoodClientConfig.MaxProtocolVersion,
+            VhLogger.FormatId(Config.ClientId));
 
-            // validate proxy servers
-            if (ProxyEndPointManager.IsEnabled) {
-                State = ClientState.ValidatingProxies;
-                await ProxyEndPointManager.CheckServers(linkedCts.Token).Vhc();
+        // validate proxy servers
+        if (ProxyEndPointManager.IsEnabled) {
+            State = ClientState.ValidatingProxies;
+            await ProxyEndPointManager.CheckServers(linkedCts.Token).Vhc();
 
-                // log proxy status
-                VhLogger.Instance.LogInformation("Proxy servers: {Count}",
-                    ProxyEndPointManager.Status.ProxyEndPointInfos.Count(x => x.Status.ErrorMessage is null));
+            // log proxy status
+            VhLogger.Instance.LogInformation("Proxy servers: {Count}",
+                ProxyEndPointManager.Status.ProxyEndPointInfos.Count(x => x.Status.ErrorMessage is null));
 
-                // check is any proxy succeeded
-                if (!ProxyEndPointManager.Status.IsAnySucceeded)
-                    throw new UnreachableProxyServerException();
-            }
-
-            // Establish first connection and create a session
-            State = ClientState.FindingReachableServer;
-            var vpnEndPoint = await _serverFinder.FindReachableServerAsync([Token.ServerToken], linkedCts.Token).Vhc();
-            var allowRedirect = !_serverFinder.CustomServerEndpoints.Any();
-            await ConnectInternal(vpnEndPoint, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
-            State = ClientState.Connected;
+            // check is any proxy succeeded
+            if (!ProxyEndPointManager.Status.IsAnySucceeded)
+                throw new UnreachableProxyServerException();
         }
-        catch (Exception ex) {
-            // clear before start new async task
-            await DisposeAsync(ex);
-            throw;
-        }
+
+        // Establish first connection and create a session
+        State = ClientState.FindingReachableServer;
+        var vpnEndPoint = await _serverFinder.FindReachableServerAsync([Token.ServerToken], linkedCts.Token).Vhc();
+        var allowRedirect = !_serverFinder.CustomServerEndpoints.Any();
+        await ConnectInternal(vpnEndPoint, allowRedirect: allowRedirect, linkedCts.Token).Vhc();
+        State = ClientState.Connected;
     }
 
 
@@ -626,17 +630,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await _session.SendRewardedAdData(adData, cancellationToken);
 
         await SetAdOk(cancellationToken);
-    }
-
-    private ValueTask DisposeAsync(Exception ex)
-    {
-        // DisposeAsync will try SendByte, and it may cause calling this dispose method again and go to deadlock
-        if (_disposed || _disposeLock.IsLocked) // IsLocked means that DisposeAsync is already running
-            return ValueTask.CompletedTask;
-
-        VhLogger.Instance.LogDebug(ex, "Client is disposing due an error.");
-        LastException = ex;
-        return DisposeAsync();
     }
 
     public async ValueTask DisposeAsync()

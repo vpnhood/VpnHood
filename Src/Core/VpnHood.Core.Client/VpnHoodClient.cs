@@ -170,24 +170,27 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
     }
 
-    //todo: session sate update does not fire anything
+    public ProgressStatus? StateProgress =>
+        State switch {
+            ClientState.FindingReachableServer or ClientState.FindingBestServer => _serverFinder.Progress,
+            ClientState.ValidatingProxies => ProxyEndPointManager.Progress,
+            _ => null
+        };
+
     public ClientState State {
         get {
-            if (field is ClientState.Disconnecting or ClientState.Disposed)
+            if (field is ClientState.Disposed or ClientState.Disconnecting)
                 return field;
 
             // waiting for ad
             if (_waitForAdCts?.Task.IsCompleted is false)
                 return ClientState.WaitingForAd;
 
-            // waiting 
+            // waiting for ad (step 2)
             if (_session?.PassthroughForAd == true && field == ClientState.Connected)
                 return ClientState.WaitingForAdEx;
 
-            // use state session
-            if (_session != null)
-                return _session.State;
-
+            // return session state if session is created, otherwise return client state
             return field;
         }
         private set {
@@ -195,13 +198,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             FireStateChanged();
         }
     } = ClientState.None;
-
-    public ProgressStatus? StateProgress =>
-        State switch {
-            ClientState.FindingReachableServer or ClientState.FindingBestServer => _serverFinder.Progress,
-            ClientState.ValidatingProxies => ProxyEndPointManager.Progress,
-            _ => null
-        };
 
     private void FireStateChanged()
     {
@@ -225,7 +221,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         try {
             await Connect2(cancellationToken);
         }
-        catch {
+        catch (Exception ex) {
             await DisposeAsync();
             throw;
         }
@@ -535,7 +531,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     HostUdpEndPoint = hostUdpEndPoint,
                     IsIpV6SupportedByServer = helloResponse.IsIpV6Supported
                 });
-            _session.Disposed += (_, _) => _ = DisposeAsync();
+            _session.StateChanged +=  Session_StateChanged;
 
             // manage datagram channels
             await _session.ManagePacketChannels(cancellationToken).Vhc();
@@ -586,6 +582,17 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         }
     }
 
+    private void Session_StateChanged(object? sender, EventArgs e)
+    {
+        if (_session is null)
+            throw new InvalidOperationException("How a null session session can fire an event!");
+
+        // disposed client if the session is disposed
+        if (_session is { State: ClientState.Disposed })
+            Dispose();
+
+        State = _session.State;
+    }
 
     public Task UpdateSessionStatus(CancellationToken cancellationToken)
     {
@@ -654,6 +661,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // close session
         _session?.Dispose();
+        _session?.StateChanged -= Session_StateChanged;
+
         _netFilter.Dispose();
 
         // dispose ConnectorService before ProxyEndPointManager as it uses ProxyEndPointManager

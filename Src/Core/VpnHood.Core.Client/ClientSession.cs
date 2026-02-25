@@ -51,12 +51,11 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     private bool _dropUdp;
     private DateTime? _lastConnectionErrorTime;
 
-    public event EventHandler? Disposed;
+    public event EventHandler? StateChanged;
     public ISessionStatus Status => _status;
     public ulong SessionId { get; }
     public byte[] SessionKey { get; }
     public SessionInfo SessionInfo { get; }
-    public ClientState State { get; private set; } = ClientState.Connected;
     public ClientSessionConfig Config { get; }
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
@@ -175,10 +174,18 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         // apply config
         UpdateConfig();
 
-
         // start
         _clientHost.Start();
     }
+    
+    public ClientState State {
+        get;
+        private set {
+            if (field == value) return;
+            field = value;
+            StateChanged?.Invoke(this, EventArgs.Empty);
+        }
+    } = ClientState.Connected;
 
     public bool DropUdp {
         get => _dropUdp;
@@ -644,6 +651,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _clientUsageTracker?.Dispose();
 
         // invoke disposed event
-        Task.Run(() => Disposed?.Invoke(this, EventArgs.Empty));
+        State = ClientState.Disposed;
     }
 }

@@ -42,7 +42,7 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IAppCultureProvider? CultureProvider { get; set; }
     public IAppAccountProvider? AccountProvider { get; set; }
     public IAppUserReviewProvider? UserReviewProvider { get; set; }
-    public AppAdProviderItem[] AdProviderItems { get; set; } = [];
+    public IReadOnlyList<AppAdProviderItem> AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
     public TimeSpan UnstableTimeout { get; set; } = ClientOptions.Default.UnstableTimeout;
     public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;

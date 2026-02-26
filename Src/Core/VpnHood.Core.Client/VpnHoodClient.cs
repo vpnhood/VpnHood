@@ -476,6 +476,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
                 SessionInfo.DnsConfig, VhLogger.Format(SessionIncludeIpRangesByDevice.ToIpNetworks()));
 
+
+            // Start the VpnAdapter
+            var adapterOptions = new VpnAdapterOptions {
+                DnsServers = dnsConfig.DnsServers,
+                VirtualIpNetworkV4 = networkV4,
+                VirtualIpNetworkV6 = networkV6,
+                Mtu = helloResponse.Mtu - TunnelDefaults.MtuOverhead,
+                IncludeNetworks = SessionIncludeIpRangesByDevice.ToIpNetworks(),
+                SessionName = Config.SessionName,
+                ExcludeApps = Config.ExcludeApps,
+                IncludeApps = Config.IncludeApps
+            };
+
             // create session
             _session = new ClientSession(
                 vpnAdapter: _vpnAdapter,
@@ -489,6 +502,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 domainFilteringService: _domainFilteringService,
                 netFilter: _netFilter,
                 options: new ClientSessionOptions {
+                    VpnAdapterOptions= adapterOptions,
                     ChannelProtocol = ChannelProtocol,
                     TcpProxyCatcherAddressIpV4 = Config.TcpProxyCatcherAddressIpV4,
                     TcpProxyCatcherAddressIpV6 = Config.TcpProxyCatcherAddressIpV6,
@@ -512,43 +526,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     DnsConfig = dnsConfig,
                     IsTcpProxySupported = Config.IsTcpProxySupported,
                     HostUdpEndPoint = hostUdpEndPoint,
-                    IsIpV6SupportedByServer = helloResponse.IsIpV6Supported
+                    IsIpV6SupportedByServer = helloResponse.IsIpV6Supported,
+                    AdRequirement = helloResponse.AdRequirement
                 });
             _session.StateChanged += Session_StateChanged;
-            var manageChannelsTask = _session.ManagePacketChannels(cancellationToken);
-
-            // wait for ad before adapter
-            var retryAd = false;
-            if (helloResponse.AdRequirement != AdRequirement.None) {
-                try {
-                    await _session.AdHandler.WaitForAd(cancellationToken);
-                }
-                catch {
-                    retryAd = false;
-                }
-            }
-
-            // manage datagram channels
-            await manageChannelsTask.Vhc();
-
-            // Start the VpnAdapter
-            var adapterOptions = new VpnAdapterOptions {
-                DnsServers = dnsConfig.DnsServers,
-                VirtualIpNetworkV4 = networkV4,
-                VirtualIpNetworkV6 = networkV6,
-                Mtu = helloResponse.Mtu - TunnelDefaults.MtuOverhead,
-                IncludeNetworks = SessionIncludeIpRangesByDevice.ToIpNetworks(),
-                SessionName = Config.SessionName,
-                ExcludeApps = Config.ExcludeApps,
-                IncludeApps = Config.IncludeApps
-            };
-
-            // start the VpnAdapter
-            await _vpnAdapter.Start(adapterOptions, cancellationToken);
-
-            // retry ad after adapter started
-            if (retryAd)
-                await _session.AdHandler.WaitForAd(cancellationToken);
+            await _session.Start(cancellationToken);
         }
         catch (TimeoutException) {
             throw new ConnectionTimeoutException("Could not connect to the server in the given time.");

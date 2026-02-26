@@ -40,6 +40,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AsyncLock _disposeLock = new();
     private readonly AsyncLock _packetChannelLock = new();
+    private readonly VpnAdapterOptions _adapterOptions;
     private DateTime? _autoWaitTime;
     private ClientUdpChannelTransmitter? _udpTransmitter;
 
@@ -88,6 +89,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _dropQuic = options.DropQuic;
         _dropUdp = options.DropUdp;
         _socketFactory = socketFactory;
+        _adapterOptions = options.VpnAdapterOptions;
         Config = config;
         SessionInfo = sessionInfo;
         SessionKey = sessionKey;
@@ -181,6 +183,34 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _clientHost.Start();
     }
 
+    public async Task Start(CancellationToken cancellationToken)
+    {
+        State = ClientState.Connecting;
+
+        // we can start managing datagram channels but lets wait for it after ad
+        var manageChannelsTask = ManagePacketChannels(cancellationToken);
+
+        // wait for ad before adapter
+        var retryAd = false;
+        if (Config.AdRequirement != AdRequirement.None) 
+            retryAd = await AdHandler.TryWaitForAd(cancellationToken) != null;
+
+        // manage datagram channels
+        await manageChannelsTask.Vhc();
+
+        // start adapter
+        await _vpnAdapter.Start(_adapterOptions, cancellationToken);
+
+        // retry ad after adapter started
+        if (retryAd) {
+            var ex = await AdHandler.TryWaitForAd(cancellationToken);
+            if (ex != null && Config.AdRequirement is not AdRequirement.Flexible)
+                throw ex;
+        }
+
+        State = ClientState.Connected;
+    }
+
     private bool ShouldManagePacketChannels {
         get => _tunnel.PacketChannelCount < _tunnel.MaxPacketChannelCount;
     }
@@ -196,7 +226,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
             field = value;
             StateChanged?.Invoke(this, EventArgs.Empty);
         }
-    } = ClientState.Connected;
+    } = ClientState.None;
 
     public bool DropUdp {
         get => _dropUdp;

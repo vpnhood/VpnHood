@@ -20,4 +20,5 @@ internal class ClientSessionConfig
     public required IPEndPoint? HostUdpEndPoint { get; init; }
     public required int RemoteMtu { get; init; }
     public required bool IsIpV6SupportedByServer { get; init; }
+    public required AdRequirement AdRequirement { get; init; }
 }

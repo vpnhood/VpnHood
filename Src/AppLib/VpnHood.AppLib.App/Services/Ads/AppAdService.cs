@@ -10,7 +10,7 @@ namespace VpnHood.AppLib.Services.Ads;
 
 public class AppAdService(
     IRegionProvider regionProvider,
-    AppAdProviderItem[] adProviderItems,
+    IReadOnlyList<AppAdProviderItem> adProviderItems,
     TimeSpan loadAdTimeout,
     TimeSpan loadAdPostDelay,
     ITracker tracker)

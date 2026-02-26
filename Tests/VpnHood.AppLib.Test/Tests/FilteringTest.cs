@@ -21,7 +21,7 @@ public class FilteringTest : TestAppBase
         app.SettingsService.SplitByIpSettings.AppIncludes = MockEps.HttpsV4EndPoint2.Address.ToString();
 
         // connect
-        await appDom.Connect(TestCt);
+        await appDom.Connect(cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
         // test includes

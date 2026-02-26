@@ -166,7 +166,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsDebugMode = options.IsDebugMode,
             CustomData = options.CustomData,
             PremiumFeatures = options.PremiumFeatures,
-            IsAdSupported = options.AdProviderItems.Length > 0,
+            IsAdSupported = options.AdProviderItems.Any(),
             IsProxySupported = true
         };
 

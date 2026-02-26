@@ -4,6 +4,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
@@ -37,7 +38,7 @@ public class AdTest : TestAppBase
 
         // connect
         var clientProfile = app.ClientProfileService.ImportAccessKey(accessManager.GetToken(accessToken).ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
     }
 
     [TestMethod]
@@ -115,30 +116,20 @@ public class AdTest : TestAppBase
     [DataRow(false)]
     public async Task RewardedAd_expiration_must_be_increased_by_plan_id(bool acceptAd)
     {
+        using var appDom = await AppClientServerDom.Create(TestAppHelper);
+
         // create server
-        using var accessManager = TestHelper.CreateAccessManager();
-        await using var server = await TestHelper.CreateServer(accessManager);
-        accessManager.CanExtendPremiumByAd = true;
-        accessManager.RejectAllAds = !acceptAd;
-
-        // create client app
-        var appOptions = TestAppHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager) };
-        appOptions.AdProviderItems = [adProviderItem];
-        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-
-        // create access token
-        var token = accessManager.CreateToken();
-        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        appDom.AccessManager.CanExtendPremiumByAd = true;
+        appDom.AccessManager.RejectAllAds = !acceptAd;
 
         // connect
         if (acceptAd) {
-            await app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt);
-            Assert.IsNull(app.State.SessionStatus?.SessionExpirationTime);
+            await appDom.Connect(ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt);
+            Assert.IsNull(appDom.App.State.SessionStatus?.SessionExpirationTime);
         }
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
-                app.Connect(clientProfile.ClientProfileId, ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt));
+                appDom.Connect( ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
         }
     }
@@ -385,10 +376,10 @@ public class AdTest : TestAppBase
 
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         // connect
-        _ = app.Connect(clientProfile.ClientProfileId); // don't await as it will wait for ad to load
+        _ = app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt); // don't await as it will wait for ad to load
         await app.WaitForState(AppConnectionState.WaitingForAd);
-        await VhTestUtil.AssertEqualsWait(true, () => app.State.IsWaitingForInternalAd);
-        await VhTestUtil.AssertEqualsWait(2, () => testAdProvider.LoadAdCount,
+        await AssertEqualsWait(true, () => app.State.IsWaitingForInternalAd);
+        await AssertEqualsWait(2, () => testAdProvider.LoadAdCount,
             "two times must be tried to reach fallback.");
 
         app.AdManager.AdService.InternalAdDismiss(ShowAdResult.Clicked);

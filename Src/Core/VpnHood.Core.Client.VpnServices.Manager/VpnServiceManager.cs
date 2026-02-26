@@ -437,8 +437,10 @@ public class VpnServiceManager : IDisposable
     private void CheckForEvents()
     {
         var connectionInfo = _connectionInfo;
+        
         // check if the state has changed
-        if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState) {
+        if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState || 
+            _lastConnectionInfo.SessionStatus?.IsAdapterStarted != connectionInfo.SessionStatus?.IsAdapterStarted) {
             VhLogger.Instance.LogDebug("The VpnService state has been changed. {OldSate} => {NewState}",
                 _lastConnectionInfo?.ClientState, connectionInfo.ClientState);
 

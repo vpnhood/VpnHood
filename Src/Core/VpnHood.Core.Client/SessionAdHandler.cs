@@ -1,4 +1,6 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
@@ -12,21 +14,36 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
     public event EventHandler? IsWaitingForChanged;
     public bool IsWaitingForAd => !_waitForAdCts.Task.IsCompleted;
 
-    private readonly AsyncLock _waitForAdLock = new();
+    private readonly Lock _waitForAdLock = new();
 
-    public async Task WaitForAd(CancellationToken cancellationToken)
+    public async Task<Exception?> TryWaitForAd(CancellationToken cancellationToken)
     {
-        using var scopeLock = await _waitForAdLock.LockAsync(cancellationToken).Vhc();
+        try {
+            await WaitForAd(cancellationToken);
+            return null;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Failed to wait for ad.");
+            return ex;
+        }
+    }
 
+    public Task WaitForAd(CancellationToken cancellationToken)
+    {
+        lock (_waitForAdLock) {
+            return _waitForAdCts.Task.IsCompleted 
+                ? WaitForAdInternal(cancellationToken) 
+                : _waitForAdCts.Task.WaitAsync(cancellationToken);
+        }
+    }
+
+    private async Task WaitForAdInternal(CancellationToken cancellationToken)
+    {
         try {
             _waitForAdCts = new TaskCompletionSource();
             session.PassthroughForAd = true;
             IsWaitingForChanged?.Invoke(this, EventArgs.Empty);
             await _waitForAdCts.Task.WaitAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
-            _waitForAdCts.TrySetCanceled(cancellationToken);
-            throw;
         }
         finally {
             session.PassthroughForAd = false;

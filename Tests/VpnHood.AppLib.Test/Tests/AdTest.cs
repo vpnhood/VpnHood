@@ -44,6 +44,8 @@ public class AdTest : TestAppBase
     [TestMethod]
     public async Task flexible_ad_should_close_session_if_display_ad_failed()
     {
+        using var appDom = await AppClientServerDom.Create(TestAppHelper, adType: AppAdType.InterstitialAd);
+
         // create server
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);

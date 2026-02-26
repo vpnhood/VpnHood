@@ -33,7 +33,10 @@ public class AppClientServerDom : IDisposable
         TestAdProvider = new TestAdProvider(accessManager, adProviderAdType);
         if (!appOptions.AdProviderItems.Any()) {
             appOptions.AdProviderItems = [
-                new AppAdProviderItem { AdProvider = new TestAdProvider(accessManager, adProviderAdType) }
+                new AppAdProviderItem {
+                    AdProvider = new TestAdProvider(accessManager, adProviderAdType),
+                    ProviderName = "UnitTestAd"
+                }
             ];
         }
 

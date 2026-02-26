@@ -41,7 +41,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly ServerFinder _serverFinder;
     private ulong? _sessionId;
     private readonly AsyncLock _disposeLock = new();
-    private TaskCompletionSource? _waitForAdCts;
     private readonly NetFilter _netFilter;
     private readonly DomainFilteringService _domainFilteringService;
     private readonly StaticIpFilter _staticIpFilter;
@@ -67,7 +66,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool DropUdp { get; set { field = value; _session?.DropUdp = value; } }
     public bool DropQuic { get; set { field = value; _session?.DropQuic = value; } }
     public ChannelProtocol ChannelProtocol { get; set { field = value; _session?.ChannelProtocol = value; } }
-    public Exception? LastException {get=> field ?? _session?.LastException; private set; }
+    public Exception? LastException { get => field ?? _session?.LastException; private set; }
+    public ISessionAdHandler? SessionAdHandler => _session?.AdHandler;
 
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
@@ -179,21 +179,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         };
 
     public ClientState State {
-        get {
-            if (field is ClientState.Disposed or ClientState.Disconnecting)
-                return field;
-
-            // waiting for ad
-            if (_waitForAdCts?.Task.IsCompleted is false)
-                return ClientState.WaitingForAd;
-
-            // waiting for ad (step 2)
-            if (_session?.PassthroughForAd == true && field == ClientState.Connected)
-                return ClientState.WaitingForAdEx;
-
-            // return session state if session is created, otherwise return client state
-            return field;
-        }
+        get;
         private set {
             field = value;
             FireStateChanged();
@@ -329,17 +315,21 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 UserReview = Config.UserReview
             };
 
-            using var requestResult = await ConnectorService.SendRequest<HelloResponse>(request, cancellationToken).Vhc();
+            using var requestResult =
+                await ConnectorService.SendRequest<HelloResponse>(request, cancellationToken).Vhc();
             requestResult.Connection.PreventReuse(); // lets hello request stream not to be reused
-            _connectorService.AllowTcpReuse = Config.AllowTcpReuse; // after hello, we can reuse, as the other connections can use websocket
+            _connectorService.AllowTcpReuse =
+                Config.AllowTcpReuse; // after hello, we can reuse, as the other connections can use websocket
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)
                 throw new NotSupportedException($"Server must returns {nameof(helloResponse.ClientPublicAddress)}.");
 
             // sort out server IncludeIpRanges
-            var serverIncludeIpRangesByApp = helloResponse.IncludeIpRanges?.ToOrderedList() ?? IpNetwork.All.ToIpRanges();
-            var serverIncludeIpRangesByDevice = helloResponse.VpnAdapterIncludeIpRanges?.ToOrderedList() ?? IpNetwork.All.ToIpRanges();
+            var serverIncludeIpRangesByApp =
+                helloResponse.IncludeIpRanges?.ToOrderedList() ?? IpNetwork.All.ToIpRanges();
+            var serverIncludeIpRangesByDevice =
+                helloResponse.VpnAdapterIncludeIpRanges?.ToOrderedList() ?? IpNetwork.All.ToIpRanges();
             var serverIncludeIpRanges = serverIncludeIpRangesByApp.Intersect(serverIncludeIpRangesByDevice);
             var serverAllowedLocalNetworks = IpNetwork.LocalNetworks.ToIpRanges().Intersect(serverIncludeIpRanges);
 
@@ -381,9 +371,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // set DNS after setting IpFilters
             var dnsConfig = ClientHelper
                 .GetDnsServers(Config.DnsServers,
-                serverDnsAddresses: helloResponse.DnsServers ?? [],
-                serverIncludeIpRanges: serverIncludeIpRangesByApp,
-                ipFilter: _staticIpFilter);
+                    serverDnsAddresses: helloResponse.DnsServers ?? [],
+                    serverIncludeIpRanges: serverIncludeIpRangesByApp,
+                    ipFilter: _staticIpFilter);
 
             // Build the IncludeIpRanges for the VpnAdapter
             SessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
@@ -480,19 +470,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             // prepare packet capture
             // Set a default to capture & drop the packets if the server does not provide a network
             var networkV4 = helloResponse.VirtualIpNetworkV4 ?? new IpNetwork(IPAddress.Parse("10.255.0.2"), 32);
-            var networkV6 = helloResponse.VirtualIpNetworkV6 ?? new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
+            var networkV6 = helloResponse.VirtualIpNetworkV6 ??
+                            new IpNetwork(IPAddressUtil.GenerateUlaAddress(0x1001), 128);
             VhLogger.Instance.LogInformation(
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
                 SessionInfo.DnsConfig, VhLogger.Format(SessionIncludeIpRangesByDevice.ToIpNetworks()));
-
-            // wait for ad before adapter
-            var passthroughForAd = helloResponse.AdRequirement != AdRequirement.None;
-            if (passthroughForAd) {
-                _waitForAdCts = new TaskCompletionSource();
-                FireStateChanged();
-                await _waitForAdCts.Task;
-                _waitForAdCts = null;
-            }
 
             // create session
             _session = new ClientSession(
@@ -506,7 +488,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                 connectorService: _connectorService!,
                 domainFilteringService: _domainFilteringService,
                 netFilter: _netFilter,
-                passthroughForAd: passthroughForAd,
                 options: new ClientSessionOptions {
                     ChannelProtocol = ChannelProtocol,
                     TcpProxyCatcherAddressIpV4 = Config.TcpProxyCatcherAddressIpV4,
@@ -533,10 +514,22 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
                     HostUdpEndPoint = hostUdpEndPoint,
                     IsIpV6SupportedByServer = helloResponse.IsIpV6Supported
                 });
-            _session.StateChanged +=  Session_StateChanged;
+            _session.StateChanged += Session_StateChanged;
+            var manageChannelsTask = _session.ManagePacketChannels(cancellationToken);
+
+            // wait for ad before adapter
+            var retryAd = false;
+            if (helloResponse.AdRequirement != AdRequirement.None) {
+                try {
+                    await _session.AdHandler.WaitForAd(cancellationToken);
+                }
+                catch {
+                    retryAd = false;
+                }
+            }
 
             // manage datagram channels
-            await _session.ManagePacketChannels(cancellationToken).Vhc();
+            await manageChannelsTask.Vhc();
 
             // Start the VpnAdapter
             var adapterOptions = new VpnAdapterOptions {
@@ -552,6 +545,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // start the VpnAdapter
             await _vpnAdapter.Start(adapterOptions, cancellationToken);
+
+            // retry ad after adapter started
+            if (retryAd)
+                await _session.AdHandler.WaitForAd(cancellationToken);
         }
         catch (TimeoutException) {
             throw new ConnectionTimeoutException("Could not connect to the server in the given time.");
@@ -601,45 +598,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         return _session?.UpdateStatus(cancellationToken) ?? Task.CompletedTask;
     }
 
-    public void SetWaitForAd()
-    {
-        _session?.PassthroughForAd = true;
-        FireStateChanged();
-    }
-
-    public Task SetAdFailed(CancellationToken cancellationToken)
-    {
-        _ = cancellationToken;
-
-        // if there is no wait for ad, then we should remove passthrough flag and resume the connection
-        // App is responsible to disconnect for failed ad
-        if (_waitForAdCts == null)
-            _session?.PassthroughForAd = false;
-
-        // first step should always be accepted to jump to the next step
-        _waitForAdCts?.TrySetResult();
-        FireStateChanged();
-        return Task.CompletedTask;
-    }
-
-    public Task SetAdOk(CancellationToken cancellationToken)
-    {
-        // make everything is ok. 
-        _session?.PassthroughForAd = false;
-        _session?.DropCurrentConnections();
-        _waitForAdCts?.TrySetResult();
-        FireStateChanged();
-        return Task.CompletedTask;
-    }
-
-    public async Task SetRewardedAdOk(string adData, CancellationToken cancellationToken)
-    {
-        if (_session != null)
-            await _session.SendRewardedAdData(adData, cancellationToken);
-
-        await SetAdOk(cancellationToken);
-    }
-
     public async ValueTask DisposeAsync()
     {
         if (_session != null)
@@ -659,7 +617,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogInformation("Client is shutting down...");
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
-        _waitForAdCts?.TrySetCanceled();
 
         // close session
         _session?.Dispose();

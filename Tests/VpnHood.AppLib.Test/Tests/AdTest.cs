@@ -246,7 +246,7 @@ public class AdTest : TestAppBase
         };
 
         // connect
-        _ = app.Connect(clientProfile.ClientProfileId); // don't await as it will wait for ad to load
+        _ = app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt); // don't await as it will wait for ad to load
         await app.WaitForState(AppConnectionState.WaitingForAd);
         await AssertEqualsWait(true, () => isAdLoadingStatusMet);
     }
@@ -340,13 +340,14 @@ public class AdTest : TestAppBase
         // connect
         var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        _ = app.Connect(clientProfile.ClientProfileId);
+        _ = app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
 
         //await app.WaitForState(AppConnectionState.WaitingForAd);
         //await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);
 
         // wait for AdBlockerException
-        await VhTestUtil.AssertEqualsWait(AppConnectionState.None, () => app.State.ConnectionState);
+        await VhTestUtil.AssertEqualsWait(AppConnectionState.None, 
+            () => app.State.ConnectionState, cancellationToken: TestCt);
         Assert.AreEqual(nameof(AdBlockerException), app.State.LastError?.TypeName);
     }
 

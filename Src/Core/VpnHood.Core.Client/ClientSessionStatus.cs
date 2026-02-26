@@ -51,4 +51,5 @@ internal class ClientSessionStatus(
     public bool IsIpV6SupportedByServer => packetHandler.IsIpV6SupportedByServer;
     public bool IsIpV6SupportedByClient => packetHandler.IsIpV6SupportedByClient;
     public ApiError? Error => session.LastException?.ToApiError();
+    public bool IsAdapterStarted => session.IsAdapterStarted;
 }

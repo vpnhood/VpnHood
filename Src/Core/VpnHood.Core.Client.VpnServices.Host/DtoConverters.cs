@@ -28,6 +28,7 @@ internal static class DtoConverters
             ChannelProtocol = sessionStatus.ChannelProtocol,
             IsTcpProxy = sessionStatus.IsTcpProxy,
             IsDropQuic = sessionStatus.IsDropQuic,
+            IsAdapterStarted = sessionStatus.IsAdapterStarted,
             Error = sessionStatus.Error
         };
 

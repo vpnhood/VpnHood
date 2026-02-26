@@ -57,8 +57,10 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     public byte[] SessionKey { get; }
     public SessionInfo SessionInfo { get; }
     public ClientSessionConfig Config { get; }
+    public ISessionAdHandler AdHandler { get; }
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
+    public bool IsAdapterStarted => _vpnAdapter.IsStarted;
     public bool PassthroughForAd {
         get => _packetHandler.PassthroughForAd;
         set => _packetHandler.PassthroughForAd = value;
@@ -71,7 +73,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         SessionInfo sessionInfo,
         ulong sessionId,
         byte[] sessionKey,
-        bool passthroughForAd,
         AccessUsage accessUsage,
         ConnectorService connectorService,
         DomainFilteringService domainFilteringService,
@@ -151,9 +152,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
             netFilter: _netFilter,
             proxyManager: _proxyManager,
             dnsServers: Config.DnsConfig.DnsServers,
-            isIpV6SupportedByServer: Config.IsIpV6SupportedByServer) {
-            PassthroughForAd = passthroughForAd
-        };
+            isIpV6SupportedByServer: Config.IsIpV6SupportedByServer);
 
         _status = new ClientSessionStatus(
             session: this,
@@ -167,6 +166,9 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         if (tracker != null)
             _clientUsageTracker = new ClientUsageTracker(_status, tracker);
 
+        // Ad
+        AdHandler = new SessionAdHandler(this);
+
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
         _cleanupJob = new Job(Cleanup, nameof(VpnHoodClient));
@@ -177,10 +179,14 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         // start
         _clientHost.Start();
     }
-    
+
+    private bool ShouldManagePacketChannels {
+        get { return _tunnel.PacketChannelCount < _tunnel.MaxPacketChannelCount; }
+    }
+
     public ClientState State {
         get;
-        private set {
+        internal set {
             if (field == value) return;
             field = value;
             StateChanged?.Invoke(this, EventArgs.Empty);
@@ -334,8 +340,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
-
-    private bool ShouldManagePacketChannels => _tunnel.PacketChannelCount < _tunnel.MaxPacketChannelCount;
 
     public async ValueTask ManagePacketChannels(CancellationToken cancellationToken)
     {
@@ -534,18 +538,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
             .Vhc();
     }
 
-    public async Task SendRewardedAdData(string adData, CancellationToken cancellationToken)
-    {
-        // request reward from server
-        using var requestResult = await SendRequest<SessionResponse>(
-            new RewardedAdRequest {
-                RequestId = UniqueIdFactory.Create(),
-                SessionId = SessionId,
-                SessionKey = SessionKey,
-                AdData = adData
-            },
-            cancellationToken).Vhc();
-    }
+
 
     private ValueTask DisposeAsync(Exception ex)
     {

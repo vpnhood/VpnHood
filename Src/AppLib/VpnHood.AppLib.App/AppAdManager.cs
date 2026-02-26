@@ -175,11 +175,12 @@ public class AppAdManager(
         await vpnServiceManager.RefreshState(cancellationToken);
         var connectionInfo = vpnServiceManager.ConnectionInfo;
 
-        // ignore ad blocker if DNS over TLS is not detected or if the client state is not WaitingForAdEx.
+        // ignore ad blocker if DNS over TLS is not detected or if the adapter is not started yet.
         // We don't count network and default dns as ad blocker because they can be set by network admin
         // WaitingForAdEx means adapter is started and network DNS is set to VPN DNS servers.
-        if (connectionInfo.ClientState is not ClientState.WaitingForAdEx ||
-            connectionInfo.SessionStatus?.IsDnsOverTlsDetected is null or false)
+        if (connectionInfo.SessionStatus is null || 
+            !connectionInfo.SessionStatus.IsAdapterStarted ||
+            !connectionInfo.SessionStatus.IsDnsOverTlsDetected)
             return false;
 
         // we just check if the exception is LoadAdException

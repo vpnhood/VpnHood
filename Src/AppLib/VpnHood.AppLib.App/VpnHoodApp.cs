@@ -456,7 +456,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (clientState == ClientState.Waiting)
                 return AppConnectionState.Waiting;
 
-            if (clientState is ClientState.WaitingForAd or ClientState.WaitingForAdEx)
+            if (clientState is ClientState.WaitingForAd)
                 return AdManager.IsWaitingForPostDelay ? AppConnectionState.Connected : AppConnectionState.WaitingForAd;
 
             if (clientState == ClientState.ValidatingProxies)
@@ -1002,7 +1002,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             _connectTimeoutCts.CancelAfter(TimeSpan.FromMinutes(15));
             var connectionInfo = ConnectionInfo;
-            var useFallback = connectionInfo.ClientState is ClientState.WaitingForAdEx;
+            var useFallback = connectionInfo.SessionStatus?.IsAdapterStarted is true;
             await AdManager.ShowAd(
                 connectionInfo.SessionInfo.SessionId, connectionInfo.SessionInfo.AdRequirement,
                 useFallback: useFallback, _showAdCts.Token);

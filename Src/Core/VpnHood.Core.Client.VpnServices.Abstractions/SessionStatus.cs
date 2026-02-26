@@ -25,6 +25,7 @@ public class SessionStatus
     public required bool IsDnsOverTlsDetected { get; init; }
     public required bool IsTcpProxy { get; init; }
     public required bool IsDropQuic { get; set; }
+    public required bool IsAdapterStarted { get; set; }
     public required ChannelProtocol ChannelProtocol { get; init; }
     public required ApiError? Error { get; init; }
 }

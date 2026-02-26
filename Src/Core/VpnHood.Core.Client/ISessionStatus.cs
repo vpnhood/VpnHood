@@ -31,4 +31,5 @@ public interface ISessionStatus
     bool IsIpV6SupportedByServer { get; }
     bool IsIpV6SupportedByClient { get; }
     ApiError? Error { get; }
+    bool IsAdapterStarted { get; }
 }

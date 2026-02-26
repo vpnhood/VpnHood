@@ -10,7 +10,6 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -44,26 +43,15 @@ public class AdTest : TestAppBase
     [TestMethod]
     public async Task flexible_ad_should_close_session_if_display_ad_failed()
     {
-        using var appDom = await AppClientServerDom.Create(TestAppHelper, adType: AppAdType.InterstitialAd);
-
-        // create server
-        using var accessManager = TestHelper.CreateAccessManager();
-        await using var server = await TestHelper.CreateServer(accessManager);
-
-        // create client app
-        var appOptions = TestAppHelper.CreateAppOptions();
-        var adProviderItem = new AppAdProviderItem {
-            AdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd),
-            ProviderName = "UnitTestAd"
-        };
-        appOptions.AdProviderItems = [adProviderItem];
-        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        using var appDom = await AppClientServerDom.Create(TestAppHelper, adProviderAdType: AppAdType.InterstitialAd);
+        var app = appDom.App;
         AppUiContext.Context = null;
 
         // connect
-        var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExactlyAsync<ShowAdNoUiException>(()
+            => app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt));
         await app.WaitForState(AppConnectionState.None);
     }
 
@@ -131,7 +119,7 @@ public class AdTest : TestAppBase
         }
         else {
             var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
-                appDom.Connect( ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt));
+                appDom.Connect(ConnectPlanId.PremiumByRewardedAd, cancellationToken: TestCt));
             Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
         }
     }
@@ -271,7 +259,7 @@ public class AdTest : TestAppBase
         appOptions.AdProviderItems = [adProviderItem];
 
         // create the app
-        var device = TestAppHelper.CreateDevice(); 
+        var device = TestAppHelper.CreateDevice();
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: device);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
@@ -298,11 +286,23 @@ public class AdTest : TestAppBase
     [TestMethod]
     public async Task Adblocker_exception()
     {
-        // create server
-        using var accessManager = TestHelper.CreateAccessManager();
-        await using var server = await TestHelper.CreateServer(accessManager);
+        // create client app
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.DeviceUiProvider = new TestDeviceUiProvider {
+            SystemPrivateDns = new PrivateDns {
+                Provider = "adblocker.test", //this would be failed
+                IsActive = true
+            }
+        };
 
-        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        // simulate adblocker by making ad load to fail with adblocker exception and also blocking ad provider endpoint
+        using var appDom = await AppClientServerDom.Create(TestAppHelper, 
+            adProviderAdType: AppAdType.InterstitialAd, appOptions: appOptions);
+
+        var adProvider = appDom.TestAdProvider;
+        var app = appDom.App;
+
+        // simulate adblocker
         adProvider.LoadAdCompletionSource = new TaskCompletionSource();
         adProvider.LoadAdCallback = async () => {
             if (adProvider.LoadAdCount == 1) // fail first time to use after adapter load
@@ -315,32 +315,16 @@ public class AdTest : TestAppBase
             throw new LoadAdException("Test load failed.");
         };
 
-        // create client app
-        var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.DeviceUiProvider = new TestDeviceUiProvider {
-            SystemPrivateDns = new PrivateDns { IsActive = true }
-        };
-
-        var adProviderItem = new AppAdProviderItem {
-            AdProvider = adProvider,
-            ProviderName = "UnitTestAd"
-        };
-
-        appOptions.AdProviderItems = [adProviderItem];
-
-        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
-
         // connect
-        var token = accessManager.CreateToken(adRequirement: AdRequirement.Flexible);
+        var token = appDom.AccessManager.CreateToken(adRequirement: AdRequirement.Flexible);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         _ = app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
 
-        //await app.WaitForState(AppConnectionState.WaitingForAd);
-        //await VhTestUtil.AssertEqualsWait(2, () => adProvider.LoadAdCount);
+        // we don't use tls over dns detection, so the ad should fail after first attempt by checking the provider
+        await AssertEqualsWait(1, () => adProvider.LoadAdCount);
 
         // wait for AdBlockerException
-        await VhTestUtil.AssertEqualsWait(AppConnectionState.None, 
-            () => app.State.ConnectionState, cancellationToken: TestCt);
+        await AssertEqualsWait(AppConnectionState.None, () => app.State.ConnectionState);
         Assert.AreEqual(nameof(AdBlockerException), app.State.LastError?.TypeName);
     }
 

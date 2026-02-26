@@ -34,7 +34,7 @@ public class AppClientServerDom : IDisposable
         if (!appOptions.AdProviderItems.Any()) {
             appOptions.AdProviderItems = [
                 new AppAdProviderItem {
-                    AdProvider = new TestAdProvider(accessManager, adProviderAdType),
+                    AdProvider = TestAdProvider,
                     ProviderName = "UnitTestAd"
                 }
             ];
@@ -71,7 +71,7 @@ public class AppClientServerDom : IDisposable
     public static async Task<AppClientServerDom> Create(
         TestAppHelper testAppHelper,
         TestVpnAdapterOptions? adapterOptions = null,
-        AppAdType adType = AppAdType.RewardedAd,
+        AppAdType adProviderAdType = AppAdType.RewardedAd,
         AppOptions? appOptions = null)
     {
         var device = testAppHelper.CreateDevice(adapterOptions);
@@ -87,7 +87,7 @@ public class AppClientServerDom : IDisposable
             accessManager: accessManager,
             server: server,
             appOptions: appOptions,
-            adProviderAdType: adType,
+            adProviderAdType: adProviderAdType,
             device: device);
     }
 

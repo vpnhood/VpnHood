@@ -40,7 +40,7 @@ public class TestAppHelper : TestHelper
                 LoadAdPostDelay = TimeSpan.Zero,
                 ExtendByRewardedAdThreshold = TimeSpan.Zero,
                 RejectAdBlocker = true,
-                AllowedPrivateDnsProviders = ["dns.google"]
+                AllowedPrivateDnsProviders = ["dns.google", "dns.test"]
             },
             LogServiceOptions = {
                 MinLogLevel = VhLogger.MinLogLevel,

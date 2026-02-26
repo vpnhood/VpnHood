@@ -168,6 +168,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
         // Ad
         AdHandler = new SessionAdHandler(this);
+        AdHandler.IsWaitingForChanged += (_, _) => StateChanged?.Invoke(this, EventArgs.Empty);
 
         // Create simple disposable objects
         _cancellationTokenSource = new CancellationTokenSource();
@@ -181,12 +182,16 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     }
 
     private bool ShouldManagePacketChannels {
-        get { return _tunnel.PacketChannelCount < _tunnel.MaxPacketChannelCount; }
+        get => _tunnel.PacketChannelCount < _tunnel.MaxPacketChannelCount;
     }
 
     public ClientState State {
-        get;
-        internal set {
+        get {
+            if (field is ClientState.Disposed or ClientState.Disconnecting) return field;
+            if (AdHandler.IsWaitingForAd) return ClientState.WaitingForAd;
+            return field;
+        }
+        private set {
             if (field == value) return;
             field = value;
             StateChanged?.Invoke(this, EventArgs.Empty);
@@ -642,6 +647,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
         _cleanupJob.Dispose();
         _clientUsageTracker?.Dispose();
+        AdHandler.Dispose();
 
         // invoke disposed event
         State = ClientState.Disposed;

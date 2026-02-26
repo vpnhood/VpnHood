@@ -1,5 +1,4 @@
-﻿using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
@@ -8,31 +7,34 @@ namespace VpnHood.Core.Client;
 
 internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
 {
-    private TaskCompletionSource _waitForAdCts = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private TaskCompletionSource _waitForAdCts = VhUtils.CreateCompletedTcs();
+
+    public event EventHandler? IsWaitingForChanged;
+    public bool IsWaitingForAd => !_waitForAdCts.Task.IsCompleted;
+
+    private readonly AsyncLock _waitForAdLock = new();
+
     public async Task WaitForAd(CancellationToken cancellationToken)
     {
-        var oldState = session.State;
-        var waitForAdCts = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var previousWaitForAdCts = Interlocked.Exchange(ref _waitForAdCts, waitForAdCts);
+        using var scopeLock = await _waitForAdLock.LockAsync(cancellationToken).Vhc();
 
         try {
+            _waitForAdCts = new TaskCompletionSource();
             session.PassthroughForAd = true;
-            session.State = ClientState.WaitingForAd;
-            previousWaitForAdCts.TrySetCanceled();
-            await waitForAdCts.Task.WaitAsync(cancellationToken);
+            IsWaitingForChanged?.Invoke(this, EventArgs.Empty);
+            await _waitForAdCts.Task.WaitAsync(cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
-            waitForAdCts.TrySetCanceled(cancellationToken);
+            _waitForAdCts.TrySetCanceled(cancellationToken);
             throw;
         }
         finally {
             session.PassthroughForAd = false;
             // reset connection after recovering passthrough mode to use VPN again
             session.DropCurrentConnections();
-            session.State = oldState;
+            IsWaitingForChanged?.Invoke(this, EventArgs.Empty);
         }
     }
-
     public void SetAdOk()
     {
         _waitForAdCts.TrySetResult();
@@ -62,5 +64,10 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
             SetAdFailed(ex);
             throw;
         }
+    }
+
+    public void Dispose()
+    {
+        _waitForAdCts.TrySetCanceled();
     }
 }

@@ -51,8 +51,9 @@ public class AppAdManager(
         if (uiContext == null)
             throw new ShowAdNoUiException();
 
-        // set wait for ad state 
-        await vpnServiceManager.SetWaitForAd(cancellationToken).Vhc();
+        // set wait for ad if not already in that state
+        if (vpnServiceManager.ConnectionInfo.ClientState is not ClientState.WaitingForAd)
+            await vpnServiceManager.SetWaitForAd(cancellationToken).Vhc();
 
         try {
             IsShowing = true;

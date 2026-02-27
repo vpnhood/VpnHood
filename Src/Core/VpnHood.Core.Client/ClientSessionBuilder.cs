@@ -321,9 +321,6 @@ internal class ClientSessionBuilder
                     TcpProxyCatcherAddressIpV4 = _config.TcpProxyCatcherAddressIpV4,
                     TcpProxyCatcherAddressIpV6 = _config.TcpProxyCatcherAddressIpV6,
                     RemoteMtu = helloResponse.Mtu,
-                    MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
-                        ? Math.Min(_config.MaxPacketChannelCount, helloResponse.MaxPacketChannelCount)
-                        : _config.MaxPacketChannelCount,
                     MaxPacketChannelLifespan = _config.MaxPacketChannelLifespan,
                     MinPacketChannelLifespan = _config.MinPacketChannelLifespan,
                     SessionTimeout = _config.SessionTimeout,
@@ -337,7 +334,10 @@ internal class ClientSessionBuilder
                     HostTcpEndPoint = connectorService.VpnEndPoint.TcpEndPoint,
                     HostUdpEndPoint = hostUdpEndPoint,
                     IsIpV6SupportedByServer = helloResponse.IsIpV6Supported,
-                    AdRequirement = helloResponse.AdRequirement
+                    AdRequirement = helloResponse.AdRequirement,
+                    MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
+                        ? Math.Min(_config.MaxPacketChannelCount, helloResponse.MaxPacketChannelCount)
+                        : _config.MaxPacketChannelCount,
                 });
 
             return session;

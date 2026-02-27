@@ -14,11 +14,11 @@ internal class ClientSessionOptions
     public required IVpnAdapter VpnAdapter { get; init; }
     public required ISocketFactory SocketFactory { get; init; }
     public required ITracker? Tracker { get; init; }
-    public required SessionInfo SessionInfo { get; init; }
     public required AccessUsage AccessUsage { get; init; }
     public required ConnectorService ConnectorService { get; init; }
     public required DomainFilteringService DomainFilteringService { get; init; }
     public required NetFilter NetFilter { get; init; }
+    public required SessionInfo SessionInfo { get; init; }
     public required VpnAdapterOptions VpnAdapterOptions { get; init; }
     public required ChannelProtocol ChannelProtocol { get; init; }
     public required bool DropUdp { get; init; }

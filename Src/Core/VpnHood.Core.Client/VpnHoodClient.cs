@@ -232,8 +232,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             setState: state => State = state);
 
         _session = await sessionBuilder.Build(_cancellationTokenSource.Token, cancellationToken).Vhc();
-        await _session.Start(cancellationToken);
         _session.StateChanged += Session_StateChanged;
+        await _session.Start(cancellationToken);
 
         State = ClientState.Connected;
     }

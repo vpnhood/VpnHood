@@ -38,12 +38,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Token Token { get; }
     public VpnHoodClientConfig Config { get; }
     public ProxyEndPointManager ProxyEndPointManager { get; }
+    public IClientSession? Session =>_session;
     public ISessionStatus? SessionStatus => _session?.Status;
-    public SessionInfo? SessionInfo => _session?.SessionInfo;
+    public SessionInfo? SessionInfo => _session?.Info;
     public IPEndPoint? HostTcpEndPoint => _session?.Config.HostTcpEndPoint;
     public IPEndPoint? HostUdpEndPoint => _session?.Config.HostUdpEndPoint;
-    public ITracker? Tracker { get; }
+    public ISessionAdHandler? SessionAdHandler => _session?.AdHandler;
     public IpRangeOrderedList? SessionIncludeIpRangesByDevice => _session?.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
+    public ITracker? Tracker { get; }
     public IpRangeOrderedList SessionIncludeIpRangesByApp => _staticIpFilter.IncludeRanges;
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
     public bool UseTcpProxy { get; set { field = value; _session?.UseTcpProxy = value; } }
@@ -51,7 +53,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool DropQuic { get; set { field = value; _session?.DropQuic = value; } }
     public ChannelProtocol ChannelProtocol { get; set { field = value; _session?.ChannelProtocol = value; } }
     public Exception? LastException { get => field ?? _session?.LastException; private set; }
-    public ISessionAdHandler? SessionAdHandler => _session?.AdHandler;
 
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,

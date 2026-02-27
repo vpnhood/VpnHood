@@ -22,7 +22,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
 
-internal class ClientSession : IDisposable, IAsyncDisposable
+internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 {
     private readonly ISocketFactory _socketFactory;
     private readonly IVpnAdapter _vpnAdapter;
@@ -50,9 +50,9 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     private DateTime? _lastConnectionErrorTime;
 
     public event EventHandler? StateChanged;
-    public SessionInfo SessionInfo { get; }
     public ISessionStatus Status => _status;
     public ClientSessionConfig Config { get; }
+    public SessionInfo Info => Config.SessionInfo;
     public ISessionAdHandler AdHandler { get; }
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
@@ -75,7 +75,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _dropUdp = options.DropUdp;
         _socketFactory = options.SocketFactory;
         Config = config;
-        SessionInfo = config.SessionInfo;
 
         // init VPN adapter
         _vpnAdapter = options.VpnAdapter;
@@ -259,11 +258,11 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
         // server does not support tcp proxy
         // ReSharper disable once ConvertIfStatementToReturnStatement
-        if (SessionInfo is { IsTcpProxySupported: false })
+        if (Info is { IsTcpProxySupported: false })
             return false;
 
         // server does not support tcp packets so only tcp proxy can work
-        if (SessionInfo is { IsTcpPacketSupported: false })
+        if (Info is { IsTcpPacketSupported: false })
             return true;
 
         // follow config
@@ -282,7 +281,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         var dropUdp = _dropUdp && CalcUseTcpProxy();
 
         // ChannelProtocol
-        var channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, SessionInfo);
+        var channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, Info);
         if (channelProtocol != _oldChannelProtocol) {
             VhLogger.Instance.LogInformation("VpnProtocol is changed to {VpnProtocol}.", channelProtocol);
             _tunnel.MaxPacketChannelCount = channelProtocol == ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;

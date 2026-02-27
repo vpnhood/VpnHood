@@ -14,8 +14,8 @@ public class VpnAdapterOptions
     public IpNetwork? VirtualIpNetworkV6 { get; init; }
     public IEnumerable<IPAddress> DnsServers { get; init; } = [];
     public IEnumerable<IpNetwork> IncludeNetworks { get; init; } = [];
-    public string[]? ExcludeApps { get; init; }
-    public string[]? IncludeApps { get; init; }
+    public IEnumerable<string>? ExcludeApps { get; init; }
+    public IEnumerable<string>? IncludeApps { get; init; }
     public bool UseNat { get; init; }
     public int? Mtu { get; init; }
     public int? Metric { get; init; }

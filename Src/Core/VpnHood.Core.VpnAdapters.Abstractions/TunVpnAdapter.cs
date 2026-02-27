@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -41,8 +42,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected abstract Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task SetSessionName(string sessionName, CancellationToken cancellationToken);
-    protected abstract Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken);
-    protected abstract Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken);
+    protected abstract Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken);
+    protected abstract Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken);
     protected abstract Task AdapterAdd(CancellationToken cancellationToken);
     protected abstract void AdapterRemove();
     protected abstract Task AdapterOpen(CancellationToken cancellationToken);
@@ -284,7 +285,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
-    private async Task SetAppFilters(string[]? includeApps, string[]? excludeApps, CancellationToken cancellationToken)
+    [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
+    private async Task SetAppFilters(IEnumerable<string>? includeApps, IEnumerable<string>? excludeApps, CancellationToken cancellationToken)
     {
         var appPackageId = AppPackageId;
 
@@ -297,13 +299,13 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         // make sure current app is in the allowed list
         if (includeApps != null) {
-            includeApps = includeApps.Concat([appPackageId]).Distinct().ToArray();
+            includeApps = includeApps.Concat([appPackageId]).Distinct();
             await SetAllowedApps(includeApps, cancellationToken);
         }
 
         // make sure current app is not in the disallowed list
         if (excludeApps != null) {
-            excludeApps = excludeApps.Where(x => x != appPackageId).Distinct().ToArray();
+            excludeApps = excludeApps.Where(x => x != appPackageId).Distinct();
             await SetDisallowedApps(excludeApps, cancellationToken);
         }
     }

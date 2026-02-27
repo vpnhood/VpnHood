@@ -127,10 +127,10 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         return Task.CompletedTask;
     }
 
-    protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+    protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
-    protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+    protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)

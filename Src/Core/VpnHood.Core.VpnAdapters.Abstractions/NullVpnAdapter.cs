@@ -51,12 +51,12 @@ public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
         return Task.CompletedTask;
     }
 
-    protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken)
+    protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
 
-    protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken)
+    protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }

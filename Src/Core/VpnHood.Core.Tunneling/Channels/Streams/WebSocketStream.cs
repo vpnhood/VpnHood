@@ -92,7 +92,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
         // if bytesRead is 0 and _remainingChunkBytes is not 0, it means the stream has been closed unexpectedly
         if (bytesRead == 0)
-            throw new Exception("BinaryStream has been closed unexpectedly.");
+            throw new Exception("WebSocketStream has been closed unexpectedly.");
 
         // update remaining chunk
         _remainingChunkBytes -= bytesRead;
@@ -219,7 +219,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
                 // skip close connection payload
                 if (webSocketHeader.IsCloseConnection) {
                     VhLogger.Instance.LogDebug(GeneralEventId.Stream,
-                        "BinaryStream has been closed by WebSocket close frame. StreamId: {StreamId}", StreamId);
+                        "WebSocketStream has been closed by WebSocket close frame. StreamId: {StreamId}", StreamId);
 
                     // discard the frame payload
                     await DiscardWebSocketFrame(webSocketHeader, cancellationToken).Vhc();
@@ -235,7 +235,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
                 // read another chunk header if it is not data chunk
                 if (webSocketHeader.IsPing || webSocketHeader.IsPing || !webSocketHeader.IsBinary) {
                     VhLogger.Instance.LogDebug(GeneralEventId.Stream,
-                        "BinaryStream has received a WebSocket frame that is not binary. StreamId: {StreamId}",
+                        "WebSocketStream has received a WebSocket frame that is not binary. StreamId: {StreamId}",
                         StreamId);
 
                     // discard the frame payload if it is ping or pong
@@ -248,7 +248,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         }
         catch (EndOfStreamException) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
-                "BinaryStream has been closed without terminator. StreamId: {StreamId}", StreamId);
+                "WebSocketStream has been closed without terminator. StreamId: {StreamId}", StreamId);
             _isConnectionClosed = true;
             return new WebSocketHeader {
                 IsCloseConnection = true,
@@ -288,7 +288,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         // could not reuse the underlying stream has been closed
         if (_isConnectionClosed)
             throw new EndOfStreamException(
-                $"Could not reuse a BinaryStream that its underling stream has been closed . StreamId: {StreamId}");
+                $"Could not reuse a WebSocketStream that its underling stream has been closed . StreamId: {StreamId}");
 
         // check if the stream can be reused
         if (!CanReuse)
@@ -360,7 +360,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
             if (CanReuse) {
                 // let it run in the background, the stream owner will close it
                 // CloseStream already handles the disposal and logging
-                CloseStreamAsync().ContinueWith(_ => { });
+                _ = VhUtils.TryInvokeAsync($"Closing Stream: {StreamId}", CloseStreamAsync);
             }
             else {
                 SourceStream.Dispose();

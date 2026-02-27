@@ -11,7 +11,7 @@ public class FilteringTest : TestAppBase
     [TestMethod]
     public async Task Domains_IncludeExclude()
     {
-        using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
         app.UserSettings.DomainFilterPolicy.Includes = [MockEps.HttpsUrl1.Host];
         app.UserSettings.DomainFilterPolicy.Excludes = [MockEps.HttpsUrl2.Host];
@@ -21,7 +21,7 @@ public class FilteringTest : TestAppBase
         app.SettingsService.SplitByIpSettings.AppIncludes = MockEps.HttpsV4EndPoint2.Address.ToString();
 
         // connect
-        await appDom.Connect(TestCt);
+        await appDom.Connect(cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
         // test includes
@@ -44,7 +44,7 @@ public class FilteringTest : TestAppBase
     [TestMethod]
     public async Task Ips_IncludeExclude()
     {
-        using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
 
         // target1

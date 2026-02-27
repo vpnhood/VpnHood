@@ -138,4 +138,13 @@ public class ApiError : ICloneable, IEquatable<ApiError>
     {
         return HashCode.Combine(TypeName, TypeFullName, Message, InnerMessage);
     }
+
+    public override string ToString()
+    {
+        return $"ApiError: TypeName={TypeName}, " +
+               $"TypeFullName={TypeFullName}, " +
+               $"Message={Message}, " +
+               $"InnerMessage={InnerMessage}, " +
+               $"Data=[{string.Join(", ", Data.Select(kvp => $"{kvp.Key}={kvp.Value}"))}]";
+    }
 }

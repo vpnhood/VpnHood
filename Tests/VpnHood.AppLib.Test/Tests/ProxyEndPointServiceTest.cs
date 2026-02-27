@@ -25,7 +25,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         httpProxyServer.Start();
 
         // create server
-        using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
+        await using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
 
         // set proxy settings to use the local HTTP proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
@@ -56,7 +56,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         httpProxyServer.Start();
 
         // create server
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.DebugData1 += " " + DebugCommands.NoTcpReuse;
 
         // set proxy settings to use the local HTTP proxy
@@ -130,7 +130,7 @@ public class ProxyEndPointServiceTest : TestAppBase
             });
         }
 
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual
         };
@@ -166,7 +166,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         endpoints.Add(endpoints[0]);
 
         // create the client
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual
         };
@@ -191,7 +191,7 @@ public class ProxyEndPointServiceTest : TestAppBase
             });
         }
 
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual
         };
@@ -256,7 +256,7 @@ public class ProxyEndPointServiceTest : TestAppBase
     [TestMethod]
     public async Task Get_device_proxy()
     {
-        using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
+        await using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
         var deviceUiProvider = (TestDeviceUiProvider)dom.App.Services.DeviceUiProvider;
         deviceUiProvider.DeviceProxySettings = new DeviceProxySettings {
             ProxyUrl = new Uri("http://foo.local")
@@ -293,7 +293,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         socks5ProxyServer.Start();
 
         // create app
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
 
         // add proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
@@ -320,7 +320,7 @@ public class ProxyEndPointServiceTest : TestAppBase
     public async Task Expect_UnreachableProxyException()
     {
         // create app
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
 
         // add proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
@@ -347,7 +347,7 @@ public class ProxyEndPointServiceTest : TestAppBase
     public async Task DeleteAll()
     {
         // create app
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual
         };
@@ -384,7 +384,7 @@ public class ProxyEndPointServiceTest : TestAppBase
     public async Task Import_single_proxy()
     {
         // create app
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual
         };
@@ -405,7 +405,7 @@ public class ProxyEndPointServiceTest : TestAppBase
     public async Task Import_multiple_proxies()
     {
         // create app
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual
         };
@@ -453,7 +453,7 @@ public class ProxyEndPointServiceTest : TestAppBase
     public async Task Import_with_existing_proxies()
     {
         // create app
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual
         };
@@ -488,7 +488,7 @@ public class ProxyEndPointServiceTest : TestAppBase
     public async Task Import_duplicate_proxies_should_not_duplicate()
     {
         // create app
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual
         };
@@ -534,7 +534,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         TestAppHelper.WebServer.FileContent1 = proxyListContent;
 
         // create app
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual,
             AutoUpdateOptions = new ProxyAutoUpdateOptions {
@@ -581,7 +581,7 @@ public class ProxyEndPointServiceTest : TestAppBase
         TestAppHelper.WebServer.FileContent1 = proxyListContent;
 
         // create app
-        using var dom = await AppClientServerDom.Create(TestAppHelper);
+        await using var dom = await AppClientServerDom.Create(TestAppHelper);
         dom.App.UserSettings.ProxySettings = new AppProxySettings {
             Mode = AppProxyMode.Manual,
             AutoUpdateOptions = new ProxyAutoUpdateOptions {

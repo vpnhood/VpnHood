@@ -332,12 +332,17 @@ public class Session : IDisposable
                     throw new InvalidOperationException("UdpChannel is not created yet.");
 
                 // enable udp channel
-                Tunnel.RemoveAllPacketChannels();
+                Tunnel.RemoveChannels<IPacketChannel>();
                 Tunnel.AddChannel(_udpChannel);
+                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel, 
+                    "UdpChannel is enabled. SessionId: {SessionId}", SessionId);
             }
             else {
                 // disable udp channel
-                Tunnel.RemoveAllChannels<UdpChannel>();
+                Tunnel.RemoveChannels<UdpChannel>();
+                _udpChannel = null; // remove will dispose the channel, set to null to avoid reuse
+                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
+                    "UdpChannel is disabled. SessionId: {SessionId}", SessionId);
             }
 
             field = value;

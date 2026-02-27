@@ -32,10 +32,10 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     public override bool IsAppFilterSupported => false;
     protected override string? AppPackageId => null;
 
-    protected override Task SetAllowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+    protected override Task SetAllowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
-    protected override Task SetDisallowedApps(string[] packageIds, CancellationToken cancellationToken) =>
+    protected override Task SetDisallowedApps(IEnumerable<string> packageIds, CancellationToken cancellationToken) =>
         throw new NotSupportedException("App filtering is not supported on LinuxTun.");
 
     private static async Task<string> GetPrimaryAdapterName(CancellationToken cancellationToken)

@@ -276,6 +276,9 @@ public class VpnServiceManager : IDisposable
             _connectionInfo = SetConnectionInfo(ClientState.None);
         }
         catch (VpnServiceUnreachableException ex) {
+            VhLogger.Instance.LogError(ex, "VpnService is unreachable. EndPoint: {EndPoint}", 
+                _connectionInfo.ApiEndPoint);
+
             // increment the count to stop the service if it is unreachable for too long
             _vpnServiceUnreachableCount++;
 
@@ -437,8 +440,10 @@ public class VpnServiceManager : IDisposable
     private void CheckForEvents()
     {
         var connectionInfo = _connectionInfo;
+        
         // check if the state has changed
-        if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState) {
+        if (_lastConnectionInfo?.ClientState != connectionInfo.ClientState || 
+            _lastConnectionInfo.SessionStatus?.IsAdapterStarted != connectionInfo.SessionStatus?.IsAdapterStarted) {
             VhLogger.Instance.LogDebug("The VpnService state has been changed. {OldSate} => {NewState}",
                 _lastConnectionInfo?.ClientState, connectionInfo.ClientState);
 

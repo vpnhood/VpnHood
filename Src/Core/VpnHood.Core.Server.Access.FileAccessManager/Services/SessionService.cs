@@ -291,8 +291,8 @@ public class SessionService : IDisposable
             }
 
             // set to session expiration time if session expiration time is shorter than accessUsage.ExpirationTime
-            if (session.ExpirationTime != null && (accessUsage.ExpirationTime == null ||
-                                                   session.ExpirationTime < accessUsage.ExpirationTime)) {
+            if (session.ExpirationTime != null &&
+                (accessUsage.ExpirationTime == null || session.ExpirationTime < accessUsage.ExpirationTime)) {
                 accessUsage.ExpirationTime = session.ExpirationTime.Value;
             }
 

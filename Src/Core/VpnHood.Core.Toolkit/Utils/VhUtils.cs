@@ -60,6 +60,13 @@ public static class VhUtils
         }
     }
 
+    public static TaskCompletionSource CreateCompletedTcs()
+    {
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult();
+        return tcs;
+    }
+
     private static string FixBase64String(string base64)
     {
         base64 = base64.Trim();

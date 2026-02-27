@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Client;
 
@@ -29,5 +30,6 @@ public interface ISessionStatus
     bool IsDnsOverTlsDetected { get; }
     bool IsIpV6SupportedByServer { get; }
     bool IsIpV6SupportedByClient { get; }
-
+    ApiError? Error { get; }
+    bool IsAdapterStarted { get; }
 }

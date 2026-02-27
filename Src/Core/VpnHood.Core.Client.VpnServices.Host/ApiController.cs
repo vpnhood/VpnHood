@@ -200,38 +200,45 @@ internal class ApiController : IDisposable
     {
         _ = cancellationToken;
 
-        VpnHoodClient.Config.UseTcpProxy = request.Params.UseTcpProxy;
-        VpnHoodClient.Config.DropUdp = request.Params.DropUdp;
-        VpnHoodClient.Config.DropQuic = request.Params.DropQuic;
+        VpnHoodClient.UseTcpProxy = request.Params.UseTcpProxy;
+        VpnHoodClient.DropUdp = request.Params.DropUdp;
+        VpnHoodClient.DropQuic = request.Params.DropQuic;
         VpnHoodClient.ChannelProtocol = request.Params.ChannelProtocol;
         VpnHoodClient.ProxyEndPointManager.UpdateOptions(request.Params.ProxyOptions);
 
         return Task.CompletedTask;
     }
 
-    private ValueTask SetWaitForAd(ApiSetWaitForAdRequest request, CancellationToken cancellationToken)
+    private Task SetWaitForAd(ApiSetWaitForAdRequest request, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
         _ = request;
-        VpnHoodClient.SetWaitForAd();
-        return ValueTask.CompletedTask;
+
+        // Do not await, we should not hold up the API response, the client will call SetAdOk or SetAdFailed when the ad is done
+        // Do not use request cancellation token
+        var adHandler = VhUtils.GetRequiredInstance(VpnHoodClient.Session?.AdHandler);
+        _ = adHandler.WaitForAd(CancellationToken.None); 
+        return Task.CompletedTask;
     }
 
     private async Task SetAdOk(ApiSetAdOkRequest request, CancellationToken cancellationToken)
     {
+        var adHandler = VhUtils.GetRequiredInstance(VpnHoodClient.Session?.AdHandler);
+
         // Send rewarded ad result if it exists
         if (request.IsRewarded && !string.IsNullOrEmpty(request.AdResult.AdData))
-            await VpnHoodClient.SetRewardedAdOk(request.AdResult.AdData, cancellationToken);
+            await adHandler.SendRewardedAdData(request.AdResult.AdData, cancellationToken);
         else
-            await VpnHoodClient.SetAdOk(cancellationToken);
+            adHandler.SetAdOk();
     }
 
     private Task SetAdFailed(ApiAdFailedRequest request, CancellationToken cancellationToken)
     {
-        _ = request; // request is not used here
-        return VpnHoodClient.SetAdFailed(cancellationToken);
+        _ = cancellationToken;
+        var adHandler = VhUtils.GetRequiredInstance(VpnHoodClient.Session?.AdHandler);
+        adHandler.SetAdFailed(request.ApiError?.ToException() ?? new Exception("Failed to load ad."));
+        return Task.CompletedTask;
     }
-
 
     public void Dispose()
     {

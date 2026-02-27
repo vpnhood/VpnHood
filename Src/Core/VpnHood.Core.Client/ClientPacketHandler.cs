@@ -15,16 +15,17 @@ internal class ClientPacketHandler(
     ClientHost clientHost,
     DomainFilteringService domainFilteringService,
     NetFilter netFilter,
-    ProxyManager proxyManager)
+    ProxyManager proxyManager,
+    IReadOnlyList<IPAddress> dnsServers,
+    bool isIpV6SupportedByServer)
 {
-    public IReadOnlyList<IPAddress> DnsServers { get; set; } = [];
     public bool PassthroughForAd { get; set; }
     public bool IsDnsOverTlsDetected { get; private set; }
     public bool DropQuic { get; set; }
     public bool DropUdp { get; set; }
     public bool UseTcpProxy { get; set; }
     public bool IsIpV6SupportedByClient { get; set; }
-    public bool IsIpV6SupportedByServer { get; set; }
+    public bool IsIpV6SupportedByServer => isIpV6SupportedByServer;
 
     public void ProcessOutgoingPacket(IpPacket ipPacket)
     {
@@ -160,6 +161,10 @@ internal class ClientPacketHandler(
 
     private bool ShouldDropUdpPacket(UdpPacket udpPacket)
     {
+        // Always allow DNS packets, even if DropUdp is enabled, to make sure we can resolve the domain and by pass regional ad blockers
+        if (udpPacket.DestinationPort is 53 or 853)
+            return false;
+
         if (DropUdp)
             return true;
 
@@ -175,7 +180,7 @@ internal class ClientPacketHandler(
         // but dns packets should not be treated as ad traffic, to make sure we can resolve the domain and by pass regional ad blockers
         var isDnsPacket = 
             ipPacket.Protocol is IpProtocol.Udp && 
-            (ipPacket.GetDestinationEndPoint().Port is 53 || DnsServers.Contains(ipPacket.DestinationAddress));
+            (ipPacket.GetDestinationEndPoint().Port is 53 || dnsServers.Contains(ipPacket.DestinationAddress));
 
         return !isDnsPacket;
     }

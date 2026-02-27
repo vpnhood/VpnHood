@@ -36,7 +36,7 @@ public class DiagnoserTest : TestAppBase
     [TestMethod]
     public async Task UnreachableServer()
     {
-        using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
+        await using var dom = await AppClientServerDom.CreateWithNullCapture(TestAppHelper);
 
         // change access key endpoint
         var token = dom.ClientProfile.Token;

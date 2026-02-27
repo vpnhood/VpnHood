@@ -1,4 +1,6 @@
-﻿using VpnHood.Core.Client.Abstractions;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Messaging;
 
 namespace VpnHood.Core.Client;
@@ -14,16 +16,17 @@ internal static class ChannelProtocolValidator
         return channelProtocols.ToArray();
     }
 
-    public static ChannelProtocol Validate(ChannelProtocol value, SessionInfo? sessionInfo)
+    public static ChannelProtocol Validate(ChannelProtocol value, SessionInfo sessionInfo)
     {
-        if (value == ChannelProtocol.Quic)
-            throw new NotSupportedException("QUIC is not supported");
+        if (value == ChannelProtocol.Quic) {
+            VhLogger.Instance.LogWarning("Quic protocol is not supported, fallback to Udp");
+            value = ChannelProtocol.Udp;
+        }
 
-        if (sessionInfo == null)
-            return value;
-
-        if (value == ChannelProtocol.Udp && !sessionInfo.IsUdpChannelSupported)
+        if (value == ChannelProtocol.Udp && !sessionInfo.IsUdpChannelSupported) {
+            VhLogger.Instance.LogWarning("Udp protocol is not supported, fallback to Tcp");
             return ChannelProtocol.Tcp;
+        }
 
         return value;
     }

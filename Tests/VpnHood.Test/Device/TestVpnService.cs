@@ -1,6 +1,8 @@
-﻿using VpnHood.Core.Client.VpnServices.Abstractions;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.Providers;
 
@@ -22,9 +24,9 @@ public class TestVpnService
     {
         _vpnAdapterFactory = vpnAdapterFactory;
         _vpnServiceHost = new VpnServiceHost(
-            configFolder, 
-            this, 
-            socketFactory: new TestSocketFactory(), 
+            configFolder,
+            this,
+            socketFactory: new TestSocketFactory(),
             netFilter: netFilter,
             withLogger: false);
     }
@@ -49,14 +51,17 @@ public class TestVpnService
 
     public void ShowNotification(ConnectionInfo connectionInfo)
     {
+        VhLogger.Instance.LogInformation("Show notification called with connection info: {@ConnectionInfo}", connectionInfo);
     }
 
     public void StopNotification()
     {
+        VhLogger.Instance.LogInformation("Stop notification called.");
     }
 
     public void StopSelf()
     {
+        VhLogger.Instance.LogInformation("Stop self called.");
         Dispose();
     }
 
@@ -66,5 +71,6 @@ public class TestVpnService
         IsDisposed = true;
 
         _vpnServiceHost.Dispose();
+        VhLogger.Instance.LogInformation("TestVpnService has been disposed.");
     }
 }

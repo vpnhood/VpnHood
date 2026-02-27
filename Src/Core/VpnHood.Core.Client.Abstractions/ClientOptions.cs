@@ -87,7 +87,7 @@ public class ClientOptions
     public TransferBufferSize? UdpProxyBufferSize { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public TransferBufferSize? StreamProxySendBufferSize { get; set; }
+    public TransferBufferSize? StreamProxyBufferSize { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public EndPointStrategy EndPointStrategy { get; set; }

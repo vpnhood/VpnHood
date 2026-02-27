@@ -1,6 +1,9 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Tunneling;
 using VpnHood.Test.AccessManagers;
 
 namespace VpnHood.AppLib.Test.Providers;
@@ -22,6 +25,9 @@ public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = 
     public async Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
         LoadAdCount++;
+        VhLogger.Instance.LogInformation(GeneralEventId.Test,
+            "TestAdProvider: LoadAd called. Count: {LoadAdCount}", LoadAdCount);
+
         AdLoadedTime = null;
         if (FailLoad)
             throw new LoadAdException("Load Ad failed by test.");

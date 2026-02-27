@@ -27,11 +27,12 @@ public class ServerFinder(
     IPEndPoint[] customServerEndpoints,
     ITracker? tracker,
     ProxyEndPointManager proxyEndPointManager,
+    bool includeIpV6,
     int maxDegreeOfParallelism = 10)
 {
     private ProgressMonitor? _progressMonitor;
     private HostStatus[] _hostEndPointStatuses = [];
-    public bool IncludeIpV6 { get; set; } = true;
+    public bool IncludeIpV6 { get; set; } = includeIpV6;
     public string? ServerLocation => serverLocation;
     public IPEndPoint[] CustomServerEndpoints => customServerEndpoints;
     public ProgressStatus? Progress => _progressMonitor?.Progress;

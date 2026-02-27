@@ -1,5 +1,6 @@
 # Upcoming
 * Fix: Crash on some android devices at start up
+* Update: Translate countries
 
 # v7.6.787
 * Fix: Android: UDP issue on Android

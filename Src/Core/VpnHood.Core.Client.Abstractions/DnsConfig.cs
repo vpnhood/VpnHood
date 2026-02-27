@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.Core.Client.Abstractions;
 
-public class DnsStatus
+public class DnsConfig
 {
     public required DnsSelection DnsSelection { get; init; }
     public required bool IsIncludedInVpn { get; init; }

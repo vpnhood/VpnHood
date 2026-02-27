@@ -1,10 +1,8 @@
-﻿using VpnHood.AppLib.Abstractions.AdExceptions;
-using VpnHood.Core.Client;
+﻿using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test.Extensions;

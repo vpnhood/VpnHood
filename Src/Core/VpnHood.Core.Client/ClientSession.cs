@@ -178,21 +178,26 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
         // apply config
         UpdateConfig();
-
-        // start
-        _clientHost.Start();
     }
 
     public async Task Start(CancellationToken cancellationToken)
     {
+        // can not start again
+        if (State != ClientState.None)
+            throw new InvalidOperationException("Client has been already started.");
+
+        // set state
         State = ClientState.Connecting;
+        
+        // start client host
+        _clientHost.Start();
 
         // we can start managing datagram channels but lets wait for it after ad
         var manageChannelsTask = ManagePacketChannels(cancellationToken);
 
         // wait for ad before adapter
         var retryAd = false;
-        if (Config.AdRequirement != AdRequirement.None) 
+        if (Config.AdRequirement != AdRequirement.None)
             retryAd = await AdHandler.TryWaitForAd(cancellationToken) != null;
 
         // manage datagram channels

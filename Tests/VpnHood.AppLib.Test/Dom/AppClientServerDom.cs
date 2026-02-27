@@ -10,7 +10,7 @@ using VpnHood.Test.Device;
 
 namespace VpnHood.AppLib.Test.Dom;
 
-public class AppClientServerDom : IDisposable
+public class AppClientServerDom : IAsyncDisposable, IDisposable
 {
     public TestAppHelper TestAppHelper { get; }
     public TestAccessManager AccessManager { get; }
@@ -103,6 +103,13 @@ public class AppClientServerDom : IDisposable
     {
         App.Dispose();
         Server.Dispose();
+        AccessManager.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await App.DisposeAsync();
+        await Server.DisposeAsync();
         AccessManager.Dispose();
     }
 }

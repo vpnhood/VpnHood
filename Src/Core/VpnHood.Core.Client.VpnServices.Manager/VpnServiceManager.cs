@@ -276,6 +276,9 @@ public class VpnServiceManager : IDisposable
             _connectionInfo = SetConnectionInfo(ClientState.None);
         }
         catch (VpnServiceUnreachableException ex) {
+            VhLogger.Instance.LogError(ex, "VpnService is unreachable. EndPoint: {EndPoint}", 
+                _connectionInfo.ApiEndPoint);
+
             // increment the count to stop the service if it is unreachable for too long
             _vpnServiceUnreachableCount++;
 

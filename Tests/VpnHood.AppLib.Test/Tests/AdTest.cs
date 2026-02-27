@@ -43,7 +43,7 @@ public class AdTest : TestAppBase
     [TestMethod]
     public async Task flexible_ad_should_close_session_if_display_ad_failed()
     {
-        using var appDom = await AppClientServerDom.Create(TestAppHelper, adProviderAdType: AppAdType.InterstitialAd);
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper, adProviderAdType: AppAdType.InterstitialAd);
         var app = appDom.App;
         AppUiContext.Context = null;
 
@@ -106,7 +106,7 @@ public class AdTest : TestAppBase
     [DataRow(false)]
     public async Task RewardedAd_expiration_must_be_increased_by_plan_id(bool acceptAd)
     {
-        using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
 
         // create server
         appDom.AccessManager.CanExtendPremiumByAd = true;
@@ -296,7 +296,7 @@ public class AdTest : TestAppBase
         };
 
         // simulate adblocker by making ad load to fail with adblocker exception and also blocking ad provider endpoint
-        using var appDom = await AppClientServerDom.Create(TestAppHelper, 
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper, 
             adProviderAdType: AppAdType.InterstitialAd, appOptions: appOptions);
 
         var adProvider = appDom.TestAdProvider;

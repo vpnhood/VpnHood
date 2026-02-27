@@ -582,8 +582,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        if (_session != null)
+        VhLogger.Instance.LogInformation("Client is shutting down asynchronously...");
+
+        if (_session != null) {
+            await _cancellationTokenSource.TryCancelAsync();
             await _session.DisposeAsync();
+        }
 
         Dispose();
     }

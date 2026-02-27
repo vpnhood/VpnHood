@@ -491,26 +491,26 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
             // create session
             _session = new ClientSession(
-                vpnAdapter: _vpnAdapter,
-                socketFactory: _socketFactory,
-                tracker: Tracker,
-                sessionInfo: SessionInfo,
-                sessionId: SessionId,
-                sessionKey: SessionKey,
-                accessUsage: helloResponse.AccessUsage ?? new AccessUsage(),
-                connectorService: _connectorService!,
-                domainFilteringService: _domainFilteringService,
-                netFilter: _netFilter,
                 options: new ClientSessionOptions {
-                    VpnAdapterOptions= adapterOptions,
+                    VpnAdapter = _vpnAdapter,
+                    SocketFactory = _socketFactory,
+                    Tracker = Tracker,
+                    SessionInfo = SessionInfo,
+                    AccessUsage = helloResponse.AccessUsage ?? new AccessUsage(),
+                    ConnectorService = _connectorService!,
+                    DomainFilteringService = _domainFilteringService,
+                    NetFilter = _netFilter,
+                    VpnAdapterOptions = adapterOptions,
                     ChannelProtocol = ChannelProtocol,
-                    TcpProxyCatcherAddressIpV4 = Config.TcpProxyCatcherAddressIpV4,
-                    TcpProxyCatcherAddressIpV6 = Config.TcpProxyCatcherAddressIpV6,
                     DropQuic = Config.DropQuic,
                     UseTcpProxy = Config.UseTcpProxy,
                     DropUdp = Config.DropUdp
                 },
                 config: new ClientSessionConfig {
+                    SessionId = SessionId,
+                    SessionKey = SessionKey,
+                    TcpProxyCatcherAddressIpV4 = Config.TcpProxyCatcherAddressIpV4,
+                    TcpProxyCatcherAddressIpV6 = Config.TcpProxyCatcherAddressIpV6,
                     RemoteMtu = helloResponse.Mtu,
                     MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
                         ? Math.Min(Config.MaxPacketChannelCount, helloResponse.MaxPacketChannelCount)

@@ -69,8 +69,8 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
             using var requestResult = await session.SendRequest<SessionResponse>(
                 new RewardedAdRequest {
                     RequestId = UniqueIdFactory.Create(),
-                    SessionId = session.SessionId,
-                    SessionKey = session.SessionKey,
+                    SessionId = session.Config.SessionId,
+                    SessionKey = session.Config.SessionKey,
                     AdData = rewardedAdData
                 },
                 cancellationToken).Vhc();

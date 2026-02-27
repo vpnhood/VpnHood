@@ -6,6 +6,10 @@ namespace VpnHood.Core.Client;
 
 internal class ClientSessionConfig
 {
+    public required ulong SessionId { get; init; }
+    public required byte[] SessionKey { get; init; }
+    public required IPAddress TcpProxyCatcherAddressIpV4 { get; init; }
+    public required IPAddress TcpProxyCatcherAddressIpV6 { get; init; }
     public required TimeSpan TcpConnectTimeout { get; init; }
     public required TransferBufferSize? UdpProxyBufferSize { get; init; }
     public required TransferBufferSize StreamProxyBufferSize { get; init; }

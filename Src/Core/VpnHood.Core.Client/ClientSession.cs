@@ -1,11 +1,9 @@
-using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
@@ -54,8 +52,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
     public event EventHandler? StateChanged;
     public ISessionStatus Status => _status;
-    public ulong SessionId { get; }
-    public byte[] SessionKey { get; }
     public SessionInfo SessionInfo { get; }
     public ClientSessionConfig Config { get; }
     public ISessionAdHandler AdHandler { get; }
@@ -68,37 +64,25 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     }
 
     public ClientSession(
-        IVpnAdapter vpnAdapter,
-        ISocketFactory socketFactory,
-        ITracker? tracker,
-        SessionInfo sessionInfo,
-        ulong sessionId,
-        byte[] sessionKey,
-        AccessUsage accessUsage,
-        ConnectorService connectorService,
-        DomainFilteringService domainFilteringService,
-        NetFilter netFilter,
         ClientSessionOptions options,
         ClientSessionConfig config)
     {
-        _netFilter = netFilter;
-        _connectorService = connectorService;
+        _netFilter = options.NetFilter;
+        _connectorService = options.ConnectorService;
         _channelProtocol = options.ChannelProtocol;
         _oldChannelProtocol = options.ChannelProtocol;
         _useTcpProxy = options.UseTcpProxy;
         _dropQuic = options.DropQuic;
         _dropUdp = options.DropUdp;
-        _socketFactory = socketFactory;
+        _socketFactory = options.SocketFactory;
         _adapterOptions = options.VpnAdapterOptions;
         Config = config;
-        SessionInfo = sessionInfo;
-        SessionKey = sessionKey;
-        SessionId = sessionId;
+        SessionInfo = options.SessionInfo;
 
         // init VPN adapter
-        _vpnAdapter = vpnAdapter;
-        vpnAdapter.PrimaryAdapterIpChanged += VpnAdapter_PrimaryAdapterIpChanged;
-        vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
+        _vpnAdapter = options.VpnAdapter;
+        _vpnAdapter.PrimaryAdapterIpChanged += VpnAdapter_PrimaryAdapterIpChanged;
+        _vpnAdapter.PacketReceived += VpnAdapter_PacketReceived;
 
         // Tunnel
         _tunnel = new Tunnel(new TunnelOptions {
@@ -111,7 +95,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // delegator
-        _proxyManager = new ProxyManager(socketFactory, new ProxyManagerOptions {
+        _proxyManager = new ProxyManager(_socketFactory, new ProxyManagerOptions {
             IsPingSupported = false,
             PacketProxyCallbacks = null,
             UdpTimeout = TunnelDefaults.UdpTimeout,
@@ -129,10 +113,10 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         // Stream handler
         var streamHandler = new ClientStreamHandler(
             this,
-            sessionId: sessionId,
-            sessionKey: sessionKey,
-            domainFilterService: domainFilteringService,
-            socketFactory: socketFactory,
+            sessionId: Config.SessionId,
+            sessionKey: Config.SessionKey,
+            domainFilterService: options.DomainFilteringService,
+            socketFactory: _socketFactory,
             tunnel: _tunnel,
             tcpConnectTimeout: Config.TcpConnectTimeout,
             proxyManager: _proxyManager,
@@ -142,15 +126,15 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         // proxy host
         _clientHost = new ClientHost(
             streamHandler,
-            catcherAddressIpV4: options.TcpProxyCatcherAddressIpV4,
-            catcherAddressIpV6: options.TcpProxyCatcherAddressIpV6);
+            catcherAddressIpV4: config.TcpProxyCatcherAddressIpV4,
+            catcherAddressIpV6: config.TcpProxyCatcherAddressIpV6);
         _clientHost.PacketReceived += ClientHost_PacketReceived;
 
         // packet handler
         _packetHandler = new ClientPacketHandler(
             tunnel: _tunnel,
             clientHost: _clientHost,
-            domainFilteringService: domainFilteringService,
+            domainFilteringService: options.DomainFilteringService,
             netFilter: _netFilter,
             proxyManager: _proxyManager,
             dnsServers: Config.DnsConfig.DnsServers,
@@ -159,14 +143,14 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _status = new ClientSessionStatus(
             session: this,
             tunnel: _tunnel,
-            connectorService: connectorService,
+            connectorService: _connectorService,
             proxyManager: _proxyManager,
             streamHandler: streamHandler,
             packetHandler: _packetHandler,
-            accessUsage: accessUsage);
+            accessUsage: options.AccessUsage);
 
-        if (tracker != null)
-            _clientUsageTracker = new ClientUsageTracker(_status, tracker);
+        if (options.Tracker != null)
+            _clientUsageTracker = new ClientUsageTracker(_status, options.Tracker);
 
         // Ad
         AdHandler = new SessionAdHandler(this);
@@ -411,8 +395,8 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         // Create and send the Request Message
         var request = new TcpPacketChannelRequest {
             RequestId = UniqueIdFactory.Create(),
-            SessionId = SessionId,
-            SessionKey = SessionKey
+            SessionId = Config.SessionId,
+            SessionKey = Config.SessionKey
         };
 
         var requestResult = await SendRequest<SessionResponse>(request, cancellationToken).Vhc();
@@ -448,14 +432,14 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
     private void AddUdpChannel()
     {
-        if (VhUtils.IsNullOrEmpty(SessionKey)) throw new Exception("Server UdpKey has not been set.");
+        if (VhUtils.IsNullOrEmpty(Config.SessionKey)) throw new Exception("Server UdpKey has not been set.");
         if (Config.HostUdpEndPoint == null) throw new Exception("Server does not serve any UDP endpoint.");
 
         // create channelTransmitter if not created
         _udpTransmitter ??= new ClientUdpChannelTransmitter(
             socketFactory: _socketFactory,
-            sessionId: SessionId,
-            sessionKey: SessionKey,
+            sessionId: Config.SessionId,
+            sessionKey: Config.SessionKey,
             remoteEndPoint: Config.HostUdpEndPoint,
             bufferSize: TunnelDefaults.ClientUdpChannelBufferSize);
 
@@ -571,8 +555,8 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         using var requestResult = await SendRequest<SessionResponse>(
                 new SessionStatusRequest {
                     RequestId = UniqueIdFactory.Create(),
-                    SessionId = SessionId,
-                    SessionKey = SessionKey
+                    SessionId = Config.SessionId,
+                    SessionKey = Config.SessionKey
                 },
                 cancellationToken)
             .Vhc();
@@ -620,8 +604,8 @@ internal class ClientSession : IDisposable, IAsyncDisposable
                 using var requestResult = await _connectorService.SendRequest<SessionResponse>(
                         new ByeRequest {
                             RequestId = UniqueIdFactory.Create(),
-                            SessionId = SessionId,
-                            SessionKey = SessionKey
+                            SessionId = Config.SessionId,
+                            SessionKey = Config.SessionKey
                         },
                         byteCts.Token)
                     .Vhc();

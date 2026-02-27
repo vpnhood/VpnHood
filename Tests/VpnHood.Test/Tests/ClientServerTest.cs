@@ -48,7 +48,7 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token1, vpnAdapter: TestHelper.CreateTestVpnAdapter());
         await TestHelper.Test_Https();
 
-        Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
+        Assert.AreEqual(serverEndPoint2, client.Session?.Config.HostTcpEndPoint);
     }
 
     [TestMethod]
@@ -76,7 +76,7 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token1, vpnAdapter: TestHelper.CreateTestVpnAdapter());
         await TestHelper.Test_Https();
 
-        Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
+        Assert.AreEqual(serverEndPoint2, client.Session?.Config.HostTcpEndPoint);
     }
 
 
@@ -110,8 +110,8 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
-        Assert.AreEqual(serverEndPoint2, client.HostTcpEndPoint);
-        Assert.AreEqual("UK/london", client.SessionInfo?.ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual(serverEndPoint2, client.Session?.Config.HostTcpEndPoint);
+        Assert.AreEqual("UK/london", client.Session?.Config.SessionInfo.ServerLocationInfo?.ServerLocation);
     }
 
     [TestMethod]
@@ -126,7 +126,7 @@ public class ClientServerTest : TestBase
         // create client
         var token1 = TestHelper.CreateAccessToken(accessManager1);
         await using var client = await TestHelper.CreateClient(token1, vpnAdapter: new TestNullVpnAdapter());
-        Assert.AreEqual("US/california", client.SessionInfo?.ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual("US/california", client.Session?.Config.SessionInfo.ServerLocationInfo?.ServerLocation);
     }
 
     [TestMethod]
@@ -251,7 +251,7 @@ public class ClientServerTest : TestBase
             vpnAdapter: new TestNullVpnAdapter(),
             clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
 
-        Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.HostUdpEndPoint?.Port));
+        Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.Session?.Config.HostUdpEndPoint?.Port));
     }
 
     [TestMethod]
@@ -648,7 +648,7 @@ public class ClientServerTest : TestBase
             vpnAdapter: new TestNullVpnAdapter(),
             clientOptions: TestHelper.CreateClientOptions(token: token, channelProtocol: ChannelProtocol.Udp));
 
-        Assert.IsFalse(client.SessionInfo?.IsUdpChannelSupported);
+        Assert.IsFalse(client.Session?.Config.SessionInfo.IsUdpChannelSupported);
     }
 
     [TestMethod]
@@ -685,6 +685,6 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         await client.WaitForState(ClientState.Connected);
 
-        Assert.IsNotEmpty(client.SessionInfo?.DnsConfig.DnsServers ?? []);
+        Assert.IsNotEmpty(client.Session?.Config.SessionInfo.DnsConfig.DnsServers ?? []);
     }
 }

@@ -50,7 +50,7 @@ internal class ClientServerDom : IAsyncDisposable
 
         // check ClientPublicAddress in server
         Assert.AreEqual(fileAccessManagerOptions.TcpEndPointsValue.First().Address,
-            client.SessionInfo?.ClientPublicIpAddress);
+            client.Session?.Config.SessionInfo.ClientPublicIpAddress);
 
         Collect();
     }

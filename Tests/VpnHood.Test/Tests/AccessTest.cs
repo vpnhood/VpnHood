@@ -138,13 +138,13 @@ public class AccessTest : TestBase
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: token, clientId: client1.Config.ClientId);
 
-        Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.YourSelf, client2.Session?.Config.SessionInfo.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.Ok, client2.GetSessionErrorCode());
 
         // wait for finishing client1
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
         await client1.WaitForState(ClientState.Disposed, useUpdateStatus: true);
-        Assert.AreEqual(SessionSuppressType.None, client1.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.None, client1.Session?.Config.SessionInfo.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client1.GetSessionErrorCode());
         Assert.AreEqual(SessionSuppressType.YourSelf, client1.GetSessionExceptionResponse()?.SuppressedBy);
 
@@ -165,15 +165,15 @@ public class AccessTest : TestBase
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
         await client2.WaitForState(ClientState.Disposed, useUpdateStatus: true);
 
-        Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.YourSelf, client2.Session?.Config.SessionInfo.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client2.GetSessionErrorCode());
         Assert.AreEqual(SessionSuppressType.Other, client2.GetSessionExceptionResponse()?.SuppressedBy);
         Assert.AreEqual(SessionErrorCode.Ok, client3.GetSessionErrorCode());
-        Assert.AreEqual(SessionSuppressType.None, client3.SessionInfo?.SuppressedTo);
-        Assert.AreEqual(SessionSuppressType.Other, client4.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.None, client3.Session?.Config.SessionInfo.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.Other, client4.Session?.Config.SessionInfo.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.Ok, client4.GetSessionErrorCode());
         Assert.AreEqual(SessionErrorCode.Ok, clientX.GetSessionErrorCode());
-        Assert.AreEqual(SessionSuppressType.None, clientX.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.None, clientX.Session?.Config.SessionInfo.SuppressedTo);
     }
 
     [TestMethod]
@@ -193,7 +193,7 @@ public class AccessTest : TestBase
         await using var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: token);
 
-        Assert.AreEqual(SessionSuppressType.None, client3.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.None, client3.Session?.Config.SessionInfo.SuppressedTo);
         Assert.AreEqual(SessionErrorCode.Ok, client3.GetSessionErrorCode());
     }
 
@@ -215,7 +215,7 @@ public class AccessTest : TestBase
             token: token, clientId: client1.Config.ClientId);
 
         Assert.AreEqual(SessionErrorCode.Ok, client1.GetSessionErrorCode());
-        Assert.AreEqual(SessionSuppressType.None, client2.SessionInfo?.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.None, client2.Session?.Config.SessionInfo.SuppressedTo);
     }
 
     [TestMethod]
@@ -240,10 +240,10 @@ public class AccessTest : TestBase
 
         // create a new client with the same token, it should not suppress
         await using (var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
-            var accessInfo = client2.SessionInfo?.AccessInfo;
+            var accessInfo = client2.Session?.Config.SessionInfo.AccessInfo;
             Assert.IsNotNull(accessInfo);
             Assert.IsNull(client2.GetSessionException());
-            Assert.AreEqual(SessionSuppressType.None, client2.SessionInfo?.SuppressedTo);
+            Assert.AreEqual(SessionSuppressType.None, client2.Session?.Config.SessionInfo.SuppressedTo);
             Assert.AreEqual(2, accessInfo.MaxDeviceCount);
             Assert.AreEqual(2_000_000, accessInfo.MaxTotalTraffic);
             Assert.IsTrue(accessInfo.IsPremium);
@@ -256,7 +256,7 @@ public class AccessTest : TestBase
 
         // create a new client with the same token, it should not suppress
         await using (var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
-            var accessInfo = client3.SessionInfo?.AccessInfo;
+            var accessInfo = client3.Session?.Config.SessionInfo.AccessInfo;
             Assert.IsNotNull(accessInfo);
             Assert.IsNotNull(accessInfo);
             Assert.IsTrue(accessInfo.CreatedTime < time);

@@ -67,7 +67,7 @@ public class VpnServiceHost : IDisposable
 
         // update last sate
         VhLogger.Instance.LogDebug("VpnService update the connection info file. State:{State}, LastError: {LastError}",
-            client.State, client.SessionStatus?.Error);
+            client.State, client.Session?.Status.Error);
         _ = UpdateConnectionInfo(client, CancellationToken.None);
 
         // if client is not disposed, we can show notification
@@ -226,8 +226,8 @@ public class VpnServiceHost : IDisposable
             CreatedTime = FastDateTime.Now,
             ProxyManagerStatus = client.ProxyEndPointManager.Status,
             SessionName = client.Config.SessionName,
-            SessionInfo = client.SessionInfo,
-            SessionStatus = client.SessionStatus?.ToDto(),
+            SessionInfo = client.Session?.Config.SessionInfo,
+            SessionStatus = client.Session?.Status.ToDto(),
             ClientState = client.State,
             ClientStateProgress = client.StateProgress,
             ClientStateChangedTime = client.StateChangedTime,

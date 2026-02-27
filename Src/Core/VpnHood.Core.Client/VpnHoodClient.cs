@@ -1,6 +1,5 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
-using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Filtering.Abstractions;
@@ -39,12 +38,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public VpnHoodClientConfig Config { get; }
     public ProxyEndPointManager ProxyEndPointManager { get; }
     public IClientSession? Session =>_session;
-    public ISessionStatus? SessionStatus => _session?.Status;
-    public SessionInfo? SessionInfo => _session?.Info;
-    public IPEndPoint? HostTcpEndPoint => _session?.Config.HostTcpEndPoint;
-    public IPEndPoint? HostUdpEndPoint => _session?.Config.HostUdpEndPoint;
-    public ISessionAdHandler? SessionAdHandler => _session?.AdHandler;
-    public IpRangeOrderedList? SessionIncludeIpRangesByDevice => _session?.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
     public ITracker? Tracker { get; }
     public IpRangeOrderedList SessionIncludeIpRangesByApp => _staticIpFilter.IncludeRanges;
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;

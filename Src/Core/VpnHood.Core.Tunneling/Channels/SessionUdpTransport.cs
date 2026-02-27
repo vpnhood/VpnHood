@@ -6,7 +6,7 @@ namespace VpnHood.Core.Tunneling.Channels;
 public class SessionUdpTransport(
     UdpChannelTransmitter channelTransmitter,
     ulong sessionId,
-    Span<byte> key,
+    ReadOnlySpan<byte> key,
     IPEndPoint? remoteEndPoint,
     bool isServer)
     : IUdpTransport

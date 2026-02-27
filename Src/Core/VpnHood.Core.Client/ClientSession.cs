@@ -52,7 +52,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public event EventHandler? StateChanged;
     public ISessionStatus Status => _status;
     public ClientSessionConfig Config { get; }
-    public SessionInfo Info => Config.SessionInfo;
+    public SessionInfo Info { get; }
     public ISessionAdHandler AdHandler { get; }
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
@@ -75,6 +75,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _dropUdp = options.DropUdp;
         _socketFactory = options.SocketFactory;
         Config = config;
+        Info = options.SessionInfo;
 
         // init VPN adapter
         _vpnAdapter = options.VpnAdapter;
@@ -429,14 +430,14 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     private void AddUdpChannel()
     {
-        if (VhUtils.IsNullOrEmpty(Config.SessionKey)) throw new Exception("Server UdpKey has not been set.");
+        if (Config.SessionKey.IsEmpty) throw new Exception("Server UdpKey has not been set.");
         if (Config.HostUdpEndPoint == null) throw new Exception("Server does not serve any UDP endpoint.");
 
         // create channelTransmitter if not created
         _udpTransmitter ??= new ClientUdpChannelTransmitter(
             socketFactory: _socketFactory,
             sessionId: Config.SessionId,
-            sessionKey: Config.SessionKey,
+            sessionKey: Config.SessionKey.Span,
             remoteEndPoint: Config.HostUdpEndPoint,
             bufferSize: TunnelDefaults.ClientUdpChannelBufferSize);
 

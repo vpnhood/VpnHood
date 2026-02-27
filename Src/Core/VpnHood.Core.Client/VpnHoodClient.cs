@@ -37,7 +37,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public Token Token { get; }
     public VpnHoodClientConfig Config { get; }
     public ProxyEndPointManager ProxyEndPointManager { get; }
-    public IClientSession? Session =>_session;
+    public IClientSession? Session => _session;
+    public IClientSession RequiredSession => _session ?? throw new InvalidOperationException("Session is not created yet.");
     public ITracker? Tracker { get; }
     public IpRangeOrderedList SessionIncludeIpRangesByApp => _staticIpFilter.IncludeRanges;
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;

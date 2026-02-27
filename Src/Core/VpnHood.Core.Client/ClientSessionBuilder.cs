@@ -272,6 +272,7 @@ internal class ClientSessionBuilder(
 
             var session = new ClientSession(
                 options: new ClientSessionOptions {
+                    SessionInfo = sessionInfo,
                     VpnAdapter = vpnAdapter,
                     SocketFactory = socketFactory,
                     Tracker = tracker,
@@ -285,7 +286,6 @@ internal class ClientSessionBuilder(
                     UseTcpProxy = config.UseTcpProxy
                 },
                 config: new ClientSessionConfig {
-                    SessionInfo = sessionInfo,
                     AdapterOptions = adapterOptions,
                     SessionId = sessionId,
                     SessionKey = sessionKey,

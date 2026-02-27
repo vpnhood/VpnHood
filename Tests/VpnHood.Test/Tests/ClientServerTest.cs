@@ -48,7 +48,7 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token1, vpnAdapter: TestHelper.CreateTestVpnAdapter());
         await TestHelper.Test_Https();
 
-        Assert.AreEqual(serverEndPoint2, client.Session?.Config.HostTcpEndPoint);
+        Assert.AreEqual(serverEndPoint2, client.RequiredSession.Config.HostTcpEndPoint);
     }
 
     [TestMethod]
@@ -76,7 +76,7 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token1, vpnAdapter: TestHelper.CreateTestVpnAdapter());
         await TestHelper.Test_Https();
 
-        Assert.AreEqual(serverEndPoint2, client.Session?.Config.HostTcpEndPoint);
+        Assert.AreEqual(serverEndPoint2, client.RequiredSession.Config.HostTcpEndPoint);
     }
 
 
@@ -110,8 +110,8 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
-        Assert.AreEqual(serverEndPoint2, client.Session?.Config.HostTcpEndPoint);
-        Assert.AreEqual("UK/london", client.Session?.Config.SessionInfo.ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual(serverEndPoint2, client.RequiredSession.Config.HostTcpEndPoint);
+        Assert.AreEqual("UK/london", client.RequiredSession.Info.ServerLocationInfo?.ServerLocation);
     }
 
     [TestMethod]
@@ -126,7 +126,7 @@ public class ClientServerTest : TestBase
         // create client
         var token1 = TestHelper.CreateAccessToken(accessManager1);
         await using var client = await TestHelper.CreateClient(token1, vpnAdapter: new TestNullVpnAdapter());
-        Assert.AreEqual("US/california", client.Session?.Config.SessionInfo.ServerLocationInfo?.ServerLocation);
+        Assert.AreEqual("US/california", client.RequiredSession.Info.ServerLocationInfo?.ServerLocation);
     }
 
     [TestMethod]
@@ -171,7 +171,7 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(100);
-        Assert.AreEqual(3, client.GetSessionStatus().ActivePacketChannelCount);
+        Assert.AreEqual(3, client.RequiredSession.Status.ActivePacketChannelCount);
         await client.DisposeAsync();
 
         // --------
@@ -189,7 +189,7 @@ public class ClientServerTest : TestBase
         }
 
         Thread.Sleep(200);
-        Assert.AreEqual(1, client2.GetSessionStatus().ActivePacketChannelCount);
+        Assert.AreEqual(1, client2.RequiredSession.Status.ActivePacketChannelCount);
         await client.DisposeAsync();
     }
 
@@ -251,7 +251,7 @@ public class ClientServerTest : TestBase
             vpnAdapter: new TestNullVpnAdapter(),
             clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
 
-        Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.Session?.Config.HostUdpEndPoint?.Port));
+        Assert.IsTrue(fileAccessManagerOptions.UdpEndPoints.Any(x => x.Port == client.RequiredSession.Config.HostUdpEndPoint?.Port));
     }
 
     [TestMethod]
@@ -557,41 +557,41 @@ public class ClientServerTest : TestBase
         await using var client =
             await TestHelper.CreateClient(
                 clientOptions: TestHelper.CreateClientOptions(token, channelProtocol: ChannelProtocol.Udp));
-        Assert.AreEqual(1, client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount);
-        Assert.AreEqual(0, client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount);
-        var lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount;
+        Assert.AreEqual(1, client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount);
+        Assert.AreEqual(0, client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount);
+        var lastCreatedConnectionCount = client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount;
         var lastReusedConnectionSucceededCount =
-            client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount;
+            client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount;
 
         // create one connection
         await Task.Delay(500, TestCt); // wait for connection to get ready
         Log("Test: Check the first HTTPS connection.");
         await TestHelper.Test_Https();
         Assert.AreEqual(lastReusedConnectionSucceededCount,
-            client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount);
+            client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount);
         Assert.AreEqual(lastCreatedConnectionCount + 1,
-            client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount);
-        lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount;
-        lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount;
-        await AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStatus.FreeConnectionCount);
+            client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount);
+        lastCreatedConnectionCount = client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount;
+        lastReusedConnectionSucceededCount = client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount;
+        await AssertEqualsWait(1, () => client.RequiredSession.Status.ConnectorStatus.FreeConnectionCount);
 
         // this connection must reuse the old one
         await TestHelper.Test_Https();
-        Assert.AreEqual(lastCreatedConnectionCount, client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount);
+        Assert.AreEqual(lastCreatedConnectionCount, client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount);
         Assert.AreEqual(lastReusedConnectionSucceededCount + 1,
-            client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount);
-        lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount;
-        lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount;
-        await AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStatus.FreeConnectionCount);
+            client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount);
+        lastCreatedConnectionCount = client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount;
+        lastReusedConnectionSucceededCount = client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount;
+        await AssertEqualsWait(1, () => client.RequiredSession.Status.ConnectorStatus.FreeConnectionCount);
 
         // this connection must reuse the old one again
         await TestHelper.Test_Https();
-        Assert.AreEqual(lastCreatedConnectionCount, client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount);
+        Assert.AreEqual(lastCreatedConnectionCount, client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount);
         Assert.AreEqual(lastReusedConnectionSucceededCount + 1,
-            client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount);
-        lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount;
-        lastReusedConnectionSucceededCount = client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount;
-        await AssertEqualsWait(1, () => client.GetSessionStatus().ConnectorStatus.FreeConnectionCount);
+            client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount);
+        lastCreatedConnectionCount = client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount;
+        lastReusedConnectionSucceededCount = client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount;
+        await AssertEqualsWait(1, () => client.RequiredSession.Status.ConnectorStatus.FreeConnectionCount);
 
         // open 3 connections simultaneously
         VhLogger.Instance.LogDebug("Test: Open 3 connections simultaneously.");
@@ -606,16 +606,16 @@ public class ClientServerTest : TestBase
             tcpClient3.GetStream().WriteByte(1);
 
             await AssertEqualsWait(lastCreatedConnectionCount + 2,
-                () => client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount);
+                () => client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount);
             await AssertEqualsWait(lastReusedConnectionSucceededCount + 1,
-                () => client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount);
-            lastCreatedConnectionCount = client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount;
+                () => client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount);
+            lastCreatedConnectionCount = client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount;
             lastReusedConnectionSucceededCount =
-                client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount;
+                client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount;
         }
 
         Log("Test: Waiting for free connections...");
-        await AssertEqualsWait(3, () => client.GetSessionStatus().ConnectorStatus.FreeConnectionCount);
+        await AssertEqualsWait(3, () => client.RequiredSession.Status.ConnectorStatus.FreeConnectionCount);
 
         // net two connection should use shared connection
         using (var tcpClient4 = new TcpClient())
@@ -625,13 +625,13 @@ public class ClientServerTest : TestBase
             tcpClient4.GetStream().WriteByte(1);
             tcpClient5.GetStream().WriteByte(1);
             await AssertEqualsWait(lastCreatedConnectionCount,
-                () => client.GetSessionStatus().ConnectorStatus.CreatedConnectionCount);
+                () => client.RequiredSession.Status.ConnectorStatus.CreatedConnectionCount);
             await AssertEqualsWait(lastReusedConnectionSucceededCount + 2,
-                () => client.GetSessionStatus().ConnectorStatus.ReusedConnectionSucceededCount);
+                () => client.RequiredSession.Status.ConnectorStatus.ReusedConnectionSucceededCount);
         }
 
         // wait for free the used connections 
-        await AssertEqualsWait(3, () => client.GetSessionStatus().ConnectorStatus.FreeConnectionCount);
+        await AssertEqualsWait(3, () => client.RequiredSession.Status.ConnectorStatus.FreeConnectionCount);
     }
 
     [TestMethod]
@@ -648,7 +648,7 @@ public class ClientServerTest : TestBase
             vpnAdapter: new TestNullVpnAdapter(),
             clientOptions: TestHelper.CreateClientOptions(token: token, channelProtocol: ChannelProtocol.Udp));
 
-        Assert.IsFalse(client.Session?.Config.SessionInfo.IsUdpChannelSupported);
+        Assert.IsFalse(client.RequiredSession.Info.IsUdpChannelSupported);
     }
 
     [TestMethod]
@@ -685,6 +685,6 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
         await client.WaitForState(ClientState.Connected);
 
-        Assert.IsNotEmpty(client.Session?.Config.SessionInfo.DnsConfig.DnsServers ?? []);
+        Assert.IsNotEmpty(client.RequiredSession.Info.DnsConfig.DnsServers);
     }
 }

@@ -7,10 +7,9 @@ namespace VpnHood.Core.Client;
 
 public class ClientSessionConfig
 {
-    public required SessionInfo SessionInfo { get; init; }
     public required VpnAdapterOptions AdapterOptions { get; init; }
     public required ulong SessionId { get; init; }
-    public required byte[] SessionKey { get; init; }
+    public required ReadOnlyMemory<byte> SessionKey { get; init; }
     public required IPAddress TcpProxyCatcherAddressIpV4 { get; init; }
     public required IPAddress TcpProxyCatcherAddressIpV6 { get; init; }
     public required TimeSpan TcpConnectTimeout { get; init; }

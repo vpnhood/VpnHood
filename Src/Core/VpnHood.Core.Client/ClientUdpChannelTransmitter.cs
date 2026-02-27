@@ -9,7 +9,7 @@ internal class ClientUdpChannelTransmitter : UdpChannelTransmitter
 {
     public IUdpTransport UdpTransport { get; }
 
-    public ClientUdpChannelTransmitter(ISocketFactory socketFactory, ulong sessionId, Span<byte> sessionKey,
+    public ClientUdpChannelTransmitter(ISocketFactory socketFactory, ulong sessionId, ReadOnlySpan<byte> sessionKey,
         IPEndPoint remoteEndPoint, TransferBufferSize? bufferSize)
         : base(socketFactory.CreateUdpClient(remoteEndPoint.AddressFamily))
     {

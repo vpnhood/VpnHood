@@ -39,9 +39,9 @@ public class ServerFinderTest : TestBase
             await client.WaitForState(ClientState.Connected);
 
             Assert.IsTrue(
-                servers[2].ServerHost.TcpEndPoints.First().Equals(client.Session?.Config.HostTcpEndPoint) ||
-                servers[3].ServerHost.TcpEndPoints.First().Equals(client.Session?.Config.HostTcpEndPoint) ||
-                servers[4].ServerHost.TcpEndPoints.First().Equals(client.Session?.Config.HostTcpEndPoint)
+                servers[2].ServerHost.TcpEndPoints.First().Equals(client.RequiredSession.Config.HostTcpEndPoint) ||
+                servers[3].ServerHost.TcpEndPoints.First().Equals(client.RequiredSession.Config.HostTcpEndPoint) ||
+                servers[4].ServerHost.TcpEndPoints.First().Equals(client.RequiredSession.Config.HostTcpEndPoint)
             );
         }
         finally {
@@ -96,7 +96,7 @@ public class ServerFinderTest : TestBase
                 await TestHelper.CreateClient(clientOptions: clientOptions, vpnAdapter: new TestNullVpnAdapter());
             await client.WaitForState(ClientState.Connected);
 
-            Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.Session?.Config.HostTcpEndPoint);
+            Assert.AreEqual(servers[5].ServerHost.TcpEndPoints.First(), client.RequiredSession.Config.HostTcpEndPoint);
 
             // tracker should report unreachable servers
             var testTracker = (TestTracker?)client.Tracker;

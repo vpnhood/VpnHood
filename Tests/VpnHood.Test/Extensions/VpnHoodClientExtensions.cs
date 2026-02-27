@@ -53,5 +53,14 @@ public static class VpnHoodClientExtensions
                 "Client state didn't reach the expected value.",
                 timeout);
         }
+
+        public ulong SessionId {
+            get {
+                var sessionId = client.SessionInfo?.SessionId
+                    ?? throw new InvalidOperationException("Session has not been initialized yet.");
+
+                return ulong.Parse(sessionId);
+            }
+        }
     }
 }

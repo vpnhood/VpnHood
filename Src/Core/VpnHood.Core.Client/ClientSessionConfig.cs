@@ -21,6 +21,7 @@ internal class ClientSessionConfig
     public required TimeSpan AutoWaitTimeout { get; init; }
     public required DnsConfig DnsConfig { get; init; }
     public required bool IsTcpProxySupported { get; init; }
+    public required IPEndPoint? HostTcpEndPoint { get; init; }
     public required IPEndPoint? HostUdpEndPoint { get; init; }
     public required int RemoteMtu { get; init; }
     public required bool IsIpV6SupportedByServer { get; init; }

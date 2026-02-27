@@ -38,7 +38,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AsyncLock _disposeLock = new();
     private readonly AsyncLock _packetChannelLock = new();
-    private readonly VpnAdapterOptions _adapterOptions;
     private DateTime? _autoWaitTime;
     private ClientUdpChannelTransmitter? _udpTransmitter;
 
@@ -51,14 +50,15 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     private DateTime? _lastConnectionErrorTime;
 
     public event EventHandler? StateChanged;
-    public ISessionStatus Status => _status;
+    public VpnAdapterOptions AdapterOptions { get; }
     public SessionInfo SessionInfo { get; }
+    public ISessionStatus Status => _status;
     public ClientSessionConfig Config { get; }
     public ISessionAdHandler AdHandler { get; }
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
-    public bool IsAdapterStarted => _vpnAdapter.IsStarted;
-    public bool PassthroughForAd {
+    internal bool IsAdapterStarted => _vpnAdapter.IsStarted;
+    internal bool PassthroughForAd {
         get => _packetHandler.PassthroughForAd;
         set => _packetHandler.PassthroughForAd = value;
     }
@@ -75,7 +75,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _dropQuic = options.DropQuic;
         _dropUdp = options.DropUdp;
         _socketFactory = options.SocketFactory;
-        _adapterOptions = options.VpnAdapterOptions;
+        AdapterOptions = options.VpnAdapterOptions;
         Config = config;
         SessionInfo = options.SessionInfo;
 
@@ -188,7 +188,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         await manageChannelsTask.Vhc();
 
         // start adapter
-        await _vpnAdapter.Start(_adapterOptions, cancellationToken);
+        await _vpnAdapter.Start(AdapterOptions, cancellationToken);
 
         // retry ad after adapter started
         if (retryAd) {
@@ -663,6 +663,9 @@ internal class ClientSession : IDisposable, IAsyncDisposable
 
         VhLogger.Instance.LogDebug("Disposing ProxyManager...");
         _proxyManager.Dispose();
+
+        VhLogger.Instance.LogDebug("Disposing ConnectorService...");
+        _connectorService.Dispose();
 
         _cleanupJob.Dispose();
         _clientUsageTracker?.Dispose();

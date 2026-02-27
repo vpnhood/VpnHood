@@ -38,9 +38,9 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AsyncLock _disposeLock = new();
     private readonly AsyncLock _packetChannelLock = new();
+    
     private DateTime? _autoWaitTime;
     private ClientUdpChannelTransmitter? _udpTransmitter;
-
     private bool _disposed;
     private ChannelProtocol _channelProtocol;
     private ChannelProtocol _oldChannelProtocol;
@@ -50,7 +50,6 @@ internal class ClientSession : IDisposable, IAsyncDisposable
     private DateTime? _lastConnectionErrorTime;
 
     public event EventHandler? StateChanged;
-    public VpnAdapterOptions AdapterOptions { get; }
     public SessionInfo SessionInfo { get; }
     public ISessionStatus Status => _status;
     public ClientSessionConfig Config { get; }
@@ -75,9 +74,8 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _dropQuic = options.DropQuic;
         _dropUdp = options.DropUdp;
         _socketFactory = options.SocketFactory;
-        AdapterOptions = options.VpnAdapterOptions;
         Config = config;
-        SessionInfo = options.SessionInfo;
+        SessionInfo = config.SessionInfo;
 
         // init VPN adapter
         _vpnAdapter = options.VpnAdapter;
@@ -188,7 +186,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         await manageChannelsTask.Vhc();
 
         // start adapter
-        await _vpnAdapter.Start(AdapterOptions, cancellationToken);
+        await _vpnAdapter.Start(Config.AdapterOptions, cancellationToken);
 
         // retry ad after adapter started
         if (retryAd) {
@@ -365,7 +363,7 @@ internal class ClientSession : IDisposable, IAsyncDisposable
         _vpnAdapter.SendPacketQueued(ipPacket);
     }
 
-    public async ValueTask ManagePacketChannels(CancellationToken cancellationToken)
+    private async ValueTask ManagePacketChannels(CancellationToken cancellationToken)
     {
         // if the lock is not acquired, it means that another thread is already managing packet channels
         using var lockResult = await _packetChannelLock.LockAsync(TimeSpan.Zero, cancellationToken);

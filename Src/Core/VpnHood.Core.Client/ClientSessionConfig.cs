@@ -1,11 +1,14 @@
 using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
 
-internal class ClientSessionConfig
+public class ClientSessionConfig
 {
+    public required SessionInfo SessionInfo { get; init; }
+    public required VpnAdapterOptions AdapterOptions { get; init; }
     public required ulong SessionId { get; init; }
     public required byte[] SessionKey { get; init; }
     public required IPAddress TcpProxyCatcherAddressIpV4 { get; init; }

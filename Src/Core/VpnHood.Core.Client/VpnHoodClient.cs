@@ -43,7 +43,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IPEndPoint? HostTcpEndPoint => _session?.Config.HostTcpEndPoint;
     public IPEndPoint? HostUdpEndPoint => _session?.Config.HostUdpEndPoint;
     public ITracker? Tracker { get; }
-    public IpRangeOrderedList? SessionIncludeIpRangesByDevice => _session?.AdapterOptions.IncludeNetworks.ToIpRanges();
+    public IpRangeOrderedList? SessionIncludeIpRangesByDevice => _session?.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
     public IpRangeOrderedList SessionIncludeIpRangesByApp => _staticIpFilter.IncludeRanges;
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
     public bool UseTcpProxy { get; set { field = value; _session?.UseTcpProxy = value; } }

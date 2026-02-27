@@ -2,6 +2,7 @@
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 
@@ -26,7 +27,7 @@ public static class AppDtoConverterExtensions
             AccessInfo = sessionInfo.AccessInfo,
             DnsConfig = sessionInfo.DnsConfig,
             IsLocalNetworkAllowed = sessionInfo.IsLocalNetworkAllowed,
-            ServerLocationInfo = sessionInfo.ServerLocationInfo,
+            ServerLocationInfo = sessionInfo.ServerLocationInfo?.ToAppDto(),
             ServerVersion = sessionInfo.ServerVersion,
             IsPremiumSession = sessionInfo.IsPremiumSession,
             SuppressedTo = sessionInfo.SuppressedTo,
@@ -81,5 +82,10 @@ public static class AppDtoConverterExtensions
             UnknownServerCount = sessionStatus.UnknownServerCount,
             DisabledServerCount = sessionStatus.DisabledServerCount
         };
+    }
+
+    public static AppServerLocationInfo ToAppDto(this ServerLocationInfo value)
+    {
+        return AppServerLocationInfo.FromInfo(value);
     }
 }

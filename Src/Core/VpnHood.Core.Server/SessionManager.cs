@@ -258,7 +258,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
                 .Vhc();
 
             // Check session key for recovery
-            if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
+            if (!sessionRequest.SessionKey.Span.SequenceEqual(sessionResponse.SessionKey))
                 throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, new SessionResponse {
                     ErrorCode = SessionErrorCode.AccessError,
                     ErrorMessage = "Invalid SessionKey."
@@ -293,7 +293,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         //get session
         var session = GetSessionById(requestBase.SessionId);
         if (session != null) {
-            if (!requestBase.SessionKey.SequenceEqual(session.SessionKey))
+            if (!requestBase.SessionKey.Span.SequenceEqual(session.SessionKey))
                 throw new ServerUnauthorizedAccessException("Invalid session key.", ipEndPointPair, session);
         }
         // try to restore session if not found

@@ -25,7 +25,7 @@ public class ServerNetFilterConfigTest : TestBase
         await using var client = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             clientOptions: clientOptions);
 
-        var includeNetworks = client.Session?.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
+        var includeNetworks = client.RequiredSession.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
         Assert.IsNotNull(includeNetworks);
         Assert.IsFalse(includeNetworks.Contains(IPAddress.Parse("230.0.0.0")));
         Assert.IsFalse(includeNetworks.Contains(IPAddress.Parse("230.0.0.10")));
@@ -52,7 +52,7 @@ public class ServerNetFilterConfigTest : TestBase
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
-        var includeNetworks = client.Session?.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
+        var includeNetworks = client.RequiredSession.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
         Assert.IsNotNull(includeNetworks);
         Assert.IsTrue(includeNetworks.Contains(IPAddress.Parse("230.0.0.0")));
         Assert.IsTrue(includeNetworks.Contains(IPAddress.Parse("230.0.0.10")));
@@ -87,10 +87,10 @@ public class ServerNetFilterConfigTest : TestBase
             vpnAdapter: new TestNullVpnAdapter());
 
         // client
-        Assert.AreEqual(serverAllowLocalNetworks, client.Session?.Config.SessionInfo.IsLocalNetworkAllowed);
-        Assert.AreEqual(serverAllowLocalNetworks, client.Session?.Config.AdapterOptions.IncludeNetworks.ToIpRanges().Contains(IPAddress.Parse("192.168.0.100")), "LocalNetWorks failed");
+        Assert.AreEqual(serverAllowLocalNetworks, client.RequiredSession.Info.IsLocalNetworkAllowed);
+        Assert.AreEqual(serverAllowLocalNetworks, client.RequiredSession.Config.AdapterOptions.IncludeNetworks.ToIpRanges().Contains(IPAddress.Parse("192.168.0.100")), "LocalNetWorks failed");
 
-        var ipRanges = client.Session?.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
+        var ipRanges = client.RequiredSession.Config.AdapterOptions.IncludeNetworks.ToIpRanges();
         Assert.IsNotNull(ipRanges);
         Assert.IsFalse(ipRanges.Contains(IPAddress.Parse("230.0.0.110")), "Excludes failed");
         Assert.IsTrue(ipRanges.Contains(IPAddress.Parse("230.0.0.50")), "Includes failed");

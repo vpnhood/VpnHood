@@ -11,6 +11,7 @@ namespace VpnHood.Core.Client;
 
 internal class ClientSessionOptions
 {
+    public required SessionInfo SessionInfo { get; init; }
     public required IVpnAdapter VpnAdapter { get; init; }
     public required ISocketFactory SocketFactory { get; init; }
     public required ITracker? Tracker { get; init; }

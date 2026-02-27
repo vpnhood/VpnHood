@@ -74,7 +74,7 @@ public class ServerTest : TestBase
 
         // check usage when usage should be 0
         var sessionResponseEx = await accessManager.Session_Get(
-            client.SessionId, client.Session?.Config.HostTcpEndPoint!, null, TestCt);
+            client.SessionId, client.RequiredSession.Config.HostTcpEndPoint!, null, TestCt);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage!.CycleTraffic.Received);
 
         // lets do transfer
@@ -83,7 +83,7 @@ public class ServerTest : TestBase
         // check usage should still not be 0 after interval
         await VhTestUtil.AssertEqualsWait(true, async () => {
             sessionResponseEx = await accessManager.Session_Get(
-                client.SessionId, client.Session?.Config.HostTcpEndPoint!, null, TestCt);
+                client.SessionId, client.RequiredSession.Config.HostTcpEndPoint!, null, TestCt);
             return sessionResponseEx.AccessUsage!.CycleTraffic.Received > 0;
         });
     }

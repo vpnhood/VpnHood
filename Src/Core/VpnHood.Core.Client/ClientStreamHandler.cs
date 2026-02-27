@@ -20,7 +20,7 @@ namespace VpnHood.Core.Client;
 internal class ClientStreamHandler(
     ClientSession session,
     ulong sessionId,
-    byte[] sessionKey,
+    ReadOnlyMemory<byte> sessionKey,
     ISocketFactory socketFactory,
     DomainFilteringService domainFilterService,
     Tunnel tunnel,

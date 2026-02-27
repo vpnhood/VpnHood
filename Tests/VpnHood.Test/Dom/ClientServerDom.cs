@@ -50,7 +50,7 @@ internal class ClientServerDom : IAsyncDisposable
 
         // check ClientPublicAddress in server
         Assert.AreEqual(fileAccessManagerOptions.TcpEndPointsValue.First().Address,
-            client.Session?.Config.SessionInfo.ClientPublicIpAddress);
+            client.RequiredSession.Info.ClientPublicIpAddress);
 
         Collect();
     }
@@ -100,18 +100,18 @@ internal class ClientServerDom : IAsyncDisposable
         Assert.AreEqual(ServerState.Ready, Server.State);
         Assert.AreEqual(ClientState.Connected, Client.State);
 
-        OldClientSentByteCount = Client.GetSessionStatus().SessionTraffic.Sent;
-        OldClientReceivedByteCount = Client.GetSessionStatus().SessionTraffic.Received;
+        OldClientSentByteCount = Client.RequiredSession.Status.SessionTraffic.Sent;
+        OldClientReceivedByteCount = Client.RequiredSession.Status.SessionTraffic.Received;
         OldServerSentByteCount = ServerSession.Tunnel.Traffic.Sent;
         OldServerReceivedByteCount = ServerSession.Tunnel.Traffic.Received;
     }
 
     public void AssertClientTransfer(int minTunnelSendData = 100, int minTunnelReceivedData = 500)
     {
-        Assert.AreNotEqual(OldClientSentByteCount, Client.GetSessionStatus().SessionTraffic.Sent,
+        Assert.AreNotEqual(OldClientSentByteCount, Client.RequiredSession.Status.SessionTraffic.Sent,
             delta: minTunnelSendData,
             "Not enough data has been sent through the client.");
-        Assert.AreNotEqual(OldClientReceivedByteCount, Client.GetSessionStatus().SessionTraffic.Received,
+        Assert.AreNotEqual(OldClientReceivedByteCount, Client.RequiredSession.Status.SessionTraffic.Received,
             delta: minTunnelReceivedData,
             "Not enough data has been received through the client.");
     }

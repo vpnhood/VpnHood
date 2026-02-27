@@ -207,10 +207,11 @@ public class VpnServiceHost : IDisposable
             _vpnServiceHandler.StopNotification();
             _vpnServiceHandler.StopSelf();
         }
-        catch (Exception) {
+        catch (Exception ex) {
             // we do not need to do anything if client is not null because the state changed event
             // will handle the notification and service stopping.
             // dispose the client in the background
+            VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
             _ = Client?.DisposeAsync();
         }
     }
@@ -226,7 +227,7 @@ public class VpnServiceHost : IDisposable
             CreatedTime = FastDateTime.Now,
             ProxyManagerStatus = client.ProxyEndPointManager.Status,
             SessionName = client.Config.SessionName,
-            SessionInfo = client.Session?.Config.SessionInfo,
+            SessionInfo = client.Session?.Info,
             SessionStatus = client.Session?.Status.ToDto(),
             ClientState = client.State,
             ClientStateProgress = client.StateProgress,

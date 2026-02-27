@@ -216,15 +216,15 @@ internal class ApiController : IDisposable
 
         // Do not await, we should not hold up the API response, the client will call SetAdOk or SetAdFailed when the ad is done
         // Do not use request cancellation token
-        var adHandler = VhUtils.GetRequiredInstance(VpnHoodClient.Session?.AdHandler);
+        var adHandler = VpnHoodClient.RequiredSession.AdHandler;
         _ = adHandler.WaitForAd(CancellationToken.None); 
         return Task.CompletedTask;
     }
 
     private async Task SetAdOk(ApiSetAdOkRequest request, CancellationToken cancellationToken)
     {
-        var adHandler = VhUtils.GetRequiredInstance(VpnHoodClient.Session?.AdHandler);
-
+        var adHandler = VpnHoodClient.RequiredSession.AdHandler;
+        
         // Send rewarded ad result if it exists
         if (request.IsRewarded && !string.IsNullOrEmpty(request.AdResult.AdData))
             await adHandler.SendRewardedAdData(request.AdResult.AdData, cancellationToken);
@@ -235,7 +235,7 @@ internal class ApiController : IDisposable
     private Task SetAdFailed(ApiAdFailedRequest request, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        var adHandler = VhUtils.GetRequiredInstance(VpnHoodClient.Session?.AdHandler);
+        var adHandler = VpnHoodClient.RequiredSession.AdHandler;
         adHandler.SetAdFailed(request.ApiError?.ToException() ?? new Exception("Failed to load ad."));
         return Task.CompletedTask;
     }

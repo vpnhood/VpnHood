@@ -11,10 +11,6 @@ public static class VpnHoodClientExtensions
 {
     extension(VpnHoodClient client)
     {
-        public ISessionStatus GetSessionStatus()
-            => client.Session?.Status ??
-               throw new InvalidOperationException("Session has not been initialized yet.");
-
         public Exception? GetSessionException()
         {
             var error = client.Session?.Status.Error;
@@ -54,13 +50,6 @@ public static class VpnHoodClientExtensions
                 timeout);
         }
 
-        public ulong SessionId {
-            get {
-                var sessionId = client.Session?.Config.SessionInfo.SessionId
-                    ?? throw new InvalidOperationException("Session has not been initialized yet.");
-
-                return ulong.Parse(sessionId);
-            }
-        }
+        public ulong SessionId => ulong.Parse(client.RequiredSession.Info.SessionId);
     }
 }

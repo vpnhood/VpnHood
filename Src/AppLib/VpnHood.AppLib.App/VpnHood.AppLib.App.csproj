@@ -36,8 +36,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Nager.Country" Version="4.3.5" />
-	  <PackageReference Include="Nager.Country.Translation" Version="4.3.5" />
+	  <PackageReference Include="Nager.Country" Version="4.4.0" />
+	  <PackageReference Include="Nager.Country.Translation" Version="4.4.0" />
 	</ItemGroup>
 
 	<ItemGroup>

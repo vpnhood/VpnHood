@@ -52,14 +52,33 @@ public class StoreAccountProvider(
         var httpClient = AuthenticationProvider.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
         var accessTokens = await currentVpnUserClient
-            .ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId), 
+            .ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId),
                 cancellationToken: cancellationToken).Vhc();
 
         var accessKeyList = new List<string>();
         foreach (var accessToken in accessTokens) {
             var accessKey = await currentVpnUserClient.GetAccessKeyAsync(
-                    storeAppId, accessToken.AccessTokenId, 
-                    cancellationToken).Vhc();
+                storeAppId, accessToken.AccessTokenId,
+                cancellationToken).Vhc();
+            accessKeyList.Add(accessKey);
+        }
+
+        return accessKeyList.ToArray();
+    }
+
+    public async Task<string[]> ListAccessCodes(string subscriptionId, CancellationToken cancellationToken)
+    {
+        var httpClient = AuthenticationProvider.HttpClient;
+        var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
+        var accessTokens = await currentVpnUserClient
+            .ListAccessTokensAsync(storeAppId, subscriptionId: Guid.Parse(subscriptionId),
+                cancellationToken: cancellationToken).Vhc();
+
+        var accessKeyList = new List<string>();
+        foreach (var accessToken in accessTokens) {
+            var accessKey = await currentVpnUserClient.GetAccessCodeAsync(
+                storeAppId, accessToken.AccessTokenId,
+                cancellationToken).Vhc();
             accessKeyList.Add(accessKey);
         }
 

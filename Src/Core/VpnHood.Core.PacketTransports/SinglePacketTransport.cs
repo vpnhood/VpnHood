@@ -5,7 +5,7 @@ namespace VpnHood.Core.PacketTransports;
 public abstract class SinglePacketTransport(PacketTransportOptions options)
     : PacketTransportBase(options, singleMode: true, passthrough: false)
 {
-    protected sealed override ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
+    protected sealed override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         return ipPackets.Count switch {
             0 => default,

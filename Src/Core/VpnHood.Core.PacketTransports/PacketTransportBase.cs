@@ -20,7 +20,7 @@ public abstract class PacketTransportBase : IPacketTransport
     private bool _isSending;
     protected bool IsDisposed => _isDisposed == 1;
     protected bool IsDisposing => _isDisposing == 1;
-    protected abstract ValueTask SendPacketsAsync(IList<IpPacket> ipPackets);
+    protected abstract ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets);
 
     public event EventHandler<IpPacket>? PacketReceived;
     public ReadOnlyPacketTransportStat PacketStat { get; }
@@ -157,7 +157,7 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
-    private async ValueTask<bool> SendPacketsInternalAsync(IList<IpPacket> ipPackets)
+    private async ValueTask<bool> SendPacketsInternalAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         // send packets
         try {

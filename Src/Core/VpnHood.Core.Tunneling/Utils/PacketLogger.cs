@@ -10,7 +10,7 @@ namespace VpnHood.Core.Tunneling.Utils;
 
 public static class PacketLogger
 {
-    public static void LogPackets(IList<IpPacket> ipPackets, string operation)
+    public static void LogPackets(IReadOnlyList<IpPacket> ipPackets, string operation)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++) {

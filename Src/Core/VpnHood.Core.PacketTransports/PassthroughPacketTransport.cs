@@ -8,7 +8,7 @@ public abstract class PassthroughPacketTransport()
         Blocking = false
     }, passthrough: true, singleMode: true)
 {
-    protected sealed override ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
+    protected sealed override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         switch (ipPackets.Count) {
             case 0:

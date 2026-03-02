@@ -58,7 +58,7 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
         IsStarted = false;
     }
 
-    protected override ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
+    protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         foreach (var ipPacket in ipPackets)
             SendPacket(ipPacket);

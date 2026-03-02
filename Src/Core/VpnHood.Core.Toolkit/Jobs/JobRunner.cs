@@ -105,7 +105,7 @@ public class JobRunner
         }
     }
 
-    private IList<Job> GetReadyJobs()
+    private IReadOnlyList<Job> GetReadyJobs()
     {
         List<Job> jobs;
         lock (_jobs) {

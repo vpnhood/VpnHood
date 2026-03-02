@@ -32,7 +32,7 @@ public class UdpChannel : PacketChannel
         await UdpTransport.SendAsync(buffer).Vhc();
     }
 
-    protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
+    protected override async ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         try {
             // copy packets to buffer (payload only, transmitter adds its own overhead)

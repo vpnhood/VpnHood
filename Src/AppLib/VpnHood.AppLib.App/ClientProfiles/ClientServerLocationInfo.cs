@@ -7,8 +7,15 @@ public class ClientServerLocationInfo : ServerLocationInfo
 {
     public required bool IsNestedCountry { get; init; }
     public required bool IsDefault { get; init; }
-    public string TranslatedCountryName => VpnHoodApp.Instance.Services.LocationService
-        .TryGetCountryInfo(CountryCode)?.TranslatedName ?? CountryName;
+    public string TranslatedCountryName {
+        get {
+            if (CountryCode == AutoCountryCode)
+                return AutoCountryCode;
+
+            return VpnHoodApp.Instance.Services.LocationService
+                .TryGetCountryInfo(CountryCode)?.TranslatedName ?? CountryName;
+        }
+    }
 
     public ServerLocationOptions Options { get; set; } = new() { Normal = 0 };
 
@@ -18,7 +25,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var token = clientProfile.Token;
 
         // get country policy
-        var policy = token.ClientPolicies?.FirstOrDefault(x =>
+        var policy = token.ClientPolicies?.FirstOrDefault(x => 
                          x.ClientCountries.Any(y => y.Equals(clientCountry, StringComparison.OrdinalIgnoreCase))) ??
                      token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));
 

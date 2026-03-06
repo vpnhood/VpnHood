@@ -173,6 +173,13 @@ public static class VhLogger
     private class VhLoggerDecorator : ILogger
     {
         public ILogger Logger { get; set; } = CreateConsoleLogger();
+        private readonly AotPreserveHelper _aotPreserveHelper = new();
+
+        public VhLoggerDecorator()
+        {
+            // just desperate to make sure AotPreserveHelper is called.
+            Logger.LogInformation("A new LoggerDecorator has been created. InstanceId: {InstanceId}", _aotPreserveHelper.PreserveTypes());
+        }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
             Func<TState, Exception?, string> formatter)

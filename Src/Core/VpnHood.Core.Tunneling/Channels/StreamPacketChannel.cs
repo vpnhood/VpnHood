@@ -14,7 +14,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
     private readonly IConnection _connection = options.Connection;
     public override int OverheadLength => 0;
 
-    protected override async ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
+    protected override async ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         if (IsDisposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
         var cancellationToken = CancellationToken;

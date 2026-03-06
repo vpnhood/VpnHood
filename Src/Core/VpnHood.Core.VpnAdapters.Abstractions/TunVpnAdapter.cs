@@ -441,7 +441,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             : IPAddressUtil.Increment(ipNetwork.FirstIpAddress);
     }
 
-    protected override ValueTask SendPacketsAsync(IList<IpPacket> ipPackets)
+    protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         // ReSharper disable once ForCanBeConvertedToForeach
         for (var i = 0; i < ipPackets.Count; i++)

@@ -208,8 +208,10 @@ public class Session : IDisposable
             ipPacket.UpdateAllChecksums();
         }
 
-        // todo: must be asynchronous
-        Tunnel.SendPacketQueued(ipPacket); // PacketEnqueue will dispose packets
+        // Tunnel is passthrough, so it just try to put packet on nested queue,
+        // if the queue is full, packet will be disposed and drop
+        // PacketEnqueue will dispose packets
+        Tunnel.SendPacketQueued(ipPacket); 
     }
 
     private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket)

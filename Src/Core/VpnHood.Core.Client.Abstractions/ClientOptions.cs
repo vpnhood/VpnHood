@@ -63,7 +63,7 @@ public class ClientOptions
     public ConnectPlanId PlanId { get; set; }
     public DomainFilterPolicy DomainFilterPolicy { get; set; } = new();
     public bool ForceLogSni { get; set; }
-    public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(10);
+    public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(5);
     public string? AccessCode { get; set; }
     public string? SessionName { get; set; }
     public string[]? ExcludeApps { get; set; }

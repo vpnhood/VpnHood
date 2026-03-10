@@ -16,7 +16,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
 
     protected override async ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
-        if (IsDisposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         var cancellationToken = CancellationToken;
 
         // copy packets to buffer

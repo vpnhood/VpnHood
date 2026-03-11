@@ -85,7 +85,7 @@ internal class ClientHost(
             while (!_cancellationTokenSource.IsCancellationRequested) {
                 // config tcpOrgClient
                 var tcpClient = await tcpListener.AcceptTcpClientAsync().Vhc();
-                VhUtils.ConfigTcpClient(tcpClient, null, null);
+                VhUtils.ConfigTcpClient(tcpClient, keepAlive: true, noDelay: true);
                 var tcpConnection = new TcpConnection(tcpClient, isServer: false, connectionName: "app");
                 _ = ProcessConnection(tcpConnection, _cancellationTokenSource.Token);
             }

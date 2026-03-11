@@ -13,7 +13,7 @@ namespace VpnHood.Core.Server;
 
 public class ServerOptions
 {
-    public ISocketFactory SocketFactory { get; init; } = new SocketFactory();
+    public ISocketFactory SocketFactory { get; init; } = new SocketFactory(keepAlive: true, noDelay: true);
     public ITracker? Tracker { get; init; }
     public ISystemInfoProvider? SystemInfoProvider { get; init; }
     public NetFilter NetFilter { get; init; } = new();

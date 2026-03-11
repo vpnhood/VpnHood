@@ -7,4 +7,5 @@ public class StreamPacketChannelOptions : PacketChannelOptions
 {
     public required IConnection Connection { get; init; }
     public TransferBufferSize BufferSize { get; set; } = TunnelDefaults.ConnectionPacketBufferSize;
+    public required DateTime RequestTime { get; init; }
 }

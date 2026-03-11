@@ -4,4 +4,5 @@ public abstract class ClientRequest(byte requestCode)
 {
     public byte RequestCode { get; } = requestCode;
     public required string RequestId { get; set; }
+    public DateTime RequestTime { get; } = DateTime.UtcNow;
 }

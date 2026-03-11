@@ -391,10 +391,13 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private async Task AddTcpPacketChannel(CancellationToken cancellationToken)
     {
         // Create and send the Request Message
+        var requestId = UniqueIdFactory.Create();
         var request = new TcpPacketChannelRequest {
-            RequestId = UniqueIdFactory.Create(),
+            RequestId = requestId,
+            ChannelId = requestId, // use request id as channel id for simplicity
             SessionId = Config.SessionId,
-            SessionKey = Config.SessionKey
+            SessionKey = Config.SessionKey,
+            ActiveChannelIds = _tunnel.PacketChannels.Select(c => c.ChannelId).ToArray()
         };
 
         var requestResult = await SendRequest<SessionResponse>(request, cancellationToken).Vhc();
@@ -414,7 +417,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
                 Connection = requestResult.Connection,
                 BufferSize = TunnelDefaults.ConnectionPacketBufferSize,
-                ChannelId = request.RequestId,
+                ChannelId = request.ChannelId,
+                RequestTime = request.RequestTime,
                 Blocking = true,
                 AutoDisposePackets = true,
                 Lifespan = lifespan

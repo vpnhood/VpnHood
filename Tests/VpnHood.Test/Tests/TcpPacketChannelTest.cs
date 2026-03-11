@@ -41,6 +41,7 @@ public class TcpPacketChannelTest : TestBase
         var serverTcpClient = await listenerTask;
         await using var serverStream = new TcpConnection(serverTcpClient, connectionName: "tunnel", isServer: true);
         using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
+            RequestTime = DateTime.UtcNow,
             Connection = serverStream,
             Blocking = false,
             AutoDisposePackets = true,
@@ -56,6 +57,7 @@ public class TcpPacketChannelTest : TestBase
         // create client channel
         await using var connection = new TcpConnection(tcpClient, connectionName: "tunnel", isServer: false);
         using var clientChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
+            RequestTime = DateTime.UtcNow,
             Connection = connection,
             AutoDisposePackets = true,
             Lifespan = TimeSpan.FromMilliseconds(1000),

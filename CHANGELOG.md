@@ -1,5 +1,6 @@
 # Upcoming
 * Fix: Crash on some android devices at start up
+* Fix: Required to reconnect after network failed when using TCP protocol
 * Update: Translate countries
 
 # v7.6.787

@@ -18,6 +18,8 @@ internal class ChannelManager : IDisposable
     private bool _disposed;
     private readonly Job _cleanupJob;
 
+    public IReadOnlyList<IPacketChannel> PacketChannels => _packetChannels;
+
     public ChannelManager(int maxPacketChannelCount, EventHandler<IpPacket> channelPacketReceived)
     {
         MaxPacketChannelCount = maxPacketChannelCount;

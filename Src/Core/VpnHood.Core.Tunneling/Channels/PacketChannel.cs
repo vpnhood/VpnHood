@@ -19,6 +19,8 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
     private readonly Job _checkLifetimeJob;
 
     protected CancellationToken CancellationToken => _cancellationTokenSource.Token;
+    protected override string Name { get; }
+
     public string ChannelId { get; }
     public DateTime LastActivityTime => PacketStat.LastActivityTime;
     public Traffic Traffic => new(PacketStat.SentBytes, PacketStat.ReceivedBytes);
@@ -33,6 +35,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         })
     {
         _lifespan = options.Lifespan;
+        Name = $"{VhLogger.FormatType(this)}: {options.ChannelId}";
         ChannelId = options.ChannelId;
         _checkLifetimeJob = new Job(CheckLifetime, nameof(PacketChannel));
     }

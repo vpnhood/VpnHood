@@ -211,7 +211,7 @@ public class Session : IDisposable
         // Tunnel is passthrough, so it just try to put packet on nested queue,
         // if the queue is full, packet will be disposed and drop
         // PacketEnqueue will dispose packets
-        Tunnel.SendPacketQueued(ipPacket); 
+        Tunnel.SendPacketQueued(ipPacket);
     }
 
     private void Tunnel_PacketReceived(object? sender, IpPacket ipPacket)
@@ -296,8 +296,8 @@ public class Session : IDisposable
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
-    public async Task ProcessTcpPacketChannelRequest(TcpPacketChannelRequest request, IConnection connection,
-        CancellationToken cancellationToken)
+    public async Task ProcessTcpPacketChannelRequest(TcpPacketChannelRequest request,
+        IConnection connection, CancellationToken cancellationToken)
     {
         // manage wait count
         Interlocked.Increment(ref _tcpConnectWaitCount);
@@ -312,12 +312,31 @@ public class Session : IDisposable
 
         var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
             BufferSize = TunnelDefaults.ServerStreamPacketBufferSize,
+            RequestTime = request.RequestTime,
             Blocking = false,
             AutoDisposePackets = true,
             Connection = connection,
-            ChannelId = request.RequestId,
+            ChannelId = request.ChannelId ?? request.RequestId,
             Lifespan = null
         });
+
+        // delete all inactive PacketChannels if ActiveChannelIds exists. InActive channel request time must be less than current request time
+        // to avoid deleting active channels when client is creating multiple channels at the same time.
+        if (request.ActiveChannelIds != null) {
+            var inactiveChannels = Tunnel.PacketChannels
+                .Where(x => 
+                    x is StreamPacketChannel streamPacketChannel &&
+                    streamPacketChannel.RequestTime<request.RequestTime &&
+                    !request.ActiveChannelIds.Contains(x.ChannelId));
+
+            // dispose inactive channels
+            foreach (var inactiveChannel in inactiveChannels) {
+                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
+                    "Disposing an inactive PacketChannel. SessionId: {SessionId}, ChannelId: {ChannelId}",
+                    VhLogger.FormatSessionId(SessionId), inactiveChannel.ChannelId);
+                inactiveChannel.Dispose();
+            }
+        }
 
         Tunnel.AddChannel(channel, disposeIfFailed: true);
         UseUdpChannel = false;
@@ -336,7 +355,7 @@ public class Session : IDisposable
                 // enable udp channel
                 Tunnel.RemoveChannels<IPacketChannel>();
                 Tunnel.AddChannel(_udpChannel);
-                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel, 
+                VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
                     "UdpChannel is enabled. SessionId: {SessionId}", SessionId);
             }
             else {
@@ -478,7 +497,7 @@ public class Session : IDisposable
 
     private void VerifyNetScan(IpProtocol protocol, IpEndPointValue remoteEndPoint, string requestId)
     {
-        if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint)) 
+        if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint))
             return;
 
         LogTrack(protocol, null, remoteEndPoint, false, true, "NetScan");

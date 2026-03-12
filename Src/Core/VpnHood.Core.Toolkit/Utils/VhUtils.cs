@@ -381,15 +381,23 @@ public static class VhUtils
         return timeSpan == TimeSpan.MaxValue || timeSpan == Timeout.InfiniteTimeSpan;
     }
 
-    public static void ConfigTcpClient(TcpClient tcpClient, int? sendBufferSize, int? receiveBufferSize,
-        bool? reuseAddress = null)
+    public static void ConfigTcpClient(TcpClient tcpClient, 
+        int? sendBufferSize = null, 
+        int? receiveBufferSize = null, 
+        bool? reuseAddress = null,
+        bool? keepAlive = null,
+        bool noDelay = true)
     {
-        tcpClient.NoDelay = true;
+        tcpClient.NoDelay = noDelay;
         if (sendBufferSize > 0) tcpClient.SendBufferSize = sendBufferSize.Value;
         if (receiveBufferSize > 0) tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
         if (reuseAddress != null)
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress,
                 reuseAddress.Value);
+
+        // keep alive
+        if (keepAlive != null)
+            tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, keepAlive.Value);
     }
 
     public static bool IsTcpClientHealthy(TcpClient tcpClient)

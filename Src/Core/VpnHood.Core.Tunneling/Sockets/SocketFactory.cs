@@ -7,7 +7,7 @@ using VpnHood.Core.Toolkit.Sockets;
 
 namespace VpnHood.Core.Tunneling.Sockets;
 
-public class SocketFactory : ISocketFactory
+public class SocketFactory(bool? keepAlive = null, bool? noDelay = null) : ISocketFactory
 {
     private bool _hasKeepAliveError;
 
@@ -16,6 +16,14 @@ public class SocketFactory : ISocketFactory
         var localEndPoint = new IPEndPoint(ipEndPoint.IsV4() ? IPAddress.Any : IPAddress.IPv6Any, 0);
         var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
         tcpClient.Client.Bind(localEndPoint);
+
+        // config for server
+        if (keepAlive != null)
+            SetKeepAlive(tcpClient.Client, keepAlive.Value);
+
+        if (noDelay != null)
+            tcpClient.NoDelay = noDelay.Value;
+
         return tcpClient;
     }
 

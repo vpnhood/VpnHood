@@ -12,11 +12,13 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
     private readonly int _receiveBufferSize = options.BufferSize.Receive;
     private readonly Memory<byte> _sendBuffer = new byte[options.BufferSize.Send];
     private readonly IConnection _connection = options.Connection;
+    
+    public DateTime RequestTime { get; } = options.RequestTime;
     public override int OverheadLength => 0;
 
     protected override async ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
-        if (IsDisposed) throw new ObjectDisposedException(VhLogger.FormatType(this));
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
         var cancellationToken = CancellationToken;
 
         // copy packets to buffer

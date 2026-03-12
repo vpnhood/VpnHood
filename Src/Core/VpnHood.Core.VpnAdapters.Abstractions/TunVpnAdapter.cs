@@ -29,6 +29,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private readonly Lock _stopLock = new();
     private bool _isRestarting;
     private bool _isStopping;
+    // ReSharper disable once FieldCanBeMadeReadOnly.Local
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
     public abstract bool IsNatSupported { get; }
@@ -92,8 +93,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         if (_isStopping || IsDisposed || IsDisposing)
             return;
 
-        var primaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
-        var primaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
+        using var udpClientV4 = new UdpClient(AddressFamily.InterNetwork);
+        var ipAddress = WebDeadNetworks.First(x => x.AddressFamily == AddressFamily.InterNetwork).Prefix;
+        ProtectSocket(udpClientV4.Client, ipAddress);
+
+        var primaryAdapterIpV4 = DiscoverPrimaryAdapterIpViaProtect(AddressFamily.InterNetwork);
+        var primaryAdapterIpV6 = DiscoverPrimaryAdapterIpViaProtect(AddressFamily.InterNetworkV6);
 
         // If the primary adapter IPs are changed, update them and notify subscribers
         if (!Equals(primaryAdapterIpV4, PrimaryAdapterIpV4) || !Equals(primaryAdapterIpV6, PrimaryAdapterIpV6)) {
@@ -406,18 +411,30 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return true;
     }
 
-    //todo: protect socker
     private static IPAddress? DiscoverPrimaryAdapterIp(AddressFamily addressFamily)
     {
+        using var udpClient = new UdpClient(addressFamily);
+        return DiscoverPrimaryAdapterIp(udpClient);
+    }
+
+    private IPAddress? DiscoverPrimaryAdapterIpViaProtect(AddressFamily addressFamily)
+    {
+        using var udpClient = new UdpClient(addressFamily);
+        var ipAddress = WebDeadNetworks.First(x => x.AddressFamily == addressFamily).Prefix;
+        ProtectSocket(udpClient.Client, ipAddress);
+        return DiscoverPrimaryAdapterIp(udpClient);
+    }
+    private static IPAddress? DiscoverPrimaryAdapterIp(UdpClient protectedUdpClient)
+    {
+        var addressFamily = protectedUdpClient.Client.AddressFamily;
         // not matter is it reachable or not, just try to get the primary adapter IP which can route to the internet
         var ipAddress = WebDeadNetworks.First(x => x.AddressFamily == addressFamily).Prefix;
         var remoteEndPoint = new IPEndPoint(ipAddress, 53);
 
         try {
             // IPv6 needs the addressFamily to be set
-            using var udpClient = new UdpClient(addressFamily);
-            udpClient.Connect(remoteEndPoint);
-            var localEndPoint = udpClient.Client.GetLocalEndPoint();
+            protectedUdpClient.Connect(remoteEndPoint);
+            var localEndPoint = protectedUdpClient.Client.GetLocalEndPoint();
 
             // log the discovered primary adapter IP
             VhLogger.Instance.LogDebug(

@@ -62,11 +62,19 @@ public sealed class TcpConnection : IConnection
     {
         Stream.Dispose();
         _tcpClient.Dispose();
+
+        VhLogger.Instance.LogTrace(GeneralEventId.Stream,
+            "Connection has been disposed. ConnectionId: {ConnectionId}",
+            ConnectionId);
     }
 
     public async ValueTask DisposeAsync()
     {
         await Stream.DisposeAsync();
         _tcpClient.Dispose();
+
+        VhLogger.Instance.LogTrace(GeneralEventId.Stream, 
+            "Connection has been disposed asynchronously. ConnectionId: {ConnectionId}",
+            ConnectionId);
     }
 }

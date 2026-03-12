@@ -21,6 +21,7 @@ public abstract class PacketTransportBase : IPacketTransport
     protected bool IsDisposed => _isDisposed == 1;
     protected bool IsDisposing => _isDisposing == 1;
     protected abstract ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets);
+    protected virtual string Name => VhLogger.FormatType(this);
 
     public event EventHandler<IpPacket>? PacketReceived;
     public ReadOnlyPacketTransportStat PacketStat { get; }
@@ -221,7 +222,7 @@ public abstract class PacketTransportBase : IPacketTransport
         if (VhLogger.MinLogLevel > LogLevel.Trace)
             return;
 
-        VhLogger.Instance.Log(logLevel, message: $"{VhLogger.FormatType(this)}: {message} {ipPacket}",
+        VhLogger.Instance.Log(logLevel, message: $"{Name}: {message} {ipPacket}",
             exception: exception, args: args);
     }
 

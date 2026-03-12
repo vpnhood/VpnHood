@@ -10,7 +10,10 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     public required string RegionName { get; init; }
     public string[]? Tags { get; set; }
     public string ServerLocation => $"{CountryCode}/{RegionName}";
-    public string CountryName => GetCountryName(CountryCode);
+    public string CountryName => CountryCode== AutoCountryCode 
+    ? AutoCountryCode
+    : GetCountryName(CountryCode);
+
     public bool IsAuto => IsAutoLocation(ServerLocation);
 
     public int CompareTo(ServerLocationInfo? other)

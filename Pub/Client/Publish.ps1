@@ -40,8 +40,9 @@ if ($nugets) {
 
 	# core
 	& "$solutionDir/Src/Core/VpnHood.Core.Common/_publish.ps1";
-	& "$solutionDir/Src/Core/VpnHood.Core.DomainFiltering/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Tunneling/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Filtering.Abstractions/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Filtering.DomainFiltering/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Abstractions/_publish.ps1";

@@ -19,7 +19,7 @@ public class AdapterSocketFactory(
 
         // config for client
         socketFactory.SetKeepAlive(tcpClient.Client, true);
-        VhUtils.ConfigTcpClient(tcpClient, null, null);
+        VhUtils.ConfigTcpClient(tcpClient);
         return tcpClient;
     }
 

@@ -15,6 +15,7 @@ public class ServerLocationInfo : IComparable<ServerLocationInfo>
     : GetCountryName(CountryCode);
 
     public bool IsAuto => IsAutoLocation(ServerLocation);
+    public bool HasRegion => !string.IsNullOrEmpty(RegionName) && RegionName != AutoRegionName;
 
     public int CompareTo(ServerLocationInfo? other)
     {

@@ -2,7 +2,6 @@
 using System.Text.Json.Serialization;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
 
 namespace VpnHood.AppLib.Dtos;
@@ -12,7 +11,7 @@ public class AppSessionInfo
     public required AccessInfo? AccessInfo { get; init; }
     public required DnsConfig DnsConfig { get; init; }
     public required bool IsLocalNetworkAllowed { get; set; }
-    public required ServerLocationInfo? ServerLocationInfo { get; init; }
+    public required AppServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsPremiumSession { get; init; }
     public required SessionSuppressType SuppressedTo { get; init; }
 

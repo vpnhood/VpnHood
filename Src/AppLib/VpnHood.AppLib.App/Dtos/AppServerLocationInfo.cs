@@ -6,12 +6,16 @@ public class AppServerLocationInfo : ServerLocationInfo
 {
     public string TranslatedCountryName => VpnHoodApp.Instance.Services.LocationService
         .TryGetCountryInfo(CountryCode)?.TranslatedName ?? CountryName;
-    public static AppServerLocationInfo FromInfo(ServerLocationInfo serverLocationInfo)
+
+    public bool HasMultipleRegions { get; init; }
+
+    public static AppServerLocationInfo FromInfo(ServerLocationInfo serverLocationInfo, bool hasMultipleRegions = false)
     {
         return new AppServerLocationInfo {
             CountryCode = serverLocationInfo.CountryCode,
             RegionName = serverLocationInfo.RegionName,
             Tags = serverLocationInfo.Tags,
+            HasMultipleRegions = hasMultipleRegions
         };
     }
 }

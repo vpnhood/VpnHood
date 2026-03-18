@@ -93,6 +93,9 @@ public class QuicTesterServer(
             int bytesRead;
             while ((bytesRead = await stream.ReadAsync(buffer, cancellationToken)) > 0)
                 await stream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+
+            // signal to the client that no more data will be sent
+            stream.CompleteWrites();
         }
         catch (Exception ex) {
             if (!cancellationToken.IsCancellationRequested)

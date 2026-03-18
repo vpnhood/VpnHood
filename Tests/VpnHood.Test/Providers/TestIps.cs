@@ -27,8 +27,8 @@ public class TestIps
         var remoteIpV4S = new List<IPAddress>();
         var startIp = IPAddress.Parse("198.18.11.2");
         for (var i = 0; i < 100; i++) {
+            remoteIpV4S.Add(startIp);
             startIp = IPAddressUtil.Increment(startIp);
-            remoteIpV4S.Add(IPAddressUtil.Increment(startIp));
         }
         RemoteTestIps = remoteIpV4S;
 
@@ -36,8 +36,8 @@ public class TestIps
         var localIpV4S = new List<IPAddress>();
         startIp = IPAddress.Loopback;
         for (var i = 0; i < 100; i++) {
+            localIpV4S.Add(startIp);
             startIp = IPAddressUtil.Increment(startIp);
-            localIpV4S.Add(IPAddressUtil.Increment(startIp));
         }
         LocalTestIps = localIpV4S;
         LocalBlockedServerIpAddress = localIpV4S[^1];

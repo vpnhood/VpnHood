@@ -17,8 +17,8 @@ public class TestWebServerLocalEps(TestIps testIps)
     public IPEndPoint UdpEchoEndPoint1V6 => new(testIps.LocalTestIpV6, 20201);
     public IPEndPoint UdpEchoEndPoint2V6 => new(testIps.LocalTestIpV6, 20202);
 
-    public IPEndPoint QuicEndPoint1 => new(testIps.LocalTestIps[0], 25001);
-    public IPEndPoint QuicEndPoint2 => new(testIps.LocalTestIps[1], 25002);
+    public IPEndPoint QuicEndPoint1 => new(testIps.LocalTestIps[0], 25001); // must be 127.0.0.1 for quic to work on loopback adapter
+    public IPEndPoint QuicEndPoint2 => new(testIps.LocalTestIps[1], 25002); // must be 127.0.0.1 for quic to work on loopback adapter
 
     public IPEndPoint HttpV4EndPointBlockedClient => new(testIps.LocalBlockedClientIpAddress, 15009);
     public IPEndPoint HttpV4EndPointBlockedServer => new(testIps.LocalBlockedServerIpAddress, 15010);
@@ -28,8 +28,8 @@ public class TestWebServerLocalEps(TestIps testIps)
     public Uri HttpsUrl2 => new($"https://{HttpsV4EndPoint2}/file1");
     public Uri HttpUrl1 => new($"http://{HttpV4EndPoint1}/file1");
     public Uri HttpUrl2 => new($"http://{HttpV4EndPoint2}/file2");
-    public Uri QuicUrl1 => new($"http://{QuicEndPoint1}/file1");
-    public Uri QuicUrl2 => new($"http://{QuicEndPoint2}/file2");
+    public Uri QuicUrl1 => new($"https://{QuicEndPoint1}/file1");
+    public Uri QuicUrl2 => new($"https://{QuicEndPoint2}/file2");
 
     public IReadOnlyList<IPEndPoint> AllHttpEndPoints => [
         HttpV4EndPoint1,

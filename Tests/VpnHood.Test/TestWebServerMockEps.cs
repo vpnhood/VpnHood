@@ -37,6 +37,8 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public Uri HttpsUrl2 => new UriBuilder(localEps.HttpsUrl2) { Host = "foo.test-domain2" }.Uri;
     public Uri HttpUrl1 => MapToRemote(localEps.HttpUrl1);
     public Uri HttpUrl2 => MapToRemote(localEps.HttpUrl2);
+    public Uri QuicUrl1 => new UriBuilder(localEps.QuicUrl1) { Host = "quic-test-domain1" }.Uri;
+    public Uri QuicUrl2 => new UriBuilder(localEps.QuicUrl2) { Host = "quic-foo.test-domain2" }.Uri;
     public Uri FileHttpUrl1 => MapToRemote(localEps.HttpUrl1);
     public Uri FileHttpUrl2 => MapToRemote(localEps.HttpUrl2);
     public Uri HttpRefusedUri => new($"https://{HttpV4EndPointRefused}/file2");

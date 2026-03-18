@@ -28,6 +28,8 @@ public class TestWebServerLocalEps(TestIps testIps)
     public Uri HttpsUrl2 => new($"https://{HttpsV4EndPoint2}/file1");
     public Uri HttpUrl1 => new($"http://{HttpV4EndPoint1}/file1");
     public Uri HttpUrl2 => new($"http://{HttpV4EndPoint2}/file2");
+    public Uri QuicUrl1 => new($"http://{QuicEndPoint1}/file1");
+    public Uri QuicUrl2 => new($"http://{QuicEndPoint2}/file2");
 
     public IReadOnlyList<IPEndPoint> AllHttpEndPoints => [
         HttpV4EndPoint1,

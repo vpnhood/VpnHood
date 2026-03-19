@@ -62,7 +62,7 @@ public class LocationService : IRegionProvider
     public CountryInfo? TryGetCountryInfo(string countryCode)
     {
         try {
-            var cultureInfo = CultureInfo.CurrentUICulture;
+            var cultureInfo = CultureInfo.DefaultThreadCurrentUICulture ?? CultureInfo.CurrentUICulture;
             if (!string.IsNullOrEmpty(_settingsService.UserSettings.CultureCode))
                 cultureInfo = new CultureInfo(_settingsService.UserSettings.CultureCode);
 

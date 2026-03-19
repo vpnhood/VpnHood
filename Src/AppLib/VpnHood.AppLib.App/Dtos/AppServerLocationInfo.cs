@@ -4,8 +4,15 @@ namespace VpnHood.AppLib.Dtos;
 
 public class AppServerLocationInfo : ServerLocationInfo
 {
-    public string TranslatedCountryName => VpnHoodApp.Instance.Services.LocationService
-        .TryGetCountryInfo(CountryCode)?.TranslatedName ?? CountryName;
+    public string TranslatedCountryName {
+        get {
+            if (CountryCode == AutoCountryCode)
+                return CountryName;
+
+            return VpnHoodApp.Instance.Services.LocationService
+                .TryGetCountryInfo(CountryCode)?.TranslatedName ?? CountryName;
+        }
+    }
 
     public bool HasMultipleRegions { get; init; }
 

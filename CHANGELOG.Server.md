@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Auto public resolution which returns 104.18.0.0
+
 # v7.7.792
 * Fix: Reconnection required after network failure when using the TCP protocol
 

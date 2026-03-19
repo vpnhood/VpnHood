@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using VpnHood.Core.Toolkit.Utils;
+using static System.Net.WebRequestMethods;
 
 namespace VpnHood.Core.Toolkit.Net;
 
@@ -145,11 +146,23 @@ public static class IPAddressUtil
     private static async Task<IPAddress?> GetPublicIpAddressByCloudflare(AddressFamily addressFamily,
         CancellationToken cancellationToken)
     {
-        var url = addressFamily == AddressFamily.InterNetwork
-            ? "https://1.1.1.1/cdn-cgi/trace"
-            : "https://[2606:4700:4700::1111]/cdn-cgi/trace";
+        var url = "https://www.cloudflare.com/cdn-cgi/trace";
 
-        using var httpClient = new HttpClient();
+        var handler = new SocketsHttpHandler {
+            ConnectCallback = async (context, token) => {
+                var socket = new Socket(addressFamily, SocketType.Stream, ProtocolType.Tcp);
+                try {
+                    await socket.ConnectAsync(context.DnsEndPoint, token).ConfigureAwait(false);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+                catch {
+                    socket.Dispose();
+                    throw;
+                }
+            }
+        };
+
+        using var httpClient = new HttpClient(handler);
         httpClient.DefaultRequestHeaders.Add("User-Agent", "VpnHood");
         var content = await httpClient
             .GetStringAsync(url, cancellationToken)

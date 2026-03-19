@@ -7,11 +7,11 @@ public class StaticDomainFilter(IDomainFilter? nextFilter) : IDomainFilter
     private string[] _invertedIncludes = [];
 
     public bool IsEmpty =>
-        Blocks.Length == 0 &&
-        Excludes.Length == 0 &&
-        Includes.Length == 0;
+        Blocks.Count == 0 &&
+        Excludes.Count == 0 &&
+        Includes.Count == 0;
 
-    public string[] Blocks {
+    public IReadOnlyList<string> Blocks {
         get;
         set {
             field = value;
@@ -19,7 +19,7 @@ public class StaticDomainFilter(IDomainFilter? nextFilter) : IDomainFilter
         }
     } = [];
 
-    public string[] Excludes {
+    public IReadOnlyList<string> Excludes {
         get;
         set {
             field = value;
@@ -27,7 +27,7 @@ public class StaticDomainFilter(IDomainFilter? nextFilter) : IDomainFilter
         }
     } = [];
 
-    public string[] Includes {
+    public IReadOnlyList<string> Includes {
         get;
         set {
             field = value;
@@ -35,7 +35,7 @@ public class StaticDomainFilter(IDomainFilter? nextFilter) : IDomainFilter
         }
     } = [];
 
-    private static string[] BuildSortedInvertedArray(string[] domains)
+    private static string[] BuildSortedInvertedArray(IReadOnlyList<string> domains)
     {
         var inverted = domains
             .Select(NormalizeDomain)

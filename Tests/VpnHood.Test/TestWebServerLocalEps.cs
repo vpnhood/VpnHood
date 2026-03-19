@@ -18,7 +18,7 @@ public class TestWebServerLocalEps(TestIps testIps)
     public IPEndPoint UdpEchoEndPoint2V6 => new(testIps.LocalTestIpV6, 20202);
 
     public IPEndPoint QuicEndPoint1 => new(testIps.LocalTestIps[0], 25001); // must be 127.0.0.1 for quic to work on loopback adapter
-    public IPEndPoint QuicEndPoint2 => new(testIps.LocalTestIps[1], 25002); // must be 127.0.0.1 for quic to work on loopback adapter
+    public IPEndPoint QuicEndPoint2 => new(testIps.LocalTestIps[0], 25002); // must be 127.0.0.1 for quic to work on loopback adapter
 
     public IPEndPoint HttpV4EndPointBlockedClient => new(testIps.LocalBlockedClientIpAddress, 15009);
     public IPEndPoint HttpV4EndPointBlockedServer => new(testIps.LocalBlockedServerIpAddress, 15010);

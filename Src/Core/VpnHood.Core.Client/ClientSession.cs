@@ -141,6 +141,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _status = new ClientSessionStatus(
             session: this,
             tunnel: _tunnel,
+            domainFilteringService: options.DomainFilteringService,
             connectorService: _connectorService,
             proxyManager: _proxyManager,
             streamHandler: streamHandler,

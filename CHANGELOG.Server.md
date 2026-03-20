@@ -1,4 +1,4 @@
-# Upcoming
+# v7.7.795
 * Fix: Auto public resolution which returns 104.18.0.0
 
 # v7.7.792

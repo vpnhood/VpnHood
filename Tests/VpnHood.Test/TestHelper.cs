@@ -325,6 +325,9 @@ public class TestHelper : IDisposable
                 TrackDestinationPort = true,
                 TrackLocalPort = true
             },
+            NetFilterOptions = new NetFilterOptions {
+                IncludeLocalNetwork = false 
+            },
             SessionOptions = {
                 SyncCacheSize = 50
             },

@@ -236,17 +236,15 @@ internal static class QuicSniExtractor
         if (b.Length < sampleOffset + 16) return false;
 
         // Use stackalloc for small fixed-size buffers
-        //todo: use allocated object and lock the AES encryptor for better performance if this becomes a bottleneck
         Span<byte> sample = stackalloc byte[16];
         Span<byte> mask = stackalloc byte[16];
         b.Slice(sampleOffset, 16).CopyTo(sample);
 
-        using (var aes = Aes.Create()) { //todo: dont create every time
+        using (var aes = Aes.Create()) {
             aes.Mode = CipherMode.ECB;
             aes.Padding = PaddingMode.None;
             aes.Key = st.Hp;
             using var enc = aes.CreateEncryptor();
-            // TransformBlock requires arrays, rent from pool
             var sampleArr = ArrayPool<byte>.Shared.Rent(16);
             var maskArr = ArrayPool<byte>.Shared.Rent(16);
             try {

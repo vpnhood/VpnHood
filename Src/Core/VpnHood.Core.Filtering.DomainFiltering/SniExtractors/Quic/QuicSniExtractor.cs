@@ -90,10 +90,7 @@ internal static class QuicSniExtractor
             // only decrypt client Initials whose DCID matches
             if (isInitialPkt && DcidEquals(dcidHdr, state.Dcid)) {
                 sawAnyInitial = true;
-
-                if (TryDecryptInitial(udpPayload, off, pnOffset, headerLenUpToPn, lengthField, state, out var plain)) {
-                    CollectCryptoSegments(plain, state.Segments);
-                }
+                TryDecryptAndCollectCrypto(udpPayload, off, pnOffset, headerLenUpToPn, lengthField, state);
             }
 
             if (totalPacketBytes <= 0) break;
@@ -224,29 +221,24 @@ internal static class QuicSniExtractor
         st.SecretsReady = true;
     }
 
-    private static bool TryDecryptInitial(
+    private static void TryDecryptAndCollectCrypto(
         ReadOnlySpan<byte> b, int off, int pnOffset, int headerLenUpToPn, ulong lengthField,
-        QuicSniState st,
-        out byte[] plaintext)
+        QuicSniState st)
     {
-        plaintext = [];
-
         // sample & mask
         var sampleOffset = pnOffset + 4;
-        if (b.Length < sampleOffset + 16) return false;
+        if (b.Length < sampleOffset + 16) return;
 
         // Use stackalloc for small fixed-size buffers
-        //todo: use allocated object and lock the AES encryptor for better performance if this becomes a bottleneck
         Span<byte> sample = stackalloc byte[16];
         Span<byte> mask = stackalloc byte[16];
         b.Slice(sampleOffset, 16).CopyTo(sample);
 
-        using (var aes = Aes.Create()) { //todo: dont create every time
+        using (var aes = Aes.Create()) {
             aes.Mode = CipherMode.ECB;
             aes.Padding = PaddingMode.None;
             aes.Key = st.Hp;
             using var enc = aes.CreateEncryptor();
-            // TransformBlock requires arrays, rent from pool
             var sampleArr = ArrayPool<byte>.Shared.Rent(16);
             var maskArr = ArrayPool<byte>.Shared.Rent(16);
             try {
@@ -264,7 +256,8 @@ internal static class QuicSniExtractor
         var unmaskedFirst = (byte)(first ^ (mask[0] & 0x0F));
         var pnLen = (unmaskedFirst & 0x03) + 1;
 
-        if (pnLen < 1 || pnLen > 4 || b.Length < pnOffset + pnLen) return false;
+        if (pnLen < 1 || pnLen > 4 || b.Length < pnOffset + pnLen)
+            return;
 
         // unmask PN using stackalloc
         Span<byte> pnField = stackalloc byte[4];
@@ -281,7 +274,7 @@ internal static class QuicSniExtractor
         // Nonce = iv XOR packet_number (left-padded)
         ulong pnVal = 0;
         for (var i = 0; i < pnLen; i++) pnVal = (pnVal << 8) | pnField[i];
-        
+
         Span<byte> nonce = stackalloc byte[12];
         st.Iv.CopyTo(nonce);
         for (var i = 0; i < 8; i++)
@@ -290,30 +283,31 @@ internal static class QuicSniExtractor
         // ciphertext (payload incl tag) is after PN; lengthField = PN + payload + tag
         var ctOffset = pnOffset + pnLen;
         var ctLen = (int)lengthField - pnLen;
-        if (ctLen <= 16 || b.Length < ctOffset + ctLen) return false;
+        if (ctLen <= 16 || b.Length < ctOffset + ctLen) 
+            return;
 
         var ptLen = ctLen - 16;
-        
-        // Rent buffers for ciphertext and plaintext
+
+        // Rent all buffers from pool — plaintext never escapes this method
         var ciphertext = ArrayPool<byte>.Shared.Rent(ptLen);
         var tag = ArrayPool<byte>.Shared.Rent(16);
-        plaintext = new byte[ptLen]; // This must be returned to caller
-        
+        var plaintext = ArrayPool<byte>.Shared.Rent(ptLen);
+
         try {
             b.Slice(ctOffset, ptLen).CopyTo(ciphertext);
             b.Slice(ctOffset + ptLen, 16).CopyTo(tag);
 
             using var aead = new AesGcm(st.Key, 16);
-            aead.Decrypt(nonce, ciphertext.AsSpan(0, ptLen), tag.AsSpan(0, 16), plaintext, aad);
-            return true;
+            aead.Decrypt(nonce, ciphertext.AsSpan(0, ptLen), tag.AsSpan(0, 16), plaintext.AsSpan(0, ptLen), aad);
+            CollectCryptoSegments(plaintext.AsSpan(0, ptLen), st.Segments);
         }
         catch {
-            plaintext = [];
-            return false;
+            // decryption failed — nothing to collect
         }
         finally {
             ArrayPool<byte>.Shared.Return(ciphertext);
             ArrayPool<byte>.Shared.Return(tag);
+            ArrayPool<byte>.Shared.Return(plaintext);
         }
     }
 
@@ -386,10 +380,10 @@ internal static class QuicSniExtractor
         }
 
         if (totalSize == 0) return [];
-        
+
         var result = new byte[totalSize];
         cur = 0;
-        
+
         foreach (var s in segments) {
             if (s.Off > cur) break;
             var overlap = (int)Math.Max(0, (long)(cur - s.Off));

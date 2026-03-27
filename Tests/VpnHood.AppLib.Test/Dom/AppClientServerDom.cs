@@ -5,6 +5,7 @@ using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
+using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 
@@ -53,9 +54,10 @@ public class AppClientServerDom : IAsyncDisposable, IDisposable
 
     public static async Task<AppClientServerDom> CreateWithNullCapture(
         TestAppHelper testAppHelper,
+        FileAccessManagerOptions? fileAccessManagerOptions = null,
         AppOptions? appOptions = null)
     {
-        var accessManager = testAppHelper.CreateAccessManager();
+        var accessManager = testAppHelper.CreateAccessManager(fileAccessManagerOptions);
         appOptions ??= testAppHelper.CreateAppOptions();
 
         // create server
@@ -72,10 +74,11 @@ public class AppClientServerDom : IAsyncDisposable, IDisposable
         TestAppHelper testAppHelper,
         TestVpnAdapterOptions? adapterOptions = null,
         AppAdType adProviderAdType = AppAdType.RewardedAd,
+        FileAccessManagerOptions? fileAccessManagerOptions = null,
         AppOptions? appOptions = null)
     {
         var device = testAppHelper.CreateDevice(adapterOptions);
-        var accessManager = testAppHelper.CreateAccessManager();
+        var accessManager = testAppHelper.CreateAccessManager(fileAccessManagerOptions);
         appOptions ??= testAppHelper.CreateAppOptions();
 
         // create server

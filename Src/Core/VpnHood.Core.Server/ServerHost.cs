@@ -621,11 +621,13 @@ private bool _disposed;
 
         // report in session log
         VhLogger.Instance.LogInformation(GeneralEventId.SessionTrack,
-            "SessionId: {SessionId-5}\t{Mode,-5}\tTokenId: {TokenId}\tClientCount: {ClientCount,-3}\tClientId: {ClientId}\tClientIp: {ClientIp-15}\tVersion: {Version}\tOS: {OS}",
+            "SessionId: {SessionId-5}\t{Mode,-5}\tTokenId: {TokenId}\tClientCount: {ClientCount,-3}\tClientId: {ClientId}\t" +
+            "ClientIp: {ClientIp-15}\tVersion: {Version}\tVirtualIp: {VirtualIp}\tOS: {OS}",
             VhLogger.FormatSessionId(session.SessionId), "New", VhLogger.FormatId(request.TokenId),
             session.SessionResponseEx.AccessUsage?.ActiveClientCount, VhLogger.FormatId(request.ClientInfo.ClientId),
             clientIpText, request.ClientInfo.ClientVersion,
-            UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent));
+            UserAgentParser.GetOperatingSystem(request.ClientInfo.UserAgent),
+            session.VirtualIps.IpV4);
 
         // report in track log
         if (_sessionManager.TrackingOptions.IsEnabled) {

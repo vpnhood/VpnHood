@@ -1,3 +1,9 @@
+# v7.7.795
+* Fix: Auto public resolution which returns 104.18.0.0
+
+# v7.7.792
+* Fix: Reconnection required after network failure when using the TCP protocol
+
 # v7.5.777
 * Update: Upgrade to .NET 10
 * Update: Update HTTP01 handling for valid SSL certs

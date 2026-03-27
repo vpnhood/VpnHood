@@ -53,7 +53,7 @@ public abstract class PacketSniFilteringService(
         // SNI found
         if (sniResult.DomainName != null) {
             LogSni(sniResult.DomainName, ipPacket);
-            return HandleSniFound(flowKey, ipPacket, flowInfo, sniResult.DomainName, nowTicks);
+            return HandleSniFound(flowKey, flowInfo, sniResult.DomainName, nowTicks);
         }
 
         // Need more packets to extract SNI
@@ -96,14 +96,13 @@ public abstract class PacketSniFilteringService(
     }
 
     private PacketSniFilterResult HandleSniFound(
-        IpEndPointValue flowKey, IpPacket ipPacket, FlowInfo? flowInfo,
+        IpEndPointValue flowKey, FlowInfo? flowInfo,
         string domainName, long nowTicks)
     {
         var action = DomainFilter.Process(domainName);
 
-        // Collect all buffered packets plus current one
+        // Collect all previous buffered
         var packets = flowInfo?.BufferedPackets ?? [];
-        packets.Add(ipPacket);
 
         // Update state with decision for future packets in this flow
         var state = flowInfo ?? new FlowInfo();

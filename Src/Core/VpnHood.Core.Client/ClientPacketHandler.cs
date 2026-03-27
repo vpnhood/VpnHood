@@ -130,8 +130,9 @@ internal class ClientPacketHandler(
 
     private void ProcessOutgoingPacketExclude(IpPacket ipPacket)
     {
-        // icmp can not be excluded because some adapters can not protect it
-        if (netFilter.IpMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
+        // For exclude, TCP will resemble as stream and it has its own mapper 
+        if (ipPacket.Protocol != IpProtocol.Tcp &&
+            netFilter.IpMapper?.ToHost(ipPacket.Protocol, ipPacket.GetDestinationEndPoint(), out var newEndPoint) == true) {
             ipPacket.SetDestinationEndPoint(newEndPoint);
             ipPacket.UpdateAllChecksums();
         }

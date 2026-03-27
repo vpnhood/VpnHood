@@ -67,26 +67,6 @@ public class TestHelper : IDisposable
             IpMapper = new TestIpMapper(TestIps)
         };
 
-        //NetFilter.Init([TestConstants.BlockedIp],
-        //[
-        //Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint1, WebServer.HttpV4EndPoint1),
-        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpEndPoint2, WebServer.HttpV4EndPoint2),
-        //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint1, WebServer.HttpsV4EndPoint1),
-        //    Tuple.Create(IpProtocol.Tcp, TestConstants.HttpsEndPoint2, WebServer.HttpsV4EndPoint2),
-        //    Tuple.Create(IpProtocol.Tcp, TestConstants.TcpRefusedEndPoint, WebServer.HttpsV4RefusedEndPoint1),
-        //    Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint1, WebServer.QuicEndPoint1),
-        //    Tuple.Create(IpProtocol.Udp, TestConstants.QuicEndPoint2, WebServer.QuicEndPoint2),
-        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint1, WebServer.UdpV4EndPoint1),
-        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV4EndPoint2, WebServer.UdpV4EndPoint2),
-        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint1, WebServer.UdpV6EndPoint1),
-        //    Tuple.Create(IpProtocol.Udp, TestConstants.UdpV6EndPoint2, WebServer.UdpV6EndPoint2),
-        //    Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address1, 0),
-        //        IPEndPoint.Parse("127.0.0.1:0")),
-        //    Tuple.Create(IpProtocol.IcmpV4, new IPEndPoint(TestConstants.PingV4Address2, 0),
-        //        IPEndPoint.Parse("127.0.0.2:0")),
-        //    Tuple.Create(IpProtocol.IcmpV6, new IPEndPoint(TestConstants.PingV6Address1, 0),
-        //        IPEndPoint.Parse("[::1]:0"))
-        //]);
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
         JobOptions.DefaultInterval = TimeSpan.FromMilliseconds(1000);
         JobRunner.SlowInstance.Interval = TimeSpan.FromMilliseconds(200);
@@ -217,6 +197,29 @@ public class TestHelper : IDisposable
         Assert.IsNotEmpty(result.AddressList);
     }
 
+    public async Task<bool> Test_Quic(Uri? uri = null, bool throwError = true)
+    {
+        uri ??= WebServer.MockEps.QuicUrl1;
+
+        // map test domain to endpoints
+        IPEndPoint? ipEndPoint = null;
+        if (uri.Equals(WebServer.MockEps.QuicUrl1))
+            ipEndPoint = TestIps.MapToRemote(WebServer.LocalEps.QuicEndPoint1);
+
+        if (uri.Equals(WebServer.MockEps.QuicUrl2))
+            ipEndPoint = TestIps.MapToRemote(WebServer.LocalEps.QuicEndPoint2);
+
+        ipEndPoint ??= new IPEndPoint(IPAddress.Parse(uri.Host), uri.Port);
+
+        try {
+            VhLogger.Instance.LogInformation(GeneralEventId.Test, "Testing a QUIC uri. Url: {uri}", uri);
+            return await Test_Quic(uri.Host, ipEndPoint, throwError);
+        }
+        catch when (!throwError) {
+            return false;
+        }
+    }
+
     public async Task<bool> Test_Quic(string domain, IPEndPoint ipEndPoint, bool throwError = true)
     {
         var quicTesterClient = new QuicTesterClient(ipEndPoint, domain, TestConstants.DefaultQuicTimeout);
@@ -321,6 +324,9 @@ public class TestHelper : IDisposable
                 TrackDestinationIp = true,
                 TrackDestinationPort = true,
                 TrackLocalPort = true
+            },
+            NetFilterOptions = new NetFilterOptions {
+                IncludeLocalNetwork = false 
             },
             SessionOptions = {
                 SyncCacheSize = 50

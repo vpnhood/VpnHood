@@ -12,7 +12,6 @@ using VpnHood.Core.Toolkit.Utils;
 namespace VpnHood.Core.Filtering.DomainFiltering;
 
 
-// todo add tests
 /// Note: TCP extraction by packet is useless service, because TCP SNI is come after TCP handshake, and it will be too late to exclude connection
 /// evan if we establish our own handshake, we can not simulate the rest
 /// Use TcpStreamSniFilteringService instead as proxy
@@ -26,6 +25,8 @@ public class DomainFilteringService
     private readonly int _tlsBufferSize;
     private readonly bool _trackObservations;
     public DomainObserver DomainObserver { get; }
+    public DomainObserverُStat TcpStat { get; } = new();
+    public DomainObserverُStat QuicStat { get; } = new();
 
     public DomainFilteringService(
         IDomainFilter domainFilter,
@@ -54,8 +55,16 @@ public class DomainFilteringService
         };
 
         // Track observation if enabled
-        if (_trackObservations && result.IsNewFlow && !string.IsNullOrEmpty(result.DomainName)) {
-            DomainObserver.Track(result.DomainName, result.Action, DomainObservationProtocol.Quic, ipPacket.GetDestinationEndPoint());
+        if (!result.IsNewFlow || string.IsNullOrEmpty(result.DomainName)) 
+            return result;
+
+        // Update QUIC stat
+        QuicStat.Update(result.Action);
+
+        // For QUIC, we can only get remote endpoint from packet, so we use destination endpoint for tracking
+        if (_trackObservations) {
+            DomainObserver.Track(result.DomainName,
+                result.Action, DomainObservationProtocol.Quic, ipPacket.GetDestinationEndPoint());
         }
 
         return result;
@@ -80,8 +89,14 @@ public class DomainFilteringService
         };
 
         // Track observation if enabled
-        if (_trackObservations && !string.IsNullOrEmpty(res.DomainName)) 
-            DomainObserver.Track(res.DomainName, res.Action, DomainObservationProtocol.Tcp, remoteEndPoint.ToValue());
+        if (!string.IsNullOrEmpty(res.DomainName)) {
+            // Update stream stat
+            TcpStat.Update(res.Action);
+
+            // For TCP, we can get remote endpoint from stream, so we use it for tracking
+            if (_trackObservations)
+                DomainObserver.Track(res.DomainName, res.Action, DomainObservationProtocol.Tcp, remoteEndPoint.ToValue());
+        }
 
         return res;
     }

@@ -1,4 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -28,5 +30,28 @@ public static class StateHelper
             return progress.Value.Percentage;
 
         return null;
+    }
+
+    public static AppServerLocationInfo? GetServerLocationInfo(
+        SessionInfo? sessionInfo,
+        ClientProfileInfo? clientProfileInfo)
+    {
+        // get session server location info
+        var sessionServerLocationInfo = sessionInfo?.ServerLocationInfo;
+        if (sessionServerLocationInfo != null) {
+            return AppServerLocationInfo.FromInfo(
+                sessionServerLocationInfo,
+                clientProfileInfo?.HasMultipleRegion(sessionServerLocationInfo.CountryCode) == true);
+        }
+
+        // return user selected 
+        if (clientProfileInfo?.SelectedLocationInfo is null)
+            return null;
+
+        return
+             AppServerLocationInfo.FromInfo(
+                 clientProfileInfo.SelectedLocationInfo,
+                 clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode));
+
     }
 }

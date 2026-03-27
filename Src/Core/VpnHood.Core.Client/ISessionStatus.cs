@@ -13,8 +13,8 @@ public interface ISessionStatus
     Traffic SessionSplitTraffic { get; }
     Traffic CycleTraffic { get; }
     Traffic TotalTraffic { get; }
-    int TcpTunnelledCount { get; }
-    int TcpPassthruCount { get; }
+    int StreamTunnelledCount { get; }
+    int StreamPassthruCount { get; }
     int UnstableCount { get; }
     int WaitingCount { get; }
     int SessionPacketChannelCount { get; }

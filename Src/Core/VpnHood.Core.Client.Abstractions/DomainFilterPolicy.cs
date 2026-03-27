@@ -2,7 +2,7 @@
 
 public class DomainFilterPolicy
 {
-    public string[] Blocks { get; set; } = [];
-    public string[] Excludes { get; set; } = [];
-    public string[] Includes { get; set; } = [];
+    public IReadOnlyList<string> Blocks { get; set; } = [];
+    public IReadOnlyList<string> Excludes { get; set; } = [];
+    public IReadOnlyList<string> Includes { get; set; } = [];
 }

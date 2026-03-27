@@ -73,4 +73,9 @@ public class ClientProfileInfo(ClientProfile clientProfile)
 
         return hostNames.ToArray();
     }
+
+    public bool HasMultipleRegion(string countryCode)
+    {
+        return LocationInfos.Any(x => x.IsNestedCountry && x.CountryCode == countryCode);
+    }
 }

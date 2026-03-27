@@ -17,6 +17,14 @@ public static class VpnHoodAppExtensions
                    throw new InvalidOperationException("Session has not been initialized yet");
         }
 
+        public async Task<AppSessionStatus> GetSessionStatusAsync(CancellationToken cancellationToken = default)
+        {
+            await app.ForceUpdateState(cancellationToken);
+            return app.State.SessionStatus ??
+                   throw new InvalidOperationException("Session has not been initialized yet");
+        }
+
+
         public Task WaitForState(AppConnectionState connectionSate, int timeout = 5000)
         {
             return VhTestUtil.AssertEqualsWait(connectionSate, () => app.State.ConnectionState,

@@ -1835,6 +1835,58 @@ export class ClientProfileClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    getAccessCode(clientProfileId: string, cancelToken?: CancelToken): Promise<string> {
+        let url_ = this.baseUrl + "/api/client-profiles/{clientProfileId}/access-code";
+        if (clientProfileId === undefined || clientProfileId === null)
+            throw new globalThis.Error("The parameter 'clientProfileId' must be defined.");
+        url_ = url_.replace("{clientProfileId}", encodeURIComponent("" + clientProfileId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetAccessCode(_response);
+        });
+    }
+
+    protected processGetAccessCode(response: AxiosResponse): Promise<string> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+                result200 = resultData200 !== undefined ? resultData200 : null as any;
+    
+            return Promise.resolve<string>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<string>(null as any);
+    }
 }
 
 export class IntentsClient {
@@ -3283,6 +3335,7 @@ export class AppState implements IAppState {
     sessionInfo?: AppSessionInfo | null;
     sessionStatus?: AppSessionStatus | null;
     proxyEndPointManagerStatus?: AppProxyEndPointManagerStatus | null;
+    serverLocationInfo?: AppServerLocationInfo | null;
     connectRequestTime?: Date | null;
     lastError?: ApiError | null;
     clientProfile?: ClientProfileBaseInfo | null;
@@ -3290,14 +3343,13 @@ export class AppState implements IAppState {
     promptForLog!: boolean;
     logExists!: boolean;
     hasDiagnoseRequested!: boolean;
-    clientCountryCode?: string | null;
-    clientCountryName?: string | null;
     updaterStatus?: AppUpdaterStatus | null;
     canDisconnect!: boolean;
     canConnect!: boolean;
     canDiagnose!: boolean;
     userReviewRecommended!: number;
     isQuickLaunchRecommended!: boolean;
+    clientCountryInfo?: CountryInfo | null;
     currentUiCultureInfo!: UiCultureInfo;
     systemUiCultureInfo!: UiCultureInfo;
     purchaseState?: BillingPurchaseState | null;
@@ -3332,6 +3384,7 @@ export class AppState implements IAppState {
             this.sessionInfo = _data["sessionInfo"] ? AppSessionInfo.fromJS(_data["sessionInfo"]) : null as any;
             this.sessionStatus = _data["sessionStatus"] ? AppSessionStatus.fromJS(_data["sessionStatus"]) : null as any;
             this.proxyEndPointManagerStatus = _data["proxyEndPointManagerStatus"] ? AppProxyEndPointManagerStatus.fromJS(_data["proxyEndPointManagerStatus"]) : null as any;
+            this.serverLocationInfo = _data["serverLocationInfo"] ? AppServerLocationInfo.fromJS(_data["serverLocationInfo"]) : null as any;
             this.connectRequestTime = _data["connectRequestTime"] ? new Date(_data["connectRequestTime"].toString()) : null as any;
             this.lastError = _data["lastError"] ? ApiError.fromJS(_data["lastError"]) : null as any;
             this.clientProfile = _data["clientProfile"] ? ClientProfileBaseInfo.fromJS(_data["clientProfile"]) : null as any;
@@ -3339,14 +3392,13 @@ export class AppState implements IAppState {
             this.promptForLog = _data["promptForLog"] !== undefined ? _data["promptForLog"] : null as any;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : null as any;
             this.hasDiagnoseRequested = _data["hasDiagnoseRequested"] !== undefined ? _data["hasDiagnoseRequested"] : null as any;
-            this.clientCountryCode = _data["clientCountryCode"] !== undefined ? _data["clientCountryCode"] : null as any;
-            this.clientCountryName = _data["clientCountryName"] !== undefined ? _data["clientCountryName"] : null as any;
             this.updaterStatus = _data["updaterStatus"] ? AppUpdaterStatus.fromJS(_data["updaterStatus"]) : null as any;
             this.canDisconnect = _data["canDisconnect"] !== undefined ? _data["canDisconnect"] : null as any;
             this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : null as any;
             this.canDiagnose = _data["canDiagnose"] !== undefined ? _data["canDiagnose"] : null as any;
             this.userReviewRecommended = _data["userReviewRecommended"] !== undefined ? _data["userReviewRecommended"] : null as any;
             this.isQuickLaunchRecommended = _data["isQuickLaunchRecommended"] !== undefined ? _data["isQuickLaunchRecommended"] : null as any;
+            this.clientCountryInfo = _data["clientCountryInfo"] ? CountryInfo.fromJS(_data["clientCountryInfo"]) : null as any;
             this.currentUiCultureInfo = _data["currentUiCultureInfo"] ? UiCultureInfo.fromJS(_data["currentUiCultureInfo"]) : new UiCultureInfo();
             this.systemUiCultureInfo = _data["systemUiCultureInfo"] ? UiCultureInfo.fromJS(_data["systemUiCultureInfo"]) : new UiCultureInfo();
             this.purchaseState = _data["purchaseState"] !== undefined ? _data["purchaseState"] : null as any;
@@ -3376,6 +3428,7 @@ export class AppState implements IAppState {
         data["sessionInfo"] = this.sessionInfo ? this.sessionInfo.toJSON() : null as any;
         data["sessionStatus"] = this.sessionStatus ? this.sessionStatus.toJSON() : null as any;
         data["proxyEndPointManagerStatus"] = this.proxyEndPointManagerStatus ? this.proxyEndPointManagerStatus.toJSON() : null as any;
+        data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : null as any;
         data["connectRequestTime"] = this.connectRequestTime ? this.connectRequestTime.toISOString() : null as any;
         data["lastError"] = this.lastError ? this.lastError.toJSON() : null as any;
         data["clientProfile"] = this.clientProfile ? this.clientProfile.toJSON() : null as any;
@@ -3383,14 +3436,13 @@ export class AppState implements IAppState {
         data["promptForLog"] = this.promptForLog !== undefined ? this.promptForLog : null as any;
         data["logExists"] = this.logExists !== undefined ? this.logExists : null as any;
         data["hasDiagnoseRequested"] = this.hasDiagnoseRequested !== undefined ? this.hasDiagnoseRequested : null as any;
-        data["clientCountryCode"] = this.clientCountryCode !== undefined ? this.clientCountryCode : null as any;
-        data["clientCountryName"] = this.clientCountryName !== undefined ? this.clientCountryName : null as any;
         data["updaterStatus"] = this.updaterStatus ? this.updaterStatus.toJSON() : null as any;
         data["canDisconnect"] = this.canDisconnect !== undefined ? this.canDisconnect : null as any;
         data["canConnect"] = this.canConnect !== undefined ? this.canConnect : null as any;
         data["canDiagnose"] = this.canDiagnose !== undefined ? this.canDiagnose : null as any;
         data["userReviewRecommended"] = this.userReviewRecommended !== undefined ? this.userReviewRecommended : null as any;
         data["isQuickLaunchRecommended"] = this.isQuickLaunchRecommended !== undefined ? this.isQuickLaunchRecommended : null as any;
+        data["clientCountryInfo"] = this.clientCountryInfo ? this.clientCountryInfo.toJSON() : null as any;
         data["currentUiCultureInfo"] = this.currentUiCultureInfo ? this.currentUiCultureInfo.toJSON() : null as any;
         data["systemUiCultureInfo"] = this.systemUiCultureInfo ? this.systemUiCultureInfo.toJSON() : null as any;
         data["purchaseState"] = this.purchaseState !== undefined ? this.purchaseState : null as any;
@@ -3413,6 +3465,7 @@ export interface IAppState {
     sessionInfo?: AppSessionInfo | null;
     sessionStatus?: AppSessionStatus | null;
     proxyEndPointManagerStatus?: AppProxyEndPointManagerStatus | null;
+    serverLocationInfo?: AppServerLocationInfo | null;
     connectRequestTime?: Date | null;
     lastError?: ApiError | null;
     clientProfile?: ClientProfileBaseInfo | null;
@@ -3420,14 +3473,13 @@ export interface IAppState {
     promptForLog: boolean;
     logExists: boolean;
     hasDiagnoseRequested: boolean;
-    clientCountryCode?: string | null;
-    clientCountryName?: string | null;
     updaterStatus?: AppUpdaterStatus | null;
     canDisconnect: boolean;
     canConnect: boolean;
     canDiagnose: boolean;
     userReviewRecommended: number;
     isQuickLaunchRecommended: boolean;
+    clientCountryInfo?: CountryInfo | null;
     currentUiCultureInfo: UiCultureInfo;
     systemUiCultureInfo: UiCultureInfo;
     purchaseState?: BillingPurchaseState | null;
@@ -3459,12 +3511,11 @@ export enum AppConnectionState {
 
 export class AppSessionInfo implements IAppSessionInfo {
     accessInfo?: AccessInfo | null;
-    isDnsServersAccepted!: boolean;
+    dnsConfig!: DnsConfig;
     isLocalNetworkAllowed!: boolean;
-    serverLocationInfo?: ServerLocationInfo | null;
+    serverLocationInfo?: AppServerLocationInfo | null;
     isPremiumSession!: boolean;
     suppressedTo!: SessionSuppressType;
-    dnsServers!: string[];
     serverVersion!: string;
     clientPublicIpAddress!: string;
     createdTime!: Date;
@@ -3481,7 +3532,7 @@ export class AppSessionInfo implements IAppSessionInfo {
             }
         }
         if (!data) {
-            this.dnsServers = [];
+            this.dnsConfig = new DnsConfig();
             this.channelProtocols = [];
         }
     }
@@ -3489,19 +3540,11 @@ export class AppSessionInfo implements IAppSessionInfo {
     init(_data?: any) {
         if (_data) {
             this.accessInfo = _data["accessInfo"] ? AccessInfo.fromJS(_data["accessInfo"]) : null as any;
-            this.isDnsServersAccepted = _data["isDnsServersAccepted"] !== undefined ? _data["isDnsServersAccepted"] : null as any;
+            this.dnsConfig = _data["dnsConfig"] ? DnsConfig.fromJS(_data["dnsConfig"]) : new DnsConfig();
             this.isLocalNetworkAllowed = _data["isLocalNetworkAllowed"] !== undefined ? _data["isLocalNetworkAllowed"] : null as any;
-            this.serverLocationInfo = _data["serverLocationInfo"] ? ServerLocationInfo.fromJS(_data["serverLocationInfo"]) : null as any;
+            this.serverLocationInfo = _data["serverLocationInfo"] ? AppServerLocationInfo.fromJS(_data["serverLocationInfo"]) : null as any;
             this.isPremiumSession = _data["isPremiumSession"] !== undefined ? _data["isPremiumSession"] : null as any;
             this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : null as any;
-            if (Array.isArray(_data["dnsServers"])) {
-                this.dnsServers = [] as any;
-                for (let item of _data["dnsServers"])
-                    this.dnsServers!.push(item);
-            }
-            else {
-                this.dnsServers = null as any;
-            }
             this.serverVersion = _data["serverVersion"] !== undefined ? _data["serverVersion"] : null as any;
             this.clientPublicIpAddress = _data["clientPublicIpAddress"] !== undefined ? _data["clientPublicIpAddress"] : null as any;
             this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : null as any;
@@ -3529,16 +3572,11 @@ export class AppSessionInfo implements IAppSessionInfo {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["accessInfo"] = this.accessInfo ? this.accessInfo.toJSON() : null as any;
-        data["isDnsServersAccepted"] = this.isDnsServersAccepted !== undefined ? this.isDnsServersAccepted : null as any;
+        data["dnsConfig"] = this.dnsConfig ? this.dnsConfig.toJSON() : null as any;
         data["isLocalNetworkAllowed"] = this.isLocalNetworkAllowed !== undefined ? this.isLocalNetworkAllowed : null as any;
         data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : null as any;
         data["isPremiumSession"] = this.isPremiumSession !== undefined ? this.isPremiumSession : null as any;
         data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : null as any;
-        if (Array.isArray(this.dnsServers)) {
-            data["dnsServers"] = [];
-            for (let item of this.dnsServers)
-                data["dnsServers"].push(item);
-        }
         data["serverVersion"] = this.serverVersion !== undefined ? this.serverVersion : null as any;
         data["clientPublicIpAddress"] = this.clientPublicIpAddress !== undefined ? this.clientPublicIpAddress : null as any;
         data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : null as any;
@@ -3556,12 +3594,11 @@ export class AppSessionInfo implements IAppSessionInfo {
 
 export interface IAppSessionInfo {
     accessInfo?: AccessInfo | null;
-    isDnsServersAccepted: boolean;
+    dnsConfig: DnsConfig;
     isLocalNetworkAllowed: boolean;
-    serverLocationInfo?: ServerLocationInfo | null;
+    serverLocationInfo?: AppServerLocationInfo | null;
     isPremiumSession: boolean;
     suppressedTo: SessionSuppressType;
-    dnsServers: string[];
     serverVersion: string;
     clientPublicIpAddress: string;
     createdTime: Date;
@@ -3742,6 +3779,74 @@ export interface IAccessDevice {
     ipAddress?: string | null;
 }
 
+export class DnsConfig implements IDnsConfig {
+    dnsSelection!: DnsSelection;
+    isIncludedInVpn!: boolean;
+    isUserSuppressed!: boolean;
+    dnsServers!: string[];
+
+    constructor(data?: IDnsConfig) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.dnsServers = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.dnsSelection = _data["dnsSelection"] !== undefined ? _data["dnsSelection"] : null as any;
+            this.isIncludedInVpn = _data["isIncludedInVpn"] !== undefined ? _data["isIncludedInVpn"] : null as any;
+            this.isUserSuppressed = _data["isUserSuppressed"] !== undefined ? _data["isUserSuppressed"] : null as any;
+            if (Array.isArray(_data["dnsServers"])) {
+                this.dnsServers = [] as any;
+                for (let item of _data["dnsServers"])
+                    this.dnsServers!.push(item);
+            }
+            else {
+                this.dnsServers = null as any;
+            }
+        }
+    }
+
+    static fromJS(data: any): DnsConfig {
+        data = typeof data === 'object' ? data : {};
+        let result = new DnsConfig();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["dnsSelection"] = this.dnsSelection !== undefined ? this.dnsSelection : null as any;
+        data["isIncludedInVpn"] = this.isIncludedInVpn !== undefined ? this.isIncludedInVpn : null as any;
+        data["isUserSuppressed"] = this.isUserSuppressed !== undefined ? this.isUserSuppressed : null as any;
+        if (Array.isArray(this.dnsServers)) {
+            data["dnsServers"] = [];
+            for (let item of this.dnsServers)
+                data["dnsServers"].push(item);
+        }
+        return data;
+    }
+}
+
+export interface IDnsConfig {
+    dnsSelection: DnsSelection;
+    isIncludedInVpn: boolean;
+    isUserSuppressed: boolean;
+    dnsServers: string[];
+}
+
+export enum DnsSelection {
+    UserDns = "UserDns",
+    ServerDns = "ServerDns",
+    GoogleDns = "GoogleDns",
+}
+
 export class ServerLocationInfo implements IServerLocationInfo {
     countryCode!: string;
     regionName!: string;
@@ -3749,6 +3854,7 @@ export class ServerLocationInfo implements IServerLocationInfo {
     serverLocation!: string;
     countryName!: string;
     isAuto!: boolean;
+    hasRegion!: boolean;
 
     constructor(data?: IServerLocationInfo) {
         if (data) {
@@ -3774,6 +3880,7 @@ export class ServerLocationInfo implements IServerLocationInfo {
             this.serverLocation = _data["serverLocation"] !== undefined ? _data["serverLocation"] : null as any;
             this.countryName = _data["countryName"] !== undefined ? _data["countryName"] : null as any;
             this.isAuto = _data["isAuto"] !== undefined ? _data["isAuto"] : null as any;
+            this.hasRegion = _data["hasRegion"] !== undefined ? _data["hasRegion"] : null as any;
         }
     }
 
@@ -3796,6 +3903,7 @@ export class ServerLocationInfo implements IServerLocationInfo {
         data["serverLocation"] = this.serverLocation !== undefined ? this.serverLocation : null as any;
         data["countryName"] = this.countryName !== undefined ? this.countryName : null as any;
         data["isAuto"] = this.isAuto !== undefined ? this.isAuto : null as any;
+        data["hasRegion"] = this.hasRegion !== undefined ? this.hasRegion : null as any;
         return data;
     }
 }
@@ -3807,6 +3915,44 @@ export interface IServerLocationInfo {
     serverLocation: string;
     countryName: string;
     isAuto: boolean;
+    hasRegion: boolean;
+}
+
+export class AppServerLocationInfo extends ServerLocationInfo implements IAppServerLocationInfo {
+    translatedCountryName!: string;
+    hasMultipleRegions!: boolean;
+
+    constructor(data?: IAppServerLocationInfo) {
+        super(data);
+    }
+
+    override init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            this.translatedCountryName = _data["translatedCountryName"] !== undefined ? _data["translatedCountryName"] : null as any;
+            this.hasMultipleRegions = _data["hasMultipleRegions"] !== undefined ? _data["hasMultipleRegions"] : null as any;
+        }
+    }
+
+    static override fromJS(data: any): AppServerLocationInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppServerLocationInfo();
+        result.init(data);
+        return result;
+    }
+
+    override toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["translatedCountryName"] = this.translatedCountryName !== undefined ? this.translatedCountryName : null as any;
+        data["hasMultipleRegions"] = this.hasMultipleRegions !== undefined ? this.hasMultipleRegions : null as any;
+        super.toJSON(data);
+        return data;
+    }
+}
+
+export interface IAppServerLocationInfo extends IServerLocationInfo {
+    translatedCountryName: string;
+    hasMultipleRegions: boolean;
 }
 
 export enum SessionSuppressType {
@@ -4312,6 +4458,7 @@ export interface IClientProfileBaseInfo {
 export class ClientServerLocationInfo extends ServerLocationInfo implements IClientServerLocationInfo {
     isNestedCountry!: boolean;
     isDefault!: boolean;
+    translatedCountryName!: string;
     options!: ServerLocationOptions;
 
     constructor(data?: IClientServerLocationInfo) {
@@ -4326,6 +4473,7 @@ export class ClientServerLocationInfo extends ServerLocationInfo implements ICli
         if (_data) {
             this.isNestedCountry = _data["isNestedCountry"] !== undefined ? _data["isNestedCountry"] : null as any;
             this.isDefault = _data["isDefault"] !== undefined ? _data["isDefault"] : null as any;
+            this.translatedCountryName = _data["translatedCountryName"] !== undefined ? _data["translatedCountryName"] : null as any;
             this.options = _data["options"] ? ServerLocationOptions.fromJS(_data["options"]) : new ServerLocationOptions();
         }
     }
@@ -4341,6 +4489,7 @@ export class ClientServerLocationInfo extends ServerLocationInfo implements ICli
         data = typeof data === 'object' ? data : {};
         data["isNestedCountry"] = this.isNestedCountry !== undefined ? this.isNestedCountry : null as any;
         data["isDefault"] = this.isDefault !== undefined ? this.isDefault : null as any;
+        data["translatedCountryName"] = this.translatedCountryName !== undefined ? this.translatedCountryName : null as any;
         data["options"] = this.options ? this.options.toJSON() : null as any;
         super.toJSON(data);
         return data;
@@ -4350,6 +4499,7 @@ export class ClientServerLocationInfo extends ServerLocationInfo implements ICli
 export interface IClientServerLocationInfo extends IServerLocationInfo {
     isNestedCountry: boolean;
     isDefault: boolean;
+    translatedCountryName: string;
     options: ServerLocationOptions;
 }
 
@@ -4544,6 +4694,50 @@ export interface IPublishInfo {
     notificationDelay: string;
 }
 
+export class CountryInfo implements ICountryInfo {
+    englishName!: string;
+    translatedName!: string;
+    countryCode!: string;
+
+    constructor(data?: ICountryInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.englishName = _data["englishName"] !== undefined ? _data["englishName"] : null as any;
+            this.translatedName = _data["translatedName"] !== undefined ? _data["translatedName"] : null as any;
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): CountryInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new CountryInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["englishName"] = this.englishName !== undefined ? this.englishName : null as any;
+        data["translatedName"] = this.translatedName !== undefined ? this.translatedName : null as any;
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : null as any;
+        return data;
+    }
+}
+
+export interface ICountryInfo {
+    englishName: string;
+    translatedName: string;
+    countryCode: string;
+}
+
 export class UiCultureInfo implements IUiCultureInfo {
     code!: string;
     nativeName!: string;
@@ -4688,7 +4882,7 @@ export class UserSettings implements IUserSettings {
     useTcpProxy!: boolean;
     dropQuic!: boolean;
     allowAnonymousTracker!: boolean;
-    domainFilter!: DomainFilter;
+    domainFilterPolicy!: DomainFilterPolicy;
     debugData1?: string | null;
     debugData2?: string | null;
     logAnonymous!: boolean;
@@ -4710,7 +4904,7 @@ export class UserSettings implements IUserSettings {
         if (!data) {
             this.splitByApps = [];
             this.splitByCountries = [];
-            this.domainFilter = new DomainFilter();
+            this.domainFilterPolicy = new DomainFilterPolicy();
             this.proxySettings = new AppProxySettings();
             this.dnsServers = [];
         }
@@ -4749,7 +4943,7 @@ export class UserSettings implements IUserSettings {
             this.useTcpProxy = _data["useTcpProxy"] !== undefined ? _data["useTcpProxy"] : null as any;
             this.dropQuic = _data["dropQuic"] !== undefined ? _data["dropQuic"] : null as any;
             this.allowAnonymousTracker = _data["allowAnonymousTracker"] !== undefined ? _data["allowAnonymousTracker"] : null as any;
-            this.domainFilter = _data["domainFilter"] ? DomainFilter.fromJS(_data["domainFilter"]) : new DomainFilter();
+            this.domainFilterPolicy = _data["domainFilterPolicy"] ? DomainFilterPolicy.fromJS(_data["domainFilterPolicy"]) : new DomainFilterPolicy();
             this.debugData1 = _data["debugData1"] !== undefined ? _data["debugData1"] : null as any;
             this.debugData2 = _data["debugData2"] !== undefined ? _data["debugData2"] : null as any;
             this.logAnonymous = _data["logAnonymous"] !== undefined ? _data["logAnonymous"] : null as any;
@@ -4804,7 +4998,7 @@ export class UserSettings implements IUserSettings {
         data["useTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : null as any;
         data["dropQuic"] = this.dropQuic !== undefined ? this.dropQuic : null as any;
         data["allowAnonymousTracker"] = this.allowAnonymousTracker !== undefined ? this.allowAnonymousTracker : null as any;
-        data["domainFilter"] = this.domainFilter ? this.domainFilter.toJSON() : null as any;
+        data["domainFilterPolicy"] = this.domainFilterPolicy ? this.domainFilterPolicy.toJSON() : null as any;
         data["debugData1"] = this.debugData1 !== undefined ? this.debugData1 : null as any;
         data["debugData2"] = this.debugData2 !== undefined ? this.debugData2 : null as any;
         data["logAnonymous"] = this.logAnonymous !== undefined ? this.logAnonymous : null as any;
@@ -4841,7 +5035,7 @@ export interface IUserSettings {
     useTcpProxy: boolean;
     dropQuic: boolean;
     allowAnonymousTracker: boolean;
-    domainFilter: DomainFilter;
+    domainFilterPolicy: DomainFilterPolicy;
     debugData1?: string | null;
     debugData2?: string | null;
     logAnonymous: boolean;
@@ -4867,12 +5061,12 @@ export enum SplitByCountryMode {
     IncludeList = "IncludeList",
 }
 
-export class DomainFilter implements IDomainFilter {
+export class DomainFilterPolicy implements IDomainFilterPolicy {
     blocks!: string[];
     excludes!: string[];
     includes!: string[];
 
-    constructor(data?: IDomainFilter) {
+    constructor(data?: IDomainFilterPolicy) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -4915,9 +5109,9 @@ export class DomainFilter implements IDomainFilter {
         }
     }
 
-    static fromJS(data: any): DomainFilter {
+    static fromJS(data: any): DomainFilterPolicy {
         data = typeof data === 'object' ? data : {};
-        let result = new DomainFilter();
+        let result = new DomainFilterPolicy();
         result.init(data);
         return result;
     }
@@ -4943,7 +5137,7 @@ export class DomainFilter implements IDomainFilter {
     }
 }
 
-export interface IDomainFilter {
+export interface IDomainFilterPolicy {
     blocks: string[];
     excludes: string[];
     includes: string[];
@@ -5643,46 +5837,6 @@ export class AppUserReview implements IAppUserReview {
 export interface IAppUserReview {
     rating: number;
     reviewText: string;
-}
-
-export class CountryInfo implements ICountryInfo {
-    englishName!: string;
-    countryCode!: string;
-
-    constructor(data?: ICountryInfo) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.englishName = _data["englishName"] !== undefined ? _data["englishName"] : null as any;
-            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : null as any;
-        }
-    }
-
-    static fromJS(data: any): CountryInfo {
-        data = typeof data === 'object' ? data : {};
-        let result = new CountryInfo();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["englishName"] = this.englishName !== undefined ? this.englishName : null as any;
-        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : null as any;
-        return data;
-    }
-}
-
-export interface ICountryInfo {
-    englishName: string;
-    countryCode: string;
 }
 
 export enum ShowAdResult {

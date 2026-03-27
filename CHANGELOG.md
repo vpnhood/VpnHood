@@ -1,7 +1,7 @@
 # v7.7.792
-Fix: Crash on some Android devices at startup
-Fix: Reconnection required after network failure when using the TCP protocol
-Update: Translate country names
+* Fix: Crash on some Android devices at startup
+* Fix: Reconnection required after network failure when using the TCP protocol
+* Update: Translate country names
 
 # v7.6.787
 * Fix: Android: UDP issue on Android

@@ -11,8 +11,8 @@ public class AppSessionStatus
     public required Traffic SessionSplitTraffic { get; init; }
     public required Traffic CycleTraffic { get; init; }
     public required Traffic TotalTraffic { get; init; }
-    public required int TcpTunnelledCount { get; init; }
-    public required int TcpPassthruCount { get; init; }
+    public required int StreamTunnelledCount { get; init; }
+    public required int StreamPassthruCount { get; init; }
     public required int PacketChannelCount { get; init; }
     public required int UnstableCount { get; set; }
     public required int WaitingCount { get; set; }

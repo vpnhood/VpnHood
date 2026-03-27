@@ -6,7 +6,7 @@ public class ConnectionDecorator(IConnection connection, Stream? stream = null)
     : IConnection
 {
     protected bool Disposed;
-    protected IConnection InnerConnection = connection;
+    protected IConnection InnerConnection => connection;
 
     public virtual bool Connected => !Disposed && InnerConnection.Connected;
     public Stream Stream => stream ?? InnerConnection.Stream;

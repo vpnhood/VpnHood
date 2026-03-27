@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
@@ -11,6 +12,7 @@ internal class ClientSessionStatus(
     ClientSession session,
     Tunnel tunnel,
     ConnectorService connectorService,
+    DomainFilteringService domainFilteringService,
     ProxyManager proxyManager,
     ClientStreamHandler streamHandler,
     ClientPacketHandler packetHandler,
@@ -34,8 +36,10 @@ internal class ClientSessionStatus(
     } = accessUsage.TotalTraffic;
 
     public int SessionPacketChannelCount => session.CreatedPacketChannelCount;
-    public int TcpTunnelledCount => streamHandler.Stat.TcpTunnelledCount;
-    public int TcpPassthruCount => streamHandler.Stat.TcpPassthruCount;
+    public int StreamTunnelledCount => 
+        streamHandler.Stat.TcpTunnelledCount + domainFilteringService.QuicStat.IncludeCount;
+    public int StreamPassthruCount => 
+        streamHandler.Stat.TcpPassthruCount + domainFilteringService.QuicStat.ExcludeCount;
     public int ActivePacketChannelCount => tunnel.PacketChannelCount;
     public bool IsDropQuic => packetHandler.DropQuic; // This is current, don't use session property
     public bool IsTcpProxy => packetHandler.UseTcpProxy; // This is current, don't use session property
@@ -50,6 +54,6 @@ internal class ClientSessionStatus(
     public bool IsDnsOverTlsDetected => packetHandler.IsDnsOverTlsDetected;
     public bool IsIpV6SupportedByServer => packetHandler.IsIpV6SupportedByServer;
     public bool IsIpV6SupportedByClient => packetHandler.IsIpV6SupportedByClient;
-    public ApiError? Error => session.LastException?.ToApiError();
     public bool IsAdapterStarted => session.IsAdapterStarted;
+    public ApiError? Error => session.LastException?.ToApiError();
 }

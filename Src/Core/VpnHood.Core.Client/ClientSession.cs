@@ -59,7 +59,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     internal bool IsAdapterStarted => _vpnAdapter.IsStarted;
     internal bool PassthroughForAd {
         get => _packetHandler.PassthroughForAd;
-        set => _packetHandler.PassthroughForAd = value;
+        set { 
+            _packetHandler.PassthroughForAd = value; 
+            _clientHost.PassthroughForAd = value;
+        }
     }
 
     public ClientSession(

@@ -38,7 +38,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AsyncLock _disposeLock = new();
     private readonly AsyncLock _packetChannelLock = new();
-    
+    private readonly PassthroughState _passthroughState = new();
+
     private DateTime? _autoWaitTime;
     private ClientUdpChannelTransmitter? _udpTransmitter;
     private bool _disposed;
@@ -57,13 +58,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
     internal bool IsAdapterStarted => _vpnAdapter.IsStarted;
-    internal bool PassthroughForAd {
-        get => _packetHandler.PassthroughForAd;
-        set { 
-            _packetHandler.PassthroughForAd = value; 
-            _clientHost.PassthroughForAd = value;
-        }
-    }
+    internal PassthroughState PassthroughState => _passthroughState;
 
     public ClientSession(
         ClientSessionOptions options,
@@ -122,7 +117,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             tcpConnectTimeout: Config.TcpConnectTimeout,
             proxyManager: _proxyManager,
             netFilter: _netFilter,
-            streamProxyBufferSize: Config.StreamProxyBufferSize);
+            streamProxyBufferSize: Config.StreamProxyBufferSize,
+            passthroughState: _passthroughState);
 
         // proxy host
         _clientHost = new ClientHost(
@@ -139,7 +135,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             netFilter: _netFilter,
             proxyManager: _proxyManager,
             dnsServers: Config.DnsConfig.DnsServers,
-            isIpV6SupportedByServer: Config.IsIpV6SupportedByServer);
+            isIpV6SupportedByServer: Config.IsIpV6SupportedByServer,
+            passthroughState: _passthroughState);
 
         _status = new ClientSessionStatus(
             session: this,
@@ -653,7 +650,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _clientHost.PacketReceived -= ClientHost_PacketReceived;
         _proxyManager.PacketReceived -= Proxy_PacketReceived;
 
-        _packetHandler.PassthroughForAd = false;
+        _passthroughState.PassthroughForAd = false;
 
         // stop reusing tcp connections for faster disposal
         _connectorService.AllowTcpReuse = false;

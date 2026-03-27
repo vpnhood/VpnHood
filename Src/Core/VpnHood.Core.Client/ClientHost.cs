@@ -29,10 +29,6 @@ internal class ClientHost(
 
     public IPAddress CatcherAddressIpV4 => catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 => catcherAddressIpV6;
-    public bool PassthroughForAd { 
-        get=> streamHandler.PassthroughForAd; 
-        set => streamHandler.PassthroughForAd = value;
-    }
 
     public IReadOnlyList<IPAddress> CatcherAddressIps = [catcherAddressIpV4, catcherAddressIpV6];
 

@@ -27,13 +27,13 @@ internal class ClientStreamHandler(
     ProxyManager proxyManager,
     TimeSpan tcpConnectTimeout,
     NetFilter netFilter,
-    TransferBufferSize streamProxyBufferSize)
+    TransferBufferSize streamProxyBufferSize,
+    PassthroughState passthroughState)
 {
     private int _processingCount;
     private readonly ClientHostStat _stat = new();
 
     public IClientHostStat Stat => _stat;
-    public bool PassthroughForAd { get; set; }
 
     public async Task ProcessConnection(IConnection connection, IPEndPoint hostEndPoint, 
         CancellationToken cancellationToken)
@@ -59,7 +59,7 @@ internal class ClientStreamHandler(
                 filterAction = netFilter.IpFilter.Process(IpProtocol.Tcp, hostEndPoint.ToValue());
 
             // PassthroughForAd overrides filter result to exclude if the host is in ad list
-            if (PassthroughForAd)
+            if (passthroughState.PassthroughForAd)
                 filterAction = FilterAction.Exclude;
 
             switch (filterAction)

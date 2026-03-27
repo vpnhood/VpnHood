@@ -39,7 +39,7 @@ public abstract class UdpChannelTransmitter : IDisposable
     protected abstract SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId);
 
     public int MaxPacketSize { get; set; } = TunnelDefaults.MaxPacketSize;
-    public const int HeaderLength = TagOffset + TagLength;
+    public const int HeaderLength = TagOffset + TagLength; // size: 1 + 8 + 8 + 16 = 33 bytes
     public IPEndPoint LocalEndPoint { get; }
     public bool Connected => !_disposed;
 

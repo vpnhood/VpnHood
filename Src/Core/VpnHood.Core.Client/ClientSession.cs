@@ -87,9 +87,9 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
             MaxPacketChannelCount = _channelProtocol == ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
-            UseSpeedometerTimer = true
+            UseSpeedometerTimer = true,
+            Mtu = config.Mtu
         });
-        _tunnel.RemoteMtu = Config.RemoteMtu;
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // delegator

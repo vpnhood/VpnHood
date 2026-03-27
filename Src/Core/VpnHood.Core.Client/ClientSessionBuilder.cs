@@ -108,7 +108,7 @@ internal class ClientSessionBuilder(
                 UserAgent = config.UserAgent
             };
 
-            var request = new HelloRequest {
+            var helloRequest = new HelloRequest {
                 RequestId = UniqueIdFactory.Create(),
                 EncryptedClientId = VhUtils.EncryptClientId(clientInfo.ClientId, token.Secret),
                 ClientInfo = clientInfo,
@@ -118,10 +118,11 @@ internal class ClientSessionBuilder(
                 AccessCode = config.AccessCode,
                 AllowRedirect = allowRedirect,
                 IsIpV6Supported = vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
-                UserReview = config.UserReview
+                UserReview = config.UserReview,
+                Mtu = TunnelDefaults.MtuClient
             };
 
-            using var requestResult = await connectorService.SendRequest<HelloResponse>(request, cancellationToken).Vhc();
+            using var requestResult = await connectorService.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
             requestResult.Connection.PreventReuse();
             connectorService.AllowTcpReuse = config.AllowTcpReuse;
 
@@ -259,11 +260,16 @@ internal class ClientSessionBuilder(
                 "Starting VpnAdapter... DnsServers: {DnsServers}, IncludeNetworks: {longIncludeNetworks}",
                 sessionInfo.DnsConfig, VhLogger.Format(sessionIncludeIpRangesByDevice.ToIpNetworks()));
 
+            // set minimum of server mtu, client mtu
+            var mtu = Math.Min(helloRequest.Mtu, helloResponse.Mtu);
+            if (mtu < 1000)
+                throw new InvalidOperationException($"The server MTU is too small. MTU: {mtu}");
+
             var adapterOptions = new VpnAdapterOptions {
+                Mtu = mtu - TunnelDefaults.MtuOverhead,
                 DnsServers = dnsConfig.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,
-                Mtu = helloResponse.Mtu - TunnelDefaults.MtuOverhead,
                 IncludeNetworks = sessionIncludeIpRangesByDevice.ToIpNetworks(),
                 SessionName = config.SessionName,
                 ExcludeApps = config.ExcludeApps,
@@ -291,7 +297,7 @@ internal class ClientSessionBuilder(
                     SessionKey = sessionKey,
                     TcpProxyCatcherAddressIpV4 = config.TcpProxyCatcherAddressIpV4,
                     TcpProxyCatcherAddressIpV6 = config.TcpProxyCatcherAddressIpV6,
-                    RemoteMtu = helloResponse.Mtu,
+                    Mtu = mtu,
                     MaxPacketChannelLifespan = config.MaxPacketChannelLifespan,
                     MinPacketChannelLifespan = config.MinPacketChannelLifespan,
                     SessionTimeout = config.SessionTimeout,

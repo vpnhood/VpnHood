@@ -6,10 +6,12 @@ namespace VpnHood.Core.Tunneling;
 
 public static class TunnelDefaults
 {
-    public const int MaxPacketChannelCount = 8;
-    public const int MtuOverhead = 80;
-    public const int Mtu = 1500 - MtuOverhead;
     public const int MaxPacketSize = 1500;
+    public const int MaxPacketChannelCount = 8;
+    public const int MtuOverhead = 60 + 20 + 40; // 60 for ip header + 20 for (TCP or UDP) + 40 for session header
+    public const int MtuSafety = 100;
+    public const int MtuServer = MaxPacketSize;
+    public const int MtuClient = MaxPacketSize - MtuSafety;
     public const string HttpPassCheck = "VpnHoodPassCheck";
     public const int StreamSmallReadCacheSize = 512;
     public const int ProxyPacketQueueCapacity = 200;

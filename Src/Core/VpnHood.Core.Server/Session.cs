@@ -126,10 +126,12 @@ public class Session : IDisposable
         SessionId = sessionResponseEx.SessionId;
         SessionKey = sessionResponseEx.SessionKey ?? throw new InvalidOperationException(
             $"{nameof(sessionResponseEx)} does not have {nameof(sessionResponseEx.SessionKey)}!");
+        
         Tunnel = new Tunnel(new TunnelOptions {
             MaxPacketChannelCount = options.MaxPacketChannelCountValue,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
-            AutoDisposePackets = true
+            AutoDisposePackets = true,
+            Mtu = Math.Min(TunnelDefaults.MtuServer, extraData.Mtu)
         });
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 

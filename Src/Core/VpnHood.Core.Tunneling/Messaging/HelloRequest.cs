@@ -15,4 +15,5 @@ public class HelloRequest()
     public bool? IsIpV6Supported { get; init; }
     public string? AccessCode { get; set; }
     public UserReview? UserReview { get; init; }
+    public int Mtu { get; init; } = TunnelDefaults.MtuClient;
 }

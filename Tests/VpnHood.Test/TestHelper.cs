@@ -470,7 +470,8 @@ public class TestHelper : IDisposable
         var tunnelOptions = new TunnelOptions {
             AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
-            MaxPacketChannelCount = TunnelDefaults.MaxPacketChannelCount
+            MaxPacketChannelCount = TunnelDefaults.MaxPacketChannelCount,
+            Mtu = TunnelDefaults.MtuClient
         };
         return tunnelOptions;
     }

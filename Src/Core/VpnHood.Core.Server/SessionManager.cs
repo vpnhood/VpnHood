@@ -137,7 +137,10 @@ public class SessionManager : IAsyncDisposable, IDisposable
         VhLogger.Instance.LogDebug("Validating the request by the access server. TokenId: {TokenId}",
             VhLogger.FormatId(helloRequest.TokenId));
 
-        var extraData = JsonSerializer.Serialize(new SessionExtraData());
+        var extraData = JsonSerializer.Serialize(new SessionExtraData {
+            Mtu = helloRequest.Mtu
+        });
+
         var sessionResponseEx = await _accessManager.Session_Create(new SessionRequestEx {
             HostEndPoint = ipEndPointPair.LocalEndPoint,
             RemoteEndPoint = ipEndPointPair.RemoteEndPoint,
@@ -287,7 +290,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
         }
     }
 
-    internal async Task<Session> GetSession(RequestBase requestBase, IPEndPointPair ipEndPointPair, 
+    internal async Task<Session> GetSession(RequestBase requestBase, IPEndPointPair ipEndPointPair,
         CancellationToken cancellationToken)
     {
         //get session

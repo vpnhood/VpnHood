@@ -1,5 +1,8 @@
+# Upcoming
+* Fix: UDP protocol on some networks and devices
+
 # v7.7.795
-* Fix: Auto public resolution which returns 104.18.0.0
+* Fix: Auto public IP resolution returning 104.18.0.0
 
 # v7.7.792
 * Fix: Reconnection required after network failure when using the TCP protocol

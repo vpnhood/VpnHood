@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -65,12 +66,23 @@ public class AppAccountService
         await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount), cancellationToken).Vhc();
 
         // update profiles
-        var accessKeys = _appAccount?.SubscriptionId != null
-            ? await ListAccessKeys(_appAccount.SubscriptionId, cancellationToken).Vhc()
-            : [];
+        var accessCode = _appAccount != null
+            ? await _accountProvider.GetAccessCode(_appAccount.SubscriptionId!, cancellationToken)
+            : "";
 
         // update profiles
-        _vpnHoodApp.ClientProfileService.UpdateFromAccount(accessKeys);
+        var currentProfile = GetCurrentProfile();
+        if (currentProfile != null) {
+            if (string.IsNullOrEmpty(currentProfile.AccessCode)) {
+                currentProfile.AccessCode = accessCode;
+                _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+                    new ClientProfileUpdateParams { AccessCode = accessCode });
+            }
+        }
+
+        // if updateCurrentClientProfile is true, it means we want to validate the current profile with the new account info,
+        // which may cause the current profile to be switched if it's no longer valid. If it's false, we just want to update
+        // the access code for the current profile without switching it, even if it's no longer valid.
         _vpnHoodApp.ValidateAccountClientProfiles(updateCurrentClientProfile);
     }
 
@@ -80,8 +92,26 @@ public class AppAccountService
             File.Delete(AppAccountFilePath);
 
         _appAccount = null;
-        _vpnHoodApp.ClientProfileService.UpdateFromAccount([]);
+
+        // update profiles
+        var currentProfile = GetCurrentProfile();
+        if (currentProfile != null) {
+            if (!string.IsNullOrEmpty(currentProfile.AccessCode)) {
+                currentProfile.AccessCode = null;
+                _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+                    new ClientProfileUpdateParams { AccessCode = null });
+            }
+        }
+
         _vpnHoodApp.ValidateAccountClientProfiles(false);
+    }
+
+    private ClientProfile? GetCurrentProfile()
+    {
+        var profileId = _vpnHoodApp.CurrentClientProfileInfo?.ClientProfileId;
+        return profileId != null
+            ? _vpnHoodApp.ClientProfileService.FindById(profileId.Value)
+            : null;
     }
 
     public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken = default)

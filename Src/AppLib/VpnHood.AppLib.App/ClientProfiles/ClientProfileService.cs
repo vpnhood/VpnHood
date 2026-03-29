@@ -343,23 +343,4 @@ public class ClientProfileService
             return [];
         }
     }
-
-    internal void UpdateFromAccount(string[] accessKeys)
-    {
-        var accessTokens = accessKeys.Select(Token.FromAccessKey);
-
-        // Remove client profiles that does not exist in the account
-        var toRemoves = _clientProfiles
-            .Where(x => x.IsForAccount)
-            .Where(x => accessTokens.All(y => y.TokenId != x.Token.TokenId))
-            .Select(x => x.ClientProfileId)
-            .ToArray();
-
-        foreach (var clientProfileId in toRemoves)
-            Delete(clientProfileId);
-
-        // Add or update access keys
-        foreach (var accessKey in accessKeys)
-            ImportAccessKey(accessKey, true);
-    }
 }

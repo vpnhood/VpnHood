@@ -16,4 +16,9 @@ internal class TestAccountProvider : IAppAccountProvider
     {
         return Task.FromResult(Array.Empty<string>());
     }
+
+    public Task<string> GetAccessCode(string subscriptionId, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(string.Empty);
+    }
 }

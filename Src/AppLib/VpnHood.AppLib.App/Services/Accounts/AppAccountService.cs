@@ -72,12 +72,10 @@ public class AppAccountService
 
         // update profiles
         var currentProfile = GetCurrentProfile();
-        if (currentProfile != null) {
-            if (string.IsNullOrEmpty(currentProfile.AccessCode)) {
-                currentProfile.AccessCode = accessCode;
-                _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
-                    new ClientProfileUpdateParams { AccessCode = accessCode });
-            }
+        if (currentProfile != null && string.IsNullOrEmpty(currentProfile.AccessCode)) {
+            currentProfile.AccessCode = accessCode;
+            _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+                new ClientProfileUpdateParams { AccessCode = accessCode });
         }
 
         // if updateCurrentClientProfile is true, it means we want to validate the current profile with the new account info,

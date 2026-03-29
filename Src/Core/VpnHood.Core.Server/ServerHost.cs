@@ -256,6 +256,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
             var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ?? connection.RemoteEndPoint.Address;
+            var isRevereProxy = !string.IsNullOrEmpty(clientIpByProxy);
 
             // Try to serve download file if requested
             if (await _downloadService.TryServeDownloadAsync(connection, httpRequestLine, cancellationToken).Vhc())
@@ -275,7 +276,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
                     return new ServerConnection(connection) {
                         ClientIp = clientIp,
-                        RequireHttpResponse = true
+                        RequireHttpResponse = true,
+                        IsReverseProxy = isRevereProxy
                     };
 
 
@@ -291,7 +293,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
                         return new ServerConnection(reusableConnection) {
                             ConnectionId = connectionId,
                             ClientIp = clientIp,
-                            RequireHttpResponse = true // same as simple use WebSocket stream
+                            RequireHttpResponse = true, // same as simple use WebSocket stream
+                            IsReverseProxy = isRevereProxy
                         };
                     }
 
@@ -311,7 +314,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                             ConnectionId = connectionId,
                             ClientIp = clientIp,
                             RequireHttpResponse = false, // Upgrade response has been already sent
-                            IsReverseProxy = !string.IsNullOrEmpty(clientIpByProxy)
+                            IsReverseProxy = isRevereProxy
                         };
                     }
 

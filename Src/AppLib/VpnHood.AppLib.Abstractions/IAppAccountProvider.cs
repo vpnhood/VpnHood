@@ -6,4 +6,5 @@ public interface IAppAccountProvider
     IAppBillingProvider? BillingProvider { get; }
     Task<AppAccount?> GetAccount(CancellationToken cancellationToken);
     Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken);
+    Task<string> GetAccessCode(string subscriptionId, CancellationToken cancellationToken);
 }

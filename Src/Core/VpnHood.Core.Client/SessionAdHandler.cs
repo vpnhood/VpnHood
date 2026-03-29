@@ -41,12 +41,12 @@ internal class SessionAdHandler(ClientSession session) : ISessionAdHandler
     {
         try {
             _waitForAdCts = new TaskCompletionSource();
-            session.PassthroughForAd = true;
+            session.PassthroughState.PassthroughForAd = true;
             IsWaitingForChanged?.Invoke(this, EventArgs.Empty);
             await _waitForAdCts.Task.WaitAsync(cancellationToken);
         }
         finally {
-            session.PassthroughForAd = false;
+            session.PassthroughState.PassthroughForAd = false;
             // reset connection after recovering passthrough mode to use VPN again
             session.DropCurrentConnections();
             IsWaitingForChanged?.Invoke(this, EventArgs.Empty);

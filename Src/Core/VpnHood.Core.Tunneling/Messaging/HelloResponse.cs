@@ -37,7 +37,7 @@ public class HelloResponse : SessionResponse
     public AccessInfo? AccessInfo { get; set; }
     public bool IsTcpProxySupported { get; set; } = true;
     public bool IsTcpPacketSupported { get; set; }
-    public int Mtu { get; set; } = TunnelDefaults.MaxPacketSize;
+    public int Mtu { get; set; } = TunnelDefaults.MtuServer;
 
     [Obsolete("Use IsTcpPacketSupported")]
     public bool IsTunProviderSupported {

@@ -25,7 +25,7 @@ public class ClientSessionConfig
     public required bool IsTcpProxySupported { get; init; }
     public required IPEndPoint? HostTcpEndPoint { get; init; }
     public required IPEndPoint? HostUdpEndPoint { get; init; }
-    public required int RemoteMtu { get; init; }
+    public required int Mtu { get; init; }
     public required bool IsIpV6SupportedByServer { get; init; }
     public required AdRequirement AdRequirement { get; init; }
 }

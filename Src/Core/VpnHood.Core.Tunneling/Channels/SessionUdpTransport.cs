@@ -17,7 +17,7 @@ public class SessionUdpTransport(
     internal ICryptor ReceiveCryptor { get; } = new AesGcmCryptor(key, UdpChannelTransmitter.TagLength);
     public UdpChannelTransmitter ChannelTransmitter { get; set; } = channelTransmitter;
     public Action<Memory<byte>>? DataReceived { get; set; }
-    public int OverheadLength => UdpChannelTransmitter.HeaderLength;
+    public int OverheadLength => TunnelDefaults.MtuOverhead;
     public bool Connected => ChannelTransmitter.Connected;
 
     public Task SendAsync(Memory<byte> buffer)

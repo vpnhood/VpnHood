@@ -29,6 +29,7 @@ internal class ClientHost(
 
     public IPAddress CatcherAddressIpV4 => catcherAddressIpV4;
     public IPAddress CatcherAddressIpV6 => catcherAddressIpV6;
+
     public IReadOnlyList<IPAddress> CatcherAddressIps = [catcherAddressIpV4, catcherAddressIpV6];
 
     public event EventHandler<IpPacket>? PacketReceived;

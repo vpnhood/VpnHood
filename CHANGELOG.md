@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: UDP protocol on some networks and devices
+* 
 # v7.7.792
 * Fix: Crash on some Android devices at startup
 * Fix: Reconnection required after network failure when using the TCP protocol

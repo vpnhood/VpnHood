@@ -337,7 +337,7 @@ public class ServerApp : IDisposable
                 VhLogger.Instance.LogInformation("Starting VpnAdapter...");
                 await vpnAdapter.Start(new VpnAdapterOptions {
                     SessionName = "VpnHoodServer",
-                    Mtu = TunnelDefaults.Mtu,
+                    Mtu = TunnelDefaults.MtuServer,
                     UseNat = true,
                     VirtualIpNetworkV4 = virtualIpNetworkV4,
                     VirtualIpNetworkV6 = virtualIpNetworkV6

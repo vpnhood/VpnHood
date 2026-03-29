@@ -17,9 +17,9 @@ internal class ClientPacketHandler(
     NetFilter netFilter,
     ProxyManager proxyManager,
     IReadOnlyList<IPAddress> dnsServers,
-    bool isIpV6SupportedByServer)
+    bool isIpV6SupportedByServer,
+    PassthroughState passthroughState)
 {
-    public bool PassthroughForAd { get; set; }
     public bool IsDnsOverTlsDetected { get; private set; }
     public bool DropQuic { get; set; }
     public bool DropUdp { get; set; }
@@ -174,7 +174,7 @@ internal class ClientPacketHandler(
 
     private bool ShouldPassthroughForAd(IpPacket ipPacket)
     {
-        if (!PassthroughForAd) 
+        if (!passthroughState.PassthroughForAd) 
             return false;
 
         // Passthrough for ad is enabled, DNS packets should go through the tunnel and ad traffic should not go through the tunnel,

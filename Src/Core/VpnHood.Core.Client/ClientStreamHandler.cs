@@ -27,7 +27,8 @@ internal class ClientStreamHandler(
     ProxyManager proxyManager,
     TimeSpan tcpConnectTimeout,
     NetFilter netFilter,
-    TransferBufferSize streamProxyBufferSize)
+    TransferBufferSize streamProxyBufferSize,
+    PassthroughState passthroughState)
 {
     private int _processingCount;
     private readonly ClientHostStat _stat = new();
@@ -56,6 +57,10 @@ internal class ClientStreamHandler(
             // Filter by IP if SNI filtering result is default
             if (filterAction is FilterAction.Default && netFilter.IpFilter != null) 
                 filterAction = netFilter.IpFilter.Process(IpProtocol.Tcp, hostEndPoint.ToValue());
+
+            // PassthroughForAd overrides filter result to exclude if the host is in ad list
+            if (passthroughState.PassthroughForAd)
+                filterAction = FilterAction.Exclude;
 
             switch (filterAction)
             {

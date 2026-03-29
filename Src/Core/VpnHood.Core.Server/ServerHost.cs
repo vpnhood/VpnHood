@@ -24,16 +24,16 @@ namespace VpnHood.Core.Server;
 
 public class ServerHost : IDisposable, IAsyncDisposable
 {
-private readonly HashSet<IConnection> _connections = [];
-private readonly CancellationTokenSource _cancellationTokenSource = new();
-private readonly SessionManager _sessionManager;
-private readonly DownloadService _downloadService;
-private readonly List<TcpListener> _tcpListeners;
-private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
-private readonly List<Task> _tcpListenerTasks = [];
-private readonly Job _cleanupConnectionsJob;
-private readonly AsyncLock _configureLock = new();
-private bool _disposed;
+    private readonly HashSet<IConnection> _connections = [];
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly SessionManager _sessionManager;
+    private readonly DownloadService _downloadService;
+    private readonly List<TcpListener> _tcpListeners;
+    private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
+    private readonly List<Task> _tcpListenerTasks = [];
+    private readonly Job _cleanupConnectionsJob;
+    private readonly AsyncLock _configureLock = new();
+    private bool _disposed;
 
     public const int MaxProtocolVersion = 12;
     public const int MinProtocolVersion = 8;
@@ -310,7 +310,8 @@ private bool _disposed;
                         return new ServerConnection(reusableConnection) {
                             ConnectionId = connectionId,
                             ClientIp = clientIp,
-                            RequireHttpResponse = false // Upgrade response has been already sent
+                            RequireHttpResponse = false, // Upgrade response has been already sent
+                            IsReverseProxy = !string.IsNullOrEmpty(clientIpByProxy)
                         };
                     }
 
@@ -648,6 +649,15 @@ private bool _disposed;
                 x.LocalEndPoint.Address.Equals(connection.LocalEndPoint.Address))?
             .LocalEndPoint.Port;
 
+        // if the connection is from reverse proxy,
+        // we should not return udp port because client cannot connect to it directly
+        if (connection is ServerConnection { IsReverseProxy: true } && udpPort.HasValue) {
+            udpPort = null;
+            VhLogger.Instance.LogDebug(GeneralEventId.Request,
+                "The connection is from reverse proxy, so UDP port will not be returned in Hello response. ConnectionId: {ConnectionId}",
+                connection.ConnectionId);
+        }
+
         var helloResponse = new HelloResponse {
             ErrorCode = sessionResponseEx.ErrorCode,
             ErrorMessage = sessionResponseEx.ErrorMessage,
@@ -681,8 +691,7 @@ private bool _disposed;
             IsTcpProxySupported = session.AllowTcpProxy,
             ClientPublicAddress = clientIp,
             ClientCountry = sessionResponseEx.ClientCountry,
-            VirtualIpNetworkV4 =
-                new IpNetwork(session.VirtualIps.IpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),
+            VirtualIpNetworkV4 = new IpNetwork(session.VirtualIps.IpV4, _sessionManager.VirtualIpNetworkV4.PrefixLength),
             VirtualIpNetworkV6 = new IpNetwork(session.VirtualIps.IpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)
         };
 
@@ -851,7 +860,6 @@ private bool _disposed;
     {
         public string HostName { get; } = certificate.GetNameInfo(X509NameType.DnsName, false) ??
                                           throw new Exception("Could not get the HostName from the certificate.");
-
         public X509Certificate2 Certificate { get; } = certificate;
     }
 }

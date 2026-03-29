@@ -103,6 +103,17 @@ public class ClientProfileService
         Save();
     }
 
+    private static IPEndPoint ParseEndPoint(string endpoint)
+    {
+        var ret = IPEndPoint.Parse(endpoint);
+
+        // change port 0 to 443 as default
+        if (ret.Port == 0)
+            ret = new IPEndPoint(ret.Address, 443);
+
+        return ret;
+    }
+
     public ClientProfile Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
         var item = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
@@ -120,14 +131,8 @@ public class ClientProfileService
         if (updateParams.IsFavorite != null)
             item.IsFavorite = updateParams.IsFavorite.Value;
 
-        if (updateParams.CustomServerEndpoints != null) {
-            var customEndpoints = updateParams.CustomServerEndpoints.Value?.Select(IPEndPoint.Parse).ToArray();
-            if (customEndpoints?.Any(x => x.Port == 0) == true)
-                throw new ArgumentException("Custom server endpoints cannot have port 0.",
-                    nameof(updateParams.CustomServerEndpoints));
-
-            item.CustomServerEndpoints = updateParams.CustomServerEndpoints.Value?.Select(IPEndPoint.Parse).ToArray();
-        }
+        if (updateParams.CustomServerEndpoints != null) 
+            item.CustomServerEndpoints = updateParams.CustomServerEndpoints.Value?.Select(ParseEndPoint).ToArray();
 
         if (updateParams.CustomData != null)
             item.CustomData = updateParams.CustomData.Value;

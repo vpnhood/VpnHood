@@ -1,5 +1,6 @@
-# Upcoming
+# v7.7.796
 * Fix: UDP protocol on some networks and devices
+* Update: Detect when UDP protocol is not available due to reverse proxy
 
 # v7.7.795
 * Fix: Auto public IP resolution returning 104.18.0.0

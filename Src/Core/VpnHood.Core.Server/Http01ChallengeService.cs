@@ -11,7 +11,7 @@ public class Http01ChallengeService(Http01KeyAuthorizationFunc keyAuthorizationF
     private readonly List<Http01ChallengeHandler> _services = [];
     private bool _disposed;
 
-    public int Start(IPAddress[] ipAddresses)
+    public int Start(IEnumerable<IPAddress> ipAddresses)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         Stop();

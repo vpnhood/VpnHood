@@ -84,7 +84,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _tunnel = new Tunnel(new TunnelOptions {
             AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
-            MaxPacketChannelCount = _channelProtocol == ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
+            MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
             UseSpeedometerTimer = true,
             Mtu = config.Mtu
         });
@@ -247,7 +247,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         get => _channelProtocol;
         set {
             if (_channelProtocol == value) return;
-            _channelProtocol = value;
+            _channelProtocol = ChannelProtocolValidator.Validate(value, Info);
             UpdateConfig();
         }
     }
@@ -283,12 +283,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         var dropUdp = _dropUdp && CalcUseTcpProxy();
 
         // ChannelProtocol
-        var channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, Info);
-        if (channelProtocol != _oldChannelProtocol) {
-            VhLogger.Instance.LogInformation("VpnProtocol is changed to {VpnProtocol}.", channelProtocol);
-            _tunnel.MaxPacketChannelCount = channelProtocol == ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;
-            _channelProtocol = channelProtocol;
-            _oldChannelProtocol = channelProtocol;
+        _channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, Info);
+        if (_channelProtocol != _oldChannelProtocol) {
+            VhLogger.Instance.LogInformation("VpnProtocol is changed to {VpnProtocol}.", _channelProtocol);
+            _tunnel.MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;
+            _oldChannelProtocol = _channelProtocol;
             _tunnel.RemoveChannels<IPacketChannel>();
             Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
         }

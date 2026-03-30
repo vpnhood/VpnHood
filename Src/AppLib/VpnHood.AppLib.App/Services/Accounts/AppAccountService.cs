@@ -66,16 +66,16 @@ public class AppAccountService
         await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount), cancellationToken).Vhc();
 
         // update profiles
-        var accessCode = _appAccount != null
-            ? await _accountProvider.GetAccessCode(_appAccount.SubscriptionId!, cancellationToken)
-            : "";
-
-        // update profiles
-        var currentProfile = GetCurrentProfile();
-        if (currentProfile != null && string.IsNullOrEmpty(currentProfile.AccessCode)) {
-            currentProfile.AccessCode = accessCode;
-            _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
-                new ClientProfileUpdateParams { AccessCode = accessCode });
+        if (_appAccount is { SubscriptionId: not null }) {
+            var accessCode = await _accountProvider.GetAccessCode(_appAccount.SubscriptionId, cancellationToken);
+            
+            // update profiles
+            var currentProfile = GetCurrentProfile();
+            if (currentProfile != null) {
+                currentProfile.AccessCode = accessCode;
+                _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+                    new ClientProfileUpdateParams { AccessCode = accessCode });
+            }
         }
 
         // if updateCurrentClientProfile is true, it means we want to validate the current profile with the new account info,

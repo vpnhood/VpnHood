@@ -249,6 +249,7 @@ public class ClientProfileTest : TestAppBase
             IsPremiumLocationSelected = true,
             SelectedLocation = "us/california",
             AccessCode = TestAppHelper.BuildAccessCode(),
+            IsAccessCodeFromAccount = true,
             CustomServerEndpoints = new Patch<string[]?>(["1.1.1.1:200", "1.1.1.2:200"])
         };
         app.ClientProfileService.Update(clientProfile.ClientProfileId, updateParams);
@@ -261,6 +262,7 @@ public class ClientProfileTest : TestAppBase
         Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.IsPremiumLocationSelected);
         Assert.AreEqual(updateParams.SelectedLocation.Value, clientProfile.SelectedLocation);
         Assert.AreEqual(updateParams.AccessCode.Value, clientProfile.AccessCode);
+        Assert.AreEqual(updateParams.IsAccessCodeFromAccount.Value, clientProfile.IsAccessCodeFromAccount);
         Assert.AreEqual(AccessCodeUtils.Redact(updateParams.AccessCode.Value), clientProfile.ToInfo().AccessCode);
 
         // ************

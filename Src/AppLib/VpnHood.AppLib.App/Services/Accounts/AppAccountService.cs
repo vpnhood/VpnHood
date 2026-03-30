@@ -68,13 +68,16 @@ public class AppAccountService
         // update profiles
         if (_appAccount is { SubscriptionId: not null }) {
             var accessCode = await _accountProvider.GetAccessCode(_appAccount.SubscriptionId, cancellationToken);
-            
+
             // update profiles
             var currentProfile = GetCurrentProfile();
             if (currentProfile != null) {
                 currentProfile.AccessCode = accessCode;
                 _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
-                    new ClientProfileUpdateParams { AccessCode = accessCode });
+                    new ClientProfileUpdateParams {
+                        AccessCode = accessCode,
+                        IsAccessCodeFromAccount = true
+                    });
             }
         }
 
@@ -91,13 +94,15 @@ public class AppAccountService
 
         _appAccount = null;
 
-        // update profiles
+        // update profiles - only clear access code if it was set from the account
         var currentProfile = GetCurrentProfile();
         if (currentProfile != null) {
-            if (!string.IsNullOrEmpty(currentProfile.AccessCode)) {
-                currentProfile.AccessCode = null;
+            if (!string.IsNullOrEmpty(currentProfile.AccessCode) && currentProfile.IsAccessCodeFromAccount) {
                 _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
-                    new ClientProfileUpdateParams { AccessCode = null });
+                    new ClientProfileUpdateParams {
+                        AccessCode = null,
+                        IsAccessCodeFromAccount = false
+                    });
             }
         }
 

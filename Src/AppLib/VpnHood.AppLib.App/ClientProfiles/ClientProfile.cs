@@ -18,6 +18,7 @@ public class ClientProfile
     public bool IsBuiltIn { get; set; }
     public bool IsPremium => !Token.IsPublic || AccessCode != null;
     public string? AccessCode { get; set; }
+    public bool IsAccessCodeFromAccount { get; set; }
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? CustomServerEndpoints { get; set; }

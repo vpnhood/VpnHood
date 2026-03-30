@@ -120,6 +120,16 @@ public class ClientProfileService
                    ?? throw new NotExistsException(
                        "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
 
+        // First update IsAccessCodeFromAccount because it may impact the validation of AccessCode
+        if (updateParams.IsAccessCodeFromAccount != null)
+            item.IsAccessCodeFromAccount = updateParams.IsAccessCodeFromAccount.Value;
+
+        // if IsAccessCodeFromAccount is true, can not remove access code
+        if (item.IsAccessCodeFromAccount && 
+            updateParams.AccessCode!=null && string.IsNullOrEmpty(updateParams.AccessCode.Value)){
+            throw new InvalidOperationException("Could not remove AccessCode because it is from account.");
+        }
+
         // update name
         if (updateParams.ClientProfileName != null) {
             var name = updateParams.ClientProfileName.Value?.Trim();

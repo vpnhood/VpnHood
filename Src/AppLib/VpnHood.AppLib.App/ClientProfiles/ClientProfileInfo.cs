@@ -20,6 +20,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public bool IsBuiltIn => clientProfile.IsBuiltIn;
     public bool IsForAccount => clientProfile.IsForAccount;
     public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
+    public bool IsAccessCodeFromAccount => clientProfile.IsAccessCodeFromAccount;
     public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);
     public bool CanGoPremium => ClientPolicy?.PremiumByCode == true || ClientPolicy?.PremiumByPurchase == true;
     public bool CanTryPremium => ClientPolicy?.PremiumByTrial != null;

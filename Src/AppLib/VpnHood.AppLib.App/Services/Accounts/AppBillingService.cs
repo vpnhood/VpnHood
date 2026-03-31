@@ -18,7 +18,7 @@ public class AppBillingService(AppAccountService accountService, IAppBillingProv
     public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, 
         CancellationToken cancellationToken)
     {
-        if (accountService.IsPremium)
+        if (await accountService.IsPremium(cancellationToken).Vhc())
             throw new AlreadyExistsException("You already have a premium subscription.");
 
         var ret = await billingProvider.Purchase(uiContext, purchaseParams, cancellationToken).Vhc();

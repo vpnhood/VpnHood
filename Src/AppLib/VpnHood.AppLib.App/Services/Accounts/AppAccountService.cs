@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Settings;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -9,22 +10,33 @@ namespace VpnHood.AppLib.Services.Accounts;
 public class AppAccountService
 {
     private AppAccount? _appAccount;
-    private readonly VpnHoodApp _vpnHoodApp;
+    private readonly AppSettingsService _settingsService;
     private readonly IAppAccountProvider _accountProvider;
+    private readonly ClientProfileService _clientProfileService;
+    private readonly string _appAccountFilePath;
 
-    public AppAccountService(VpnHoodApp vpnHoodApp, IAppAccountProvider accountProvider)
+    public AppAccountService(
+        AppSettingsService settingsService, 
+        IAppAccountProvider accountProvider,
+        ClientProfileService clientProfileService,
+        string storageFolderPath)
     {
-        _vpnHoodApp = vpnHoodApp;
+        _settingsService = settingsService;
         _accountProvider = accountProvider;
+        _clientProfileService = clientProfileService;
+        _appAccountFilePath = Path.Combine(storageFolderPath, "account.json");
         AuthenticationService = new AppAuthenticationService(this, accountProvider.AuthenticationProvider);
         BillingService = accountProvider.BillingProvider != null
             ? new AppBillingService(this, accountProvider.BillingProvider)
             : null;
     }
 
-    private string AppAccountFilePath => Path.Combine(_vpnHoodApp.StorageFolderPath, "account", "account.json");
 
-    public bool IsPremium => _vpnHoodApp.CurrentClientProfileInfo?.IsPremiumAccount == true;
+    public async Task <bool> IsPremium(CancellationToken cancellationToken)
+    {
+        var account =  await GetAccount(cancellationToken).Vhc();
+        return !string.IsNullOrEmpty(account?.SubscriptionId);
+    }
 
     public AppAuthenticationService AuthenticationService { get; }
 
@@ -44,7 +56,7 @@ public class AppAccountService
 
         // Get from local cache
         if (useCache) {
-            _appAccount ??= JsonUtils.TryDeserializeFile<AppAccount>(AppAccountFilePath, logger: VhLogger.Instance);
+            _appAccount ??= JsonUtils.TryDeserializeFile<AppAccount>(_appAccountFilePath, logger: VhLogger.Instance);
             if (_appAccount != null)
                 return _appAccount;
         }
@@ -57,8 +69,8 @@ public class AppAccountService
     public async Task Refresh(CancellationToken cancellationToken)
     {
         _appAccount = await _accountProvider.GetAccount(cancellationToken).Vhc();
-        Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
-        await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount), cancellationToken).Vhc();
+        Directory.CreateDirectory(Path.GetDirectoryName(_appAccountFilePath)!);
+        await File.WriteAllTextAsync(_appAccountFilePath, JsonSerializer.Serialize(_appAccount), cancellationToken).Vhc();
 
         // if requested, update the current client profile with the new access code from the account
         var currentProfile = GetCurrentProfile();
@@ -72,7 +84,7 @@ public class AppAccountService
 
         // override profiles if access code is from account, or if there is an access code from account to set (e.g. first time login or access code changed)
         if (currentProfile.IsAccessCodeFromAccount) {
-            _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+            _clientProfileService.Update(currentProfile.ClientProfileId,
                 new ClientProfileUpdateParams {
                     AccessCode = accessCode,
                     IsAccessCodeFromAccount = !string.IsNullOrEmpty(accessCode)
@@ -82,7 +94,7 @@ public class AppAccountService
 
         // Only update if there is an access code from account to set (don't clear it)
         if (!string.IsNullOrEmpty(accessCode)) {
-            _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+            _clientProfileService.Update(currentProfile.ClientProfileId,
                 new ClientProfileUpdateParams {
                     AccessCode = accessCode,
                     IsAccessCodeFromAccount = false
@@ -92,8 +104,8 @@ public class AppAccountService
 
     private void ClearAccount()
     {
-        if (File.Exists(AppAccountFilePath))
-            File.Delete(AppAccountFilePath);
+        if (File.Exists(_appAccountFilePath))
+            File.Delete(_appAccountFilePath);
 
         _appAccount = null;
 
@@ -104,7 +116,7 @@ public class AppAccountService
 
         // remove access code if it is from account (not custom access code)
         if (!string.IsNullOrEmpty(currentProfile.AccessCode) && currentProfile.IsAccessCodeFromAccount) {
-            _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+            _clientProfileService.Update(currentProfile.ClientProfileId,
                 new ClientProfileUpdateParams {
                     AccessCode = null,
                     IsAccessCodeFromAccount = false
@@ -114,10 +126,8 @@ public class AppAccountService
 
     private ClientProfile? GetCurrentProfile()
     {
-        var profileId = _vpnHoodApp.CurrentClientProfileInfo?.ClientProfileId;
-        return profileId != null
-            ? _vpnHoodApp.ClientProfileService.FindById(profileId.Value)
-            : null;
+        var profileId = _settingsService.UserSettings.ClientProfileId;
+        return _clientProfileService.FindById(profileId ?? Guid.Empty);
     }
 
     public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken = default)

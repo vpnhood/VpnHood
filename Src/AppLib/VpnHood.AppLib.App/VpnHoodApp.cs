@@ -191,7 +191,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             LocationService = locationService,
             AccountService = options.AccountProvider is null
                 ? null
-                : new AppAccountService(this, options.AccountProvider),
+                : new AppAccountService(
+                    settingsService: settingsService, 
+                    accountProvider: options.AccountProvider, 
+                    clientProfileService: ClientProfileService,
+                    storageFolderPath: Path.Combine(StorageFolderPath, "account")),
             UpdaterService = options.UpdaterOptions is null
                 ? null
                 : new AppUpdaterService(
@@ -421,7 +425,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // check remote settings
         var remoteSettings = SettingsService.RemoteSettings;
-        if (CurrentClientProfileInfo?.IsPremiumAccount == true ||
+        if (CurrentClientProfileInfo?.IsPremium == true ||
             remoteSettings?.PromotionImageUrl is null ||
             remoteSettings.PromotionStartDate < DateTime.UtcNow ||
             remoteSettings.PromotionEndDate is null ||
@@ -1235,7 +1239,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             return true;
 
         // check if the current profile is premium
-        return CurrentClientProfileInfo?.IsPremiumAccount == true;
+        return CurrentClientProfileInfo?.IsPremium == true;
     }
 
     public bool CheckPremiumFeature(AppFeature feature)

@@ -133,7 +133,7 @@ public class AccessCodeTest : TestAppBase
 
         // check account is 
         var clientProfileInfo = clientProfile.ToInfo();
-        Assert.IsTrue(clientProfileInfo.IsPremiumAccount);
+        Assert.IsTrue(clientProfileInfo.IsPremium);
         Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.CanGoPremium);
         Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByCode);
         Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByPurchase);

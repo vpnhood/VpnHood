@@ -520,6 +520,102 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
+    getSplitByDomains( cancelToken?: CancelToken): Promise<SplitByDomains> {
+        let url_ = this.baseUrl + "/api/app/split-by-domains";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSplitByDomains(_response);
+        });
+    }
+
+    protected processGetSplitByDomains(response: AxiosResponse): Promise<SplitByDomains> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = SplitByDomains.fromJS(resultData200);
+            return Promise.resolve<SplitByDomains>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SplitByDomains>(null as any);
+    }
+
+    setSplitByDomains(value: SplitByDomains, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/split-by-domains";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(value);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSetSplitByDomains(_response);
+        });
+    }
+
+    protected processSetSplitByDomains(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
     getState( cancelToken?: CancelToken): Promise<AppState> {
         let url_ = this.baseUrl + "/api/app/state";
         url_ = url_.replace(/[?&]$/, "");
@@ -3968,8 +4064,8 @@ export class AppSessionStatus implements IAppSessionStatus {
     sessionSplitTraffic!: Traffic;
     cycleTraffic!: Traffic;
     totalTraffic!: Traffic;
-    tcpTunnelledCount!: number;
-    tcpPassthruCount!: number;
+    streamTunnelledCount!: number;
+    streamPassthruCount!: number;
     packetChannelCount!: number;
     unstableCount!: number;
     waitingCount!: number;
@@ -4006,8 +4102,8 @@ export class AppSessionStatus implements IAppSessionStatus {
             this.sessionSplitTraffic = _data["sessionSplitTraffic"] ? Traffic.fromJS(_data["sessionSplitTraffic"]) : new Traffic();
             this.cycleTraffic = _data["cycleTraffic"] ? Traffic.fromJS(_data["cycleTraffic"]) : new Traffic();
             this.totalTraffic = _data["totalTraffic"] ? Traffic.fromJS(_data["totalTraffic"]) : new Traffic();
-            this.tcpTunnelledCount = _data["tcpTunnelledCount"] !== undefined ? _data["tcpTunnelledCount"] : null as any;
-            this.tcpPassthruCount = _data["tcpPassthruCount"] !== undefined ? _data["tcpPassthruCount"] : null as any;
+            this.streamTunnelledCount = _data["streamTunnelledCount"] !== undefined ? _data["streamTunnelledCount"] : null as any;
+            this.streamPassthruCount = _data["streamPassthruCount"] !== undefined ? _data["streamPassthruCount"] : null as any;
             this.packetChannelCount = _data["packetChannelCount"] !== undefined ? _data["packetChannelCount"] : null as any;
             this.unstableCount = _data["unstableCount"] !== undefined ? _data["unstableCount"] : null as any;
             this.waitingCount = _data["waitingCount"] !== undefined ? _data["waitingCount"] : null as any;
@@ -4036,8 +4132,8 @@ export class AppSessionStatus implements IAppSessionStatus {
         data["sessionSplitTraffic"] = this.sessionSplitTraffic ? this.sessionSplitTraffic.toJSON() : null as any;
         data["cycleTraffic"] = this.cycleTraffic ? this.cycleTraffic.toJSON() : null as any;
         data["totalTraffic"] = this.totalTraffic ? this.totalTraffic.toJSON() : null as any;
-        data["tcpTunnelledCount"] = this.tcpTunnelledCount !== undefined ? this.tcpTunnelledCount : null as any;
-        data["tcpPassthruCount"] = this.tcpPassthruCount !== undefined ? this.tcpPassthruCount : null as any;
+        data["streamTunnelledCount"] = this.streamTunnelledCount !== undefined ? this.streamTunnelledCount : null as any;
+        data["streamPassthruCount"] = this.streamPassthruCount !== undefined ? this.streamPassthruCount : null as any;
         data["packetChannelCount"] = this.packetChannelCount !== undefined ? this.packetChannelCount : null as any;
         data["unstableCount"] = this.unstableCount !== undefined ? this.unstableCount : null as any;
         data["waitingCount"] = this.waitingCount !== undefined ? this.waitingCount : null as any;
@@ -4059,8 +4155,8 @@ export interface IAppSessionStatus {
     sessionSplitTraffic: Traffic;
     cycleTraffic: Traffic;
     totalTraffic: Traffic;
-    tcpTunnelledCount: number;
-    tcpPassthruCount: number;
+    streamTunnelledCount: number;
+    streamPassthruCount: number;
     packetChannelCount: number;
     unstableCount: number;
     waitingCount: number;
@@ -4374,8 +4470,9 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
     supportId?: string | null;
     customData?: string | null;
     isPremiumLocationSelected!: boolean;
-    isPremiumAccount!: boolean;
+    isPremium!: boolean;
     hasAccessCode!: boolean;
+    isAccessCodeFromAccount!: boolean;
     canGoPremium!: boolean;
     canTryPremium!: boolean;
     selectedLocationInfo?: ClientServerLocationInfo | null;
@@ -4397,8 +4494,9 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
             this.supportId = _data["supportId"] !== undefined ? _data["supportId"] : null as any;
             this.customData = _data["customData"] !== undefined ? _data["customData"] : null as any;
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] !== undefined ? _data["isPremiumLocationSelected"] : null as any;
-            this.isPremiumAccount = _data["isPremiumAccount"] !== undefined ? _data["isPremiumAccount"] : null as any;
+            this.isPremium = _data["isPremium"] !== undefined ? _data["isPremium"] : null as any;
             this.hasAccessCode = _data["hasAccessCode"] !== undefined ? _data["hasAccessCode"] : null as any;
+            this.isAccessCodeFromAccount = _data["isAccessCodeFromAccount"] !== undefined ? _data["isAccessCodeFromAccount"] : null as any;
             this.canGoPremium = _data["canGoPremium"] !== undefined ? _data["canGoPremium"] : null as any;
             this.canTryPremium = _data["canTryPremium"] !== undefined ? _data["canTryPremium"] : null as any;
             this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : null as any;
@@ -4427,8 +4525,9 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
         data["supportId"] = this.supportId !== undefined ? this.supportId : null as any;
         data["customData"] = this.customData !== undefined ? this.customData : null as any;
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected !== undefined ? this.isPremiumLocationSelected : null as any;
-        data["isPremiumAccount"] = this.isPremiumAccount !== undefined ? this.isPremiumAccount : null as any;
+        data["isPremium"] = this.isPremium !== undefined ? this.isPremium : null as any;
         data["hasAccessCode"] = this.hasAccessCode !== undefined ? this.hasAccessCode : null as any;
+        data["isAccessCodeFromAccount"] = this.isAccessCodeFromAccount !== undefined ? this.isAccessCodeFromAccount : null as any;
         data["canGoPremium"] = this.canGoPremium !== undefined ? this.canGoPremium : null as any;
         data["canTryPremium"] = this.canTryPremium !== undefined ? this.canTryPremium : null as any;
         data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : null as any;
@@ -4447,8 +4546,9 @@ export interface IClientProfileBaseInfo {
     supportId?: string | null;
     customData?: string | null;
     isPremiumLocationSelected: boolean;
-    isPremiumAccount: boolean;
+    isPremium: boolean;
     hasAccessCode: boolean;
+    isAccessCodeFromAccount: boolean;
     canGoPremium: boolean;
     canTryPremium: boolean;
     selectedLocationInfo?: ClientServerLocationInfo | null;
@@ -4882,7 +4982,6 @@ export class UserSettings implements IUserSettings {
     useTcpProxy!: boolean;
     dropQuic!: boolean;
     allowAnonymousTracker!: boolean;
-    domainFilterPolicy!: DomainFilterPolicy;
     debugData1?: string | null;
     debugData2?: string | null;
     logAnonymous!: boolean;
@@ -4904,7 +5003,6 @@ export class UserSettings implements IUserSettings {
         if (!data) {
             this.splitByApps = [];
             this.splitByCountries = [];
-            this.domainFilterPolicy = new DomainFilterPolicy();
             this.proxySettings = new AppProxySettings();
             this.dnsServers = [];
         }
@@ -4943,7 +5041,6 @@ export class UserSettings implements IUserSettings {
             this.useTcpProxy = _data["useTcpProxy"] !== undefined ? _data["useTcpProxy"] : null as any;
             this.dropQuic = _data["dropQuic"] !== undefined ? _data["dropQuic"] : null as any;
             this.allowAnonymousTracker = _data["allowAnonymousTracker"] !== undefined ? _data["allowAnonymousTracker"] : null as any;
-            this.domainFilterPolicy = _data["domainFilterPolicy"] ? DomainFilterPolicy.fromJS(_data["domainFilterPolicy"]) : new DomainFilterPolicy();
             this.debugData1 = _data["debugData1"] !== undefined ? _data["debugData1"] : null as any;
             this.debugData2 = _data["debugData2"] !== undefined ? _data["debugData2"] : null as any;
             this.logAnonymous = _data["logAnonymous"] !== undefined ? _data["logAnonymous"] : null as any;
@@ -4998,7 +5095,6 @@ export class UserSettings implements IUserSettings {
         data["useTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : null as any;
         data["dropQuic"] = this.dropQuic !== undefined ? this.dropQuic : null as any;
         data["allowAnonymousTracker"] = this.allowAnonymousTracker !== undefined ? this.allowAnonymousTracker : null as any;
-        data["domainFilterPolicy"] = this.domainFilterPolicy ? this.domainFilterPolicy.toJSON() : null as any;
         data["debugData1"] = this.debugData1 !== undefined ? this.debugData1 : null as any;
         data["debugData2"] = this.debugData2 !== undefined ? this.debugData2 : null as any;
         data["logAnonymous"] = this.logAnonymous !== undefined ? this.logAnonymous : null as any;
@@ -5035,7 +5131,6 @@ export interface IUserSettings {
     useTcpProxy: boolean;
     dropQuic: boolean;
     allowAnonymousTracker: boolean;
-    domainFilterPolicy: DomainFilterPolicy;
     debugData1?: string | null;
     debugData2?: string | null;
     logAnonymous: boolean;
@@ -5059,88 +5154,6 @@ export enum SplitByCountryMode {
     ExcludeMyCountry = "ExcludeMyCountry",
     ExcludeList = "ExcludeList",
     IncludeList = "IncludeList",
-}
-
-export class DomainFilterPolicy implements IDomainFilterPolicy {
-    blocks!: string[];
-    excludes!: string[];
-    includes!: string[];
-
-    constructor(data?: IDomainFilterPolicy) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-        if (!data) {
-            this.blocks = [];
-            this.excludes = [];
-            this.includes = [];
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            if (Array.isArray(_data["blocks"])) {
-                this.blocks = [] as any;
-                for (let item of _data["blocks"])
-                    this.blocks!.push(item);
-            }
-            else {
-                this.blocks = null as any;
-            }
-            if (Array.isArray(_data["excludes"])) {
-                this.excludes = [] as any;
-                for (let item of _data["excludes"])
-                    this.excludes!.push(item);
-            }
-            else {
-                this.excludes = null as any;
-            }
-            if (Array.isArray(_data["includes"])) {
-                this.includes = [] as any;
-                for (let item of _data["includes"])
-                    this.includes!.push(item);
-            }
-            else {
-                this.includes = null as any;
-            }
-        }
-    }
-
-    static fromJS(data: any): DomainFilterPolicy {
-        data = typeof data === 'object' ? data : {};
-        let result = new DomainFilterPolicy();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        if (Array.isArray(this.blocks)) {
-            data["blocks"] = [];
-            for (let item of this.blocks)
-                data["blocks"].push(item);
-        }
-        if (Array.isArray(this.excludes)) {
-            data["excludes"] = [];
-            for (let item of this.excludes)
-                data["excludes"].push(item);
-        }
-        if (Array.isArray(this.includes)) {
-            data["includes"] = [];
-            for (let item of this.includes)
-                data["includes"].push(item);
-        }
-        return data;
-    }
-}
-
-export interface IDomainFilterPolicy {
-    blocks: string[];
-    excludes: string[];
-    includes: string[];
 }
 
 export enum EndPointStrategy {
@@ -5265,13 +5278,13 @@ export class ClientProfileInfo implements IClientProfileInfo {
     supportId?: string | null;
     customData?: string | null;
     isPremiumLocationSelected!: boolean;
-    isPremiumAccount!: boolean;
+    isPremium!: boolean;
     tokenId!: string;
     hostNames!: string[];
     isValidHostName!: boolean;
     isBuiltIn!: boolean;
-    isForAccount!: boolean;
     accessCode?: string | null;
+    isAccessCodeFromAccount!: boolean;
     locationInfos!: ClientServerLocationInfo[];
     canGoPremium!: boolean;
     canTryPremium!: boolean;
@@ -5299,7 +5312,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
             this.supportId = _data["supportId"] !== undefined ? _data["supportId"] : null as any;
             this.customData = _data["customData"] !== undefined ? _data["customData"] : null as any;
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] !== undefined ? _data["isPremiumLocationSelected"] : null as any;
-            this.isPremiumAccount = _data["isPremiumAccount"] !== undefined ? _data["isPremiumAccount"] : null as any;
+            this.isPremium = _data["isPremium"] !== undefined ? _data["isPremium"] : null as any;
             this.tokenId = _data["tokenId"] !== undefined ? _data["tokenId"] : null as any;
             if (Array.isArray(_data["hostNames"])) {
                 this.hostNames = [] as any;
@@ -5311,8 +5324,8 @@ export class ClientProfileInfo implements IClientProfileInfo {
             }
             this.isValidHostName = _data["isValidHostName"] !== undefined ? _data["isValidHostName"] : null as any;
             this.isBuiltIn = _data["isBuiltIn"] !== undefined ? _data["isBuiltIn"] : null as any;
-            this.isForAccount = _data["isForAccount"] !== undefined ? _data["isForAccount"] : null as any;
             this.accessCode = _data["accessCode"] !== undefined ? _data["accessCode"] : null as any;
+            this.isAccessCodeFromAccount = _data["isAccessCodeFromAccount"] !== undefined ? _data["isAccessCodeFromAccount"] : null as any;
             if (Array.isArray(_data["locationInfos"])) {
                 this.locationInfos = [] as any;
                 for (let item of _data["locationInfos"])
@@ -5350,7 +5363,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
         data["supportId"] = this.supportId !== undefined ? this.supportId : null as any;
         data["customData"] = this.customData !== undefined ? this.customData : null as any;
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected !== undefined ? this.isPremiumLocationSelected : null as any;
-        data["isPremiumAccount"] = this.isPremiumAccount !== undefined ? this.isPremiumAccount : null as any;
+        data["isPremium"] = this.isPremium !== undefined ? this.isPremium : null as any;
         data["tokenId"] = this.tokenId !== undefined ? this.tokenId : null as any;
         if (Array.isArray(this.hostNames)) {
             data["hostNames"] = [];
@@ -5359,8 +5372,8 @@ export class ClientProfileInfo implements IClientProfileInfo {
         }
         data["isValidHostName"] = this.isValidHostName !== undefined ? this.isValidHostName : null as any;
         data["isBuiltIn"] = this.isBuiltIn !== undefined ? this.isBuiltIn : null as any;
-        data["isForAccount"] = this.isForAccount !== undefined ? this.isForAccount : null as any;
         data["accessCode"] = this.accessCode !== undefined ? this.accessCode : null as any;
+        data["isAccessCodeFromAccount"] = this.isAccessCodeFromAccount !== undefined ? this.isAccessCodeFromAccount : null as any;
         if (Array.isArray(this.locationInfos)) {
             data["locationInfos"] = [];
             for (let item of this.locationInfos)
@@ -5385,13 +5398,13 @@ export interface IClientProfileInfo {
     supportId?: string | null;
     customData?: string | null;
     isPremiumLocationSelected: boolean;
-    isPremiumAccount: boolean;
+    isPremium: boolean;
     tokenId: string;
     hostNames: string[];
     isValidHostName: boolean;
     isBuiltIn: boolean;
-    isForAccount: boolean;
     accessCode?: string | null;
+    isAccessCodeFromAccount: boolean;
     locationInfos: ClientServerLocationInfo[];
     canGoPremium: boolean;
     canTryPremium: boolean;
@@ -5699,6 +5712,50 @@ export interface ISplitByIps {
     appIncludes: string;
     appExcludes: string;
     appBlocks: string;
+}
+
+export class SplitByDomains implements ISplitByDomains {
+    includes!: string;
+    excludes!: string;
+    blocks!: string;
+
+    constructor(data?: ISplitByDomains) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.includes = _data["includes"] !== undefined ? _data["includes"] : null as any;
+            this.excludes = _data["excludes"] !== undefined ? _data["excludes"] : null as any;
+            this.blocks = _data["blocks"] !== undefined ? _data["blocks"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): SplitByDomains {
+        data = typeof data === 'object' ? data : {};
+        let result = new SplitByDomains();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["includes"] = this.includes !== undefined ? this.includes : null as any;
+        data["excludes"] = this.excludes !== undefined ? this.excludes : null as any;
+        data["blocks"] = this.blocks !== undefined ? this.blocks : null as any;
+        return data;
+    }
+}
+
+export interface ISplitByDomains {
+    includes: string;
+    excludes: string;
+    blocks: string;
 }
 
 export enum ConnectPlanId {
@@ -6017,6 +6074,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
     customData?: PatchOfString | null;
     isPremiumLocationSelected?: PatchOfBoolean | null;
     accessCode?: PatchOfString | null;
+    isAccessCodeFromAccount?: PatchOfBoolean | null;
     customServerEndpoints?: PatchOfStringOf | null;
 
     constructor(data?: IClientProfileUpdateParams) {
@@ -6036,6 +6094,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
             this.customData = _data["customData"] ? PatchOfString.fromJS(_data["customData"]) : null as any;
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] ? PatchOfBoolean.fromJS(_data["isPremiumLocationSelected"]) : null as any;
             this.accessCode = _data["accessCode"] ? PatchOfString.fromJS(_data["accessCode"]) : null as any;
+            this.isAccessCodeFromAccount = _data["isAccessCodeFromAccount"] ? PatchOfBoolean.fromJS(_data["isAccessCodeFromAccount"]) : null as any;
             this.customServerEndpoints = _data["customServerEndpoints"] ? PatchOfStringOf.fromJS(_data["customServerEndpoints"]) : null as any;
         }
     }
@@ -6055,6 +6114,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
         data["customData"] = this.customData ? this.customData.toJSON() : null as any;
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected ? this.isPremiumLocationSelected.toJSON() : null as any;
         data["accessCode"] = this.accessCode ? this.accessCode.toJSON() : null as any;
+        data["isAccessCodeFromAccount"] = this.isAccessCodeFromAccount ? this.isAccessCodeFromAccount.toJSON() : null as any;
         data["customServerEndpoints"] = this.customServerEndpoints ? this.customServerEndpoints.toJSON() : null as any;
         return data;
     }
@@ -6067,6 +6127,7 @@ export interface IClientProfileUpdateParams {
     customData?: PatchOfString | null;
     isPremiumLocationSelected?: PatchOfBoolean | null;
     accessCode?: PatchOfString | null;
+    isAccessCodeFromAccount?: PatchOfBoolean | null;
     customServerEndpoints?: PatchOfStringOf | null;
 }
 

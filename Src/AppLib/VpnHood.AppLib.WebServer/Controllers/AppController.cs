@@ -181,7 +181,8 @@ internal class AppController : ControllerBase, IAppController
             DeviceIncludes = App.SettingsService.SplitByIpSettings.DeviceIncludes,
             DeviceExcludes = App.SettingsService.SplitByIpSettings.DeviceExcludes,
             AppIncludes = App.SettingsService.SplitByIpSettings.AppIncludes,
-            AppExcludes = App.SettingsService.SplitByIpSettings.AppExcludes
+            AppExcludes = App.SettingsService.SplitByIpSettings.AppExcludes,
+            AppBlocks = App.SettingsService.SplitByIpSettings.AppBlocks
         };
 
         return Task.FromResult(appIpFilters);
@@ -193,6 +194,7 @@ internal class AppController : ControllerBase, IAppController
         App.SettingsService.SplitByIpSettings.DeviceIncludes = value.DeviceIncludes;
         App.SettingsService.SplitByIpSettings.AppExcludes = value.AppExcludes;
         App.SettingsService.SplitByIpSettings.AppIncludes = value.AppIncludes;
+        App.SettingsService.SplitByIpSettings.AppBlocks = value.AppBlocks;
         return Task.CompletedTask;
     }
 

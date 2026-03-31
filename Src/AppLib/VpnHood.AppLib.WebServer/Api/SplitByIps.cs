@@ -6,4 +6,5 @@ public class SplitByIps
     public required string DeviceExcludes { get; set; }
     public required string AppIncludes { get; set; }
     public required string AppExcludes { get; set; }
+    public required string AppBlocks { get; set; }
 }

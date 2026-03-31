@@ -726,6 +726,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AutoWaitTimeout = _autoWaitTimeout,
                 IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
                 IncludeIpRangesByApp = (await GetIncludeIpRanges(cancellationToken)).ToArray(),
+                BlockIpRangesByApp = GetBlockIpRangesByApp(),
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 ConnectTimeout = _tcpTimeout,
@@ -1093,6 +1094,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         return ipRanges;
+    }
+
+    public IpRange[] GetBlockIpRangesByApp()
+    {
+        if (UserSettings.UseSplitByIpViaApp && CheckPremiumFeature(AppFeature.SplitByIpViaApp))
+            return IpRangeParser.ParseExcludes(SettingsService.SplitByIpSettings.AppBlocks);
+
+        return [];
     }
 
     // make sure the active profile is valid and exist

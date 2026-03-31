@@ -5654,6 +5654,7 @@ export class SplitByIps implements ISplitByIps {
     deviceExcludes!: string;
     appIncludes!: string;
     appExcludes!: string;
+    appBlocks!: string;
 
     constructor(data?: ISplitByIps) {
         if (data) {
@@ -5670,6 +5671,7 @@ export class SplitByIps implements ISplitByIps {
             this.deviceExcludes = _data["deviceExcludes"] !== undefined ? _data["deviceExcludes"] : null as any;
             this.appIncludes = _data["appIncludes"] !== undefined ? _data["appIncludes"] : null as any;
             this.appExcludes = _data["appExcludes"] !== undefined ? _data["appExcludes"] : null as any;
+            this.appBlocks = _data["appBlocks"] !== undefined ? _data["appBlocks"] : null as any;
         }
     }
 
@@ -5686,6 +5688,7 @@ export class SplitByIps implements ISplitByIps {
         data["deviceExcludes"] = this.deviceExcludes !== undefined ? this.deviceExcludes : null as any;
         data["appIncludes"] = this.appIncludes !== undefined ? this.appIncludes : null as any;
         data["appExcludes"] = this.appExcludes !== undefined ? this.appExcludes : null as any;
+        data["appBlocks"] = this.appBlocks !== undefined ? this.appBlocks : null as any;
         return data;
     }
 }
@@ -5695,6 +5698,7 @@ export interface ISplitByIps {
     deviceExcludes: string;
     appIncludes: string;
     appExcludes: string;
+    appBlocks: string;
 }
 
 export enum ConnectPlanId {

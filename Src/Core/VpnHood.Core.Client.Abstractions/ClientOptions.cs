@@ -22,6 +22,9 @@ public class ClientOptions
     public IpRange[] IncludeIpRangesByApp { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
+    public IpRange[] BlockIpRangesByApp { get; set; } = [];
+
+    [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] IncludeIpRangesByDevice { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
 
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]

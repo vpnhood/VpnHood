@@ -1,0 +1,1 @@
+- Do not touch VpnHood.Client.Api.ts as it will be rebuilt in publish

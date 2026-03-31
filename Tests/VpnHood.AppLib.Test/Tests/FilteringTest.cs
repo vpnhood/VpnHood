@@ -113,6 +113,43 @@ public class FilteringTest : TestAppBase
         await app.Disconnect();
     }
 
+    [TestMethod]
+    public async Task Ips_Block()
+    {
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        var app = appDom.App;
+
+        // target1: will be blocked
+        var httpsUrl1 = MockEps.HttpsUrl1;
+        var udpEchoEndPoint1 = MockEps.UdpV4EndPoint1;
+        var blockedIps = new[] { new IpRange(IPAddress.Parse(MockEps.HttpUrl1.Host)), new IpRange(udpEchoEndPoint1.Address) };
+
+        // target2: should still work (included)
+        var httpsUrl2 = MockEps.HttpsUrl2;
+        var udpEchoEndPoint2 = MockEps.UdpV4EndPoint2;
+
+        // ************
+        // *** TEST ***: Block target1 IPs via AppBlocks
+        app.SettingsService.SplitByIpSettings.AppBlocks = blockedIps.ToText();
+        await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+
+        // blocked HTTPS should fail
+        Log("Testing blocked HTTPS...");
+        var httpsResult = await TestHelper.Test_Https(uri: httpsUrl1, throwError: false, timeout: TimeSpan.FromSeconds(1));
+        Assert.IsFalse(httpsResult, "HTTPS to blocked IP should fail.");
+
+        // blocked UDP should fail
+        Log("Testing blocked UDP...");
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(() =>
+            TestHelper.Test_UdpEcho(udpEchoEndPoint1, timeout: TimeSpan.FromSeconds(1)));
+
+        // non-blocked target should still work
+        Log("Testing non-blocked HTTPS...");
+        await IpFilters_AssertInclude(TestHelper, app, udpEchoEndPoint2, httpsUrl2);
+        await app.Disconnect();
+    }
+
     public static async Task IpFilters_AssertInclude(TestHelper testHelper, VpnHoodApp app,
         IPEndPoint? udpEchoEndPint, Uri? url, int receiveDelta = 1000)
     {

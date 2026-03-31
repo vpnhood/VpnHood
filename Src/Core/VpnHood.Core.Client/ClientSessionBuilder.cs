@@ -165,6 +165,8 @@ internal class ClientSessionBuilder(
                 : null;
 
             staticIpFilter.IncludeRanges = config.IncludeIpRangesByApp.ToOrderedList();
+            staticIpFilter.BlockedRanges = config.BlockIpRangesByApp.ToOrderedList();
+
             var dnsConfig = ClientHelper.GetDnsServers(
                 config.DnsServers,
                 serverDnsAddresses: helloResponse.DnsServers ?? [],

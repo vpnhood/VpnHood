@@ -61,6 +61,7 @@
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path=".github/copilot-instructions.md" />
     <File Path="README.md" />
     <File Path="VpnHood.sln.DotSettings" />
   </Folder>
@@ -115,8 +116,8 @@
     <Project Path="Src/Core/VpnHood.Core.Client.VpnServices.Manager/VpnHood.Core.Client.VpnServices.Manager.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Client/VpnHood.Core.Client.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Common/VpnHood.Core.Common.csproj" />
-    <Project Path="Src/Core/VpnHood.Core.Filtering.Abstractions/VpnHood.Core.Filtering.Abstractions.csproj"/>
-    <Project Path="Src/Core/VpnHood.Core.Filtering.DomainFiltering/VpnHood.Core.Filtering.DomainFiltering.csproj"/>
+    <Project Path="Src/Core/VpnHood.Core.Filtering.Abstractions/VpnHood.Core.Filtering.Abstractions.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Filtering.DomainFiltering/VpnHood.Core.Filtering.DomainFiltering.csproj" />
     <Project Path="Src/Core/VpnHood.Core.IpLocations.SqliteProvider/VpnHood.Core.IpLocations.SqliteProvider.csproj" />
     <Project Path="Src/Core/VpnHood.Core.IpLocations/VpnHood.Core.IpLocations.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Packets/VpnHood.Core.Packets.csproj" />

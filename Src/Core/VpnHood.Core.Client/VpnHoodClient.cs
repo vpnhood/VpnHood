@@ -79,6 +79,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ExcludeApps = options.ExcludeApps,
             IncludeApps = options.IncludeApps,
             IncludeIpRangesByApp = options.IncludeIpRangesByApp,
+            BlockIpRangesByApp = options.BlockIpRangesByApp,
             IncludeIpRangesByDevice = options.IncludeIpRangesByDevice,
             DnsServers = options.DnsServers,
             SessionName = options.SessionName,

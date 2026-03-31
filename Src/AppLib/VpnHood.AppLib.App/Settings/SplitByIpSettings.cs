@@ -65,6 +65,11 @@ public class SplitByIpSettings(string folderPath)
         set => Write("device_excludes", value);
     }
 
+    public string AppBlocks {
+        get => Read("app_blocks");
+        set => Write("app_blocks", value);
+    }
+
     private string Read(string fileTitle)
     {
         return File.ReadAllText(GetFilePath(fileTitle));

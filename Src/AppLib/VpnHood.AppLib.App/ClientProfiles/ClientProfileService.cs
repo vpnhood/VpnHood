@@ -120,16 +120,6 @@ public class ClientProfileService
                    ?? throw new NotExistsException(
                        "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
 
-        // First update IsAccessCodeFromAccount because it may impact the validation of AccessCode
-        if (updateParams.IsAccessCodeFromAccount != null)
-            item.IsAccessCodeFromAccount = updateParams.IsAccessCodeFromAccount.Value;
-
-        // if IsAccessCodeFromAccount is true, can not remove access code
-        if (item.IsAccessCodeFromAccount && 
-            updateParams.AccessCode!=null && string.IsNullOrEmpty(updateParams.AccessCode.Value)){
-            throw new InvalidOperationException("Could not remove AccessCode because it is from account.");
-        }
-
         // update name
         if (updateParams.ClientProfileName != null) {
             var name = updateParams.ClientProfileName.Value?.Trim();
@@ -141,7 +131,7 @@ public class ClientProfileService
         if (updateParams.IsFavorite != null)
             item.IsFavorite = updateParams.IsFavorite.Value;
 
-        if (updateParams.CustomServerEndpoints != null) 
+        if (updateParams.CustomServerEndpoints != null)
             item.CustomServerEndpoints = updateParams.CustomServerEndpoints.Value?.Select(ParseEndPoint).ToArray();
 
         if (updateParams.CustomData != null)
@@ -153,6 +143,9 @@ public class ClientProfileService
         if (updateParams.SelectedLocation != null)
             item.SelectedLocation = updateParams.SelectedLocation;
 
+        if (updateParams.IsAccessCodeFromAccount != null)
+            item.IsAccessCodeFromAccount = updateParams.IsAccessCodeFromAccount.Value;
+
         if (updateParams.AccessCode != null && updateParams.AccessCode.Value != item.AccessCode) {
             item.AccessCode = string.IsNullOrEmpty(updateParams.AccessCode.Value)
                 ? null
@@ -162,6 +155,7 @@ public class ClientProfileService
             if (item.AccessCode is null) {
                 item.IsPremiumLocationSelected = false;
                 item.SelectedLocation = null;
+                item.IsAccessCodeFromAccount = false;
             }
         }
 

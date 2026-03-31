@@ -315,7 +315,7 @@ public class ClientAppTest : TestAppBase
         await app.Connect(clientProfile.ClientProfileId, diagnose: true);
 
 
-        Assert.IsTrue(app.State.ClientProfile?.IsPremiumAccount);
+        Assert.IsTrue(app.State.ClientProfile?.IsPremium);
         Assert.IsTrue(app.State.SessionInfo?.IsPremiumSession);
     }
 

@@ -50,41 +50,44 @@ public class AppAccountService
         }
 
         // Update cache from server and update local cache
-        await Refresh(true, cancellationToken);
+        await Refresh(cancellationToken);
         return _appAccount;
     }
 
-    public Task Refresh(CancellationToken cancellationToken)
-    {
-        return Refresh(updateCurrentClientProfile: false, cancellationToken);
-    }
-
-    public async Task Refresh(bool updateCurrentClientProfile, CancellationToken cancellationToken)
+    public async Task Refresh(CancellationToken cancellationToken)
     {
         _appAccount = await _accountProvider.GetAccount(cancellationToken).Vhc();
         Directory.CreateDirectory(Path.GetDirectoryName(AppAccountFilePath)!);
         await File.WriteAllTextAsync(AppAccountFilePath, JsonSerializer.Serialize(_appAccount), cancellationToken).Vhc();
 
-        // update profiles
-        if (_appAccount is { SubscriptionId: not null }) {
-            var accessCode = await _accountProvider.GetAccessCode(_appAccount.SubscriptionId, cancellationToken);
+        // if requested, update the current client profile with the new access code from the account
+        var currentProfile = GetCurrentProfile();
+        if (currentProfile is null)
+            throw new InvalidOperationException("Could not refresh account when there is no current client profile.");
 
-            // update profiles
-            var currentProfile = GetCurrentProfile();
-            if (currentProfile != null) {
-                currentProfile.AccessCode = accessCode;
-                _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
-                    new ClientProfileUpdateParams {
-                        AccessCode = accessCode,
-                        IsAccessCodeFromAccount = true
-                    });
-            }
+        // update profiles
+        var accessCode = _appAccount is { SubscriptionId: not null }
+            ? await _accountProvider.GetAccessCode(_appAccount.SubscriptionId, cancellationToken)
+            : null;
+
+        // override profiles if access code is from account, or if there is an access code from account to set (e.g. first time login or access code changed)
+        if (currentProfile.IsAccessCodeFromAccount) {
+            _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+                new ClientProfileUpdateParams {
+                    AccessCode = accessCode,
+                    IsAccessCodeFromAccount = !string.IsNullOrEmpty(accessCode)
+                });
+            return;
         }
 
-        // if updateCurrentClientProfile is true, it means we want to validate the current profile with the new account info,
-        // which may cause the current profile to be switched if it's no longer valid. If it's false, we just want to update
-        // the access code for the current profile without switching it, even if it's no longer valid.
-        _vpnHoodApp.ValidateAccountClientProfiles(updateCurrentClientProfile);
+        // Only update if there is an access code from account to set (don't clear it)
+        if (!string.IsNullOrEmpty(accessCode)) {
+            _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+                new ClientProfileUpdateParams {
+                    AccessCode = accessCode,
+                    IsAccessCodeFromAccount = false
+                });
+        }
     }
 
     private void ClearAccount()
@@ -96,17 +99,17 @@ public class AppAccountService
 
         // update profiles - only clear access code if it was set from the account
         var currentProfile = GetCurrentProfile();
-        if (currentProfile != null) {
-            if (!string.IsNullOrEmpty(currentProfile.AccessCode) && currentProfile.IsAccessCodeFromAccount) {
-                _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
-                    new ClientProfileUpdateParams {
-                        AccessCode = null,
-                        IsAccessCodeFromAccount = false
-                    });
-            }
-        }
+        if (currentProfile is null)
+            return;
 
-        _vpnHoodApp.ValidateAccountClientProfiles(false);
+        // remove access code if it is from account (not custom access code)
+        if (!string.IsNullOrEmpty(currentProfile.AccessCode) && currentProfile.IsAccessCodeFromAccount) {
+            _vpnHoodApp.ClientProfileService.Update(currentProfile.ClientProfileId,
+                new ClientProfileUpdateParams {
+                    AccessCode = null,
+                    IsAccessCodeFromAccount = false
+                });
+        }
     }
 
     private ClientProfile? GetCurrentProfile()

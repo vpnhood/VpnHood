@@ -25,7 +25,7 @@ public class QuicTesterClient(IPEndPoint serverEp, string domain, TimeSpan? time
                 TargetHost = domain,
                 EncryptionPolicy = EncryptionPolicy.RequireEncryption
             },
-            IdleTimeout = timeout ?? TimeSpan.FromSeconds(15)
+            HandshakeTimeout = timeout ?? TimeSpan.FromSeconds(5)
         };
 
         await using var connection = await QuicConnection.ConnectAsync(options, cancellationToken);

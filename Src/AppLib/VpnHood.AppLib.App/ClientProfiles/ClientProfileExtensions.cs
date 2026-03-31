@@ -15,7 +15,7 @@ public static class ClientProfileExtensions
             SupportId = clientProfileInfo.SupportId,
             CustomData = clientProfileInfo.CustomData,
             IsPremiumLocationSelected = clientProfileInfo.IsPremiumLocationSelected,
-            IsPremiumAccount = clientProfileInfo.IsPremiumAccount,
+            IsPremium = clientProfileInfo.IsPremiumAccount,
             SelectedLocationInfo = clientProfileInfo.SelectedLocationInfo,
             HasAccessCode = !string.IsNullOrEmpty(clientProfileInfo.AccessCode),
             CustomServerEndpoints = clientProfileInfo.CustomServerEndpoints,

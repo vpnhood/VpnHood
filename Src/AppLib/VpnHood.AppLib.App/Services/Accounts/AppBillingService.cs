@@ -22,7 +22,7 @@ public class AppBillingService(AppAccountService accountService, IAppBillingProv
             throw new AlreadyExistsException("You already have a premium subscription.");
 
         var ret = await billingProvider.Purchase(uiContext, purchaseParams, cancellationToken).Vhc();
-        await accountService.Refresh(updateCurrentClientProfile: true, cancellationToken: cancellationToken).Vhc();
+        await accountService.Refresh(cancellationToken: cancellationToken).Vhc();
         return ret;
     }
 

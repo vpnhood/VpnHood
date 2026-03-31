@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Quic;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Test;
@@ -70,6 +71,59 @@ public class FilteringTest : TestAppBase
         Assert.AreEqual(oldStat.StreamPassthruCount + 1, newStat.StreamPassthruCount);
     }
 
+
+    [TestMethod]
+    public async Task Domains_Block_Https()
+    {
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        var app = appDom.App;
+
+        // block domain1
+        app.SettingsService.SplitByDomainSettings.Blocks = MockEps.HttpsUrl1.Host;
+
+        // connect
+        await appDom.Connect(cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+
+        // blocked HTTPS should fail
+        Log("Testing blocked HTTPS domain...");
+        var httpsResult = await TestHelper.Test_Https(uri: MockEps.HttpsUrl1, throwError: false, timeout: TimeSpan.FromSeconds(1));
+        Assert.IsFalse(httpsResult, "HTTPS to blocked domain should fail.");
+
+        // non-blocked HTTPS should still work
+        Log("Testing non-blocked HTTPS domain...");
+        var oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        await TestHelper.Test_Https(uri: MockEps.HttpsUrl2);
+        var newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        Assert.AreEqual(oldStat.StreamTunnelledCount + 1, newStat.StreamTunnelledCount);
+    }
+
+    [TestMethod]
+    public async Task Domains_Block_Quic()
+    {
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        var app = appDom.App;
+
+        // block domain1
+        app.SettingsService.SplitByDomainSettings.Blocks = MockEps.QuicUrl1.Host;
+
+        // connect
+        await appDom.Connect(cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+
+        // blocked QUIC should fail
+        Log("Testing blocked QUIC domain...");
+        var ex = await Assert.ThrowsExactlyAsync<QuicException>(() =>
+             TestHelper.Test_Quic(uri: MockEps.QuicUrl1, timeout: TimeSpan.FromSeconds(1)));
+        Assert.AreEqual(QuicError.ConnectionTimeout, ex.QuicError);
+
+        // non-blocked QUIC should still work
+        Log("Testing non-blocked QUIC domain...");
+        var oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        await TestHelper.Test_Quic(uri: MockEps.QuicUrl2);
+        var newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        Assert.AreEqual(oldStat.StreamTunnelledCount + 1, newStat.StreamTunnelledCount);
+    }
 
     [TestMethod]
     public async Task Ips_IncludeExclude()

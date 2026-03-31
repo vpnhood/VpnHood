@@ -855,13 +855,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // remove the access code if it is rejected
             case SessionErrorCode.AccessCodeRejected when Features.AutoRemoveExpiredPremium:
-                VhLogger.Instance.LogWarning("Access code rejected. Removing the access code from profile.");
-                RemovePremium(profileInfo.ClientProfileId);
-                break;
-
-            // remove the client profile if access expired
-            case SessionErrorCode.AccessExpired when Features.AutoRemoveExpiredPremium && profileInfo.IsForAccount:
-                VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
+                VhLogger.Instance.LogWarning("Access code rejected. Removing premium...");
                 RemovePremium(profileInfo.ClientProfileId);
                 break;
         }
@@ -1113,30 +1107,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         };
     }
 
-    // make sure the active profile is valid and exist
-    internal void ValidateAccountClientProfiles(bool updateCurrentClientProfile)
-    {
-        // Select the best client profile from their account.
-        if (updateCurrentClientProfile) {
-            var clientProfiles = ClientProfileService
-                .List()
-                .Where(x => x.IsForAccount)
-                .ToArray();
-
-            if (clientProfiles.Any()) {
-                UserSettings.ClientProfileId = clientProfiles.Last().ClientProfileId;
-                Settings.Save();
-            }
-        }
-
-        // update the current profile if the current profile does not exist
-        if (ClientProfileService.FindById(UserSettings.ClientProfileId ?? Guid.Empty) == null) {
-            var clientProfiles = ClientProfileService.List();
-            UserSettings.ClientProfileId = clientProfiles.Length == 1 ? clientProfiles.First().ClientProfileId : null;
-            Settings.Save();
-        }
-    }
-
     public async Task CopyLogToStream(Stream destination)
     {
         await using var write = new StreamWriter(destination, Encoding.UTF8, bufferSize: -1, leaveOpen: true);
@@ -1255,15 +1225,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogWarning("Access code is removed from the profile.");
             ClientProfileService.Update(profileInfo.ClientProfileId,
                 new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
-        }
-
-        // remove the client profile if access expired
-        if (profileInfo.IsForAccount) {
-            VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
-            ClientProfileService.Delete(profileInfo.ClientProfileId);
-            if (Services.AccountService != null)
-                _ = VhUtils.TryInvokeAsync("Refresh Account",
-                    () => Services.AccountService.Refresh(updateCurrentClientProfile: true, CancellationToken.None));
         }
     }
 

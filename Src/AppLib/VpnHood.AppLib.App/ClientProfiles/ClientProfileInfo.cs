@@ -18,7 +18,6 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public string[] HostNames => GetEndPoints(clientProfile.Token.ServerToken);
     public bool IsValidHostName => clientProfile.Token.ServerToken.IsValidHostName;
     public bool IsBuiltIn => clientProfile.IsBuiltIn;
-    public bool IsForAccount => clientProfile.IsForAccount;
     public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
     public bool IsAccessCodeFromAccount => clientProfile.IsAccessCodeFromAccount;
     public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);

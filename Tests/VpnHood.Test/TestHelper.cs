@@ -197,7 +197,7 @@ public class TestHelper : IDisposable
         Assert.IsNotEmpty(result.AddressList);
     }
 
-    public async Task<bool> Test_Quic(Uri? uri = null, bool throwError = true)
+    public async Task<bool> Test_Quic(Uri? uri = null, TimeSpan? timeout = null, bool throwError = true)
     {
         uri ??= WebServer.MockEps.QuicUrl1;
 
@@ -213,16 +213,17 @@ public class TestHelper : IDisposable
 
         try {
             VhLogger.Instance.LogInformation(GeneralEventId.Test, "Testing a QUIC uri. Url: {uri}", uri);
-            return await Test_Quic(uri.Host, ipEndPoint, throwError);
+            return await Test_Quic(uri.Host, ipEndPoint, timeout, throwError);
         }
         catch when (!throwError) {
             return false;
         }
     }
 
-    public async Task<bool> Test_Quic(string domain, IPEndPoint ipEndPoint, bool throwError = true)
+    public async Task<bool> Test_Quic(string domain, IPEndPoint ipEndPoint, TimeSpan? timeout = null, bool throwError = true)
     {
-        var quicTesterClient = new QuicTesterClient(ipEndPoint, domain, TestConstants.DefaultQuicTimeout);
+        timeout ??= TestConstants.DefaultQuicTimeout;
+        var quicTesterClient = new QuicTesterClient(ipEndPoint, domain, timeout);
         var data = new byte[1024 * 1024 * 10]; // 1 MB
         Random.Shared.NextBytes(data);
         try {

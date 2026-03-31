@@ -39,6 +39,18 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
+    [HttpGet("split-by-domains")]
+    public Task<SplitByDomains> GetSplitByDomains(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPut("split-by-domains")]
+    public Task SetSplitByDomains(SplitByDomains value, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
     [HttpGet("state")]
     public Task<AppState> GetState(CancellationToken cancellationToken)
     {

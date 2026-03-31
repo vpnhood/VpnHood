@@ -703,9 +703,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
             if (UserSettings.UseSplitByIpViaDevice && CheckPremiumFeature(AppFeature.SplitByIpViaDevice)) {
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
-                    IpRangeParser.ParseIncludes(SettingsService.SplitByIpSettings.DeviceIncludes));
+                    IpRangeTextFileParser.ParseIncludes(SettingsService.SplitByIpSettings.DeviceIncludes));
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
-                    IpRangeParser.ParseExcludes(SettingsService.SplitByIpSettings.DeviceExcludes));
+                    IpRangeTextFileParser.ParseExcludes(SettingsService.SplitByIpSettings.DeviceExcludes));
             }
 
             // use default DNS servers if not premium account
@@ -740,7 +740,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PlanId = planId,
                 AccessCode = accessCode,
                 IsTcpProxySupported = Features.IsTcpProxySupported,
-                DomainFilterPolicy = UserSettings.DomainFilterPolicy,
+                DomainFilterPolicy = GetDomainFilterPolicy(),
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
                 AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
                 AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
@@ -1087,10 +1087,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // calculate AppFilter IPs
         if (UserSettings.UseSplitByIpViaApp && CheckPremiumFeature(AppFeature.SplitByIpViaApp)) {
             ipRanges = ipRanges.Intersect(
-                IpRangeParser.ParseIncludes(SettingsService.SplitByIpSettings.AppIncludes));
+                IpRangeTextFileParser.ParseIncludes(SettingsService.SplitByIpSettings.AppIncludes));
 
             ipRanges = ipRanges.Exclude(
-                IpRangeParser.ParseExcludes(SettingsService.SplitByIpSettings.AppExcludes));
+                IpRangeTextFileParser.ParseExcludes(SettingsService.SplitByIpSettings.AppExcludes));
         }
 
         return ipRanges;
@@ -1099,9 +1099,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public IpRange[] GetBlockIpRangesByApp()
     {
         if (UserSettings.UseSplitByIpViaApp && CheckPremiumFeature(AppFeature.SplitByIpViaApp))
-            return IpRangeParser.ParseExcludes(SettingsService.SplitByIpSettings.AppBlocks);
+            return IpRangeTextFileParser.ParseExcludes(SettingsService.SplitByIpSettings.AppBlocks);
 
         return [];
+    }
+
+    public DomainFilterPolicy GetDomainFilterPolicy()
+    {
+        return new DomainFilterPolicy {
+            Includes = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Includes) ?? [],
+            Excludes = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Excludes) ?? [],
+            Blocks = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Blocks) ?? []
+        };
     }
 
     // make sure the active profile is valid and exist

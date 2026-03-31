@@ -16,6 +16,8 @@ public interface IAppController
     Task<AppData> GetConfig(CancellationToken cancellationToken);
     Task<SplitByIps> GetSplitByIps(CancellationToken cancellationToken);
     Task SetSplitByIps(SplitByIps value, CancellationToken cancellationToken);
+    Task<SplitByDomains> GetSplitByDomains(CancellationToken cancellationToken);
+    Task SetSplitByDomains(SplitByDomains value, CancellationToken cancellationToken);
     Task<AppState> GetState(CancellationToken cancellationToken);
     Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
     Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);

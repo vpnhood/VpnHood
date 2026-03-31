@@ -43,6 +43,17 @@ internal class AppController : ControllerBase, IAppController
             await ctx.SendNoContent();
         });
 
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "split-by-domains", async ctx => {
+            var res = await GetSplitByDomains(ctx.Token);
+            await ctx.SendJson(res);
+        });
+
+        mapper.AddStatic(HttpMethod.PUT, baseUrl + "split-by-domains", async ctx => {
+            var body = ctx.ReadJson<SplitByDomains>();
+            await SetSplitByDomains(body, ctx.Token);
+            await ctx.SendNoContent();
+        });
+
         mapper.AddStatic(HttpMethod.GET, baseUrl + "state", async ctx => {
             var res = await GetState(ctx.Token);
             await ctx.SendJson(res);
@@ -195,6 +206,25 @@ internal class AppController : ControllerBase, IAppController
         App.SettingsService.SplitByIpSettings.AppExcludes = value.AppExcludes;
         App.SettingsService.SplitByIpSettings.AppIncludes = value.AppIncludes;
         App.SettingsService.SplitByIpSettings.AppBlocks = value.AppBlocks;
+        return Task.CompletedTask;
+    }
+
+    public Task<SplitByDomains> GetSplitByDomains(CancellationToken cancellationToken)
+    {
+        var splitByDomains = new SplitByDomains {
+            Includes = App.SettingsService.SplitByDomainSettings.Includes,
+            Excludes = App.SettingsService.SplitByDomainSettings.Excludes,
+            Blocks = App.SettingsService.SplitByDomainSettings.Blocks
+        };
+
+        return Task.FromResult(splitByDomains);
+    }
+
+    public Task SetSplitByDomains(SplitByDomains value, CancellationToken cancellationToken)
+    {
+        App.SettingsService.SplitByDomainSettings.Includes = value.Includes;
+        App.SettingsService.SplitByDomainSettings.Excludes = value.Excludes;
+        App.SettingsService.SplitByDomainSettings.Blocks = value.Blocks;
         return Task.CompletedTask;
     }
 

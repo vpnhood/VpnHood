@@ -77,7 +77,7 @@ public class SplitByIpSettings(string folderPath)
 
     private void Write(string fileTitle, string content)
     {
-        IpRangeParser.Parse(content); // validate
+        IpRangeTextFileParser.Parse(content); // validate
         File.WriteAllText(GetFilePath(fileTitle), content);
     }
 }

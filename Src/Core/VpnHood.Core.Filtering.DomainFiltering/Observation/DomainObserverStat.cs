@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Filtering.DomainFiltering.Observation;
 
-public class DomainObserverُStat
+public class DomainObserverStat
 {
     public int TotalCount { get; internal set; }
     public int BlockedCount { get; internal set; }
@@ -13,14 +13,15 @@ public class DomainObserverُStat
     {
         TotalCount++;
         switch (action) {
-            case FilterAction.Block:
-                BlockedCount++;
-                break;
+            case FilterAction.Default: // counted as included unless ip filter drops it (Rarely happens)
             case FilterAction.Include:
                 IncludeCount++;
                 break;
             case FilterAction.Exclude:
                 ExcludeCount++;
+                break;
+            case FilterAction.Block:
+                BlockedCount++;
                 break;
         }
     }

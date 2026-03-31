@@ -14,8 +14,8 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.DomainFilterPolicy.Includes = [MockEps.HttpsUrl1.Host];
-        app.UserSettings.DomainFilterPolicy.Excludes = [MockEps.HttpsUrl2.Host];
+        app.SettingsService.SplitByDomainSettings.Includes = MockEps.HttpsUrl1.Host;
+        app.SettingsService.SplitByDomainSettings.Excludes = MockEps.HttpsUrl2.Host;
 
         // domain filter should have upper hand.
         // Here we force IpFilter to include HttpsUrl2 and exclude HttpsUrl1
@@ -45,8 +45,8 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.DomainFilterPolicy.Includes = [MockEps.QuicUrl1.Host];
-        app.UserSettings.DomainFilterPolicy.Excludes = [MockEps.QuicUrl2.Host];
+        app.SettingsService.SplitByDomainSettings.Includes = MockEps.QuicUrl1.Host;
+        app.SettingsService.SplitByDomainSettings.Excludes = MockEps.QuicUrl2.Host;
 
         // domain filter should have upper hand.
         // Here we force IpFilter to include QuicUrl2 and exclude QuicUrl1
@@ -122,6 +122,7 @@ public class FilteringTest : TestAppBase
         var oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
         await TestHelper.Test_Quic(uri: MockEps.QuicUrl2);
         var newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        Assert.AreEqual(oldStat.StreamPassthruCount, newStat.StreamPassthruCount);
         Assert.AreEqual(oldStat.StreamTunnelledCount + 1, newStat.StreamTunnelledCount);
     }
 

@@ -25,8 +25,8 @@ public class DomainFilteringService
     private readonly int _tlsBufferSize;
     private readonly bool _trackObservations;
     public DomainObserver DomainObserver { get; }
-    public DomainObserverُStat TcpStat { get; } = new();
-    public DomainObserverُStat QuicStat { get; } = new();
+    public DomainObserverStat TcpStat { get; } = new();
+    public DomainObserverStat QuicStat { get; } = new();
 
     public DomainFilteringService(
         IDomainFilter domainFilter,

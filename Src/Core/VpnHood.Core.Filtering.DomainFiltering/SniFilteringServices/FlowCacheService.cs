@@ -25,6 +25,7 @@ internal class FlowCacheService : IDisposable
         return _flowCache.TryGetValue(key, out value);
     }
 
+    // ReSharper disable once OutParameterValueIsAlwaysDiscarded.Global
     public bool TryRemove(IpEndPointValue key, out FlowInfo? value)
     {
         return _flowCache.TryRemove(key, out value);

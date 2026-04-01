@@ -876,6 +876,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 VhLogger.Instance.LogWarning("Access code rejected. Removing premium...");
                 RemovePremium(profileInfo.ClientProfileId);
                 break;
+
+            // remove the client profile if access expired
+            case SessionErrorCode.AccessExpired when Features.AutoRemoveExpiredPremium && profileInfo.IsAccessCodeFromAccount:
+                VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
+                RemovePremium(profileInfo.ClientProfileId);
+                break;
         }
     }
 

@@ -62,6 +62,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly ITrackerFactory _trackerFactory;
     private readonly IDevice _device;
+    private readonly bool _refreshAccountLegacy;
     private bool _isDisconnecting;
     private AppConnectionState? _lastConnectionState;
     private CancellationTokenSource _connectCts = new();
@@ -112,10 +113,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _logService = logService;
         _sessionTimeout = options.SessionTimeout;
         _allowRecommendUserReviewByServer = options.AllowRecommendUserReviewByServer;
-        _trackerFactory = options.TrackerFactory ?? 
+        _trackerFactory = options.TrackerFactory ??
                           (options.IsDebugMode ? new NullTrackerFactory() : new BuiltInTrackerFactory());
-        
-        var locationService = new LocationService(SettingsService, 
+
+        var locationService = new LocationService(SettingsService,
             useExternalLocationService: options.UseExternalLocationService,
             useInternalLocationService: options.UseInternalLocationService,
             locationServiceTimeout: options.LocationServiceTimeout,
@@ -127,6 +128,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // add a default test public server if not added yet
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
+
+        // remove all legacy the client profile for single profile app
+#pragma warning disable CS0618 // Type or member is obsolete
+        if (options.AccountProvider != null) {
+            var profileIds = ClientProfileService.List().Where(x => x is { IsForAccount: true, IsBuiltIn: false }).Select(x => x.ClientProfileId);
+            foreach (var profileId in profileIds.ToArray()) {
+                _refreshAccountLegacy = true;
+                ClientProfileService.Delete(profileId);
+            }
+        }
+#pragma warning restore CS0618 // Type or member is obsolete
 
         // remove default client profile if not exists
         if (UserSettings.ClientProfileId != null &&
@@ -192,8 +204,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AccountService = options.AccountProvider is null
                 ? null
                 : new AppAccountService(
-                    settingsService: settingsService, 
-                    accountProvider: options.AccountProvider, 
+                    settingsService: settingsService,
+                    accountProvider: options.AccountProvider,
                     clientProfileService: ClientProfileService,
                     storageFolderPath: Path.Combine(StorageFolderPath, "account")),
             UpdaterService = options.UpdaterOptions is null
@@ -257,7 +269,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
         }
 
-        //var a = await Dns.GetHostEntryAsync("googleads.g.doubleclick.net");
+        // refresh account if legacy account exists, but no error if refresh failed
+        if (_refreshAccountLegacy && Services.AccountService != null)
+            await VhUtils.TryInvokeAsync("Refreshing Account", ()=> Services.AccountService.Refresh(CancellationToken.None));
     }
 
     private void ApplySettings()
@@ -454,7 +468,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return AppConnectionState.None;
 
             if (clientState == ClientState.Initializing ||
-                Services.LocationService.IsFindingCountryIpRange || 
+                Services.LocationService.IsFindingCountryIpRange ||
                 Services.LocationService.IsFindingCountryCode)
                 return AppConnectionState.Initializing;
 

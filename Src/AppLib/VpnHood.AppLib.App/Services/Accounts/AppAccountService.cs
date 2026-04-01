@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
@@ -16,7 +17,7 @@ public class AppAccountService
     private readonly string _appAccountFilePath;
 
     public AppAccountService(
-        AppSettingsService settingsService, 
+        AppSettingsService settingsService,
         IAppAccountProvider accountProvider,
         ClientProfileService clientProfileService,
         string storageFolderPath)
@@ -32,9 +33,9 @@ public class AppAccountService
     }
 
 
-    public async Task <bool> IsPremium(CancellationToken cancellationToken)
+    public async Task<bool> IsPremium(CancellationToken cancellationToken)
     {
-        var account =  await GetAccount(cancellationToken).Vhc();
+        var account = await GetAccount(cancellationToken).Vhc();
         return !string.IsNullOrEmpty(account?.SubscriptionId);
     }
 
@@ -127,7 +128,9 @@ public class AppAccountService
     private ClientProfile? GetCurrentProfile()
     {
         var profileId = _settingsService.UserSettings.ClientProfileId;
-        return _clientProfileService.FindById(profileId ?? Guid.Empty);
+        var profile = _clientProfileService.FindById(profileId ?? Guid.Empty) 
+            ?? _clientProfileService.List().FirstOrDefault();
+        return profile;
     }
 
     public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken = default)

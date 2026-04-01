@@ -165,15 +165,9 @@ public class ClientProfileService
 
     public ClientProfile ImportAccessKey(string accessKey)
     {
-        return ImportAccessKey(accessKey, false);
-    }
-
-    private ClientProfile ImportAccessKey(string accessKey, bool isForAccount)
-    {
         try {
             var token = Token.FromAccessKey(accessKey);
-            return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false,
-                isForAccount: isForAccount);
+            return ImportAccessToken(token, overwriteNewer: true, allowOverwriteBuiltIn: false);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not import access key.");
@@ -184,8 +178,9 @@ public class ClientProfileService
     private readonly Lock _importLock = new();
 
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, bool allowOverwriteBuiltIn,
-        bool isForAccount = false, bool isBuiltIn = false)
+    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, 
+        bool allowOverwriteBuiltIn, 
+        bool isBuiltIn = false)
     {
         lock (_importLock) {
             // make sure no one overwrites built-in tokens
@@ -205,7 +200,6 @@ public class ClientProfileService
                     ClientProfileId = Guid.NewGuid(),
                     ClientProfileName = token.Name,
                     Token = token,
-                    IsForAccount = isForAccount,
                     IsBuiltIn = isBuiltIn
                 };
 

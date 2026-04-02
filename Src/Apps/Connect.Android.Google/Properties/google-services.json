@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "866504584967-44pm7ol6e1ltopl54bdvhql4t19c14tg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vpnhood.connect.android",
+            "certificate_hash": "545a64d0835080a610c8b1c2d0fa19a0929f08aa"
+          }
+        },
+        {
           "client_id": "866504584967-immiavpqi0ed6iddu58263qhkqip5ie3.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
@@ -61,13 +69,6 @@
             {
               "client_id": "866504584967-mqa61vv13fg70n2gvkojp9vr00bhgagk.apps.googleusercontent.com",
               "client_type": 3
-            },
-            {
-              "client_id": "866504584967-modrk2gb38jikaoefugf2v2aupu6bb0s.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.vpnhood.connect.android.web"
-              }
             }
           ]
         }

@@ -46,6 +46,14 @@
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <AndroidKeyStore>False</AndroidKeyStore>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <AndroidKeyStore>False</AndroidKeyStore>
+	</PropertyGroup>
+
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json')">
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>AppSettings</_Parameter1>
@@ -89,6 +97,9 @@
 	<ItemGroup>
 		<PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.JVM" Version="1.10.4.1" ExcludeAssets="all" />
 		<PackageReference Include="Xamarin.AndroidX.Datastore.Preferences.Core.JVM" Version="1.2.0.2" ExcludeAssets="all" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Docs\" />
 	</ItemGroup>
 
 </Project>

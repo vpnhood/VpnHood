@@ -116,7 +116,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _trackerFactory = options.TrackerFactory ??
                           (options.IsDebugMode ? new NullTrackerFactory() : new BuiltInTrackerFactory());
 
-        var locationService = new LocationService(SettingsService,
+        var locationService = new LocationService(settingsService,
             useExternalLocationService: options.UseExternalLocationService,
             useInternalLocationService: options.UseInternalLocationService,
             locationServiceTimeout: options.LocationServiceTimeout,

@@ -28,7 +28,8 @@ public class LocationService : IRegionProvider
     public LocationService(AppSettingsService settingsService,
         bool useInternalLocationService,
         bool useExternalLocationService,
-        TimeSpan locationServiceTimeout, byte[]? ipLocationZipData)
+        TimeSpan locationServiceTimeout,
+        byte[]? ipLocationZipData)
     {
         _settingsService = settingsService;
         _useExternalLocationService = useExternalLocationService;

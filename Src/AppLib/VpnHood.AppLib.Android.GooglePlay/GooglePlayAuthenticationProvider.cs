@@ -1,6 +1,8 @@
 using System.Security.Authentication;
 using AndroidX.Credentials;
+using AndroidX.Credentials.Exceptions;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Device.Droid;
 using VpnHood.Core.Client.Device.UiContexts;
 using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
@@ -14,20 +16,48 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAp
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
-
-        // GetGoogleIdOption is used to specify the options for the Google
-        using var googleSignInOptions = new GetGoogleIdOption.Builder()
-            .SetFilterByAuthorizedAccounts(false)
-            .SetServerClientId(googleSignInClientId)
-            .SetAutoSelectEnabled(isSilentLogin)
-            .Build();
-
-        using var credentialRequest =
-            new GetCredentialRequest.Builder().AddCredentialOption(googleSignInOptions).Build();
         using var credentialManager = GoogleCredentialManager.Create(appUiContext.Activity);
-        using var credentialResponse = await credentialManager
-            .GetCredentialAsync(appUiContext.Activity, credentialRequest, cancellationToken).ConfigureAwait(false);
-        return GetIdTokenFromCredentialResponse(credentialResponse);
+        var nonce = Guid.NewGuid().ToString();
+
+        // Try GetGoogleIdOption first (supports silent/auto-select login)
+        try {
+            using var googleIdOption = new GetGoogleIdOption.Builder()
+                .SetFilterByAuthorizedAccounts(false)
+                .SetServerClientId(googleSignInClientId)
+                .SetAutoSelectEnabled(isSilentLogin)
+                .SetNonce(nonce)
+                .Build();
+
+            using var credentialRequest = new GetCredentialRequest.Builder().AddCredentialOption(googleIdOption).Build();
+            using var credentialResponse = await credentialManager
+                .GetCredentialAsync(appUiContext.Activity, credentialRequest, cancellationToken)
+                .ConfigureAwait(false);
+            return GetIdTokenFromCredentialResponse(credentialResponse);
+        }
+        catch (NoCredentialException) when (!isSilentLogin) {
+            // Use GetSignInWithGoogleOption as fallback to show the interactive sign-in UI
+            return await SignInWithGoogle(appUiContext, credentialManager, nonce, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<string> SignInWithGoogle(AndroidUiContext appUiContext,
+        GoogleCredentialManager credentialManager, string nonce, CancellationToken cancellationToken)
+    {
+        try {
+            using var signInOption = new GetSignInWithGoogleOption.Builder(googleSignInClientId)
+                .SetNonce(nonce)
+                .Build();
+            using var fallbackRequest =
+                new GetCredentialRequest.Builder().AddCredentialOption(signInOption).Build();
+            using var fallbackResponse = await credentialManager
+                .GetCredentialAsync(appUiContext.Activity, fallbackRequest, cancellationToken)
+                .ConfigureAwait(false);
+            return GetIdTokenFromCredentialResponse(fallbackResponse);
+        }
+        catch (AuthenticationException ex) when (ex.Message.Contains("CancellationException")) {
+            // GetCredentialCancellationException from user dismissing the dialog
+            throw new UserCanceledException(ex.Message, ex);
+        }
     }
 
     public async Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)

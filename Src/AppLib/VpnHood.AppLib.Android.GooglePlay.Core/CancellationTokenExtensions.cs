@@ -4,6 +4,8 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 
 public static class CancellationTokenExtensions
 {
+    // do not dispose this CancellationSignal, because it will be cancelled by system when cancellationToken is cancelled,
+    // and we don't want to dispose it before that. It may cause system crash if we dispose it too early.
     public static CancellationSignal ToCancellationSignal(this CancellationToken cancellationToken)
     {
         var cancellationSignal = new CancellationSignal();

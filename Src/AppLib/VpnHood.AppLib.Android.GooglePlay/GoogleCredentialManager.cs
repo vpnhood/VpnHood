@@ -14,18 +14,18 @@ public class GoogleCredentialManager(ICredentialManager credentialManager) : IDi
         GetCredentialRequest credentialRequest, CancellationToken cancellationToken)
     {
         using var credentialManagerCallback = new CredentialManagerCallback();
-        using var cancellationSignal = cancellationToken.ToCancellationSignal();
+        var cancellationSignal = cancellationToken.ToCancellationSignal(); // do not dispose this
         credentialManager.GetCredentialAsync(activity, credentialRequest, cancellationSignal,
             activity.MainExecutor!, credentialManagerCallback);
-        var credentialResponse = await credentialManagerCallback.GetResultAsync().ConfigureAwait(false);
-        return credentialResponse;
+            var credentialResponse = await credentialManagerCallback.GetResultAsync().ConfigureAwait(false);
+            return credentialResponse;
     }
 
     public async Task ClearCredentialStateAsync(Activity activity, CancellationToken cancellationToken)
     {
         using var request = new ClearCredentialStateRequest();
         using var credentialManagerCallback = new CredentialManagerCallback();
-        using var cancellationSignal = cancellationToken.ToCancellationSignal();
+        var cancellationSignal = cancellationToken.ToCancellationSignal(); // do not dispose this
         credentialManager.ClearCredentialStateAsync(request, cancellationSignal,
             activity.MainExecutor!, credentialManagerCallback);
         await credentialManagerCallback.GetResultAsync().ConfigureAwait(false);

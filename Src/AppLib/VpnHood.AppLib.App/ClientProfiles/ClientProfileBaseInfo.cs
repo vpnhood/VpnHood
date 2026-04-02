@@ -13,7 +13,7 @@ public class ClientProfileBaseInfo
     public required bool IsPremiumLocationSelected { get; init; }
     public required bool IsPremium { get; init; }
     public required bool HasAccessCode { get; init; }
-    public bool IsAccessCodeFromAccount { get; set; }
+    public required bool IsAccessCodeFromAccount { get; set; }
     public required bool CanGoPremium { get; init; }
     public required bool CanTryPremium { get; init; }
     public required ClientServerLocationInfo? SelectedLocationInfo { get; init; }

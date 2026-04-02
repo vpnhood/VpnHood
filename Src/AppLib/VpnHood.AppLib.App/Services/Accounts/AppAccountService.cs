@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using System.Text.Json;
+﻿using System.Text.Json;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
@@ -78,17 +77,30 @@ public class AppAccountService
         if (currentProfile is null)
             throw new InvalidOperationException("Could not refresh account when there is no current client profile.");
 
-        var accessCode = _appAccount is { SubscriptionId: not null } 
+        // remove AccessCode from Account if there is no account (signed out)
+        // keep it if account exists but there is no subscription or access code is empty, because user have to remove it manually
+        if (_appAccount is null) {
+            if (currentProfile.IsAccessCodeFromAccount)
+                _clientProfileService.Update(currentProfile.ClientProfileId,
+                    new ClientProfileUpdateParams {
+                        AccessCode = new Patch<string?>(null),
+                        IsAccessCodeFromAccount = false
+                    });
+            return;
+        }
+
+        // get access code from account
+        var accessCode = _appAccount.SubscriptionId is not null
             ? await _accountProvider.GetAccessCode(_appAccount.SubscriptionId, cancellationToken)
             : null;
-        
+
         if (string.IsNullOrEmpty(accessCode))
             return;
-        
+
         // override profiles if access code is from account, or if there is an access code from account to set (e.g. first time login or access code changed)
         _clientProfileService.Update(currentProfile.ClientProfileId,
             new ClientProfileUpdateParams {
-                AccessCode = accessCode,
+                AccessCode = new Patch<string?>(accessCode),
                 IsAccessCodeFromAccount = true
             });
     }
@@ -109,7 +121,7 @@ public class AppAccountService
         if (!string.IsNullOrEmpty(currentProfile.AccessCode) && currentProfile.IsAccessCodeFromAccount) {
             _clientProfileService.Update(currentProfile.ClientProfileId,
                 new ClientProfileUpdateParams {
-                    AccessCode = null,
+                    AccessCode = new Patch<string?>(null),
                     IsAccessCodeFromAccount = false
                 });
         }
@@ -118,7 +130,7 @@ public class AppAccountService
     private ClientProfile? GetCurrentProfile()
     {
         var profileId = _settingsService.UserSettings.ClientProfileId;
-        var profile = _clientProfileService.FindById(profileId ?? Guid.Empty) 
+        var profile = _clientProfileService.FindById(profileId ?? Guid.Empty)
             ?? _clientProfileService.List().FirstOrDefault();
         return profile;
     }

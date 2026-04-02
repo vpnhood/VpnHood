@@ -78,29 +78,19 @@ public class AppAccountService
         if (currentProfile is null)
             throw new InvalidOperationException("Could not refresh account when there is no current client profile.");
 
-        // update profiles
-        var accessCode = _appAccount is { SubscriptionId: not null }
+        var accessCode = _appAccount is { SubscriptionId: not null } 
             ? await _accountProvider.GetAccessCode(_appAccount.SubscriptionId, cancellationToken)
             : null;
-
-        // override profiles if access code is from account, or if there is an access code from account to set (e.g. first time login or access code changed)
-        if (currentProfile.IsAccessCodeFromAccount) {
-            _clientProfileService.Update(currentProfile.ClientProfileId,
-                new ClientProfileUpdateParams {
-                    AccessCode = accessCode,
-                    IsAccessCodeFromAccount = !string.IsNullOrEmpty(accessCode)
-                });
+        
+        if (string.IsNullOrEmpty(accessCode))
             return;
-        }
-
-        // Only update if there is an access code from account to set (don't clear it)
-        if (!string.IsNullOrEmpty(accessCode)) {
-            _clientProfileService.Update(currentProfile.ClientProfileId,
-                new ClientProfileUpdateParams {
-                    AccessCode = accessCode,
-                    IsAccessCodeFromAccount = false
-                });
-        }
+        
+        // override profiles if access code is from account, or if there is an access code from account to set (e.g. first time login or access code changed)
+        _clientProfileService.Update(currentProfile.ClientProfileId,
+            new ClientProfileUpdateParams {
+                AccessCode = accessCode,
+                IsAccessCodeFromAccount = true
+            });
     }
 
     private void ClearAccount()

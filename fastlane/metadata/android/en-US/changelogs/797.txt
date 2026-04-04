@@ -1,0 +1,4 @@
+* Update: Allow retrieving premium code after in-app purchase via Google Play
+* Fix: UDP protocol issues on certain networks and devices
+* Fix: Google Play premium purchase issues
+* Fix: Installation failure on some Android devices due to missing CPU architecture support

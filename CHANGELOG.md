@@ -1,7 +1,8 @@
-# Upcoming
+# v7.7.797
 * Update: Allow retrieving premium code after in-app purchase via Google Play
 * Fix: UDP protocol issues on certain networks and devices
 * Fix: Google Play premium purchase issues
+* Fix: Installation failure on some Android devices due to missing CPU architecture support
 
 # v7.7.792
 * Fix: Crash on some Android devices at startup

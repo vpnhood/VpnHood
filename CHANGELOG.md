@@ -1,5 +1,7 @@
 # Upcoming
-* Fix: UDP protocol on some networks and devices
+* Update: Allow retrieving premium code after in-app purchase via Google Play
+* Fix: UDP protocol issues on certain networks and devices
+* Fix: Google Play premium purchase issues
 
 # v7.7.792
 * Fix: Crash on some Android devices at startup

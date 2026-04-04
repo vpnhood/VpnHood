@@ -32,9 +32,9 @@ public class AppAccountService
     }
 
 
-    public async Task<bool> IsPremium(CancellationToken cancellationToken)
+    public async Task<bool> IsPremium(bool useCache, CancellationToken cancellationToken)
     {
-        var account = await GetAccount(cancellationToken).Vhc();
+        var account = await GetAccount(useCache, cancellationToken).Vhc();
         return !string.IsNullOrEmpty(account?.SubscriptionId);
     }
 

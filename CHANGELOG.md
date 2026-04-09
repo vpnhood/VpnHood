@@ -1,4 +1,4 @@
-# Upcoming
+# v7.7.798
 * Fix: Could not establish certain connections in Cloak Mode, such as FTPS
 
 # v7.7.797

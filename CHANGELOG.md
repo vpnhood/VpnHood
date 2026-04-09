@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Could not establish certain connections in Cloak Mode, such as FTPS
+
 # v7.7.797
 * Update: Allow retrieving premium code after in-app purchase via Google Play
 * Fix: UDP protocol issues on certain networks and devices

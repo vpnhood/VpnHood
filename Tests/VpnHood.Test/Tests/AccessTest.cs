@@ -1,0 +1,266 @@
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling;
+using VpnHood.Test.Device;
+using VpnHood.Test.Extensions;
+
+namespace VpnHood.Test.Tests;
+
+[TestClass]
+public class AccessTest : TestBase
+{
+    [TestMethod]
+    public async Task Server_reject_invalid_requests()
+    {
+        await using var server = await TestHelper.CreateServer();
+
+        // ************
+        // *** TEST ***: request with invalid tokenId
+        var token = TestHelper.CreateAccessToken(server);
+        token.TokenId = Guid.NewGuid().ToString(); //set invalid tokenId
+
+        try {
+            await using var client1 = await TestHelper.CreateClient(token);
+            Assert.Fail("Client should not connect with invalid token id");
+        }
+        catch (Exception ex) when (ex is not AssertFailedException) {
+        }
+
+        // ************
+        // *** TEST ***: request with invalid token signature
+        token = TestHelper.CreateAccessToken(server);
+        token.Secret = Guid.NewGuid().ToByteArray(); //set invalid secret
+
+        try {
+            await using var client2 = await TestHelper.CreateClient(token);
+            Assert.Fail("Client should not connect with invalid token secret");
+        }
+        catch (Exception ex) when (ex is not AssertFailedException) {
+        }
+    }
+
+    [TestMethod]
+    public async Task Server_reject_expired_access_hello()
+    {
+        await using var server = await TestHelper.CreateServer();
+
+        // create an expired token
+        var token = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
+
+        // create client and connect
+        await using var client = await TestHelper.CreateClient(token, autoConnect: false);
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => client.Connect(TestCt));
+        Assert.AreEqual(SessionErrorCode.AccessExpired, ex.SessionResponse.ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task Server_reject_expired_access_at_runtime()
+    {
+        var managerOptions = TestHelper.CreateFileAccessManagerOptions();
+        managerOptions.SessionOptions.SyncInterval =
+            TimeSpan.FromMinutes(10); // make sure the disconnect is not due to sync
+        using var accessManager = TestHelper.CreateAccessManager(managerOptions);
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // create a short expiring token
+        var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.UtcNow.AddSeconds(1));
+
+        // connect and download
+        await using var client = await TestHelper.CreateClient(accessToken);
+
+        // test expiration
+        await VhTestUtil.AssertEqualsWait(ClientState.Disposed, async () => {
+            await server.SessionManager.Sync(true, TestCt);
+            await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(500));
+            return client.State;
+        }, cancellationToken: TestCt);
+
+        Assert.AreEqual(SessionErrorCode.AccessExpired, client.GetSessionErrorCode());
+
+        var sessionId = client.SessionId;
+        await AssertEqualsWait(true, () => {
+            var managerSession = accessManager.SessionService.Sessions.GetValueOrDefault(sessionId);
+            return managerSession?.EndTime != null;
+        });
+    }
+
+    [TestMethod]
+    public async Task Server_reject_trafficOverflow_access()
+    {
+        // create server
+        var managerOptions = TestHelper.CreateFileAccessManagerOptions();
+        managerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
+        await using var server = await TestHelper.CreateServer(managerOptions);
+
+        // create a fast expiring token
+        var accessToken = TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
+
+        // ----------
+        // check: client must disconnect at runtime on traffic overflow
+        // ----------
+        await using var client1 = await TestHelper.CreateClient(accessToken);
+        Assert.AreEqual(50, client1.RequiredSession.Status.SessionMaxTraffic);
+
+        VhLogger.Instance.LogDebug("Test: Second try should get the AccessTrafficOverflow status.");
+        await VhTestUtil.AssertEqualsWait(SessionErrorCode.AccessTrafficOverflow, async () => {
+            await TestHelper.Test_Https(timeout: TimeSpan.FromMilliseconds(2000), throwError: false);
+            return client1.GetSessionErrorCode();
+        });
+
+        // ----------
+        // check: client must disconnect at hello on traffic overflow
+        // ----------
+        await using var client2 = await TestHelper.CreateClient(accessToken, autoConnect: false);
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => client2.Connect());
+        Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.GetSessionErrorCode());
+        Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, ex.SessionResponse.ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task Server_maxClient_suppress_other_sessions()
+    {
+        var managerOptions = TestHelper.CreateFileAccessManagerOptions();
+        managerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
+
+        // Create Server
+        await using var server = await TestHelper.CreateServer(managerOptions);
+        var token = TestHelper.CreateAccessToken(server, maxClientCount: 2);
+
+        // create default token with 2 client count
+        await using var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: token);
+
+        // suppress by yourself
+        await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: token, clientId: client1.Config.ClientId);
+
+        Assert.AreEqual(SessionSuppressType.YourSelf, client2.RequiredSession.Info.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.Ok, client2.GetSessionErrorCode());
+
+        // wait for finishing client1
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for client1 disposal.");
+        await client1.WaitForState(ClientState.Disposed, useUpdateStatus: true);
+        Assert.AreEqual(SessionSuppressType.None, client1.RequiredSession.Info.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client1.GetSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.YourSelf, client1.GetSessionExceptionResponse()?.SuppressedBy);
+
+        // suppress by other (MaxTokenClient is 2)
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Creating client3.");
+        await using var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: token);
+
+        await using var client4 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: token);
+
+        // create a client with another token
+        var accessTokenX = TestHelper.CreateAccessToken(server);
+        await using var clientX = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: accessTokenX);
+
+        // wait for finishing client2
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Waiting for client2 disposal.");
+        await client2.WaitForState(ClientState.Disposed, useUpdateStatus: true);
+
+        Assert.AreEqual(SessionSuppressType.YourSelf, client2.RequiredSession.Info.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, client2.GetSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.Other, client2.GetSessionExceptionResponse()?.SuppressedBy);
+        Assert.AreEqual(SessionErrorCode.Ok, client3.GetSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.None, client3.RequiredSession.Info.SuppressedTo);
+        Assert.AreEqual(SessionSuppressType.Other, client4.RequiredSession.Info.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.Ok, client4.GetSessionErrorCode());
+        Assert.AreEqual(SessionErrorCode.Ok, clientX.GetSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.None, clientX.RequiredSession.Info.SuppressedTo);
+    }
+
+    [TestMethod]
+    public async Task Server_maxClient_should_not_suppress_when_zero()
+    {
+        // Create Server
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server, 0);
+
+        // client1
+        await using var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: token);
+
+        await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: token);
+
+        await using var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: token);
+
+        Assert.AreEqual(SessionSuppressType.None, client3.RequiredSession.Info.SuppressedTo);
+        Assert.AreEqual(SessionErrorCode.Ok, client3.GetSessionErrorCode());
+    }
+
+    [TestMethod]
+    public async Task Client_should_not_suppress_itself_after_disconnect()
+    {
+        // Create Server
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server);
+
+        // create default token with 2 client count
+        var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: token);
+        await client1.DisposeAsync();
+        await client1.WaitForState(ClientState.Disposed);
+
+        // suppress by yourself
+        await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
+            token: token, clientId: client1.Config.ClientId);
+
+        Assert.AreEqual(SessionErrorCode.Ok, client1.GetSessionErrorCode());
+        Assert.AreEqual(SessionSuppressType.None, client2.RequiredSession.Info.SuppressedTo);
+    }
+
+    [TestMethod]
+    public async Task Client_should_get_access_info()
+    {
+        // Create Server
+        var expired = DateTime.UtcNow.AddDays(1);
+        await using var server = await TestHelper.CreateServer();
+        var token = TestHelper.CreateAccessToken(server, maxClientCount: 2,
+            expirationTime: expired,
+            maxTrafficByteCount: 2_000_000);
+
+        // create default token with 2 client count
+        await using (var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
+            await client1.WaitForState(ClientState.Connected);
+        }
+
+        await Task.Delay(1000, TestCt);
+        // remove milliseconds from time for comparison
+        var time = DateTime.UtcNow;
+        time = new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, time.Second, DateTimeKind.Utc);
+
+        // create a new client with the same token, it should not suppress
+        await using (var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
+            var accessInfo = client2.RequiredSession.Info.AccessInfo;
+            Assert.IsNotNull(accessInfo);
+            Assert.IsNull(client2.GetSessionException());
+            Assert.AreEqual(SessionSuppressType.None, client2.RequiredSession.Info.SuppressedTo);
+            Assert.AreEqual(2, accessInfo.MaxDeviceCount);
+            Assert.AreEqual(2_000_000, accessInfo.MaxTotalTraffic);
+            Assert.IsTrue(accessInfo.IsPremium);
+            Assert.AreEqual(expired, accessInfo.ExpirationTime);
+            Assert.IsTrue(accessInfo.CreatedTime <= time);
+            Assert.IsTrue(accessInfo.LastUsedTime <= time, $"Diff: {(time - accessInfo.LastUsedTime).TotalSeconds}sec");
+        }
+
+        await Task.Delay(200, TestCt);
+
+        // create a new client with the same token, it should not suppress
+        await using (var client3 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
+            var accessInfo = client3.RequiredSession.Info.AccessInfo;
+            Assert.IsNotNull(accessInfo);
+            Assert.IsNotNull(accessInfo);
+            Assert.IsTrue(accessInfo.CreatedTime < time);
+            Assert.IsTrue(accessInfo.LastUsedTime > time);
+        }
+    }
+}

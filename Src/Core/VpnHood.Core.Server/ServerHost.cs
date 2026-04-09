@@ -496,10 +496,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             // reply the error to caller if it is SessionException
             // create a new CancellationTokenSource for close timeout
-            using var closeTimeoutCts =
-                new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
-            using var closeCts =
-                CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token);
+            using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
+            using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token);
             await connection.DisposeAsync(ex.SessionResponse, closeCts.Token).Vhc();
         }
         finally {

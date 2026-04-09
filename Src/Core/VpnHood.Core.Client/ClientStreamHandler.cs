@@ -134,11 +134,6 @@ internal class ClientStreamHandler(
             VhLogger.Format(hostEndPoint), connection.ConnectionId);
 
 
-        //handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
-        var memory = new Memory<byte>(new byte[TunnelDefaults.PrefetchStreamBufferSize]);
-        var read = await connection.Stream.ReadAsync(memory, cancellationToken);
-        var initContents = memory[..read];
-
         // Create the Request
         var request = new StreamProxyChannelRequest {
             RequestId = connection.ConnectionId,
@@ -146,6 +141,11 @@ internal class ClientStreamHandler(
             SessionKey = sessionKey,
             DestinationEndPoint = hostEndPoint
         };
+
+        // handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
+        // wait just 100ms, because is some case such as FTPS with explicit encryption, client waits for server data
+        // before sending the TLS hello, so there is no initial data to prefetch
+        var initContents = await ReadInitContents(connection.Stream, TimeSpan.FromMilliseconds(100), cancellationToken);
 
         // read the response
         var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
@@ -161,6 +161,26 @@ internal class ClientStreamHandler(
         catch {
             requestResult.Dispose();
             throw;
+        }
+    }
+
+    // return init contents if exist in given timeout, otherwise return empty. 
+    private static async Task<ReadOnlyMemory<byte>> ReadInitContents(Stream stream, TimeSpan initTimeout, CancellationToken cancellationToken)
+    {
+        using var prefetchCts = new CancellationTokenSource(initTimeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(prefetchCts.Token, cancellationToken);
+
+        try {
+            // handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
+            // wait just 100ms, because is some case such as FTPS with explicit encryption, client waits for server data
+            // before sending the TLS hello, so there is no initial data to prefetch
+            var memory = new Memory<byte>(new byte[TunnelDefaults.PrefetchStreamBufferSize]);
+            var read = await stream.ReadAsync(memory, linkedCts.Token);
+            var initContents = memory[..read];
+            return initContents;
+        }
+        catch (OperationCanceledException) when (prefetchCts.IsCancellationRequested) {
+            return ReadOnlyMemory<byte>.Empty;
         }
     }
 

@@ -1,0 +1,1 @@
+* Fix: Could not establish certain connections in Cloak Mode, such as FTPS

@@ -152,12 +152,24 @@ public class ClientTunnelTest : TestBase
         clientServer.AssertTransfer();
     }
 
+    private async Task AssertValidTcpData(ClientServerDom clientServer)
+    {
+        clientServer.Collect();
+
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: TcpData");
+        await TestHelper.Test_TcpData();
+
+        clientServer.AssertClientReceived();
+        clientServer.AssertServerSent();
+    }
+
     private async Task AssertTunnel(ClientServerDom clientServerDom)
     {
         await AssertValidTcp(clientServerDom);
         await AssertValidUdp(clientServerDom);
         await AssertValidPingV4(clientServerDom);
         await AssertValidPingV6(clientServerDom);
+        await AssertValidTcpData(clientServerDom);
         await AssertInvalidTcpRequest(clientServerDom);
     }
 }

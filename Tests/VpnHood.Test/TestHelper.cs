@@ -240,6 +240,26 @@ public class TestHelper : IDisposable
     }
 
 
+    public async Task Test_TcpData(IPEndPoint? tcpEndPoint = null, TimeSpan? timeout = null)
+    {
+        tcpEndPoint ??= WebServer.MockEps.TcpDataEndPoint1;
+        timeout ??= TestConstants.DefaultHttpTimeout;
+
+        using var cts = new CancellationTokenSource(timeout.Value);
+        using var tcpClient = new TcpClient();
+        await tcpClient.ConnectAsync(tcpEndPoint, cts.Token);
+
+        var buffer = new byte[2000];
+        var totalRead = 0;
+        while (totalRead < buffer.Length) {
+            var read = await tcpClient.GetStream().ReadAsync(buffer.AsMemory(totalRead), cts.Token);
+            if (read == 0) break;
+            totalRead += read;
+        }
+
+        Assert.AreEqual(2000, totalRead, "Did not receive expected 2000 bytes from TcpData endpoint.");
+    }
+
     public async Task<bool> Test_Https(Uri? uri = null, TimeSpan? timeout = null, bool throwError = true)
     {
         uri ??= WebServer.MockEps.HttpsUrl1;

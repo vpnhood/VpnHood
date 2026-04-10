@@ -106,24 +106,44 @@ internal class ClientServerDom : IAsyncDisposable
         OldServerReceivedByteCount = ServerSession.Tunnel.Traffic.Received;
     }
 
-    public void AssertClientTransfer(int minTunnelSendData = 100, int minTunnelReceivedData = 500)
+    public void AssertClientSent(int minData = 100)
     {
         Assert.AreNotEqual(OldClientSentByteCount, Client.RequiredSession.Status.SessionTraffic.Sent,
-            delta: minTunnelSendData,
+            delta: minData,
             "Not enough data has been sent through the client.");
+    }
+
+    public void AssertClientReceived(int minData = 500)
+    {
         Assert.AreNotEqual(OldClientReceivedByteCount, Client.RequiredSession.Status.SessionTraffic.Received,
-            delta: minTunnelReceivedData,
+            delta: minData,
             "Not enough data has been received through the client.");
+    }
+
+    public void AssertServerSent(int minData = 500)
+    {
+        Assert.AreNotEqual(OldServerSentByteCount, ServerSession.Tunnel.Traffic.Sent,
+            delta: minData,
+            "Not enough data has been sent through the server.");
+    }
+
+    public void AssertServerReceived(int minData = 100)
+    {
+        Assert.AreNotEqual(OldServerReceivedByteCount, ServerSession.Tunnel.Traffic.Received,
+            delta: minData,
+            "Not enough data has been received through the server.");
+    }
+
+    public void AssertClientTransfer(int minTunnelSendData = 100, int minTunnelReceivedData = 500)
+    {
+        AssertClientSent(minTunnelSendData);
+        AssertClientReceived(minTunnelReceivedData);
     }
 
     public void AssertServerTransfer(int minTunnelSendData = 500, int minTunnelReceivedData = 100)
     {
-        Assert.AreNotEqual(OldServerSentByteCount, ServerSession.Tunnel.Traffic.Sent,
-            delta: minTunnelSendData,
-            "Not enough data has been sent through the server.");
-        Assert.AreNotEqual(OldServerReceivedByteCount, ServerSession.Tunnel.Traffic.Received,
-            delta: minTunnelReceivedData,
-            "Not enough data has been received through the server.");
+        AssertServerSent(minTunnelSendData);
+        AssertServerReceived(minTunnelReceivedData);
     }
 
     public void AssertTransfer(int minTunnelSendData = 100, int minTunnelReceivedData = 500)

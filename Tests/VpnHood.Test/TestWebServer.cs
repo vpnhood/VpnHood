@@ -26,6 +26,7 @@ public class TestWebServer : IDisposable
     private readonly List<WebserverLite> _webServers = [];
     private IReadOnlyList<UdpClient> UdpClients { get; }
     private readonly List<QuicTesterServer> _quicServers = [];
+    private readonly List<TcpListener> _tcpDataListeners = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
@@ -83,11 +84,12 @@ public class TestWebServer : IDisposable
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting UDP...");
         StartUdpEchoServer();
-        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer started UDP...");
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting QUIC...");
         StartQuicEchoServer();
-        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer started QUIC...");
+
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting TcpData...");
+        StartTcpDataServer();
 
         return Task.CompletedTask;
     }
@@ -113,6 +115,32 @@ public class TestWebServer : IDisposable
             var udpResult = await udpClient.ReceiveAsync(CancellationToken);
             await udpClient.SendAsync(udpResult.Buffer, udpResult.RemoteEndPoint, CancellationToken);
         }
+    }
+
+    private void StartTcpDataServer()
+    {
+        foreach (var endpoint in LocalEps.AllTcpDataEndPoints) {
+            var listener = new TcpListener(endpoint);
+            listener.Start();
+            _tcpDataListeners.Add(listener);
+            _ = AcceptTcpDataClients(listener);
+        }
+    }
+
+    private async Task AcceptTcpDataClients(TcpListener listener)
+    {
+        while (!CancellationToken.IsCancellationRequested) {
+            var client = await listener.AcceptTcpClientAsync(CancellationToken);
+            _ = SendTcpData(client);
+        }
+    }
+
+    private static async Task SendTcpData(TcpClient client)
+    {
+        using var _ = client;
+        var buffer = new byte[2000];
+        Random.Shared.NextBytes(buffer);
+        await client.GetStream().WriteAsync(buffer);
     }
 
     private void StartQuicEchoServer()
@@ -142,6 +170,9 @@ public class TestWebServer : IDisposable
 
         foreach (var quicServer in _quicServers)
             quicServer.Dispose();
+
+        foreach (var listener in _tcpDataListeners)
+            listener.Dispose();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test Server Disposed.");
         _cancellationTokenSource.Dispose();

@@ -45,4 +45,5 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public Uri HttpBlockedServerUri => new($"https://{HttpV4EndPointBlockedServer}/file2");
     public IPAddress PingV4Address1 => testIps.RemoteTestIps[0];
     public IPAddress PingV6Address1 => testIps.RemoteTestIpV6;
+    public IPEndPoint TcpDataEndPoint1 => MapToRemote(localEps.TcpDataEndPoint1);
 }

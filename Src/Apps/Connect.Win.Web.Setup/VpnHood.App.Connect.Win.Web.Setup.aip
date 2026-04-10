@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="23.4" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="23.6" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_APP_FILE" Value="[#VpnHoodConnect.exe]"/>
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
@@ -19,10 +19,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{D29A3BBF-4451-474D-9CA6-C25262C8DBF6} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{A9F8DBD4-A010-40A5-B86A-7B0756FB88A9} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood! CONNECT"/>
-    <ROW Property="ProductVersion" Value="7.7.791" Options="20"/>
+    <ROW Property="ProductVersion" Value="7.7.798" Options="20"/>
     <ROW Property="RUNAPPLICATION" Value="1" Type="4"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{CD5160B9-4A66-4F81-A162-9BA69FC81313}"/>
@@ -72,7 +72,7 @@
     <ROW Directory="zhHant_Dir" Directory_Parent="APPDIR" DefaultDir="zh-Hant" DirectoryOptions="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{B726AA46-6DB9-4753-8934-360487BD2946}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{5C2B6C0F-B5E2-44A0-87CA-0104950C6EE8}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{21851DB9-D1F6-4B22-9844-D91CE291D8A3}" Directory_="APPDIR" Attributes="260" KeyPath="NoModify" Options="1"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="Accessibility.dll" ComponentId="{6125235F-C8DC-42E0-BC59-0E11D956B841}" Directory_="APPDIR" Attributes="0" KeyPath="Accessibility.dll"/>
@@ -533,7 +533,7 @@
     <ROW Component="hostfxr.dll" ComponentId="{BC0967F4-7DF4-4A37-8C80-3C76828B0F66}" Directory_="APPDIR" Attributes="256" KeyPath="hostfxr.dll"/>
     <ROW Component="hostpolicy.dll" ComponentId="{37A1012B-C8BE-498A-9BD7-2CD78581BB7B}" Directory_="APPDIR" Attributes="256" KeyPath="hostpolicy.dll"/>
     <ROW Component="mscordaccore.dll" ComponentId="{EA8A69E4-1B6B-4AAD-A48D-9EB59FA6AB15}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore.dll"/>
-    <ROW Component="mscordaccore_amd64_amd64_10.0.326.7603.dll" ComponentId="{5751D466-6C7D-4F06-A14F-882D946953C4}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_10.0.326.7603.dll"/>
+    <ROW Component="mscordaccore_amd64_amd64_10.0.526.15411.dll" ComponentId="{E4132475-3BA6-4019-8F15-40E256E714B3}" Directory_="APPDIR" Attributes="256" KeyPath="mscordaccore_amd64_amd64_10.0.526.15411.dll"/>
     <ROW Component="mscordbi.dll" ComponentId="{EBA3A2AB-FBCE-495D-8012-0465D47E5B42}" Directory_="APPDIR" Attributes="256" KeyPath="mscordbi.dll"/>
     <ROW Component="mscorlib.dll" ComponentId="{5E6D16B7-22DA-4FCB-AC28-AD3A361BF6C5}" Directory_="APPDIR" Attributes="0" KeyPath="mscorlib.dll"/>
     <ROW Component="mscorrc.dll" ComponentId="{F98E0E0B-1EC3-41F4-8FC2-528E33EF3A9A}" Directory_="APPDIR" Attributes="256" KeyPath="mscorrc.dll"/>
@@ -1017,7 +1017,6 @@
     <ROW File="System.Windows.Input.Manipulations_12_.resources.dll" Component_="System.Windows.Input.Manipulations_12_.resources.dll" FileName="SYSTEM~2.DLL|System.Windows.Input.Manipulations.resources.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\zh-Hant\System.Windows.Input.Manipulations.resources.dll" SelfReg="false"/>
     <ROW File="CavemanTcp.dll" Component_="CavemanTcp.dll" FileName="CAVEMA~1.DLL|CavemanTcp.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\CavemanTcp.dll" SelfReg="false"/>
     <ROW File="IpMatcher.dll" Component_="IpMatcher.dll" FileName="IPMATC~1.DLL|IpMatcher.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\IpMatcher.dll" SelfReg="false"/>
-    <ROW File="mscordaccore_amd64_amd64_10.0.326.7603.dll" Component_="mscordaccore_amd64_amd64_10.0.326.7603.dll" FileName="MSCORD~2.DLL|mscordaccore_amd64_amd64_10.0.326.7603.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\mscordaccore_amd64_amd64_10.0.326.7603.dll" SelfReg="false"/>
     <ROW File="Nager.Country.dll" Component_="Nager.Country.dll" FileName="NAGERC~1.DLL|Nager.Country.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\Nager.Country.dll" SelfReg="false"/>
     <ROW File="Nager.Country.Translation.dll" Component_="Nager.Country.Translation.dll" FileName="NAGERC~2.DLL|Nager.Country.Translation.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\Nager.Country.Translation.dll" SelfReg="false"/>
     <ROW File="RegexMatcher.dll" Component_="RegexMatcher.dll" FileName="REGEXM~1.DLL|RegexMatcher.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\RegexMatcher.dll" SelfReg="false"/>
@@ -1040,6 +1039,7 @@
     <ROW File="VpnHood.Core.Proxies.EndPointManagement.pdb" Component_="VpnHood.Core.Proxies.EndPointManag_1_ement.dll" FileName="VPNHO~27.PDB|VpnHood.Core.Proxies.EndPointManagement.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Proxies.EndPointManagement.pdb" SelfReg="false"/>
     <ROW File="WatsonWebserver.Core.dll" Component_="WatsonWebserver.Core.dll" FileName="WATSON~1.DLL|WatsonWebserver.Core.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\WatsonWebserver.Core.dll" SelfReg="false"/>
     <ROW File="WatsonWebserver.Lite.dll" Component_="WatsonWebserver.Lite.dll" FileName="WATSON~2.DLL|WatsonWebserver.Lite.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\WatsonWebserver.Lite.dll" SelfReg="false"/>
+    <ROW File="mscordaccore_amd64_amd64_10.0.526.15411.dll" Component_="mscordaccore_amd64_amd64_10.0.526.15411.dll" FileName="MSCORD~3.DLL|mscordaccore_amd64_amd64_10.0.526.15411.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\mscordaccore_amd64_amd64_10.0.526.15411.dll" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiRemoveFileComponent">
     <ROW RemoveFile="__1" Options="3"/>
@@ -1068,7 +1068,7 @@
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
-    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="[|ProductName]" SignOptions="7" SignTool="7" UseSha256="1" TSEndPoint="https://wus2.codesigning.azure.net/" TSAccountName="Vh-Signing" TSCertName="OmegaHood-CodeSigning"/>
+    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="[|ProductName]" SignOptions="7" SignTool="7" UseSha256="1" Subject="CN=NetFreedom Pioneers, O=NetFreedom Pioneers, S=California, C=US, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=California, OID.1.3.6.1.4.1.311.60.2.1.3=US, SERIALNUMBER=3506245" TSEndPoint="https://wus2.codesigning.azure.net/" TSAccountName="Vh-Signing" TSCertName="OmegaHood-CodeSigning"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DynamicPropertyComponent">
     <ROW Property="ProductVersion" Type="3" SourcePath="..\..\..\Pub\PubVersion.json" PathInSource="Root\Version"/>
@@ -1693,9 +1693,9 @@
     <ROW Feature_="MainFeature" Component_="WatsonWebserver.Lite.dll"/>
     <ROW Feature_="MainFeature" Component_="CavemanTcp.dll"/>
     <ROW Feature_="MainFeature" Component_="IpMatcher.dll"/>
-    <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_10.0.326.7603.dll"/>
     <ROW Feature_="MainFeature" Component_="Nager.Country.dll"/>
     <ROW Feature_="MainFeature" Component_="Nager.Country.Translation.dll"/>
+    <ROW Feature_="MainFeature" Component_="mscordaccore_amd64_amd64_10.0.526.15411.dll"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="SystemFoldermsiexec.exe" SourcePath="&lt;AI_RES&gt;uninstall.ico" Index="0"/>

@@ -29,6 +29,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private readonly Lock _stopLock = new();
     private bool _isRestarting;
     private bool _isStopping;
+    private VpnAdapterOptions? _startOptions;
+
     // ReSharper disable once FieldCanBeMadeReadOnly.Local
     protected bool UseNat { get; private set; }
     public abstract bool IsAppFilterSupported { get; }
@@ -124,9 +126,19 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return ipVersion == IpVersion.IPv4 ? AdapterIpNetworkV4 : AdapterIpNetworkV6;
     }
 
-    public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
+    public async Task Restart(CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
+        ArgumentNullException.ThrowIfNull(_startOptions, nameof(cancellationToken));
+        Stop();
+        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+        await Start(_startOptions, cancellationToken);
+    }
+
+        public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+        _startOptions = options;
 
         if (UseNat && !IsNatSupported)
             throw new NotSupportedException("NAT is not supported by this adapter.");

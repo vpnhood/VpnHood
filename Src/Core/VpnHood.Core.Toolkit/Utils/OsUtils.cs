@@ -54,8 +54,10 @@ public static class OsUtils
         var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
 
         await WaitForExitAsync(process, cancellationToken);
-        if (process.ExitCode != 0)
+        if (process.ExitCode != 0) {
+            error += $". Command: {fileName} {command}.";
             throw new ExternalException(error, process.ExitCode);
+        }
 
         return output;
     }

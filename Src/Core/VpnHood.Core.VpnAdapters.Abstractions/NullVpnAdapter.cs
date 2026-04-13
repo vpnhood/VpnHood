@@ -11,6 +11,7 @@ public class NullVpnAdapter(bool autoDisposePackets, bool blocking) :
         AutoDisposePackets = autoDisposePackets
     })
 {
+    protected override bool RestartAfterNetworkAddressChanged => false;
     public override bool IsAppFilterSupported => true;
     public override bool IsNatSupported => true;
     protected override bool IsSocketProtectedByBind => false;

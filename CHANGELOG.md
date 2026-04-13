@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: freeze connection after network change or restroe from hypernation
+
 # v7.7.798
 * Fix: Could not establish certain connections in Cloak Mode, such as FTPS
 

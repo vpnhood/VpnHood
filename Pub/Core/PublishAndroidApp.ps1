@@ -4,6 +4,7 @@ param(
 	[Parameter(Mandatory=$true)] [String]$packageId,
 	[Parameter(Mandatory=$true)] [String]$distribution,
 	[Parameter(Mandatory=$true)] [String]$repoUrl,
+	[String]$archs = "",
 	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
@@ -41,98 +42,123 @@ $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
 $appIconXml = Join-Path $projectDir "Resources/mipmap-anydpi-v26/ic_launcher.xml";
 $appIconXmlDoc = [xml](Get-Content $appIconXml);
 $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
+if ([string]::IsNullOrWhiteSpace($archs)) {
+    $archs = "android-arm64;android-x64;android-arm;android-x86;"
+}
+
+# prepare temp project file and update RuntimeIdentifiers
+# I got sick and tird passing -p:RuntimeIdentifiers 
+$tempProjectFile = $projectFile + ".tmp.csproj"
+Copy-Item -Path $projectFile -Destination $tempProjectFile -Force
+
+$projectXml = New-Object System.Xml.XmlDocument
+$projectXml.PreserveWhitespace = $true
+$projectXml.Load($tempProjectFile)
+
+$runtimeIdentifierNodes = $projectXml.SelectNodes("/*[local-name()='Project']/*[local-name()='PropertyGroup']/*[local-name()='RuntimeIdentifiers']")
+foreach ($runtimeIdentifierNode in $runtimeIdentifierNodes) {
+	$runtimeIdentifierNode.InnerText = $archs
+}
+$projectXml.Save($tempProjectFile)
 
 Write-Host;
 Write-Host "*** Creating $module_packageFileName ..." -BackgroundColor Blue -ForegroundColor White;
 
-# ------------- apk
-if ($apk)
-{
-	# not-sure about RestoreDisableParallel yet
-	$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
-	$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
-	dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
-		/p:SolutionDir=$solutionDir `
-		/p:Configuration=Release `
-		/p:ApplicationId=$packageId `
-		/p:Version=$versionParam `
-		/p:OutputPath=$outputPath `
-		/p:ArchiveOnBuild=true `
-		/p:AndroidPackageFormat="apk" `
-		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
-		;
-	
-	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
+try {
+	# ------------- apk
+	if ($apk)
+	{
+		# not-sure about RestoreDisableParallel yet
+		$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
+		$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
+		dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
+			/p:SolutionDir=$solutionDir `
+			/p:Configuration=Release `
+			/p:ApplicationId=$packageId `
+			/p:Version=$versionParam `
+			/p:OutputPath=$outputPath `
+			/p:ArchiveOnBuild=true `
+			/p:AndroidPackageFormat="apk" `
+			/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+			/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
+			;
 
-	# publish info
-	$json = @{
-		Version = $versionParam; 
-		UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
-		PackageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
-		PackageId = "$packageId";
-		InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
-		ReleaseDate = "$releaseDate";
-		DeprecatedVersion = "$deprecatedVersion";
-		NotificationDelay = "$versionNotificationDelay";
-	};
+		if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
 
-	$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;
+		# publish info
+		$json = @{
+			Version = $versionParam; 
+			UpdateInfoUrl = "$repoUrl/releases/latest/download/$module_infoFileName";
+			PackageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
+			PackageId = "$packageId";
+			InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$module_packageFileName";
+			ReleaseDate = "$releaseDate";
+			DeprecatedVersion = "$deprecatedVersion";
+			NotificationDelay = "$versionNotificationDelay";
+		};
+
+		$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;
+	}
+
+	# ------------- aab
+	if ($aab)
+	{
+		# set app icon
+		$appIconXmlNode.SetAttribute("android:drawable", "@drawable/ic_launcher_background");
+		$appIconXmlDoc.save($appIconXml);
+
+		# update variables
+		$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
+		$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"
+		$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
+		$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
+
+		dotnet build $tempProjectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
+			/p:SolutionDir=$solutionDir `
+			/p:Configuration=Release `
+			/p:ApplicationId=$packageId `
+			/p:Version=$versionParam `
+			/p:OutputPath=$outputPath `
+			/p:ArchiveOnBuild=true `
+			/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
+			/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
+			;
+
+		if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
+
+		# rollout fraction 0.00 - 1.00 with two decimals
+		$rolloutRatio = "{0:F2}" -f ([double]$rollout / 100);
+
+		# publish info
+		$json = @{
+			Version = $versionParam; 
+			UpdateInfoUrl = "$repoUrl/releases/latest/download/$packageFileTitle-android.json";
+			PackageUrl = "$repoUrl/releases/download/$versionTag/$packageFileTitle-android.apk";
+			PackageId = "$packageId";
+			InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$packageFileTitle-android.apk";
+			ReleaseDate = "$releaseDate";
+			DeprecatedVersion = "$deprecatedVersion";
+			NotificationDelay = "7.00:00:00";
+			Rollout = $rolloutRatio;
+			GooglePlayUrl = "https://play.google.com/store/apps/details?id=$packageId";
+		};
+
+		$json | ConvertTo-Json | Out-File "$module_packageFile.json" -Encoding ASCII;
+	}
+
+	# copy to module
+	Copy-Item -path $signedPacakgeFile -Destination $module_packageFile -Force
+
+	if ($isLatest)
+	{
+		Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
+	}
+
+	# report version
+	ReportVersion
 }
-
-# ------------- aab
-if ($aab)
-{
-	# set app icon
-	$appIconXmlNode.SetAttribute("android:drawable", "@drawable/ic_launcher_background");
-	$appIconXmlDoc.save($appIconXml);
-
-	# update variables
-	$outputPath = Join-Path $projectDir "bin/ReleaseAab/";
-	$signedPacakgeFile = Join-Path "$outputPath" "$packageId-Signed.aab"
-	$module_packageFile = "$moduleDir/$packageFileTitle-android.aab";
-	$module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
-
-    dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
-		/p:SolutionDir=$solutionDir `
-		/p:Configuration=Release `
-		/p:ApplicationId=$packageId `
-		/p:Version=$versionParam `
-		/p:OutputPath=$outputPath `
-		/p:ArchiveOnBuild=true `
-		/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass `
-		/p:AndroidSigningKeyPass=$keystorePass /p:AndroidKeyStore=True `
-		;
-
-	if ($LASTEXITCODE -gt 0) { Throw "The build exited with error code: " + $lastexitcode; }
-
-	# rollout fraction 0.00 - 1.00 with two decimals
-	$rolloutRatio = "{0:F2}" -f ([double]$rollout / 100);
-
-	# publish info
-	$json = @{
-		Version = $versionParam; 
-		UpdateInfoUrl = "$repoUrl/releases/latest/download/$packageFileTitle-android.json";
-		PackageUrl = "$repoUrl/releases/download/$versionTag/$packageFileTitle-android.apk";
-		PackageId = "$packageId";
-		InstallationPageUrl = "$repoUrl/releases/download/$versionTag/$packageFileTitle-android.apk";
-		ReleaseDate = "$releaseDate";
-		DeprecatedVersion = "$deprecatedVersion";
-		NotificationDelay = "7.00:00:00";
-		Rollout = $rolloutRatio;
-		GooglePlayUrl = "https://play.google.com/store/apps/details?id=$packageId";
-	};
-
-	$json | ConvertTo-Json | Out-File "$module_packageFile.json" -Encoding ASCII;
+finally {
+	if (Test-Path $tempProjectFile) {
+		Remove-Item -Path $tempProjectFile -Force
+	}
 }
-
-# copy to module
-Copy-Item -path $signedPacakgeFile -Destination $module_packageFile -Force
-
-if ($isLatest)
-{
-	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
-}
-
-# report version
-ReportVersion

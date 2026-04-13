@@ -27,7 +27,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         [IpNetwork.Parse("203.0.113.1/24"), IpNetwork.Parse("2001:4860:ffff::1234/48")];
 
     private readonly Lock _stopLock = new();
+    private bool _isStarting;
     private bool _isRestarting;
+    private bool _isRestartingAdapter;
     private bool _isStopping;
     private VpnAdapterOptions? _startOptions;
 
@@ -53,6 +55,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected abstract void AdapterClose();
     protected abstract void WaitForTunWrite();
     protected abstract void WaitForTunRead();
+    protected abstract bool RestartAfterNetworkAddressChanged { get; }
 
     /// <summary>
     /// Return false if there is no packet
@@ -88,29 +91,6 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
     }
 
-    private void NetworkChange_NetworkAddressChanged(object? sender, EventArgs e)
-    {
-        // Do not update the primary adapter IPs if the adapter is stopping or disposed
-        // it will be updated on the next start
-        if (_isStopping || IsDisposed || IsDisposing)
-            return;
-
-        using var udpClientV4 = new UdpClient(AddressFamily.InterNetwork);
-        var ipAddress = WebDeadNetworks.First(x => x.AddressFamily == AddressFamily.InterNetwork).Prefix;
-        ProtectSocket(udpClientV4.Client, ipAddress);
-
-        var primaryAdapterIpV4 = DiscoverPrimaryAdapterIpViaProtect(AddressFamily.InterNetwork);
-        var primaryAdapterIpV6 = DiscoverPrimaryAdapterIpViaProtect(AddressFamily.InterNetworkV6);
-
-        // If the primary adapter IPs are changed, update them and notify subscribers
-        if (!Equals(primaryAdapterIpV4, PrimaryAdapterIpV4) || !Equals(primaryAdapterIpV6, PrimaryAdapterIpV6)) {
-            PrimaryAdapterIpV4 = primaryAdapterIpV4;
-            PrimaryAdapterIpV6 = primaryAdapterIpV6;
-            PrimaryAdapterIpChanged?.Invoke(this, e);
-        }
-
-    }
-
     public IPAddress? GetPrimaryAdapterAddress(IpVersion ipVersion)
     {
         return ipVersion == IpVersion.IPv4 ? PrimaryAdapterIpV4 : PrimaryAdapterIpV6;
@@ -126,16 +106,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return ipVersion == IpVersion.IPv4 ? AdapterIpNetworkV4 : AdapterIpNetworkV6;
     }
 
-    public async Task Restart(CancellationToken cancellationToken)
-    {
-        ObjectDisposedException.ThrowIf(IsDisposed, this);
-        ArgumentNullException.ThrowIfNull(_startOptions, nameof(cancellationToken));
-        Stop();
-        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
-        await Start(_startOptions, cancellationToken);
-    }
-
-        public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
+    public async Task Start(VpnAdapterOptions options, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
         _startOptions = options;
@@ -148,6 +119,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // We must set the started at first, to let clean-up be done stop via any exception. 
             // We hope client await the start otherwise we need different state for adapters
+            _isStarting = true;
             IsStarted = true;
 
             // get the WAN adapter IP (lets do it again)
@@ -269,6 +241,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 "Failed to start TUN adapter.");
             Stop(false);
             throw;
+        }
+        finally {
+            _isStarting = false;
         }
     }
 
@@ -423,19 +398,42 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         return true;
     }
 
+    private void DiscoverPrimaryAdapterIps(bool protect)
+    {
+        var primaryAdapterIpV4 = DiscoverPrimaryAdapterIpViaProtect(AddressFamily.InterNetwork, protect);
+        var primaryAdapterIpV6 = DiscoverPrimaryAdapterIpViaProtect(AddressFamily.InterNetworkV6, protect);
+
+        // If the primary adapter IPs are changed, update them and notify subscribers
+        if (!Equals(primaryAdapterIpV4, PrimaryAdapterIpV4) || !Equals(primaryAdapterIpV6, PrimaryAdapterIpV6)) {
+            PrimaryAdapterIpV4 = primaryAdapterIpV4;
+            PrimaryAdapterIpV6 = primaryAdapterIpV6;
+            PrimaryAdapterIpChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private IPAddress? DiscoverPrimaryAdapterIpViaProtect(AddressFamily addressFamily, bool protect)
+    {
+        using var udpClient = new UdpClient(addressFamily);
+        if (protect) {
+            try {
+                var ipAddress = WebDeadNetworks.First(x => x.AddressFamily == addressFamily).Prefix;
+                ProtectSocket(udpClient.Client, ipAddress);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Failed to protect the socket for discovering primary adapter IP. AddressFamily: {AddressFamily}",
+                    addressFamily);
+                return null;
+            }
+        }
+        return DiscoverPrimaryAdapterIp(udpClient);
+    }
+
     private static IPAddress? DiscoverPrimaryAdapterIp(AddressFamily addressFamily)
     {
         using var udpClient = new UdpClient(addressFamily);
         return DiscoverPrimaryAdapterIp(udpClient);
     }
 
-    private IPAddress? DiscoverPrimaryAdapterIpViaProtect(AddressFamily addressFamily)
-    {
-        using var udpClient = new UdpClient(addressFamily);
-        var ipAddress = WebDeadNetworks.First(x => x.AddressFamily == addressFamily).Prefix;
-        ProtectSocket(udpClient.Client, ipAddress);
-        return DiscoverPrimaryAdapterIp(udpClient);
-    }
     private static IPAddress? DiscoverPrimaryAdapterIp(UdpClient protectedUdpClient)
     {
         var addressFamily = protectedUdpClient.Client.AddressFamily;
@@ -447,6 +445,11 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             // IPv6 needs the addressFamily to be set
             protectedUdpClient.Connect(remoteEndPoint);
             var localEndPoint = protectedUdpClient.Client.GetLocalEndPoint();
+
+            // in IPV6, the local ip may be some random ip for another virtual adapter.
+            // valid one should be global unicast and assigned to local interfaces
+            if (addressFamily.IsV6() && !IpNetwork.AllGlobalUnicastV6.Contains(localEndPoint.Address))
+                throw new Exception("The discovered primary adapter IP is not assigned to any local interface.");
 
             // log the discovered primary adapter IP
             VhLogger.Instance.LogDebug(
@@ -488,9 +491,9 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             SendPacketInternal(ipPacket);
             _ioErrorCount = 0;
         }
-        catch (Exception) when (!_isRestarting) {
+        catch (Exception) when (!_isRestartingAdapter) {
             _ioErrorCount++;
-            if (_ioErrorCount < MaxIoErrorCount || _isRestarting)
+            if (_ioErrorCount < MaxIoErrorCount || _isRestartingAdapter)
                 throw;
 
             // restart if the maximum I/O error count is exceeded
@@ -558,7 +561,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in reading packets from TUN adapter.");
                 _ioErrorCount++;
-                if (_ioErrorCount < MaxIoErrorCount || _isRestarting)
+                if (_ioErrorCount < MaxIoErrorCount || _isRestartingAdapter)
                     continue;
 
                 // restart if the maximum I/O error count is exceeded
@@ -605,6 +608,48 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
+    private void NetworkChange_NetworkAddressChanged(object? sender, EventArgs e)
+    {
+        // Do not update the primary adapter IPs if the adapter is stopping or disposed
+        // it will be updated on the next start
+        if (_isStarting || _isStopping || IsDisposing || _isRestarting || _isRestartingAdapter || IsDisposed)
+            return;
+
+        VhLogger.Instance.LogInformation("Network address changed.");
+        if (RestartAfterNetworkAddressChanged)
+            Task.Run(() => Restart(CancellationToken.None));
+        else
+            DiscoverPrimaryAdapterIps(true);
+    }
+
+
+    private readonly AsyncLock _restartLock = new();
+    public async Task Restart(CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+        ArgumentNullException.ThrowIfNull(_startOptions);
+        using var lockScope = await _restartLock.LockAsync(cancellationToken);
+        try {
+            _isRestarting = true;
+            VhLogger.Instance.LogInformation("Restarting VPN Adapter");
+
+            // stop the adapter first, make sure ip discovery use correct routes
+            Stop();
+            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+
+            // rediscover the primary adapter IPs, in case they are changed during the stop-start process.
+            // adapter is off so should not protect
+            DiscoverPrimaryAdapterIps(protect: false);
+
+            // start the adapter with the same options
+            await Start(_startOptions, cancellationToken);
+        }
+        finally {
+            _isRestarting = false;
+        }
+    }
+
+
     private async Task RestartAdapter(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogWarning("Restarting the adapter.");
@@ -613,8 +658,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         if (!IsStarted)
             throw new InvalidOperationException("Cannot restart the adapter when it is stopped.");
 
-        _isRestarting = false;
         try {
+            _isRestartingAdapter = true;
             AdapterClose();
             await AdapterOpen(cancellationToken);
         }
@@ -623,7 +668,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             throw;
         }
         finally {
-            _isRestarting = false;
+            _isRestartingAdapter = false;
         }
     }
 

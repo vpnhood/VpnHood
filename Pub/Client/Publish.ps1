@@ -87,6 +87,7 @@ if ($linux) {
 if ($android) {
 	& "$solutionDir/Src/Apps/Client.Android.Google/_publish.ps1";
 	& "$solutionDir/Src/Apps/Client.Android.Web/_publish.ps1";
+	& "$solutionDir/Src/Apps/Client.Android.Web/_publish-arm64.ps1";
 }
 
 # distribute

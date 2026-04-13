@@ -27,6 +27,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
 
+    protected override bool RestartAfterNetworkAddressChanged => false;
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => true;
     protected override bool IsSocketProtectedByBind => false;

@@ -49,6 +49,8 @@ gh release create "$versionTag" `
 	$packageDir/android-google/$packageFileTitle-android.aab.json `
 	$packageDir/android-web/$packageFileTitle-android-web.apk `
 	$packageDir/android-web/$packageFileTitle-android-web.json `
+	$packageDir/android-web/$packageFileTitle-android-arm64-web.apk `
+	$packageDir/android-web/$packageFileTitle-android-arm64-web.json `
 	$packageDir/linux-x64/$packageFileTitle-linux-x64.tar.gz `
 	$packageDir/linux-x64/$packageFileTitle-linux-x64.json `
 	$packageDir/linux-x64/$packageFileTitle-linux-x64.sh `

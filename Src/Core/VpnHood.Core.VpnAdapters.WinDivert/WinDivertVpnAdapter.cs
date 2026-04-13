@@ -39,7 +39,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
     protected override bool IsSocketProtectedByBind => false;
     public override bool IsNatSupported => false;
     protected override string? AppPackageId => null;
-
+    protected override bool RestartAfterNetworkAddressChanged => false;
     protected override Task AdapterAdd(CancellationToken cancellationToken)
     {
         // initialize devices

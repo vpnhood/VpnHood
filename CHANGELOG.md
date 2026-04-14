@@ -1,4 +1,4 @@
-# Upcoming
+# v7.7.799
 * Fix: freeze connection after network change or restroe from hypernation
 
 # v7.7.798

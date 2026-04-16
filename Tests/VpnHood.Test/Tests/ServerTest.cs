@@ -11,6 +11,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Test.Device;
 using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
+// ReSharper disable ShortLivedHttpClient
 
 // ReSharper disable DisposeOnUsingVariable
 

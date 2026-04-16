@@ -165,6 +165,7 @@ public class AppUpdaterService : IDisposable
 
             // fetch the latest publish info
             VhLogger.Instance.LogDebug("Retrieving the latest publish info...");
+            // ReSharper disable once ShortLivedHttpClient
             using var httpClient = new HttpClient();
             var publishInfoJson = await httpClient.GetStringAsync(updateInfoUrl, cancellationToken).Vhc();
             _data.PublishInfo = JsonUtils.Deserialize<PublishInfo>(publishInfoJson);

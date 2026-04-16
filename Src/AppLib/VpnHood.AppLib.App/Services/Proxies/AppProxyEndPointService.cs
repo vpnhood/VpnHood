@@ -350,6 +350,7 @@ public class AppProxyEndPointService
     public async Task ReloadUrl(CancellationToken cancellationToken)
     {
         // fetch endpoints from url and merge
+        // ReSharper disable once ShortLivedHttpClient
         using var httpClient = new HttpClient();
         var content = await httpClient.GetStringAsync(ProxySettings.AutoUpdateOptions.Url, cancellationToken);
         Import(content);

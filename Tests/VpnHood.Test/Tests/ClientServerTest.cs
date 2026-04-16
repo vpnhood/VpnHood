@@ -15,6 +15,7 @@ using VpnHood.Test.Dom;
 using VpnHood.Test.Extensions;
 using VpnHood.Test.Providers;
 using ClientState = VpnHood.Core.Client.Abstractions.ClientState;
+// ReSharper disable ShortLivedHttpClient
 
 // ReSharper disable DisposeOnUsingVariable
 

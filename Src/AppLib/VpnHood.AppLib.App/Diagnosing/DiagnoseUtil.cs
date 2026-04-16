@@ -53,6 +53,7 @@ public static class DiagnoseUtil
 
             using var timeoutCts = new CancellationTokenSource(timeout);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
+            // ReSharper disable once ShortLivedHttpClient
             using var httpClient = new HttpClient();
             var result = await httpClient.GetStringAsync(uri, linkedCts.Token)
                 .Vhc();

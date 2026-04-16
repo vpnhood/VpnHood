@@ -47,6 +47,7 @@ public static class CertificateUtil
         };
 
         try {
+            // ReSharper disable once ShortLivedHttpClient
             using var client = new HttpClient(handler);
             await client.GetAsync(url, cancellationToken);
         }

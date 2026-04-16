@@ -42,11 +42,6 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected abstract string? AppPackageId { get; }
     protected abstract Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken);
     protected abstract Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken);
-    protected Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
-    {
-        return SetDnsServers(dnsServers, cancellationToken);
-    }
-
     protected abstract Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers, CancellationToken cancellationToken);
     protected abstract Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken);
@@ -648,10 +643,6 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     private HashSet<IPAddress> GetPrimaryAdapterAddresses()
     {
-        var a = NetworkInterface.GetAllNetworkInterfaces()
-            .Where(ni => ni.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-
         return NetworkInterface.GetAllNetworkInterfaces()
             .Where(IsPrimaryAdapter)
             .Where(ni => ni.OperationalStatus == OperationalStatus.Up)

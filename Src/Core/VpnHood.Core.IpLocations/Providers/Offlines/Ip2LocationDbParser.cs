@@ -20,6 +20,7 @@ public static class Ip2LocationDbParser
             return;
 
         // copy zip to memory
+        // ReSharper disable once ShortLivedHttpClient
         using var httpClient = new HttpClient();
         // ReSharper disable once StringLiteralTypo
         var url = $"https://www.ip2location.com/download/?token={apiKey}&file=DB1LITECSVIPV6";

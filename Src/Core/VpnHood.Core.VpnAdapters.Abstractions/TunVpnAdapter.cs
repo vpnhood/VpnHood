@@ -42,7 +42,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     protected abstract string? AppPackageId { get; }
     protected abstract Task SetMtu(int mtu, bool ipV4, bool ipV6, CancellationToken cancellationToken);
     protected abstract Task SetMetric(int metric, bool ipV4, bool ipV6, CancellationToken cancellationToken);
-    protected abstract Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken);
+    protected Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
+    {
+        return SetDnsServers(dnsServers, cancellationToken);
+    }
+
+    protected abstract Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers, CancellationToken cancellationToken);
     protected abstract Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken);
     protected abstract Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken);

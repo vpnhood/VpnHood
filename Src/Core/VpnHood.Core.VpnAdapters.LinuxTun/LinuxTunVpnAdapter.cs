@@ -237,7 +237,8 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     }
 
     [SuppressMessage("ReSharper", "PossibleMultipleEnumeration")]
-    protected override async Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
+    protected override async Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,
+        CancellationToken cancellationToken)
     {
         if (!dnsServers.Any())
             return;

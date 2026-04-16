@@ -138,13 +138,13 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override void AdapterClose()
     {
-        if (_tunSession != IntPtr.Zero) {
-            WinTunApi.WintunEndSession(_tunSession);
-            _tunSession = IntPtr.Zero;
-        }
-
-        // do not close this handle by documentation
+        // Zero the fields first so concurrent readers/writers see the session as closed,
+        // then end the session to signal blocked WintunReceivePacket calls.
+        var session = Interlocked.Exchange(ref _tunSession, IntPtr.Zero);
         _readEvent = IntPtr.Zero;
+
+        if (session != IntPtr.Zero)
+            WinTunApi.WintunEndSession(session);
     }
 
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
@@ -263,7 +263,8 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     }
     */
 
-    protected override async Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
+    protected override async Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers,
+        CancellationToken cancellationToken)
     {
         var ipv4 = dnsServers
             .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)
@@ -347,7 +348,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override void WaitForTunRead()
     {
-        var result = Kernel32.WaitForSingleObject(_readEvent, Kernel32.Infinite);
+        var readEvent = _readEvent;
+        if (readEvent == IntPtr.Zero)
+            throw new IOException("WinTun session is closed.");
+
+        var result = Kernel32.WaitForSingleObject(readEvent, Kernel32.Infinite);
         if (result == Kernel32.WaitObject0)
             return;
 
@@ -359,7 +364,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override bool ReadPacket(byte[] buffer)
     {
-        var tunReceivePacket = WinTunApi.WintunReceivePacket(_tunSession, out var size);
+        var session = _tunSession;
+        if (session == IntPtr.Zero)
+            throw new IOException("WinTun session is closed.");
+
+        var tunReceivePacket = WinTunApi.WintunReceivePacket(session, out var size);
 
         // return if something is written
         if (tunReceivePacket != IntPtr.Zero) {
@@ -368,11 +377,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                 return true;
             }
             finally {
-                WinTunApi.WintunReleaseReceivePacket(_tunSession, tunReceivePacket);
+                WinTunApi.WintunReleaseReceivePacket(session, tunReceivePacket);
             }
         }
 
-        // check  for errors
+        // check for errors
         var lastError = (WintunReceivePacketError)Marshal.GetLastWin32Error();
         return lastError switch {
             WintunReceivePacketError.NoMoreItems => false,
@@ -391,20 +400,23 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override bool WritePacket(IpPacket ipPacket)
     {
+        var session = _tunSession;
+        if (session == IntPtr.Zero)
+            return false;
+
         var packetBytes = ipPacket.Buffer;
 
         // Allocate memory for the packet inside WinTun ring buffer
-        var packetMemory = WinTunApi.WintunAllocateSendPacket(_tunSession, packetBytes.Length); // thread-safe
+        var packetMemory = WinTunApi.WintunAllocateSendPacket(session, packetBytes.Length); // thread-safe
         if (packetMemory == IntPtr.Zero)
             return false;
-
 
         // Copy the raw packet data into WinTun memory
         var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
         Marshal.Copy(buffer, offset, packetMemory, length);
 
         // Send the packet through WinTun
-        WinTunApi.WintunSendPacket(_tunSession, packetMemory); // thread-safe
+        WinTunApi.WintunSendPacket(session, packetMemory); // thread-safe
         return true;
     }
 

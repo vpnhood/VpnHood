@@ -22,13 +22,13 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private int _mtu = 0xFFFF;
     private int _ioErrorCount;
     private readonly bool _autoMetric;
+    private HashSet<IPAddress> _lastPrimaryAdapterAddresses = [];
 
     private static readonly IpNetwork[] WebDeadNetworks =
         [IpNetwork.Parse("203.0.113.1/24"), IpNetwork.Parse("2001:4860:ffff::1234/48")];
 
     private readonly Lock _stopLock = new();
     private bool _isStarting;
-    private bool _isRestarting;
     private bool _isRestartingAdapter;
     private bool _isStopping;
     private VpnAdapterOptions? _startOptions;
@@ -129,6 +129,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             AdapterIpNetworkV6 = options.VirtualIpNetworkV6;
             UseNat = options.UseNat;
             _mtu = options.Mtu ?? _mtu;
+            _lastPrimaryAdapterAddresses = GetPrimaryAdapterAddresses();
 
             // report the primary adapter IPs
             VhLogger.Instance.LogInformation(
@@ -612,7 +613,18 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     {
         // Do not update the primary adapter IPs if the adapter is stopping or disposed
         // it will be updated on the next start
-        if (_isStarting || _isStopping || IsDisposing || _isRestarting || _isRestartingAdapter || IsDisposed)
+        if (_isStarting || _isStopping || IsDisposing || _restartLock.IsLocked ||
+            _isRestartingAdapter || IsDisposed )
+            return;
+
+        // check if primary adapter addresses actually changed
+        var currentAddresses = GetPrimaryAdapterAddresses();
+        if (currentAddresses.SetEquals(_lastPrimaryAdapterAddresses))
+            return;
+        _lastPrimaryAdapterAddresses = currentAddresses;
+        
+        // do not restart adapter if there is no primary network adapter up
+        if (currentAddresses.Count == 0)
             return;
 
         VhLogger.Instance.LogInformation("Network address changed.");
@@ -622,31 +634,49 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             DiscoverPrimaryAdapterIps(true);
     }
 
+    private static bool IsPrimaryAdapter(NetworkInterface networkInterface)
+    {
+        return networkInterface.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+               networkInterface.NetworkInterfaceType != NetworkInterfaceType.Tunnel &&
+               !networkInterface.Description.Contains("Virtual", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private HashSet<IPAddress> GetPrimaryAdapterAddresses()
+    {
+        var a = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(ni => ni.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        return NetworkInterface.GetAllNetworkInterfaces()
+            .Where(IsPrimaryAdapter)
+            .Where(ni => ni.OperationalStatus == OperationalStatus.Up)
+            .Where(ni => !ni.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
+            .Select(a => a.Address)
+            .ToHashSet();
+    }
 
     private readonly AsyncLock _restartLock = new();
     public async Task Restart(CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
         ArgumentNullException.ThrowIfNull(_startOptions);
-        using var lockScope = await _restartLock.LockAsync(cancellationToken);
-        try {
-            _isRestarting = true;
-            VhLogger.Instance.LogInformation("Restarting VPN Adapter");
+        using var lockScope = await _restartLock.LockAsync(TimeSpan.Zero, cancellationToken);
+        if (!lockScope.Succeeded)
+            return; // already in progress
 
-            // stop the adapter first, make sure ip discovery use correct routes
-            Stop();
-            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+        VhLogger.Instance.LogInformation("Restarting VPN Adapter");
 
-            // rediscover the primary adapter IPs, in case they are changed during the stop-start process.
-            // adapter is off so should not protect
-            DiscoverPrimaryAdapterIps(protect: false);
+        // stop the adapter first, make sure ip discovery use correct routes
+        Stop();
+        await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
 
-            // start the adapter with the same options
-            await Start(_startOptions, cancellationToken);
-        }
-        finally {
-            _isRestarting = false;
-        }
+        // rediscover the primary adapter IPs, in case they are changed during the stop-start process.
+        // adapter is off so should not protect
+        DiscoverPrimaryAdapterIps(protect: false);
+
+        // start the adapter with the same options
+        await Start(_startOptions, cancellationToken);
     }
 
 

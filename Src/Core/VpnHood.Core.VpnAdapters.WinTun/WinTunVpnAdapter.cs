@@ -1,11 +1,12 @@
-﻿using System.ComponentModel;
+﻿using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 using System.IO.Compression;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -237,13 +238,18 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     //    await OsUtils.ExecuteCommandAsync("netsh", commandV6, cancellationToken);
     //}
 
+    /*
     protected override async Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
         // remove previous DNS servers.
         // Do not log in debug mode because it is common error as the adapter is usually new
         VhLogger.Instance.LogDebug("Removing previous DNS from the adapter...");
-        await VhUtils.TryInvokeAsync(VhLogger.MinLogLevel == LogLevel.Trace ? "Remove previous DNS" : "",
+        await VhUtils.TryInvokeAsync(VhLogger.MinLogLevel == LogLevel.Trace ? "Remove previous IPv4 DNS" : "",
             () => OsUtils.ExecuteCommandAsync("netsh", $"netsh interface ipv4 delete dns \"{AdapterName}\" all",
+                cancellationToken));
+
+        await VhUtils.TryInvokeAsync(VhLogger.MinLogLevel == LogLevel.Trace ? "Remove previous IPv6 DNS" : "",
+            () => OsUtils.ExecuteCommandAsync("netsh", $"netsh interface ipv6 delete dns \"{AdapterName}\" all",
                 cancellationToken));
 
         VhLogger.Instance.LogDebug("Adding new DNS to the adapter...");
@@ -253,6 +259,44 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
                 : $"interface ipv6 add dns \"{AdapterName}\" {ipAddress}";
 
             await OsUtils.ExecuteCommandAsync("netsh", command, cancellationToken);
+        }
+    }
+    */
+
+    protected override async Task SetDnsServers(IEnumerable<IPAddress> dnsServers, CancellationToken cancellationToken)
+    {
+        var ipv4 = dnsServers
+            .Where(ip => ip.AddressFamily == AddressFamily.InterNetwork)
+            .ToArray();
+
+        var ipv6 = dnsServers
+            .Where(ip => ip.AddressFamily == AddressFamily.InterNetworkV6)
+            .ToArray();
+
+        VhLogger.Instance.LogDebug("Setting DNS via PowerShell...");
+
+        if (ipv4.Length > 0) {
+            var v4List = string.Join(",", ipv4.Select(ip => $"'{ip}'"));
+            var cmd = $"Set-DnsClientServerAddress -InterfaceAlias '{AdapterName}' -ServerAddresses @({v4List})";
+
+            await VhUtils.TryInvokeAsync(
+                VhLogger.MinLogLevel == LogLevel.Trace ? "Set IPv4 DNS" : "",
+                () => OsUtils.ExecuteCommandAsync(
+                    "powershell.exe",
+                    $"-NoProfile -ExecutionPolicy Bypass -Command \"{cmd}\"",
+                    cancellationToken));
+        }
+
+        if (ipv6.Length > 0) {
+            var v6List = string.Join(",", ipv6.Select(ip => $"'{ip}'"));
+            var cmd = $"Set-DnsClientServerAddress -InterfaceAlias '{AdapterName}' -ServerAddresses @({v6List})";
+
+            await VhUtils.TryInvokeAsync(
+                VhLogger.MinLogLevel == LogLevel.Trace ? "Set IPv6 DNS" : "",
+                () => OsUtils.ExecuteCommandAsync(
+                    "powershell.exe",
+                    $"-NoProfile -ExecutionPolicy Bypass -Command \"{cmd}\"",
+                    cancellationToken));
         }
     }
 

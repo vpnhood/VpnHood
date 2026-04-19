@@ -10,5 +10,6 @@ public enum AppFeature
     CustomDns,
     SplitByIpViaApp,
     SplitByIpViaDevice,
+    SplitByDomain,
     SplitByCountry
 }

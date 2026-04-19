@@ -271,7 +271,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // refresh account if legacy account exists, but no error if refresh failed
         if (_refreshAccountLegacy && Services.AccountService != null)
-            await VhUtils.TryInvokeAsync("Refreshing Account", ()=> Services.AccountService.Refresh(CancellationToken.None));
+            await VhUtils.TryInvokeAsync("Refreshing Account", () => Services.AccountService.Refresh(CancellationToken.None));
     }
 
     private void ApplySettings()
@@ -1124,11 +1124,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public DomainFilterPolicy GetDomainFilterPolicy()
     {
-        return new DomainFilterPolicy {
-            Includes = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Includes) ?? [],
-            Excludes = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Excludes) ?? [],
-            Blocks = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Blocks) ?? []
-        };
+        // return empty if it is premium feature but not allowed to avoid unnecessary parsing
+        return CheckPremiumFeature(AppFeature.SplitByDomain) && UserSettings.UseSplitByDomain
+            ? new DomainFilterPolicy {
+                Includes = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Includes) ?? [],
+                Excludes = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Excludes) ?? [],
+                Blocks = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Blocks) ?? []
+            }
+            : new DomainFilterPolicy();
     }
 
     public async Task CopyLogToStream(Stream destination)

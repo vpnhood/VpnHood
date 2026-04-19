@@ -30,6 +30,7 @@ public static class ConnectAppResources
         AppFeature.AlwaysOn,
         AppFeature.QuickLaunch,
         AppFeature.SplitByIpViaApp,
-        AppFeature.SplitByIpViaDevice
+        AppFeature.SplitByIpViaDevice,
+        AppFeature.SplitByDomain
     ];
 }

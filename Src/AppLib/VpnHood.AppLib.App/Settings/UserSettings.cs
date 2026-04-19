@@ -21,6 +21,7 @@ public class UserSettings
     public string[] SplitByCountries { get; set; } = [];
     public bool UseSplitByIpViaApp { get; set; }
     public bool UseSplitByIpViaDevice { get; set; }
+    public bool UseSplitByDomain { get; set; }
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;
     public bool UseTcpProxy { get; set; }

@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: IPv6 UDP listener may stop working after a while
+
 # v7.7.796
 * Fix: UDP protocol on some networks and devices
 * Update: Detect when UDP protocol is not available due to reverse proxy

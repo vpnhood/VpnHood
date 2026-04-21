@@ -172,7 +172,7 @@ public class LocationService : IRegionProvider
         return countryInfos!;
     }
 
-    public async Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken)
+    public async Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
         if (IpRangeLocationProvider is null)
             return [];
@@ -189,8 +189,8 @@ public class LocationService : IRegionProvider
     public async Task<IpRangeOrderedList> GetIncludeCountryIpRanges(CancellationToken cancellationToken)
     {
         var ipRanges = IpNetwork.All.ToIpRanges();
-        var splitByCountryMode = _settingsService.Settings.UserSettings.SplitByCountryMode;
-        if (splitByCountryMode is SplitByCountryMode.IncludeAll)
+        var splitByCountryMode = _settingsService.Settings.UserSettings.SplitCountryMode;
+        if (splitByCountryMode is SplitCountryMode.IncludeAll)
             return ipRanges;
 
         try {
@@ -202,27 +202,27 @@ public class LocationService : IRegionProvider
                 throw new InvalidOperationException("Could not use internal location service because it is disabled.");
 
             // calculate include country IPs
-            if (splitByCountryMode is SplitByCountryMode.IncludeList) {
+            if (splitByCountryMode is SplitCountryMode.IncludeList) {
                 VhLogger.Instance.LogInformation("Calculating include country IP ranges...");
                 var countryIpRanges = new List<IpRange>();
-                foreach (var country in _settingsService.UserSettings.SplitByCountries)
+                foreach (var country in _settingsService.UserSettings.SplitCountries)
                     countryIpRanges.AddRange(
                         await IpRangeLocationProvider.GetIpRanges(country, cancellationToken).Vhc());
                 ipRanges = countryIpRanges.ToOrderedList();
             }
 
             // calculate exclude country IPs
-            if (splitByCountryMode is SplitByCountryMode.ExcludeList) {
+            if (splitByCountryMode is SplitCountryMode.ExcludeList) {
                 VhLogger.Instance.LogInformation("Calculating exclude country IP ranges...");
                 var countryIpRanges = new List<IpRange>();
-                foreach (var country in _settingsService.UserSettings.SplitByCountries)
+                foreach (var country in _settingsService.UserSettings.SplitCountries)
                     countryIpRanges.AddRange(
                         await IpRangeLocationProvider.GetIpRanges(country, cancellationToken).Vhc());
                 ipRanges = ipRanges.Exclude(countryIpRanges);
             }
 
 
-            if (splitByCountryMode is SplitByCountryMode.ExcludeMyCountry) {
+            if (splitByCountryMode is SplitCountryMode.ExcludeMyCountry) {
                 VhLogger.Instance.LogInformation("Calculating exclude my country IP ranges...");
 
                 // do not use cache and server country code, maybe client on satellite, and they need to split their own country IPs 
@@ -238,7 +238,7 @@ public class LocationService : IRegionProvider
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not retrieve the requested countries ip ranges.");
-            _settingsService.Settings.UserSettings.SplitByCountryMode = SplitByCountryMode.IncludeAll;
+            _settingsService.Settings.UserSettings.SplitCountryMode = SplitCountryMode.IncludeAll;
             _settingsService.Settings.Save();
             return IpNetwork.All.ToIpRanges();
         }

@@ -10,7 +10,6 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
-using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services;
@@ -168,7 +167,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.BillingProvider != null,
             IsTcpProxySupported = device.IsTcpProxySupported,
-            IsSplitByDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
+            IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
             IsUserReviewSupported = options.UserReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
             WebUiPort = options.WebUiPort,
@@ -176,7 +175,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AppId = options.AppId,
             AppName = options.Resources.Strings.AppName,
             DebugCommands = DebugCommands.All,
-            IsLocalNetworkSupported = options.IsLocalNetworkSupported,
             IsDebugMode = options.IsDebugMode,
             CustomData = options.CustomData,
             PremiumFeatures = options.PremiumFeatures,
@@ -308,14 +306,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
                 // check is disconnect required
                 disconnectRequired =
-                    UserSettings.UseSplitByIpViaDevice != oldUserSettings.UseSplitByIpViaDevice ||
-                    UserSettings.UseSplitByIpViaApp != oldUserSettings.UseSplitByIpViaApp ||
-                    UserSettings.SplitByCountryMode != oldUserSettings.SplitByCountryMode ||
-                    !UserSettings.SplitByCountries.SequenceEqual(oldUserSettings.SplitByCountries) ||
+                    UserSettings.UseSplitLocalNetwork != oldUserSettings.UseSplitLocalNetwork ||
+                    UserSettings.UseSplitIpViaDevice != oldUserSettings.UseSplitIpViaDevice ||
+                    UserSettings.UseSplitIpViaApp != oldUserSettings.UseSplitIpViaApp ||
+                    UserSettings.SplitCountryMode != oldUserSettings.SplitCountryMode ||
+                    UserSettings.SplitAppMode != oldUserSettings.SplitAppMode ||
+                    !UserSettings.SplitApps.SequenceEqual(oldUserSettings.SplitApps) ||
+                    !UserSettings.SplitCountries.SequenceEqual(oldUserSettings.SplitCountries) ||
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
-                    UserSettings.IncludeLocalNetwork != oldUserSettings.IncludeLocalNetwork ||
-                    UserSettings.SplitByAppMode != oldUserSettings.SplitByAppMode ||
-                    !UserSettings.SplitByApps.SequenceEqual(oldUserSettings.SplitByApps) ||
                     UserSettings.DnsMode != oldUserSettings.DnsMode ||
                     !VhUtils.SequenceEquals(UserSettings.DnsServers, oldUserSettings.DnsServers);
             }
@@ -722,11 +720,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // calculate vpnAdapterIpRanges
             var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
-            if (UserSettings.UseSplitByIpViaDevice && CheckPremiumFeature(AppFeature.SplitByIpViaDevice)) {
+            if (UserSettings.UseSplitIpViaDevice && CheckPremiumFeature(AppFeature.SplitIpViaDevice)) {
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
-                    IpRangeTextFileParser.ParseIncludes(SettingsService.SplitByIpSettings.DeviceIncludes));
+                    IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpSettings.DeviceIncludes));
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
-                    IpRangeTextFileParser.ParseExcludes(SettingsService.SplitByIpSettings.DeviceExcludes));
+                    IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpSettings.DeviceExcludes));
             }
 
             // use default DNS servers if not premium account
@@ -745,7 +743,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionTimeout = _sessionTimeout,
                 UnstableTimeout = _unstableTimeout,
                 AutoWaitTimeout = _autoWaitTimeout,
-                IncludeLocalNetwork = UserSettings.IncludeLocalNetwork && Features.IsLocalNetworkSupported,
+                SplitLocalNetwork = UserSettings.UseSplitLocalNetwork,
                 IncludeIpRangesByApp = (await GetIncludeIpRanges(cancellationToken)).ToArray(),
                 BlockIpRangesByApp = GetBlockIpRangesByApp(),
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
@@ -765,8 +763,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
                 AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
                 AllowTcpReuse = !HasDebugCommand(DebugCommands.NoTcpReuse),
-                ExcludeApps = UserSettings.SplitByAppMode == SplitByMode.Exclude ? UserSettings.SplitByApps : null,
-                IncludeApps = UserSettings.SplitByAppMode == SplitByMode.Include ? UserSettings.SplitByApps : null,
+                ExcludeApps = UserSettings.SplitAppMode == SplitAppMode.Exclude ? UserSettings.SplitApps : null,
+                IncludeApps = UserSettings.SplitAppMode == SplitAppMode.Include ? UserSettings.SplitApps : null,
                 DnsServers = dnsServers,
                 LogServiceOptions = GetLogOptions(),
                 Ga4MeasurementId = _ga4MeasurementId,
@@ -1100,18 +1098,18 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public async Task<IpRangeOrderedList> GetIncludeIpRanges(CancellationToken cancellationToken)
     {
         // get country ip ranges
-        if (SettingsService.Settings.UserSettings.SplitByCountryMode is not SplitByCountryMode.IncludeAll)
-            VerifyPremiumFeature(AppFeature.SplitByCountry);
+        if (SettingsService.Settings.UserSettings.SplitCountryMode is not SplitCountryMode.IncludeAll)
+            VerifyPremiumFeature(AppFeature.SplitCountry);
 
         var ipRanges = await Services.LocationService.GetIncludeCountryIpRanges(cancellationToken);
 
         // calculate AppFilter IPs
-        if (UserSettings.UseSplitByIpViaApp && CheckPremiumFeature(AppFeature.SplitByIpViaApp)) {
+        if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp)) {
             ipRanges = ipRanges.Intersect(
-                IpRangeTextFileParser.ParseIncludes(SettingsService.SplitByIpSettings.AppIncludes));
+                IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpSettings.AppIncludes));
 
             ipRanges = ipRanges.Exclude(
-                IpRangeTextFileParser.ParseExcludes(SettingsService.SplitByIpSettings.AppExcludes));
+                IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpSettings.AppExcludes));
         }
 
         return ipRanges;
@@ -1119,8 +1117,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public IpRange[] GetBlockIpRangesByApp()
     {
-        if (UserSettings.UseSplitByIpViaApp && CheckPremiumFeature(AppFeature.SplitByIpViaApp))
-            return IpRangeTextFileParser.ParseExcludes(SettingsService.SplitByIpSettings.AppBlocks);
+        if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp))
+            return IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpSettings.AppBlocks);
 
         return [];
     }
@@ -1128,11 +1126,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public DomainFilterPolicy GetDomainFilterPolicy()
     {
         // return empty if it is premium feature but not allowed to avoid unnecessary parsing
-        return CheckPremiumFeature(AppFeature.SplitByDomain) && UserSettings.UseSplitByDomain
+        return CheckPremiumFeature(AppFeature.SplitDomain) && UserSettings.UseSplitDomain
             ? new DomainFilterPolicy {
-                Includes = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Includes) ?? [],
-                Excludes = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Excludes) ?? [],
-                Blocks = DomainTextFileParser.Parse(SettingsService.SplitByDomainSettings.Blocks) ?? []
+                Includes = DomainTextFileParser.Parse(SettingsService.SplitDomainSettings.Includes) ?? [],
+                Excludes = DomainTextFileParser.Parse(SettingsService.SplitDomainSettings.Excludes) ?? [],
+                Blocks = DomainTextFileParser.Parse(SettingsService.SplitDomainSettings.Blocks) ?? []
             }
             : new DomainFilterPolicy();
     }

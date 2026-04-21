@@ -25,7 +25,6 @@ internal static class App
             Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
-            IsLocalNetworkSupported = true,
             AllowEndPointStrategy = true,
             DisconnectOnDispose = true,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,

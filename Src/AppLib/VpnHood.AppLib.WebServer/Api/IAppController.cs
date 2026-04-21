@@ -14,10 +14,10 @@ public interface IAppController
     Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken);
     Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken);
     Task<AppData> GetConfig(CancellationToken cancellationToken);
-    Task<SplitByIps> GetSplitByIps(CancellationToken cancellationToken);
-    Task SetSplitByIps(SplitByIps value, CancellationToken cancellationToken);
-    Task<SplitByDomains> GetSplitByDomains(CancellationToken cancellationToken);
-    Task SetSplitByDomains(SplitByDomains value, CancellationToken cancellationToken);
+    Task<SplitIps> GetSplitIps(CancellationToken cancellationToken);
+    Task SetSplitIps(SplitIps value, CancellationToken cancellationToken);
+    Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken);
+    Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken);
     Task<AppState> GetState(CancellationToken cancellationToken);
     Task Connect(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
     Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
@@ -32,7 +32,7 @@ public interface IAppController
     Task ExtendByRewardedAd(CancellationToken cancellationToken);
     Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken);
     Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken);
-    Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken);
+    Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken);
     Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken);
     Task InternalAdError(string errorMessage, CancellationToken cancellationToken);
     Task RemovePremium(Guid profileId, CancellationToken cancellationToken);

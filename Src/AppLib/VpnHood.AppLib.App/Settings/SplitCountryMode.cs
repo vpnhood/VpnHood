@@ -3,7 +3,7 @@
 namespace VpnHood.AppLib.Settings;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum SplitByCountryMode
+public enum SplitCountryMode
 {
     IncludeAll,
     ExcludeMyCountry,

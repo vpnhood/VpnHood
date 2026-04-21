@@ -33,24 +33,24 @@ internal class AppController : ControllerBase, IAppController
         });
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "split-by-ips", async ctx => {
-            var res = await GetSplitByIps(ctx.Token);
+            var res = await GetSplitIps(ctx.Token);
             await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.PUT, baseUrl + "split-by-ips", async ctx => {
-            var body = ctx.ReadJson<SplitByIps>();
-            await SetSplitByIps(body, ctx.Token);
+            var body = ctx.ReadJson<SplitIps>();
+            await SetSplitIps(body, ctx.Token);
             await ctx.SendNoContent();
         });
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "split-by-domains", async ctx => {
-            var res = await GetSplitByDomains(ctx.Token);
+            var res = await GetSplitDomains(ctx.Token);
             await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.PUT, baseUrl + "split-by-domains", async ctx => {
-            var body = ctx.ReadJson<SplitByDomains>();
-            await SetSplitByDomains(body, ctx.Token);
+            var body = ctx.ReadJson<SplitDomains>();
+            await SetSplitDomains(body, ctx.Token);
             await ctx.SendNoContent();
         });
 
@@ -155,7 +155,7 @@ internal class AppController : ControllerBase, IAppController
         });
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "supported-split-by-countries", async ctx => {
-            var res = await GetSupportedSplitByCountries(ctx.Token);
+            var res = await GetSupportedSplitCountries(ctx.Token);
             await ctx.SendJson(res);
         });
     }
@@ -186,45 +186,45 @@ internal class AppController : ControllerBase, IAppController
         return Task.FromResult(ret);
     }
 
-    public Task<SplitByIps> GetSplitByIps(CancellationToken cancellationToken)
+    public Task<SplitIps> GetSplitIps(CancellationToken cancellationToken)
     {
-        var appIpFilters = new SplitByIps {
-            DeviceIncludes = App.SettingsService.SplitByIpSettings.DeviceIncludes,
-            DeviceExcludes = App.SettingsService.SplitByIpSettings.DeviceExcludes,
-            AppIncludes = App.SettingsService.SplitByIpSettings.AppIncludes,
-            AppExcludes = App.SettingsService.SplitByIpSettings.AppExcludes,
-            AppBlocks = App.SettingsService.SplitByIpSettings.AppBlocks
+        var appIpFilters = new SplitIps {
+            DeviceIncludes = App.SettingsService.SplitIpSettings.DeviceIncludes,
+            DeviceExcludes = App.SettingsService.SplitIpSettings.DeviceExcludes,
+            AppIncludes = App.SettingsService.SplitIpSettings.AppIncludes,
+            AppExcludes = App.SettingsService.SplitIpSettings.AppExcludes,
+            AppBlocks = App.SettingsService.SplitIpSettings.AppBlocks
         };
 
         return Task.FromResult(appIpFilters);
     }
 
-    public Task SetSplitByIps(SplitByIps value, CancellationToken cancellationToken)
+    public Task SetSplitIps(SplitIps value, CancellationToken cancellationToken)
     {
-        App.SettingsService.SplitByIpSettings.DeviceExcludes = value.DeviceExcludes;
-        App.SettingsService.SplitByIpSettings.DeviceIncludes = value.DeviceIncludes;
-        App.SettingsService.SplitByIpSettings.AppExcludes = value.AppExcludes;
-        App.SettingsService.SplitByIpSettings.AppIncludes = value.AppIncludes;
-        App.SettingsService.SplitByIpSettings.AppBlocks = value.AppBlocks;
+        App.SettingsService.SplitIpSettings.DeviceExcludes = value.DeviceExcludes;
+        App.SettingsService.SplitIpSettings.DeviceIncludes = value.DeviceIncludes;
+        App.SettingsService.SplitIpSettings.AppExcludes = value.AppExcludes;
+        App.SettingsService.SplitIpSettings.AppIncludes = value.AppIncludes;
+        App.SettingsService.SplitIpSettings.AppBlocks = value.AppBlocks;
         return Task.CompletedTask;
     }
 
-    public Task<SplitByDomains> GetSplitByDomains(CancellationToken cancellationToken)
+    public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken)
     {
-        var splitByDomains = new SplitByDomains {
-            Includes = App.SettingsService.SplitByDomainSettings.Includes,
-            Excludes = App.SettingsService.SplitByDomainSettings.Excludes,
-            Blocks = App.SettingsService.SplitByDomainSettings.Blocks
+        var splitByDomains = new SplitDomains {
+            Includes = App.SettingsService.SplitDomainSettings.Includes,
+            Excludes = App.SettingsService.SplitDomainSettings.Excludes,
+            Blocks = App.SettingsService.SplitDomainSettings.Blocks
         };
 
         return Task.FromResult(splitByDomains);
     }
 
-    public Task SetSplitByDomains(SplitByDomains value, CancellationToken cancellationToken)
+    public Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken)
     {
-        App.SettingsService.SplitByDomainSettings.Includes = value.Includes;
-        App.SettingsService.SplitByDomainSettings.Excludes = value.Excludes;
-        App.SettingsService.SplitByDomainSettings.Blocks = value.Blocks;
+        App.SettingsService.SplitDomainSettings.Includes = value.Includes;
+        App.SettingsService.SplitDomainSettings.Excludes = value.Excludes;
+        App.SettingsService.SplitDomainSettings.Blocks = value.Blocks;
         return Task.CompletedTask;
     }
 
@@ -354,8 +354,8 @@ internal class AppController : ControllerBase, IAppController
         return Task.FromResult(App.Services.LocationService.GetCountries());
     }
 
-    public Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken)
+    public Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
-        return App.Services.LocationService.GetSupportedSplitByCountries(cancellationToken);
+        return App.Services.LocationService.GetSupportedSplitCountries(cancellationToken);
     }
 }

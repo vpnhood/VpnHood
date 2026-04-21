@@ -29,8 +29,8 @@ public static class ConnectAppResources
         AppFeature.CustomDns,
         AppFeature.AlwaysOn,
         AppFeature.QuickLaunch,
-        AppFeature.SplitByIpViaApp,
-        AppFeature.SplitByIpViaDevice,
-        AppFeature.SplitByDomain
+        AppFeature.SplitIpViaApp,
+        AppFeature.SplitIpViaDevice,
+        AppFeature.SplitDomain
     ];
 }

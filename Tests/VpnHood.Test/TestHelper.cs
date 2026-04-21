@@ -514,7 +514,7 @@ public class TestHelper : IDisposable
             AllowEndPointTracker = true,
             MaxPacketChannelCount = 1,
             IncludeIpRangesByDevice = TestIps.AllRemoteTestIps.ToIpRanges().ToArray(),
-            IncludeLocalNetwork = true,
+            SplitLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
             ChannelProtocol = channelProtocol,
             UseTcpProxy = useTcpProxy,

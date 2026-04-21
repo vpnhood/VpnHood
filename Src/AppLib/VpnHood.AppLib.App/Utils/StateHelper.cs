@@ -74,8 +74,8 @@ public static class StateHelper
             return TcpProxyUsageReason.ServerRequiredOff;
 
         // split-by-domain requires TcpProxy for SNI stream interception
-        if (userSettings.UseSplitByDomain)
-            return TcpProxyUsageReason.SplitByDomainRequiredOn;
+        if (userSettings.UseSplitDomain)
+            return TcpProxyUsageReason.SplitDomainRequiredOn;
 
         return TcpProxyUsageReason.None;
     }

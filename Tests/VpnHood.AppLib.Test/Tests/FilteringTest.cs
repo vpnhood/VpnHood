@@ -15,13 +15,13 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.UseSplitByDomain = true;
-        app.SettingsService.SplitByDomainSettings.Includes = MockEps.HttpsUrl1.Host;
-        app.SettingsService.SplitByDomainSettings.Excludes = MockEps.HttpsUrl2.Host;
+        app.UserSettings.UseSplitDomain = true;
+        app.SettingsService.SplitDomainSettings.Includes = MockEps.HttpsUrl1.Host;
+        app.SettingsService.SplitDomainSettings.Excludes = MockEps.HttpsUrl2.Host;
 
         // domain filter should have upper hand.
         // Here we force IpFilter to include HttpsUrl2 and exclude HttpsUrl1
-        app.SettingsService.SplitByIpSettings.AppIncludes = MockEps.HttpsV4EndPoint2.Address.ToString();
+        app.SettingsService.SplitIpSettings.AppIncludes = MockEps.HttpsV4EndPoint2.Address.ToString();
 
         // connect
         await appDom.Connect(cancellationToken: TestCt);
@@ -47,13 +47,13 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.UseSplitByDomain = true;
-        app.SettingsService.SplitByDomainSettings.Includes = MockEps.QuicUrl1.Host;
-        app.SettingsService.SplitByDomainSettings.Excludes = MockEps.QuicUrl2.Host;
+        app.UserSettings.UseSplitDomain = true;
+        app.SettingsService.SplitDomainSettings.Includes = MockEps.QuicUrl1.Host;
+        app.SettingsService.SplitDomainSettings.Excludes = MockEps.QuicUrl2.Host;
 
         // domain filter should have upper hand.
         // Here we force IpFilter to include QuicUrl2 and exclude QuicUrl1
-        app.SettingsService.SplitByIpSettings.AppIncludes = MockEps.QuicEndPoint2.Address.ToString();
+        app.SettingsService.SplitIpSettings.AppIncludes = MockEps.QuicEndPoint2.Address.ToString();
 
         // connect
         await appDom.Connect(cancellationToken: TestCt);
@@ -80,10 +80,10 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.UseSplitByDomain = true;
+        app.UserSettings.UseSplitDomain = true;
 
         // block domain1
-        app.SettingsService.SplitByDomainSettings.Blocks = MockEps.HttpsUrl1.Host;
+        app.SettingsService.SplitDomainSettings.Blocks = MockEps.HttpsUrl1.Host;
 
         // connect
         await appDom.Connect(cancellationToken: TestCt);
@@ -107,10 +107,10 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.UseSplitByDomain = true;
+        app.UserSettings.UseSplitDomain = true;
 
         // block domain1
-        app.SettingsService.SplitByDomainSettings.Blocks = MockEps.QuicUrl1.Host;
+        app.SettingsService.SplitDomainSettings.Blocks = MockEps.QuicUrl1.Host;
 
         // connect
         await appDom.Connect(cancellationToken: TestCt);
@@ -149,8 +149,8 @@ public class FilteringTest : TestAppBase
 
         // ************
         // *** TEST ***: Test Include ip filter
-        app.SettingsService.SplitByIpSettings.AppIncludes = targetIps1.ToText();
-        app.SettingsService.SplitByIpSettings.AppExcludes = targetIps2.ToText();
+        app.SettingsService.SplitIpSettings.AppIncludes = targetIps1.ToText();
+        app.SettingsService.SplitIpSettings.AppExcludes = targetIps2.ToText();
         await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
         await TestHelper.Test_Ping(ipAddress: MockEps.PingV4Address1);
@@ -162,8 +162,8 @@ public class FilteringTest : TestAppBase
 
         // ************
         // *** TEST ***: Reverse include/exclude list, then target1 should be excluded and target2 should be included.
-        app.SettingsService.SplitByIpSettings.AppIncludes = targetIps2.ToText();
-        app.SettingsService.SplitByIpSettings.AppExcludes = targetIps1.ToText();
+        app.SettingsService.SplitIpSettings.AppIncludes = targetIps2.ToText();
+        app.SettingsService.SplitIpSettings.AppExcludes = targetIps1.ToText();
         await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
@@ -190,7 +190,7 @@ public class FilteringTest : TestAppBase
 
         // ************
         // *** TEST ***: Block target1 IPs via AppBlocks
-        app.SettingsService.SplitByIpSettings.AppBlocks = blockedIps.ToText();
+        app.SettingsService.SplitIpSettings.AppBlocks = blockedIps.ToText();
         await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 

@@ -26,7 +26,6 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             Resources = resources,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
-            IsLocalNetworkSupported = true,
             AdjustForSystemBars = false,
             AllowEndPointStrategy = true,
             AllowRecommendUserReviewByServer = false,

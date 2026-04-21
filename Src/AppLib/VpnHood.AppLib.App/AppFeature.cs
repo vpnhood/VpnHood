@@ -8,8 +8,8 @@ public enum AppFeature
     QuickLaunch,
     AlwaysOn,
     CustomDns,
-    SplitByIpViaApp,
-    SplitByIpViaDevice,
-    SplitByDomain,
-    SplitByCountry
+    SplitIpViaApp,
+    SplitIpViaDevice,
+    SplitDomain,
+    SplitCountry
 }

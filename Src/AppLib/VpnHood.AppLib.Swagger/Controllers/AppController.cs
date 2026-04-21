@@ -28,25 +28,25 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpGet("split-by-ips")]
-    public Task<SplitByIps> GetSplitByIps(CancellationToken cancellationToken)
+    public Task<SplitIps> GetSplitIps(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPut("split-by-ips")]
-    public Task SetSplitByIps(SplitByIps value, CancellationToken cancellationToken)
+    public Task SetSplitIps(SplitIps value, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpGet("split-by-domains")]
-    public Task<SplitByDomains> GetSplitByDomains(CancellationToken cancellationToken)
+    public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPut("split-by-domains")]
-    public Task SetSplitByDomains(SplitByDomains value, CancellationToken cancellationToken)
+    public Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -147,7 +147,7 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpGet("supported-split-by-countries")]
-    public Task<CountryInfo[]> GetSupportedSplitByCountries(CancellationToken cancellationToken)
+    public Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

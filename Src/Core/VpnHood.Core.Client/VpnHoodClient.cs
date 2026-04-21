@@ -90,7 +90,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             UserAgent = options.UserAgent,
             ClientId = options.ClientId,
             SessionTimeout = options.SessionTimeout,
-            IncludeLocalNetwork = options.IncludeLocalNetwork,
+            IncludeLocalNetwork = options.SplitLocalNetwork,
             IsTcpProxySupported = options.IsTcpProxySupported,
             UseTcpProxy = options.UseTcpProxy,
             DropUdp = options.DropUdp,

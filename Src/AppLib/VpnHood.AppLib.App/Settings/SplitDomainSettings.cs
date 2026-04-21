@@ -1,6 +1,6 @@
 namespace VpnHood.AppLib.Settings;
 
-public class SplitByDomainSettings(string folderPath)
+public class SplitDomainSettings(string folderPath)
 {
     private string GetFilePath(string fileTitle)
     {

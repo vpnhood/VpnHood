@@ -15,13 +15,14 @@ public class UserSettings
     public string? CultureCode { get; set; }
     public Guid? ClientProfileId { get; set; }
     public int MaxPacketChannelCount { get; set; } = ClientOptions.Default.MaxPacketChannelCount;
-    public SplitByMode SplitByAppMode { get; set; } = SplitByMode.All;
-    public string[] SplitByApps { get; set; } = [];
-    public SplitByCountryMode SplitByCountryMode { get; set; } = SplitByCountryMode.IncludeAll;
-    public string[] SplitByCountries { get; set; } = [];
-    public bool UseSplitByIpViaApp { get; set; }
-    public bool UseSplitByIpViaDevice { get; set; }
-    public bool UseSplitByDomain { get; set; }
+    public SplitAppMode SplitAppMode { get; set; } = SplitAppMode.All;
+    public string[] SplitApps { get; set; } = [];
+    public SplitCountryMode SplitCountryMode { get; set; } = SplitCountryMode.IncludeAll;
+    public string[] SplitCountries { get; set; } = [];
+    public bool UseSplitIpViaApp { get; set; }
+    public bool UseSplitIpViaDevice { get; set; }
+    public bool UseSplitDomain { get; set; }
+    public bool UseSplitLocalNetwork { get; set; }
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;
     public bool UseTcpProxy { get; set; }
@@ -30,7 +31,6 @@ public class UserSettings
     public string? DebugData1 { get; set; }
     public string? DebugData2 { get; set; }
     public bool LogAnonymous { get; set; } = true;
-    public bool IncludeLocalNetwork { get; set; } = ClientOptions.Default.IncludeLocalNetwork;
     public EndPointStrategy EndPointStrategy { get; set; }
     public DnsMode DnsMode { get; set; }
     public AppProxySettings ProxySettings { get; set; } = new();
@@ -56,43 +56,42 @@ public class UserSettings
     }
 
     [Obsolete("Use CountryFilterMode. for version <=784")]
-    public bool? TunnelClientCountry {
-        init {
-            if (value == false)
-                SplitByCountryMode = SplitByCountryMode.ExcludeMyCountry;
-        }
-    }
+    public bool? IncludeLocalNetwork { init { if (value == false) UseSplitLocalNetwork = !value.Value; } }
 
-    [Obsolete("Use UseSplitByIpsViaApp. for version <=784")]
-    public bool? UseAppIpFilter {
-        init {
-            if (value == true)
-                UseSplitByIpViaApp = true;
-        }
-    }
+    [Obsolete("Use CountryFilterMode. for version <=784")]
+    public bool? TunnelClientCountry { init { if (value == false) SplitCountryMode = SplitCountryMode.ExcludeMyCountry; } }
 
-    [Obsolete("Use UseSplitByIpsViaDevice. for version <=784")]
-    public bool? UseVpnAdapterIpFilter { 
-        init {
-            if (value == true)
-                UseSplitByIpViaDevice = true;
-        }
-    }
+    [Obsolete("Use UseSplitIpViaApp. for version <=784")]
+    public bool? UseAppIpFilter { init { if (value == true) UseSplitIpViaApp = true; } }
 
-    [Obsolete("Use SplitByAppMode. for version <=784")]
-    public SplitByMode? AppFiltersMode { 
-        init {
-            if (value != null)
-                SplitByAppMode = value.Value;
-        }
-    }
+    [Obsolete("Use UseSplitIpViaDevice. for version <=784")]
+    public bool? UseVpnAdapterIpFilter { init { if (value == true) UseSplitIpViaDevice = true; } }
 
-    [Obsolete("Use SplitByApps. for version <=784")]
-    public string[]? AppFilters { 
-        init {
-            if (value != null)
-                SplitByApps = value;
-        }
-    }
+    [Obsolete("Use SplitAppMode. for version <=801")]
+    public SplitAppMode? AppFiltersMode { init { if (value != null) SplitAppMode = value.Value; } }
+
+    [Obsolete("Use SplitApps. for version <=801")]
+    public string[]? AppFilters { init { if (value != null) SplitApps = value; } }
+
+    [Obsolete("Use SplitAppMode. for version <=801")]
+    public SplitAppMode? SplitByAppMode { init { if (value != null) SplitAppMode = value.Value; } }
+
+    [Obsolete("Use SplitApps. for version <=801")]
+    public string[]? SplitByApps { init { if (value != null) SplitApps = value; } }
+
+    [Obsolete("Use SplitCountryMode. for version <=801")]
+    public SplitCountryMode? SplitByCountryMode { init { if (value != null) SplitCountryMode = value.Value; } }
+
+    [Obsolete("Use SplitCountries. for version <=801")]
+    public string[]? SplitByCountries { init { if (value != null) SplitCountries = value; } }
+
+    [Obsolete("Use UseSplitIpViaApp. for version <=801")]
+    public bool? UseSplitByIpViaApp { init { if (value == true) UseSplitIpViaApp = true; } }
+
+    [Obsolete("Use UseSplitIpViaDevice. for version <=801")]
+    public bool? UseSplitByIpViaDevice { init { if (value == true) UseSplitIpViaDevice = true; } }
+
+    [Obsolete("Use UseSplitDomain. for version <=801")]
+    public bool? UseSplitByDomain { init { if (value == true) UseSplitDomain = true; } }
 
 }

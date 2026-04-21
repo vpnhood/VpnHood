@@ -36,7 +36,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public string? Ga4MeasurementId { get; set; } = "G-4LE99XKZYE";
     public string? UiName { get; set; }
     public bool IsAddAccessKeySupported { get; set; } = true;
-    public bool IsLocalNetworkSupported { get; set; }
     public string[] AccessKeys { get; set; } = [];
     public IDeviceUiProvider? DeviceUiProvider { get; set; }
     public IAppCultureProvider? CultureProvider { get; set; }

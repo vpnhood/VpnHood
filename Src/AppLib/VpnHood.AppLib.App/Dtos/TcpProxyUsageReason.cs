@@ -18,5 +18,5 @@ public enum TcpProxyUsageReason
     ServerRequiredOff,
 
     /// <summary>Split-by-domain is active and requires TcpProxy for SNI filtering (forced on).</summary>
-    SplitByDomainRequiredOn
+    SplitDomainRequiredOn
 }

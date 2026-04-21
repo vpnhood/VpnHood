@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AppLib.WebServer.Api;
 
-public class SplitByIps
+public class SplitIps
 {
     public required string DeviceIncludes { get; set; }
     public required string DeviceExcludes { get; set; }

@@ -424,7 +424,7 @@ export class AppClient {
         return Promise.resolve<AppData>(null as any);
     }
 
-    getSplitByIps( cancelToken?: CancelToken): Promise<SplitByIps> {
+    getSplitIps( cancelToken?: CancelToken): Promise<SplitIps> {
         let url_ = this.baseUrl + "/api/app/split-by-ips";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -444,11 +444,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetSplitByIps(_response);
+            return this.processGetSplitIps(_response);
         });
     }
 
-    protected processGetSplitByIps(response: AxiosResponse): Promise<SplitByIps> {
+    protected processGetSplitIps(response: AxiosResponse): Promise<SplitIps> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -462,17 +462,17 @@ export class AppClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = SplitByIps.fromJS(resultData200);
-            return Promise.resolve<SplitByIps>(result200);
+            result200 = SplitIps.fromJS(resultData200);
+            return Promise.resolve<SplitIps>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<SplitByIps>(null as any);
+        return Promise.resolve<SplitIps>(null as any);
     }
 
-    setSplitByIps(value: SplitByIps, cancelToken?: CancelToken): Promise<void> {
+    setSplitIps(value: SplitIps, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/split-by-ips";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -495,11 +495,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processSetSplitByIps(_response);
+            return this.processSetSplitIps(_response);
         });
     }
 
-    protected processSetSplitByIps(response: AxiosResponse): Promise<void> {
+    protected processSetSplitIps(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -520,7 +520,7 @@ export class AppClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getSplitByDomains( cancelToken?: CancelToken): Promise<SplitByDomains> {
+    getSplitDomains( cancelToken?: CancelToken): Promise<SplitDomains> {
         let url_ = this.baseUrl + "/api/app/split-by-domains";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -540,11 +540,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetSplitByDomains(_response);
+            return this.processGetSplitDomains(_response);
         });
     }
 
-    protected processGetSplitByDomains(response: AxiosResponse): Promise<SplitByDomains> {
+    protected processGetSplitDomains(response: AxiosResponse): Promise<SplitDomains> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -558,17 +558,17 @@ export class AppClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = SplitByDomains.fromJS(resultData200);
-            return Promise.resolve<SplitByDomains>(result200);
+            result200 = SplitDomains.fromJS(resultData200);
+            return Promise.resolve<SplitDomains>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<SplitByDomains>(null as any);
+        return Promise.resolve<SplitDomains>(null as any);
     }
 
-    setSplitByDomains(value: SplitByDomains, cancelToken?: CancelToken): Promise<void> {
+    setSplitDomains(value: SplitDomains, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/app/split-by-domains";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -591,11 +591,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processSetSplitByDomains(_response);
+            return this.processSetSplitDomains(_response);
         });
     }
 
-    protected processSetSplitByDomains(response: AxiosResponse): Promise<void> {
+    protected processSetSplitDomains(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1344,7 +1344,7 @@ export class AppClient {
         return Promise.resolve<CountryInfo[]>(null as any);
     }
 
-    getSupportedSplitByCountries( cancelToken?: CancelToken): Promise<CountryInfo[]> {
+    getSupportedSplitCountries( cancelToken?: CancelToken): Promise<CountryInfo[]> {
         let url_ = this.baseUrl + "/api/app/supported-split-by-countries";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1364,11 +1364,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetSupportedSplitByCountries(_response);
+            return this.processGetSupportedSplitCountries(_response);
         });
     }
 
-    protected processGetSupportedSplitByCountries(response: AxiosResponse): Promise<CountryInfo[]> {
+    protected processGetSupportedSplitCountries(response: AxiosResponse): Promise<CountryInfo[]> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -3168,14 +3168,13 @@ export class AppFeatures implements IAppFeatures {
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
     isTcpProxySupported!: boolean;
-    isSplitByDomainSupported!: boolean;
+    isSplitDomainSupported!: boolean;
     isUserReviewSupported!: boolean;
     isTv!: boolean;
     gaMeasurementId?: string | null;
     clientId!: string;
     isDebugMode!: boolean;
     debugCommands!: string[];
-    isLocalNetworkSupported!: boolean;
     isProxySupported!: boolean;
     adjustForSystemBars!: boolean;
     allowEndPointStrategy!: boolean;
@@ -3214,7 +3213,7 @@ export class AppFeatures implements IAppFeatures {
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : null as any;
             this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : null as any;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
-            this.isSplitByDomainSupported = _data["isSplitByDomainSupported"] !== undefined ? _data["isSplitByDomainSupported"] : null as any;
+            this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
             this.isUserReviewSupported = _data["isUserReviewSupported"] !== undefined ? _data["isUserReviewSupported"] : null as any;
             this.isTv = _data["isTv"] !== undefined ? _data["isTv"] : null as any;
             this.gaMeasurementId = _data["gaMeasurementId"] !== undefined ? _data["gaMeasurementId"] : null as any;
@@ -3228,7 +3227,6 @@ export class AppFeatures implements IAppFeatures {
             else {
                 this.debugCommands = null as any;
             }
-            this.isLocalNetworkSupported = _data["isLocalNetworkSupported"] !== undefined ? _data["isLocalNetworkSupported"] : null as any;
             this.isProxySupported = _data["isProxySupported"] !== undefined ? _data["isProxySupported"] : null as any;
             this.adjustForSystemBars = _data["adjustForSystemBars"] !== undefined ? _data["adjustForSystemBars"] : null as any;
             this.allowEndPointStrategy = _data["allowEndPointStrategy"] !== undefined ? _data["allowEndPointStrategy"] : null as any;
@@ -3276,7 +3274,7 @@ export class AppFeatures implements IAppFeatures {
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : null as any;
         data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : null as any;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
-        data["isSplitByDomainSupported"] = this.isSplitByDomainSupported !== undefined ? this.isSplitByDomainSupported : null as any;
+        data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
         data["isUserReviewSupported"] = this.isUserReviewSupported !== undefined ? this.isUserReviewSupported : null as any;
         data["isTv"] = this.isTv !== undefined ? this.isTv : null as any;
         data["gaMeasurementId"] = this.gaMeasurementId !== undefined ? this.gaMeasurementId : null as any;
@@ -3287,7 +3285,6 @@ export class AppFeatures implements IAppFeatures {
             for (let item of this.debugCommands)
                 data["debugCommands"].push(item);
         }
-        data["isLocalNetworkSupported"] = this.isLocalNetworkSupported !== undefined ? this.isLocalNetworkSupported : null as any;
         data["isProxySupported"] = this.isProxySupported !== undefined ? this.isProxySupported : null as any;
         data["adjustForSystemBars"] = this.adjustForSystemBars !== undefined ? this.adjustForSystemBars : null as any;
         data["allowEndPointStrategy"] = this.allowEndPointStrategy !== undefined ? this.allowEndPointStrategy : null as any;
@@ -3322,14 +3319,13 @@ export interface IAppFeatures {
     isAccountSupported: boolean;
     isBillingSupported: boolean;
     isTcpProxySupported: boolean;
-    isSplitByDomainSupported: boolean;
+    isSplitDomainSupported: boolean;
     isUserReviewSupported: boolean;
     isTv: boolean;
     gaMeasurementId?: string | null;
     clientId: string;
     isDebugMode: boolean;
     debugCommands: string[];
-    isLocalNetworkSupported: boolean;
     isProxySupported: boolean;
     adjustForSystemBars: boolean;
     allowEndPointStrategy: boolean;
@@ -3346,10 +3342,10 @@ export enum AppFeature {
     QuickLaunch = "QuickLaunch",
     AlwaysOn = "AlwaysOn",
     CustomDns = "CustomDns",
-    SplitByIpViaApp = "SplitByIpViaApp",
-    SplitByIpViaDevice = "SplitByIpViaDevice",
-    SplitByDomain = "SplitByDomain",
-    SplitByCountry = "SplitByCountry",
+    SplitIpViaApp = "SplitIpViaApp",
+    SplitIpViaDevice = "SplitIpViaDevice",
+    SplitDomain = "SplitDomain",
+    SplitCountry = "SplitCountry",
 }
 
 export enum ChannelProtocol {
@@ -4079,7 +4075,6 @@ export class AppSessionStatus implements IAppSessionStatus {
     sessionExpirationTime?: Date | null;
     activeClientCount?: number | null;
     isTcpProxy!: boolean;
-    isTcpProxyByDomainFilter!: boolean;
     canChangeTcpProxy!: boolean;
     isDropQuic!: boolean;
     channelProtocol!: ChannelProtocol;
@@ -4119,7 +4114,6 @@ export class AppSessionStatus implements IAppSessionStatus {
             this.sessionExpirationTime = _data["sessionExpirationTime"] ? new Date(_data["sessionExpirationTime"].toString()) : null as any;
             this.activeClientCount = _data["activeClientCount"] !== undefined ? _data["activeClientCount"] : null as any;
             this.isTcpProxy = _data["isTcpProxy"] !== undefined ? _data["isTcpProxy"] : null as any;
-            this.isTcpProxyByDomainFilter = _data["isTcpProxyByDomainFilter"] !== undefined ? _data["isTcpProxyByDomainFilter"] : null as any;
             this.canChangeTcpProxy = _data["canChangeTcpProxy"] !== undefined ? _data["canChangeTcpProxy"] : null as any;
             this.isDropQuic = _data["isDropQuic"] !== undefined ? _data["isDropQuic"] : null as any;
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
@@ -4151,7 +4145,6 @@ export class AppSessionStatus implements IAppSessionStatus {
         data["sessionExpirationTime"] = this.sessionExpirationTime ? this.sessionExpirationTime.toISOString() : null as any;
         data["activeClientCount"] = this.activeClientCount !== undefined ? this.activeClientCount : null as any;
         data["isTcpProxy"] = this.isTcpProxy !== undefined ? this.isTcpProxy : null as any;
-        data["isTcpProxyByDomainFilter"] = this.isTcpProxyByDomainFilter !== undefined ? this.isTcpProxyByDomainFilter : null as any;
         data["canChangeTcpProxy"] = this.canChangeTcpProxy !== undefined ? this.canChangeTcpProxy : null as any;
         data["isDropQuic"] = this.isDropQuic !== undefined ? this.isDropQuic : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
@@ -4176,7 +4169,6 @@ export interface IAppSessionStatus {
     sessionExpirationTime?: Date | null;
     activeClientCount?: number | null;
     isTcpProxy: boolean;
-    isTcpProxyByDomainFilter: boolean;
     canChangeTcpProxy: boolean;
     isDropQuic: boolean;
     channelProtocol: ChannelProtocol;
@@ -4982,7 +4974,7 @@ export enum TcpProxyUsageReason {
     ClientNotSupported = "ClientNotSupported",
     ServerRequiredOn = "ServerRequiredOn",
     ServerRequiredOff = "ServerRequiredOff",
-    SplitByDomainRequiredOn = "SplitByDomainRequiredOn",
+    SplitDomainRequiredOn = "SplitDomainRequiredOn",
 }
 
 export class UserSettings implements IUserSettings {
@@ -4992,13 +4984,14 @@ export class UserSettings implements IUserSettings {
     cultureCode?: string | null;
     clientProfileId?: string | null;
     maxPacketChannelCount!: number;
-    splitByAppMode!: SplitByMode;
-    splitByApps!: string[];
-    splitByCountryMode!: SplitByCountryMode;
-    splitByCountries!: string[];
-    useSplitByIpViaApp!: boolean;
-    useSplitByIpViaDevice!: boolean;
-    useSplitByDomain!: boolean;
+    splitAppMode!: SplitAppMode;
+    splitApps!: string[];
+    splitCountryMode!: SplitCountryMode;
+    splitCountries!: string[];
+    useSplitIpViaApp!: boolean;
+    useSplitIpViaDevice!: boolean;
+    useSplitDomain!: boolean;
+    useSplitLocalNetwork!: boolean;
     channelProtocol!: ChannelProtocol;
     dropUdp!: boolean;
     useTcpProxy!: boolean;
@@ -5007,7 +5000,6 @@ export class UserSettings implements IUserSettings {
     debugData1?: string | null;
     debugData2?: string | null;
     logAnonymous!: boolean;
-    includeLocalNetwork!: boolean;
     endPointStrategy!: EndPointStrategy;
     dnsMode!: DnsMode;
     proxySettings!: AppProxySettings;
@@ -5023,8 +5015,8 @@ export class UserSettings implements IUserSettings {
             }
         }
         if (!data) {
-            this.splitByApps = [];
-            this.splitByCountries = [];
+            this.splitApps = [];
+            this.splitCountries = [];
             this.proxySettings = new AppProxySettings();
             this.dnsServers = [];
         }
@@ -5038,27 +5030,28 @@ export class UserSettings implements IUserSettings {
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : null as any;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : null as any;
             this.maxPacketChannelCount = _data["maxPacketChannelCount"] !== undefined ? _data["maxPacketChannelCount"] : null as any;
-            this.splitByAppMode = _data["splitByAppMode"] !== undefined ? _data["splitByAppMode"] : null as any;
-            if (Array.isArray(_data["splitByApps"])) {
-                this.splitByApps = [] as any;
-                for (let item of _data["splitByApps"])
-                    this.splitByApps!.push(item);
+            this.splitAppMode = _data["splitAppMode"] !== undefined ? _data["splitAppMode"] : null as any;
+            if (Array.isArray(_data["splitApps"])) {
+                this.splitApps = [] as any;
+                for (let item of _data["splitApps"])
+                    this.splitApps!.push(item);
             }
             else {
-                this.splitByApps = null as any;
+                this.splitApps = null as any;
             }
-            this.splitByCountryMode = _data["splitByCountryMode"] !== undefined ? _data["splitByCountryMode"] : null as any;
-            if (Array.isArray(_data["splitByCountries"])) {
-                this.splitByCountries = [] as any;
-                for (let item of _data["splitByCountries"])
-                    this.splitByCountries!.push(item);
+            this.splitCountryMode = _data["splitCountryMode"] !== undefined ? _data["splitCountryMode"] : null as any;
+            if (Array.isArray(_data["splitCountries"])) {
+                this.splitCountries = [] as any;
+                for (let item of _data["splitCountries"])
+                    this.splitCountries!.push(item);
             }
             else {
-                this.splitByCountries = null as any;
+                this.splitCountries = null as any;
             }
-            this.useSplitByIpViaApp = _data["useSplitByIpViaApp"] !== undefined ? _data["useSplitByIpViaApp"] : null as any;
-            this.useSplitByIpViaDevice = _data["useSplitByIpViaDevice"] !== undefined ? _data["useSplitByIpViaDevice"] : null as any;
-            this.useSplitByDomain = _data["useSplitByDomain"] !== undefined ? _data["useSplitByDomain"] : null as any;
+            this.useSplitIpViaApp = _data["useSplitIpViaApp"] !== undefined ? _data["useSplitIpViaApp"] : null as any;
+            this.useSplitIpViaDevice = _data["useSplitIpViaDevice"] !== undefined ? _data["useSplitIpViaDevice"] : null as any;
+            this.useSplitDomain = _data["useSplitDomain"] !== undefined ? _data["useSplitDomain"] : null as any;
+            this.useSplitLocalNetwork = _data["useSplitLocalNetwork"] !== undefined ? _data["useSplitLocalNetwork"] : null as any;
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
             this.dropUdp = _data["dropUdp"] !== undefined ? _data["dropUdp"] : null as any;
             this.useTcpProxy = _data["useTcpProxy"] !== undefined ? _data["useTcpProxy"] : null as any;
@@ -5067,7 +5060,6 @@ export class UserSettings implements IUserSettings {
             this.debugData1 = _data["debugData1"] !== undefined ? _data["debugData1"] : null as any;
             this.debugData2 = _data["debugData2"] !== undefined ? _data["debugData2"] : null as any;
             this.logAnonymous = _data["logAnonymous"] !== undefined ? _data["logAnonymous"] : null as any;
-            this.includeLocalNetwork = _data["includeLocalNetwork"] !== undefined ? _data["includeLocalNetwork"] : null as any;
             this.endPointStrategy = _data["endPointStrategy"] !== undefined ? _data["endPointStrategy"] : null as any;
             this.dnsMode = _data["dnsMode"] !== undefined ? _data["dnsMode"] : null as any;
             this.proxySettings = _data["proxySettings"] ? AppProxySettings.fromJS(_data["proxySettings"]) : new AppProxySettings();
@@ -5099,21 +5091,22 @@ export class UserSettings implements IUserSettings {
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : null as any;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : null as any;
         data["maxPacketChannelCount"] = this.maxPacketChannelCount !== undefined ? this.maxPacketChannelCount : null as any;
-        data["splitByAppMode"] = this.splitByAppMode !== undefined ? this.splitByAppMode : null as any;
-        if (Array.isArray(this.splitByApps)) {
-            data["splitByApps"] = [];
-            for (let item of this.splitByApps)
-                data["splitByApps"].push(item);
+        data["splitAppMode"] = this.splitAppMode !== undefined ? this.splitAppMode : null as any;
+        if (Array.isArray(this.splitApps)) {
+            data["splitApps"] = [];
+            for (let item of this.splitApps)
+                data["splitApps"].push(item);
         }
-        data["splitByCountryMode"] = this.splitByCountryMode !== undefined ? this.splitByCountryMode : null as any;
-        if (Array.isArray(this.splitByCountries)) {
-            data["splitByCountries"] = [];
-            for (let item of this.splitByCountries)
-                data["splitByCountries"].push(item);
+        data["splitCountryMode"] = this.splitCountryMode !== undefined ? this.splitCountryMode : null as any;
+        if (Array.isArray(this.splitCountries)) {
+            data["splitCountries"] = [];
+            for (let item of this.splitCountries)
+                data["splitCountries"].push(item);
         }
-        data["useSplitByIpViaApp"] = this.useSplitByIpViaApp !== undefined ? this.useSplitByIpViaApp : null as any;
-        data["useSplitByIpViaDevice"] = this.useSplitByIpViaDevice !== undefined ? this.useSplitByIpViaDevice : null as any;
-        data["useSplitByDomain"] = this.useSplitByDomain !== undefined ? this.useSplitByDomain : null as any;
+        data["useSplitIpViaApp"] = this.useSplitIpViaApp !== undefined ? this.useSplitIpViaApp : null as any;
+        data["useSplitIpViaDevice"] = this.useSplitIpViaDevice !== undefined ? this.useSplitIpViaDevice : null as any;
+        data["useSplitDomain"] = this.useSplitDomain !== undefined ? this.useSplitDomain : null as any;
+        data["useSplitLocalNetwork"] = this.useSplitLocalNetwork !== undefined ? this.useSplitLocalNetwork : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
         data["dropUdp"] = this.dropUdp !== undefined ? this.dropUdp : null as any;
         data["useTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : null as any;
@@ -5122,7 +5115,6 @@ export class UserSettings implements IUserSettings {
         data["debugData1"] = this.debugData1 !== undefined ? this.debugData1 : null as any;
         data["debugData2"] = this.debugData2 !== undefined ? this.debugData2 : null as any;
         data["logAnonymous"] = this.logAnonymous !== undefined ? this.logAnonymous : null as any;
-        data["includeLocalNetwork"] = this.includeLocalNetwork !== undefined ? this.includeLocalNetwork : null as any;
         data["endPointStrategy"] = this.endPointStrategy !== undefined ? this.endPointStrategy : null as any;
         data["dnsMode"] = this.dnsMode !== undefined ? this.dnsMode : null as any;
         data["proxySettings"] = this.proxySettings ? this.proxySettings.toJSON() : null as any;
@@ -5144,13 +5136,14 @@ export interface IUserSettings {
     cultureCode?: string | null;
     clientProfileId?: string | null;
     maxPacketChannelCount: number;
-    splitByAppMode: SplitByMode;
-    splitByApps: string[];
-    splitByCountryMode: SplitByCountryMode;
-    splitByCountries: string[];
-    useSplitByIpViaApp: boolean;
-    useSplitByIpViaDevice: boolean;
-    useSplitByDomain: boolean;
+    splitAppMode: SplitAppMode;
+    splitApps: string[];
+    splitCountryMode: SplitCountryMode;
+    splitCountries: string[];
+    useSplitIpViaApp: boolean;
+    useSplitIpViaDevice: boolean;
+    useSplitDomain: boolean;
+    useSplitLocalNetwork: boolean;
     channelProtocol: ChannelProtocol;
     dropUdp: boolean;
     useTcpProxy: boolean;
@@ -5159,7 +5152,6 @@ export interface IUserSettings {
     debugData1?: string | null;
     debugData2?: string | null;
     logAnonymous: boolean;
-    includeLocalNetwork: boolean;
     endPointStrategy: EndPointStrategy;
     dnsMode: DnsMode;
     proxySettings: AppProxySettings;
@@ -5168,13 +5160,13 @@ export interface IUserSettings {
     dnsServers: string[];
 }
 
-export enum SplitByMode {
+export enum SplitAppMode {
     All = "All",
     Exclude = "Exclude",
     Include = "Include",
 }
 
-export enum SplitByCountryMode {
+export enum SplitCountryMode {
     IncludeAll = "IncludeAll",
     ExcludeMyCountry = "ExcludeMyCountry",
     ExcludeList = "ExcludeList",
@@ -5687,14 +5679,14 @@ export interface IAppStrings {
     openInBrowser: string;
 }
 
-export class SplitByIps implements ISplitByIps {
+export class SplitIps implements ISplitIps {
     deviceIncludes!: string;
     deviceExcludes!: string;
     appIncludes!: string;
     appExcludes!: string;
     appBlocks!: string;
 
-    constructor(data?: ISplitByIps) {
+    constructor(data?: ISplitIps) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5713,9 +5705,9 @@ export class SplitByIps implements ISplitByIps {
         }
     }
 
-    static fromJS(data: any): SplitByIps {
+    static fromJS(data: any): SplitIps {
         data = typeof data === 'object' ? data : {};
-        let result = new SplitByIps();
+        let result = new SplitIps();
         result.init(data);
         return result;
     }
@@ -5731,7 +5723,7 @@ export class SplitByIps implements ISplitByIps {
     }
 }
 
-export interface ISplitByIps {
+export interface ISplitIps {
     deviceIncludes: string;
     deviceExcludes: string;
     appIncludes: string;
@@ -5739,12 +5731,12 @@ export interface ISplitByIps {
     appBlocks: string;
 }
 
-export class SplitByDomains implements ISplitByDomains {
+export class SplitDomains implements ISplitDomains {
     includes!: string;
     excludes!: string;
     blocks!: string;
 
-    constructor(data?: ISplitByDomains) {
+    constructor(data?: ISplitDomains) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5761,9 +5753,9 @@ export class SplitByDomains implements ISplitByDomains {
         }
     }
 
-    static fromJS(data: any): SplitByDomains {
+    static fromJS(data: any): SplitDomains {
         data = typeof data === 'object' ? data : {};
-        let result = new SplitByDomains();
+        let result = new SplitDomains();
         result.init(data);
         return result;
     }
@@ -5777,7 +5769,7 @@ export class SplitByDomains implements ISplitByDomains {
     }
 }
 
-export interface ISplitByDomains {
+export interface ISplitDomains {
     includes: string;
     excludes: string;
     blocks: string;

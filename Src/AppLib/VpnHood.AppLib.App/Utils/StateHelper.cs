@@ -2,6 +2,7 @@
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Toolkit.Utils;
@@ -53,5 +54,29 @@ public static class StateHelper
                  clientProfileInfo.SelectedLocationInfo,
                  clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode));
 
+    }
+
+    public static TcpProxyUsageReason GetTcpProxyUsageReason(
+        AppFeatures appFeatures,
+        UserSettings userSettings,
+        SessionInfo? sessionInfo)
+    {
+        // client platform does not support TcpProxy at all
+        if (!appFeatures.IsTcpProxySupported)
+            return TcpProxyUsageReason.ClientNotSupported;
+
+        // server requires TcpProxy because it cannot deliver raw TCP packets
+        if (sessionInfo is { IsTcpPacketSupported: false })
+            return TcpProxyUsageReason.ServerRequiredOn;
+
+        // server does not support TcpProxy
+        if (sessionInfo is { IsTcpProxySupported: false })
+            return TcpProxyUsageReason.ServerRequiredOff;
+
+        // split-by-domain requires TcpProxy for SNI stream interception
+        if (userSettings.UseSplitByDomain)
+            return TcpProxyUsageReason.SplitByDomainRequiredOn;
+
+        return TcpProxyUsageReason.None;
     }
 }

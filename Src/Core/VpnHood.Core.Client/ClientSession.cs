@@ -4,6 +4,7 @@ using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
@@ -38,6 +39,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AsyncLock _disposeLock = new();
     private readonly AsyncLock _packetChannelLock = new();
+    private readonly DomainFilteringService _domainFilteringService;
 
     private DateTime? _autoWaitTime;
     private ClientUdpChannelTransmitter? _udpTransmitter;
@@ -71,6 +73,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _dropQuic = options.DropQuic;
         _dropUdp = options.DropUdp;
         _socketFactory = options.SocketFactory;
+        _domainFilteringService = options.DomainFilteringService;
         Config = config;
         Info = options.SessionInfo;
 
@@ -264,6 +267,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         // server does not support tcp packets so only tcp proxy can work
         if (Info is { IsTcpPacketSupported: false })
+            return true;
+
+        // DomainFilter needs TcpProxy
+        if (_domainFilteringService.IsEnabled)
             return true;
 
         // follow config

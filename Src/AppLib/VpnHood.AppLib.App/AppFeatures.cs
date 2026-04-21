@@ -17,6 +17,7 @@ public class AppFeatures
     public required bool IsAccountSupported { get; init; }
     public required bool IsBillingSupported { get; init; }
     public required bool IsTcpProxySupported { get; init; }
+    public required bool IsSplitByDomainSupported { get; init; }
     public required bool IsUserReviewSupported { get; init; }
     public required bool IsTv { get; init; }
     public required string? GaMeasurementId { get; init; }

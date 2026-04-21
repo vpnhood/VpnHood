@@ -36,13 +36,15 @@ internal class ClientSessionStatus(
     } = accessUsage.TotalTraffic;
 
     public int SessionPacketChannelCount => session.CreatedPacketChannelCount;
-    public int StreamTunnelledCount => 
+    public int StreamTunnelledCount =>
         streamHandler.Stat.TcpTunnelledCount + domainFilteringService.QuicStat.IncludeCount;
-    public int StreamPassthruCount => 
+    public int StreamPassthruCount =>
         streamHandler.Stat.TcpPassthruCount + domainFilteringService.QuicStat.ExcludeCount;
     public int ActivePacketChannelCount => tunnel.PacketChannelCount;
     public bool IsDropQuic => packetHandler.DropQuic; // This is current, don't use session property
     public bool IsTcpProxy => packetHandler.UseTcpProxy; // This is current, don't use session property
+    public bool CanChangeTcpProxy =>
+        session.Info is { IsTcpProxySupported: true, IsTcpPacketSupported: true } && !domainFilteringService.IsEnabled;
     public ChannelProtocol ChannelProtocol => session.ChannelProtocol;
     public int UnstableCount { get; set; }
     public int WaitingCount { get; set; }
@@ -55,7 +57,5 @@ internal class ClientSessionStatus(
     public bool IsIpV6SupportedByServer => packetHandler.IsIpV6SupportedByServer;
     public bool IsIpV6SupportedByClient => packetHandler.IsIpV6SupportedByClient;
     public bool IsAdapterStarted => session.IsAdapterStarted;
-    public bool IsTcpProxyByDomainFilter => domainFilteringService.IsEnabled;
-    public bool CanChangeTcpProxy => session.Info is { IsTcpProxySupported: true, IsTcpPacketSupported: true } && !IsTcpProxyByDomainFilter;
     public ApiError? Error => session.LastException?.ToApiError();
 }

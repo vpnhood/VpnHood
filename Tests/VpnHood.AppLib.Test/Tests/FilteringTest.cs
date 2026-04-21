@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Quic;
+using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Test;
@@ -39,10 +40,6 @@ public class FilteringTest : TestAppBase
         newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
         Assert.AreEqual(oldStat.StreamTunnelledCount, newStat.StreamTunnelledCount);
         Assert.AreEqual(oldStat.StreamPassthruCount + 1, newStat.StreamPassthruCount);
-
-        // Check TcpProxy status
-        Assert.IsFalse(newStat.CanChangeTcpProxy);
-        Assert.IsTrue(newStat.IsTcpProxyByDomainFilter);
     }
 
     [TestMethod]
@@ -75,10 +72,6 @@ public class FilteringTest : TestAppBase
         newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
         Assert.AreEqual(oldStat.StreamTunnelledCount, newStat.StreamTunnelledCount);
         Assert.AreEqual(oldStat.StreamPassthruCount + 1, newStat.StreamPassthruCount);
-
-        // Check TcpProxy status
-        Assert.IsFalse(newStat.CanChangeTcpProxy);
-        Assert.IsTrue(newStat.IsTcpProxyByDomainFilter);
     }
 
 

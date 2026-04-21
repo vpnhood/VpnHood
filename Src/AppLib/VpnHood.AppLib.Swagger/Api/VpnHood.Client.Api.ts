@@ -3168,6 +3168,7 @@ export class AppFeatures implements IAppFeatures {
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
     isTcpProxySupported!: boolean;
+    isSplitByDomainSupported!: boolean;
     isUserReviewSupported!: boolean;
     isTv!: boolean;
     gaMeasurementId?: string | null;
@@ -3213,6 +3214,7 @@ export class AppFeatures implements IAppFeatures {
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : null as any;
             this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : null as any;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
+            this.isSplitByDomainSupported = _data["isSplitByDomainSupported"] !== undefined ? _data["isSplitByDomainSupported"] : null as any;
             this.isUserReviewSupported = _data["isUserReviewSupported"] !== undefined ? _data["isUserReviewSupported"] : null as any;
             this.isTv = _data["isTv"] !== undefined ? _data["isTv"] : null as any;
             this.gaMeasurementId = _data["gaMeasurementId"] !== undefined ? _data["gaMeasurementId"] : null as any;
@@ -3274,6 +3276,7 @@ export class AppFeatures implements IAppFeatures {
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : null as any;
         data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : null as any;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
+        data["isSplitByDomainSupported"] = this.isSplitByDomainSupported !== undefined ? this.isSplitByDomainSupported : null as any;
         data["isUserReviewSupported"] = this.isUserReviewSupported !== undefined ? this.isUserReviewSupported : null as any;
         data["isTv"] = this.isTv !== undefined ? this.isTv : null as any;
         data["gaMeasurementId"] = this.gaMeasurementId !== undefined ? this.gaMeasurementId : null as any;
@@ -3319,6 +3322,7 @@ export interface IAppFeatures {
     isAccountSupported: boolean;
     isBillingSupported: boolean;
     isTcpProxySupported: boolean;
+    isSplitByDomainSupported: boolean;
     isUserReviewSupported: boolean;
     isTv: boolean;
     gaMeasurementId?: string | null;
@@ -3459,6 +3463,7 @@ export class AppState implements IAppState {
     channelProtocol!: ChannelProtocol;
     isProxyEndPointActive!: boolean;
     promotionExists!: boolean;
+    tcpProxyUsageReason!: TcpProxyUsageReason;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -3508,6 +3513,7 @@ export class AppState implements IAppState {
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
             this.isProxyEndPointActive = _data["isProxyEndPointActive"] !== undefined ? _data["isProxyEndPointActive"] : null as any;
             this.promotionExists = _data["promotionExists"] !== undefined ? _data["promotionExists"] : null as any;
+            this.tcpProxyUsageReason = _data["tcpProxyUsageReason"] !== undefined ? _data["tcpProxyUsageReason"] : null as any;
         }
     }
 
@@ -3552,6 +3558,7 @@ export class AppState implements IAppState {
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
         data["isProxyEndPointActive"] = this.isProxyEndPointActive !== undefined ? this.isProxyEndPointActive : null as any;
         data["promotionExists"] = this.promotionExists !== undefined ? this.promotionExists : null as any;
+        data["tcpProxyUsageReason"] = this.tcpProxyUsageReason !== undefined ? this.tcpProxyUsageReason : null as any;
         return data;
     }
 }
@@ -3589,6 +3596,7 @@ export interface IAppState {
     channelProtocol: ChannelProtocol;
     isProxyEndPointActive: boolean;
     promotionExists: boolean;
+    tcpProxyUsageReason: TcpProxyUsageReason;
 }
 
 export enum AppConnectionState {
@@ -3619,7 +3627,6 @@ export class AppSessionInfo implements IAppSessionInfo {
     channelProtocols!: ChannelProtocol[];
     isTcpProxySupported!: boolean;
     isTcpPacketSupported!: boolean;
-    canChangeTcpProxy!: boolean;
 
     constructor(data?: IAppSessionInfo) {
         if (data) {
@@ -3655,7 +3662,6 @@ export class AppSessionInfo implements IAppSessionInfo {
             }
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
             this.isTcpPacketSupported = _data["isTcpPacketSupported"] !== undefined ? _data["isTcpPacketSupported"] : null as any;
-            this.canChangeTcpProxy = _data["canChangeTcpProxy"] !== undefined ? _data["canChangeTcpProxy"] : null as any;
         }
     }
 
@@ -3684,7 +3690,6 @@ export class AppSessionInfo implements IAppSessionInfo {
         }
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
         data["isTcpPacketSupported"] = this.isTcpPacketSupported !== undefined ? this.isTcpPacketSupported : null as any;
-        data["canChangeTcpProxy"] = this.canChangeTcpProxy !== undefined ? this.canChangeTcpProxy : null as any;
         return data;
     }
 }
@@ -3702,7 +3707,6 @@ export interface IAppSessionInfo {
     channelProtocols: ChannelProtocol[];
     isTcpProxySupported: boolean;
     isTcpPacketSupported: boolean;
-    canChangeTcpProxy: boolean;
 }
 
 export class AccessInfo implements IAccessInfo {
@@ -4075,6 +4079,8 @@ export class AppSessionStatus implements IAppSessionStatus {
     sessionExpirationTime?: Date | null;
     activeClientCount?: number | null;
     isTcpProxy!: boolean;
+    isTcpProxyByDomainFilter!: boolean;
+    canChangeTcpProxy!: boolean;
     isDropQuic!: boolean;
     channelProtocol!: ChannelProtocol;
 
@@ -4113,6 +4119,8 @@ export class AppSessionStatus implements IAppSessionStatus {
             this.sessionExpirationTime = _data["sessionExpirationTime"] ? new Date(_data["sessionExpirationTime"].toString()) : null as any;
             this.activeClientCount = _data["activeClientCount"] !== undefined ? _data["activeClientCount"] : null as any;
             this.isTcpProxy = _data["isTcpProxy"] !== undefined ? _data["isTcpProxy"] : null as any;
+            this.isTcpProxyByDomainFilter = _data["isTcpProxyByDomainFilter"] !== undefined ? _data["isTcpProxyByDomainFilter"] : null as any;
+            this.canChangeTcpProxy = _data["canChangeTcpProxy"] !== undefined ? _data["canChangeTcpProxy"] : null as any;
             this.isDropQuic = _data["isDropQuic"] !== undefined ? _data["isDropQuic"] : null as any;
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
         }
@@ -4143,6 +4151,8 @@ export class AppSessionStatus implements IAppSessionStatus {
         data["sessionExpirationTime"] = this.sessionExpirationTime ? this.sessionExpirationTime.toISOString() : null as any;
         data["activeClientCount"] = this.activeClientCount !== undefined ? this.activeClientCount : null as any;
         data["isTcpProxy"] = this.isTcpProxy !== undefined ? this.isTcpProxy : null as any;
+        data["isTcpProxyByDomainFilter"] = this.isTcpProxyByDomainFilter !== undefined ? this.isTcpProxyByDomainFilter : null as any;
+        data["canChangeTcpProxy"] = this.canChangeTcpProxy !== undefined ? this.canChangeTcpProxy : null as any;
         data["isDropQuic"] = this.isDropQuic !== undefined ? this.isDropQuic : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
         return data;
@@ -4166,6 +4176,8 @@ export interface IAppSessionStatus {
     sessionExpirationTime?: Date | null;
     activeClientCount?: number | null;
     isTcpProxy: boolean;
+    isTcpProxyByDomainFilter: boolean;
+    canChangeTcpProxy: boolean;
     isDropQuic: boolean;
     channelProtocol: ChannelProtocol;
 }
@@ -4963,6 +4975,14 @@ export class PrivateDns implements IPrivateDns {
 export interface IPrivateDns {
     isActive: boolean;
     provider?: string | null;
+}
+
+export enum TcpProxyUsageReason {
+    None = "None",
+    ClientNotSupported = "ClientNotSupported",
+    ServerRequiredOn = "ServerRequiredOn",
+    ServerRequiredOff = "ServerRequiredOff",
+    SplitByDomainRequiredOn = "SplitByDomainRequiredOn",
 }
 
 export class UserSettings implements IUserSettings {

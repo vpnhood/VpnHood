@@ -10,6 +10,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
+using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services;
@@ -167,6 +168,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.BillingProvider != null,
             IsTcpProxySupported = device.IsTcpProxySupported,
+            IsSplitByDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
             IsUserReviewSupported = options.UserReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
             WebUiPort = options.WebUiPort,
@@ -422,6 +424,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
                 PromotionExists = PromotionExists(),
+                TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.DeviceUiProvider.GetBarsInfo(uiContext)
                     : SystemBarsInfo.Default

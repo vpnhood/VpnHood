@@ -38,7 +38,8 @@ public class AppState
     public required bool? IsWaitingForInternalAd { get; set; }
     public required int? StateProgress { get; init; }
     public required bool IsDiagnosing { get; set; }
-    public required ChannelProtocol ChannelProtocol { get; set; }
-    public required bool IsProxyEndPointActive { get; set; }
-    public required bool PromotionExists { get; set; }
+    public required ChannelProtocol ChannelProtocol { get; init; }
+    public required bool IsProxyEndPointActive { get; init; }
+    public required bool PromotionExists { get; init; }
+    public required TcpProxyUsageReason TcpProxyUsageReason { get; init; }
 }

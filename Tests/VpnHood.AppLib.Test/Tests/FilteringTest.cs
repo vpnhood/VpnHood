@@ -14,6 +14,7 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
+        app.UserSettings.UseSplitByDomain = true;
         app.SettingsService.SplitByDomainSettings.Includes = MockEps.HttpsUrl1.Host;
         app.SettingsService.SplitByDomainSettings.Excludes = MockEps.HttpsUrl2.Host;
 
@@ -39,12 +40,17 @@ public class FilteringTest : TestAppBase
         Assert.AreEqual(oldStat.StreamTunnelledCount, newStat.StreamTunnelledCount);
         Assert.AreEqual(oldStat.StreamPassthruCount + 1, newStat.StreamPassthruCount);
 
+        // Check TcpProxy status
+        Assert.IsFalse(newStat.CanChangeTcpProxy);
+        Assert.IsTrue(newStat.IsTcpProxyByDomainFilter);
     }
+
     [TestMethod]
     public async Task Domains_IncludeExclude_Quic()
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
+        app.UserSettings.UseSplitByDomain = true;
         app.SettingsService.SplitByDomainSettings.Includes = MockEps.QuicUrl1.Host;
         app.SettingsService.SplitByDomainSettings.Excludes = MockEps.QuicUrl2.Host;
 
@@ -69,6 +75,10 @@ public class FilteringTest : TestAppBase
         newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
         Assert.AreEqual(oldStat.StreamTunnelledCount, newStat.StreamTunnelledCount);
         Assert.AreEqual(oldStat.StreamPassthruCount + 1, newStat.StreamPassthruCount);
+
+        // Check TcpProxy status
+        Assert.IsFalse(newStat.CanChangeTcpProxy);
+        Assert.IsTrue(newStat.IsTcpProxyByDomainFilter);
     }
 
 
@@ -77,6 +87,7 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
+        app.UserSettings.UseSplitByDomain = true;
 
         // block domain1
         app.SettingsService.SplitByDomainSettings.Blocks = MockEps.HttpsUrl1.Host;
@@ -103,6 +114,7 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
+        app.UserSettings.UseSplitByDomain = true;
 
         // block domain1
         app.SettingsService.SplitByDomainSettings.Blocks = MockEps.QuicUrl1.Host;

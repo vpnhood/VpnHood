@@ -38,7 +38,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource;
     private readonly AsyncLock _disposeLock = new();
     private readonly AsyncLock _packetChannelLock = new();
-    private readonly PassthroughState _passthroughState = new();
 
     private DateTime? _autoWaitTime;
     private ClientUdpChannelTransmitter? _udpTransmitter;
@@ -58,7 +57,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     public Exception? LastException { get; private set; }
     public int CreatedPacketChannelCount { get; private set; }
     internal bool IsAdapterStarted => _vpnAdapter.IsStarted;
-    internal PassthroughState PassthroughState => _passthroughState;
+    internal PassthroughState PassthroughState { get; } = new();
 
     public ClientSession(
         ClientSessionOptions options,
@@ -118,7 +117,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             proxyManager: _proxyManager,
             netFilter: _netFilter,
             streamProxyBufferSize: Config.StreamProxyBufferSize,
-            passthroughState: _passthroughState);
+            passthroughState: PassthroughState);
 
         // proxy host
         _clientHost = new ClientHost(
@@ -136,7 +135,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             proxyManager: _proxyManager,
             dnsServers: Config.DnsConfig.DnsServers,
             isIpV6SupportedByServer: Config.IsIpV6SupportedByServer,
-            passthroughState: _passthroughState);
+            passthroughState: PassthroughState);
 
         _status = new ClientSessionStatus(
             session: this,
@@ -276,11 +275,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // UseTcp
         var useTcpProxy = CalcUseTcpProxy();
 
-        // DropQuic is useless if we don't use tcp proxy
-        var dropQuic = _dropQuic && CalcUseTcpProxy();
+        // DropQuic is useful only if we use tcp proxy
+        var dropQuic = _dropQuic && useTcpProxy;
 
-        // DropUdp is useless if we don't use tcp proxy
-        var dropUdp = _dropUdp && CalcUseTcpProxy();
+        // DropUdp is useful only if we use tcp proxy
+        var dropUdp = _dropUdp && useTcpProxy;
 
         // ChannelProtocol
         _channelProtocol = ChannelProtocolValidator.Validate(_channelProtocol, Info);
@@ -649,7 +648,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _clientHost.PacketReceived -= ClientHost_PacketReceived;
         _proxyManager.PacketReceived -= Proxy_PacketReceived;
 
-        _passthroughState.PassthroughForAd = false;
+        PassthroughState.PassthroughForAd = false;
 
         // stop reusing tcp connections for faster disposal
         _connectorService.AllowTcpReuse = false;

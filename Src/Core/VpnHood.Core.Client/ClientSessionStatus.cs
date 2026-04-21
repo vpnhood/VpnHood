@@ -55,5 +55,7 @@ internal class ClientSessionStatus(
     public bool IsIpV6SupportedByServer => packetHandler.IsIpV6SupportedByServer;
     public bool IsIpV6SupportedByClient => packetHandler.IsIpV6SupportedByClient;
     public bool IsAdapterStarted => session.IsAdapterStarted;
+    public bool IsTcpProxyByDomainFilter => domainFilteringService.IsEnabled;
+    public bool CanChangeTcpProxy => session.Info is { IsTcpProxySupported: true, IsTcpPacketSupported: true } && !IsTcpProxyByDomainFilter;
     public ApiError? Error => session.LastException?.ToApiError();
 }

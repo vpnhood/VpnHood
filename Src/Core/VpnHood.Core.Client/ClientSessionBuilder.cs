@@ -198,7 +198,7 @@ internal class ClientSessionBuilder(
 
             if (!helloResponse.IsTcpPacketSupported && !config.IsTcpProxySupported)
                 throw new NotSupportedException(
-                    "The server does not support any protocol to support your client.");
+                    "The server does not support any protocol to support your client. Please contact support.");
 
             if (!helloResponse.IsTcpPacketSupported && !config.UseTcpProxy)
                 VhLogger.Instance.LogWarning("TCP Proxy enabled because the server does not support TCP packets.");

@@ -25,5 +25,4 @@ public class AppSessionInfo
     public required IReadOnlyList<ChannelProtocol> ChannelProtocols { get; init; }
     public required bool IsTcpProxySupported { get; init; }
     public required bool IsTcpPacketSupported { get; init; }
-    public bool CanChangeTcpProxy => IsTcpProxySupported && IsTcpPacketSupported;
 }

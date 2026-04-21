@@ -22,6 +22,8 @@ public interface ISessionStatus
     ChannelProtocol ChannelProtocol { get; }
     bool IsDropQuic { get; }
     bool IsTcpProxy { get; }
+    bool IsTcpProxyByDomainFilter { get; }
+    bool CanChangeTcpProxy { get; }
     bool CanExtendByRewardedAd { get; }
     int UserReviewRecommended { get; }
     long SessionMaxTraffic { get; }

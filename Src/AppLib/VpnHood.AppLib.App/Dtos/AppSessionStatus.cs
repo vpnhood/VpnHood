@@ -21,6 +21,8 @@ public class AppSessionStatus
     public required DateTime? SessionExpirationTime { get; init; }
     public required int? ActiveClientCount { get; init; }
     public required bool IsTcpProxy { get; init; }
+    public required bool IsTcpProxyByDomainFilter { get; init; }
+    public required bool CanChangeTcpProxy { get; init; }
     public required bool IsDropQuic { get; init; }
     public required ChannelProtocol ChannelProtocol { get; init; }
 }

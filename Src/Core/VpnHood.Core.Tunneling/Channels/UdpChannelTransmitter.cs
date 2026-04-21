@@ -102,7 +102,7 @@ public abstract class UdpChannelTransmitter : IDisposable
             await SendCoreAsync(sessionId, ipEndPoint, payload, cryptor);
         }
         catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
-            VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
+            VhLogger.Instance.LogError(GeneralEventId.Essential, ex,
                 "UdpChannelTransmitter: Socket is in invalid state. Disposing the transmitter. " +
                 "DataLength: {DataLength}, DestinationIp: {DestinationIp}",
                 payload.Length, VhLogger.Format(ipEndPoint));
@@ -214,7 +214,7 @@ public abstract class UdpChannelTransmitter : IDisposable
                 break;
             }
             catch (Exception ex) when (SocketUtils.IsInvalidUdpStateException(ex)) {
-                VhLogger.Instance.LogError(GeneralEventId.Udp, ex, "UdpChannelTransmitter: Read loop crashed.");
+                VhLogger.Instance.LogError(GeneralEventId.Essential, ex, "UdpChannelTransmitter: Read loop crashed.");
                 Dispose();
                 break;
             }
@@ -228,6 +228,10 @@ public abstract class UdpChannelTransmitter : IDisposable
     {
         if (_disposed)
             return;
+
+        VhLogger.Instance.LogInformation(GeneralEventId.Essential, 
+            "UdpChannelTransmitter: Disposing the transmitter. LocalEndPoint: {LocalEndPoint}", 
+            VhLogger.Format(_udpClient.Client.LocalEndPoint));
 
         _disposed = true;
         _udpClient.Dispose();

@@ -28,7 +28,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
 
         IsStarted = true;
         var ipEndPoint = new IPEndPoint(ipAddress, 80);
-        VhLogger.Instance.LogInformation("HTTP-01 Challenge Listener starting on {EndPoint}", ipEndPoint);
+        VhLogger.Instance.LogInformation("HTTP-01 Challenge Listener starting on {EndPoint}", VhLogger.FormatId(ipEndPoint));
 
         _tcpListener = new TcpListener(ipEndPoint);
         _tcpListener.Start();

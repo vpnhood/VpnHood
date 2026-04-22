@@ -69,12 +69,11 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
         return Task.FromResult(clientProfile.ToInfo());
     }
 
-    public Task Delete(Guid clientProfileId, CancellationToken cancellationToken)
+    public async Task Delete(Guid clientProfileId, CancellationToken cancellationToken)
     {
-        if (clientProfileId == App.CurrentClientProfileInfo?.ClientProfileId)
-            return App.Disconnect();
+        if (!App.IsIdle && clientProfileId == App.CurrentClientProfileInfo?.ClientProfileId)
+            await App.Disconnect();
 
         App.ClientProfileService.Delete(clientProfileId);
-        return Task.CompletedTask;
     }
 }

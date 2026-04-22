@@ -88,7 +88,7 @@ public class ClientProfileService
 
         // BuiltInToken should not be removed
         if (item.IsBuiltIn)
-            throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
+            throw new InvalidOperationException("Can not delete built-In tokens.");
 
         _clientProfiles.Remove(item);
         Save();

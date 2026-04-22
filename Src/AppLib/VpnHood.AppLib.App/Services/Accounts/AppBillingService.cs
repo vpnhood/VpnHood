@@ -1,5 +1,6 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -13,6 +14,25 @@ public class AppBillingService(AppAccountService accountService, IAppBillingProv
     public Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         return billingProvider.GetSubscriptionPlans(cancellationToken);
+    }
+
+    public async Task<AppStoreInfo> GetStoreInfo(CancellationToken cancellationToken)
+    {
+        try {
+            var subscriptionPlans = await billingProvider.GetSubscriptionPlans(cancellationToken);
+            return new AppStoreInfo {
+                StoreName = billingProvider.ProviderName,
+                SubscriptionPlans = subscriptionPlans,
+                StoreError = null
+            };
+        }
+        catch (Exception ex) {
+            return new AppStoreInfo {
+                StoreName = billingProvider.ProviderName,
+                SubscriptionPlans = [],
+                StoreError = ex.ToApiError()
+            };
+        }
     }
 
     public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, 

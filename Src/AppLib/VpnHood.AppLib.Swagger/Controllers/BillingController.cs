@@ -22,7 +22,7 @@ public class BillingController : ControllerBase, IBillingController
     }
 
     [HttpGet("purchase-options")]
-    public Task<AppPurchaseOptions> GetPurchaseOptions(CancellationToken cancellationToken)
+    public Task<AppPurchaseOptions> GetPurchaseOptions(Guid clientProfileId, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

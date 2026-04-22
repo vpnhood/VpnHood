@@ -27,11 +27,6 @@ internal class BillingController : ControllerBase, IBillingController
             var res = await Purchase(purchaseParams, ctx.Token);
             await ctx.SendJson(res);
         });
-
-        mapper.AddStatic(HttpMethod.GET, baseUrl + "purchase-options", async ctx => {
-            var res = await GetPurchaseOptions(ctx.Token);
-            await ctx.SendJson(res);
-        });
     }
 
     public Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
@@ -42,10 +37,5 @@ internal class BillingController : ControllerBase, IBillingController
     public Task<string> Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
         return BillingService.Purchase(AppUiContext.RequiredContext, purchaseParams, cancellationToken);
-    }
-
-    public Task<AppPurchaseOptions> GetPurchaseOptions(CancellationToken cancellationToken)
-    {
-        return VpnHoodApp.Instance.GetPurchaseOptions(cancellationToken);
     }
 }

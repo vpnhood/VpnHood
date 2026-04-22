@@ -1185,45 +1185,31 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         VhLogger.Instance.LogError(ex, message);
     }
 
-    public async Task<AppPurchaseOptions> GetPurchaseOptions(CancellationToken cancellationToken)
+    public async Task<AppPurchaseOptions> GetPurchaseOptions(Guid clientProfileId, CancellationToken cancellationToken)
     {
-        var profileInfo = CurrentClientProfileInfo;
-        var clientPolicy = profileInfo?.ClientPolicy;
+        var profileInfo = ClientProfileService.GetInfo(clientProfileId);
+        var clientPolicy = profileInfo.ClientPolicy;
         var purchaseUrlMode = clientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore;
         var purchaseUrl = clientPolicy?.PurchaseUrl;
 
         // get subscription plans from the store
-        var subscriptionPlans = Array.Empty<SubscriptionPlan>();
-        string? storeName = null;
-        ApiError? apiError = null;
-        if (purchaseUrlMode != PurchaseUrlMode.HideStore) {
-            try {
-                var billingService = Services.AccountService?.BillingService;
-                storeName = billingService?.ProviderName;
-                if (billingService != null)
-                    subscriptionPlans = await billingService.GetSubscriptionPlans(cancellationToken);
-            }
-            catch (Exception ex) {
-                apiError = ex.ToApiError();
-            }
-        }
-
-        // store is available if there is at least one subscription plan
-        var isStoreAvailable = subscriptionPlans.Any();
+        var storeInfo = purchaseUrlMode != PurchaseUrlMode.HideStore && Services.AccountService?.BillingService != null
+            ? await Services.AccountService.BillingService.GetStoreInfo(cancellationToken)
+            : AppStoreInfo.Empty;
 
         // calculate purchase url
         var externalUrl = purchaseUrlMode switch {
             PurchaseUrlMode.HideStore => purchaseUrl,
             PurchaseUrlMode.WithStore => purchaseUrl,
-            PurchaseUrlMode.WhenNoStore when !isStoreAvailable => purchaseUrl,
+            PurchaseUrlMode.WhenNoStore when !storeInfo.IsAvailable => purchaseUrl,
             _ => null
         };
 
         var purchaseOptions = new AppPurchaseOptions {
-            StoreName = storeName,
-            IsStoreAvailable = isStoreAvailable,
-            SubscriptionPlans = subscriptionPlans,
-            StoreError = apiError, // no error if purchaseUrl is set
+            StoreName = storeInfo.StoreName,
+            IsStoreAvailable = storeInfo.IsAvailable,
+            SubscriptionPlans = storeInfo.SubscriptionPlans,
+            StoreError = storeInfo.StoreError,
             PurchaseUrl = externalUrl,
             CanGoPremiumByCode = clientPolicy?.PremiumByCode == true
         };

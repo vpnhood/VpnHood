@@ -54,7 +54,7 @@ public class ClientProfileTest : TestAppBase
 
         // BuiltIn token should not be removed
         foreach (var clientProfile in clientProfiles) {
-            Assert.ThrowsExactly<UnauthorizedAccessException>(() => {
+            Assert.ThrowsExactly<InvalidOperationException>(() => {
                 // ReSharper disable once AccessToDisposedClosure
                 app1.ClientProfileService.Delete(clientProfile.ClientProfileId);
             });
@@ -569,7 +569,7 @@ public class ClientProfileTest : TestAppBase
 
         // test default policy (no error)
         billingProvider.SubscriptionPlanException = null;
-        var purchaseOptions = await app.GetPurchaseOptions(TestCt);
+        var purchaseOptions = await app.GetPurchaseOptions(clientProfileInfo.ClientProfileId, TestCt);
         Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.IsNull(purchaseOptions.PurchaseUrl);
@@ -578,7 +578,7 @@ public class ClientProfileTest : TestAppBase
 
         // test default policy (billing error)
         billingProvider.SubscriptionPlanException = new Exception("Billing Error");
-        purchaseOptions = await app.GetPurchaseOptions(TestCt);
+        purchaseOptions = await app.GetPurchaseOptions(clientProfileInfo.ClientProfileId, TestCt);
         Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
@@ -589,7 +589,7 @@ public class ClientProfileTest : TestAppBase
         // test ca policy
         app.UpdateClientCountry("CA");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
-        purchaseOptions = await app.GetPurchaseOptions(TestCt);
+        purchaseOptions = await app.GetPurchaseOptions(clientProfileInfo.ClientProfileId, TestCt);
         Assert.AreEqual(caPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
         Assert.AreEqual(caPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.AreEqual(caPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
@@ -599,7 +599,7 @@ public class ClientProfileTest : TestAppBase
         // test cn policy
         app.UpdateClientCountry("CN");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo();
-        purchaseOptions = await app.GetPurchaseOptions(TestCt);
+        purchaseOptions = await app.GetPurchaseOptions(clientProfileInfo.ClientProfileId, TestCt);
         Assert.AreEqual(cnPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
         Assert.AreEqual(cnPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
         Assert.IsNull(purchaseOptions.StoreName);

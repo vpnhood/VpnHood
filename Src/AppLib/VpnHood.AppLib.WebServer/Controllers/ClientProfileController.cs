@@ -43,6 +43,12 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
             await Delete(id, ctx.Token);
             await ctx.SendNoContent();
         });
+
+        mapper.AddParam(HttpMethod.GET, baseUrl + "{id}/purchase-options", async ctx => {
+            var id = ctx.GetRouteParameter<Guid>("id");
+            var res = await GetPurchaseOptions(id, ctx.Token);
+            await ctx.SendJson(res);
+        });
     }
 
     public Task<ClientProfileInfo> AddByAccessKey(string accessKey, CancellationToken cancellationToken)
@@ -75,5 +81,10 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
             await App.Disconnect();
 
         App.ClientProfileService.Delete(clientProfileId);
+    }
+
+    public Task<AppPurchaseOptions> GetPurchaseOptions(Guid clientProfileId, CancellationToken cancellationToken)
+    {
+        return App.GetPurchaseOptions(clientProfileId, cancellationToken);
     }
 }

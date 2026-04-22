@@ -1665,8 +1665,12 @@ export class BillingClient {
         return Promise.resolve<string>(null as any);
     }
 
-    getPurchaseOptions( cancelToken?: CancelToken): Promise<AppPurchaseOptions> {
-        let url_ = this.baseUrl + "/api/billing/purchase-options";
+    getPurchaseOptions(clientProfileId: string, cancelToken?: CancelToken): Promise<AppPurchaseOptions> {
+        let url_ = this.baseUrl + "/api/billing/purchase-options?";
+        if (clientProfileId === undefined || clientProfileId === null)
+            throw new globalThis.Error("The parameter 'clientProfileId' must be defined and cannot be null.");
+        else
+            url_ += "clientProfileId=" + encodeURIComponent("" + clientProfileId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -1982,6 +1986,57 @@ export class ClientProfileClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<string>(null as any);
+    }
+
+    getPurchaseOptions(clientProfileId: string, cancelToken?: CancelToken): Promise<AppPurchaseOptions> {
+        let url_ = this.baseUrl + "/api/client-profiles/{clientProfileId}/purchase-options";
+        if (clientProfileId === undefined || clientProfileId === null)
+            throw new globalThis.Error("The parameter 'clientProfileId' must be defined.");
+        url_ = url_.replace("{clientProfileId}", encodeURIComponent("" + clientProfileId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetPurchaseOptions(_response);
+        });
+    }
+
+    protected processGetPurchaseOptions(response: AxiosResponse): Promise<AppPurchaseOptions> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = AppPurchaseOptions.fromJS(resultData200);
+            return Promise.resolve<AppPurchaseOptions>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<AppPurchaseOptions>(null as any);
     }
 }
 

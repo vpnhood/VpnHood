@@ -9,4 +9,5 @@ public interface IClientProfileController
     Task<string> GetAccessCode(Guid clientProfileId, CancellationToken cancellationToken);
     Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams, CancellationToken cancellationToken);
     Task Delete(Guid clientProfileId, CancellationToken cancellationToken);
+    Task<AppPurchaseOptions> GetPurchaseOptions(Guid clientProfileId, CancellationToken cancellationToken);
 }

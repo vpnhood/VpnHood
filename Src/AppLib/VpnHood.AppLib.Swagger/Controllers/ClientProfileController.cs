@@ -39,4 +39,10 @@ public class ClientProfileController : ControllerBase, IClientProfileController
     {
         throw new SwaggerOnlyException();
     }
+
+    [HttpGet("{clientProfileId}/purchase-options")]
+    public Task<AppPurchaseOptions> GetPurchaseOptions(Guid clientProfileId, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
 }

@@ -1,0 +1,2 @@
+* Feature: Split Tunneling by Domain
+* Fix: Minor UI issues and performance improvements

@@ -108,6 +108,7 @@ public class IpV4Packet : IpPacket
         set => Span[6] = (byte)((value << 5) | (Span[6] & 0x1F));
     }
 
+    // ReSharper disable once IdentifierTypo
     public bool DontFragment {
         get => (Span[6] & 0x40) != 0;
         set {

@@ -31,5 +31,5 @@ public class ServerOptions
     public IpNetwork VirtualIpNetworkV4 { get; init; } = TunnelDefaults.VirtualIpNetworkV4;
     public IpNetwork VirtualIpNetworkV6 { get; init; } = TunnelDefaults.VirtualIpNetworkV6;
     public TimeSpan ConfigErrorStrikeDuration { get; init; } = TimeSpan.FromDays(7);
-    public TimeSpan ConfigErrorRetryInterval { get; init; } = TimeSpan.FromHours(2);
+    public TimeSpan ConfigErrorRetryInterval { get; init; } = TimeSpan.FromHours(3);
 }

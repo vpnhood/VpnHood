@@ -1,3 +1,6 @@
+# Upcoming
+* Feature: Pause zombie servers for a while to save resources
+
 # v7.8.801
 * Fix: IPv6 UDP listener may stop working after a while
 

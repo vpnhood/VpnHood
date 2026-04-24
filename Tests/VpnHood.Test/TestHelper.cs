@@ -53,7 +53,7 @@ public class TestHelper : IDisposable
         VhLogger.Instance = VhLogger.CreateConsoleLogger(); // min level is controlled by VhLogger.MinLevel
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
-        WebServer = TestWebServer.Create(new TestIps());
+        WebServer = TestWebServer.Create(TestIps);
         ClientNetFilter = new NetFilter {
             IpFilter = new StaticIpFilter(null) {
                 BlockedRanges = new[] { WebServer.MockEps.HttpV4EndPointBlockedClient.Address }.ToOrderedIpRanges()

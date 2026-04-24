@@ -274,7 +274,7 @@ public class VpnHoodServer : IAsyncDisposable
             State = ServerState.Ready;
 
             _lastConfigException = null;
-            _configErrorTracker.ReportSuccess();
+            _configErrorTracker.RecordSuccess();
 
             VhLogger.Instance.LogInformation("Server is ready!");
     

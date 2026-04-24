@@ -83,18 +83,28 @@ public class ConfigErrorTrackerTest : TestBase
     }
 
     [TestMethod]
-    public void IsPaused_returns_false_on_first_call_even_when_expired()
+    public void IsPaused_returns_false_until_RecordError_even_when_strike_expired()
     {
         var storagePath = CreateTempStorage();
         try {
             WriteStrikeFile(storagePath, DateTime.UtcNow.AddDays(-30));
-            var tracker = CreateTracker(storagePath);
+            var tracker = CreateTracker(storagePath, retryInterval: TimeSpan.FromMilliseconds(100));
 
+            // IsPaused is false before any RecordError in this process
             Assert.IsFalse(tracker.IsPaused,
-                "IsPaused should return false on the first call to allow at least one attempt.");
+                "IsPaused should return false before any RecordError call.");
 
+            // After RecordError, the tracker evaluates the persisted strike and pauses
+            tracker.RecordError(new Exception("another failure"));
+
+            // Immediately after RecordError: paused (must wait for RetryInterval)
             Assert.IsTrue(tracker.IsPaused,
-                "IsPaused should return true on the second call when paused and retry interval not elapsed.");
+                "IsPaused should return true immediately after RecordError.");
+
+            // After RetryInterval elapses: allowed
+            Thread.Sleep(150);
+            Assert.IsFalse(tracker.IsPaused,
+                "IsPaused should return false after RetryInterval has elapsed.");
         }
         finally {
             Directory.Delete(storagePath, true);
@@ -109,11 +119,19 @@ public class ConfigErrorTrackerTest : TestBase
             WriteStrikeFile(storagePath, DateTime.UtcNow.AddDays(-30));
             var tracker = CreateTracker(storagePath, retryInterval: TimeSpan.FromMilliseconds(100));
 
+            // Before RecordError, IsPaused is false
             Assert.IsFalse(tracker.IsPaused);
+
+            // RecordError triggers threshold evaluation — immediately paused
+            tracker.RecordError(new Exception("failure"));
             Assert.IsTrue(tracker.IsPaused);
 
+            // After RetryInterval elapses: allowed
             Thread.Sleep(150);
             Assert.IsFalse(tracker.IsPaused, "IsPaused should return false after RetryInterval has elapsed.");
+
+            // Calling IsPaused again is still false (idempotent — time hasn't changed)
+            Assert.IsFalse(tracker.IsPaused, "IsPaused should be idempotent.");
         }
         finally {
             Directory.Delete(storagePath, true);
@@ -130,10 +148,10 @@ public class ConfigErrorTrackerTest : TestBase
             Thread.Sleep(10);
             tracker.RecordError(new Exception("test error again"));
 
-            Assert.IsFalse(tracker.IsPaused);
+            // Immediately after RecordError: paused
             Assert.IsTrue(tracker.IsPaused);
 
-            tracker.ReportSuccess();
+            tracker.RecordSuccess();
 
             Assert.IsFalse(tracker.IsPaused, "IsPaused should be false after ReportSuccess.");
             Assert.IsFalse(File.Exists(Path.Combine(storagePath, ConfigErrorTracker.StrikeFileName)),
@@ -172,11 +190,16 @@ public class ConfigErrorTrackerTest : TestBase
             File.WriteAllText(Path.Combine(storagePath, ConfigErrorTracker.StrikeFileName), "NOT VALID JSON{{{");
             var tracker = CreateTracker(storagePath);
 
+            // Before RecordError, IsPaused is always false
             Assert.IsFalse(tracker.IsPaused,
-                "First call should return false even with corrupt file.");
+                "IsPaused should return false before any RecordError call.");
 
+            // RecordError with corrupt file on disk triggers pause
+            tracker.RecordError(new Exception("failure after corrupt file"));
+
+            // Immediately after RecordError: paused
             Assert.IsTrue(tracker.IsPaused,
-                "IsPaused should return true when strike file is corrupt.");
+                "IsPaused should return true when strike file was corrupt.");
         }
         finally {
             Directory.Delete(storagePath, true);
@@ -223,13 +246,11 @@ public class ConfigErrorTrackerTest : TestBase
             configureInterval: TimeSpan.FromMilliseconds(100),
             retryInterval: TimeSpan.FromMilliseconds(100));
 
-        // Act: start the server — first call to IsPaused returns false (first attempt allowed)
+        // Act: start the server — IsPaused is false, configure runs and fails, RecordError activates pause
         await server.Start(TestCt);
-
-        // Server tried once and failed — state should be Waiting but tracker is paused
         Assert.AreEqual(ServerState.Waiting, server.State);
 
-        // Act: trigger another ConfigureAndSendStatus — this time IsPaused should block it
+        // IsPaused is now true — ConfigureAndSendStatus should be blocked
         var lastConfigureTime = accessManager.LastConfigureTime;
         await server.ConfigureAndSendStatus(TestCt);
 
@@ -245,7 +266,7 @@ public class ConfigErrorTrackerTest : TestBase
         using var accessManager = TestHelper.CreateAccessManager();
         accessManager.ServerConfigureException = new Exception("temporary failure");
 
-        await using var server = CreateServer(accessManager);
+        await using var server = CreateServer(accessManager, retryInterval: TimeSpan.FromMilliseconds(50));
 
         // Act: start fails
         await server.Start(TestCt);
@@ -255,6 +276,9 @@ public class ConfigErrorTrackerTest : TestBase
 
         // Fix the access manager
         accessManager.ServerConfigureException = null;
+
+        // Wait for retry interval so IsPaused becomes false
+        await Task.Delay(100, TestCt);
 
         // Retry configure
         await server.ConfigureAndSendStatus(TestCt);
@@ -280,13 +304,13 @@ public class ConfigErrorTrackerTest : TestBase
             configureInterval: TimeSpan.FromMilliseconds(50),
             retryInterval: TimeSpan.FromMilliseconds(200));
 
-        // Act: start (first attempt is always allowed)
+        // Act: start (IsPaused is false, configure fails, RecordError activates pause)
         await server.Start(TestCt);
-        var configureCount1 = accessManager.LastConfigureTime;
+        var lastConfigureTime = accessManager.LastConfigureTime;
 
-        // Immediate retry should be blocked
+        // Immediately after: IsPaused is true, retry should be blocked
         await server.ConfigureAndSendStatus(TestCt);
-        Assert.AreEqual(configureCount1, accessManager.LastConfigureTime,
+        Assert.AreEqual(lastConfigureTime, accessManager.LastConfigureTime,
             "Immediate retry should be blocked by IsPaused.");
 
         // Wait for retry interval to elapse
@@ -294,7 +318,7 @@ public class ConfigErrorTrackerTest : TestBase
 
         // Now retry should be allowed
         await server.ConfigureAndSendStatus(TestCt);
-        Assert.AreNotEqual(configureCount1, accessManager.LastConfigureTime,
+        Assert.AreNotEqual(lastConfigureTime, accessManager.LastConfigureTime,
             "Retry should be allowed after RetryInterval has elapsed.");
     }
 }

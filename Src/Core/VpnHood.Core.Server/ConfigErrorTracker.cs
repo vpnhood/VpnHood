@@ -12,10 +12,15 @@ namespace VpnHood.Core.Server;
 /// <b>How it works:</b>
 /// <list type="bullet">
 ///   <item>On each configuration failure, call <see cref="RecordError"/>. This persists
-///         the error to <c>config-error.json</c> so the strike survives process restarts.</item>
+///         the error to <c>config-error.json</c> so the strike survives process restarts.
+///         After the first <see cref="RecordError"/> call, the tracker evaluates whether
+///         the pause threshold has been reached.</item>
 ///   <item>Before each retry, check <see cref="IsPaused"/>. When paused, the tracker blocks
 ///         all retries except one attempt per <see cref="RetryInterval"/>.</item>
-///   <item>On a successful configuration, call <see cref="ReportSuccess"/> to clear the
+///   <item><see cref="IsPaused"/> always returns false until the first <see cref="RecordError"/>
+///         call in the current process, ensuring the server gets at least one attempt after
+///         every restart.</item>
+///   <item>On a successful configuration, call <see cref="RecordSuccess"/> to clear the
 ///         strike file, reset the tracker, and resume normal operation.</item>
 /// </list>
 ///
@@ -41,11 +46,8 @@ public class ConfigErrorTracker
     public const string StrikeFileName = "config-error.json";
     private readonly string _filePath;
     private ConfigErrorStrike? _strike;
-    private DateTime? _lastRetryTime;
+    private DateTime _lastErrorTime;
     private bool _hasReachedPauseThreshold;
-    
-    // ReSharper disable once ReplaceWithFieldKeyword
-    private bool _hasAttemptedOnce;
 
     public ConfigErrorTracker(string storagePath, TimeSpan strikeDuration, TimeSpan retryInterval)
     {
@@ -53,52 +55,37 @@ public class ConfigErrorTracker
         RetryInterval = retryInterval;
         _filePath = Path.Combine(storagePath, StrikeFileName);
         _strike = LoadFromFile();
-        _hasReachedPauseThreshold = CheckPauseThreshold();
     }
 
     /// <summary>
     /// Returns true when the tracker is in a paused state and retries should be skipped.
-    /// Guaranteed to return false on the first call after construction, so the server
-    /// always gets at least one attempt per process lifetime.
-    /// While paused, one retry is allowed per <see cref="RetryInterval"/>; after each allowed
-    /// retry the caller must call <see cref="RecordError"/> on failure or <see cref="ReportSuccess"/>
-    /// on success.
+    /// This property is idempotent — it does not mutate state.
+    /// Always returns false until the first <see cref="RecordError"/> call in the current process,
+    /// so the server always gets at least one attempt per process lifetime.
+    /// After an error is recorded and the pause threshold is reached, returns true until
+    /// <see cref="RetryInterval"/> has elapsed since the last <see cref="RecordError"/> call.
     /// </summary>
     public bool IsPaused {
         get {
             if (!_hasReachedPauseThreshold)
                 return false;
 
-            // Always allow the first attempt after process start
-            if (!_hasAttemptedOnce) {
-                _hasAttemptedOnce = true;
-                _lastRetryTime = DateTime.UtcNow;
-                return false;
-            }
-
-            // Allow one retry per RetryInterval
-            if (DateTime.UtcNow - _lastRetryTime!.Value >= RetryInterval) {
-                _lastRetryTime = DateTime.UtcNow;
-                VhLogger.Instance.LogWarning(
-                    "Configuration error tracker is paused (first error: {FirstErrorTime} UTC). " +
-                    "Allowing one retry attempt. Next retry in {RetryInterval}.",
-                    _strike?.FirstErrorTime, RetryInterval);
-                return false;
-            }
-
-            return true;
+            // Allow retry when enough time has passed since the last RecordError
+            return DateTime.UtcNow - _lastErrorTime < RetryInterval;
         }
     }
 
     /// <summary>
     /// Records a configuration or status error. Persists the strike to disk immediately.
-    /// If the file cannot be written, the tracker enters the paused state.
+    /// After recording, checks whether the pause threshold has been reached based on the
+    /// persisted first error time. If the file cannot be written, the tracker enters the paused state.
     /// </summary>
     public void RecordError(Exception error)
     {
         _strike ??= new ConfigErrorStrike { FirstErrorTime = DateTime.UtcNow };
         _strike.LastErrorTime = DateTime.UtcNow;
         _strike.LastErrorMessage = error.Message;
+        _lastErrorTime = DateTime.UtcNow;
 
         try {
             var json = JsonSerializer.Serialize(_strike);
@@ -119,11 +106,10 @@ public class ConfigErrorTracker
     /// Clears the strike after a successful configuration.
     /// Resets the tracker to normal operation.
     /// </summary>
-    public void ReportSuccess()
+    public void RecordSuccess()
     {
         _strike = null;
         _hasReachedPauseThreshold = false;
-        _lastRetryTime = null;
         try {
             if (File.Exists(_filePath))
                 File.Delete(_filePath);

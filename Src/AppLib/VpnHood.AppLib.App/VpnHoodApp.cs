@@ -584,7 +584,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         try {
             connectOptions ??= new ConnectOptions();
-            VhLogger.Instance.LogDebug(
+            VhLogger.Instance.LogInformation(
                 "Connection requested. ProfileId: {ProfileId}, ServerLocation: {ServerLocation}, Plan: {Plan}, Diagnose: {Diagnose}",
                 connectOptions.ClientProfileId, connectOptions.ServerLocation, connectOptions.PlanId,
                 connectOptions.Diagnose);

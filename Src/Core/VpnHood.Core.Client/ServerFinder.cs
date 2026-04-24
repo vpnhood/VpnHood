@@ -108,8 +108,9 @@ public class ServerFinder(
         CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
-            "Finding a reachable server... QueryTimeout: {QueryTimeout}",
-            serverQueryTimeout);
+            "Finding a reachable server... " +
+            "QueryTimeout: {QueryTimeout}, ServerLocation: {ServerLocation}",
+            serverQueryTimeout, ServerLocation);
 
         // create server finder items from ServerToken.HostEndPoints using SelectMany
         var vpnEndPoints = await ResolveVpnEndPoints(serverTokens, IncludeIpV6, cancellationToken);
@@ -149,7 +150,8 @@ public class ServerFinder(
     public async Task<VpnEndPoint> FindBestRedirectedServerAsync(ServerToken[] serverTokens,
         CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.Request, "Finding best server from redirected endpoints...");
+        VhLogger.Instance.LogInformation(GeneralEventId.Request, 
+            "Finding best server from redirected endpoints... ServerLocation: {ServerLocation}", ServerLocation);
 
         if (!serverTokens.Any())
             throw new Exception("There is no server endpoint. Please check server configuration.");

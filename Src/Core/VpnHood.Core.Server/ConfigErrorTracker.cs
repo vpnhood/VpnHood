@@ -97,7 +97,15 @@ public class ConfigErrorTracker
             return;
         }
 
-        _hasReachedPauseThreshold = CheckPauseThreshold();
+        // Check if the strike has reached the pause threshold after recording the error.
+        _hasReachedPauseThreshold = DateTime.UtcNow - _strike.FirstErrorTime >= StrikeDuration;
+        if (_hasReachedPauseThreshold) {
+            VhLogger.Instance.LogCritical(
+                "Configuration has been failing since {FirstErrorTime} (UTC), exceeding the {Days}-day threshold. " +
+                "Server will pause retries and allow one attempt per {RetryInterval}.",
+                _strike.FirstErrorTime, StrikeDuration.Days, RetryInterval);
+            _hasReachedPauseThreshold = true;
+        }
     }
 
     /// <summary>
@@ -115,22 +123,6 @@ public class ConfigErrorTracker
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Could not delete config error strike file.");
         }
-    }
-
-    private bool CheckPauseThreshold()
-    {
-        if (_strike == null)
-            return false;
-
-        if (DateTime.UtcNow - _strike.FirstErrorTime >= StrikeDuration) {
-            VhLogger.Instance.LogCritical(
-                "Configuration has been failing since {FirstErrorTime} (UTC), exceeding the {Days}-day threshold. " +
-                "Server will pause retries and allow one attempt per {RetryInterval}.",
-                _strike.FirstErrorTime, StrikeDuration.Days, RetryInterval);
-            return true;
-        }
-
-        return false;
     }
 
     /// <summary>

@@ -46,7 +46,6 @@ public class ConfigErrorTracker
     public const string StrikeFileName = "config-error.json";
     private readonly string _filePath;
     private ConfigErrorStrike? _strike;
-    private DateTime _lastErrorTime;
     private bool _hasReachedPauseThreshold;
 
     public ConfigErrorTracker(string storagePath, TimeSpan strikeDuration, TimeSpan retryInterval)
@@ -63,15 +62,15 @@ public class ConfigErrorTracker
     /// Always returns false until the first <see cref="RecordError"/> call in the current process,
     /// so the server always gets at least one attempt per process lifetime.
     /// After an error is recorded and the pause threshold is reached, returns true until
-    /// <see cref="RetryInterval"/> has elapsed since the last <see cref="RecordError"/> call.
+    /// <see cref="RetryInterval"/> has elapsed since the last recorded error.
     /// </summary>
     public bool IsPaused {
         get {
-            if (!_hasReachedPauseThreshold)
+            if (!_hasReachedPauseThreshold || _strike == null)
                 return false;
 
-            // Allow retry when enough time has passed since the last RecordError
-            return DateTime.UtcNow - _lastErrorTime < RetryInterval;
+            // Allow retry when enough time has passed since the last recorded error.
+            return DateTime.UtcNow - _strike.LastErrorTime < RetryInterval;
         }
     }
 
@@ -85,7 +84,6 @@ public class ConfigErrorTracker
         _strike ??= new ConfigErrorStrike { FirstErrorTime = DateTime.UtcNow };
         _strike.LastErrorTime = DateTime.UtcNow;
         _strike.LastErrorMessage = error.Message;
-        _lastErrorTime = DateTime.UtcNow;
 
         try {
             var json = JsonSerializer.Serialize(_strike);
@@ -164,7 +162,6 @@ public class ConfigErrorTracker
     private class ConfigErrorStrike
     {
         public DateTime FirstErrorTime { get; init; }
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public DateTime LastErrorTime { get; set; }
         // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public string? LastErrorMessage { get; set; }

@@ -79,7 +79,7 @@ public class TestWebServerLocalEps
 
         HttpV4EndPointBlockedClient = AllocateFreeTcpEndPoint(testIps.LocalBlockedClientIpAddress);
         HttpV4EndPointBlockedServer = AllocateFreeTcpEndPoint(testIps.LocalBlockedServerIpAddress);
-        UdpNsEchoEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[3]);
+        UdpNsEchoEndPoint1 = new IPEndPoint(testIps.LocalTestIps[3], 53);
         HttpV4EndPointRefused1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
     }
 

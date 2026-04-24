@@ -30,7 +30,7 @@ namespace VpnHood.Core.Server;
 ///
 /// This class is designed to be called from a single thread and is not thread-safe.
 /// </summary>
-internal class ConfigErrorTracker
+public class ConfigErrorTracker
 {
     /// <summary>The duration after which persistent errors cause the tracker to pause retries.</summary>
     public TimeSpan StrikeDuration { get; }
@@ -38,22 +38,28 @@ internal class ConfigErrorTracker
     /// <summary>While paused, the minimum interval between retry attempts.</summary>
     public TimeSpan RetryInterval { get; }
 
+    public const string StrikeFileName = "config-error.json";
     private readonly string _filePath;
     private ConfigErrorStrike? _strike;
     private DateTime? _lastRetryTime;
     private bool _hasReachedPauseThreshold;
+    
+    // ReSharper disable once ReplaceWithFieldKeyword
+    private bool _hasAttemptedOnce;
 
     public ConfigErrorTracker(string storagePath, TimeSpan strikeDuration, TimeSpan retryInterval)
     {
         StrikeDuration = strikeDuration;
         RetryInterval = retryInterval;
-        _filePath = Path.Combine(storagePath, "config-error.json");
+        _filePath = Path.Combine(storagePath, StrikeFileName);
         _strike = LoadFromFile();
         _hasReachedPauseThreshold = CheckPauseThreshold();
     }
 
     /// <summary>
     /// Returns true when the tracker is in a paused state and retries should be skipped.
+    /// Guaranteed to return false on the first call after construction, so the server
+    /// always gets at least one attempt per process lifetime.
     /// While paused, one retry is allowed per <see cref="RetryInterval"/>; after each allowed
     /// retry the caller must call <see cref="RecordError"/> on failure or <see cref="ReportSuccess"/>
     /// on success.
@@ -63,8 +69,15 @@ internal class ConfigErrorTracker
             if (!_hasReachedPauseThreshold)
                 return false;
 
+            // Always allow the first attempt after process start
+            if (!_hasAttemptedOnce) {
+                _hasAttemptedOnce = true;
+                _lastRetryTime = DateTime.UtcNow;
+                return false;
+            }
+
             // Allow one retry per RetryInterval
-            if (_lastRetryTime == null || DateTime.UtcNow - _lastRetryTime.Value >= RetryInterval) {
+            if (DateTime.UtcNow - _lastRetryTime!.Value >= RetryInterval) {
                 _lastRetryTime = DateTime.UtcNow;
                 VhLogger.Instance.LogWarning(
                     "Configuration error tracker is paused (first error: {FirstErrorTime} UTC). " +

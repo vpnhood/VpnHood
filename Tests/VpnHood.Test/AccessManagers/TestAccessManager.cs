@@ -36,6 +36,7 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public ServerToken[]? RedirectServerTokens { get; set; }
     public string? AcmeHttp01KeyToken { get; set; }
     public string? AcmeHttp01KeyAuthorization { get; set; }
+    public Exception? ServerConfigureException { get; set; }
 
     public void AddAdData(string adData)
     {
@@ -61,6 +62,10 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
         LastConfigureTime = DateTime.Now;
         LastServerInfo = serverInfo;
         LastServerStatus = serverInfo.Status;
+
+        if (ServerConfigureException != null)
+            throw ServerConfigureException;
+
         return base.Server_Configure(serverInfo, cancellationToken);
     }
 

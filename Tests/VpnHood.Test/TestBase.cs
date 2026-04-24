@@ -22,7 +22,7 @@ public abstract class TestBase
         TestHelper.Dispose();
     }
 
-    protected void Log(string message)
+    protected static void Log(string message)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Test, message);
     }

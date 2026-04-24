@@ -1,5 +1,6 @@
-# Upcoming
+# v7.8.802
 * Feature: Split Tunneling by Domain 
+* Fix: Minor UI issues and performance improvements
 
 # v7.7.799
 * Fix: freeze connection after network change or restroe from hypernation

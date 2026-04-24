@@ -31,7 +31,7 @@
 
 	<ItemGroup>
 		<!--Waiting for this issue: https://github.com/RicoSuter/NSwag/issues/5359-->
-		<PackageReference Include="NSwag.AspNetCore" Version="14.7.1" />
+		<PackageReference Include="NSwag.AspNetCore" Version="[14.6.3]" />
 	</ItemGroup>
 
 	<ItemGroup>

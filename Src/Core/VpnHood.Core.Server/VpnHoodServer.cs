@@ -28,6 +28,7 @@ public class VpnHoodServer : IAsyncDisposable
 {
     private readonly bool _autoDisposeAccessManager;
     private readonly string _lastConfigFilePath;
+    private readonly ConfigErrorTracker _configErrorTracker;
     private bool _disposed;
     private Exception? _lastConfigException;
     private string? _lastConfigCode;
@@ -79,6 +80,7 @@ public class VpnHoodServer : IAsyncDisposable
             AccessManager.Acme_GetHttp01KeyAuthorization(token, cancellationToken));
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
+        _configErrorTracker = new ConfigErrorTracker(options.StoragePath);
         _publicIpDiscovery = options.PublicIpDiscovery;
         _netConfigurationService = options.NetConfigurationProvider != null
             ? new NetConfigurationService(options.NetConfigurationProvider)
@@ -93,20 +95,23 @@ public class VpnHoodServer : IAsyncDisposable
 
     public async ValueTask ConfigureAndSendStatus(CancellationToken cancellationToken)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(VhLogger.FormatType(this));
-
+        ObjectDisposedException.ThrowIf(_disposed, this);
         using var scope = VhLogger.Instance.BeginScope("Server");
 
-        if (State == ServerState.Waiting && _configureTask.IsCompleted) {
-            _configureTask = Configure(cancellationToken); // configure does not throw any error
-            await _configureTask.Vhc();
-            return;
-        }
+        switch (State) {
+            // Paused means the strike duration has been exceeded; do not retry until the process is restarted.
+            case ServerState.Paused:
+                return;
 
-        if (State == ServerState.Ready && _sendStatusTask.IsCompleted) {
-            _sendStatusTask = SendStatusToAccessManager(true, cancellationToken);
-            await _sendStatusTask.Vhc();
+            case ServerState.Waiting when _configureTask.IsCompleted:
+                _configureTask = Configure(cancellationToken); // configure does not throw any error
+                await _configureTask.Vhc();
+                return;
+
+            case ServerState.Ready when _sendStatusTask.IsCompleted:
+                _sendStatusTask = SendStatusToAccessManager(true, cancellationToken);
+                await _sendStatusTask.Vhc();
+                break;
         }
     }
 
@@ -139,9 +144,12 @@ public class VpnHoodServer : IAsyncDisposable
             }
         });
 
-
         // Configure
         State = ServerState.Waiting;
+
+        // if the config error has reached the pause threshold, start in Paused state till manual intervention
+        if (_configErrorTracker.ShouldPause())
+            State = ServerState.Paused;
 
         // recover previous sessions
         try {
@@ -274,6 +282,8 @@ public class VpnHoodServer : IAsyncDisposable
             _lastConfigException = null;
             VhLogger.Instance.LogInformation("Server is ready!");
 
+            _configErrorTracker.ReportSuccess();
+
             // set status after successful configuration
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
         }
@@ -281,8 +291,14 @@ public class VpnHoodServer : IAsyncDisposable
             State = ServerState.Waiting;
             _lastConfigException = ex;
             SessionManager.Tracker?.TryTrackError(ex, "Could not configure server!", "Configure");
-            VhLogger.Instance.LogError(ex, "Could not configure server! Retrying after {TotalSeconds} seconds.",
-                _configureAndSendStatusJob.Interval.TotalSeconds);
+
+            if (_configErrorTracker.RecordError(ex) || _configErrorTracker.ShouldPause())
+                State = ServerState.Paused;
+            else
+                VhLogger.Instance.LogError(ex,
+                    "Could not configure server! Retrying after {TotalSeconds} seconds.",
+                    _configureAndSendStatusJob.Interval.TotalSeconds);
+
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
         }
     }

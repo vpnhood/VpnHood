@@ -13,93 +13,104 @@ namespace VpnHood.Core.Server;
 /// <list type="bullet">
 ///   <item>On each configuration failure, call <see cref="RecordError"/>. This persists
 ///         the error to <c>config-error.json</c> so the strike survives process restarts.</item>
-///   <item>After recording (or on startup), call <see cref="ShouldPause"/> to check whether
-///         the server must stop retrying. The server should enter the <see cref="ServerState.Paused"/>
-///         state and remain there until the process is restarted.</item>
+///   <item>Before each retry, check <see cref="IsPaused"/>. When paused, the tracker blocks
+///         all retries except one attempt per <see cref="RetryInterval"/>.</item>
 ///   <item>On a successful configuration, call <see cref="ReportSuccess"/> to clear the
-///         strike file and reset the tracker.</item>
+///         strike file, reset the tracker, and resume normal operation.</item>
 /// </list>
 ///
-/// <b>Pause conditions (any of the following):</b>
-/// <list type="bullet">
-///   <item>The strike file exists but cannot be read (corrupt or permission issue).</item>
-///   <item>The error cannot be written to the strike file (disk full, permission issue).</item>
-///   <item>The first recorded error is older than <see cref="StrikeDuration"/> (default 7 days).</item>
-/// </list>
+/// <b>Pause behavior:</b>
+/// <para>
+/// The tracker enters a paused state when the first recorded error is older than
+/// <see cref="StrikeDuration"/>, the strike file cannot be read, or the strike file
+/// cannot be written. While paused, the server is allowed exactly one retry attempt
+/// per <see cref="RetryInterval"/> to give it a chance to recover automatically
+/// (e.g., after a transient network issue or access server restart).
+/// </para>
 ///
 /// This class is designed to be called from a single thread and is not thread-safe.
 /// </summary>
 internal class ConfigErrorTracker
 {
-    /// <summary>The duration after which persistent configuration errors cause the server to pause.</summary>
+    /// <summary>The duration after which persistent errors cause the tracker to pause retries.</summary>
     public TimeSpan StrikeDuration { get; }
+
+    /// <summary>While paused, the minimum interval between retry attempts.</summary>
+    public TimeSpan RetryInterval { get; }
 
     private readonly string _filePath;
     private ConfigErrorStrike? _strike;
+    private DateTime? _lastRetryTime;
+    private bool _hasReachedPauseThreshold;
 
-    public ConfigErrorTracker(string storagePath, TimeSpan strikeDuration)
+    public ConfigErrorTracker(string storagePath, TimeSpan strikeDuration, TimeSpan retryInterval)
     {
         StrikeDuration = strikeDuration;
+        RetryInterval = retryInterval;
         _filePath = Path.Combine(storagePath, "config-error.json");
         _strike = LoadFromFile();
+        _hasReachedPauseThreshold = CheckPauseThreshold();
     }
 
     /// <summary>
-    /// Records a configuration error. Persists the strike to disk immediately.
-    /// If the file cannot be written, the server should pause to avoid zombie behavior,
-    /// so this method returns true to indicate a forced pause.
+    /// Returns true when the tracker is in a paused state and retries should be skipped.
+    /// While paused, one retry is allowed per <see cref="RetryInterval"/>; after each allowed
+    /// retry the caller must call <see cref="RecordError"/> on failure or <see cref="ReportSuccess"/>
+    /// on success.
     /// </summary>
-    /// <returns>true if the error could NOT be persisted and the server must pause immediately.</returns>
-    public bool RecordError(Exception error)
+    public bool IsPaused {
+        get {
+            if (!_hasReachedPauseThreshold)
+                return false;
+
+            // Allow one retry per RetryInterval
+            if (_lastRetryTime == null || DateTime.UtcNow - _lastRetryTime.Value >= RetryInterval) {
+                _lastRetryTime = DateTime.UtcNow;
+                VhLogger.Instance.LogWarning(
+                    "Configuration error tracker is paused (first error: {FirstErrorTime} UTC). " +
+                    "Allowing one retry attempt. Next retry in {RetryInterval}.",
+                    _strike?.FirstErrorTime, RetryInterval);
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Records a configuration or status error. Persists the strike to disk immediately.
+    /// If the file cannot be written, the tracker enters the paused state.
+    /// </summary>
+    public void RecordError(Exception error)
     {
-        _strike ??= new ConfigErrorStrike { FirstErrorTime = DateTime.Now };
-        _strike.LastErrorTime = DateTime.Now;
+        _strike ??= new ConfigErrorStrike { FirstErrorTime = DateTime.UtcNow };
+        _strike.LastErrorTime = DateTime.UtcNow;
         _strike.LastErrorMessage = error.Message;
 
         try {
             var json = JsonSerializer.Serialize(_strike);
             File.WriteAllText(_filePath, json);
-            return ShouldPause();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogCritical(ex,
                 "Could not write config error strike file. " +
-                "Server must pause to prevent zombie behavior.");
-            return true;
-        }
-    }
-
-    /// <summary>
-    /// Checks whether the server should enter the Paused state and stop retrying.
-    /// All decision logic and logging is handled internally.
-    /// </summary>
-    public bool ShouldPause()
-    {
-        if (_strike == null)
-            return false;
-
-        if (DateTime.Now - _strike.FirstErrorTime >= StrikeDuration) {
-            VhLogger.Instance.LogCritical(
-                "Configuration has been failing since {FirstErrorTime} (UTC), exceeding the {Days}-day threshold. " +
-                "Server will not retry. Restart the process to attempt configuration again.",
-                _strike.FirstErrorTime, StrikeDuration.Days);
-            return true;
+                "Server will pause retries to prevent zombie behavior.");
+            _hasReachedPauseThreshold = true;
+            return;
         }
 
-        VhLogger.Instance.LogWarning(
-            "A configuration error strike is active (first error: {FirstErrorTime} UTC). " +
-            "Server will keep retrying until the {Days}-day threshold is reached.",
-            _strike.FirstErrorTime, StrikeDuration.Days);
-        return false;
+        _hasReachedPauseThreshold = CheckPauseThreshold();
     }
 
     /// <summary>
     /// Clears the strike after a successful configuration.
-    /// Logs a message if the file cannot be deleted, but does not cause a pause.
+    /// Resets the tracker to normal operation.
     /// </summary>
     public void ReportSuccess()
     {
         _strike = null;
+        _hasReachedPauseThreshold = false;
+        _lastRetryTime = null;
         try {
             if (File.Exists(_filePath))
                 File.Delete(_filePath);
@@ -109,27 +120,43 @@ internal class ConfigErrorTracker
         }
     }
 
+    private bool CheckPauseThreshold()
+    {
+        if (_strike == null)
+            return false;
+
+        if (DateTime.UtcNow - _strike.FirstErrorTime >= StrikeDuration) {
+            VhLogger.Instance.LogCritical(
+                "Configuration has been failing since {FirstErrorTime} (UTC), exceeding the {Days}-day threshold. " +
+                "Server will pause retries and allow one attempt per {RetryInterval}.",
+                _strike.FirstErrorTime, StrikeDuration.Days, RetryInterval);
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Loads the strike from disk. If the file exists but cannot be read, returns a strike
     /// with <see cref="ConfigErrorStrike.FirstErrorTime"/> set to <see cref="DateTime.MinValue"/>
-    /// so that <see cref="ShouldPause"/> will immediately return true.
+    /// so that the tracker immediately enters the paused state.
     /// </summary>
     private ConfigErrorStrike? LoadFromFile()
     {
         try {
-            return File.Exists(_filePath) 
-                ? JsonUtils.DeserializeFile<ConfigErrorStrike>(_filePath) 
+            return File.Exists(_filePath)
+                ? JsonUtils.DeserializeFile<ConfigErrorStrike>(_filePath)
                 : null;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogCritical(ex,
                 "Config error strike file exists but could not be read. " +
-                "Server must pause to prevent zombie behavior.");
+                "Server will pause retries to prevent zombie behavior.");
 
             // Return a strike that is guaranteed to exceed the threshold
             return new ConfigErrorStrike {
                 FirstErrorTime = DateTime.MinValue,
-                LastErrorTime = DateTime.Now,
+                LastErrorTime = DateTime.UtcNow,
                 LastErrorMessage = $"Strike file was unreadable: {ex.Message}"
             };
         }

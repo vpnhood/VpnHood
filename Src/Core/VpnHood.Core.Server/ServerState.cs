@@ -9,6 +9,5 @@ public enum ServerState
     Waiting,
     Configuring,
     Ready,
-    Paused,
     Disposed
 }

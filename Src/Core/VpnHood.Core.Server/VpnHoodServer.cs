@@ -80,7 +80,7 @@ public class VpnHoodServer : IAsyncDisposable
             AccessManager.Acme_GetHttp01KeyAuthorization(token, cancellationToken));
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
-        _configErrorTracker = new ConfigErrorTracker(options.StoragePath, options.ConfigErrorStrikeDuration);
+        _configErrorTracker = new ConfigErrorTracker(options.StoragePath, options.ConfigErrorStrikeDuration, options.ConfigErrorRetryInterval);
         _publicIpDiscovery = options.PublicIpDiscovery;
         _netConfigurationService = options.NetConfigurationProvider != null
             ? new NetConfigurationService(options.NetConfigurationProvider)
@@ -99,16 +99,14 @@ public class VpnHoodServer : IAsyncDisposable
         using var scope = VhLogger.Instance.BeginScope("Server");
 
         switch (State) {
-            // Paused means the strike duration has been exceeded; do not retry until the process is restarted.
-            case ServerState.Paused:
-                return;
-
             case ServerState.Waiting when _configureTask.IsCompleted:
+                if (_configErrorTracker.IsPaused) return;
                 _configureTask = Configure(cancellationToken); // configure does not throw any error
                 await _configureTask.Vhc();
                 return;
 
             case ServerState.Ready when _sendStatusTask.IsCompleted:
+                if (_configErrorTracker.IsPaused) return;
                 _sendStatusTask = SendStatusToAccessManager(true, cancellationToken);
                 await _sendStatusTask.Vhc();
                 break;
@@ -146,10 +144,6 @@ public class VpnHoodServer : IAsyncDisposable
 
         // Configure
         State = ServerState.Waiting;
-
-        // if the config error has reached the pause threshold, start in Paused state till manual intervention
-        if (_configErrorTracker.ShouldPause())
-            State = ServerState.Paused;
 
         // recover previous sessions
         try {
@@ -292,12 +286,10 @@ public class VpnHoodServer : IAsyncDisposable
             _lastConfigException = ex;
             SessionManager.Tracker?.TryTrackError(ex, "Could not configure server!", "Configure");
 
-            if (_configErrorTracker.RecordError(ex))
-                State = ServerState.Paused;
-            else
-                VhLogger.Instance.LogError(ex,
-                    "Could not configure server! Retrying after {TotalSeconds} seconds.",
-                    _configureAndSendStatusJob.Interval.TotalSeconds);
+            _configErrorTracker.RecordError(ex);
+            VhLogger.Instance.LogError(ex,
+                "Could not configure server! Retrying after {TotalSeconds} seconds.",
+                _configureAndSendStatusJob.Interval.TotalSeconds);
 
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
         }
@@ -522,11 +514,7 @@ public class VpnHoodServer : IAsyncDisposable
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the server status.");
-
-            // if sending status fails, it may indicate a problem in the network or the Access Manager,
-            // if the error has been repeated, it means access manager does not accept this server anymore
-            if (_configErrorTracker.RecordError(ex))
-                State = ServerState.Paused;
+            _configErrorTracker.RecordError(ex);
         }
     }
 

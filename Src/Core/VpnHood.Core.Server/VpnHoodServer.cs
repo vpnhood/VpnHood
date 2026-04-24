@@ -80,7 +80,7 @@ public class VpnHoodServer : IAsyncDisposable
             AccessManager.Acme_GetHttp01KeyAuthorization(token, cancellationToken));
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
-        _configErrorTracker = new ConfigErrorTracker(options.StoragePath);
+        _configErrorTracker = new ConfigErrorTracker(options.StoragePath, options.ConfigErrorStrikeDuration);
         _publicIpDiscovery = options.PublicIpDiscovery;
         _netConfigurationService = options.NetConfigurationProvider != null
             ? new NetConfigurationService(options.NetConfigurationProvider)
@@ -280,10 +280,10 @@ public class VpnHoodServer : IAsyncDisposable
             State = ServerState.Ready;
 
             _lastConfigException = null;
-            VhLogger.Instance.LogInformation("Server is ready!");
-
             _configErrorTracker.ReportSuccess();
 
+            VhLogger.Instance.LogInformation("Server is ready!");
+    
             // set status after successful configuration
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
         }
@@ -292,7 +292,7 @@ public class VpnHoodServer : IAsyncDisposable
             _lastConfigException = ex;
             SessionManager.Tracker?.TryTrackError(ex, "Could not configure server!", "Configure");
 
-            if (_configErrorTracker.RecordError(ex) || _configErrorTracker.ShouldPause())
+            if (_configErrorTracker.RecordError(ex))
                 State = ServerState.Paused;
             else
                 VhLogger.Instance.LogError(ex,
@@ -522,6 +522,11 @@ public class VpnHoodServer : IAsyncDisposable
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the server status.");
+
+            // if sending status fails, it may indicate a problem in the network or the Access Manager,
+            // if the error has been repeated, it means access manager does not accept this server anymore
+            if (_configErrorTracker.RecordError(ex))
+                State = ServerState.Paused;
         }
     }
 

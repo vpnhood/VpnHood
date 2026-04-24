@@ -32,13 +32,14 @@ namespace VpnHood.Core.Server;
 internal class ConfigErrorTracker
 {
     /// <summary>The duration after which persistent configuration errors cause the server to pause.</summary>
-    public static readonly TimeSpan StrikeDuration = TimeSpan.FromDays(7);
+    public TimeSpan StrikeDuration { get; }
 
     private readonly string _filePath;
     private ConfigErrorStrike? _strike;
 
-    public ConfigErrorTracker(string storagePath)
+    public ConfigErrorTracker(string storagePath, TimeSpan strikeDuration)
     {
+        StrikeDuration = strikeDuration;
         _filePath = Path.Combine(storagePath, "config-error.json");
         _strike = LoadFromFile();
     }
@@ -58,7 +59,7 @@ internal class ConfigErrorTracker
         try {
             var json = JsonSerializer.Serialize(_strike);
             File.WriteAllText(_filePath, json);
-            return false;
+            return ShouldPause();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogCritical(ex,

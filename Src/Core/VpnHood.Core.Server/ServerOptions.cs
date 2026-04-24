@@ -30,4 +30,5 @@ public class ServerOptions
     public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromMinutes(1);
     public IpNetwork VirtualIpNetworkV4 { get; init; } = TunnelDefaults.VirtualIpNetworkV4;
     public IpNetwork VirtualIpNetworkV6 { get; init; } = TunnelDefaults.VirtualIpNetworkV6;
+    public TimeSpan ConfigErrorStrikeDuration { get; init; } = TimeSpan.FromDays(7);
 }

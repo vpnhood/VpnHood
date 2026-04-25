@@ -30,7 +30,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.730" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.731" />
 		<PackageReference Include="VpnHood.Core.Proxies" Version="7.4.768" />
 	</ItemGroup>
 

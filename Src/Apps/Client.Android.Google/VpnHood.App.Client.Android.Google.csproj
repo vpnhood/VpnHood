@@ -80,7 +80,7 @@
 
 	<!--Fix SDK Built Error 1/17/2026-->
 	<ItemGroup>
-		<PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.JVM" Version="1.10.4.1" ExcludeAssets="all" />
+		<PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.JVM" Version="1.10.5" ExcludeAssets="all" />
 	</ItemGroup>
 
 </Project>

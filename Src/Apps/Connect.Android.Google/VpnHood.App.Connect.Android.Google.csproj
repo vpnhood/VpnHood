@@ -95,8 +95,8 @@
 
 	<!--Fix SDK Built Error 1/17/2026-->
 	<ItemGroup>
-		<PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.JVM" Version="1.10.4.1" ExcludeAssets="all" />
-		<PackageReference Include="Xamarin.AndroidX.Datastore.Preferences.Core.JVM" Version="1.2.0.2" ExcludeAssets="all" />
+		<PackageReference Include="Xamarin.AndroidX.Compose.Runtime.Annotation.JVM" Version="1.10.5" ExcludeAssets="all" />
+		<PackageReference Include="Xamarin.AndroidX.Datastore.Preferences.Core.JVM" Version="1.2.1" ExcludeAssets="all" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="Docs\" />

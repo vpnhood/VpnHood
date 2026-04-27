@@ -230,6 +230,10 @@ public class ServerFinder(
         try {
             // first attempt the first server, take it simple. If it fails, do parallel checks.
             // this help prevent false DDOS attack on servers as most client can simply connect to the first server
+            VhLogger.Instance.LogInformation(GeneralEventId.Request,
+                "Starting endpoint check for the first endpoint... EndPoint: {EndPoint}",
+                VhLogger.Format(firstHostStatus.VpnEndPoint.TcpEndPoint));
+
             await VerifyHostStatus(firstHostStatus, serverQueryTimeout, cancellationToken);
             if (firstHostStatus.Available == true)
                 return [firstHostStatus];
@@ -244,7 +248,7 @@ public class ServerFinder(
         }
         finally {
             VhLogger.Instance.LogInformation(GeneralEventId.Request,
-                "Server verification completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
+                "Endpoint reachability check completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
                 FastDateTime.Now - _progressMonitor.Progress.StartedTime,
                 hostStatuses.Count(x => x.Available is not null), hostStatuses.Length);
 
@@ -258,7 +262,7 @@ public class ServerFinder(
         ProgressMonitor progressMonitor, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
-            "Starting server verification. Endpoints: {EndpointCount}, MaxParallelism: {MaxParallelism}",
+            "Starting endpoints reachability. EndpointCount: {EndpointCount}, MaxParallelism: {MaxParallelism}",
             hostStatuses.Length, maxDegreeOfParallelism);
 
         using var searchingCts = new CancellationTokenSource(); // this will be canceled when a server is found
@@ -342,7 +346,7 @@ public class ServerFinder(
     {
         try {
             VhLogger.Instance.LogInformation(GeneralEventId.Request,
-                "Starting the first server verification. EndPoint: {EndPoint}",
+                "Check an endpoint reachability. EndPoint: {EndPoint}",
                 VhLogger.Format(connector.VpnEndPoint.TcpEndPoint));
 
             using var queryTimeoutCts = new CancellationTokenSource(queryTimeout); // timeout for each server query

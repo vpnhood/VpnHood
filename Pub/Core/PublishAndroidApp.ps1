@@ -8,6 +8,10 @@ param(
 	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
+
+# clean up any leftover temp project files
+Get-ChildItem -Path $projectDir -File -Filter "*.tmp.csproj" | Remove-Item -Force;
+
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 
 Write-Host "";
@@ -71,7 +75,7 @@ try {
 		# not-sure about RestoreDisableParallel yet
 		$outputPath = Join-Path $projectDir "bin/Release-$distribution/";
 		$signedPacakgeFile = Join-Path $outputPath "$packageId-Signed.apk"
-		dotnet build $projectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
+		dotnet build $tempProjectFile /t:Clean /t:SignAndroidPackage /verbosity:$msverbosity `
 			/p:SolutionDir=$solutionDir `
 			/p:Configuration=Release `
 			/p:ApplicationId=$packageId `

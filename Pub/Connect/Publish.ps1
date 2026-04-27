@@ -35,6 +35,7 @@ if ($linux) {
 if ($android) {
 	& "$solutionDir/Src/Apps/Connect.Android.Google/_publish.ps1";
 	& "$solutionDir/Src/Apps/Connect.Android.Web/_publish.ps1";
+	& "$solutionDir/Src/Apps/Connect.Android.Web/_publish-arm64.ps1";
 }
 
 # distribute

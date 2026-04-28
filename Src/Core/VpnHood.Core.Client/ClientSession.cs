@@ -32,7 +32,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly ClientUsageTracker? _clientUsageTracker;
     private readonly ProxyManager _proxyManager;
     private readonly ClientPacketHandler _packetHandler;
-    private readonly ClientHost _clientHost;
+    private readonly ClientTcpHost _clientTcpHost;
     private readonly ConnectorService _connectorService;
     private readonly ClientSessionStatus _status;
     private readonly Job _cleanupJob;
@@ -123,16 +123,16 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             passthroughState: PassthroughState);
 
         // proxy host
-        _clientHost = new ClientHost(
+        _clientTcpHost = new ClientTcpHost(
             streamHandler,
             catcherAddressIpV4: config.TcpProxyCatcherAddressIpV4,
             catcherAddressIpV6: config.TcpProxyCatcherAddressIpV6);
-        _clientHost.PacketReceived += ClientHost_PacketReceived;
+        _clientTcpHost.PacketReceived += ClientTcpHostPacketReceived;
 
         // packet handler
         _packetHandler = new ClientPacketHandler(
             tunnel: _tunnel,
-            clientHost: _clientHost,
+            clientTcpHost: _clientTcpHost,
             domainFilteringService: options.DomainFilteringService,
             netFilter: _netFilter,
             proxyManager: _proxyManager,
@@ -175,7 +175,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         State = ClientState.Connecting;
         
         // start client host
-        _clientHost.Start();
+        _clientTcpHost.Start();
 
         // we can start managing datagram channels but lets wait for it after ad
         var manageChannelsTask = ManagePacketChannels(cancellationToken);
@@ -349,7 +349,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _packetHandler.ProcessOutgoingPacket(ipPacket);
     }
 
-    private void ClientHost_PacketReceived(object? sender, IpPacket ipPacket) =>
+    private void ClientTcpHostPacketReceived(object? sender, IpPacket ipPacket) =>
         ProcessIncomingPacket(ipPacket, true);
 
     private void Proxy_PacketReceived(object? sender, IpPacket ipPacket) =>
@@ -553,7 +553,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
     public void DropCurrentConnections()
     {
-        _clientHost.DropCurrentConnections();
+        _clientTcpHost.DropCurrentConnections();
         _tunnel.RemoveChannels<IProxyChannel>();
     }
 
@@ -652,7 +652,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _vpnAdapter.PacketReceived -= VpnAdapter_PacketReceived;
         _vpnAdapter.PrimaryAdapterIpChanged -= VpnAdapter_PrimaryAdapterIpChanged;
         _tunnel.PacketReceived -= Tunnel_PacketReceived;
-        _clientHost.PacketReceived -= ClientHost_PacketReceived;
+        _clientTcpHost.PacketReceived -= ClientTcpHostPacketReceived;
         _proxyManager.PacketReceived -= Proxy_PacketReceived;
 
         PassthroughState.PassthroughForAd = false;
@@ -661,7 +661,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _connectorService.AllowTcpReuse = false;
 
         VhLogger.Instance.LogDebug("Disposing ClientHost...");
-        _clientHost.Dispose();
+        _clientTcpHost.Dispose();
 
         VhLogger.Instance.LogDebug("Disposing Tunnel...");
         _tunnel.Dispose();

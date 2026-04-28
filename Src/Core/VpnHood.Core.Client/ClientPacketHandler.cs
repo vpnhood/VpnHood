@@ -12,7 +12,7 @@ namespace VpnHood.Core.Client;
 
 internal class ClientPacketHandler(
     Tunnel tunnel,
-    ClientHost clientHost,
+    ClientTcpHost clientTcpHost,
     DomainFilteringService domainFilteringService,
     NetFilter netFilter,
     ProxyManager proxyManager,
@@ -65,12 +65,6 @@ internal class ClientPacketHandler(
         if (filterAction == FilterAction.Default && netFilter.IpFilter != null)
             filterAction = netFilter.IpFilter.Process(ipPacket.Protocol, ipPacket.GetDestinationEndPoint());
 
-        // TcpHost has to manage its own packets
-        if (clientHost.IsOwnPacket(ipPacket)) {
-            clientHost.ProcessOutgoingPacket(ipPacket);
-            return;
-        }
-
         // block
         if (filterAction == FilterAction.Block)
             throw new NetFilterException("A packet has been dropped by the domain filter.");
@@ -103,7 +97,7 @@ internal class ClientPacketHandler(
         // Tcp
         if (ipPacket.Protocol == IpProtocol.Tcp) {
             if (UseTcpProxy)
-                clientHost.ProcessOutgoingPacket(ipPacket);
+                clientTcpHost.ProcessOutgoingPacket(ipPacket);
             else
                 tunnel.SendPacketQueued(ipPacket);
 
@@ -142,7 +136,7 @@ internal class ClientPacketHandler(
 
         // Tcp
         if (ipPacket.Protocol == IpProtocol.Tcp) {
-            clientHost.ProcessOutgoingPacket(ipPacket);
+            clientTcpHost.ProcessOutgoingPacket(ipPacket);
             return;
         }
 

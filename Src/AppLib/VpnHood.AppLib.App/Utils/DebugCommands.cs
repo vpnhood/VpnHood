@@ -13,6 +13,7 @@ public static class DebugCommands
     public const string UserReview = "/user-review";
     public const string RemoteAccess = "/remote-access";
     public const string DisableWebSocket = "/disable-websocket";
+    public const string TcpStack = "/tcp-stack";
 
     public static string[] All => [
         CaptureContext,
@@ -25,6 +26,7 @@ public static class DebugCommands
         UserReview,
         WinDivert,
         RemoteAccess,
-        DisableWebSocket
+        DisableWebSocket,
+        TcpStack
     ];
 }

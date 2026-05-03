@@ -32,7 +32,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly ClientUsageTracker? _clientUsageTracker;
     private readonly ProxyManager _proxyManager;
     private readonly ClientPacketHandler _packetHandler;
-    private readonly ClientTcpHost _clientTcpHost;
+    private readonly IClientTcpHost _clientTcpHost;
     private readonly ConnectorService _connectorService;
     private readonly ClientSessionStatus _status;
     private readonly Job _cleanupJob;
@@ -123,10 +123,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             passthroughState: PassthroughState);
 
         // proxy host
-        _clientTcpHost = new ClientTcpHost(
-            streamHandler,
-            catcherAddressIpV4: config.TcpProxyCatcherAddressIpV4,
-            catcherAddressIpV6: config.TcpProxyCatcherAddressIpV6);
+        _clientTcpHost = options.UseTcpStack
+            ? new ClientTcpHost(streamHandler)
+            : new ClientTcpLocalHost(
+                streamHandler,
+                catcherAddressIpV4: config.TcpProxyCatcherAddressIpV4,
+                catcherAddressIpV6: config.TcpProxyCatcherAddressIpV6);
         _clientTcpHost.PacketReceived += ClientTcpHostPacketReceived;
 
         // packet handler

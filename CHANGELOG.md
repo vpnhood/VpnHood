@@ -1,3 +1,6 @@
+# v7.9.808
+* Update: Huge performance improvement in cloak mode
+
 # v7.8.802
 * Feature: Split Tunneling by Domain 
 * Fix: Minor UI issues and performance improvements

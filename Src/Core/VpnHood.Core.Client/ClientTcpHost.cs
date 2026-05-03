@@ -10,23 +10,19 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client;
 
-internal class ClientTcpHost(
-    ClientStreamHandler streamHandler,
-    IPAddress catcherAddressIpV4,
-    IPAddress catcherAddressIpV6)
-    : IDisposable
+internal class ClientTcpHost(ClientStreamHandler streamHandler)
+    : IClientTcpHost
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private LocalTcpStack? _tcpStack;
     private LocalTcpListener? _listener;
 
-    public IPAddress CatcherAddressIpV4 => catcherAddressIpV4;
-    public IPAddress CatcherAddressIpV6 => catcherAddressIpV6;
-
-    public IReadOnlyList<IPAddress> CatcherAddressIps = [catcherAddressIpV4, catcherAddressIpV6];
+    public IReadOnlyList<IPAddress> CatcherAddressIps => [];
+    public bool IsOwnPacket(IpPacket ipPacket) => false;
 
     public event EventHandler<IpPacket>? PacketReceived;
+
 
     public void DropCurrentConnections()
     {
@@ -134,4 +130,5 @@ internal class ClientTcpHost(
             await stream.DisposeAsync().Vhc();
         }
     }
+
 }

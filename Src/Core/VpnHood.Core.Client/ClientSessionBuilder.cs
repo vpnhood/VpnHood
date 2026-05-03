@@ -291,7 +291,8 @@ internal class ClientSessionBuilder(
                     ChannelProtocol = channelProtocol,
                     DropQuic = config.DropQuic,
                     DropUdp = config.DropUdp,
-                    UseTcpProxy = config.UseTcpProxy
+                    UseTcpProxy = config.UseTcpProxy,
+                    UseTcpStack = config.UseTcpStack
                 },
                 config: new ClientSessionConfig {
                     AdapterOptions = adapterOptions,

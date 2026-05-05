@@ -162,6 +162,9 @@ try {
 	ReportVersion
 }
 finally {
+	# delete *.tmp.csproj.nuget.* in bin folders
+	Get-ChildItem -Path (Join-Path $projectDir "obj") -Recurse -File -Filter "*.tmp.csproj.nuget.*" -ErrorAction SilentlyContinue | Remove-Item -Force;
+
 	if (Test-Path $tempProjectFile) {
 		Remove-Item -Path $tempProjectFile -Force
 	}

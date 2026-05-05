@@ -5,8 +5,8 @@
 		<RootNamespace>VpnHood.App.Client.Droid.Web</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.connect.android.web.debug</ApplicationId>
-		<ApplicationVersion>808</ApplicationVersion>
-		<ApplicationDisplayVersion>7.9.808</ApplicationDisplayVersion>
+		<ApplicationVersion>809</ApplicationVersion>
+		<ApplicationDisplayVersion>7.9.809</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
@@ -46,7 +46,7 @@
 		<PackageIcon>VpnHood.png</PackageIcon>
 		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>7.9.808</Version>
+		<Version>7.9.809</Version>
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
@@ -66,7 +66,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.731" />
+	  <PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.732" />
 	</ItemGroup>
 
 	<ItemGroup>

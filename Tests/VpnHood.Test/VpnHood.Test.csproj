@@ -1,4 +1,4 @@
-﻿<Project Sdk="MSTest.Sdk/4.2.1">
+﻿<Project Sdk="MSTest.Sdk/4.2.2">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<IsPackable>false</IsPackable>
@@ -45,6 +45,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.4.0" />
+	  <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.5.1" />
 	</ItemGroup>
 </Project>

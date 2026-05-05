@@ -134,11 +134,11 @@ public static class PacketBuilder
         int sourcePort, int destinationPort, ReadOnlySpan<byte> options, ReadOnlySpan<byte> payload)
     {
         var ipPacket = BuildIp(sourceAddress, destinationAddress, IpProtocol.Tcp, 20 + options.Length + payload.Length);
-        var udpPacket = ipPacket.BuildTcp();
-        udpPacket.SourcePort = (ushort)sourcePort;
-        udpPacket.DestinationPort = (ushort)destinationPort;
-        payload.CopyTo(udpPacket.Payload.Span);
-        options.CopyTo(udpPacket.Options.Span);
+        var tcpPacket = ipPacket.BuildTcp(options.Length);
+        tcpPacket.SourcePort = (ushort)sourcePort;
+        tcpPacket.DestinationPort = (ushort)destinationPort;
+        payload.CopyTo(tcpPacket.Payload.Span);
+        options.CopyTo(tcpPacket.Options.Span);
         return ipPacket;
     }
 

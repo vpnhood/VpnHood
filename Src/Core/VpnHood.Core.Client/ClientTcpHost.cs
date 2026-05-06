@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Net.Sockets;
 using VpnHood.Core.Packets;
 using VpnHood.Core.TcpStack;
 using VpnHood.Core.Toolkit.Logging;
@@ -44,8 +45,8 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
     private async Task AcceptLoop(LocalTcpListener listener, CancellationToken cancellationToken)
     {
         try {
-            await foreach (var stream in listener.AcceptAllAsync(cancellationToken).ConfigureAwait(false)) {
-                _ = ProcessAcceptedStream(stream, cancellationToken);
+            await foreach (var tcpClient in listener.AcceptAllAsync(cancellationToken).ConfigureAwait(false)) {
+                _ = ProcessAcceptedStream(tcpClient, cancellationToken);
             }
         }
         catch (OperationCanceledException) {
@@ -60,12 +61,12 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         }
     }
 
-    private async Task ProcessAcceptedStream(LocalTcpStream stream, CancellationToken cancellationToken)
+    private async Task ProcessAcceptedStream(LocalTcpClient localTcpClient, CancellationToken cancellationToken)
     {
-        var connection = new LocalStreamConnection(stream);
+        var connection = new LocalStreamConnection(localTcpClient);
         try {
             // The "host" endpoint is the original TCP destination captured by the stack.
-            var hostEndPoint = stream.LocalEndPoint;
+            var hostEndPoint = localTcpClient.LocalEndPoint;
             await streamHandler.ProcessConnection(connection, hostEndPoint, cancellationToken).Vhc();
         }
         catch (Exception ex) {
@@ -103,31 +104,31 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         PacketReceived = null;
     }
 
-    private sealed class LocalStreamConnection(LocalTcpStream stream) : IConnection
+    private sealed class LocalStreamConnection(LocalTcpClient tcpClient) : IConnection
     {
         private bool _disposed;
 
         public string ConnectionId { get; set; } = UniqueIdFactory.Create();
         public string ConnectionName => "app";
         public bool IsServer => false;
-        public bool Connected => !_disposed && stream is { CanRead: true, CanWrite: true };
-        public Stream Stream => stream;
-        public IPEndPoint LocalEndPoint { get; } = stream.LocalEndPoint;
-        public IPEndPoint RemoteEndPoint { get; } = stream.RemoteEndPoint;
+        public bool Connected => !_disposed && tcpClient.Stream is { CanRead: true, CanWrite: true };
+        public Stream Stream => tcpClient.Stream;
+        public IPEndPoint LocalEndPoint { get; } = tcpClient.LocalEndPoint;
+        public IPEndPoint RemoteEndPoint { get; } = tcpClient.RemoteEndPoint;
         public bool RequireHttpResponse { get; set; }
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
-            stream.Dispose();
+            tcpClient.Dispose();
         }
 
         public async ValueTask DisposeAsync()
         {
             if (_disposed) return;
             _disposed = true;
-            await stream.DisposeAsync().Vhc();
+            await tcpClient.DisposeAsync().Vhc();
         }
     }
 

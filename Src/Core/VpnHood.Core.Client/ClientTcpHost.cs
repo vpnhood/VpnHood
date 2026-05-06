@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Packets;
 using VpnHood.Core.TcpStack;
+using VpnHood.Core.TcpStack.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -16,8 +17,8 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
 {
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private LocalTcpStack? _tcpStack;
-    private LocalTcpListener? _listener;
+    private ITcpStack? _tcpStack;
+    private ITcpListener? _listener;
 
     public IReadOnlyList<IPAddress> CatcherAddressIps => [];
     public bool IsOwnPacket(IpPacket ipPacket) => false;
@@ -42,7 +43,7 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         Task.Run(() => AcceptLoop(_listener, _cancellationTokenSource.Token));
     }
 
-    private async Task AcceptLoop(LocalTcpListener listener, CancellationToken cancellationToken)
+    private async Task AcceptLoop(ITcpListener listener, CancellationToken cancellationToken)
     {
         try {
             await foreach (var tcpClient in listener.AcceptAllAsync(cancellationToken).ConfigureAwait(false)) {
@@ -61,12 +62,12 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         }
     }
 
-    private async Task ProcessAcceptedStream(LocalTcpClient localTcpClient, CancellationToken cancellationToken)
+    private async Task ProcessAcceptedStream(ITcpClient tcpClient, CancellationToken cancellationToken)
     {
-        var connection = new LocalStreamConnection(localTcpClient);
+        var connection = new LocalStreamConnection(tcpClient);
         try {
             // The "host" endpoint is the original TCP destination captured by the stack.
-            var hostEndPoint = localTcpClient.LocalEndPoint;
+            var hostEndPoint = tcpClient.LocalEndPoint;
             await streamHandler.ProcessConnection(connection, hostEndPoint, cancellationToken).Vhc();
         }
         catch (Exception ex) {
@@ -104,7 +105,7 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         PacketReceived = null;
     }
 
-    private sealed class LocalStreamConnection(LocalTcpClient tcpClient) : IConnection
+    private sealed class LocalStreamConnection(ITcpClient tcpClient) : IConnection
     {
         private bool _disposed;
 

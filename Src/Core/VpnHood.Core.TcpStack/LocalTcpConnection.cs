@@ -1,9 +1,16 @@
 using System.Diagnostics;
 using System.IO.Pipelines;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.TcpStack.Abstractions;
 using VpnHood.Core.TcpStack.Primitives;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
+
+// ReSharper disable StringLiteralTypo
+// ReSharper disable IdentifierTypo
+// ReSharper disable CommentTypo
 
 namespace VpnHood.Core.TcpStack;
 
@@ -17,10 +24,6 @@ internal sealed class LocalTcpConnection(
     TimeSpan? tcpTimeout = null)
     : IDisposable
 {
-    // Diagnostic logging hook (set from app for tests). Receives free-form lines.
-    public static Action<string>? DiagLog;
-    private static void Log(string msg) { try { DiagLog?.Invoke(msg); } catch { /* ignore */ } }
-
     // Static TCP receive window advertised to the peer (no window scaling).
     private const ushort LoopbackWindowSize = 0xFFFF;
 
@@ -211,12 +214,11 @@ internal sealed class LocalTcpConnection(
                 DrainWindowSignal();
 
                 uint pw, una, nxt;
-                int retxFree;
                 lock (_seqLock) {
                     pw = _peerWindow; una = _sndUna; nxt = _sndNxt;
                     var inFlight = (long)(nxt - una);
                     var fromPeer = (int)Math.Max(0, _peerWindow - inFlight);
-                    retxFree = RetxBufferSize - _retxBufferLen;
+                    var retxFree = RetxBufferSize - _retxBufferLen;
                     allowable = Math.Min(fromPeer, retxFree);
                 }
 
@@ -224,7 +226,9 @@ internal sealed class LocalTcpConnection(
                     var now = Environment.TickCount;
                     if (now - _lastZeroWinLogTick > 500) {
                         _lastZeroWinLogTick = now;
-                        Log($"[SEND] zero-win wait offset={offset}/{data.Length} pw={pw} sndUna={una} sndNxt={nxt} inFlight={(long)(nxt - una)}");
+                        if (stack.VerboseLogging)
+                            VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag, "[SEND] zero-win wait offset={Offset}/{DataLength} pw={PeerWindow} sndUna={SndUna} sndNxt={SndNxt} inFlight={InFlight}",
+                                offset, data.Length, pw, una, nxt, (long)(nxt - una));
                     }
                     // Wait for peer window to open (signalled by TrySignalWindow when ACK arrives).
                     // Use a timeout so we can send a Zero Window Probe (ZWP) if the peer does not
@@ -242,7 +246,8 @@ internal sealed class LocalTcpConnection(
                         if (offset < data.Length) {
                             if (Environment.TickCount - _lastZwpLogTick > 500) {
                                 _lastZwpLogTick = Environment.TickCount;
-                                Log($"[SEND] ZWP fire offset={offset} pw={pw}");
+                                if (stack.VerboseLogging)
+                                    VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag, "[SEND] ZWP fire offset={Offset} pw={PeerWindow}", offset, pw);
                             }
                             offset += SendZeroWindowProbe(stack, data.Span[offset]);
                         }
@@ -314,8 +319,8 @@ internal sealed class LocalTcpConnection(
                 prevUna = _sndUna;
                 sndNxtSnap = _sndNxt;
                 // Only advance if ack is within [_sndUna, _sndNxt].
-                diff = (long)(ack - _sndUna);
-                if (diff > 0 && diff <= (long)(_sndNxt - _sndUna)) {
+                diff = ack - _sndUna;
+                if (diff > 0 && diff <= _sndNxt - _sndUna) {
                     _sndUna = ack;
                     // Drop acknowledged bytes from retx buffer.
                     var n = (int)diff;
@@ -343,17 +348,23 @@ internal sealed class LocalTcpConnection(
                 newPw = _peerWindow;
             }
             var ackCount = Interlocked.Increment(ref _ackCount);
+
             // Only log significant events (avoid log spam):
             //  - zero / very low advertised window
             //  - ACK that doesn't advance _sndUna AND has no payload (pure dup-ack / probe)
             //  - every 5000th ACK as a heartbeat
-            if (windowSize == 0 || newPw < 4096 || (diff <= 0 && payload.Length == 0) || (ackCount % 5000) == 0)
-                //Log($"[ACK#{ackCount}] ack={ack} prevUna={prevUna} nxt={sndNxtSnap} diff={diff} winRaw={windowSize} pw={newPw} payload={payload.Length} sig={_windowSignal.CurrentCount} dup={_dupAckCount}");
-                if (shouldFastRetx) {
-                    var n = Interlocked.Increment(ref _retxCount);
-                    //Log($"[RETX#{n}] fast retransmit at sndUna={ack} retxLen={_retxBufferLen}");
-                    FastRetransmit();
-                }
+            if (windowSize == 0 || newPw < 4096 || (diff <= 0 && payload.Length == 0) || (ackCount % 5000) == 0) {
+                if (_stack?.VerboseLogging == true)
+                    VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag, "[ACK#{AckCount}] ack={Ack} prevUna={PrevUna} nxt={SndNxtSnap} diff={Diff} winRaw={WindowSize} pw={NewPw} payload={PayloadLength} sig={CurrentCount} dup={DupAckCount}",
+                        ackCount, ack, prevUna, sndNxtSnap, diff, windowSize, newPw, payload.Length, _windowSignal.CurrentCount, _dupAckCount);
+            }
+
+            if (shouldFastRetx) {
+                var n = Interlocked.Increment(ref _retxCount);
+                if (_stack?.VerboseLogging == true)
+                    VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag, "[RETX#{RetxCount}] fast retransmit at sndUna={Ack} retxLen={RetxBufferLen}", n, ack, _retxBufferLen);
+                FastRetransmit();
+            }
             TrySignalWindow();
         }
 

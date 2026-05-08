@@ -24,12 +24,11 @@ public sealed class LocalTcpStack : ITcpStack
     // Max TCP window without window scaling.
     private const ushort LoopbackWindowSize = 0xFFFF;
 
-    /// <summary>Diagnostic logging hook for low-level TCP events (tests/diagnostics only).</summary>
-    public static Action<string>? DiagLog
-    {
-        get => LocalTcpConnection.DiagLog;
-        set => LocalTcpConnection.DiagLog = value;
-    }
+    /// <summary>
+    /// Gets or sets a value indicating whether verbose diagnostic information should be logged via VhLogger.
+    /// This is useful for debugging TCP connection issues (e.g., retransmissions, zero-window probes).
+    /// </summary>
+    public bool VerboseLogging { get; set; }
 
     private readonly ConcurrentDictionary<IPEndPointPairValue, LocalTcpConnection> _connections = new();
     private readonly ConcurrentDictionary<IpEndPointValue, LocalTcpListener> _listeners = new();

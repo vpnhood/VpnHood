@@ -37,6 +37,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.TcpStack.Abstractions\VpnHood.Core.TcpStack.Abstractions.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
 	</ItemGroup>
 
 </Project>

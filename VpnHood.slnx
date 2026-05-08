@@ -129,8 +129,6 @@
     <Project Path="Src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Toolkit/VpnHood.Core.Toolkit.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Tunneling/VpnHood.Core.Tunneling.csproj" />
-    <Project Path="../VpnHood.Core.TcpStack/VpnHood.Core.TcpStack.LwIP/VpnHood.Core.TcpStack.LwIP.csproj" />
-    <Project Path="../VpnHood.Core.TcpStack/VpnHood.Core.TcpStack/VpnHood.Core.TcpStack.csproj" />
   </Folder>
   <Folder Name="/Src/Core/Adapters/">
     <Project Path="Src/Core/VpnHood.Core.VpnAdapters.Abstractions/VpnHood.Core.VpnAdapters.Abstractions.csproj" />
@@ -145,8 +143,13 @@
     <Project Path="Src/Core/VpnHood.Core.Client.Device.Win/VpnHood.Core.Client.Device.Win.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Client.Device/VpnHood.Core.Client.Device.csproj" />
   </Folder>
+  <Folder Name="/Src/Core/TcpStacks/">
+    <Project Path="Src/Core/VpnHood.Core.TcpStack.Abstractions/VpnHood.Core.TcpStack.Abstractions.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.TcpStack/VpnHood.Core.TcpStack.csproj" />
+  </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/VpnHood.AppLib.Test/VpnHood.AppLib.Test.csproj" />
+    <Project Path="Tests/VpnHood.Core.TcpStack.Test/VpnHood.Core.TcpStack.Test.csproj" />
     <Project Path="Tests/VpnHood.Test/VpnHood.Test.csproj" />
   </Folder>
 </Solution>

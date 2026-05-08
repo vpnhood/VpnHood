@@ -10,6 +10,7 @@ public static class VhLogger
 {
     private static readonly VhLoggerDecorator InstanceDecorator = new();
 
+    public static event EventHandler<LoggedEventArgs>? Logged;
     public static ILogger Instance {
         get => InstanceDecorator;
         set {
@@ -22,6 +23,7 @@ public static class VhLogger
     public static bool IsAnonymousMode { get; set; } = true;
 
     public static LogLevel MinLogLevel { get; set; } = LogLevel.Information;
+
 
     public static ILogger CreateConsoleLogger(LogLevel logLevel = LogLevel.Trace, bool singleLine = false)
     {
@@ -187,7 +189,8 @@ public static class VhLogger
             if (MinLogLevel > logLevel)
                 return;
 
-            // also fire an event
+            // Fire an event
+            Logged?.Invoke(null, new LoggedEventArgs(logLevel, eventId, formatter(state, exception), exception));
 
             Logger.Log(logLevel, eventId, state, exception, formatter);
         }

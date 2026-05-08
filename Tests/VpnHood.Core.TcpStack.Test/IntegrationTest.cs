@@ -61,7 +61,7 @@ public sealed class TcpStackIntegrationTest
             Console.WriteLine($"[{time:HH:mm:ss.fff}] <<< INCOMING: {info}");
             lock (incomingPackets) incomingPackets.Add((time, info, packet.Buffer.ToArray()));
 
-            tcpStack.ProcessIncoming(packet.Buffer.Span);
+            tcpStack.ProcessIncoming(packet);
         };
 
         tcpStack.OnPacketSend = packet => {
@@ -242,7 +242,7 @@ public sealed class TcpStackIntegrationTest
                 if (packet.Protocol == IpProtocol.Tcp) tcpPacketCount++;
                 packetCount++;
                 // Process with TCP stack
-                tcpStack.ProcessIncoming(packet.Buffer.Span);
+                tcpStack.ProcessIncoming(packet);
             }
             catch (Exception ex) {
                 Console.WriteLine($"[ADAPTER] Error processing packet: {ex.Message}");

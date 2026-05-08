@@ -32,7 +32,7 @@ public sealed class LocalTcpStackTest
 
         // Act - Send SYN packet
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
-        tcpStack.ProcessIncoming(synPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(synPacket);
 
         // Assert - Should receive SYN-ACK
         Assert.AreEqual(1, sentPackets.Count, "Should send SYN-ACK");
@@ -45,7 +45,7 @@ public sealed class LocalTcpStackTest
         // Act - Send final ACK to complete handshake
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, 
             ack: true, seq: 1001, ackNum: synAckTcp.SequenceNumber + 1);
-        tcpStack.ProcessIncoming(ackPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(ackPacket);
 
         // Assert - Connection should be accepted
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
@@ -71,14 +71,14 @@ public sealed class LocalTcpStackTest
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
-        tcpStack.ProcessIncoming(synPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(synPacket);
         
         var synAckTcp = sentPackets[0].ExtractTcp();
         var serverSeq = synAckTcp.SequenceNumber;
         
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
-        tcpStack.ProcessIncoming(ackPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(ackPacket);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var stream = await acceptTask.WaitAsync(cts.Token);
@@ -88,7 +88,7 @@ public sealed class LocalTcpStackTest
         var testData = "Hello"u8.ToArray(); // "Hello"
         var dataPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: testData);
-        tcpStack.ProcessIncoming(dataPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(dataPacket);
 
         await WaitForCondition(() => sentPackets.Count >= 1, cts.Token);
 
@@ -121,14 +121,14 @@ public sealed class LocalTcpStackTest
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
-        tcpStack.ProcessIncoming(synPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(synPacket);
         
         var synAckTcp = sentPackets[0].ExtractTcp();
         var serverSeq = synAckTcp.SequenceNumber;
         
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
-        tcpStack.ProcessIncoming(ackPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(ackPacket);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
         var stream = await acceptTask.WaitAsync(cts.Token);
@@ -192,7 +192,7 @@ public sealed class LocalTcpStackTest
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
-        tcpStack.ProcessIncoming(synPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(synPacket);
         
         IpPacket synAckPacket;
         lock (lockObj) { synAckPacket = sentPackets[0]; }
@@ -201,7 +201,7 @@ public sealed class LocalTcpStackTest
         
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
-        tcpStack.ProcessIncoming(ackPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(ackPacket);
         
         await Task.Delay(100); // Wait for accept
 
@@ -211,7 +211,7 @@ public sealed class LocalTcpStackTest
         var testData = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
         var dataPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: testData);
-        tcpStack.ProcessIncoming(dataPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(dataPacket);
         
         // Wait for echo response
         await Task.Delay(500);
@@ -251,7 +251,7 @@ public sealed class LocalTcpStackTest
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
-        tcpStack.ProcessIncoming(synPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(synPacket);
         
         IpPacket synAckPacket;
         lock (lockObj) { synAckPacket = sentPackets[0]; }
@@ -260,7 +260,7 @@ public sealed class LocalTcpStackTest
         
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
-        tcpStack.ProcessIncoming(ackPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(ackPacket);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var stream = await acceptTask.WaitAsync(cts.Token);
@@ -271,7 +271,7 @@ public sealed class LocalTcpStackTest
         
         var dataPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: testData);
-        tcpStack.ProcessIncoming(dataPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(dataPacket);
 
         // Read data from stream
         var received = new List<byte>();
@@ -348,7 +348,7 @@ public sealed class LocalTcpStackTest
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
-        tcpStack.ProcessIncoming(synPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(synPacket);
         
         IpPacket synAckPacket;
         lock (lockObj) { synAckPacket = sentPackets[0]; }
@@ -357,7 +357,7 @@ public sealed class LocalTcpStackTest
         
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
-        tcpStack.ProcessIncoming(ackPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(ackPacket);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var stream = await acceptTask.WaitAsync(cts.Token);
@@ -367,7 +367,7 @@ public sealed class LocalTcpStackTest
         var testData = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
         var dataPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: testData);
-        tcpStack.ProcessIncoming(dataPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(dataPacket);
         
         // Wait for ACK
         await Task.Delay(50, cts.Token);
@@ -377,7 +377,7 @@ public sealed class LocalTcpStackTest
         Assert.IsTrue(ackCountAfterFirst >= 1, "Should send ACK for data");
         
         // Act - Simulate retransmission (same packet again)
-        tcpStack.ProcessIncoming(dataPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(dataPacket);
         
         // Wait for ACK of retransmit
         await Task.Delay(50, cts.Token);
@@ -417,7 +417,7 @@ public sealed class LocalTcpStackTest
 
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
-        tcpStack.ProcessIncoming(synPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(synPacket);
         
         IpPacket synAckPacket;
         lock (lockObj) { synAckPacket = sentPackets[0]; }
@@ -426,7 +426,7 @@ public sealed class LocalTcpStackTest
         
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
-        tcpStack.ProcessIncoming(ackPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(ackPacket);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         await acceptTask.WaitAsync(cts.Token);
@@ -436,7 +436,7 @@ public sealed class LocalTcpStackTest
         var testData = new byte[] { 0x06, 0x07, 0x08, 0x09, 0x0A };
         var outOfOrderPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1006, ackNum: serverSeq + 1, payload: testData);
-        tcpStack.ProcessIncoming(outOfOrderPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(outOfOrderPacket);
         
         await Task.Delay(50, cts.Token);
 
@@ -480,7 +480,7 @@ public sealed class LocalTcpStackTest
 
         // Act - SYN
         var synPacket = CreateTcpPacket(clientIpV6, clientPort, serverIpV6, serverPort, syn: true, seq: 1000);
-        tcpStack.ProcessIncoming(synPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(synPacket);
 
         // Assert - SYN-ACK is IPv6
         IpPacket synAckPacket;
@@ -496,7 +496,7 @@ public sealed class LocalTcpStackTest
         // Act - final ACK
         var ackPacket = CreateTcpPacket(clientIpV6, clientPort, serverIpV6, serverPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
-        tcpStack.ProcessIncoming(ackPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(ackPacket);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         var stream = await acceptTask.WaitAsync(cts.Token);
@@ -506,7 +506,7 @@ public sealed class LocalTcpStackTest
         var testData = "Hello over IPv6!"u8.ToArray();
         var dataPacket = CreateTcpPacket(clientIpV6, clientPort, serverIpV6, serverPort,
             ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: testData);
-        tcpStack.ProcessIncoming(dataPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(dataPacket);
 
         var buffer = new byte[100];
         var bytesRead = await stream.Stream.ReadAsync(buffer, cts.Token);
@@ -547,7 +547,7 @@ public sealed class LocalTcpStackTest
 
         // Act - SYN to a port nobody listens on
         var synPacket = CreateTcpPacket(clientIpV6, 54321, serverIpV6, 9999, syn: true, seq: 1000);
-        tcpStack.ProcessIncoming(synPacket.Buffer.Span);
+        tcpStack.ProcessIncoming(synPacket);
 
         // Assert - IPv6 RST
         Assert.AreEqual(1, sentPackets.Count);
@@ -565,3 +565,4 @@ public sealed class LocalTcpStackTest
             await Task.Delay(5, ct);
     }
 }
+

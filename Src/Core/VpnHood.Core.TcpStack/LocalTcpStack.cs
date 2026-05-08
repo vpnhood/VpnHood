@@ -93,28 +93,6 @@ public sealed class LocalTcpStack : ITcpStack
     }
 
     /// <summary>
-    /// Processes an incoming IP packet. The bytes are copied into a pooled buffer; the original
-    /// span is not retained, and the pooled buffer is released before this method returns.
-    /// </summary>
-    public void ProcessIncoming(ReadOnlySpan<byte> packetData)
-    {
-        if (_disposed)
-            return;
-
-        IpPacket? ipPacket = null;
-        try {
-            ipPacket = PacketBuilder.Parse(packetData);
-            ProcessIncomingInternal(ipPacket);
-        }
-        catch {
-            // Silently ignore malformed packets
-        }
-        finally {
-            ipPacket?.Dispose();
-        }
-    }
-
-    /// <summary>
     /// Processes an already-parsed incoming IP packet without taking ownership.
     /// The caller remains responsible for disposing <paramref name="ipPacket"/>.
     /// </summary>

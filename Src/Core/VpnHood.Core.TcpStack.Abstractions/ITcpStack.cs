@@ -18,12 +18,6 @@ public interface ITcpStack : IDisposable
     Action<IpPacket>? OnPacketSend { get; set; }
 
     /// <summary>
-    /// Feeds a raw IP packet (as a byte span) into the stack for processing.
-    /// The span is not retained after this call returns.
-    /// </summary>
-    void ProcessIncoming(ReadOnlySpan<byte> packetData);
-
-    /// <summary>
     /// Feeds an already-parsed IP packet into the stack.
     /// The caller retains ownership of <paramref name="ipPacket"/>.
     /// </summary>

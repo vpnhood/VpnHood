@@ -1,4 +1,5 @@
-﻿namespace VpnHood.Core.Toolkit.Net;
+﻿// ReSharper disable InconsistentNaming
+namespace VpnHood.Core.Toolkit.Net;
 
 public enum IpVersion : byte
 {

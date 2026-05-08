@@ -43,7 +43,7 @@ public class VpnHoodClientConfig
     public required IPAddress TcpProxyCatcherAddressIpV4 { get; init; }
     public required IPAddress TcpProxyCatcherAddressIpV6 { get; init; }
     public required bool UseTcpProxy { get; init; }
-    public required bool UseTcpStack { get; init; }
+    public required bool UseOsTcpStack { get; init; }
     public required bool DropUdp { get; init; }
     public required bool DropQuic { get; init; }
 }

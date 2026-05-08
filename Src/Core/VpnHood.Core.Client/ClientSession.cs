@@ -123,12 +123,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             passthroughState: PassthroughState);
 
         // proxy host
-        _clientTcpHost = options.UseTcpStack
-            ? new ClientTcpHost(streamHandler)
-            : new ClientTcpLocalHost(
+        _clientTcpHost = options.UseOsTcpStack
+            ? new ClientTcpLocalHost(
                 streamHandler,
                 catcherAddressIpV4: config.TcpProxyCatcherAddressIpV4,
-                catcherAddressIpV6: config.TcpProxyCatcherAddressIpV6);
+                catcherAddressIpV6: config.TcpProxyCatcherAddressIpV6)
+            : new ClientTcpHost(streamHandler);
         _clientTcpHost.PacketReceived += ClientTcpHostPacketReceived;
 
         // packet handler

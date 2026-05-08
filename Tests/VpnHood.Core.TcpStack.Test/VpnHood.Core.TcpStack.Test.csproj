@@ -1,4 +1,4 @@
-<Project Sdk="MSTest.Sdk/3.6.4">
+<Project Sdk="MSTest.Sdk/4.2.2">
 
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
@@ -26,6 +26,25 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Src\Core\VpnHood.Core.TcpStack\VpnHood.Core.TcpStack.csproj" />
     <ProjectReference Include="..\..\Src\Core\VpnHood.Core.VpnAdapters.WinDivert\VpnHood.Core.VpnAdapters.WinDivert.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.5.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="MSTest.Analyzers" Version="4.2.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="MSTest.TestAdapter" Version="4.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="MSTest.TestFramework" Version="4.2.2" />
   </ItemGroup>
 
 </Project>

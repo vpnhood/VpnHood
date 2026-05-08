@@ -292,7 +292,7 @@ internal class ClientSessionBuilder(
                     DropQuic = config.DropQuic,
                     DropUdp = config.DropUdp,
                     UseTcpProxy = config.UseTcpProxy,
-                    UseTcpStack = config.UseTcpStack
+                    UseOsTcpStack = config.UseOsTcpStack
                 },
                 config: new ClientSessionConfig {
                     AdapterOptions = adapterOptions,

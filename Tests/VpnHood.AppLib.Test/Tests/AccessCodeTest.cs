@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks.Sources;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -11,9 +12,42 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class AccessCodeTest : TestAppBase
 {
+
+    sealed class MySource : IValueTaskSource<int>
+    {
+        public short Version => 0;
+
+        public int GetResult(short token)
+            => throw new InvalidOperationException("Not completed yet");
+
+        public ValueTaskSourceStatus GetStatus(short token)
+            => ValueTaskSourceStatus.Pending;
+
+        public void OnCompleted(
+            Action<object?> continuation,
+            object? state,
+            short token,
+            ValueTaskSourceOnCompletedFlags flags)
+        {
+        }
+    }
     [TestMethod]
     public async Task AaFoo()
     {
+        var source = new MySource();
+
+        var valueTask = new ValueTask<int>(source, source.Version);
+
+        Console.WriteLine(valueTask.IsCompleted); // False
+
+        try {
+            valueTask.AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception ex) {
+            Console.WriteLine(ex.GetType().FullName);
+            Console.WriteLine(ex.Message);
+        }
+
         var tcpClient = new TcpClient();
         Console.WriteLine(tcpClient.ReceiveBufferSize);
         Console.WriteLine(tcpClient.SendBufferSize);

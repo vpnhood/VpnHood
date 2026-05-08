@@ -240,8 +240,47 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
             throw new InvalidOperationException("Adapter is not open.");
 
         var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
-        _outStream.Write(buffer, offset, length);
-        return true;
+        try {
+            _outStream.Write(buffer, offset, length);
+            return true;
+        }
+        catch (Exception ex) when (IsRetryableTunWriteError(ex)) {
+            return false;
+        }
+    }
+
+    private static bool IsRetryableTunWriteError(Exception ex)
+    {
+        if (ex is not Java.IO.IOException &&
+            ex is not IOException &&
+            ex is not InterruptedIOException)
+            return false;
+
+        for (var e = ex; e != null; e = e.InnerException) {
+            
+            if (e is ErrnoException errnoException) {
+                return 
+                    errnoException.Errno == OsConstants.Eagain || 
+                    errnoException.Errno == OsConstants.Eintr;
+            }
+
+            if (e is InterruptedIOException)
+                return true;
+
+            var msg = e.Message;
+            if (string.IsNullOrEmpty(msg))
+                continue;
+
+            if (msg.Contains("EAGAIN", StringComparison.OrdinalIgnoreCase) ||
+                msg.Contains("EWOULDBLOCK", StringComparison.OrdinalIgnoreCase) ||
+                msg.Contains("EINTR", StringComparison.OrdinalIgnoreCase) ||
+                msg.Contains("Try again", StringComparison.OrdinalIgnoreCase) ||
+                msg.Contains("temporarily unavailable", StringComparison.OrdinalIgnoreCase) ||
+                msg.Contains("would block", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     protected override bool ReadPacket(byte[] buffer)

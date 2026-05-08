@@ -30,8 +30,12 @@ public static class TaskExtensions
 
     public static void VhBlock(this ValueTask task)
     {
-        if (!task.IsCompleted)
-            task.GetAwaiter().GetResult();
+        // Some IValueTaskSource-backed ValueTasks do not support GetResult before completion.
+        // Use the fast path when already completed; otherwise convert to Task and block on it.
+        if (task.IsCompleted)
+            task.GetAwaiter().GetResult(); // observe completion / re-throw any exception
+        else
+            task.AsTask().GetAwaiter().GetResult();
     }
 
     extension(CancellationTokenSource cancellationTokenSource)

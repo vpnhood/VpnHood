@@ -92,10 +92,9 @@ public abstract class PacketTransportBase : IPacketTransport
             lock (_singlePacketBuffer) {
                 _singlePacketBuffer[0] = ipPacket;
                 var ret = SendPacketsInternalAsync(_singlePacketBuffer);
-                if (!ret.IsCompleted)
-                    throw new InvalidOperationException(
-                        "A passthrough PacketTransport should not return an incomplete task.");
-                return ret.GetAwaiter().GetResult();
+                return ret.IsCompleted 
+                    ? ret.GetAwaiter().GetResult() 
+                    : throw new InvalidOperationException("A passthrough PacketTransport should not return an incomplete task.");
             }
         }
 

@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Net;
-using System.Net.Sockets;
 using VpnHood.Core.Packets;
 using VpnHood.Core.TcpStack;
 using VpnHood.Core.TcpStack.Abstractions;
@@ -35,9 +34,10 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         using var logScope = VhLogger.Instance.BeginScope("ClientTcpHost");
-        VhLogger.Instance.LogInformation("Starting ClientTcpHost (LocalTcpStack)...");
+        VhLogger.Instance.LogInformation("Starting ClientTcpHost (TcpStack)...");
         _tcpStack = new LocalTcpStack {
-            OnPacketSend = packet => PacketReceived?.Invoke(this, packet)
+            OnPacketSend = packet => PacketReceived?.Invoke(this, packet),
+            UseFixedSendWindow = false
         };
         _listener = _tcpStack.ListenAny();
         Task.Run(() => AcceptLoop(_listener, _cancellationTokenSource.Token));

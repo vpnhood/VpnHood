@@ -129,6 +129,7 @@
     <Project Path="Src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Toolkit/VpnHood.Core.Toolkit.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Tunneling/VpnHood.Core.Tunneling.csproj" />
+    <Project Path="../VpnHood.Core.TcpStack/VpnHood.Core.TcpStack.LwIP/VpnHood.Core.TcpStack.LwIP.csproj" />
     <Project Path="../VpnHood.Core.TcpStack/VpnHood.Core.TcpStack/VpnHood.Core.TcpStack.csproj" />
   </Folder>
   <Folder Name="/Src/Core/Adapters/">

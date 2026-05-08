@@ -10,3 +10,4 @@ public readonly record struct IPEndPointPair(
 {
     public override string ToString() => $"{VhLogger.Format(LocalEndPoint)}->{VhLogger.Format(RemoteEndPoint)}";
 }
+

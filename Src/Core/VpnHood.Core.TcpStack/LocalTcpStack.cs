@@ -31,7 +31,7 @@ public sealed class LocalTcpStack : ITcpStack
         set => LocalTcpConnection.DiagLog = value;
     }
 
-    private readonly ConcurrentDictionary<IpEndPointQuad, LocalTcpConnection> _connections = new();
+    private readonly ConcurrentDictionary<IPEndPointPairValue, LocalTcpConnection> _connections = new();
     private readonly ConcurrentDictionary<IpEndPointValue, LocalTcpListener> _listeners = new();
     private readonly Lock _anyListenerLock = new();
     private LocalTcpListener? _anyListener;
@@ -137,38 +137,38 @@ public sealed class LocalTcpStack : ITcpStack
             return;
 
         var tcpPacket = ipPacket.ExtractTcp();
-        var endPointQuad = new IpEndPointQuad(
+        var endPointPair = new IPEndPointPairValue(
             new IpEndPointValue(ipPacket.SourceAddress, tcpPacket.SourcePort),
             new IpEndPointValue(ipPacket.DestinationAddress, tcpPacket.DestinationPort));
 
         // Handle SYN packets (new connection requests)
         if (tcpPacket is { Synchronize: true, Acknowledgment: false }) {
-            HandleSynPacket(endPointQuad, tcpPacket);
+            HandleSynPacket(endPointPair, tcpPacket);
             return;
         }
 
         // Handle packets for existing connections
-        if (_connections.TryGetValue(endPointQuad, out var existing)) {
+        if (_connections.TryGetValue(endPointPair, out var existing)) {
             HandleExistingConnection(existing, tcpPacket);
             return;
         }
 
         // Unknown connection - send RST if not already an RST
         if (!tcpPacket.Reset)
-            SendRst(endPointQuad.Destination, endPointQuad.Source, tcpPacket);
+            SendRst(endPointPair.Destination, endPointPair.Source, tcpPacket);
     }
 
-    private void HandleSynPacket(IpEndPointQuad endPointQuad, TcpPacket tcpPacket)
+    private void HandleSynPacket(IPEndPointPairValue ipEndPointPair, TcpPacket tcpPacket)
     {
-        var listener = ResolveListener(endPointQuad.Destination);
+        var listener = ResolveListener(ipEndPointPair.Destination);
         if (listener == null) {
             // No listener - send RST
-            SendRst(endPointQuad.Destination, endPointQuad.Source, tcpPacket);
+            SendRst(ipEndPointPair.Destination, ipEndPointPair.Source, tcpPacket);
             return;
         }
 
         // SYN retransmit for a connection that's still in SynReceived: re-send SYN-ACK
-        if (_connections.TryGetValue(endPointQuad, out var existingConn)) {
+        if (_connections.TryGetValue(ipEndPointPair, out var existingConn)) {
             if (existingConn.State == TcpConnectionState.SynReceived)
                 SendSynAck(existingConn);
             return;
@@ -177,10 +177,10 @@ public sealed class LocalTcpStack : ITcpStack
         var isnLocal = (uint)RandomNumberGenerator.GetInt32(int.MaxValue);
         var peerMss = ParseMssOption(tcpPacket.Options.Span);
         var peerWsShift = ParseWindowScaleOption(tcpPacket.Options.Span);
-        var connection = new LocalTcpConnection(endPointQuad, isnLocal, tcpPacket.SequenceNumber, peerMss, listener, peerWsShift);
+        var connection = new LocalTcpConnection(ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss, listener, peerWsShift);
         connection.OnClosed += OnConnectionClosed;
 
-        if (!_connections.TryAdd(endPointQuad, connection)) {
+        if (!_connections.TryAdd(ipEndPointPair, connection)) {
             connection.Dispose();
             return;
         }
@@ -205,7 +205,7 @@ public sealed class LocalTcpStack : ITcpStack
         // MSS(4) + NOP(1) + WS(3) = 8 bytes, 4-byte aligned.
         ReadOnlySpan<byte> options = [2, 4, advertisedMss >> 8, advertisedMss & 0xFF, 1, 3, 3, 0];
         var packet = PacketBuilder.BuildTcp(
-            conn.EndPointQuad.Destination, conn.EndPointQuad.Source,
+            conn.IpEndPointPair.Destination, conn.IpEndPointPair.Source,
             options: options,
             payload: ReadOnlySpan<byte>.Empty);
 
@@ -250,7 +250,7 @@ public sealed class LocalTcpStack : ITcpStack
     internal void SendAckOnly(LocalTcpConnection conn)
     {
         var packet = PacketBuilder.BuildTcp(
-            conn.EndPointQuad.Destination, conn.EndPointQuad.Source,
+            conn.IpEndPointPair.Destination, conn.IpEndPointPair.Source,
             options: ReadOnlySpan<byte>.Empty,
             payload: ReadOnlySpan<byte>.Empty);
 
@@ -293,7 +293,7 @@ public sealed class LocalTcpStack : ITcpStack
 
     private void OnConnectionClosed(LocalTcpConnection conn)
     {
-        _connections.TryRemove(conn.EndPointQuad, out _);
+        _connections.TryRemove(conn.IpEndPointPair, out _);
     }
 
     /// <summary>

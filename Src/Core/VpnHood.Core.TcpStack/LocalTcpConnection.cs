@@ -3,11 +3,12 @@ using System.IO.Pipelines;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.TcpStack.Primitives;
+using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.TcpStack;
 
 internal sealed class LocalTcpConnection(
-    IpEndPointQuad endPointQuad,
+    IPEndPointPairValue ipEndPointPair,
     uint isnLocal,
     uint isnRemote,
     ushort? peerMss,
@@ -76,7 +77,7 @@ internal sealed class LocalTcpConnection(
     private uint _lastDupAck;
     private int _dupAckCount;
     private long _retxCount;
-    public IpEndPointQuad EndPointQuad => endPointQuad;
+    public IPEndPointPairValue IpEndPointPair => ipEndPointPair;
     public uint IsnLocal { get; } = isnLocal;
     public ushort Mss { get; } = ClampMss(peerMss);
     public TcpConnectionState State { get; private set; } = TcpConnectionState.SynReceived;
@@ -111,8 +112,8 @@ internal sealed class LocalTcpConnection(
         var stream = new LocalTcpStream(this, stack);
         _pendingClient = new LocalTcpClient(
             stream,
-            endPointQuad.Destination.ToIPEndPoint(),
-            endPointQuad.Source.ToIPEndPoint());
+            ipEndPointPair.Destination.ToIPEndPoint(),
+            ipEndPointPair.Source.ToIPEndPoint());
 
         // Start idle monitor
         _ = Task.Run(MonitorIdleAsync);
@@ -258,7 +259,7 @@ internal sealed class LocalTcpConnection(
                 var segLen = Math.Min(burst, mss);
                 var segmentData = data.Span.Slice(offset, segLen);
 
-                var packet = PacketBuilder.BuildTcp(EndPointQuad.Destination, EndPointQuad.Source,
+                var packet = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
                     options: ReadOnlySpan<byte>.Empty, payload: segmentData);
                 var tcp = packet.ExtractTcp();
 
@@ -491,7 +492,7 @@ internal sealed class LocalTcpConnection(
             _appToNetCompleted = true;
 
             finPacket = PacketBuilder.BuildTcp(
-                EndPointQuad.Destination, EndPointQuad.Source,
+                IpEndPointPair.Destination, IpEndPointPair.Source,
                 options: ReadOnlySpan<byte>.Empty,
                 payload: ReadOnlySpan<byte>.Empty);
 
@@ -547,7 +548,7 @@ internal sealed class LocalTcpConnection(
         IpPacket? probe = null;
         try {
             ReadOnlySpan<byte> probeData = [probeByte];
-            probe = PacketBuilder.BuildTcp(EndPointQuad.Destination, EndPointQuad.Source,
+            probe = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
                 options: ReadOnlySpan<byte>.Empty, payload: probeData);
             var tcp = probe.ExtractTcp();
 
@@ -612,7 +613,7 @@ internal sealed class LocalTcpConnection(
             ackForSegment = _rcvNxt;
         }
 
-        var packet = PacketBuilder.BuildTcp(EndPointQuad.Destination, EndPointQuad.Source,
+        var packet = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
             options: ReadOnlySpan<byte>.Empty, payload: payloadCopy);
         var tcp = packet.ExtractTcp();
         tcp.SequenceNumber = seqForSegment;

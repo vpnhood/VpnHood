@@ -270,7 +270,7 @@ public class TunnelTest : TestBase
         Assert.IsTrue(binaryStream.CanReuse);
 
         binaryStream.PreventReuse();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => binaryStream.CreateReuse());
+        await Assert.ThrowsAsync<InvalidOperationException>(binaryStream.CreateReuse);
 
         // read data from stream
         await cts.CancelAsync();

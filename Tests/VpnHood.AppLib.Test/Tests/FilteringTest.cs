@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Net.Quic;
-using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Test;

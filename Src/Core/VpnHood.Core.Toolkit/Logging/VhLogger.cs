@@ -187,6 +187,8 @@ public static class VhLogger
             if (MinLogLevel > logLevel)
                 return;
 
+            // also fire an event
+
             Logger.Log(logLevel, eventId, state, exception, formatter);
         }
 

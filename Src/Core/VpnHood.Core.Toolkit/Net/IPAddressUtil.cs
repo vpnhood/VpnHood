@@ -5,7 +5,6 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using VpnHood.Core.Toolkit.Utils;
-using static System.Net.WebRequestMethods;
 
 namespace VpnHood.Core.Toolkit.Net;
 

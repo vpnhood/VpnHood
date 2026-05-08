@@ -171,12 +171,6 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         buffer.CopyTo(fullBuffer[ChunkHeaderLength..]);
         // await required to prevent releasing of the memory owner
         await WriteInternalPreserverAsync(fullBuffer, cancellationToken);
-
-        // create the chunk header
-        // var header = BuildHeader(_writeChunkHeaderBuffer.Span, buffer.Length, GenerateNewMaskKey(stackalloc byte[4]));
-        // await SourceStream.WriteAsync(_writeChunkHeaderBuffer[..header.Length], cancellationToken).Vhc();
-        // await SourceStream.WriteAsync(buffer, cancellationToken).Vhc();
-        //WroteChunkCount++;
     }
 
     private Span<byte> BuildHeader(Span<byte> header, int payloadLength, ReadOnlySpan<byte> maskKey)

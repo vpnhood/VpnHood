@@ -115,44 +115,4 @@ public class LogService(string logFilePath) : IDisposable
             return;
         Stop();
     }
-
-    // ReSharper disable once GrammarMistakeInComment
-    //private class InterceptingLogger(ILogger innerLogger) : ILogger
-    //{
-    //    private static string UpdateMessage(string message)
-    //    {
-    //        if (!VpnHoodApp.IsInit)
-    //            return message;
-
-    //        var memInfo = VpnHoodApp.Instance.Device.MemInfo;
-    //        if (memInfo is { TotalMemory: > 0 }) {
-    //            var used = (memInfo.TotalMemory - memInfo.AvailableMemory) / 1_000_000;
-    //            var total = memInfo.TotalMemory / 1_000_000;
-    //            var mem = $"Mem: {used}/{total} ({used * 100 / total}%)";
-
-    //            // find first linefeed and split into two parts
-    //            message = message.Replace("\r\n", "\n");
-    //            var index = message.Length > 2 ? message.TrimStart().IndexOf('\n') : 0;
-    //            var part1 = index > 0 ? message[..index] : message;
-    //            var part2 = index > 0 ? message[(index + 1)..] : "";
-
-    //            // append memory info
-    //            part1 = part1.TrimEnd().TrimEnd('|').TrimEnd();
-    //            message = part1 + " | " + mem;
-    //            if (part2.Length > 0)
-    //                message += "\n" + part2;
-
-    //            message = message.Replace("\n", Environment.NewLine);
-    //        }
-
-    //        return message;
-    //    }
-
-    //    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
-    //        Func<TState, Exception?, string> formatter) =>
-    //        innerLogger.Log(logLevel, eventId, state, exception, (_, _) => UpdateMessage(formatter(state, exception)));
-
-    //    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => innerLogger.BeginScope(state);
-    //    public bool IsEnabled(LogLevel logLevel) => innerLogger.IsEnabled(logLevel);
-    //}
 }

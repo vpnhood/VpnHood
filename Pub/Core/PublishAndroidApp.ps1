@@ -47,7 +47,7 @@ $appIconXml = Join-Path $projectDir "Resources/mipmap-anydpi-v26/ic_launcher.xml
 $appIconXmlDoc = [xml](Get-Content $appIconXml);
 $appIconXmlNode = $appIconXmlDoc.selectSingleNode("adaptive-icon/background");
 if ([string]::IsNullOrWhiteSpace($archs)) {
-    $archs = "android-arm64;android-x64;android-arm;android-x86;"
+    $archs = "android-arm64;android-x64;android-arm;"
 }
 
 # prepare temp project file and update RuntimeIdentifiers

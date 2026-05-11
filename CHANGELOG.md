@@ -1,5 +1,7 @@
-# v7.9.808
-* Update: Huge performance improvement in cloak mode
+# Upcoming
+* Update: Huge performance improvement in Cloak Mode
+* Fix: Lost connection after switching from mobile data to Wi-Fi on Android
+* Improve: Speed and stability
 
 # v7.8.802
 * Feature: Split Tunneling by Domain 

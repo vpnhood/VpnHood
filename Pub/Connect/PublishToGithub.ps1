@@ -74,5 +74,5 @@ if (-not $prerelease)
 
 # commit and push to main
 if (-not $prerelease){
-	CommitAndPushToMainRepo
+	CommitAndSyncMainRepo
 }

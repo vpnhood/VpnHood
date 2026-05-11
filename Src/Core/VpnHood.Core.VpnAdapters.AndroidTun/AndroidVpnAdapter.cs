@@ -113,14 +113,22 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     public override bool ProtectSocket(Socket socket)
     {
-        BindToAny(socket); // just for compatibility. other Tun adapters always return a bound socket
-        return vpnService.Protect(socket.Handle.ToInt32());
+        var ret = vpnService.Protect(socket.Handle.ToInt32());
+
+        // just for compatibility. other Tun adapters always return a bound socket
+        // It must be after protect otherwise it will bind to wrong tun
+        BindToAny(socket); 
+        return ret;
     }
 
     public override bool ProtectSocket(Socket socket, IPAddress ipAddress)
     {
-        BindToAny(socket); // just for compatibility. other Tun adapters always return a bound socket
-        return vpnService.Protect(socket.Handle.ToInt32());
+        var ret = vpnService.Protect(socket.Handle.ToInt32());
+        
+        // just for compatibility. other Tun adapters always return a bound socket
+        // It must be after protect otherwise it will bind to wrong tun
+        BindToAny(socket);
+        return ret;
     }
 
     protected override Task AddAddress(IpNetwork ipNetwork, CancellationToken cancellationToken)

@@ -93,6 +93,14 @@ function CommitAndPushToMainRepo {
 	git --git-dir=$gitDir --work-tree=$solutionDir push origin development:main --force 
 }
 
+function CommitAndSyncMainRepo {
+	Write-Host "Commit & push current changes to the main repo"
+	git --git-dir=$gitDir --work-tree=$solutionDir add -A
+	git --git-dir=$gitDir --work-tree=$solutionDir commit -m "Publish $versionTag"
+	git --git-dir=$gitDir --work-tree=$solutionDir pull
+	git --git-dir=$gitDir --work-tree=$solutionDir push
+}
+
 # push to repo using gh api.
 # Do not show any message except error
 function PushTextToRepo {

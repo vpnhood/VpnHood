@@ -9,6 +9,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -283,13 +284,14 @@ public class TestHelper : IDisposable
     }
 
     public Token CreateAccessToken(FileAccessManager fileAccessManager,
-        int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
+        int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null, Traffic? maxSpeed = null)
     {
         var accessToken = fileAccessManager.AccessTokenService.Create(
             tokenName: $"Test Server {++_accessTokenIndex}",
             maxClientCount: maxClientCount,
             maxTrafficByteCount: maxTrafficByteCount,
-            expirationTime: expirationTime
+            expirationTime: expirationTime,
+            maxSpeed: maxSpeed
         );
 
         return fileAccessManager.GetToken(accessToken);
@@ -308,10 +310,11 @@ public class TestHelper : IDisposable
     }
 
     public Token CreateAccessToken(VpnHoodServer server,
-        int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
+        int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null, 
+        Traffic? maxSpeed = null)
     {
         var fileAccessManager = GetFileAccessManagerFromServer(server);
-        return CreateAccessToken(fileAccessManager, maxClientCount, maxTrafficByteCount, expirationTime);
+        return CreateAccessToken(fileAccessManager, maxClientCount, maxTrafficByteCount, expirationTime, maxSpeed);
     }
 
     public string CreateAccessManagerWorkingDir()

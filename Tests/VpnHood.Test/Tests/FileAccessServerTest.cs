@@ -40,8 +40,8 @@ public class FileAccessManagerTest : TestBase
         var sessionRequestEx1 = CreateSessionRequestEx(token1);
         sessionRequestEx1.ExtraData = "1234";
 
-        var token2 = accessManager1.CreateToken();
-        var sessionRequestEx2 = CreateSessionRequestEx(token2);
+        var token2 = accessManager1.AccessTokenService.Create(maxSpeed: new Traffic(sent: 123, received: 456));
+        var sessionRequestEx2 = CreateSessionRequestEx(accessManager1.GetToken(token2));
 
         var token3 = accessManager1.CreateToken();
 
@@ -88,8 +88,10 @@ public class FileAccessManagerTest : TestBase
 
         // ************
         // *** TEST ***: token must be retrieved with TokenId
-        Assert.AreEqual(SessionErrorCode.Ok, (await accessManager2.Session_Create(sessionRequestEx2, TestCt)).ErrorCode,
+        var sessionResponseEx2 = await accessManager2.Session_Create(sessionRequestEx2, TestCt);
+        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx2.ErrorCode,
             "Access has not been retrieved");
+        Assert.AreEqual(new Traffic(sent: 123, received: 456), sessionResponseEx2.AccessInfo?.MaxSpeed);
 
         // ************
         // *** TEST ***: token must be retrieved after reloading
@@ -97,6 +99,8 @@ public class FileAccessManagerTest : TestBase
         var accessManager3 = new FileAccessManager(storagePath, fileAccessManagerOptions);
         accessTokenDatas = await accessManager3.AccessTokenService.List(TestCt);
         Assert.HasCount(3, accessTokenDatas);
+        Assert.AreEqual(new Traffic(sent: 123, received: 456),
+            accessTokenDatas.Single(x => x.AccessToken.TokenId == token2.TokenId).AccessToken.MaxSpeed);
         Assert.AreEqual(SessionErrorCode.Ok, (await accessManager3.Session_Create(sessionRequestEx2, TestCt)).ErrorCode,
             "access has not been retrieved");
     }

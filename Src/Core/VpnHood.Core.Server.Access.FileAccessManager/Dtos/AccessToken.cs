@@ -11,5 +11,6 @@ public class AccessToken
     public DateTime? ExpirationTime { get; set; }
     public int MaxClientCount { get; set; }
     public long MaxTraffic { get; set; }
+    public Traffic? MaxSpeed { get; set; }
     public AdRequirement AdRequirement { get; set; }
 }

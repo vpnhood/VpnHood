@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Reflection;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Client;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
@@ -226,7 +228,8 @@ public class AccessTest : TestBase
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server, maxClientCount: 2,
             expirationTime: expired,
-            maxTrafficByteCount: 2_000_000);
+            maxTrafficByteCount: 2_000_000,
+            maxSpeed: new Traffic(2020, 3030));
 
         // create default token with 2 client count
         await using (var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
@@ -246,10 +249,11 @@ public class AccessTest : TestBase
             Assert.AreEqual(SessionSuppressType.None, client2.RequiredSession.Info.SuppressedTo);
             Assert.AreEqual(2, accessInfo.MaxDeviceCount);
             Assert.AreEqual(2_000_000, accessInfo.MaxTotalTraffic);
+            Assert.AreEqual(new Traffic(2020, 3030), accessInfo.MaxSpeed);
             Assert.IsTrue(accessInfo.IsPremium);
             Assert.AreEqual(expired, accessInfo.ExpirationTime);
-            Assert.IsTrue(accessInfo.CreatedTime <= time);
-            Assert.IsTrue(accessInfo.LastUsedTime <= time, $"Diff: {(time - accessInfo.LastUsedTime).TotalSeconds}sec");
+            Assert.IsLessThanOrEqualTo(time, accessInfo.CreatedTime);
+            Assert.IsLessThanOrEqualTo(time, accessInfo.LastUsedTime, $"Diff: {(time - accessInfo.LastUsedTime).TotalSeconds}sec");
         }
 
         await Task.Delay(200, TestCt);
@@ -259,8 +263,8 @@ public class AccessTest : TestBase
             var accessInfo = client3.RequiredSession.Info.AccessInfo;
             Assert.IsNotNull(accessInfo);
             Assert.IsNotNull(accessInfo);
-            Assert.IsTrue(accessInfo.CreatedTime < time);
-            Assert.IsTrue(accessInfo.LastUsedTime > time);
+            Assert.IsLessThan(time, accessInfo.CreatedTime);
+            Assert.IsGreaterThan(time, accessInfo.LastUsedTime);
         }
     }
 }

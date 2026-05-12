@@ -28,6 +28,7 @@ namespace VpnHood.Core.Server;
 
 public class Session : IDisposable
 {
+    private const double ReceiveSpeedGrace = 1.2;
     private readonly IAccessManager _accessManager;
     private readonly IVpnAdapter? _vpnAdapter;
     private readonly ISocketFactory _socketFactory;
@@ -133,6 +134,12 @@ public class Session : IDisposable
             AutoDisposePackets = true,
             Mtu = Math.Min(TunnelDefaults.MtuServer, extraData.Mtu)
         });
+
+        if (sessionResponseEx.AccessInfo?.MaxSpeed != null)
+            Tunnel.TrafficMeter.MaxSpeed = new Traffic(
+                sent: sessionResponseEx.AccessInfo.MaxSpeed.Value.Received,
+                received: (long)(sessionResponseEx.AccessInfo.MaxSpeed.Value.Sent * ReceiveSpeedGrace));
+
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // ReSharper disable once MergeIntoPattern
@@ -328,9 +335,9 @@ public class Session : IDisposable
         // to avoid deleting active channels when client is creating multiple channels at the same time.
         if (request.ActiveChannelIds != null) {
             var inactiveChannels = Tunnel.PacketChannels
-                .Where(x => 
+                .Where(x =>
                     x is StreamPacketChannel streamPacketChannel &&
-                    streamPacketChannel.RequestTime<request.RequestTime &&
+                    streamPacketChannel.RequestTime < request.RequestTime &&
                     !request.ActiveChannelIds.Contains(x.ChannelId));
 
             // dispose inactive channels

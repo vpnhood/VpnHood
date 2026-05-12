@@ -89,6 +89,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
             Mtu = config.Mtu
         });
+        _tunnel.TrafficMeter.MaxSpeed = new Traffic(config.MaxSpeed?.Sent ?? 0, 0);
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 
         // delegator

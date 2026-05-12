@@ -40,24 +40,12 @@ public class TrafficMeter : IDisposable
     /// Gets or sets the maximum allowed speed (bytes per second) for throttling.
     /// Null means unlimited.
     /// </summary>
-    public Traffic? MaxSpeed {
-        get => _sent.MaxSpeed is null && _received.MaxSpeed is null
-            ? null
-            : new Traffic(_sent.MaxSpeed ?? 0, _received.MaxSpeed ?? 0);
+    public Traffic MaxSpeed {
+        get => new(_sent.MaxSpeed, _received.MaxSpeed);
         set {
-            _sent.MaxSpeed = value is { Sent: > 0 } ? value.Value.Sent : null;
-            _received.MaxSpeed = value is { Received: > 0 } ? value.Value.Received : null;
+            _sent.MaxSpeed = value.Sent;
+            _received.MaxSpeed = value.Received;
         }
-    }
-
-    public long? SendMaxSpeed {
-        get => _sent.MaxSpeed;
-        set => _sent.MaxSpeed = value is > 0 ? value : null;
-    }
-
-    public long? ReceiveMaxSpeed {
-        get => _received.MaxSpeed;
-        set => _received.MaxSpeed = value is > 0 ? value : null;
     }
 
     /// <summary>

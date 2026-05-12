@@ -4,6 +4,7 @@ namespace VpnHood.Core.Tunneling;
 
 internal sealed class TrafficMeterItem : IDisposable
 {
+    private static readonly TimeSpan MaxThrottleDelay = TimeSpan.FromSeconds(2);
     private long _total;
     private long _lastTotal;
     private long _windowTotal;
@@ -15,9 +16,12 @@ internal sealed class TrafficMeterItem : IDisposable
     private bool _disposed;
 
     public required TimeSpan SpeedInterval { get; init; }
-    public long? MaxSpeed { get; set; }
+
+    /// <remarks>Unit: bytes per second.</remarks>
+    public long MaxSpeed { get; set; }
     public long Traffic => Interlocked.Read(ref _total);
 
+    /// <remarks>Unit: bytes per second.</remarks>
     public long Speed {
         get {
             UpdateSpeed();
@@ -80,7 +84,7 @@ internal sealed class TrafficMeterItem : IDisposable
 
     private TimeSpan GetThrottleDelay(long bytes = 0)
     {
-        if (_disposed || MaxSpeed is null or <= 0)
+        if (_disposed || MaxSpeed is 0)
             return TimeSpan.Zero;
 
         var now = FastDateTime.Now;
@@ -88,10 +92,10 @@ internal sealed class TrafficMeterItem : IDisposable
         if (elapsed < 0.1)
             elapsed = 0.1;
 
-        var targetTime = (Interlocked.Read(ref _windowTotal) + bytes) / (double)MaxSpeed.Value;
+        var targetTime = (Interlocked.Read(ref _windowTotal) + bytes) / (double)MaxSpeed;
         var delaySeconds = targetTime - elapsed;
         return delaySeconds > 0
-            ? TimeSpan.FromSeconds(Math.Min(delaySeconds, 2))
+            ? TimeSpan.FromSeconds(Math.Min(delaySeconds, MaxThrottleDelay.TotalSeconds))
             : TimeSpan.Zero;
     }
 

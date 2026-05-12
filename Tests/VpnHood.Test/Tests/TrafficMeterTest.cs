@@ -226,7 +226,7 @@ public class TrafficMeterTest : TestBase
         await AssertEqualsWait(1, () => receivedCount);
 
         // UDP has no natural backpressure, so throttled packets are dropped instead of queued.
-        client.Tunnel.TrafficMeter.SendMaxSpeed = 1;
+        client.Tunnel.TrafficMeter.MaxSpeed = new Traffic(sent: 1, received: 0);
 
         var packets = Enumerable.Range(0, 5)
             .Select(_ => PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)))
@@ -293,7 +293,7 @@ public class TrafficMeterTest : TestBase
         await AssertEqualsWait(1, () => receivedCount);
 
         // set tight send speed limit
-        clientTunnel.TrafficMeter.SendMaxSpeed = 1;
+        clientTunnel.TrafficMeter.MaxSpeed = new Traffic(sent: 1, received: 0);
 
         // send burst of packets through the tunnel
         var packets = Enumerable.Range(0, 5)
@@ -333,7 +333,7 @@ public class TrafficMeterTest : TestBase
         listener2.Stop();
 
         var trafficMeter = new TrafficMeter {
-            SendMaxSpeed = 1 // 1 byte/sec
+            MaxSpeed = new Traffic(sent: 1, received: 0) // 1 byte/sec
         };
 
         // ProxyChannel bridges tunnelServer <-> hostServer

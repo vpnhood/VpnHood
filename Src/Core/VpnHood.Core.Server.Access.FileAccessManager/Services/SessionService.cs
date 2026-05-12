@@ -130,6 +130,7 @@ public class SessionService : IDisposable
             CreatedTime = accessTokenData.Usage.CreatedTime,
             IsPremium = true, // token is always premium in File Access Manager
             MaxDeviceCount = accessTokenData.AccessToken.MaxClientCount,
+            MaxSpeed = accessTokenData.AccessToken.MaxSpeed,
             MaxTotalTraffic = accessTokenData.AccessToken.MaxTraffic,
             DevicesSummary = null // not supported
         };

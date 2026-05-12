@@ -301,6 +301,7 @@ internal class ClientSessionBuilder(
                     TcpProxyCatcherAddressIpV4 = config.TcpProxyCatcherAddressIpV4,
                     TcpProxyCatcherAddressIpV6 = config.TcpProxyCatcherAddressIpV6,
                     Mtu = mtu,
+                    MaxSpeed = helloResponse.AccessInfo?.MaxSpeed,
                     MaxPacketChannelLifespan = config.MaxPacketChannelLifespan,
                     MinPacketChannelLifespan = config.MinPacketChannelLifespan,
                     SessionTimeout = config.SessionTimeout,

@@ -45,6 +45,7 @@ public class AccessTokenService
         string? tokenName = null,
         int maxTrafficByteCount = 0,
         DateTime? expirationTime = null,
+        Traffic? maxSpeed = null,
         AdRequirement adRequirement = AdRequirement.None)
     {
         // generate key
@@ -57,6 +58,7 @@ public class AccessTokenService
             TokenId = Guid.NewGuid().ToString(),
             IssuedAt = DateTime.UtcNow,
             MaxTraffic = maxTrafficByteCount,
+            MaxSpeed = maxSpeed,
             MaxClientCount = maxClientCount,
             ExpirationTime = expirationTime,
             AdRequirement = adRequirement,

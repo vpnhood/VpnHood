@@ -88,19 +88,9 @@ public class TrafficMeter : IDisposable
         return _sent.ThrottleAsync(cancellationToken);
     }
 
-    public ValueTask ThrottleSendAsync(long bytes, CancellationToken cancellationToken)
-    {
-        return _sent.ThrottleAsync(bytes, cancellationToken);
-    }
-
     public ValueTask ThrottleReceiveAsync(CancellationToken cancellationToken)
     {
         return _received.ThrottleAsync(cancellationToken);
-    }
-
-    public ValueTask ThrottleReceiveAsync(long bytes, CancellationToken cancellationToken)
-    {
-        return _received.ThrottleAsync(bytes, cancellationToken);
     }
 
     public bool ShouldThrottle()

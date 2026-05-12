@@ -55,7 +55,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
     {
         var trafficMeter = TrafficMeter;
         if (trafficMeter != null) {
-            var throttleTask = trafficMeter.ThrottleSendAsync(buffer.Length, cancellationToken);
+            var throttleTask = trafficMeter.ThrottleSendAsync(cancellationToken);
             if (!throttleTask.IsCompleted)
                 await throttleTask.Vhc();
         }

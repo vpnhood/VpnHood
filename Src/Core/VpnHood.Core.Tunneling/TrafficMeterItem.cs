@@ -63,25 +63,6 @@ internal sealed class TrafficMeterItem : IDisposable
         }
     }
 
-    public async ValueTask ThrottleAsync(long bytes, CancellationToken cancellationToken)
-    {
-        var delay = GetThrottleDelay(bytes);
-        if (delay <= TimeSpan.Zero)
-            return;
-
-        await _throttleSemaphore.WaitAsync(cancellationToken).Vhc();
-        try {
-            delay = GetThrottleDelay(bytes);
-            if (delay <= TimeSpan.Zero)
-                return;
-
-            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
-        }
-        finally {
-            _throttleSemaphore.Release();
-        }
-    }
-
     private TimeSpan GetThrottleDelay(long bytes = 0)
     {
         if (_disposed || MaxSpeed is 0)

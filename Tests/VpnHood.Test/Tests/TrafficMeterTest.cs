@@ -65,11 +65,9 @@ public class TrafficMeterTest : TestBase
         private ServerUdpChannelTransmitterTest Transmitter { get; }
         public IPEndPoint LocalEndPoint => Transmitter.LocalEndPoint;
 
-        public ServerUdpTunnelFixture(TestHelper testHelper, ulong sessionId, byte[] sessionKey,
-            TrafficMeter? trafficMeter = null)
+        public ServerUdpTunnelFixture(TestHelper testHelper, ulong sessionId, byte[] sessionKey)
         {
             Tunnel = new Tunnel(testHelper.CreateTunnelOptions());
-            trafficMeter ??= Tunnel.TrafficMeter;
 
             Transmitter = new ServerUdpChannelTransmitterTest(new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)));
             Channel = new UdpChannel(Transmitter.AddSession(sessionId, sessionKey), new UdpChannelOptions {
@@ -77,7 +75,7 @@ public class TrafficMeterTest : TestBase
                 Blocking = false,
                 ChannelId = Guid.CreateVersion7().ToString(),
                 Lifespan = null,
-                TrafficMeter = trafficMeter
+                TrafficMeter = Tunnel.TrafficMeter
             });
             Tunnel.AddChannel(Channel);
         }
@@ -97,10 +95,9 @@ public class TrafficMeterTest : TestBase
         private readonly ClientUdpChannelTransmitterTest _transmitter;
 
         public ClientUdpTunnelFixture(TestHelper testHelper, IPEndPoint serverEndPoint, ulong sessionId,
-            byte[] sessionKey, TrafficMeter? trafficMeter = null)
+            byte[] sessionKey)
         {
             Tunnel = new Tunnel(testHelper.CreateTunnelOptions());
-            trafficMeter ??= Tunnel.TrafficMeter;
 
             _transmitter = new ClientUdpChannelTransmitterTest(serverEndPoint, sessionId, sessionKey);
             Channel = new UdpChannel(_transmitter.UdpTransport, new UdpChannelOptions {
@@ -108,7 +105,7 @@ public class TrafficMeterTest : TestBase
                 Blocking = false,
                 ChannelId = Guid.CreateVersion7().ToString(),
                 Lifespan = null,
-                TrafficMeter = trafficMeter
+                TrafficMeter = Tunnel.TrafficMeter
             });
             Tunnel.AddChannel(Channel);
         }
@@ -221,32 +218,30 @@ public class TrafficMeterTest : TestBase
 
         using var client = new ClientUdpTunnelFixture(TestHelper, server.LocalEndPoint, sessionId, sessionKey);
         var receivedCount = 0;
-        client.Tunnel.PacketReceived += (_, _) => receivedCount++;
+        client.Tunnel.PacketReceived += (_, _) => Interlocked.Increment(ref receivedCount);
 
-        // warm up:
+        // warm up: send a packet and wait for round-trip
         var warmup = PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true));
         client.Tunnel.SendPacketQueued(warmup);
         await AssertEqualsWait(1, () => receivedCount);
 
-        // set max send speed to 1 byte/s after traffic is already flowing
-        client.Tunnel.TrafficMeter.MaxSpeed = new Traffic(sent: 1, received: 0);
+        // UDP has no natural backpressure, so throttled packets are dropped instead of queued.
+        client.Tunnel.TrafficMeter.SendMaxSpeed = 1;
 
-        var packets = Enumerable.Range(0, 10)
+        var packets = Enumerable.Range(0, 5)
             .Select(_ => PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)))
             .ToArray();
 
-        // the throttle is called per-packet in ProxyChannel but not in UdpChannel;
-        // trigger it explicitly by calling ThrottleAsync after reporting all sent bytes
-        foreach (var packet in packets)
-            client.Tunnel.TrafficMeter.OnSent(packet.PacketLength);
-
         var stopwatch = Stopwatch.StartNew();
-        await client.Tunnel.TrafficMeter.ThrottleAsync(TestCt);
+        foreach (var packet in packets)
+            client.Tunnel.SendPacketQueued(packet);
+        await Task.Delay(500, TestCt);
         stopwatch.Stop();
 
-        Assert.IsGreaterThanOrEqualTo(TimeSpan.FromSeconds(1), stopwatch.Elapsed,
-            $"Throttling via Tunnel.TrafficMeter should have delayed at least 1 second. " +
-            $"Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s");
+        Assert.IsLessThanOrEqualTo(receivedCount, 1,
+            "UDP packets should be dropped when send throttle is exceeded instead of being queued.");
+        Assert.IsLessThan(TimeSpan.FromSeconds(1), stopwatch.Elapsed,
+            $"UDP throttling should not block or queue in Tunnel. Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s");
     }
 
     [TestMethod]
@@ -262,11 +257,7 @@ public class TrafficMeterTest : TestBase
         var serverTcpClient = await listenerTask;
         tcpListener.Stop();
 
-        // create a shared TrafficMeter with tight send limit
-        var trafficMeter = new TrafficMeter {
-            MaxSpeed = new Traffic(sent: 100, received: 0) // 100 bytes/sec
-        };
-
+        using var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         await using var serverConn = new TcpConnection(serverTcpClient, connectionName: "server", isServer: true);
         using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             RequestTime = DateTime.UtcNow,
@@ -275,13 +266,13 @@ public class TrafficMeterTest : TestBase
             AutoDisposePackets = true,
             Lifespan = null,
             ChannelId = Guid.NewGuid().ToString(),
-            TrafficMeter = trafficMeter
+            TrafficMeter = serverTunnel.TrafficMeter
         });
-        using var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         serverTunnel.AddChannel(serverChannel);
         // ReSharper disable once AccessToDisposedClosure
         serverTunnel.PacketReceived += (_, ipPacket) => serverChannel.SendPacketQueued(ipPacket.Clone());
 
+        using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         await using var clientConn = new TcpConnection(tcpClient, connectionName: "client", isServer: false);
         using var clientChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             RequestTime = DateTime.UtcNow,
@@ -290,30 +281,34 @@ public class TrafficMeterTest : TestBase
             AutoDisposePackets = true,
             Lifespan = null,
             ChannelId = Guid.NewGuid().ToString(),
-            TrafficMeter = trafficMeter
+            TrafficMeter = clientTunnel.TrafficMeter
         });
-        using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
         clientTunnel.AddChannel(clientChannel);
-        
-        // ReSharper disable once NotAccessedVariable
-        var receivedCount = 0;
-        clientTunnel.PacketReceived += (_, _) => receivedCount++;
 
-        // send enough data to exceed the 100 bytes/sec limit
-        var packets = Enumerable.Range(0, 10)
+        var receivedCount = 0;
+        clientTunnel.PacketReceived += (_, _) => Interlocked.Increment(ref receivedCount);
+
+        // warm up
+        clientTunnel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+        await AssertEqualsWait(1, () => receivedCount);
+
+        // set tight send speed limit
+        clientTunnel.TrafficMeter.SendMaxSpeed = 1;
+
+        // send burst of packets through the tunnel
+        var packets = Enumerable.Range(0, 5)
             .Select(_ => PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)))
             .ToArray();
 
-        // report sent bytes directly to trigger throttle condition
-        foreach (var packet in packets)
-            trafficMeter.OnSent(packet.PacketLength);
-
         var stopwatch = Stopwatch.StartNew();
-        await trafficMeter.ThrottleAsync(TestCt);
+        foreach (var packet in packets)
+            clientTunnel.SendPacketQueued(packet);
+
+        await AssertEqualsWait(1 + packets.Length, () => receivedCount, timeout: 15000);
         stopwatch.Stop();
 
         Assert.IsGreaterThanOrEqualTo(TimeSpan.FromSeconds(1), stopwatch.Elapsed,
-            $"StreamPacketChannel TrafficMeter should throttle. Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s");
+            $"StreamPacketChannel Tunnel should throttle. Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s");
     }
 
     [TestMethod]
@@ -338,7 +333,7 @@ public class TrafficMeterTest : TestBase
         listener2.Stop();
 
         var trafficMeter = new TrafficMeter {
-            MaxSpeed = new Traffic(sent: 1, received: 0) // 1 byte/sec
+            SendMaxSpeed = 1 // 1 byte/sec
         };
 
         // ProxyChannel bridges tunnelServer <-> hostServer

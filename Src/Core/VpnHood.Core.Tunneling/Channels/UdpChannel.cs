@@ -2,6 +2,7 @@
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
@@ -35,6 +36,8 @@ public class UdpChannel : PacketChannel
     protected override async ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
         try {
+            var trafficMeter = TrafficMeter;
+
             // copy packets to buffer (payload only, transmitter adds its own overhead)
             var bufferIndex = 0;
 
@@ -43,10 +46,19 @@ public class UdpChannel : PacketChannel
                 var ipPacket = ipPackets[i];
                 var packetBytes = ipPacket.Buffer;
 
+                // UDP has no natural backpressure, so throttled packets are dropped instead of queued.
+                if (trafficMeter != null && trafficMeter.ShouldThrottleSend(packetBytes.Length)) {
+                    VhLogger.Instance.LogDebug(GeneralEventId.Udp,
+                        "Dropping a UDP packet due to send throttle. ChannelId: {ChannelId}, PacketLength: {PacketLength}",
+                        ChannelId, packetBytes.Length);
+                    continue;
+                }
+
                 // flush buffer if this packet does not fit
                 if (bufferIndex > 0 &&
                     bufferIndex + packetBytes.Length > _buffer.Length - UdpTransport.OverheadLength) {
                     await SendBuffer(_buffer[..bufferIndex]).Vhc();
+                    trafficMeter?.OnSent(bufferIndex);
                     bufferIndex = 0;
                 }
 
@@ -64,8 +76,10 @@ public class UdpChannel : PacketChannel
             }
 
             // send remaining buffer
-            if (bufferIndex > 0)
+            if (bufferIndex > 0) {
                 await SendBuffer(_buffer[..bufferIndex]).Vhc();
+                trafficMeter?.OnSent(bufferIndex);
+            }
         }
         catch (Exception ex) when (ex is OperationCanceledException or ObjectDisposedException) {
             // ignore cancellation
@@ -77,7 +91,7 @@ public class UdpChannel : PacketChannel
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
-                "UdpChannel has been closed due to a transport error in sending packets. ChannelId: {ChannelId}", 
+                "UdpChannel has been closed due to a transport error in sending packets. ChannelId: {ChannelId}",
                 ChannelId);
 
             Dispose();
@@ -98,6 +112,18 @@ public class UdpChannel : PacketChannel
         while (bufferIndex < buffer.Length) {
             var ipPacket = ReadNextPacketKeepMemory(buffer[bufferIndex..]);
             bufferIndex += ipPacket.PacketLength;
+
+            // UDP has no natural backpressure, so received packets are dropped when the configured receiving limit is exceeded.
+            // Client does not throttle receive so it should set it to 0
+            if (TrafficMeter != null &&
+                TrafficMeter.ShouldThrottleReceive(ipPacket.PacketLength)) {
+                PacketLogger.LogPacket(ipPacket, $"Dropping a UDP packet due to receive throttle. ChannelId: {ChannelId}",
+                    eventId: GeneralEventId.Udp);
+                ipPacket.Dispose();
+                continue;
+            }
+
+            TrafficMeter?.OnReceived(ipPacket.PacketLength);
             OnPacketReceived(ipPacket);
         }
     }

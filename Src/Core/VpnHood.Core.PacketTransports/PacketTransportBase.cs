@@ -66,10 +66,6 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
-    protected virtual void OnPacketSent(IpPacket ipPacket)
-    {
-    }
-
     private async ValueTask SendPacketQueuedPassthroughAsync(IpPacket ipPacket)
     {
         ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
@@ -183,7 +179,6 @@ public abstract class PacketTransportBase : IPacketTransport
             for (var i = 0; i < ipPackets.Count; i++) {
                 _stat.SentBytes += ipPackets[i].PacketLength;
                 _stat.SentPackets++;
-                OnPacketSent(ipPackets[i]);
                 if (_autoDisposePackets)
                     ipPackets[i].Dispose();
             }

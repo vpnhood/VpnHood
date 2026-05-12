@@ -200,12 +200,14 @@ public class ProxyChannel : IProxyChannel
 
             // notify traffic meter and throttle if needed
             if (_trafficMeter != null) {
-                if (isSendingToTunnel)
+                if (isSendingToTunnel) {
                     _trafficMeter.OnSent(bytesRead);
-                else
+                    await _trafficMeter.ThrottleSendAsync(sourceCt).Vhc();
+                }
+                else {
                     _trafficMeter.OnReceived(bytesRead);
-
-                await _trafficMeter.ThrottleAsync(sourceCt).Vhc();
+                    await _trafficMeter.ThrottleReceiveAsync(sourceCt).Vhc();
+                }
             }
         }
     }

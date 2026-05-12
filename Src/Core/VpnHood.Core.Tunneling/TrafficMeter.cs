@@ -3,19 +3,16 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Tunneling;
 
+/// <summary>
+/// Tracks tunnel traffic as two independent directions.
+/// Throttling policy is intentionally applied by transport implementations, not by <see cref="Tunnel"/>:
+/// async stream/proxy transports await to slow down naturally, while UDP transports drop packets when over limit.
+/// For session-facing limits, server download maps to send and server upload maps to receive.
+/// </summary>
 public class TrafficMeter : IDisposable
 {
-    private long _totalSent;
-    private long _totalReceived;
-    private long _lastSent;
-    private long _lastReceived;
-    private long _windowSent;
-    private long _windowReceived;
-    private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
-    private DateTime _windowStartTime = FastDateTime.Now;
-    private Traffic _speed;
-    private readonly Lock _speedLock = new();
-    private readonly SemaphoreSlim _throttleSemaphore = new(1, 1);
+    private readonly TrafficMeterItem _sent;
+    private readonly TrafficMeterItem _received;
     private bool _disposed;
 
     /// <summary>
@@ -23,10 +20,16 @@ public class TrafficMeter : IDisposable
     /// </summary>
     public TimeSpan SpeedInterval { get; init; } = TimeSpan.FromSeconds(2);
 
+    public TrafficMeter()
+    {
+        _sent = new TrafficMeterItem { SpeedInterval = SpeedInterval };
+        _received = new TrafficMeterItem { SpeedInterval = SpeedInterval };
+    }
+
     /// <summary>
     /// Gets the total traffic transferred.
     /// </summary>
-    public Traffic Traffic => new(Interlocked.Read(ref _totalSent), Interlocked.Read(ref _totalReceived));
+    public Traffic Traffic => new(_sent.Traffic, _received.Traffic);
 
     /// <summary>
     /// Gets the last activity time.
@@ -35,20 +38,32 @@ public class TrafficMeter : IDisposable
 
     /// <summary>
     /// Gets or sets the maximum allowed speed (bytes per second) for throttling.
-    /// Zero or negative means unlimited.
+    /// Null means unlimited.
     /// </summary>
-    public Traffic MaxSpeed { get; set; }
+    public Traffic? MaxSpeed {
+        get => _sent.MaxSpeed is null && _received.MaxSpeed is null
+            ? null
+            : new Traffic(_sent.MaxSpeed ?? 0, _received.MaxSpeed ?? 0);
+        set {
+            _sent.MaxSpeed = value is { Sent: > 0 } ? value.Value.Sent : null;
+            _received.MaxSpeed = value is { Received: > 0 } ? value.Value.Received : null;
+        }
+    }
+
+    public long? SendMaxSpeed {
+        get => _sent.MaxSpeed;
+        set => _sent.MaxSpeed = value is > 0 ? value : null;
+    }
+
+    public long? ReceiveMaxSpeed {
+        get => _received.MaxSpeed;
+        set => _received.MaxSpeed = value is > 0 ? value : null;
+    }
 
     /// <summary>
     /// Gets the current transfer speed.
     /// </summary>
-    public Traffic Speed {
-        get {
-            UpdateSpeed();
-            lock (_speedLock)
-                return _speed;
-        }
-    }
+    public Traffic Speed => new(_sent.Speed, _received.Speed);
 
     /// <summary>
     /// Reports sent bytes to the traffic meter. This method is thread-safe.
@@ -56,8 +71,7 @@ public class TrafficMeter : IDisposable
     public void OnSent(long bytes)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        Interlocked.Add(ref _totalSent, bytes);
-        Interlocked.Add(ref _windowSent, bytes);
+        _sent.OnTraffic(bytes);
         LastActivityTime = FastDateTime.Now;
     }
 
@@ -67,83 +81,49 @@ public class TrafficMeter : IDisposable
     public void OnReceived(long bytes)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        Interlocked.Add(ref _totalReceived, bytes);
-        Interlocked.Add(ref _windowReceived, bytes);
+        _received.OnTraffic(bytes);
         LastActivityTime = FastDateTime.Now;
     }
 
-    /// <summary>
-    /// Waits if the current transfer rate exceeds the maximum allowed speed.
-    /// Should be called by transfer producers before or after a transfer to enforce throttling.
-    /// </summary>
-    public async ValueTask ThrottleAsync(CancellationToken cancellationToken)
+    public bool ShouldThrottleSend(long bytes = 0)
     {
-        if (_disposed)
-            return;
-
-        var maxSpeed = MaxSpeed;
-        if (maxSpeed is { Sent: <= 0, Received: <= 0 })
-            return;
-
-        // Use semaphore to serialize throttle checks
-        await _throttleSemaphore.WaitAsync(cancellationToken).Vhc();
-        try {
-            var now = FastDateTime.Now;
-            var elapsed = (now - _windowStartTime).TotalSeconds;
-            if (elapsed < 0.1)
-                elapsed = 0.1; // avoid division by zero
-
-            var currentSentRate = Interlocked.Read(ref _windowSent) / elapsed;
-            var currentReceivedRate = Interlocked.Read(ref _windowReceived) / elapsed;
-
-            // Calculate delay needed to bring rate within limits
-            var delaySeconds = 0.0;
-
-            if (maxSpeed.Sent > 0 && currentSentRate > maxSpeed.Sent) {
-                var targetTime = Interlocked.Read(ref _windowSent) / (double)maxSpeed.Sent;
-                delaySeconds = Math.Max(delaySeconds, targetTime - elapsed);
-            }
-
-            if (maxSpeed.Received > 0 && currentReceivedRate > maxSpeed.Received) {
-                var targetTime = Interlocked.Read(ref _windowReceived) / (double)maxSpeed.Received;
-                delaySeconds = Math.Max(delaySeconds, targetTime - elapsed);
-            }
-
-            if (delaySeconds > 0) {
-                var delay = TimeSpan.FromSeconds(Math.Min(delaySeconds, 2)); // cap delay to 2 seconds
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
-            }
-
-            // Reset window periodically
-            if (elapsed >= SpeedInterval.TotalSeconds) {
-                Interlocked.Exchange(ref _windowSent, 0);
-                Interlocked.Exchange(ref _windowReceived, 0);
-                _windowStartTime = FastDateTime.Now;
-            }
-        }
-        finally {
-            _throttleSemaphore.Release();
-        }
+        return _sent.ShouldThrottle(bytes);
     }
 
-    private void UpdateSpeed()
+    public bool ShouldThrottleReceive(long bytes = 0)
     {
-        lock (_speedLock) {
-            var now = FastDateTime.Now;
-            var duration = (now - _lastSpeedUpdateTime).TotalSeconds;
-            if (duration < 1)
-                return;
+        return _received.ShouldThrottle(bytes);
+    }
 
-            var totalSent = Interlocked.Read(ref _totalSent);
-            var totalReceived = Interlocked.Read(ref _totalReceived);
+    public ValueTask ThrottleSendAsync(CancellationToken cancellationToken)
+    {
+        return _sent.ThrottleAsync(cancellationToken);
+    }
 
-            var sentSpeed = (long)((totalSent - _lastSent) / duration);
-            var receivedSpeed = (long)((totalReceived - _lastReceived) / duration);
-            _speed = new Traffic(sentSpeed, receivedSpeed);
-            _lastSpeedUpdateTime = now;
-            _lastSent = totalSent;
-            _lastReceived = totalReceived;
-        }
+    public ValueTask ThrottleSendAsync(long bytes, CancellationToken cancellationToken)
+    {
+        return _sent.ThrottleAsync(bytes, cancellationToken);
+    }
+
+    public ValueTask ThrottleReceiveAsync(CancellationToken cancellationToken)
+    {
+        return _received.ThrottleAsync(cancellationToken);
+    }
+
+    public ValueTask ThrottleReceiveAsync(long bytes, CancellationToken cancellationToken)
+    {
+        return _received.ThrottleAsync(bytes, cancellationToken);
+    }
+
+    public bool ShouldThrottle()
+    {
+        return ShouldThrottleSend() || ShouldThrottleReceive();
+    }
+
+    public async ValueTask ThrottleAsync(CancellationToken cancellationToken)
+    {
+        await ThrottleSendAsync(cancellationToken);
+        await ThrottleReceiveAsync(cancellationToken);
     }
 
     public void Dispose()
@@ -152,6 +132,7 @@ public class TrafficMeter : IDisposable
             return;
 
         _disposed = true;
-        _throttleSemaphore.Dispose();
+        _sent.Dispose();
+        _received.Dispose();
     }
 }

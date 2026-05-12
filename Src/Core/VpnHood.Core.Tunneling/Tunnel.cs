@@ -49,13 +49,13 @@ public class Tunnel : PassthroughPacketTransport
     // it is not thread-safe
     protected override void SendPacket(IpPacket ipPacket)
     {
-        // flush all packets to the same channel
+        SendPacketInternal(ipPacket);
+    }
+
+    private void SendPacketInternal(IpPacket ipPacket)
+    {
         var channel = FindChannelForPacket(ipPacket);
-
-        // check is there any packet larger than MTU
         VerifyMtu(ipPacket, TunnelDefaults.MtuOverhead);
-
-        // send packet
         channel.SendPacketQueued(ipPacket);
     }
 

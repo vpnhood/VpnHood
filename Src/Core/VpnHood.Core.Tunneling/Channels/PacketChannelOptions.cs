@@ -7,5 +7,5 @@ public class PacketChannelOptions
     public required bool Blocking { get; init; }
     public required TimeSpan? Lifespan { get; init; }
     public required string ChannelId { get; init; }
-    public required TrafficMeter TrafficMeter { get; init; }
+    public TrafficMeter? TrafficMeter { get; init; }
 }

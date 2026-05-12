@@ -73,14 +73,14 @@ public class TrafficMeter : IDisposable
         LastActivityTime = FastDateTime.Now;
     }
 
-    public bool ShouldThrottleSend(long bytes = 0)
+    public bool ShouldThrottleSend()
     {
-        return _sent.ShouldThrottle(bytes);
+        return _sent.ShouldThrottle();
     }
 
-    public bool ShouldThrottleReceive(long bytes = 0)
+    public bool ShouldThrottleReceive()
     {
-        return _received.ShouldThrottle(bytes);
+        return _received.ShouldThrottle();
     }
 
     public ValueTask ThrottleSendAsync(CancellationToken cancellationToken)

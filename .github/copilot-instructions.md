@@ -1,3 +1,5 @@
 - Do not touch VpnHood.Client.Api.ts as it will be rebuilt in publish
 - Use primary constructors when possible
 - Use TestHelper.WorkingPath as the temp directory for tests
+- Use .Vhc() instead of .ConfigureAwait(false) if it is available but do not add it to the project if it is not available. 
+- For UI code such as android UI, always use .ConfigureAwait(false) when it is required.

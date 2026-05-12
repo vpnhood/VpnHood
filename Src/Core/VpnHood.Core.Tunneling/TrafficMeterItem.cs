@@ -37,9 +37,9 @@ internal sealed class TrafficMeterItem : IDisposable
         Interlocked.Add(ref _windowTotal, bytes);
     }
 
-    public bool ShouldThrottle(long bytes = 0)
+    public bool ShouldThrottle()
     {
-        return GetThrottleDelay(bytes) > TimeSpan.Zero;
+        return GetThrottleDelay() > TimeSpan.Zero;
     }
 
     public async ValueTask ThrottleAsync(CancellationToken cancellationToken)
@@ -54,16 +54,21 @@ internal sealed class TrafficMeterItem : IDisposable
             if (delay <= TimeSpan.Zero)
                 return;
 
-            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
-            Interlocked.Exchange(ref _windowTotal, 0);
-            _windowStartTime = FastDateTime.Now;
+            await Task.Delay(delay, cancellationToken).Vhc();
+            var now = FastDateTime.Now;
+            var totalElapsed = (now - _windowStartTime).TotalSeconds;
+            var allowed = (long)(MaxSpeed * totalElapsed);
+            var current = Interlocked.Read(ref _windowTotal);
+            var carry = Math.Max(0, current - allowed);
+            Interlocked.Exchange(ref _windowTotal, carry);
+            _windowStartTime = now;
         }
         finally {
             _throttleSemaphore.Release();
         }
     }
 
-    private TimeSpan GetThrottleDelay(long bytes = 0)
+    private TimeSpan GetThrottleDelay()
     {
         if (_disposed || MaxSpeed is 0)
             return TimeSpan.Zero;
@@ -73,7 +78,7 @@ internal sealed class TrafficMeterItem : IDisposable
         if (elapsed < 0.1)
             elapsed = 0.1;
 
-        var targetTime = (Interlocked.Read(ref _windowTotal) + bytes) / (double)MaxSpeed;
+        var targetTime = Interlocked.Read(ref _windowTotal) / (double)MaxSpeed;
         var delaySeconds = targetTime - elapsed;
         return delaySeconds > 0
             ? TimeSpan.FromSeconds(Math.Min(delaySeconds, MaxThrottleDelay.TotalSeconds))

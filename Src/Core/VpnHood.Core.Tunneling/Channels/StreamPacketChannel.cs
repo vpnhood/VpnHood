@@ -80,7 +80,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
             }
 
             TrafficMeter?.OnReceived(ipPacket.PacketLength);
-            if (_connection.IsServer && TrafficMeter != null) {
+            if (TrafficMeter != null) {
                 var throttleTask = TrafficMeter.ThrottleReceiveAsync(cancellationToken);
                 if (!throttleTask.IsCompleted)
                     await throttleTask.Vhc();

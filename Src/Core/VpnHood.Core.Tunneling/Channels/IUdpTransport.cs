@@ -2,7 +2,7 @@
 
 public interface IUdpTransport : IDisposable
 {
-    Task SendAsync(Memory<byte> buffer);
+    Task SendAsync(ReadOnlyMemory<byte> buffer);
     Action<Memory<byte>>? DataReceived { get; set; }
     int OverheadLength { get; }
     bool Connected { get; }

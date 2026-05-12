@@ -66,6 +66,10 @@ public abstract class PacketTransportBase : IPacketTransport
         }
     }
 
+    protected virtual void OnPacketSent(IpPacket ipPacket)
+    {
+    }
+
     private async ValueTask SendPacketQueuedPassthroughAsync(IpPacket ipPacket)
     {
         ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
@@ -92,8 +96,8 @@ public abstract class PacketTransportBase : IPacketTransport
             lock (_singlePacketBuffer) {
                 _singlePacketBuffer[0] = ipPacket;
                 var ret = SendPacketsInternalAsync(_singlePacketBuffer);
-                return ret.IsCompleted 
-                    ? ret.GetAwaiter().GetResult() 
+                return ret.IsCompleted
+                    ? ret.GetAwaiter().GetResult()
                     : throw new InvalidOperationException("A passthrough PacketTransport should not return an incomplete task.");
             }
         }
@@ -179,6 +183,7 @@ public abstract class PacketTransportBase : IPacketTransport
             for (var i = 0; i < ipPackets.Count; i++) {
                 _stat.SentBytes += ipPackets[i].PacketLength;
                 _stat.SentPackets++;
+                OnPacketSent(ipPackets[i]);
                 if (_autoDisposePackets)
                     ipPackets[i].Dispose();
             }

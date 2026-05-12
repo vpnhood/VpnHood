@@ -126,7 +126,7 @@ public class Session : IDisposable
         SessionId = sessionResponseEx.SessionId;
         SessionKey = sessionResponseEx.SessionKey ?? throw new InvalidOperationException(
             $"{nameof(sessionResponseEx)} does not have {nameof(sessionResponseEx.SessionKey)}!");
-        
+
         Tunnel = new Tunnel(new TunnelOptions {
             MaxPacketChannelCount = options.MaxPacketChannelCountValue,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
@@ -160,7 +160,8 @@ public class Session : IDisposable
             Blocking = false,
             AutoDisposePackets = true,
             Lifespan = null,
-            ChannelId = Guid.NewGuid().ToString()
+            ChannelId = Guid.NewGuid().ToString(),
+            TrafficMeter = Tunnel.TrafficMeter
         });
 
         UseUdpChannel = true;
@@ -319,7 +320,8 @@ public class Session : IDisposable
             AutoDisposePackets = true,
             Connection = connection,
             ChannelId = request.ChannelId ?? request.RequestId,
-            Lifespan = null
+            Lifespan = null,
+            TrafficMeter = Tunnel.TrafficMeter
         });
 
         // delete all inactive PacketChannels if ActiveChannelIds exists. InActive channel request time must be less than current request time
@@ -460,7 +462,7 @@ public class Session : IDisposable
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
             var proxyChannel = new ProxyChannel(connection.ToString()!, tcpConnectionHost, connection,
-                _streamProxyBufferSize);
+                _streamProxyBufferSize, Tunnel.TrafficMeter);
 
             Tunnel.AddChannel(proxyChannel, disposeIfFailed: true);
         }

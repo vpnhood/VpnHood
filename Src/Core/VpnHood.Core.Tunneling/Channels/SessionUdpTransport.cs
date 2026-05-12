@@ -20,7 +20,7 @@ public class SessionUdpTransport(
     public int OverheadLength => TunnelDefaults.MtuOverhead;
     public bool Connected => ChannelTransmitter.Connected;
 
-    public Task SendAsync(Memory<byte> buffer)
+    public Task SendAsync(ReadOnlyMemory<byte> buffer)
     {
         return RemoteEndPoint is not null
             ? ChannelTransmitter.SendAsync(sessionId, buffer, RemoteEndPoint, SendCryptor)

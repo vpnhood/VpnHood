@@ -46,7 +46,8 @@ public class TcpPacketChannelTest : TestBase
             Blocking = false,
             AutoDisposePackets = true,
             Lifespan = null,
-            ChannelId = Guid.NewGuid().ToString()
+            ChannelId = Guid.NewGuid().ToString(),
+            TrafficMeter = new TrafficMeter()
         });
 
         using var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
@@ -62,7 +63,8 @@ public class TcpPacketChannelTest : TestBase
             AutoDisposePackets = true,
             Lifespan = TimeSpan.FromMilliseconds(1000),
             Blocking = false,
-            ChannelId = Guid.NewGuid().ToString()
+            ChannelId = Guid.NewGuid().ToString(),
+            TrafficMeter = new TrafficMeter()
         });
 
         using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());

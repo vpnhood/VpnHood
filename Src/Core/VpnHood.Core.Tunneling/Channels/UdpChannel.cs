@@ -27,7 +27,7 @@ public class UdpChannel : PacketChannel
         return _readingTask.Task;
     }
 
-    private async Task SendBuffer(Memory<byte> buffer)
+    private async Task SendBuffer(ReadOnlyMemory<byte> buffer)
     {
         await UdpTransport.SendAsync(buffer).Vhc();
     }

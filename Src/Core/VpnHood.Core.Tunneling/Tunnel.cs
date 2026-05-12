@@ -3,24 +3,18 @@ using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.PacketTransports;
-using VpnHood.Core.Toolkit.Jobs;
-using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels;
 
 namespace VpnHood.Core.Tunneling;
 
 public class Tunnel : PassthroughPacketTransport
 {
-    private Traffic _lastTraffic = new();
-    private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
-    private readonly TimeSpan _speedometerThreshold = TimeSpan.FromSeconds(2);
     private readonly ChannelManager _channelManager;
-    private Traffic _speed = new();
-    private readonly Lock _speedLock = new();
-    private readonly Job? _speedometerJob;
 
-    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
-    public Traffic Traffic => _channelManager.Traffic;
+    public TrafficMeter TrafficMeter { get; }
+    public Traffic Speed => IsDisposed ? new Traffic() : TrafficMeter.Speed;
+    public DateTime LastActivityTime => TrafficMeter.LastActivityTime;
+    public Traffic Traffic => TrafficMeter.Traffic;
     public int PacketChannelCount => _channelManager.PacketChannelCount;
     public int StreamProxyChannelCount => _channelManager.ProxyChannelCount;
     public void RemoveChannels<T>() where T : IChannel => _channelManager.RemoveChannels<T>();
@@ -33,27 +27,11 @@ public class Tunnel : PassthroughPacketTransport
 
     public int Mtu { get; set; }
 
-    public Traffic Speed {
-        get {
-            if (IsDisposed)
-                return new Traffic();
-
-            if (_speedometerJob == null)
-                UpdateSpeed();
-
-            lock (_speedLock) {
-                return _speed;
-            }
-        }
-    }
-
     public Tunnel(TunnelOptions options)
     {
         Mtu = options.Mtu;
+        TrafficMeter = new TrafficMeter();
         _channelManager = new ChannelManager(options.MaxPacketChannelCount, Channel_OnPacketReceived);
-        _speedometerJob = options.UseSpeedometerTimer
-            ? new Job(UpdateSpeedJob, _speedometerThreshold, "TunnelSpeedometer")
-            : null;
     }
 
     public void AddChannel(IChannel channel, bool disposeIfFailed = false)
@@ -64,38 +42,6 @@ public class Tunnel : PassthroughPacketTransport
         catch when (disposeIfFailed) {
             channel.Dispose();
             throw;
-        }
-    }
-
-
-    private ValueTask UpdateSpeedJob(CancellationToken arg)
-    {
-        UpdateSpeed();
-        return ValueTask.CompletedTask;
-    }
-
-    private void UpdateSpeed()
-    {
-        if (IsDisposed)
-            throw new ObjectDisposedException(nameof(Tunnel));
-
-        lock (_speedLock) {
-            var now = FastDateTime.Now;
-            var traffic = _channelManager.Traffic;
-            var duration = (now - _lastSpeedUpdateTime).TotalSeconds;
-            if (duration < 1)
-                return;
-
-            var sendSpeed = (long)((traffic.Sent - _lastTraffic.Sent) / duration);
-            var receivedSpeed = (long)((traffic.Received - _lastTraffic.Received) / duration);
-            _speed = new Traffic(sendSpeed, receivedSpeed);
-            _lastSpeedUpdateTime = now;
-
-            // update traffic usage & last traffic if changed
-            if (_lastTraffic != traffic) {
-                LastActivityTime = now;
-                _lastTraffic = traffic;
-            }
         }
     }
 
@@ -166,8 +112,7 @@ public class Tunnel : PassthroughPacketTransport
     protected override void DisposeManaged()
     {
         _channelManager.Dispose();
-        _speedometerJob?.Dispose();
-        _speed = new Traffic();
+        TrafficMeter.Dispose();
 
         base.DisposeManaged();
     }

@@ -76,7 +76,8 @@ public class TunnelTest : TestBase
             AutoDisposePackets = true,
             Blocking = false,
             ChannelId = Guid.CreateVersion7().ToString(),
-            Lifespan = null
+            Lifespan = null,
+            TrafficMeter = new TrafficMeter()
         });
 
         return (channel, transmitter);
@@ -92,7 +93,8 @@ public class TunnelTest : TestBase
                 AutoDisposePackets = true,
                 Blocking = false,
                 ChannelId = Guid.CreateVersion7().ToString(),
-                Lifespan = null
+                Lifespan = null,
+                TrafficMeter = new TrafficMeter()
             });
 
         return (channel, serverTransmitter);
@@ -139,8 +141,11 @@ public class TunnelTest : TestBase
         foreach (var ipPacket in packets)
             clientUdpChannelDisposable.SendPacketQueued(ipPacket.Clone());
 
-        await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Count);
-        await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Count);
+        await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Count, 
+            cancellationToken: TestContext.CancellationToken);
+
+        await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Count, 
+            cancellationToken: TestContext.CancellationToken);
     }
 
     [TestMethod]
@@ -195,8 +200,8 @@ public class TunnelTest : TestBase
         foreach (var ipPacket in ipPackets)
             clientTunnel.SendPacketQueued(ipPacket);
 
-        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => serverReceivedPackets.Count);
-        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => clientReceivedPackets.Count);
+        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => serverReceivedPackets.Count, cancellationToken: TestContext.CancellationToken);
+        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => clientReceivedPackets.Count, cancellationToken: TestContext.CancellationToken);
     }
 
     private static async Task SimpleLoopback(TcpListener tcpListener, CancellationToken cancellationToken)
@@ -277,7 +282,6 @@ public class TunnelTest : TestBase
         tcpListener.Stop();
     }
 
-
     [TestMethod]
     public async Task WebSocketHeader_build_Client()
     {
@@ -323,4 +327,6 @@ public class TunnelTest : TestBase
                 Assert.AreEqual(10, memStream.Position, "Stream position mismatch for payload length > 0xFFFF");
         }
     }
+
+    public TestContext TestContext { get; set; }
 }

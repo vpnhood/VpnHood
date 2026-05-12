@@ -17,6 +17,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
     private bool _started;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly Job _checkLifetimeJob;
+    private readonly TrafficMeter _trafficMeter;
 
     protected CancellationToken CancellationToken => _cancellationTokenSource.Token;
     protected override string Name { get; }
@@ -35,6 +36,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         })
     {
         _lifespan = options.Lifespan;
+        _trafficMeter = options.TrafficMeter;
         Name = $"{VhLogger.FormatType(this)}: {options.ChannelId}";
         ChannelId = options.ChannelId;
         _checkLifetimeJob = new Job(CheckLifetime, nameof(PacketChannel));
@@ -127,6 +129,11 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
     }
 
 
+    protected override void OnPacketSent(IpPacket ipPacket)
+    {
+        _trafficMeter.OnSent(ipPacket.PacketLength);
+    }
+
     protected override void OnPacketReceived(IpPacket ipPacket)
     {
         // check close message
@@ -148,6 +155,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         }
 
         base.OnPacketReceived(ipPacket);
+        _trafficMeter.OnReceived(ipPacket.PacketLength);
     }
 
     protected override void DisposeManaged()

@@ -154,8 +154,7 @@ internal class ClientStreamHandler(
             var proxyConnection = requestResult.Connection;
 
             // add stream proxy
-            var channel = new ProxyChannel(proxyConnection.ToString()!, connection, proxyConnection,
-                streamProxyBufferSize);
+            var channel = new ProxyChannel(proxyConnection.ToString()!, connection, proxyConnection, streamProxyBufferSize, tunnel.TrafficMeter);
             tunnel.AddChannel(channel, disposeIfFailed: true);
         }
         catch {

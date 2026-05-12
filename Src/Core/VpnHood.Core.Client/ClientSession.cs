@@ -87,7 +87,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             AutoDisposePackets = true,
             PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
             MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
-            UseSpeedometerTimer = true,
             Mtu = config.Mtu
         });
         _tunnel.PacketReceived += Tunnel_PacketReceived;
@@ -429,7 +428,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 RequestTime = request.RequestTime,
                 Blocking = true,
                 AutoDisposePackets = true,
-                Lifespan = lifespan
+                Lifespan = lifespan,
+                TrafficMeter = _tunnel.TrafficMeter
             });
             _tunnel.AddChannel(channel, true);
             CreatedPacketChannelCount++;
@@ -459,7 +459,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             LeaveUdpTransportOpen = true,
             Blocking = true,
             ChannelId = Guid.NewGuid().ToString(),
-            Lifespan = null
+            Lifespan = null,
+            TrafficMeter = _tunnel.TrafficMeter
         });
 
         // add to tunnel

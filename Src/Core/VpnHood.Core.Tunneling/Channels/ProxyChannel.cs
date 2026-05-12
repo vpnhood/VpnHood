@@ -26,13 +26,15 @@ public class ProxyChannel : IProxyChannel
 
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
+    private readonly TrafficMeter? _trafficMeter;
 
     public ProxyChannel(string channelId, IConnection orgConnection, IConnection tunnelConnection,
-        TransferBufferSize tunnelBufferSize)
+        TransferBufferSize tunnelBufferSize, TrafficMeter? trafficMeter = null)
     {
         _hostConnection = orgConnection;
         _tunnelConnection = tunnelConnection;
         _tunnelBufferSize = tunnelBufferSize;
+        _trafficMeter = trafficMeter;
 
         if (_tunnelBufferSize.Receive is < BufferSizeMin or > BufferSizeMax)
             throw new ArgumentOutOfRangeException(
@@ -194,6 +196,16 @@ public class ProxyChannel : IProxyChannel
 
                 // set LastActivityTime as some data delegated
                 LastActivityTime = FastDateTime.Now;
+            }
+
+            // notify traffic meter and throttle if needed
+            if (_trafficMeter != null) {
+                if (isSendingToTunnel)
+                    _trafficMeter.OnSent(bytesRead);
+                else
+                    _trafficMeter.OnReceived(bytesRead);
+
+                await _trafficMeter.ThrottleAsync(sourceCt).Vhc();
             }
         }
     }

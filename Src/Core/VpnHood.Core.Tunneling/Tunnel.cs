@@ -1,5 +1,4 @@
-﻿using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Packets;
+﻿using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.PacketTransports;
@@ -12,9 +11,6 @@ public class Tunnel : PassthroughPacketTransport
     private readonly ChannelManager _channelManager;
 
     public TrafficMeter TrafficMeter { get; }
-    public Traffic Speed => IsDisposed ? new Traffic() : TrafficMeter.Speed;
-    public DateTime LastActivityTime => TrafficMeter.LastActivityTime;
-    public Traffic Traffic => TrafficMeter.Traffic;
     public int PacketChannelCount => _channelManager.PacketChannelCount;
     public int StreamProxyChannelCount => _channelManager.ProxyChannelCount;
     public void RemoveChannels<T>() where T : IChannel => _channelManager.RemoveChannels<T>();

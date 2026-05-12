@@ -72,7 +72,7 @@ public class Session : IDisposable
 
 
     public int UdpConnectionCount => _proxyManager.UdpClientCount;
-    public DateTime LastActivityTime => Tunnel.LastActivityTime;
+    public DateTime LastActivityTime => Tunnel.TrafficMeter.LastActivityTime;
     public VirtualIpBundle VirtualIps { get; }
     public bool AllowTcpPacket { get; }
     public bool AllowTcpProxy { get; }
@@ -145,7 +145,7 @@ public class Session : IDisposable
         get {
             // Intentionally Reversed: sending to tunnel means receiving form client,
             // Intentionally Reversed: receiving from tunnel means sending for client
-            var traffic = Tunnel.Traffic - _prevTraffic;
+            var traffic = Tunnel.TrafficMeter.Traffic - _prevTraffic;
             return new Traffic {
                 Sent = traffic.Received,
                 Received = traffic.Sent
@@ -171,7 +171,7 @@ public class Session : IDisposable
     public Traffic ResetTraffic()
     {
         var traffic = Traffic;
-        _prevTraffic = Tunnel.Traffic;
+        _prevTraffic = Tunnel.TrafficMeter.Traffic;
         return traffic;
     }
 

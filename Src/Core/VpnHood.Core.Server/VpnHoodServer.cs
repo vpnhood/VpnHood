@@ -488,8 +488,8 @@ public class VpnHoodServer : IAsyncDisposable
             CpuUsage = systemInfo.CpuUsage,
             UsedMemory = Process.GetCurrentProcess().WorkingSet64,
             TunnelSpeed = new Traffic {
-                Sent = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Sent),
-                Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.Speed.Received)
+                Sent = SessionManager.Sessions.Sum(x => x.Value.Tunnel.TrafficMeter.Speed.Sent),
+                Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.TrafficMeter.Speed.Received)
             },
             ConfigCode = _lastConfigCode,
             ConfigError = _lastConfigException?.ToApiError().ToJson()

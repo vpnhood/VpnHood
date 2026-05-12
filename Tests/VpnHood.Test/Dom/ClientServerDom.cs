@@ -102,8 +102,8 @@ internal class ClientServerDom : IAsyncDisposable
 
         OldClientSentByteCount = Client.RequiredSession.Status.SessionTraffic.Sent;
         OldClientReceivedByteCount = Client.RequiredSession.Status.SessionTraffic.Received;
-        OldServerSentByteCount = ServerSession.Tunnel.Traffic.Sent;
-        OldServerReceivedByteCount = ServerSession.Tunnel.Traffic.Received;
+        OldServerSentByteCount = ServerSession.Tunnel.TrafficMeter.Traffic.Sent;
+        OldServerReceivedByteCount = ServerSession.Tunnel.TrafficMeter.Traffic.Received;
     }
 
     public void AssertClientSent(int minData = 100)
@@ -122,14 +122,14 @@ internal class ClientServerDom : IAsyncDisposable
 
     public void AssertServerSent(int minData = 500)
     {
-        Assert.AreNotEqual(OldServerSentByteCount, ServerSession.Tunnel.Traffic.Sent,
+        Assert.AreNotEqual(OldServerSentByteCount, ServerSession.Tunnel.TrafficMeter.Traffic.Sent,
             delta: minData,
             "Not enough data has been sent through the server.");
     }
 
     public void AssertServerReceived(int minData = 100)
     {
-        Assert.AreNotEqual(OldServerReceivedByteCount, ServerSession.Tunnel.Traffic.Received,
+        Assert.AreNotEqual(OldServerReceivedByteCount, ServerSession.Tunnel.TrafficMeter.Traffic.Received,
             delta: minData,
             "Not enough data has been received through the server.");
     }

@@ -23,16 +23,16 @@ internal class ClientSessionStatus(
     internal void Update(AccessUsage? value) => _accessUsage = value ?? _accessUsage;
 
     public ClientConnectorStatus ConnectorStatus => connectorService.Status;
-    public Traffic Speed => tunnel.Speed;
-    public Traffic SessionTraffic => tunnel.Traffic;
+    public Traffic Speed => tunnel.TrafficMeter.Speed;
+    public Traffic SessionTraffic => tunnel.TrafficMeter.Traffic;
     public Traffic SessionSplitTraffic => proxyManager.Traffic;
 
     public Traffic CycleTraffic {
-        get => field + tunnel.Traffic;
+        get => field + tunnel.TrafficMeter.Traffic;
     } = accessUsage.CycleTraffic;
 
     public Traffic TotalTraffic {
-        get => field + tunnel.Traffic;
+        get => field + tunnel.TrafficMeter.Traffic;
     } = accessUsage.TotalTraffic;
 
     public int SessionPacketChannelCount => session.CreatedPacketChannelCount;

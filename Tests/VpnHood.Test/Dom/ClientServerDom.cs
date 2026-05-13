@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
@@ -55,7 +56,10 @@ internal class ClientServerDom : IAsyncDisposable
         Collect();
     }
 
-    public static async Task<ClientServerDom> Create(TestHelper testHelper, ClientOptions? clientOptions = null)
+    public static async Task<ClientServerDom> Create(
+        TestHelper testHelper, 
+        ClientOptions? clientOptions = null,
+        Traffic? maxSpeedMbps = null)
     {
         TestAccessManager? accessManager = null;
         VpnHoodServer? server = null;
@@ -77,7 +81,7 @@ internal class ClientServerDom : IAsyncDisposable
 
             accessManager = testHelper.CreateAccessManager(fileAccessManagerOptions);
             server = await testHelper.CreateServer(accessManager, socketFactory: testSocketFactory);
-            var token = testHelper.CreateAccessToken(server);
+            var token = testHelper.CreateAccessToken(server, maxSpeedMbps: maxSpeedMbps);
 
             // Create Client
             clientOptions.AccessKey = token.ToAccessKey();

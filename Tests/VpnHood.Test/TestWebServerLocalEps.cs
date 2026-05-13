@@ -22,6 +22,8 @@ public class TestWebServerLocalEps
     public IPEndPoint QuicEndPoint2 { get; } 
 
     public IPEndPoint TcpDataEndPoint1 { get; }
+    public IPEndPoint TcpUploadEndPoint1 { get; }
+    public IPEndPoint TcpDownloadEndPoint1 { get; }
 
     public IPEndPoint HttpV4EndPointBlockedClient { get; }
     public IPEndPoint HttpV4EndPointBlockedServer { get; }
@@ -76,6 +78,8 @@ public class TestWebServerLocalEps
         QuicEndPoint2 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
 
         TcpDataEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
+        TcpUploadEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
+        TcpDownloadEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
 
         HttpV4EndPointBlockedClient = AllocateFreeTcpEndPoint(testIps.LocalBlockedClientIpAddress);
         HttpV4EndPointBlockedServer = AllocateFreeTcpEndPoint(testIps.LocalBlockedServerIpAddress);
@@ -102,6 +106,14 @@ public class TestWebServerLocalEps
 
     public IReadOnlyList<IPEndPoint> AllTcpDataEndPoints => [
         TcpDataEndPoint1
+    ];
+
+    public IReadOnlyList<IPEndPoint> AllTcpUploadEndPoints => [
+        TcpUploadEndPoint1
+    ];
+
+    public IReadOnlyList<IPEndPoint> AllTcpDownloadEndPoints => [
+        TcpDownloadEndPoint1
     ];
 
     public IReadOnlyList<IPEndPoint> AllUdpEchoEndPoints => [

@@ -22,7 +22,6 @@ public class ClientTunnelTest : TestBase
     public async Task UdpChannel()
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
-        VhLogger.Instance = VhLogger.CreateConsoleLogger();
         var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Udp);
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
 
@@ -36,7 +35,6 @@ public class ClientTunnelTest : TestBase
     public async Task UdpChannel_Switch()
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
-        VhLogger.Instance = VhLogger.CreateConsoleLogger();
         var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Udp);
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
 

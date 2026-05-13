@@ -125,6 +125,20 @@ public class TestWebServer : IDisposable
             _tcpDataListeners.Add(listener);
             _ = AcceptTcpDataClients(listener);
         }
+
+        foreach (var endpoint in LocalEps.AllTcpUploadEndPoints) {
+            var listener = new TcpListener(endpoint);
+            listener.Start();
+            _tcpDataListeners.Add(listener);
+            _ = AcceptTcpUploadClients(listener);
+        }
+
+        foreach (var endpoint in LocalEps.AllTcpDownloadEndPoints) {
+            var listener = new TcpListener(endpoint);
+            listener.Start();
+            _tcpDataListeners.Add(listener);
+            _ = AcceptTcpDownloadClients(listener);
+        }
     }
 
     private async Task AcceptTcpDataClients(TcpListener listener)
@@ -141,6 +155,77 @@ public class TestWebServer : IDisposable
         var buffer = new byte[2000];
         Random.Shared.NextBytes(buffer);
         await client.GetStream().WriteAsync(buffer);
+    }
+
+    private async Task AcceptTcpUploadClients(TcpListener listener)
+    {
+        while (!CancellationToken.IsCancellationRequested) {
+            var client = await listener.AcceptTcpClientAsync(CancellationToken);
+            _ = HandleTcpUpload(client);
+        }
+    }
+
+    private static async Task HandleTcpUpload(TcpClient client)
+    {
+        using var _ = client;
+        var stream = client.GetStream();
+
+        // Read 4-byte length prefix (big-endian)
+        var lenBuf = new byte[4];
+        await stream.ReadExactlyAsync(lenBuf);
+        var byteCount = (int)(
+            (uint)lenBuf[0] << 24 | (uint)lenBuf[1] << 16 |
+            (uint)lenBuf[2] << 8 | lenBuf[3]);
+
+        // Read exactly byteCount bytes and compute checksum
+        var data = new byte[byteCount];
+        await stream.ReadExactlyAsync(data);
+        uint checksum = 0;
+        foreach (var b in data)
+            checksum += b;
+
+        // Send back 4-byte checksum (big-endian)
+        var result = new byte[] {
+            (byte)(checksum >> 24), (byte)(checksum >> 16),
+            (byte)(checksum >> 8), (byte)checksum
+        };
+        await stream.WriteAsync(result);
+    }
+
+    private async Task AcceptTcpDownloadClients(TcpListener listener)
+    {
+        while (!CancellationToken.IsCancellationRequested) {
+            var client = await listener.AcceptTcpClientAsync(CancellationToken);
+            _ = HandleTcpDownload(client);
+        }
+    }
+
+    private static async Task HandleTcpDownload(TcpClient client)
+    {
+        using var _ = client;
+        var stream = client.GetStream();
+
+        // Read 4-byte length prefix (big-endian)
+        var lenBuf = new byte[4];
+        await stream.ReadExactlyAsync(lenBuf);
+        var byteCount = (int)(
+            (uint)lenBuf[0] << 24 | (uint)lenBuf[1] << 16 |
+            (uint)lenBuf[2] << 8 | lenBuf[3]);
+
+        // Generate random data and compute checksum
+        var data = new byte[byteCount];
+        Random.Shared.NextBytes(data);
+        uint checksum = 0;
+        foreach (var b in data)
+            checksum += b;
+
+        // Send data followed by 4-byte checksum (big-endian)
+        await stream.WriteAsync(data);
+        var result = new byte[] {
+            (byte)(checksum >> 24), (byte)(checksum >> 16),
+            (byte)(checksum >> 8), (byte)checksum
+        };
+        await stream.WriteAsync(result);
     }
 
     private void StartQuicEchoServer()

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
@@ -8,6 +9,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
+using VpnHood.Test.Dom;
 using VpnHood.Test.Packets;
 
 namespace VpnHood.Test.Tests;
@@ -207,110 +209,51 @@ public class TrafficMeterTest : TestBase
     }
 
     [TestMethod]
-    public async Task Throttles_max_speed_via_Tunnel()
+    public async Task Max_upload_via_StreamPacketChannel()
     {
-        var sessionId = 1UL;
-        var sessionKey = VhUtils.GenerateKey();
+        // Note: in tests the IsProxyMode is always true
 
-        using var server = new ServerUdpTunnelFixture(TestHelper, sessionId, sessionKey);
-        // ReSharper disable once AccessToDisposedClosure
-        server.Tunnel.PacketReceived += (_, ipPacket) => server.Channel.SendPacketQueued(ipPacket.Clone());
+        var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Tcp);
+        await using var clientServerDom = await ClientServerDom.Create(TestHelper,
+            clientOption, maxSpeedMbps: new Traffic(sent: 1, received: 0));
 
-        using var client = new ClientUdpTunnelFixture(TestHelper, server.LocalEndPoint, sessionId, sessionKey);
-        var receivedCount = 0;
-        client.Tunnel.PacketReceived += (_, _) => Interlocked.Increment(ref receivedCount);
+        // Upload is throttled at 1 Mbps; sending 1 MB should take well over 500 ms
+        var uploadStopwatch = Stopwatch.StartNew();
+        await TestHelper.Test_TcpUpload(100_000, cancellationToken: TestCt);
+        uploadStopwatch.Stop();
+        Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(500), uploadStopwatch.Elapsed,
+            $"Upload should be throttled (>500 ms). Elapsed: {uploadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
 
-        // warm up: send a packet and wait for round-trip
-        var warmup = PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true));
-        client.Tunnel.SendPacketQueued(warmup);
-        await AssertEqualsWait(1, () => receivedCount);
-
-        // set an extreme send limit (1 byte/sec) so every packet in the burst below is throttled and dropped
-        //client.Tunnel.TrafficMeter.MaxSpeed = new Traffic(sent: 1, received: 0);
-
-        var packets = Enumerable.Range(0, 1000)
-            .Select(_ => PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)))
-            .ToArray();
-
-        var stopwatch = Stopwatch.StartNew();
-        foreach (var packet in packets)
-            client.Tunnel.SendPacketQueued(packet);
-
-        // wait long enough that any non-dropped packet would have been echoed back
-        await Task.Delay(1000, TestCt);
-        stopwatch.Stop();
-
-        Assert.IsLessThanOrEqualTo(receivedCount, 1,
-            "UDP packets should be dropped when send throttle is exceeded instead of being queued.");
-        Assert.IsLessThan(TimeSpan.FromSeconds(3), stopwatch.Elapsed,
-            $"UDP throttling should not block the sender. Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s");
+        // Download has no throttle; receiving 1 MB locally should complete in under 100 ms
+        var downloadStopwatch = Stopwatch.StartNew();
+        await TestHelper.Test_TcpDownload(100_000, cancellationToken: TestCt);
+        downloadStopwatch.Stop();
+        Assert.IsLessThan(TimeSpan.FromMilliseconds(100), downloadStopwatch.Elapsed,
+            $"Download should not be throttled (<100 ms). Elapsed: {downloadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
     }
 
     [TestMethod]
-    public async Task Throttles_max_speed_via_StreamPacketChannel()
+    public async Task Max_download_via_StreamPacketChannel()
     {
-        var tcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var tcpListener = new TcpListener(tcpEndPoint);
-        tcpListener.Start();
-        var listenerTask = tcpListener.AcceptTcpClientAsync(TestCt);
+        // Note: in tests the IsProxyMode is always true
 
-        using var tcpClient = new TcpClient();
-        await tcpClient.ConnectAsync(tcpEndPoint, TestCt);
-        var serverTcpClient = await listenerTask;
-        tcpListener.Stop();
+        var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Tcp);
+        await using var clientServerDom = await ClientServerDom.Create(TestHelper,
+            clientOption, maxSpeedMbps: new Traffic(sent: 0, received: 1));
 
-        using var serverTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
-        await using var serverConn = new TcpConnection(serverTcpClient, connectionName: "server", isServer: true);
-        using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
-            RequestTime = DateTime.UtcNow,
-            Connection = serverConn,
-            Blocking = false,
-            AutoDisposePackets = true,
-            Lifespan = null,
-            ChannelId = Guid.NewGuid().ToString(),
-            TrafficMeter = serverTunnel.TrafficMeter
-        });
-        serverTunnel.AddChannel(serverChannel);
-        // ReSharper disable once AccessToDisposedClosure
-        serverTunnel.PacketReceived += (_, ipPacket) => serverChannel.SendPacketQueued(ipPacket.Clone());
+        // Upload has no throttle; sending 1 MB locally should complete in under 100 ms
+        var uploadStopwatch = Stopwatch.StartNew();
+        await TestHelper.Test_TcpUpload(100_000, cancellationToken: TestCt);
+        uploadStopwatch.Stop();
+        Assert.IsLessThan(TimeSpan.FromMilliseconds(100), uploadStopwatch.Elapsed,
+            $"Upload should not be throttled (<100 ms). Elapsed: {uploadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
 
-        using var clientTunnel = new Tunnel(TestHelper.CreateTunnelOptions());
-        await using var clientConn = new TcpConnection(tcpClient, connectionName: "client", isServer: false);
-        using var clientChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
-            RequestTime = DateTime.UtcNow,
-            Connection = clientConn,
-            Blocking = false,
-            AutoDisposePackets = true,
-            Lifespan = null,
-            ChannelId = Guid.NewGuid().ToString(),
-            TrafficMeter = clientTunnel.TrafficMeter
-        });
-        clientTunnel.AddChannel(clientChannel);
-
-        var receivedCount = 0;
-        clientTunnel.PacketReceived += (_, _) => Interlocked.Increment(ref receivedCount);
-
-        // warm up
-        clientTunnel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
-        await AssertEqualsWait(1, () => receivedCount);
-
-        // set tight send speed limit
-        clientTunnel.TrafficMeter.MaxSpeed = new Traffic(sent: 1, received: 0);
-
-        // send burst of packets through the tunnel
-        var packets = Enumerable.Range(0, 5)
-            .Select(_ => PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)))
-            .ToArray();
-
-        var stopwatch = Stopwatch.StartNew();
-        foreach (var packet in packets)
-            clientTunnel.SendPacketQueued(packet);
-
-        await AssertEqualsWait(1 + packets.Length, () => receivedCount, timeout: 15000);
-        stopwatch.Stop();
-
-        Assert.IsGreaterThanOrEqualTo(TimeSpan.FromSeconds(1), stopwatch.Elapsed,
-            $"StreamPacketChannel Tunnel should throttle. Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s");
+        // Download is throttled at 1 Mbps; receiving 1 MB should take well over 500 ms
+        var downloadStopwatch = Stopwatch.StartNew();
+        await TestHelper.Test_TcpDownload(100_000, cancellationToken: TestCt);
+        downloadStopwatch.Stop();
+        Assert.IsGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(500), downloadStopwatch.Elapsed,
+            $"Download should be throttled (>500 ms). Elapsed: {downloadStopwatch.Elapsed.TotalMilliseconds:F0} ms");
     }
 
     [TestMethod]

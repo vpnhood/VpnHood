@@ -46,4 +46,6 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public IPAddress PingV4Address1 => testIps.RemoteTestIps[0];
     public IPAddress PingV6Address1 => testIps.RemoteTestIpV6;
     public IPEndPoint TcpDataEndPoint1 => MapToRemote(localEps.TcpDataEndPoint1);
+    public IPEndPoint TcpUploadEndPoint1 => MapToRemote(localEps.TcpUploadEndPoint1);
+    public IPEndPoint TcpDownloadEndPoint1 => MapToRemote(localEps.TcpDownloadEndPoint1);
 }

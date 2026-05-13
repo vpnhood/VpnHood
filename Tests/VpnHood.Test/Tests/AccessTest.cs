@@ -261,7 +261,7 @@ public class AccessTest : TestBase
             var serverMaxSpeed = serverSession.Tunnel.TrafficMeter.MaxSpeed;
             Assert.AreEqual(50 * 1_000_000 / 8, serverMaxSpeed.Sent,
                 "Server send limit should be 50 Mbps converted to bps (client download = server send).");
-            Assert.AreEqual((long)(5 * 1_000_000 / 8 * 1.2), serverMaxSpeed.Received,
+            Assert.AreEqual((long)(5 * 1_000_000 / 8d * 1.2), serverMaxSpeed.Received,
                 "Server receive limit should be 5 Mbps * ReceiveSpeedGrace(1.2) converted to bps (client upload = server receive).");
         }
 

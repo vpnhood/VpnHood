@@ -25,6 +25,8 @@ public class TestWebServer : IDisposable
 
     private readonly List<WebserverLite> _webServers = [];
     private IReadOnlyList<UdpClient> UdpClients { get; }
+    private IReadOnlyList<UdpClient> UdpUploadClients { get; }
+    private IReadOnlyList<UdpClient> UdpDownloadClients { get; }
     private readonly List<QuicTesterServer> _quicServers = [];
     private readonly List<TcpListener> _tcpDataListeners = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -36,6 +38,8 @@ public class TestWebServer : IDisposable
         LocalEps = new TestWebServerLocalEps(testIps);
         MockEps = new TestWebServerMockEps(LocalEps, testIps);
         UdpClients = LocalEps.AllUdpEchoEndPoints.Select(x => new UdpClient(x)).ToArray();
+        UdpUploadClients = LocalEps.AllUdpUploadEndPoints.Select(x => new UdpClient(x)).ToArray();
+        UdpDownloadClients = LocalEps.AllUdpDownloadEndPoints.Select(x => new UdpClient(x)).ToArray();
 
         // Init files
         FileContent1 = string.Empty;
@@ -84,6 +88,8 @@ public class TestWebServer : IDisposable
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting UDP...");
         StartUdpEchoServer();
+        StartUdpUploadServer();
+        StartUdpDownloadServer();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting QUIC...");
         StartQuicEchoServer();
@@ -114,6 +120,58 @@ public class TestWebServer : IDisposable
         while (!CancellationToken.IsCancellationRequested) {
             var udpResult = await udpClient.ReceiveAsync(CancellationToken);
             await udpClient.SendAsync(udpResult.Buffer, udpResult.RemoteEndPoint, CancellationToken);
+        }
+    }
+
+    private void StartUdpUploadServer()
+    {
+        foreach (var udpClient in UdpUploadClients)
+            _ = RunUdpUploadServer(udpClient);
+    }
+
+    private async Task RunUdpUploadServer(UdpClient udpClient)
+    {
+        while (!CancellationToken.IsCancellationRequested) {
+            var result = await udpClient.ReceiveAsync(CancellationToken);
+            var buf = result.Buffer;
+            // First 4 bytes are the declared length (big-endian), rest is data
+            var declaredLength = (int)((uint)buf[0] << 24 | (uint)buf[1] << 16 | (uint)buf[2] << 8 | buf[3]);
+            uint checksum = 0;
+            for (var i = 4; i < 4 + declaredLength && i < buf.Length; i++)
+                checksum += buf[i];
+            var response = new[] {
+                (byte)(checksum >> 24), (byte)(checksum >> 16),
+                (byte)(checksum >> 8), (byte)checksum
+            };
+            await udpClient.SendAsync(response, result.RemoteEndPoint, CancellationToken);
+        }
+    }
+
+    private void StartUdpDownloadServer()
+    {
+        foreach (var udpClient in UdpDownloadClients)
+            _ = RunUdpDownloadServer(udpClient);
+    }
+
+    private async Task RunUdpDownloadServer(UdpClient udpClient)
+    {
+        while (!CancellationToken.IsCancellationRequested) {
+            var result = await udpClient.ReceiveAsync(CancellationToken);
+            var buf = result.Buffer;
+            var byteCount = (int)((uint)buf[0] << 24 | (uint)buf[1] << 16 | (uint)buf[2] << 8 | buf[3]);
+            var data = new byte[byteCount];
+            Random.Shared.NextBytes(data);
+            uint checksum = 0;
+            foreach (var b in data)
+                checksum += b;
+            // Response: data + 4-byte checksum
+            var response = new byte[byteCount + 4];
+            data.CopyTo(response, 0);
+            response[byteCount] = (byte)(checksum >> 24);
+            response[byteCount + 1] = (byte)(checksum >> 16);
+            response[byteCount + 2] = (byte)(checksum >> 8);
+            response[byteCount + 3] = (byte)checksum;
+            await udpClient.SendAsync(response, result.RemoteEndPoint, CancellationToken);
         }
     }
 
@@ -185,7 +243,7 @@ public class TestWebServer : IDisposable
             checksum += b;
 
         // Send back 4-byte checksum (big-endian)
-        var result = new byte[] {
+        var result = new[] {
             (byte)(checksum >> 24), (byte)(checksum >> 16),
             (byte)(checksum >> 8), (byte)checksum
         };
@@ -221,7 +279,7 @@ public class TestWebServer : IDisposable
 
         // Send data followed by 4-byte checksum (big-endian)
         await stream.WriteAsync(data);
-        var result = new byte[] {
+        var result = new[] {
             (byte)(checksum >> 24), (byte)(checksum >> 16),
             (byte)(checksum >> 8), (byte)checksum
         };
@@ -251,6 +309,12 @@ public class TestWebServer : IDisposable
             webServer.TryStop(); // dispose has issues if there are active connections
 
         foreach (var udpClient in UdpClients)
+            udpClient.Dispose();
+
+        foreach (var udpClient in UdpUploadClients)
+            udpClient.Dispose();
+
+        foreach (var udpClient in UdpDownloadClients)
             udpClient.Dispose();
 
         foreach (var quicServer in _quicServers)

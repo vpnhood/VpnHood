@@ -48,4 +48,6 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public IPEndPoint TcpDataEndPoint1 => MapToRemote(localEps.TcpDataEndPoint1);
     public IPEndPoint TcpUploadEndPoint1 => MapToRemote(localEps.TcpUploadEndPoint1);
     public IPEndPoint TcpDownloadEndPoint1 => MapToRemote(localEps.TcpDownloadEndPoint1);
+    public IPEndPoint UdpUploadEndPoint1 => MapToRemote(localEps.UdpUploadEndPoint1);
+    public IPEndPoint UdpDownloadEndPoint1 => MapToRemote(localEps.UdpDownloadEndPoint1);
 }

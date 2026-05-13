@@ -9,6 +9,7 @@ using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Socks5ProxyServers;
+using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test.Tests;
 

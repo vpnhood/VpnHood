@@ -142,10 +142,10 @@ public class TunnelTest : TestBase
             clientUdpChannelDisposable.SendPacketQueued(ipPacket.Clone());
 
         await VhTestUtil.AssertEqualsWait(packets.Count, () => serverReceivedPackets.Count, 
-            cancellationToken: TestContext.CancellationToken);
+            cancellationToken: TestCt);
 
         await VhTestUtil.AssertEqualsWait(packets.Count, () => clientReceivedPackets.Count, 
-            cancellationToken: TestContext.CancellationToken);
+            cancellationToken: TestCt);
     }
 
     [TestMethod]
@@ -200,8 +200,8 @@ public class TunnelTest : TestBase
         foreach (var ipPacket in ipPackets)
             clientTunnel.SendPacketQueued(ipPacket);
 
-        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => serverReceivedPackets.Count, cancellationToken: TestContext.CancellationToken);
-        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => clientReceivedPackets.Count, cancellationToken: TestContext.CancellationToken);
+        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => serverReceivedPackets.Count, cancellationToken: TestCt);
+        await VhTestUtil.AssertEqualsWait(ipPackets.Count, () => clientReceivedPackets.Count, cancellationToken: TestCt);
     }
 
     private static async Task SimpleLoopback(TcpListener tcpListener, CancellationToken cancellationToken)
@@ -328,5 +328,4 @@ public class TunnelTest : TestBase
         }
     }
 
-    public TestContext TestContext { get; set; }
 }

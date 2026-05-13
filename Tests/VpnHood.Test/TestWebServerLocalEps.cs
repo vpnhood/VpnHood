@@ -24,6 +24,8 @@ public class TestWebServerLocalEps
     public IPEndPoint TcpDataEndPoint1 { get; }
     public IPEndPoint TcpUploadEndPoint1 { get; }
     public IPEndPoint TcpDownloadEndPoint1 { get; }
+    public IPEndPoint UdpUploadEndPoint1 { get; }
+    public IPEndPoint UdpDownloadEndPoint1 { get; }
 
     public IPEndPoint HttpV4EndPointBlockedClient { get; }
     public IPEndPoint HttpV4EndPointBlockedServer { get; }
@@ -80,6 +82,8 @@ public class TestWebServerLocalEps
         TcpDataEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
         TcpUploadEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
         TcpDownloadEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
+        UdpUploadEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
+        UdpDownloadEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
 
         HttpV4EndPointBlockedClient = AllocateFreeTcpEndPoint(testIps.LocalBlockedClientIpAddress);
         HttpV4EndPointBlockedServer = AllocateFreeTcpEndPoint(testIps.LocalBlockedServerIpAddress);
@@ -123,5 +127,13 @@ public class TestWebServerLocalEps
         UdpEchoEndPoint1V6,
         UdpEchoEndPoint2V6,
         UdpNsEchoEndPoint1
+    ];
+
+    public IReadOnlyList<IPEndPoint> AllUdpUploadEndPoints => [
+        UdpUploadEndPoint1
+    ];
+
+    public IReadOnlyList<IPEndPoint> AllUdpDownloadEndPoints => [
+        UdpDownloadEndPoint1
     ];
 }

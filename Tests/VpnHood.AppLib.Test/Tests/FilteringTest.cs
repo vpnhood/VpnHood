@@ -60,14 +60,14 @@ public class FilteringTest : TestAppBase
 
         // test includes
         var oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
-        await TestHelper.Test_Quic(uri: MockEps.QuicUrl1);
+        await TestHelper.Test_QuicEcho(uri: MockEps.QuicUrl1);
         var newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
         Assert.AreEqual(oldStat.StreamTunnelledCount + 1, newStat.StreamTunnelledCount);
         Assert.AreEqual(oldStat.StreamPassthruCount, newStat.StreamPassthruCount);
 
         // test excludes
         oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
-        await TestHelper.Test_Quic(uri: MockEps.QuicUrl2);
+        await TestHelper.Test_QuicEcho(uri: MockEps.QuicUrl2);
         newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
         Assert.AreEqual(oldStat.StreamTunnelledCount, newStat.StreamTunnelledCount);
         Assert.AreEqual(oldStat.StreamPassthruCount + 1, newStat.StreamPassthruCount);
@@ -118,13 +118,13 @@ public class FilteringTest : TestAppBase
         // blocked QUIC should fail
         Log("Testing blocked QUIC domain...");
         var ex = await Assert.ThrowsExactlyAsync<QuicException>(() =>
-             TestHelper.Test_Quic(uri: MockEps.QuicUrl1, timeout: TimeSpan.FromSeconds(1)));
+             TestHelper.Test_QuicEcho(uri: MockEps.QuicUrl1, timeout: TimeSpan.FromSeconds(1)));
         Assert.AreEqual(QuicError.ConnectionTimeout, ex.QuicError);
 
         // non-blocked QUIC should still work
         Log("Testing non-blocked QUIC domain...");
         var oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
-        await TestHelper.Test_Quic(uri: MockEps.QuicUrl2);
+        await TestHelper.Test_QuicEcho(uri: MockEps.QuicUrl2);
         var newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
         Assert.AreEqual(oldStat.StreamPassthruCount, newStat.StreamPassthruCount);
         Assert.AreEqual(oldStat.StreamTunnelledCount + 1, newStat.StreamTunnelledCount);

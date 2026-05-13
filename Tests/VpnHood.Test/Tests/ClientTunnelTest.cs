@@ -155,8 +155,16 @@ public class ClientTunnelTest : TestBase
     {
         clientServer.Collect();
 
-        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: TcpData");
-        await TestHelper.Test_TcpData();
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: TcpUpload");
+        await TestHelper.Test_TcpUpload();
+
+        clientServer.AssertClientSent();
+        clientServer.AssertServerReceived();
+
+        clientServer.Collect();
+
+        VhLogger.Instance.LogInformation(GeneralEventId.Test, "Test: TcpDownload");
+        await TestHelper.Test_TcpDownload();
 
         clientServer.AssertClientReceived();
         clientServer.AssertServerSent();

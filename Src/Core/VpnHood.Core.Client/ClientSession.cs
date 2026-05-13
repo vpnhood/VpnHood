@@ -90,8 +90,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             Mtu = config.Mtu
         });
 
-        if (config.MaxSpeed?.Total > 0)
-            _tunnel.TrafficMeter.MaxSpeed = new Traffic(config.MaxSpeed?.Sent ?? 0, config.MaxSpeed?.Received ?? 0);
+        if (config.MaxSpeedMbps?.Sent > 0 || config.MaxSpeedMbps?.Received > 0)
+            _tunnel.TrafficMeter.MaxSpeed = new Traffic(
+                sent: config.MaxSpeedMbps.Value.Sent * 1_000_000 / 8,
+                received: config.MaxSpeedMbps.Value.Received * 1_000_000 / 8);
 
         _tunnel.PacketReceived += Tunnel_PacketReceived;
 

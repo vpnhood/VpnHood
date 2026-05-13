@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Toolkit.Utils;
@@ -73,6 +74,9 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         var maxTrafficOptions = new Option<int?>("-maxTraffic") {
             Description = "MaximumTraffic in MB. Default: unlimited"
         };
+        var maxSpeedOption = new Option<int?>("-maxSpeed") {
+            Description = "MaximumSpeed in Mbps for both upload and download. Default: unlimited"
+        };
         var expirationTimeOption = new Option<DateTime?>("-expire") {
             Description = "ExpirationTime. Default: Never Expire. Format: 2030/01/25"
         };
@@ -80,14 +84,17 @@ public class FileAccessManagerCommand(FileAccessManager fileAccessManager)
         command.Add(nameOption);
         command.Add(maxClientOption);
         command.Add(maxTrafficOptions);
+        command.Add(maxSpeedOption);
         command.Add(expirationTimeOption);
 
         command.SetAction(async (parseResult, cancellationToken) => {
+            var maxSpeedMbps = parseResult.GetValue(maxSpeedOption);
             var accessToken = fileAccessManager.AccessTokenService.Create(
                 tokenName: parseResult.GetValue(nameOption),
                 maxClientCount: parseResult.GetValue(maxClientOption) ?? 2,
                 maxTrafficByteCount: (parseResult.GetValue(maxTrafficOptions) ?? 0) * 1_000_000,
-                expirationTime: parseResult.GetValue(expirationTimeOption)
+                expirationTime: parseResult.GetValue(expirationTimeOption),
+                maxSpeedMbps: maxSpeedMbps != null ? new Traffic(sent: maxSpeedMbps.Value, received: maxSpeedMbps.Value) : null
             );
 
             Console.WriteLine("The following token has been generated: ");

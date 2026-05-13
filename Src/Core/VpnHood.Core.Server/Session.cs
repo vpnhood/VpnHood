@@ -135,10 +135,10 @@ public class Session : IDisposable
             Mtu = Math.Min(TunnelDefaults.MtuServer, extraData.Mtu)
         });
 
-        if (sessionResponseEx.AccessInfo?.MaxSpeed != null)
+        if (sessionResponseEx.AccessInfo?.MaxSpeedMbps?.Sent > 0 || sessionResponseEx.AccessInfo?.MaxSpeedMbps?.Received > 0)
             Tunnel.TrafficMeter.MaxSpeed = new Traffic(
-                sent: sessionResponseEx.AccessInfo.MaxSpeed.Value.Received,
-                received: (long)(sessionResponseEx.AccessInfo.MaxSpeed.Value.Sent * ReceiveSpeedGrace));
+                sent: sessionResponseEx.AccessInfo.MaxSpeedMbps.Value.Received * 1_000_000 / 8,
+                received: (long)Math.Ceiling(sessionResponseEx.AccessInfo.MaxSpeedMbps.Value.Sent * 1_000_000d / 8 * ReceiveSpeedGrace));
 
         Tunnel.PacketReceived += Tunnel_PacketReceived;
 

@@ -40,7 +40,7 @@ public class FileAccessManagerTest : TestBase
         var sessionRequestEx1 = CreateSessionRequestEx(token1);
         sessionRequestEx1.ExtraData = "1234";
 
-        var token2 = accessManager1.AccessTokenService.Create(maxSpeed: new Traffic(sent: 123, received: 456));
+        var token2 = accessManager1.AccessTokenService.Create(maxSpeedMbps: new Traffic(sent: 5, received: 50));
         var sessionRequestEx2 = CreateSessionRequestEx(accessManager1.GetToken(token2));
 
         var token3 = accessManager1.CreateToken();
@@ -48,9 +48,9 @@ public class FileAccessManagerTest : TestBase
         // ************
         // *** TEST ***: get all tokensId
         var accessTokenDatas = await accessManager1.AccessTokenService.List(TestCt);
-        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token1.TokenId));
-        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
-        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
+        Assert.Contains(x => x.AccessToken.TokenId == token1.TokenId, accessTokenDatas);
+        Assert.Contains(x => x.AccessToken.TokenId == token2.TokenId, accessTokenDatas);
+        Assert.Contains(x => x.AccessToken.TokenId == token3.TokenId, accessTokenDatas);
         Assert.HasCount(3, accessTokenDatas);
 
 
@@ -70,9 +70,9 @@ public class FileAccessManagerTest : TestBase
         // *** TEST ***: Removing token
         accessManager1.AccessTokenService.Delete(token1.TokenId, TestCt).Wait();
         accessTokenDatas = await accessManager1.AccessTokenService.List(TestCt);
-        Assert.IsFalse(accessTokenDatas.Any(x => x.AccessToken.TokenId == token1.TokenId));
-        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
-        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
+        Assert.DoesNotContain(x => x.AccessToken.TokenId == token1.TokenId, accessTokenDatas);
+        Assert.Contains(x => x.AccessToken.TokenId == token2.TokenId, accessTokenDatas);
+        Assert.Contains(x => x.AccessToken.TokenId == token3.TokenId, accessTokenDatas);
         Assert.HasCount(2, accessTokenDatas);
         Assert.AreEqual(SessionErrorCode.AccessError,
             (await accessManager1.Session_Create(sessionRequestEx1, TestCt)).ErrorCode);
@@ -82,8 +82,8 @@ public class FileAccessManagerTest : TestBase
         var accessManager2 = new FileAccessManager(storagePath, fileAccessManagerOptions);
 
         accessTokenDatas = await accessManager2.AccessTokenService.List(TestCt);
-        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token2.TokenId));
-        Assert.IsTrue(accessTokenDatas.Any(x => x.AccessToken.TokenId == token3.TokenId));
+        Assert.Contains(x => x.AccessToken.TokenId == token2.TokenId, accessTokenDatas);
+        Assert.Contains(x => x.AccessToken.TokenId == token3.TokenId, accessTokenDatas);
         Assert.HasCount(2, accessTokenDatas);
 
         // ************
@@ -91,7 +91,7 @@ public class FileAccessManagerTest : TestBase
         var sessionResponseEx2 = await accessManager2.Session_Create(sessionRequestEx2, TestCt);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx2.ErrorCode,
             "Access has not been retrieved");
-        Assert.AreEqual(new Traffic(sent: 123, received: 456), sessionResponseEx2.AccessInfo?.MaxSpeed);
+        Assert.AreEqual(new Traffic(sent: 5, received: 50), sessionResponseEx2.AccessInfo?.MaxSpeedMbps);
 
         // ************
         // *** TEST ***: token must be retrieved after reloading
@@ -99,8 +99,8 @@ public class FileAccessManagerTest : TestBase
         var accessManager3 = new FileAccessManager(storagePath, fileAccessManagerOptions);
         accessTokenDatas = await accessManager3.AccessTokenService.List(TestCt);
         Assert.HasCount(3, accessTokenDatas);
-        Assert.AreEqual(new Traffic(sent: 123, received: 456),
-            accessTokenDatas.Single(x => x.AccessToken.TokenId == token2.TokenId).AccessToken.MaxSpeed);
+        Assert.AreEqual(new Traffic(sent: 5, received: 50),
+            accessTokenDatas.Single(x => x.AccessToken.TokenId == token2.TokenId).AccessToken.MaxSpeedMbps);
         Assert.AreEqual(SessionErrorCode.Ok, (await accessManager3.Session_Create(sessionRequestEx2, TestCt)).ErrorCode,
             "access has not been retrieved");
     }

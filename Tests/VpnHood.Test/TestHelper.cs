@@ -284,14 +284,14 @@ public class TestHelper : IDisposable
     }
 
     public Token CreateAccessToken(FileAccessManager fileAccessManager,
-        int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null, Traffic? maxSpeed = null)
+        int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null, Traffic? maxSpeedMbps = null)
     {
         var accessToken = fileAccessManager.AccessTokenService.Create(
             tokenName: $"Test Server {++_accessTokenIndex}",
             maxClientCount: maxClientCount,
             maxTrafficByteCount: maxTrafficByteCount,
             expirationTime: expirationTime,
-            maxSpeed: maxSpeed
+            maxSpeedMbps: maxSpeedMbps
         );
 
         return fileAccessManager.GetToken(accessToken);
@@ -311,10 +311,10 @@ public class TestHelper : IDisposable
 
     public Token CreateAccessToken(VpnHoodServer server,
         int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null, 
-        Traffic? maxSpeed = null)
+        Traffic? maxSpeedMbps = null)
     {
         var fileAccessManager = GetFileAccessManagerFromServer(server);
-        return CreateAccessToken(fileAccessManager, maxClientCount, maxTrafficByteCount, expirationTime, maxSpeed);
+        return CreateAccessToken(fileAccessManager, maxClientCount, maxTrafficByteCount, expirationTime, maxSpeedMbps);
     }
 
     public string CreateAccessManagerWorkingDir()

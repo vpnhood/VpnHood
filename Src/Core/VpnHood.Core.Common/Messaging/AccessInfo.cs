@@ -10,7 +10,7 @@ public class AccessInfo
     public long MaxCycleTraffic { get; set; }
     public long MaxTotalTraffic { get; set; }
     public int MaxDeviceCount { get; init; }
-    public Traffic? MaxSpeed { get; init; }
+    public Traffic? MaxSpeedMbps { get; init; }
     public int DeviceLifeSpan { get; init; } // In days
     public AccessDevicesSummary? DevicesSummary { get; init; }
 }

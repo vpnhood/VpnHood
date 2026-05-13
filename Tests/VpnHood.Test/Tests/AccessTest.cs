@@ -229,7 +229,7 @@ public class AccessTest : TestBase
         var token = TestHelper.CreateAccessToken(server, maxClientCount: 2,
             expirationTime: expired,
             maxTrafficByteCount: 2_000_000,
-            maxSpeed: new Traffic(2020, 3030));
+            maxSpeedMbps: new Traffic(5, 50));
 
         // create default token with 2 client count
         await using (var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(), token: token)) {
@@ -249,11 +249,20 @@ public class AccessTest : TestBase
             Assert.AreEqual(SessionSuppressType.None, client2.RequiredSession.Info.SuppressedTo);
             Assert.AreEqual(2, accessInfo.MaxDeviceCount);
             Assert.AreEqual(2_000_000, accessInfo.MaxTotalTraffic);
-            Assert.AreEqual(new Traffic(2020, 3030), accessInfo.MaxSpeed);
+            Assert.AreEqual(new Traffic(5, 50), accessInfo.MaxSpeedMbps);
             Assert.IsTrue(accessInfo.IsPremium);
             Assert.AreEqual(expired, accessInfo.ExpirationTime);
             Assert.IsLessThanOrEqualTo(time, accessInfo.CreatedTime);
             Assert.IsLessThanOrEqualTo(time, accessInfo.LastUsedTime, $"Diff: {(time - accessInfo.LastUsedTime).TotalSeconds}sec");
+
+            // verify server-side TrafficMeter was configured with correct bps values converted from Mbps
+            // MaxSpeedMbps(sent=5, received=50): server maps received->sent and sent->received with ReceiveSpeedGrace(1.2)
+            var serverSession = server.GetSession(client2);
+            var serverMaxSpeed = serverSession.Tunnel.TrafficMeter.MaxSpeed;
+            Assert.AreEqual(50 * 1_000_000 / 8, serverMaxSpeed.Sent,
+                "Server send limit should be 50 Mbps converted to bps (client download = server send).");
+            Assert.AreEqual((long)(5 * 1_000_000 / 8 * 1.2), serverMaxSpeed.Received,
+                "Server receive limit should be 5 Mbps * ReceiveSpeedGrace(1.2) converted to bps (client upload = server receive).");
         }
 
         await Task.Delay(200, TestCt);

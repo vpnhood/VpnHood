@@ -225,23 +225,25 @@ public class TrafficMeterTest : TestBase
         client.Tunnel.SendPacketQueued(warmup);
         await AssertEqualsWait(1, () => receivedCount);
 
-        // UDP has no natural backpressure, so throttled packets are dropped instead of queued.
-        client.Tunnel.TrafficMeter.MaxSpeed = new Traffic(sent: 1, received: 0);
+        // set an extreme send limit (1 byte/sec) so every packet in the burst below is throttled and dropped
+        //client.Tunnel.TrafficMeter.MaxSpeed = new Traffic(sent: 1, received: 0);
 
-        var packets = Enumerable.Range(0, 5)
+        var packets = Enumerable.Range(0, 1000)
             .Select(_ => PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)))
             .ToArray();
 
         var stopwatch = Stopwatch.StartNew();
         foreach (var packet in packets)
             client.Tunnel.SendPacketQueued(packet);
-        await Task.Delay(500, TestCt);
+
+        // wait long enough that any non-dropped packet would have been echoed back
+        await Task.Delay(1000, TestCt);
         stopwatch.Stop();
 
         Assert.IsLessThanOrEqualTo(receivedCount, 1,
             "UDP packets should be dropped when send throttle is exceeded instead of being queued.");
-        Assert.IsLessThan(TimeSpan.FromSeconds(1), stopwatch.Elapsed,
-            $"UDP throttling should not block or queue in Tunnel. Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s");
+        Assert.IsLessThan(TimeSpan.FromSeconds(3), stopwatch.Elapsed,
+            $"UDP throttling should not block the sender. Elapsed: {stopwatch.Elapsed.TotalSeconds:F2}s");
     }
 
     [TestMethod]

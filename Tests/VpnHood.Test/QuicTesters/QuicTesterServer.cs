@@ -11,7 +11,8 @@ namespace VpnHood.Test.QuicTesters;
 public class QuicTesterServer(
     IPEndPoint quicEndPoint,
     X509Certificate2 certificate,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken,
+    Func<QuicStream, CancellationToken, Task>? streamHandler = null)
     : IDisposable
 {
     private QuicListener? _quicListener;
@@ -40,7 +41,7 @@ public class QuicTesterServer(
             // start accepting connections
             while (!cancellationToken.IsCancellationRequested) {
                 var client = await _quicListener.AcceptConnectionAsync(cancellationToken);
-                _ = ProcessConnection(client, cancellationToken);
+                _ = ProcessConnection(client);
             }
         }
         catch (Exception ex) {
@@ -70,14 +71,14 @@ public class QuicTesterServer(
         return new ValueTask<QuicServerConnectionOptions>(ret);
     }
 
-    private static async Task ProcessConnection(QuicConnection quicConnection, CancellationToken cancellationToken)
+    private async Task ProcessConnection(QuicConnection quicConnection)
     {
         VhLogger.Instance.LogInformation("QuicServer: Start processing connection. ClientEp: {ClientEp}",
             quicConnection.RemoteEndPoint);
         try {
             while (!cancellationToken.IsCancellationRequested) {
                 var stream = await quicConnection.AcceptInboundStreamAsync(cancellationToken);
-                _ = ProcessQuicStream(stream, cancellationToken);
+                _ = ProcessQuicStream(stream, cancellationToken, streamHandler);
             }
         }
         finally {
@@ -85,17 +86,21 @@ public class QuicTesterServer(
         }
     }
 
-    private static async Task ProcessQuicStream(QuicStream stream, CancellationToken cancellationToken)
+    private static async Task ProcessQuicStream(QuicStream stream, CancellationToken cancellationToken,
+        Func<QuicStream, CancellationToken, Task>? streamHandler)
     {
         try {
-            // echo: read data and send it back
-            var buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = await stream.ReadAsync(buffer, cancellationToken)) > 0)
-                await stream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-
-            // signal to the client that no more data will be sent
-            stream.CompleteWrites();
+            if (streamHandler != null) {
+                await streamHandler(stream, cancellationToken);
+            }
+            else {
+                // default: echo
+                var buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = await stream.ReadAsync(buffer, cancellationToken)) > 0)
+                    await stream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+                stream.CompleteWrites();
+            }
         }
         catch (Exception ex) {
             if (!cancellationToken.IsCancellationRequested)

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Quic;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
@@ -289,11 +290,71 @@ public class TestWebServer : IDisposable
     private void StartQuicEchoServer()
     {
         var certificate = X509CertificateLoader.LoadPkcs12FromFile("Assets/VpnHood.UnitTest.pfx", null, X509KeyStorageFlags.Exportable);
+
         foreach (var endpoint in LocalEps.AllQuicEndPoints) {
             var quicServer = new QuicTesterServer(endpoint, certificate, CancellationToken);
             _quicServers.Add(quicServer);
             _ = quicServer.Start();
         }
+
+        foreach (var endpoint in LocalEps.AllQuicUploadEndPoints) {
+            var quicServer = new QuicTesterServer(endpoint, certificate, CancellationToken, HandleQuicUploadStream);
+            _quicServers.Add(quicServer);
+            _ = quicServer.Start();
+        }
+
+        foreach (var endpoint in LocalEps.AllQuicDownloadEndPoints) {
+            var quicServer = new QuicTesterServer(endpoint, certificate, CancellationToken, HandleQuicDownloadStream);
+            _quicServers.Add(quicServer);
+            _ = quicServer.Start();
+        }
+    }
+
+    private static async Task HandleQuicUploadStream(QuicStream stream, CancellationToken cancellationToken)
+    {
+        // Read 4-byte length prefix (big-endian)
+        var lenBuf = new byte[4];
+        await stream.ReadExactlyAsync(lenBuf, cancellationToken);
+        var byteCount = (int)((uint)lenBuf[0] << 24 | (uint)lenBuf[1] << 16 | (uint)lenBuf[2] << 8 | lenBuf[3]);
+
+        // Read exactly byteCount bytes and compute checksum
+        var data = new byte[byteCount];
+        await stream.ReadExactlyAsync(data, cancellationToken);
+        uint checksum = 0;
+        foreach (var b in data)
+            checksum += b;
+
+        // Send back 4-byte checksum (big-endian)
+        var result = new byte[] {
+            (byte)(checksum >> 24), (byte)(checksum >> 16),
+            (byte)(checksum >> 8), (byte)checksum
+        };
+        await stream.WriteAsync(result, cancellationToken);
+        stream.CompleteWrites();
+    }
+
+    private static async Task HandleQuicDownloadStream(QuicStream stream, CancellationToken cancellationToken)
+    {
+        // Read 4-byte length prefix (big-endian)
+        var lenBuf = new byte[4];
+        await stream.ReadExactlyAsync(lenBuf, cancellationToken);
+        var byteCount = (int)((uint)lenBuf[0] << 24 | (uint)lenBuf[1] << 16 | (uint)lenBuf[2] << 8 | lenBuf[3]);
+
+        // Generate random data and compute checksum
+        var data = new byte[byteCount];
+        Random.Shared.NextBytes(data);
+        uint checksum = 0;
+        foreach (var b in data)
+            checksum += b;
+
+        // Send data followed by 4-byte checksum (big-endian)
+        await stream.WriteAsync(data, cancellationToken);
+        var result = new byte[] {
+            (byte)(checksum >> 24), (byte)(checksum >> 16),
+            (byte)(checksum >> 8), (byte)checksum
+        };
+        await stream.WriteAsync(result, cancellationToken);
+        stream.CompleteWrites();
     }
 
     private static async Task DefaultRoute(HttpContextBase ctx)

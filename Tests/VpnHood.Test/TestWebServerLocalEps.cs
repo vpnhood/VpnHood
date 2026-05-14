@@ -20,6 +20,8 @@ public class TestWebServerLocalEps
 
     public IPEndPoint QuicEndPoint1 { get; } 
     public IPEndPoint QuicEndPoint2 { get; } 
+    public IPEndPoint QuicUploadEndPoint1 { get; }
+    public IPEndPoint QuicDownloadEndPoint1 { get; }
 
     public IPEndPoint TcpDataEndPoint1 { get; }
     public IPEndPoint TcpUploadEndPoint1 { get; }
@@ -78,6 +80,8 @@ public class TestWebServerLocalEps
         // must be 127.0.0.1 for quic to work on loopback adapter
         QuicEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
         QuicEndPoint2 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
+        QuicUploadEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
+        QuicDownloadEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
 
         TcpDataEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
         TcpUploadEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
@@ -106,6 +110,14 @@ public class TestWebServerLocalEps
     public IReadOnlyList<IPEndPoint> AllQuicEndPoints => [
         QuicEndPoint1,
         QuicEndPoint2
+    ];
+
+    public IReadOnlyList<IPEndPoint> AllQuicUploadEndPoints => [
+        QuicUploadEndPoint1
+    ];
+
+    public IReadOnlyList<IPEndPoint> AllQuicDownloadEndPoints => [
+        QuicDownloadEndPoint1
     ];
 
     public IReadOnlyList<IPEndPoint> AllTcpDataEndPoints => [

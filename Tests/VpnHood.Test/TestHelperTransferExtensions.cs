@@ -166,6 +166,98 @@ public static class TestHelperTransferExtensions
             }
         }
 
+        public async Task Test_QuicUpload(int byteCount = 50_000, IPEndPoint? quicEndPoint = null,
+            TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        {
+            quicEndPoint ??= testHelper.WebServer.MockEps.QuicUploadEndPoint1;
+            timeout ??= TestConstants.DefaultQuicTimeout;
+
+            var data = new byte[byteCount];
+            Random.Shared.NextBytes(data);
+            uint expectedChecksum = 0;
+            foreach (var b in data)
+                expectedChecksum += b;
+
+            using var cts = new CancellationTokenSource(timeout.Value);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
+
+            var options = new System.Net.Quic.QuicClientConnectionOptions {
+                RemoteEndPoint = quicEndPoint,
+                DefaultStreamErrorCode = 0,
+                DefaultCloseErrorCode = 0,
+                ClientAuthenticationOptions = new System.Net.Security.SslClientAuthenticationOptions {
+                    CertificateRevocationCheckMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck,
+                    ApplicationProtocols = [System.Net.Security.SslApplicationProtocol.Http3],
+                    RemoteCertificateValidationCallback = (_, _, _, _) => true,
+                    TargetHost = "quic-upload-test"
+                },
+                HandshakeTimeout = timeout.Value
+            };
+
+            await using var connection = await System.Net.Quic.QuicConnection.ConnectAsync(options, linkedCts.Token);
+            await using var stream = await connection.OpenOutboundStreamAsync(System.Net.Quic.QuicStreamType.Bidirectional, linkedCts.Token);
+
+            var lenBuf = new[] {
+                (byte)(byteCount >> 24), (byte)(byteCount >> 16),
+                (byte)(byteCount >> 8), (byte)byteCount
+            };
+            await stream.WriteAsync(lenBuf, linkedCts.Token);
+            await stream.WriteAsync(data, linkedCts.Token);
+            stream.CompleteWrites();
+
+            var resultBuf = new byte[4];
+            await stream.ReadExactlyAsync(resultBuf, linkedCts.Token);
+            var actualChecksum = (uint)(resultBuf[0] << 24 | resultBuf[1] << 16 | resultBuf[2] << 8 | resultBuf[3]);
+
+            Assert.AreEqual(expectedChecksum, actualChecksum, "QuicUpload checksum mismatch.");
+        }
+
+        public async Task Test_QuicDownload(int byteCount = 50_000, IPEndPoint? quicEndPoint = null,
+            TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+        {
+            quicEndPoint ??= testHelper.WebServer.MockEps.QuicDownloadEndPoint1;
+            timeout ??= TestConstants.DefaultQuicTimeout;
+
+            using var cts = new CancellationTokenSource(timeout.Value);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancellationToken);
+
+            var options = new System.Net.Quic.QuicClientConnectionOptions {
+                RemoteEndPoint = quicEndPoint,
+                DefaultStreamErrorCode = 0,
+                DefaultCloseErrorCode = 0,
+                ClientAuthenticationOptions = new System.Net.Security.SslClientAuthenticationOptions {
+                    CertificateRevocationCheckMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck,
+                    ApplicationProtocols = [System.Net.Security.SslApplicationProtocol.Http3],
+                    RemoteCertificateValidationCallback = (_, _, _, _) => true,
+                    TargetHost = "quic-download-test"
+                },
+                HandshakeTimeout = timeout.Value
+            };
+
+            await using var connection = await System.Net.Quic.QuicConnection.ConnectAsync(options, linkedCts.Token);
+            await using var stream = await connection.OpenOutboundStreamAsync(System.Net.Quic.QuicStreamType.Bidirectional, linkedCts.Token);
+
+            var lenBuf = new[] {
+                (byte)(byteCount >> 24), (byte)(byteCount >> 16),
+                (byte)(byteCount >> 8), (byte)byteCount
+            };
+            await stream.WriteAsync(lenBuf, linkedCts.Token);
+            stream.CompleteWrites();
+
+            var data = new byte[byteCount];
+            await stream.ReadExactlyAsync(data, linkedCts.Token);
+
+            var resultBuf = new byte[4];
+            await stream.ReadExactlyAsync(resultBuf, linkedCts.Token);
+            var receivedChecksum = (uint)(resultBuf[0] << 24 | resultBuf[1] << 16 | resultBuf[2] << 8 | resultBuf[3]);
+
+            uint actualChecksum = 0;
+            foreach (var b in data)
+                actualChecksum += b;
+
+            Assert.AreEqual(receivedChecksum, actualChecksum, "QuicDownload checksum mismatch.");
+        }
+
         public async Task<bool> Test_Https(Uri? uri = null, TimeSpan? timeout = null, bool throwError = true)
         {
             uri ??= testHelper.WebServer.MockEps.HttpsUrl1;

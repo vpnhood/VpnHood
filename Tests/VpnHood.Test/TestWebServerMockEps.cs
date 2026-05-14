@@ -18,6 +18,8 @@ public class TestWebServerMockEps(TestWebServerLocalEps localEps, TestIps testIp
     public IPAddress IpInvalid => testIps.RemoteInvalidTestIpV4;
     public IPEndPoint QuicEndPoint1 => MapToRemote(localEps.QuicEndPoint1);
     public IPEndPoint QuicEndPoint2 => MapToRemote(localEps.QuicEndPoint2);
+    public IPEndPoint QuicUploadEndPoint1 => MapToRemote(localEps.QuicUploadEndPoint1);
+    public IPEndPoint QuicDownloadEndPoint1 => MapToRemote(localEps.QuicDownloadEndPoint1);
     public IPEndPoint HttpsV4EndPoint1 => MapToRemote(localEps.HttpsV4EndPoint1);
     public IPEndPoint HttpsV4EndPoint2 => MapToRemote(localEps.HttpsV4EndPoint2);
     public IPEndPoint HttpV4EndPoint1 => MapToRemote(localEps.HttpV4EndPoint1);

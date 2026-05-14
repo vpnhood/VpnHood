@@ -148,7 +148,8 @@ internal class ClientSessionBuilder(
                 $"IsLocalNetworkAllowed: {serverAllowedLocalNetworks.Any()}, " +
                 $"NetworkV4: {helloResponse.VirtualIpNetworkV4}, " +
                 $"NetworkV6: {helloResponse.VirtualIpNetworkV6}, " +
-                $"ClientCountry: {helloResponse.ClientCountry}");
+                $"ClientCountry: {helloResponse.ClientCountry}, " +
+                $"MaxSpeedMbps: {helloResponse.AccessInfo?.MaxSpeedMbps}");
 
             connectorService.Init(
                 helloResponse.ProtocolVersion,

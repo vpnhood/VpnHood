@@ -23,10 +23,11 @@ public class TrafficMeterTest : TestBase
         var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Tcp);
         await using var clientServerDom = await ClientServerDom.Create(TestHelper,
             clientOption);
-
         await Task.WhenAll(
             TestHelper.Test_TcpUpload(100_000, cancellationToken: TestCt),
             TestHelper.Test_TcpDownload(60_0000, cancellationToken: TestCt));
+        
+        await Task.Delay(1000); //todo: remove
 
         Assert.IsGreaterThanOrEqualTo(100_000, clientServerDom.Client.Session!.Status.SessionTraffic.Sent,
             "TrafficMeter should track sent bytes.");

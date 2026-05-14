@@ -153,6 +153,10 @@ internal class ClientStreamHandler(
         try {
             var proxyConnection = requestResult.Connection;
 
+            // account for prefetched init contents that bypassed the proxy channel
+            if (initContents.Length > 0)
+                tunnel.TrafficMeter.OnSent(initContents.Length);
+
             // add stream proxy
             var channel = new ProxyChannel(proxyConnection.ToString()!, connection, proxyConnection, streamProxyBufferSize, tunnel.TrafficMeter);
             tunnel.AddChannel(channel, disposeIfFailed: true);

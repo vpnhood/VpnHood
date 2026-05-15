@@ -1,4 +1,4 @@
-# Upcoming
+# v7.9.813
 * Feature: Pause zombie servers for a while to save resources
 * Feature: Traffic throttling
 

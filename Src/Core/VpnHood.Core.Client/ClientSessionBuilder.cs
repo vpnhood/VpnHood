@@ -178,7 +178,7 @@ internal class ClientSessionBuilder(
                 includeIpRanges: serverIncludeIpRangesByDevice.Intersect(config.IncludeIpRangesByDevice),
                 canProtectSocket: vpnAdapter.CanProtectSocket,
                 includeLocalNetwork: config.IncludeLocalNetwork,
-                catcherIps: [config.TcpProxyCatcherAddressIpV4, config.TcpProxyCatcherAddressIpV6],
+                catcherIps: config.UseOsTcpStack ? [config.TcpProxyCatcherAddressIpV4, config.TcpProxyCatcherAddressIpV6] : [],
                 hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address);
 
             staticIpFilter.IncludeRanges = staticIpFilter.IncludeRanges
@@ -319,7 +319,7 @@ internal class ClientSessionBuilder(
                     AdRequirement = helloResponse.AdRequirement,
                     MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
                         ? Math.Min(config.MaxPacketChannelCount, helloResponse.MaxPacketChannelCount)
-                        : config.MaxPacketChannelCount,
+                        : config.MaxPacketChannelCount
                 });
 
             return session;

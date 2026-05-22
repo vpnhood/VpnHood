@@ -48,12 +48,13 @@ public class ServerConfig
         TcpEndPoints ?? [new IPEndPoint(IPAddress.Any, 443), new IPEndPoint(IPAddress.IPv6Any, 443)];
 
     [JsonIgnore]
-    public IPEndPoint[] UdpEndPointsValue =>
-        UdpEndPoints ?? [new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.IPv6Any, 0)];
+    public IPEndPoint[] QuicEndPointsValue =>
+        QuicEndPoints ?? [];
 
     [JsonIgnore]
-    public IPEndPoint[] QuicEndPointsValue =>
-        QuicEndPoints ?? [new IPEndPoint(IPAddress.Any, 443), new IPEndPoint(IPAddress.IPv6Any, 443)];
+    public IPEndPoint[] UdpEndPointsValue =>
+        UdpEndPoints ?? [];
+
 
     [JsonIgnore]
     public IPAddress[] DnsServersValue => DnsServers ?? IPAddressUtil.GoogleDnsServers;

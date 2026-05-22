@@ -1,8 +1,9 @@
 using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net;
-using Microsoft.Extensions.Logging;
+using System.Net.Quic;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
@@ -143,6 +144,7 @@ internal class ClientSessionBuilder(
                 $"CurrentProtocolVersion: {connectorService.ProtocolVersion}, " +
                 $"ClientIp: {VhLogger.Format(helloResponse.ClientPublicAddress)}, " +
                 $"UdpPort: {helloResponse.UdpPort}, " +
+                $"QuicPort: {helloResponse.QuicPort}, " +
                 $"IsTcpPacketSupported: {helloResponse.IsTcpPacketSupported}, " +
                 $"IsTcpProxySupported: {helloResponse.IsTcpProxySupported}, " +
                 $"IsLocalNetworkAllowed: {serverAllowedLocalNetworks.Any()}, " +
@@ -165,6 +167,10 @@ internal class ClientSessionBuilder(
                 ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, helloResponse.UdpPort.Value)
                 : null;
 
+            var hostQuicEndPoint = helloResponse.QuicPort > 0
+                ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, helloResponse.QuicPort.Value)
+                : null;
+
             staticIpFilter.IncludeRanges = config.IncludeIpRangesByApp.ToOrderedList();
             staticIpFilter.BlockedRanges = config.BlockIpRangesByApp.ToOrderedList();
 
@@ -176,7 +182,7 @@ internal class ClientSessionBuilder(
 
             var sessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
                 includeIpRanges: serverIncludeIpRangesByDevice.Intersect(config.IncludeIpRangesByDevice),
-                canProtectSocket: vpnAdapter.CanProtectSocket,
+                canProtectSocket: vpnAdapter.CanProtectSocket && false, //todo temporary
                 includeLocalNetwork: config.IncludeLocalNetwork,
                 catcherIps: config.UseOsTcpStack ? [config.TcpProxyCatcherAddressIpV4, config.TcpProxyCatcherAddressIpV6] : [],
                 hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address);
@@ -223,6 +229,7 @@ internal class ClientSessionBuilder(
                 CreatedTime = DateTime.UtcNow,
                 IsTcpPacketSupported = helloResponse.IsTcpPacketSupported,
                 IsTcpProxySupported = helloResponse.IsTcpProxySupported,
+                IsQuicChannelSupported = hostQuicEndPoint != null && QuicConnection.IsSupported,
                 ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse),
                 ServerLocationInfo = helloResponse.ServerLocation != null
                     ? ServerLocationInfo.Parse(helloResponse.ServerLocation)
@@ -315,6 +322,7 @@ internal class ClientSessionBuilder(
                     IsTcpProxySupported = config.IsTcpProxySupported,
                     HostTcpEndPoint = connectorService.VpnEndPoint.TcpEndPoint,
                     HostUdpEndPoint = hostUdpEndPoint,
+                    HostQuicEndPoint = hostQuicEndPoint,
                     IsIpV6SupportedByServer = helloResponse.IsIpV6Supported,
                     AdRequirement = helloResponse.AdRequirement,
                     MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0

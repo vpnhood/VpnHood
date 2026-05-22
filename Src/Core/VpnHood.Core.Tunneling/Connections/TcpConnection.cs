@@ -12,6 +12,7 @@ namespace VpnHood.Core.Tunneling.Connections;
 public sealed class TcpConnection : IConnection
 {
     private readonly TcpClient _tcpClient;
+    private int _disposed;
 
     public TcpConnection(TcpClient tcpClient,
         string connectionName, bool isServer, string? connectionId = null)
@@ -60,6 +61,8 @@ public sealed class TcpConnection : IConnection
 
     public void Dispose()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
         Stream.Dispose();
         _tcpClient.Dispose();
 
@@ -70,6 +73,8 @@ public sealed class TcpConnection : IConnection
 
     public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
         await Stream.DisposeAsync();
         _tcpClient.Dispose();
 

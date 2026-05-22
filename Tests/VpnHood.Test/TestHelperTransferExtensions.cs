@@ -186,7 +186,7 @@ public static class TestHelperTransferExtensions
                 DefaultStreamErrorCode = 0,
                 DefaultCloseErrorCode = 0,
                 ClientAuthenticationOptions = new System.Net.Security.SslClientAuthenticationOptions {
-                    CertificateRevocationCheckMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck,
+                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                     ApplicationProtocols = [System.Net.Security.SslApplicationProtocol.Http3],
                     RemoteCertificateValidationCallback = (_, _, _, _) => true,
                     TargetHost = "quic-upload-test"
@@ -226,7 +226,7 @@ public static class TestHelperTransferExtensions
                 DefaultStreamErrorCode = 0,
                 DefaultCloseErrorCode = 0,
                 ClientAuthenticationOptions = new System.Net.Security.SslClientAuthenticationOptions {
-                    CertificateRevocationCheckMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck,
+                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                     ApplicationProtocols = [System.Net.Security.SslApplicationProtocol.Http3],
                     RemoteCertificateValidationCallback = (_, _, _, _) => true,
                     TargetHost = "quic-download-test"

@@ -1,9 +1,6 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Net;
-using System.Net.NetworkInformation;
-using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device.UiContexts;
@@ -138,6 +135,7 @@ public class TestHelper : IDisposable
             IsUnitTest = true,
             PublicEndPoints = null, // use TcpEndPoints
             TcpEndPoints = tcpEndPoints ?? [VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback)],
+            QuicEndPoints = tcpEndPoints ?? [VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback)],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
             TrackingOptions = new TrackingOptions {
                 TrackClientIp = true,

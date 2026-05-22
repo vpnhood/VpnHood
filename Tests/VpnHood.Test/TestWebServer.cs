@@ -325,7 +325,7 @@ public class TestWebServer : IDisposable
             checksum += b;
 
         // Send back 4-byte checksum (big-endian)
-        var result = new byte[] {
+        var result = new[] {
             (byte)(checksum >> 24), (byte)(checksum >> 16),
             (byte)(checksum >> 8), (byte)checksum
         };
@@ -349,7 +349,7 @@ public class TestWebServer : IDisposable
 
         // Send data followed by 4-byte checksum (big-endian)
         await stream.WriteAsync(data, cancellationToken);
-        var result = new byte[] {
+        var result = new[] {
             (byte)(checksum >> 24), (byte)(checksum >> 16),
             (byte)(checksum >> 8), (byte)checksum
         };

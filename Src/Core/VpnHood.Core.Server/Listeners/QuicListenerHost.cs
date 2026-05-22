@@ -2,13 +2,11 @@ using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Quic;
 using System.Net.Security;
-using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
 
 namespace VpnHood.Core.Server.Listeners;
@@ -28,6 +26,11 @@ internal class QuicListenerHost(
     {
         _certificates = certificates;
 
+        if (!QuicListener.IsSupported && ipEndPoints.Length > 0) {
+            VhLogger.Instance.LogWarning("QUIC is not supported on this platform.");
+            return;
+        }
+
         if (ipEndPoints.Any(x => x.Port == 0))
             throw new InvalidOperationException("QUIC port has not been specified.");
 
@@ -38,12 +41,6 @@ internal class QuicListenerHost(
                 VhLogger.Format(entry.Listener.LocalEndPoint));
             await entry.StopAsync().Vhc();
             _listeners.Remove(entry);
-        }
-
-        if (!QuicListener.IsSupported || !QuicConnection.IsSupported) {
-            if (ipEndPoints.Length > 0)
-                VhLogger.Instance.LogWarning("QUIC is not supported on this platform.");
-            return;
         }
 
         if (_certificates.Count == 0 && ipEndPoints.Length > 0)
@@ -107,7 +104,7 @@ internal class QuicListenerHost(
 
     private async Task ListenTask(QuicListener listener, CancellationToken ct)
     {
-        var localEp = (IPEndPoint)listener.LocalEndPoint;
+        var localEp = listener.LocalEndPoint;
         var errorCounter = 0;
         const int maxErrorCount = 200;
 

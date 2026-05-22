@@ -13,6 +13,25 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 
+/// <summary>
+/// Sends binary protocol requests to the VPN server over streams provided by <see cref="ConnectorService"/>.
+/// </summary>
+/// <remarks>
+/// <see cref="RequestSender"/> is the sole owner of its <see cref="ConnectorService"/>: it creates one
+/// from the supplied <see cref="ConnectorServiceOptions"/> and disposes it when it is itself disposed.
+/// Callers that need to configure transport details (e.g. QUIC endpoint, connection reuse) access the
+/// service via <see cref="ConnectorService"/>. Statistics are exposed through <see cref="ConnectorService.Stat"/>.
+/// <para>
+/// Request flow:
+/// <list type="number">
+///   <item>Try to reuse a free pooled stream from <see cref="ConnectorService.GetFreeConnection"/>.</item>
+///   <item>On failure or no free connection, open a fresh stream via <see cref="ConnectorService.GetConnectionToServer"/>.</item>
+///   <item>Serialize the request, write it to the stream, read back the <see cref="VpnHood.Core.Common.Messaging.SessionResponse"/>.</item>
+/// </list>
+/// </para>
+/// Only TCP connections are added to the reuse pool. QUIC streams are not reused because each QUIC
+/// stream is already a lightweight, independent channel within the same QUIC connection.
+/// </remarks>
 internal class RequestSender(ConnectorServiceOptions connectorServiceOptions) : IDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();

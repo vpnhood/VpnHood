@@ -14,6 +14,26 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 
+/// <summary>
+/// Manages the transport layer for outbound connections to the VPN server.
+/// </summary>
+/// <remarks>
+/// Supports two transport backends:
+/// <list type="bullet">
+///   <item><term>TCP + TLS</term><description>Each tunnel request opens a new TLS-authenticated TCP connection via <see cref="TcpStreamConnectionFactory"/>. Connections that complete a request can be returned to the reuse pool.</description></item>
+///   <item><term>QUIC</term><description>Connections are opened as bidirectional streams on a pooled <see cref="System.Net.Quic.QuicConnection"/> via <see cref="QuicStreamConnectionFactory"/>. QUIC streams are independent and are NOT added to the reuse pool — each stream maps 1:1 to a request lifetime.</description></item>
+/// </list>
+/// HTTP framing (POST header or WebSocket upgrade) is applied on top of the raw stream before
+/// returning it — the server's <c>ProcessNewConnection</c> expects an HTTP/1.1 request regardless
+/// of the underlying transport.
+/// <para>
+/// Our QUIC is a custom protocol, NOT HTTP/3. We use it purely as a transport layer,
+/// with the same binary request/response framing as TCP. <c>SslApplicationProtocol.Http3</c>
+/// is used only as the ALPN token during the TLS handshake.
+/// </para>
+/// Owned by <see cref="RequestSender"/> — created from <see cref="ConnectorServiceOptions"/>,
+/// exposed via <see cref="RequestSender.ConnectorService"/>, and disposed by <see cref="RequestSender.Dispose"/>.
+/// </remarks>
 internal class ConnectorService : IDisposable
 {
     private const bool UseBuffer = true;

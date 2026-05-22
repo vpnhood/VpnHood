@@ -24,6 +24,7 @@ public sealed class QuicStreamConnection : IStreamConnection
         ConnectionId = connectionId ?? UniqueIdFactory.Create();
     }
 
+    public event EventHandler? Disposed;
     public string ConnectionName { get; }
     public bool IsServer { get; }
     public bool Connected => _connected;
@@ -58,6 +59,7 @@ public sealed class QuicStreamConnection : IStreamConnection
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
         _connected = false;
         _stream.Dispose();
+        Disposed?.Invoke(this, EventArgs.Empty);
 
         VhLogger.Instance.LogTrace(GeneralEventId.Stream,
             "QuicStreamConnection has been disposed. ConnectionId: {ConnectionId}", ConnectionId);
@@ -68,6 +70,7 @@ public sealed class QuicStreamConnection : IStreamConnection
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
         _connected = false;
         await Stream.DisposeAsync();
+        Disposed?.Invoke(this, EventArgs.Empty);
 
         VhLogger.Instance.LogTrace(GeneralEventId.Stream,
             "Connection has been disposed asynchronously. ConnectionId: {ConnectionId}",

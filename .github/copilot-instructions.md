@@ -6,3 +6,5 @@
 - the documentation repo is in $(SoultionDir)/../VpnHood.wiki, so when I request, update the documentation in that repo
 - Dont use async postfix if the there is no async method with the same name.
 - Our QUIC is a custom protocol, not HTTP3. We use it a transport protocol and the protocol is exactly same as HTTP2, so we use it same TCP
+- use SafeDisposeAsync if you want to dispose an IAsyncDisposable if you want catch and ignore any exception thrown 
+- use AsyncLock instead of SemaphoreSlim for non hot path code, and use it with using statement

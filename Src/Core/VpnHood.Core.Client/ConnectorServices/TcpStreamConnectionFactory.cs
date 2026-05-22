@@ -6,9 +6,9 @@ using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
-using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Connections;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 

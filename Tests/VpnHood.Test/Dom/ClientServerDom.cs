@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Quic;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
@@ -78,6 +79,11 @@ internal class ClientServerDom : IAsyncDisposable
             fileAccessManagerOptions.TcpEndPoints = [serverEp];
             fileAccessManagerOptions.PublicEndPoints = [serverEp];
             fileAccessManagerOptions.UdpEndPoints = [VhUtils.GetFreeUdpEndPoint(IPAddress.IPv6Loopback)];
+            if (QuicListener.IsSupported && QuicConnection.IsSupported)
+                fileAccessManagerOptions.QuicEndPoints = [
+                    VhUtils.GetFreeUdpEndPoint(IPAddress.Any),
+                    VhUtils.GetFreeUdpEndPoint(IPAddress.IPv6Any)
+                ];
 
             accessManager = testHelper.CreateAccessManager(fileAccessManagerOptions);
             server = await testHelper.CreateServer(accessManager, socketFactory: testSocketFactory);

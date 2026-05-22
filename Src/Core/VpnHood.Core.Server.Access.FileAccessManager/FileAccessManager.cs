@@ -188,10 +188,18 @@ public class FileAccessManager : IAccessManager
                 ? serverInfo.FreeUdpPortV6
                 : serverInfo.FreeUdpPortV4;
         }
-
         ServerConfig.UdpEndPoints = udpEndPoints.Where(x => x.Port != 0).ToArray();
 
-        return Task.FromResult((ServerConfig)ServerConfig);
+        // update QuicEndPoints if they are not configured (port 0 means auto-assign)
+        var quicEndPoints = ServerConfig.QuicEndPointsValue.ToArray();
+        foreach (var quicEndPoint in quicEndPoints.Where(x => x.Port == 0)) {
+            quicEndPoint.Port = quicEndPoint.AddressFamily == AddressFamily.InterNetworkV6
+                ? serverInfo.FreeQuicPortV6
+                : serverInfo.FreeQuicPortV4;
+        }
+        ServerConfig.QuicEndPoints = quicEndPoints.Where(x => x.Port != 0).ToArray();
+
+        return Task.FromResult<ServerConfig>(ServerConfig);
     }
 
     public virtual Task<string> Acme_GetHttp01KeyAuthorization(string token, CancellationToken cancellationToken)

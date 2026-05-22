@@ -171,6 +171,8 @@ public class VpnHoodServer : IAsyncDisposable
             VhLogger.Instance.LogDebug("Finding free EndPoints...");
             var freeUdpPortV4 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetwork, null);
             var freeUdpPortV6 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetworkV6, freeUdpPortV4);
+            var freeQuicPortV4 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetwork, 443);
+            var freeQuicPortV6 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetworkV6, 443);
 
             VhLogger.Instance.LogDebug("Finding public addresses...");
             var privateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses().Vhc();
@@ -195,6 +197,8 @@ public class VpnHoodServer : IAsyncDisposable
                 LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 FreeUdpPortV4 = freeUdpPortV4,
                 FreeUdpPortV6 = freeUdpPortV6,
+                FreeQuicPortV4 = freeQuicPortV4,
+                FreeQuicPortV6 = freeQuicPortV6,
                 IsRestarted = _isRestarted,
                 NetworkInterfaceNames = _netConfigurationService != null
                     ? await _netConfigurationService.GetNetworkInterfaceNames()
@@ -259,6 +263,7 @@ public class VpnHoodServer : IAsyncDisposable
                 DnsServers = serverConfig.DnsServersValue,
                 TcpEndPoints = serverConfig.TcpEndPointsValue,
                 UdpEndPoints = serverConfig.UdpEndPointsValue,
+                QuicEndPoints = serverConfig.QuicEndPointsValue,
                 Certificates = serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null))
                     .ToArray(),
                 UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue

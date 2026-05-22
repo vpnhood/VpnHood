@@ -12,15 +12,18 @@ internal static class ChannelProtocolValidator
         var channelProtocols = new List<ChannelProtocol> { ChannelProtocol.Tcp };
         if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= 11 })
             channelProtocols.Add(ChannelProtocol.Udp);
+        if (helloResponse is { QuicPort: > 0, ProtocolVersion: >= 13 } &&
+            System.Net.Quic.QuicConnection.IsSupported)
+            channelProtocols.Add(ChannelProtocol.Quic);
 
         return channelProtocols.ToArray();
     }
 
     public static ChannelProtocol Validate(ChannelProtocol value, SessionInfo sessionInfo)
     {
-        if (value == ChannelProtocol.Quic) {
-            VhLogger.Instance.LogWarning("Quic protocol is not supported, fallback to Udp");
-            value = ChannelProtocol.Udp;
+        if (value == ChannelProtocol.Quic && !sessionInfo.IsQuicChannelSupported) {
+            VhLogger.Instance.LogWarning("Quic protocol is not supported, fallback to Tcp");
+            value = ChannelProtocol.Tcp;
         }
 
         if (value == ChannelProtocol.Udp && !sessionInfo.IsUdpChannelSupported) {

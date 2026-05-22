@@ -18,6 +18,7 @@ public class HelloResponse : SessionResponse
     public IpNetwork? VirtualIpNetworkV6 { get; init; }
 
     public int? UdpPort { get; set; }
+    public int? QuicPort { get; set; }
     public string ServerVersion { get; set; } = null!;
     public int ProtocolVersion { get; set; }
     public byte[] ServerSecret { get; set; } = null!;

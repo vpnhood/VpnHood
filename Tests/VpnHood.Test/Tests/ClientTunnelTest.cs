@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Net.Quic;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -27,6 +28,21 @@ public class ClientTunnelTest : TestBase
 
         VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by UdpChannel.");
         Assert.AreEqual(ChannelProtocol.Udp, clientServerDom.Client.ChannelProtocol);
+        await AssertTunnel(clientServerDom);
+    }
+
+    [TestMethod]
+    public async Task QuicChannel()
+    {
+        if (!QuicListener.IsSupported || !QuicConnection.IsSupported)
+            Assert.Inconclusive("QUIC is not supported on this platform.");
+
+        VhLogger.MinLogLevel = LogLevel.Trace;
+        var clientOption = TestHelper.CreateClientOptions(channelProtocol: ChannelProtocol.Quic);
+        await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
+
+        VhLogger.Instance.LogDebug(GeneralEventId.Test, "Test: Testing by QuicChannel.");
+        Assert.AreEqual(ChannelProtocol.Quic, clientServerDom.Client.ChannelProtocol);
         await AssertTunnel(clientServerDom);
     }
 

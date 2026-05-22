@@ -12,6 +12,7 @@ public class SessionInfo
     public required AccessInfo? AccessInfo { get; init; }
     public required DateTime CreatedTime { get; set; }
     public required bool IsUdpChannelSupported { get; init; }
+    public required bool IsQuicChannelSupported { get; init; }
     public required bool IsTcpPacketSupported { get; init; }
     public required bool IsTcpProxySupported { get; init; }
     public required bool IsLocalNetworkAllowed { get; set; }

@@ -4,3 +4,5 @@
 - Use .Vhc() instead of .ConfigureAwait(false) if it is available but do not add it to the project if it is not available. 
 - For UI code such as android UI, always use .ConfigureAwait(false) when it is required.
 - the documentation repo is in $(SoultionDir)/../VpnHood.wiki, so when I request, update the documentation in that repo
+- Dont use async postfix if the there is no async method with the same name.
+- Our QUIC is a custom protocol, not HTTP3. We use it a transport protocol and the protocol is exactly same as HTTP2, so we use it same TCP

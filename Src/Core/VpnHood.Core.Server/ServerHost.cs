@@ -1,12 +1,15 @@
 ﻿using System.Net;
+using System.Net.Quic;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Server.Exceptions;
+using VpnHood.Core.Server.Listeners;
 using VpnHood.Core.Server.Utils;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
@@ -28,32 +31,40 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly DownloadService _downloadService;
-    private readonly List<TcpListener> _tcpListeners;
+    private readonly TcpListenerHost _tcpListenerHost;
+    private readonly QuicListenerHost _quicListenerHost;
     private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
-    private readonly List<Task> _tcpListenerTasks = [];
     private readonly Job _cleanupConnectionsJob;
     private readonly AsyncLock _configureLock = new();
     private bool _disposed;
 
-    public const int MaxProtocolVersion = 12;
+    public const int MaxProtocolVersion = 13;
     public const int MinProtocolVersion = 8;
     public int MinClientProtocolVersion { get; set; } = 8;
     public bool IsIpV6Supported { get; set; }
     public IpRange[]? NetFilterVpnAdapterIncludeIpRanges { get; set; }
     public IpRange[]? NetFilterIncludeIpRanges { get; set; }
     public IPAddress[]? DnsServers { get; set; }
-    public CertificateHostName[] Certificates { get; private set; } = [];
-    public IPEndPoint[] TcpEndPoints => _tcpListeners.Select(x => (IPEndPoint)x.LocalEndpoint).ToArray();
+    public IReadOnlyList<CertificateHostName> Certificates { get; private set; } = [];
+    public IReadOnlyList<IPEndPoint> TcpEndPoints => _tcpListenerHost.EndPoints;
+    public IReadOnlyList<IPEndPoint> QuicEndPoints => _quicListenerHost.EndPoints;
     public bool Started => !_disposed && !_cancellationTokenSource.IsCancellationRequested;
     public string? DownloadPath => _downloadService.DownloadPath;
 
     public ServerHost(SessionManager sessionManager, string? downloadsPath)
     {
-        _tcpListeners = [];
         _sessionManager = sessionManager;
         _downloadService = new DownloadService(downloadsPath);
         _cleanupConnectionsJob = new Job(CleanupConnections, TimeSpan.FromMinutes(5), nameof(ServerHost));
         UniqueIdFactory.DebugInitId = 5000;
+        _tcpListenerHost = new TcpListenerHost(
+            sessionManager: _sessionManager,
+            cancellationToken: _cancellationTokenSource.Token,
+            processNewConnection: ProcessNewConnection);
+        _quicListenerHost = new QuicListenerHost(
+            sessionManager: _sessionManager,
+            cancellationToken: _cancellationTokenSource.Token,
+            processNewConnection: ProcessNewConnection);
     }
 
     internal async Task Configure(ServerHostConfiguration configuration)
@@ -71,9 +82,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
         DnsServers = configuration.DnsServers;
         Certificates = configuration.Certificates.Select(x => new CertificateHostName(x)).ToArray();
 
-        ConfigureTcpListeners(configuration.TcpEndPoints);
+        await _tcpListenerHost.Configure(configuration.TcpEndPoints, Certificates).Vhc();
+        await _quicListenerHost.Configure(configuration.QuicEndPoints, Certificates).Vhc();
         ConfigureUdpListeners(configuration.UdpEndPoints, configuration.UdpChannelBufferSize);
-        _tcpListenerTasks.RemoveAll(x => x.IsCompleted);
     }
 
 
@@ -115,107 +126,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
         foreach (var udpChannelTransmitter in _udpChannelTransmitters) {
             udpChannelTransmitter.BufferSize = bufferSize ?? TunnelDefaults.ServerUdpChannelBufferSize;
         }
-    }
-
-    private void ConfigureTcpListeners(IPEndPoint[] tcpEndPoints)
-    {
-        if (tcpEndPoints.Length == 0)
-            throw new ArgumentNullException(nameof(tcpEndPoints), "No TcpEndPoint has been configured.");
-
-        // start TCPs
-        // stop listeners that are not in the new list
-        foreach (var tcpListener in _tcpListeners
-                     .Where(x => !tcpEndPoints.Contains((IPEndPoint)x.LocalEndpoint)).ToArray()) {
-            VhLogger.Instance.LogInformation("Stop listening on TcpEndPoint: {TcpEndPoint}",
-                VhLogger.Format(tcpListener.LocalEndpoint));
-            tcpListener.Stop();
-            _tcpListeners.Remove(tcpListener);
-        }
-
-        foreach (var tcpEndPoint in tcpEndPoints) {
-            // check already listening
-            if (_tcpListeners.Any(x => x.LocalEndpoint.Equals(tcpEndPoint)))
-                continue;
-
-            try {
-                VhLogger.Instance.LogInformation("Start listening on TcpEndPoint: {TcpEndPoint}",
-                    VhLogger.Format(tcpEndPoint));
-                var tcpListener = new TcpListener(tcpEndPoint);
-                tcpListener.Start();
-                _tcpListeners.Add(tcpListener);
-                _tcpListenerTasks.Add(ListenTask(tcpListener));
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogInformation("Error listening on TcpEndPoint: {TcpEndPoint}",
-                    VhLogger.Format(tcpEndPoint));
-                ex.Data.Add("TcpEndPoint", tcpEndPoint);
-                throw;
-            }
-        }
-    }
-
-    private async Task ListenTask(TcpListener tcpListener)
-    {
-        var localEp = (IPEndPoint)tcpListener.LocalEndpoint;
-        var errorCounter = 0;
-        const int maxErrorCount = 200;
-
-        // Listening for new connection
-        while (Started) {
-            try {
-                var tcpClient = await tcpListener.AcceptTcpClientAsync().Vhc();
-                if (!Started)
-                    throw new ObjectDisposedException("ServerHost has been stopped.");
-
-                var tcpKernelBufferSize = _sessionManager.SessionOptions.TcpKernelBufferSize ??
-                                          TunnelDefaults.ServerTcpKernelBufferSize;
-                VhUtils.ConfigTcpClient(tcpClient,
-                    sendBufferSize: tcpKernelBufferSize?.Send,
-                    receiveBufferSize: tcpKernelBufferSize?.Receive);
-
-                // config tcpClient
-                _ = TryProcessTcpClient(tcpClient, _cancellationTokenSource.Token);
-                errorCounter = 0;
-            }
-            catch (Exception) when (!tcpListener.Server.IsBound) {
-                break;
-            }
-            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted) {
-                errorCounter++;
-            }
-            catch (ObjectDisposedException) {
-                errorCounter++;
-            }
-            catch (Exception ex) {
-                if (!Started)
-                    break; // no log if stopping
-
-                errorCounter++;
-                if (errorCounter > maxErrorCount) {
-                    VhLogger.Instance.LogError(
-                        "Too many unexpected errors in AcceptTcpClient. Stopping the Listener... LocalEndPint: {LocalEndPint}",
-                        tcpListener.LocalEndpoint);
-                    break;
-                }
-
-                VhLogger.Instance.LogError(GeneralEventId.Request, ex,
-                    "ServerHost could not AcceptTcpClient. LocalEndPint: {LocalEndPint}, ErrorCounter: {ErrorCounter}",
-                    tcpListener.LocalEndpoint, errorCounter);
-            }
-        }
-
-        // stop listener
-        tcpListener.Stop();
-        VhLogger.Instance.LogInformation("TCP Listener has been stopped. LocalEp: {LocalEp}", VhLogger.Format(localEp));
-    }
-
-    private X509Certificate ServerCertificateSelectionCallback(object sender, string? hostname)
-    {
-        var certificate =
-            Certificates.SingleOrDefault(x => x.HostName.Equals(hostname, StringComparison.OrdinalIgnoreCase))
-            ?? Certificates.First();
-
-        return certificate.Certificate;
     }
 
     private static async Task<int> ReadRequestVersion(IConnection connection, CancellationToken cancellationToken)
@@ -333,103 +243,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private async Task<ServerConnection> CreateHttpConnection(TcpClient tcpClient, CancellationToken cancellationToken)
-    {
-        VhLogger.Instance.LogDebug(GeneralEventId.Request, "TLS Authenticating...");
-        var sslStream = new SslStream(tcpClient.GetStream(), true);
-
-        try {
-            // establish SSL
-            await sslStream.AuthenticateAsServerAsync(
-                new SslServerAuthenticationOptions {
-                    ClientCertificateRequired = false,
-                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                    ServerCertificateSelectionCallback = ServerCertificateSelectionCallback
-                },
-                cancellationToken).Vhc();
-
-            // create client stream
-            var tcpConnection = new TcpConnection(tcpClient, sslStream, connectionName: "tunnel", isServer: true);
-            var connection = await CreateHttpConnection(tcpConnection, cancellationToken).Vhc();
-            return connection;
-        }
-        catch (Exception) {
-            await sslStream.SafeDisposeAsync();
-            throw;
-        }
-    }
-
-    private async Task TryProcessTcpClient(TcpClient tcpClient, CancellationToken cancellationToken)
-    {
-        try {
-            await ProcessTcpClient(tcpClient, cancellationToken).Vhc();
-        }
-        catch (RequestHandledException) {
-            // Request was handled (e.g., file download), no further action needed
-            tcpClient.Dispose();
-        }
-        catch (Exception ex) {
-            if (ex is ISelfLog loggable) loggable.Log();
-            else
-                VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
-                    "ServerHost could not process this request. RemoteEp: {RemoteEp}, ClientIp: {ClientIp}, ConnectionId: {ConnectionId}",
-                    VhLogger.Format(tcpClient.TryGetRemoteEndPoint()), ex.Data["ClientIp"], ex.Data["ConnectionId"]);
-
-            tcpClient.Dispose();
-        }
-    }
-
-    private async Task ProcessTcpClient(TcpClient tcpClient, CancellationToken cancellationToken)
-    {
-        using var timeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
-        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
-        ServerConnection? connection = null;
-        try {
-
-            // create connection
-            connection = await CreateHttpConnection(tcpClient, connectCts.Token).Vhc();
-            VhLogger.Instance.LogDebug(GeneralEventId.Request,
-                "ServerHost has created a new connection. ConnectionId: {ConnectionId}, RemoteEp: {RemoteEp}, ClientIp: {ClientIp}",
-                connection.ConnectionId, VhLogger.Format(connection.RemoteEndPoint),
-                VhLogger.Format(connection.ClientIp));
-
-            // read request version
-            var requestVersion = await ReadRequestVersion(connection, connectCts.Token).Vhc();
-            if (requestVersion < 0)
-                return; // connection has been closed
-
-            // process connection
-            await ProcessConnection(connection, requestVersion, clientIp: connection.ClientIp,
-                connectCts.Token).Vhc();
-        }
-        catch (Exception ex) {
-            // try to write unauthorized response for any unknown error if client steam is not ChunkStream
-            // ReSharper disable once AccessToDisposedClosure
-            if (connection is { Connected: true, RequireHttpResponse: true } &&
-                !VhUtils.IsSocketClosedException(ex)) {
-                VhLogger.Instance.LogDebug(GeneralEventId.Request,
-                    "ServerHost is writing unauthorized response. ConnectionId: {ConnectionId}",
-                    connection.ConnectionId);
-
-                // create a new CancellationTokenSource for close timeout
-                using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
-                using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token);
-                await VhUtils.TryInvokeAsync("Write unauthorized response.",
-                    () => connection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), closeCts.Token)).Vhc();
-            }
-
-            // dispose the stream
-            if (connection != null) {
-                connection.PreventReuse();
-                await connection.DisposeAsync();
-                ex.Data["ConnectionId"] = connection.ConnectionId;
-                ex.Data["ClientIp"] = VhLogger.Format(connection.ClientIp);
-            }
-            tcpClient.Dispose();
-            throw;
-        }
-    }
-
     private void ReuseConnection(IConnection connection)
     {
         // it handles the exception and dispose the stream
@@ -443,8 +256,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             // add client stream to reuse list and take the ownership
             using var timeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
-            using var reusedCts =
-                CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _cancellationTokenSource.Token);
+            using var reusedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _cancellationTokenSource.Token);
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "ServerHost is pending a shared Connection for reuse. ConnectionId: {ConnectionId}",
@@ -455,8 +267,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             if (requestVersion < 0)
                 return; // client stream has been closed
 
-            timeoutCts.CancelAfter(_sessionManager.SessionOptions
-                .TcpReuseTimeoutValue); // reset timeout for new request
+            timeoutCts.CancelAfter(_sessionManager.SessionOptions.TcpReuseTimeoutValue); // reset timeout for new request
             await ProcessConnection(connection, requestVersion, clientIp: null, reusedCts.Token).Vhc();
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
@@ -471,6 +282,51 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
                     "ServerHost could not process this request on reused stream. ConnectionId: {ConnectionId}",
                     connection.ConnectionId);
+        }
+    }
+
+    private async Task ProcessNewConnection(IConnection connection, CancellationToken cancellationToken)
+    {
+        var clientIp = connection.RemoteEndPoint.Address;
+        try {
+            var serverConnection = await CreateHttpConnection(connection, cancellationToken).Vhc();
+            connection = serverConnection;
+            clientIp = serverConnection.ClientIp;
+
+            VhLogger.Instance.LogDebug(GeneralEventId.Request,
+                "ServerHost has created a new connection. ConnectionId: {ConnectionId}, RemoteEp: {RemoteEp}, ClientIp: {ClientIp}",
+                serverConnection.ConnectionId, VhLogger.Format(serverConnection.RemoteEndPoint),
+                VhLogger.Format(serverConnection.ClientIp));
+
+            var requestVersion = await ReadRequestVersion(serverConnection, cancellationToken).Vhc();
+            if (requestVersion < 0)
+                return;
+
+            await ProcessConnection(connection, requestVersion, serverConnection.ClientIp, cancellationToken).Vhc();
+        }
+        catch (RequestHandledException) {
+            // no need to do anything, just return and let the connection be closed by caller
+            await connection.DisposeAsync();
+        }
+        catch (Exception ex) {
+            if (connection is { Connected: true, RequireHttpResponse: true } &&
+                !VhUtils.IsSocketClosedException(ex)) {
+                VhLogger.Instance.LogDebug(GeneralEventId.Request,
+                    "ServerHost is writing unauthorized response. ConnectionId: {ConnectionId}",
+                    connection.ConnectionId);
+
+                using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
+                using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, cancellationToken);
+                // ReSharper disable once AccessToDisposedClosure
+                await VhUtils.TryInvokeAsync("Write unauthorized response.",
+                    () => connection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), closeCts.Token)).Vhc();
+            }
+
+            connection.PreventReuse();
+            await connection.DisposeAsync();
+            ex.Data["ConnectionId"] = connection.ConnectionId;
+            ex.Data["ClientIp"] = VhLogger.Format(clientIp);
+            throw;
         }
     }
 
@@ -580,6 +436,23 @@ public class ServerHost : IDisposable, IAsyncDisposable
         return request;
     }
 
+    private static int? FindMatchingPort(IEnumerable<IPEndPoint> endPoints, IConnection connection, string connectionType)
+    {
+        var endPoint = endPoints.FirstOrDefault(x =>
+            (x.Address.Equals(IPAddress.Any) && connection.LocalEndPoint.IsV4()) ||
+            (x.Address.Equals(IPAddress.IPv6Any) && connection.LocalEndPoint.IsV6()) ||
+            x.Address.Equals(connection.LocalEndPoint.Address));
+
+        if (endPoint != null && connection is ServerConnection { IsReverseProxy: true }) {
+            VhLogger.Instance.LogDebug(GeneralEventId.Request,
+                "The connection is from reverse proxy, so {ConnectionType} port will not be returned in Hello response. ConnectionId: {ConnectionId}",
+                connectionType, connection.ConnectionId);
+            return null;
+        }
+
+        return endPoint?.Port;
+    }
+
     private async Task ProcessHello(IConnection connection, IPAddress clientIp,
         CancellationToken cancellationToken)
     {
@@ -642,22 +515,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
         VhLogger.Instance.LogDebug(GeneralEventId.Request,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponseEx.SessionId)}");
 
-        // find udp port that match to the same tcp local IpAddress
-        var udpPort = _udpChannelTransmitters
-            .SingleOrDefault(x =>
-                (x.LocalEndPoint.Address.Equals(IPAddress.Any) && connection.LocalEndPoint.IsV4()) ||
-                (x.LocalEndPoint.Address.Equals(IPAddress.IPv6Any) && connection.LocalEndPoint.IsV6()) ||
-                x.LocalEndPoint.Address.Equals(connection.LocalEndPoint.Address))?
-            .LocalEndPoint.Port;
-
-        // if the connection is from reverse proxy,
-        // we should not return udp port because client cannot connect to it directly
-        if (connection is ServerConnection { IsReverseProxy: true } && udpPort.HasValue) {
-            udpPort = null;
-            VhLogger.Instance.LogDebug(GeneralEventId.Request,
-                "The connection is from reverse proxy, so UDP port will not be returned in Hello response. ConnectionId: {ConnectionId}",
-                connection.ConnectionId);
-        }
+        // find udp/quic port that matches the same local IP address family
+        var udpPort = FindMatchingPort(_udpChannelTransmitters.Select(x => x.LocalEndPoint), connection, "UDP");
+        var quicPort = FindMatchingPort(_quicListenerHost.EndPoints, connection, "QUIC");
 
         var helloResponse = new HelloResponse {
             ErrorCode = sessionResponseEx.ErrorCode,
@@ -668,6 +528,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             SessionKey = sessionResponseEx.SessionKey,
             ServerSecret = _sessionManager.ServerSecret,
             UdpPort = protocolVersion > 10 ? udpPort : null,
+            QuicPort = quicPort,
             GaMeasurementId = sessionResponseEx.GaMeasurementId,
             ServerVersion = _sessionManager.ServerVersion.ToString(3),
             ProtocolVersion = sessionResponseEx.ProtocolVersion,
@@ -806,11 +667,17 @@ public class ServerHost : IDisposable, IAsyncDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(15));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
         _disposed = true;
 
         // cancel all running tasks
         VhLogger.Instance.LogDebug("Stopping ServerHost...");
-        _cancellationTokenSource.TryCancel();
+        await _cancellationTokenSource.TryCancelAsync();
         _cancellationTokenSource.Dispose();
 
         // Job
@@ -822,11 +689,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
             udpChannelClient.Dispose();
         _udpChannelTransmitters.Clear();
 
-        // TCPs
-        VhLogger.Instance.LogDebug("Disposing TcpListeners...");
-        foreach (var tcpListener in _tcpListeners)
-            tcpListener.Stop();
-        _tcpListeners.Clear();
+        // QUIC + TCPs in parallel
+        VhLogger.Instance.LogDebug("Disposing QuicListeners and TcpListeners...");
+        await Task.WhenAll(_quicListenerHost.StopAllAsync().AsTask(), _tcpListenerHost.StopAllAsync().AsTask()).Vhc();
 
         // dispose connections
         VhLogger.Instance.LogDebug("Disposing Connections...");
@@ -835,32 +700,6 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 connection.PreventReuse();
                 connection.Dispose();
             }
-
-        // clear list of listeners
-        _tcpListenerTasks.Clear();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        var tcpListenerTasks = _tcpListenerTasks.ToArray();
-        Dispose();
-
-        // wait for finalizing all listener tasks
-        VhLogger.Instance.LogDebug("Disposing current processing requests...");
-        try {
-            await VhUtils.RunTask(Task.WhenAll(tcpListenerTasks), TimeSpan.FromSeconds(15)).Vhc();
-        }
-        catch (Exception ex) {
-            if (ex is TimeoutException)
-                VhLogger.Instance.LogError(ex, "Error in stopping ServerHost.");
-        }
-    }
-
-    // cache HostName for performance
-    public class CertificateHostName(X509Certificate2 certificate)
-    {
-        public string HostName { get; } = certificate.GetNameInfo(X509NameType.DnsName, false) ??
-                                          throw new Exception("Could not get the HostName from the certificate.");
-        public X509Certificate2 Certificate { get; } = certificate;
     }
 }
+

@@ -22,6 +22,9 @@ public class ServerConfig
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? UdpEndPoints { get; set; }
 
+    [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
+    public IPEndPoint[]? QuicEndPoints { get; set; }
+
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
 
@@ -49,6 +52,10 @@ public class ServerConfig
         UdpEndPoints ?? [new IPEndPoint(IPAddress.Any, 0), new IPEndPoint(IPAddress.IPv6Any, 0)];
 
     [JsonIgnore]
+    public IPEndPoint[] QuicEndPointsValue =>
+        QuicEndPoints ?? [new IPEndPoint(IPAddress.Any, 443), new IPEndPoint(IPAddress.IPv6Any, 443)];
+
+    [JsonIgnore]
     public IPAddress[] DnsServersValue => DnsServers ?? IPAddressUtil.GoogleDnsServers;
 
     [JsonIgnore]
@@ -71,6 +78,7 @@ public class ServerConfig
         NetFilterOptions.Merge(obj.NetFilterOptions);
         if (obj.TcpEndPoints != null) TcpEndPoints = obj.TcpEndPoints;
         if (obj.UdpEndPoints != null) UdpEndPoints = obj.UdpEndPoints;
+        if (obj.QuicEndPoints != null) QuicEndPoints = obj.QuicEndPoints;
         if (obj.UpdateStatusInterval != null) UpdateStatusInterval = obj.UpdateStatusInterval;
         if (obj.DnsServers != null) DnsServers = obj.DnsServers;
         if (obj.LogAnonymizer != null) LogAnonymizer = obj.LogAnonymizer;

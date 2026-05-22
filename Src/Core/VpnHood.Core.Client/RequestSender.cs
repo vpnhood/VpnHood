@@ -13,19 +13,12 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 
-internal class RequestSender : IDisposable
+internal class RequestSender(ConnectorServiceOptions connectorServiceOptions) : IDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private int _isDisposed;
 
-    public ConnectorService ConnectorService { get; }
-    public ConnectorStat Stat { get; }
-
-    public RequestSender(ConnectorServiceOptions connectorServiceOptions)
-    {
-        ConnectorService = new ConnectorService(connectorServiceOptions);
-        Stat = new ConnectorStat(() => ConnectorService.FreeConnectionCount);
-    }
+    public ConnectorService ConnectorService { get; } = new(connectorServiceOptions);
 
     public Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
         CancellationToken cancellationToken)
@@ -70,7 +63,7 @@ internal class RequestSender : IDisposable
             VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.",
                 ret.Response.ErrorCode);
 
-            lock (Stat) Stat.RequestCount++;
+            lock (ConnectorService.Stat) ConnectorService.Stat.RequestCount++;
             return ret;
         }
         catch (Exception) when (timeoutCts.IsCancellationRequested) {
@@ -94,7 +87,7 @@ internal class RequestSender : IDisposable
                 // send the request
                 await reusableConnection.Stream.WriteAsync(request, cancellationToken).Vhc();
                 var response = await ReadSessionResponse<T>(reusableConnection.Stream, cancellationToken).Vhc();
-                lock (Stat) Stat.ReusedConnectionSucceededCount++;
+                lock (ConnectorService.Stat) ConnectorService.Stat.ReusedConnectionSucceededCount++;
                 return new ConnectorRequestResult<T> {
                     Response = response,
                     StreamConnection = reusableConnection
@@ -107,7 +100,7 @@ internal class RequestSender : IDisposable
             }
             catch (Exception ex) {
                 // dispose the connection and retry with new connection
-                lock (Stat) Stat.ReusedConnectionFailedCount++;
+                lock (ConnectorService.Stat) ConnectorService.Stat.ReusedConnectionFailedCount++;
                 reusableConnection.PreventReuse();
                 await reusableConnection.DisposeAsync();
                 VhLogger.Instance.LogError(GeneralEventId.Stream, ex,
@@ -119,7 +112,6 @@ internal class RequestSender : IDisposable
         // create a new connection
         var connection = await ConnectorService.GetConnectionToServer(requestId + ":tunnel", request.Length,
             onAttempt, cancellationToken).Vhc();
-        lock (Stat) Stat.CreatedConnectionCount++;
 
         // send request
         try {

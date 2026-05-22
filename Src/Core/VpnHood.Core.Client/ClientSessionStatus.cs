@@ -22,7 +22,7 @@ internal class ClientSessionStatus(
     private AccessUsage _accessUsage = accessUsage;
     internal void Update(AccessUsage? value) => _accessUsage = value ?? _accessUsage;
 
-    public ConnectorStat ConnectorStatus => requestSender.Stat;
+    public ConnectorStat ConnectorStatus => requestSender.ConnectorService.Stat;
     public Traffic Speed => tunnel.TrafficMeter.Speed;
     public Traffic SessionTraffic => tunnel.TrafficMeter.Traffic;
     public Traffic SessionSplitTraffic => proxyManager.Traffic;

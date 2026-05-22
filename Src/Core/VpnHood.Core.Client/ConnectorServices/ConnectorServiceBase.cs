@@ -1,17 +1,11 @@
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net;
-using System.Net.Quic;
 using System.Net.Security;
-using System.Net.Sockets;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Sockets;
-using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels.Streams;
@@ -23,13 +17,13 @@ namespace VpnHood.Core.Client.ConnectorServices;
 internal class ConnectorServiceBase : IDisposable
 {
     private const bool UseBuffer = true;
-    private readonly ISocketFactory _socketFactory;
     private readonly ConcurrentQueue<ReusableConnectionItem> _freeReusableStreamConnectionItems = new();
     private readonly HashSet<ReusableStreamConnection> _sharedStreamConnections = new(50); // for preventing reuse
     private readonly Job _cleanupJob;
     private int _isDisposed;
     private bool _useWebSocket;
-    private readonly ProxyEndPointManager _proxyEndPointManager;
+    private readonly TcpStreamConnectionFactory _tcpStreamConnectionFactory;
+    private readonly QuicStreamConnectionFactory _quicStreamConnectionFactory;
 
     public ClientConnectorStatus Status { get; }
     public TimeSpan TcpReuseTimeout { get; private set; }
@@ -37,20 +31,30 @@ internal class ConnectorServiceBase : IDisposable
     public VpnEndPoint VpnEndPoint { get; init; }
     public TimeSpan RequestTimeout { get; protected set; }
     public bool UseQuic { get; set; }
-    public IPEndPoint? QuicEndPoint { get; set; }
-    private QuicConnection? _quicConnection;
-    private readonly SemaphoreSlim _quicConnectionLock = new(1, 1);
+
+    public IPEndPoint? QuicEndPoint {
+        get => _quicStreamConnectionFactory.QuicEndPoint;
+        set => _quicStreamConnectionFactory.QuicEndPoint = value;
+    }
 
     protected ConnectorServiceBase(ConnectorServiceOptions options)
     {
-        _socketFactory = options.SocketFactory;
         AllowStreamConnectionReuse = options.AllowTcpReuse;
-        _proxyEndPointManager = options.ProxyEndPointManager;
         Status = new ClientConnectorStatusImpl(this);
         TcpReuseTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
         VpnEndPoint = options.VpnEndPoint;
         RequestTimeout = options.RequestTimeout;
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
+
+        _tcpStreamConnectionFactory = new TcpStreamConnectionFactory(
+            options.SocketFactory,
+            options.ProxyEndPointManager,
+            options.VpnEndPoint,
+            UserCertificateValidationCallback);
+
+        _quicStreamConnectionFactory = new QuicStreamConnectionFactory(
+            options.VpnEndPoint,
+            UserCertificateValidationCallback);
     }
 
     protected void Init(int protocolVersion, byte[]? serverSecret, TimeSpan tcpReuseTimeout, bool useWebSocket)
@@ -162,120 +166,15 @@ internal class ConnectorServiceBase : IDisposable
     protected async Task<IStreamConnection> GetConnectionToServer(string streamId, int contentLength,
         Action? onConnectAttempt, CancellationToken cancellationToken)
     {
-        if (UseQuic && QuicEndPoint != null)
-            return await GetQuicConnectionToServer(streamId, contentLength, cancellationToken).Vhc();
+        // Create raw stream connection from appropriate factory
+        var rawConnection = UseQuic
+            ? await _quicStreamConnectionFactory.CreateConnection(streamId, cancellationToken).Vhc()
+            : await _tcpStreamConnectionFactory.CreateConnection(streamId, onConnectAttempt, cancellationToken).Vhc();
 
-        return await GetStreamConnectionToServer(streamId, contentLength, onConnectAttempt, cancellationToken).Vhc();
-    }
-
-    protected async Task<IStreamConnection> GetStreamConnectionToServer(string streamId, int contentLength,
-        Action? onConnectAttempt, CancellationToken cancellationToken)
-    {
-        var tcpEndPoint = VpnEndPoint.TcpEndPoint;
-
-        // create new stream
-        TcpClient? tcpClient = null;
-        try {
-            VhLogger.Instance.LogDebug(GeneralEventId.Request,
-                "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
-
-            // Client.SessionTimeout does not affect in ConnectAsync
-            if (_proxyEndPointManager.IsEnabled)
-                tcpClient = await _proxyEndPointManager.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
-            else {
-                tcpClient = _socketFactory.CreateTcpClient(tcpEndPoint);
-                await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
-            }
-
-            return await GetStreamConnectionToServer(streamId, tcpClient, contentLength, cancellationToken).Vhc();
-        }
-        catch (Exception ex) {
-            // record failed proxy
-            if (_proxyEndPointManager.IsEnabled && tcpClient != null)
-                _proxyEndPointManager.RecordFailed(tcpClient, ex);
-
-            tcpClient?.Dispose();
-            throw;
-        }
-    }
-
-    private async Task<IStreamConnection> GetStreamConnectionToServer(string streamId, TcpClient tcpClient,
-        int contentLength, CancellationToken cancellationToken)
-    {
-        // Establish a TLS connection
-        var sslStream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
-        try {
-            var hostName = VpnEndPoint.HostName;
-            VhLogger.Instance.LogDebug(GeneralEventId.Request, "TLS Authenticating... HostName: {HostName}",
-                VhLogger.FormatHostName(hostName));
-
-            await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions {
-                TargetHost = hostName,
-                EnabledSslProtocols = SslProtocols.None // auto
-            }, cancellationToken).Vhc();
-
-            // create TcpConnection
-            var tcpConnection = new TcpStreamConnection(tcpClient, sslStream,
-                connectionId: streamId, connectionName: "tunnel", isServer: false);
-            var connection = await CreateHttpConnection(tcpConnection, contentLength, cancellationToken).Vhc();
-            lock (Status) Status.CreatedConnectionCount++;
-            return connection;
-        }
-        catch {
-            await sslStream.SafeDisposeAsync();
-            throw;
-        }
-    }
-
-    private async Task<QuicConnection> GetOrCreateQuicConnection(CancellationToken cancellationToken)
-    {
-        if (_quicConnection != null)
-            return _quicConnection;
-
-        var quicEndPoint = QuicEndPoint ?? throw new InvalidOperationException("QuicEndPoint has not been set.");
-        VhLogger.Instance.LogDebug(GeneralEventId.Request,
-            "Establishing a new QUIC connection to the Server... EndPoint: {EndPoint}", VhLogger.Format(quicEndPoint));
-
-        var options = new QuicClientConnectionOptions {
-            RemoteEndPoint = quicEndPoint,
-            DefaultStreamErrorCode = 0,
-            DefaultCloseErrorCode = 0,
-            ClientAuthenticationOptions = new SslClientAuthenticationOptions {
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                ApplicationProtocols = [SslApplicationProtocol.Http3],
-                RemoteCertificateValidationCallback = UserCertificateValidationCallback,
-                EnabledSslProtocols = SslProtocols.Tls13,
-                TargetHost = VpnEndPoint.HostName,
-                EncryptionPolicy = EncryptionPolicy.RequireEncryption
-            }
-        };
-
-        _quicConnection = await QuicConnection.ConnectAsync(options, cancellationToken).Vhc();
-        return _quicConnection;
-    }
-
-    private async Task<IStreamConnection> GetQuicConnectionToServer(string streamId, int contentLength,
-        CancellationToken cancellationToken)
-    {
-        await _quicConnectionLock.WaitAsync(cancellationToken).Vhc();
-        try {
-            var quicConnection = await GetOrCreateQuicConnection(cancellationToken).Vhc();
-            var stream = await quicConnection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, cancellationToken).Vhc();
-
-            var connection = new QuicStreamConnection(stream,
-                localEndPoint: quicConnection.LocalEndPoint,
-                remoteEndPoint: quicConnection.RemoteEndPoint,
-                connectionName: "tunnel",
-                isServer: false,
-                connectionId: streamId);
-
-            var httpConnection = await CreateHttpConnection(connection, contentLength, cancellationToken).Vhc();
-            lock (Status) Status.CreatedConnectionCount++;
-            return httpConnection;
-        }
-        finally {
-            _quicConnectionLock.Release();
-        }
+        // Apply HTTP framing on top of the raw connection
+        var connection = await CreateHttpConnection(rawConnection, contentLength, cancellationToken).Vhc();
+        lock (Status) Status.CreatedConnectionCount++;
+        return connection;
     }
 
     protected ReusableStreamConnection? GetFreeConnection()
@@ -309,11 +208,6 @@ internal class ConnectorServiceBase : IDisposable
             IdleTimeout = TcpReuseTimeout,
             StreamConnection = streamConnection
         });
-    }
-
-    public Task RunJob()
-    {
-        return Task.CompletedTask;
     }
 
     private ValueTask Cleanup(CancellationToken cancellationToken)
@@ -382,11 +276,9 @@ internal class ConnectorServiceBase : IDisposable
             // Stop the cleanup job
             _cleanupJob.Dispose();
 
-            // Dispose QUIC connection
-            if (_quicConnection != null) {
-                try { _quicConnection.DisposeAsync().AsTask().Wait(); } catch { /* ignore */ }
-                _quicConnection = null;
-            }
+            // Dispose connection factories
+            _tcpStreamConnectionFactory.Dispose();
+            _quicStreamConnectionFactory.DisposeAsync().VhBlock();
 
             // Prevent reuse of client streams
             PreventReuseSharedStreamConnections();

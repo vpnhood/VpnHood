@@ -392,7 +392,9 @@ public class ServerFinder(
             protocolVersion: connector.ProtocolVersion, serverSecret: null,
             requestTimeout: serverQueryTimeout,
             tcpReuseTimeout: TimeSpan.Zero,
-            useWebSocket: false);
+            useWebSocket: false,
+            useQuic: false,
+            quicEndPoint: null);
 
         return connector;
     }

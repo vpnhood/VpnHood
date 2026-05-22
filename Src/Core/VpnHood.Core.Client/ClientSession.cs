@@ -301,6 +301,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             VhLogger.Instance.LogInformation("VpnProtocol is changed to {VpnProtocol}.", _channelProtocol);
             _tunnel.MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;
             _oldChannelProtocol = _channelProtocol;
+            _connectorService.UseQuic = _channelProtocol == ChannelProtocol.Quic && Config.HostQuicEndPoint != null;
+            _connectorService.QuicEndPoint = Config.HostQuicEndPoint;
             _tunnel.RemoveChannels<IPacketChannel>();
             Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
         }

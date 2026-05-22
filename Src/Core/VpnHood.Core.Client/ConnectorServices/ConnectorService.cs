@@ -22,9 +22,11 @@ internal class ConnectorService(
 
 
     public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan requestTimeout, TimeSpan tcpReuseTimeout,
-        bool useWebSocket)
+        bool useWebSocket, bool useQuic, IPEndPoint? quicEndPoint)
     {
         RequestTimeout = requestTimeout;
+        UseQuic = useQuic;
+        QuicEndPoint = quicEndPoint;
         base.Init(protocolVersion, serverSecret, tcpReuseTimeout, useWebSocket && protocolVersion >= 9);
     }
 
@@ -119,7 +121,7 @@ internal class ConnectorService(
         }
 
         // create a new connection
-        var connection = await GetTlsConnectionToServer(requestId + ":tunnel", request.Length,
+        var connection = await GetConnectionToServer(requestId + ":tunnel", request.Length,
             onAttempt, cancellationToken).Vhc();
 
         // send request

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Quic;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -35,6 +36,10 @@ internal class ConnectorServiceBase : IDisposable
     public int ProtocolVersion { get; private set; } = 8;
     public VpnEndPoint VpnEndPoint { get; init; }
     public TimeSpan RequestTimeout { get; protected set; }
+    public bool UseQuic { get; set; }
+    public IPEndPoint? QuicEndPoint { get; set; }
+    private QuicConnection? _quicConnection;
+    private readonly SemaphoreSlim _quicConnectionLock = new(1, 1);
 
     protected ConnectorServiceBase(ConnectorServiceOptions options)
     {
@@ -154,6 +159,15 @@ internal class ConnectorServiceBase : IDisposable
             : CreateSimpleConnection(connection, contentLength, cancellationToken); // Simple HTTP connection
     }
 
+    protected async Task<IConnection> GetConnectionToServer(string streamId, int contentLength,
+        Action? onConnectAttempt, CancellationToken cancellationToken)
+    {
+        if (UseQuic && QuicEndPoint != null)
+            return await GetQuicConnectionToServer(streamId, contentLength, cancellationToken).Vhc();
+
+        return await GetTlsConnectionToServer(streamId, contentLength, onConnectAttempt, cancellationToken).Vhc();
+    }
+
     protected async Task<IConnection> GetTlsConnectionToServer(string streamId, int contentLength,
         Action? onConnectAttempt, CancellationToken cancellationToken)
     {
@@ -210,6 +224,57 @@ internal class ConnectorServiceBase : IDisposable
         catch {
             await sslStream.SafeDisposeAsync();
             throw;
+        }
+    }
+
+    private async Task<QuicConnection> GetOrCreateQuicConnection(CancellationToken cancellationToken)
+    {
+        if (_quicConnection != null)
+            return _quicConnection;
+
+        var quicEndPoint = QuicEndPoint ?? throw new InvalidOperationException("QuicEndPoint has not been set.");
+        VhLogger.Instance.LogDebug(GeneralEventId.Request,
+            "Establishing a new QUIC connection to the Server... EndPoint: {EndPoint}", VhLogger.Format(quicEndPoint));
+
+        var options = new QuicClientConnectionOptions {
+            RemoteEndPoint = quicEndPoint,
+            DefaultStreamErrorCode = 0,
+            DefaultCloseErrorCode = 0,
+            ClientAuthenticationOptions = new SslClientAuthenticationOptions {
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+                ApplicationProtocols = [SslApplicationProtocol.Http3],
+                RemoteCertificateValidationCallback = UserCertificateValidationCallback,
+                EnabledSslProtocols = SslProtocols.Tls13,
+                TargetHost = VpnEndPoint.HostName,
+                EncryptionPolicy = EncryptionPolicy.RequireEncryption
+            }
+        };
+
+        _quicConnection = await QuicConnection.ConnectAsync(options, cancellationToken).Vhc();
+        return _quicConnection;
+    }
+
+    private async Task<IConnection> GetQuicConnectionToServer(string streamId, int contentLength,
+        CancellationToken cancellationToken)
+    {
+        await _quicConnectionLock.WaitAsync(cancellationToken).Vhc();
+        try {
+            var quicConnection = await GetOrCreateQuicConnection(cancellationToken).Vhc();
+            var stream = await quicConnection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, cancellationToken).Vhc();
+
+            var connection = new QuicStreamConnection(stream,
+                localEndPoint: quicConnection.LocalEndPoint,
+                remoteEndPoint: quicConnection.RemoteEndPoint,
+                connectionName: "tunnel",
+                isServer: false,
+                connectionId: streamId);
+
+            var httpConnection = await CreateHttpConnection(connection, contentLength, cancellationToken).Vhc();
+            lock (Status) Status.CreatedConnectionCount++;
+            return httpConnection;
+        }
+        finally {
+            _quicConnectionLock.Release();
         }
     }
 
@@ -316,6 +381,12 @@ internal class ConnectorServiceBase : IDisposable
         if (disposing) {
             // Stop the cleanup job
             _cleanupJob.Dispose();
+
+            // Dispose QUIC connection
+            if (_quicConnection != null) {
+                try { _quicConnection.DisposeAsync().AsTask().Wait(); } catch { /* ignore */ }
+                _quicConnection = null;
+            }
 
             // Prevent reuse of client streams
             PreventReuseSharedConnections();

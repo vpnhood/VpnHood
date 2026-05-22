@@ -153,13 +153,6 @@ internal class ClientSessionBuilder(
                 $"ClientCountry: {helloResponse.ClientCountry}, " +
                 $"MaxSpeedMbps: {helloResponse.AccessInfo?.MaxSpeedMbps}");
 
-            connectorService.Init(
-                helloResponse.ProtocolVersion,
-                requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),
-                tcpReuseTimeout: helloResponse.TcpReuseTimeout,
-                serverSecret: helloResponse.ServerSecret,
-                useWebSocket: config.UseWebSocket);
-
             var sessionId = helloResponse.SessionId;
             var sessionKey = helloResponse.SessionKey;
 
@@ -170,6 +163,15 @@ internal class ClientSessionBuilder(
             var hostQuicEndPoint = helloResponse.QuicPort > 0
                 ? new IPEndPoint(connectorService.VpnEndPoint.TcpEndPoint.Address, helloResponse.QuicPort.Value)
                 : null;
+
+            connectorService.Init(
+                helloResponse.ProtocolVersion,
+                requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),
+                tcpReuseTimeout: helloResponse.TcpReuseTimeout,
+                serverSecret: helloResponse.ServerSecret,
+                useWebSocket: config.UseWebSocket,
+                useQuic: channelProtocol == ChannelProtocol.Quic && hostQuicEndPoint != null,
+                quicEndPoint: hostQuicEndPoint);
 
             staticIpFilter.IncludeRanges = config.IncludeIpRangesByApp.ToOrderedList();
             staticIpFilter.BlockedRanges = config.BlockIpRangesByApp.ToOrderedList();

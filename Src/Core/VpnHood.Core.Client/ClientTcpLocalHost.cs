@@ -85,7 +85,7 @@ internal class ClientTcpLocalHost(
                 // config tcpOrgClient
                 var tcpClient = await tcpListener.AcceptTcpClientAsync().Vhc();
                 VhUtils.ConfigTcpClient(tcpClient, keepAlive: true, noDelay: true);
-                var tcpConnection = new TcpConnection(tcpClient, isServer: false, connectionName: "app");
+                var tcpConnection = new TcpStreamConnection(tcpClient, isServer: false, connectionName: "app");
                 _ = ProcessConnection(tcpConnection, _cancellationTokenSource.Token);
             }
         }
@@ -158,11 +158,11 @@ internal class ClientTcpLocalHost(
         }
     }
 
-    private async Task ProcessConnection(IConnection connection, CancellationToken cancellationToken)
+    private async Task ProcessConnection(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         try {
             // get original remote from NAT
-            var remoteEndPoint = connection.RemoteEndPoint;
+            var remoteEndPoint = streamConnection.RemoteEndPoint;
             var ipVersion = remoteEndPoint.IpVersion();
             var natItem =
                 (NatItemEx?)_nat.Resolve(ipVersion, IpProtocol.Tcp, (ushort)remoteEndPoint.Port) ??
@@ -171,15 +171,15 @@ internal class ClientTcpLocalHost(
 
             // check invalid income
             var catcherAddress = ipVersion == IpVersion.IPv4 ? catcherAddressIpV4 : catcherAddressIpV6;
-            if (!Equals(connection.RemoteEndPoint.Address, catcherAddress))
+            if (!Equals(streamConnection.RemoteEndPoint.Address, catcherAddress))
                 throw new Exception("TcpProxy rejected an outbound connection!");
 
             var hostEndPoint = new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort);
-            await streamHandler.ProcessConnection(connection, hostEndPoint, cancellationToken).Vhc();
+            await streamHandler.ProcessConnection(streamConnection, hostEndPoint, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.Stream, ex, "Could not process a tcp stream request.");
-            await connection.DisposeAsync();
+            await streamConnection.DisposeAsync();
         }
     }
 

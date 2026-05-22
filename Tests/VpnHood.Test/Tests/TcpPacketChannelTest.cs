@@ -39,10 +39,10 @@ public class TcpPacketChannelTest : TestBase
 
         // create server channel
         var serverTcpClient = await listenerTask;
-        await using var serverStream = new TcpConnection(serverTcpClient, connectionName: "tunnel", isServer: true);
+        await using var serverStream = new TcpStreamConnection(serverTcpClient, connectionName: "tunnel", isServer: true);
         using var serverChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             RequestTime = DateTime.UtcNow,
-            Connection = serverStream,
+            StreamConnection = serverStream,
             Blocking = false,
             AutoDisposePackets = true,
             Lifespan = null,
@@ -56,10 +56,10 @@ public class TcpPacketChannelTest : TestBase
         serverTunnel.PacketReceived += (_, ipPacket) => { lastServerReceivedPacket = ipPacket; };
 
         // create client channel
-        await using var connection = new TcpConnection(tcpClient, connectionName: "tunnel", isServer: false);
+        await using var connection = new TcpStreamConnection(tcpClient, connectionName: "tunnel", isServer: false);
         using var clientChannel = new StreamPacketChannel(new StreamPacketChannelOptions {
             RequestTime = DateTime.UtcNow,
-            Connection = connection,
+            StreamConnection = connection,
             AutoDisposePackets = true,
             Lifespan = TimeSpan.FromMilliseconds(1000),
             Blocking = false,

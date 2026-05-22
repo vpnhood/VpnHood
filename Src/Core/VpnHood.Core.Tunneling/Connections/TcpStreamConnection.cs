@@ -9,12 +9,12 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Connections;
 
-public sealed class TcpConnection : IConnection
+public sealed class TcpStreamConnection : IStreamConnection
 {
     private readonly TcpClient _tcpClient;
     private int _disposed;
 
-    public TcpConnection(TcpClient tcpClient,
+    public TcpStreamConnection(TcpClient tcpClient,
         string connectionName, bool isServer, string? connectionId = null)
     {
         _tcpClient = tcpClient;
@@ -24,7 +24,7 @@ public sealed class TcpConnection : IConnection
         ConnectionId = connectionId ?? UniqueIdFactory.Create();
     }
 
-    public TcpConnection(TcpClient tcpClient, Stream stream,
+    public TcpStreamConnection(TcpClient tcpClient, Stream stream,
         string connectionName, bool isServer, string? connectionId = null)
         : this(tcpClient, connectionName: connectionName, isServer: isServer, connectionId: connectionId)
     {

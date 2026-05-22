@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Tunneling.Connections;
 
-public interface IConnection : IDisposable, IAsyncDisposable
+public interface IStreamConnection : IDisposable, IAsyncDisposable
 {
     string ConnectionId { get; set; } // for diagnostic purposes
     string ConnectionName { get; } // for diagnostic purposes

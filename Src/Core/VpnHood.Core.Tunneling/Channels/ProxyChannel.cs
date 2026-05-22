@@ -11,8 +11,8 @@ namespace VpnHood.Core.Tunneling.Channels;
 public class ProxyChannel : IProxyChannel
 {
     private int _isDisposed;
-    private readonly IConnection _hostConnection;
-    private readonly IConnection _tunnelConnection;
+    private readonly IStreamConnection _hostStreamConnection;
+    private readonly IStreamConnection _tunnelStreamConnection;
     private readonly TransferBufferSize _tunnelBufferSize;
     private const int BufferSizeMax = 0x14000;
     private const int BufferSizeMin = 2048;
@@ -28,11 +28,11 @@ public class ProxyChannel : IProxyChannel
     public string ChannelId { get; }
     private readonly TrafficMeter? _trafficMeter;
 
-    public ProxyChannel(string channelId, IConnection orgConnection, IConnection tunnelConnection,
+    public ProxyChannel(string channelId, IStreamConnection orgStreamConnection, IStreamConnection tunnelStreamConnection,
         TransferBufferSize tunnelBufferSize, TrafficMeter? trafficMeter = null)
     {
-        _hostConnection = orgConnection;
-        _tunnelConnection = tunnelConnection;
+        _hostStreamConnection = orgStreamConnection;
+        _tunnelStreamConnection = tunnelStreamConnection;
         _tunnelBufferSize = tunnelBufferSize;
         _trafficMeter = trafficMeter;
 
@@ -82,11 +82,11 @@ public class ProxyChannel : IProxyChannel
             _started = true;
 
             var tunnelReadTask = CopyFromTunnelAsync(
-                _tunnelConnection.Stream, _hostConnection.Stream, _tunnelBufferSize.Receive,
+                _tunnelStreamConnection.Stream, _hostStreamConnection.Stream, _tunnelBufferSize.Receive,
                 cancellationToken, cancellationToken); // tunnel => host
 
             var tunnelWriteTask = CopyToTunnelAsync(
-                _hostConnection.Stream, _tunnelConnection.Stream, _tunnelBufferSize.Send,
+                _hostStreamConnection.Stream, _tunnelStreamConnection.Stream, _tunnelBufferSize.Send,
                 cancellationToken, cancellationToken); // host => tunnel
 
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).Vhc();
@@ -94,8 +94,8 @@ public class ProxyChannel : IProxyChannel
 
             // just to ensure that both tasks are completed gracefully, Connection should also handle it
             await Task.WhenAll(
-                    _hostConnection.Stream.DisposeAsync().AsTask(),
-                    _tunnelConnection.Stream.DisposeAsync().AsTask())
+                    _hostStreamConnection.Stream.DisposeAsync().AsTask(),
+                    _tunnelStreamConnection.Stream.DisposeAsync().AsTask())
                 .Vhc();
         }
         catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
@@ -220,7 +220,7 @@ public class ProxyChannel : IProxyChannel
             return default;
 
         // check tcp states
-        if (_hostConnection.Connected && _tunnelConnection.Connected)
+        if (_hostStreamConnection.Connected && _tunnelStreamConnection.Connected)
             return default;
 
         VhLogger.Instance.LogInformation(GeneralEventId.ProxyChannel,
@@ -244,7 +244,7 @@ public class ProxyChannel : IProxyChannel
         _cancellationTokenSource.Dispose();
         _checkAliveJob.Dispose();
         _started = false;
-        _hostConnection.Dispose();
-        _tunnelConnection.Dispose();
+        _hostStreamConnection.Dispose();
+        _tunnelStreamConnection.Dispose();
     }
 }

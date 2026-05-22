@@ -7,7 +7,7 @@ using VpnHood.Core.Tunneling.Utils;
 
 namespace VpnHood.Core.Tunneling.Connections;
 
-public sealed class QuicStreamConnection : IConnection
+public sealed class QuicStreamConnection : IStreamConnection
 {
     private readonly QuicStream _stream;
     private bool _connected = true;

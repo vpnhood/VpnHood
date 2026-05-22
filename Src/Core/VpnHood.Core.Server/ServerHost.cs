@@ -22,7 +22,7 @@ namespace VpnHood.Core.Server;
 
 public class ServerHost : IDisposable, IAsyncDisposable
 {
-    private readonly HashSet<IConnection> _connections = [];
+    private readonly HashSet<IStreamConnection> _connections = [];
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly SessionManager _sessionManager;
     private readonly DownloadService _downloadService;
@@ -123,17 +123,17 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private static async Task<int> ReadRequestVersion(IConnection connection, CancellationToken cancellationToken)
+    private static async Task<int> ReadRequestVersion(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         var buffer = new byte[1];
 
         // read request version. We may wait here for reuse timeout
-        var rest = await connection.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
+        var rest = await streamConnection.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (rest == 0) {
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
-                "Connection has been closed. ConnectionId: {ConnectionId}", connection.ConnectionId);
-            connection.PreventReuse();
-            await connection.DisposeAsync();
+                "Connection has been closed. ConnectionId: {ConnectionId}", streamConnection.ConnectionId);
+            streamConnection.PreventReuse();
+            await streamConnection.DisposeAsync();
             return -1;
         }
 
@@ -141,12 +141,12 @@ public class ServerHost : IDisposable, IAsyncDisposable
         return version;
     }
 
-    private async Task<ServerConnection> CreateHttpConnection(IConnection connection, CancellationToken cancellationToken)
+    private async Task<ServerStreamConnection> CreateHttpConnection(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         try {
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "Waiting for Connection request...");
             var headers =
-                await HttpUtils.ParseHeadersAsync(connection.Stream, cancellationToken).Vhc()
+                await HttpUtils.ParseHeadersAsync(streamConnection.Stream, cancellationToken).Vhc()
                 ?? throw new Exception("Connection has been closed before receiving any request.");
 
             VhLogger.Instance.LogDebug(GeneralEventId.Request, "request: {request}", string.Join("\n", headers));
@@ -154,17 +154,17 @@ public class ServerHost : IDisposable, IAsyncDisposable
             Enum.TryParse<TunnelStreamType>(headers.GetValueOrDefault("X-BinaryStream", ""), out var streamType);
             bool.TryParse(headers.GetValueOrDefault("X-Buffered", "true"), out var useBuffer);
             int.TryParse(headers.GetValueOrDefault("X-ProtocolVersion", "0"), out var protocolVersion);
-            var connectionId = headers.GetValueOrDefault("X-ConnectionId", connection.ConnectionId);
+            var connectionId = headers.GetValueOrDefault("X-ConnectionId", streamConnection.ConnectionId);
             var webSocketKey = headers.GetValueOrDefault("Sec-WebSocket-Key", "");
             var httpRequestLine = headers.GetValueOrDefault(HttpUtils.HttpRequestKey, "");
             var httpMethod = httpRequestLine.Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
-            var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ?? connection.RemoteEndPoint.Address;
+            var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ?? streamConnection.RemoteEndPoint.Address;
             var isRevereProxy = !string.IsNullOrEmpty(clientIpByProxy);
 
             // Try to serve download file if requested
-            if (await _downloadService.TryServeDownloadAsync(connection, httpRequestLine, cancellationToken).Vhc())
+            if (await _downloadService.TryServeDownloadAsync(streamConnection, httpRequestLine, cancellationToken).Vhc())
                 throw new RequestHandledException(); // Should not reach here, but just in case
 
             if (upgrade.Equals("websocket", StringComparison.OrdinalIgnoreCase))
@@ -179,7 +179,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     if (httpMethod != "POST")
                         throw new Exception("Bad request");
 
-                    return new ServerConnection(connection) {
+                    return new ServerStreamConnection(streamConnection) {
                         ClientIp = clientIp,
                         RequireHttpResponse = true,
                         IsReverseProxy = isRevereProxy
@@ -192,10 +192,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
                         // create WebSocket stream without handshake
                         var websocketStream = new WebSocketStream(
-                            connection.Stream, connection.ConnectionId, useBuffer: useBuffer, isServer: true);
-                        var websocketConnection = new ConnectionDecorator(connection, websocketStream);
-                        var reusableConnection = new ReusableConnection(websocketConnection, ReuseConnection);
-                        return new ServerConnection(reusableConnection) {
+                            streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
+                        var websocketConnection = new StreamConnectionDecorator(streamConnection, websocketStream);
+                        var reusableConnection = new ReusableStreamConnection(websocketConnection, ReuseConnection);
+                        return new ServerStreamConnection(reusableConnection) {
                             ConnectionId = connectionId,
                             ClientIp = clientIp,
                             RequireHttpResponse = true, // same as simple use WebSocket stream
@@ -209,13 +209,13 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
                         // reply HTTP response for websocket upgrade
                         var response = HttpResponseBuilder.WebSocketUpgrade(webSocketKey);
-                        await connection.Stream.WriteAsync(response, cancellationToken).Vhc();
+                        await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
                         var websocketStream = new WebSocketStream(
-                            connection.Stream, connection.ConnectionId, useBuffer: useBuffer, isServer: true);
-                        var websocketConnection = new ConnectionDecorator(connection, websocketStream);
-                        var reusableConnection = new ReusableConnection(websocketConnection, ReuseConnection);
-                        return new ServerConnection(reusableConnection) {
+                            streamConnection.Stream, streamConnection.ConnectionId, useBuffer: useBuffer, isServer: true);
+                        var websocketConnection = new StreamConnectionDecorator(streamConnection, websocketStream);
+                        var reusableConnection = new ReusableStreamConnection(websocketConnection, ReuseConnection);
+                        return new ServerStreamConnection(reusableConnection) {
                             ConnectionId = connectionId,
                             ClientIp = clientIp,
                             RequireHttpResponse = false, // Upgrade response has been already sent
@@ -228,23 +228,23 @@ public class ServerHost : IDisposable, IAsyncDisposable
                     throw new UnauthorizedAccessException(); //Unknown BinaryStreamType
             }
         }
-        catch (Exception ex) when (connection.Connected) {
+        catch (Exception ex) when (streamConnection.Connected) {
             //always return BadRequest 
             var response = ex is UnauthorizedAccessException
                 ? HttpResponseBuilder.Unauthorized()
                 : HttpResponseBuilder.Error(HttpStatusCode.BadRequest);
-            await connection.Stream.WriteAsync(response, cancellationToken).Vhc();
+            await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
             throw;
         }
     }
 
-    private void ReuseConnection(IConnection connection)
+    private void ReuseConnection(IStreamConnection streamConnection)
     {
         // it handles the exception and dispose the stream
-        _ = TryReuseConnectionAsync(connection);
+        _ = TryReuseConnectionAsync(streamConnection);
     }
 
-    private async Task TryReuseConnectionAsync(IConnection connection)
+    private async Task TryReuseConnectionAsync(IStreamConnection streamConnection)
     {
         try {
             ObjectDisposedException.ThrowIf(_disposed, this);
@@ -255,37 +255,37 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "ServerHost is pending a shared Connection for reuse. ConnectionId: {ConnectionId}",
-                connection.ConnectionId);
+                streamConnection.ConnectionId);
 
             // wait for reuse timeout by reading the request version
-            var requestVersion = await ReadRequestVersion(connection, reusedCts.Token).Vhc();
+            var requestVersion = await ReadRequestVersion(streamConnection, reusedCts.Token).Vhc();
             if (requestVersion < 0)
                 return; // client stream has been closed
 
             timeoutCts.CancelAfter(_sessionManager.SessionOptions.TcpReuseTimeoutValue); // reset timeout for new request
-            await ProcessConnection(connection, requestVersion, clientIp: null, reusedCts.Token).Vhc();
+            await ProcessConnection(streamConnection, requestVersion, clientIp: null, reusedCts.Token).Vhc();
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "ServerHost has reused a shared Connection. ConnectionId: {ConnectionId}",
-                connection.ConnectionId);
+                streamConnection.ConnectionId);
         }
         catch (Exception ex) {
-            connection.PreventReuse();
-            connection.Dispose();
+            streamConnection.PreventReuse();
+            streamConnection.Dispose();
             if (ex is ISelfLog loggable) loggable.Log();
             else
                 VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
                     "ServerHost could not process this request on reused stream. ConnectionId: {ConnectionId}",
-                    connection.ConnectionId);
+                    streamConnection.ConnectionId);
         }
     }
 
-    private async Task ProcessNewConnection(IConnection connection, CancellationToken cancellationToken)
+    private async Task ProcessNewConnection(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
-        var clientIp = connection.RemoteEndPoint.Address;
+        var clientIp = streamConnection.RemoteEndPoint.Address;
         try {
-            var serverConnection = await CreateHttpConnection(connection, cancellationToken).Vhc();
-            connection = serverConnection;
+            var serverConnection = await CreateHttpConnection(streamConnection, cancellationToken).Vhc();
+            streamConnection = serverConnection;
             clientIp = serverConnection.ClientIp;
 
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
@@ -297,45 +297,45 @@ public class ServerHost : IDisposable, IAsyncDisposable
             if (requestVersion < 0)
                 return;
 
-            await ProcessConnection(connection, requestVersion, serverConnection.ClientIp, cancellationToken).Vhc();
+            await ProcessConnection(streamConnection, requestVersion, serverConnection.ClientIp, cancellationToken).Vhc();
         }
         catch (RequestHandledException) {
             // no need to do anything, just return and let the connection be closed by caller
-            await connection.DisposeAsync();
+            await streamConnection.DisposeAsync();
         }
         catch (Exception ex) {
-            if (connection is { Connected: true, RequireHttpResponse: true } &&
+            if (streamConnection is { Connected: true, RequireHttpResponse: true } &&
                 !VhUtils.IsSocketClosedException(ex)) {
                 VhLogger.Instance.LogDebug(GeneralEventId.Request,
                     "ServerHost is writing unauthorized response. ConnectionId: {ConnectionId}",
-                    connection.ConnectionId);
+                    streamConnection.ConnectionId);
 
                 using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
                 using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, cancellationToken);
                 // ReSharper disable once AccessToDisposedClosure
                 await VhUtils.TryInvokeAsync("Write unauthorized response.",
-                    () => connection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), closeCts.Token)).Vhc();
+                    () => streamConnection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), closeCts.Token)).Vhc();
             }
 
-            connection.PreventReuse();
-            await connection.DisposeAsync();
-            ex.Data["ConnectionId"] = connection.ConnectionId;
+            streamConnection.PreventReuse();
+            await streamConnection.DisposeAsync();
+            ex.Data["ConnectionId"] = streamConnection.ConnectionId;
             ex.Data["ClientIp"] = VhLogger.Format(clientIp);
             throw;
         }
     }
 
-    private async Task ProcessConnection(IConnection connection, int requestVersion, IPAddress? clientIp,
+    private async Task ProcessConnection(IStreamConnection streamConnection, int requestVersion, IPAddress? clientIp,
         CancellationToken cancellationToken)
     {
-        using var scope = VhLogger.Instance.BeginScope($"ConnectionId: {connection.ConnectionId}");
+        using var scope = VhLogger.Instance.BeginScope($"ConnectionId: {streamConnection.ConnectionId}");
 
         try {
             // Take ownership: stream is added here and removed in finally
             lock (_connections)
-                _connections.Add(connection);
+                _connections.Add(streamConnection);
 
-            await ProcessRequest(connection, requestVersion, clientIp: clientIp, cancellationToken).Vhc();
+            await ProcessRequest(streamConnection, requestVersion, clientIp: clientIp, cancellationToken).Vhc();
         }
         catch (SessionException ex) {
             if (ex is ISelfLog loggable)
@@ -343,21 +343,21 @@ public class ServerHost : IDisposable, IAsyncDisposable
             else
                 VhLogger.Instance.LogDebug(GeneralEventId.Request, ex,
                     "Could not process this request. SessionErrorCode: {SessionErrorCode}, ConnectionId: {ConnectionId}",
-                    ex.SessionResponse.ErrorCode, connection.ConnectionId);
+                    ex.SessionResponse.ErrorCode, streamConnection.ConnectionId);
 
             // reply the error to caller if it is SessionException
             // create a new CancellationTokenSource for close timeout
             using var closeTimeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpConnectTimeoutValue);
             using var closeCts = CancellationTokenSource.CreateLinkedTokenSource(closeTimeoutCts.Token, _cancellationTokenSource.Token);
-            await connection.DisposeAsync(ex.SessionResponse, closeCts.Token).Vhc();
+            await streamConnection.DisposeAsync(ex.SessionResponse, closeCts.Token).Vhc();
         }
         finally {
             lock (_connections)
-                _connections.Remove(connection);
+                _connections.Remove(streamConnection);
         }
     }
 
-    private async Task ProcessRequest(IConnection connection, int requestVersion, IPAddress? clientIp,
+    private async Task ProcessRequest(IStreamConnection streamConnection, int requestVersion, IPAddress? clientIp,
         CancellationToken cancellationToken)
     {
         if (requestVersion != 1)
@@ -366,7 +366,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         var buffer = new byte[1];
 
         // read request code
-        var res = await connection.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
+        var res = await streamConnection.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).Vhc();
         if (res == 0)
             throw new Exception("Connection has been closed before reading the request code.");
 
@@ -375,35 +375,35 @@ public class ServerHost : IDisposable, IAsyncDisposable
             case RequestCode.Hello:
                 if (clientIp is null)
                     throw new InvalidOperationException("Hello request should come by ClientIp.");
-                await ProcessHello(connection, clientIp, cancellationToken).Vhc();
+                await ProcessHello(streamConnection, clientIp, cancellationToken).Vhc();
                 break;
 
             case RequestCode.SessionStatus:
-                await ProcessSessionStatus(connection, cancellationToken).Vhc();
+                await ProcessSessionStatus(streamConnection, cancellationToken).Vhc();
                 break;
 
             case RequestCode.TcpPacketChannel:
-                await ProcessTcpPacketChannel(connection, cancellationToken).Vhc();
+                await ProcessTcpPacketChannel(streamConnection, cancellationToken).Vhc();
                 break;
 
             case RequestCode.ProxyChannel:
-                await ProcessStreamProxyChannel(connection, cancellationToken).Vhc();
+                await ProcessStreamProxyChannel(streamConnection, cancellationToken).Vhc();
                 break;
 
             case RequestCode.UdpPacket:
-                await ProcessUdpPacketRequest(connection, cancellationToken).Vhc();
+                await ProcessUdpPacketRequest(streamConnection, cancellationToken).Vhc();
                 break;
 
             case RequestCode.RewardedAd:
-                await ProcessRewardedAdRequest(connection, cancellationToken).Vhc();
+                await ProcessRewardedAdRequest(streamConnection, cancellationToken).Vhc();
                 break;
 
             case RequestCode.ServerCheck:
-                await ProcessServerCheck(connection, cancellationToken).Vhc();
+                await ProcessServerCheck(streamConnection, cancellationToken).Vhc();
                 break;
 
             case RequestCode.Bye:
-                await ProcessBye(connection, cancellationToken).Vhc();
+                await ProcessBye(streamConnection, cancellationToken).Vhc();
                 break;
 
             default:
@@ -411,7 +411,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         }
     }
 
-    private static async Task<T> ReadRequest<T>(IConnection connection, CancellationToken cancellationToken)
+    private static async Task<T> ReadRequest<T>(IStreamConnection streamConnection, CancellationToken cancellationToken)
         where T : ClientRequest
     {
         // reading request
@@ -419,10 +419,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
             "Processing a request. RequestType: {RequestType}.",
             VhLogger.FormatType<T>());
 
-        var request = await StreamUtils.ReadObjectAsync<T>(connection.Stream, cancellationToken).Vhc();
+        var request = await StreamUtils.ReadObjectAsync<T>(streamConnection.Stream, cancellationToken).Vhc();
 
         // check request id to server
-        connection.ConnectionId = request.RequestId;
+        streamConnection.ConnectionId = request.RequestId;
 
         VhLogger.Instance.LogDebug(GeneralEventId.Request,
             "Request has been read. RequestType: {RequestType}. RequestId: {RequestId}",
@@ -431,24 +431,24 @@ public class ServerHost : IDisposable, IAsyncDisposable
         return request;
     }
 
-    private static int? FindMatchingPort(IEnumerable<IPEndPoint> endPoints, IConnection connection, string connectionType)
+    private static int? FindMatchingPort(IEnumerable<IPEndPoint> endPoints, IStreamConnection streamConnection, string connectionType)
     {
         var endPoint = endPoints.FirstOrDefault(x =>
-            (x.Address.Equals(IPAddress.Any) && connection.LocalEndPoint.IsV4()) ||
-            (x.Address.Equals(IPAddress.IPv6Any) && connection.LocalEndPoint.IsV6()) ||
-            x.Address.Equals(connection.LocalEndPoint.Address));
+            (x.Address.Equals(IPAddress.Any) && streamConnection.LocalEndPoint.IsV4()) ||
+            (x.Address.Equals(IPAddress.IPv6Any) && streamConnection.LocalEndPoint.IsV6()) ||
+            x.Address.Equals(streamConnection.LocalEndPoint.Address));
 
-        if (endPoint != null && connection is ServerConnection { IsReverseProxy: true }) {
+        if (endPoint != null && streamConnection is ServerStreamConnection { IsReverseProxy: true }) {
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
                 "The connection is from reverse proxy, so {ConnectionType} port will not be returned in Hello response. ConnectionId: {ConnectionId}",
-                connectionType, connection.ConnectionId);
+                connectionType, streamConnection.ConnectionId);
             return null;
         }
 
         return endPoint?.Port;
     }
 
-    private async Task ProcessHello(IConnection connection, IPAddress clientIp,
+    private async Task ProcessHello(IStreamConnection streamConnection, IPAddress clientIp,
         CancellationToken cancellationToken)
     {
         //var ipEndPointPair = connection.IpEndPointPair;
@@ -456,8 +456,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
         // reading request
         VhLogger.Instance.LogDebug(GeneralEventId.Request, "Processing hello request...");
 
-        var request = await ReadRequest<HelloRequest>(connection, cancellationToken).Vhc();
-        using var scope = CreateLogScope(connection, request);
+        var request = await ReadRequest<HelloRequest>(streamConnection, cancellationToken).Vhc();
+        using var scope = CreateLogScope(streamConnection, request);
 
         // find best version (for future)
         var protocolVersion = Math.Min(MaxProtocolVersion, request.ClientInfo.MaxProtocolVersion);
@@ -469,14 +469,14 @@ public class ServerHost : IDisposable, IAsyncDisposable
             request.ClientInfo.ClientVersion, request.ClientInfo.UserAgent);
 
         var sessionResponseEx = await _sessionManager.CreateSession(
-            request, connection.ToEndPointPair(), protocolVersion, clientIp, cancellationToken).Vhc();
+            request, streamConnection.ToEndPointPair(), protocolVersion, clientIp, cancellationToken).Vhc();
 
         var session = _sessionManager.GetSessionById(sessionResponseEx.SessionId) ??
             throw new InvalidOperationException("Session is lost!");
 
         // check client version; unfortunately it must be after CreateSession to preserve server anonymity
         if (request.ClientInfo == null || protocolVersion < MinClientProtocolVersion)
-            throw new ServerSessionException(connection.RemoteEndPoint, session,
+            throw new ServerSessionException(streamConnection.RemoteEndPoint, session,
                 SessionErrorCode.UnsupportedClient, request.RequestId,
                 "This client is outdated and not supported anymore! Please update your app.");
 
@@ -511,8 +511,8 @@ public class ServerHost : IDisposable, IAsyncDisposable
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponseEx.SessionId)}");
 
         // find udp/quic port that matches the same local IP address family
-        var udpPort = FindMatchingPort(_udpChannelTransmitters.Select(x => x.LocalEndPoint), connection, "UDP");
-        var quicPort = FindMatchingPort(_quicListenerHost.EndPoints, connection, "QUIC");
+        var udpPort = FindMatchingPort(_udpChannelTransmitters.Select(x => x.LocalEndPoint), streamConnection, "UDP");
+        var quicPort = FindMatchingPort(_quicListenerHost.EndPoints, streamConnection, "QUIC");
 
         var helloResponse = new HelloResponse {
             ErrorCode = sessionResponseEx.ErrorCode,
@@ -552,34 +552,34 @@ public class ServerHost : IDisposable, IAsyncDisposable
             VirtualIpNetworkV6 = new IpNetwork(session.VirtualIps.IpV6, _sessionManager.VirtualIpNetworkV6.PrefixLength)
         };
 
-        await connection.DisposeAsync(helloResponse, cancellationToken).Vhc();
+        await streamConnection.DisposeAsync(helloResponse, cancellationToken).Vhc();
     }
 
-    private async Task ProcessRewardedAdRequest(IConnection connection, CancellationToken cancellationToken)
+    private async Task ProcessRewardedAdRequest(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Request, "Reading the RewardedAd request...");
-        var request = await ReadRequest<RewardedAdRequest>(connection, cancellationToken).Vhc();
-        using var scope = CreateLogScope(connection, request);
+        var request = await ReadRequest<RewardedAdRequest>(streamConnection, cancellationToken).Vhc();
+        using var scope = CreateLogScope(streamConnection, request);
 
-        var session = await _sessionManager.GetSession(request, connection.ToEndPointPair(), cancellationToken).Vhc();
-        await session.ProcessRewardedAdRequest(request, connection, cancellationToken).Vhc();
+        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        await session.ProcessRewardedAdRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
     // todo: it must be removed
-    private async Task ProcessSessionStatus(IConnection connection, CancellationToken cancellationToken)
+    private async Task ProcessSessionStatus(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Request, "Reading the SessionStatus request...");
-        var request = await ReadRequest<SessionStatusRequest>(connection, cancellationToken).Vhc();
-        using var scope = CreateLogScope(connection, request);
+        var request = await ReadRequest<SessionStatusRequest>(streamConnection, cancellationToken).Vhc();
+        using var scope = CreateLogScope(streamConnection, request);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, connection.ToEndPointPair(), cancellationToken).Vhc();
+        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
 
         // processing request
-        await session.ProcessSessionStatusRequest(request, connection, cancellationToken).Vhc();
+        await session.ProcessSessionStatusRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
-    private static async Task ProcessServerCheck(IConnection connection, CancellationToken cancellationToken)
+    private static async Task ProcessServerCheck(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         // unauthorized reply is enough to prevent fingerprinting and let the client knows that the server is alive
         // no need to read the request, the header is enough to identify the request because bearer token exists in requests
@@ -587,59 +587,59 @@ public class ServerHost : IDisposable, IAsyncDisposable
             "Process ServerCheck and return unauthorized for the request...");
 
         // write unauthorized response
-        await connection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).Vhc();
-        connection.PreventReuse();
-        await connection.DisposeAsync();
+        await streamConnection.Stream.WriteAsync(HttpResponseBuilder.Unauthorized(), cancellationToken).Vhc();
+        streamConnection.PreventReuse();
+        await streamConnection.DisposeAsync();
     }
 
-    private async Task ProcessBye(IConnection connection, CancellationToken cancellationToken)
+    private async Task ProcessBye(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Request, "Reading the Bye request...");
-        var request = await ReadRequest<ByeRequest>(connection, cancellationToken).Vhc();
-        using var scope = CreateLogScope(connection, request);
+        var request = await ReadRequest<ByeRequest>(streamConnection, cancellationToken).Vhc();
+        using var scope = CreateLogScope(streamConnection, request);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, connection.ToEndPointPair(), cancellationToken).Vhc();
+        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
 
         // Dispose client stream
-        if (connection is ReusableConnection reusableConnection)
+        if (streamConnection is ReusableStreamConnection reusableConnection)
             reusableConnection.PreventReuse();
-        await connection.DisposeAsync(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken);
+        await streamConnection.DisposeAsync(new SessionResponse { ErrorCode = SessionErrorCode.Ok }, cancellationToken);
 
         // must be last
         await _sessionManager.CloseSession(session.SessionId, cancellationToken);
     }
 
-    private async Task ProcessUdpPacketRequest(IConnection connection, CancellationToken cancellationToken)
+    private async Task ProcessUdpPacketRequest(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Request, "Reading a UdpPacket request...");
-        var request = await ReadRequest<UdpPacketRequest>(connection, cancellationToken).Vhc();
-        using var scope = CreateLogScope(connection, request);
+        var request = await ReadRequest<UdpPacketRequest>(streamConnection, cancellationToken).Vhc();
+        using var scope = CreateLogScope(streamConnection, request);
 
-        var session = await _sessionManager.GetSession(request, connection.ToEndPointPair(), cancellationToken).Vhc();
-        await session.ProcessUdpPacketRequest(request, connection, cancellationToken).Vhc();
+        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        await session.ProcessUdpPacketRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
-    private async Task ProcessTcpPacketChannel(IConnection connection, CancellationToken cancellationToken)
+    private async Task ProcessTcpPacketChannel(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Request, "Reading the TcpPacketChannelRequest...");
-        var request = await ReadRequest<TcpPacketChannelRequest>(connection, cancellationToken).Vhc();
-        using var scope = CreateLogScope(connection, request);
+        var request = await ReadRequest<TcpPacketChannelRequest>(streamConnection, cancellationToken).Vhc();
+        using var scope = CreateLogScope(streamConnection, request);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, connection.ToEndPointPair(), cancellationToken).Vhc();
-        await session.ProcessTcpPacketChannelRequest(request, connection, cancellationToken).Vhc();
+        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        await session.ProcessTcpPacketChannelRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
-    private async Task ProcessStreamProxyChannel(IConnection connection, CancellationToken cancellationToken)
+    private async Task ProcessStreamProxyChannel(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Reading the StreamProxyChannelRequest...");
-        var request = await ReadRequest<StreamProxyChannelRequest>(connection, cancellationToken).Vhc();
-        using var scope = CreateLogScope(connection, request);
+        var request = await ReadRequest<StreamProxyChannelRequest>(streamConnection, cancellationToken).Vhc();
+        using var scope = CreateLogScope(streamConnection, request);
 
         // find session
-        var session = await _sessionManager.GetSession(request, connection.ToEndPointPair(), cancellationToken).Vhc();
-        await session.ProcessTcpProxyRequest(request, connection, cancellationToken).Vhc();
+        var session = await _sessionManager.GetSession(request, streamConnection.ToEndPointPair(), cancellationToken).Vhc();
+        await session.ProcessTcpProxyRequest(request, streamConnection, cancellationToken).Vhc();
     }
 
     private ValueTask CleanupConnections(CancellationToken cancellationToken)
@@ -650,12 +650,12 @@ public class ServerHost : IDisposable, IAsyncDisposable
         return default;
     }
 
-    private static IDisposable? CreateLogScope(IConnection connection, ClientRequest request)
+    private static IDisposable? CreateLogScope(IStreamConnection streamConnection, ClientRequest request)
     {
         var state = new StringBuilder();
         if (request is RequestBase requestBase)
             state.Append($"SessionId: {VhLogger.FormatSessionId(requestBase.SessionId)}, ");
-        state.Append($"StreamId: {connection.ConnectionId}, RequestId: {request.RequestId}");
+        state.Append($"StreamId: {streamConnection.ConnectionId}, RequestId: {request.RequestId}");
         return VhLogger.Instance.BeginScope(state.ToString());
     }
 

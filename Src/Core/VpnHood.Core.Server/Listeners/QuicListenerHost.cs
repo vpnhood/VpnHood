@@ -14,7 +14,7 @@ namespace VpnHood.Core.Server.Listeners;
 internal class QuicListenerHost(
     SessionManager sessionManager,
     CancellationToken cancellationToken,
-    Func<IConnection, CancellationToken, Task> processNewConnection)
+    Func<IStreamConnection, CancellationToken, Task> processNewConnection)
 {
     private readonly List<QuicListenerEntry> _listeners = [];
     private IReadOnlyList<CertificateHostName> _certificates = [];
@@ -170,7 +170,7 @@ internal class QuicListenerHost(
             connectionName: "tunnel",
             isServer: true);
 
-        var serverConnection = new ServerConnection(connection) {
+        var serverConnection = new ServerStreamConnection(connection) {
             ClientIp = quicConnection.RemoteEndPoint.Address
         };
 

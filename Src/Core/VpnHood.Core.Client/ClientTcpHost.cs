@@ -104,7 +104,7 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         PacketReceived = null;
     }
 
-    private sealed class LocalStreamConnection(ITcpClient tcpClient) : IConnection
+    private sealed class LocalStreamConnection(ITcpClient tcpClient) : IStreamConnection
     {
         private bool _disposed;
 

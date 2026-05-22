@@ -5,22 +5,22 @@ using VpnHood.Core.Tunneling.Channels.Streams;
 
 namespace VpnHood.Core.Tunneling.Connections;
 
-public delegate void ReuseConnectionCallback(ReusableConnection reusableConnection);
-public class ReusableConnection : ConnectionDecorator
+public delegate void ReuseConnectionCallback(ReusableStreamConnection reusableStreamConnection);
+public class ReusableStreamConnection : StreamConnectionDecorator
 {
     private readonly Lock _reuseLock = new();
     private readonly ReuseConnectionCallback _reuseConnectionCallback;
     private bool _allowReuse = true;
     private bool _reusing;
 
-    public ReusableConnection(IConnection connection, ReuseConnectionCallback reuseConnectionCallback)
-        : base(connection)
+    public ReusableStreamConnection(IStreamConnection streamConnection, ReuseConnectionCallback reuseConnectionCallback)
+        : base(streamConnection)
     {
         _reuseConnectionCallback = reuseConnectionCallback;
 
         VhLogger.Instance.LogDebug(GeneralEventId.Stream,
             "A ReusableConnection has been created. ConnectionId: {ConnectionId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-            ConnectionId, connection.Stream.GetType().Name, VhLogger.Format(LocalEndPoint),
+            ConnectionId, streamConnection.Stream.GetType().Name, VhLogger.Format(LocalEndPoint),
             VhLogger.Format(RemoteEndPoint));
     }
 
@@ -69,8 +69,8 @@ public class ReusableConnection : ConnectionDecorator
 
             // we don't call SuppressFlow on debug to allow MsTest shows console output in nested task
             using IDisposable? suppressFlow = IsDebug ? null : ExecutionContext.SuppressFlow();
-            var connectionDecorator = new ConnectionDecorator(InnerConnection, newStream);
-            var reusableConnection = new ReusableConnection(connectionDecorator, reuseConnectionCallback);
+            var connectionDecorator = new StreamConnectionDecorator(InnerStreamConnection, newStream);
+            var reusableConnection = new ReusableStreamConnection(connectionDecorator, reuseConnectionCallback);
             Task.Run(() => reuseConnectionCallback(reusableConnection))
                 .ContinueWith(task => VhLogger.Instance.LogError(GeneralEventId.Stream, task.Exception,
                         "Reuse callback failed. ConnectionId: {ConnectionId}", ConnectionId),

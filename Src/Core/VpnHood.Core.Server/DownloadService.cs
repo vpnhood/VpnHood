@@ -19,11 +19,11 @@ internal class DownloadService(string? downloadsPath)
     /// <summary>
     /// Tries to serve a download file from the specified URL path.
     /// </summary>
-    /// <param name="connection">The connection to write the response to.</param>
+    /// <param name="streamConnection">The stream connection to write the response to.</param>
     /// <param name="httpRequestLine">The HTTP request line (e.g., "GET /downloads/file.txt HTTP/1.1").</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if the request was handled, false if not applicable.</returns>
-    public async Task<bool> TryServeDownloadAsync(IConnection connection, string httpRequestLine,
+    public async Task<bool> TryServeDownloadAsync(IStreamConnection streamConnection, string httpRequestLine,
         CancellationToken cancellationToken)
     {
         // Check if downloads path is configured
@@ -60,12 +60,12 @@ internal class DownloadService(string? downloadsPath)
             .Equals(RandomFileName, StringComparison.OrdinalIgnoreCase);
         if (isRandomFile) {
             var sizeMb = ParseSizeParameter(queryString, DefaultRandomSizeMb);
-            await ServeRandomDataAsync(connection, sizeMb, cancellationToken).Vhc();
+            await ServeRandomDataAsync(streamConnection, sizeMb, cancellationToken).Vhc();
             return true;
         }
 
         // Serve the actual file
-        await ServeFileAsync(connection, filePath, cancellationToken).Vhc();
+        await ServeFileAsync(streamConnection, filePath, cancellationToken).Vhc();
         return true;
     }
 
@@ -90,18 +90,18 @@ internal class DownloadService(string? downloadsPath)
         return defaultValue;
     }
 
-    private static async Task ServeRandomDataAsync(IConnection connection, int sizeMb,
+    private static async Task ServeRandomDataAsync(IStreamConnection streamConnection, int sizeMb,
         CancellationToken cancellationToken)
     {
         var totalBytes = (long)sizeMb * 1024 * 1024;
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Download started for random data. SizeMB: {SizeMb}, RemoteEp: {RemoteEp}",
-            sizeMb, VhLogger.Format(connection.RemoteEndPoint));
+            sizeMb, VhLogger.Format(streamConnection.RemoteEndPoint));
 
         // Write HTTP response header
         var response = BuildOkResponse(totalBytes, "application/octet-stream", RandomFileName);
-        await connection.Stream.WriteAsync(response, cancellationToken).Vhc();
+        await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
         // Write random data in chunks
         const int chunkSize = 64 * 1024; // 64KB chunks
@@ -113,19 +113,19 @@ internal class DownloadService(string? downloadsPath)
 
             var bytesToWrite = (int)Math.Min(chunkSize, bytesRemaining);
             RandomNumberGenerator.Fill(buffer.AsSpan(0, bytesToWrite));
-            await connection.Stream.WriteAsync(buffer.AsMemory(0, bytesToWrite), cancellationToken).Vhc();
+            await streamConnection.Stream.WriteAsync(buffer.AsMemory(0, bytesToWrite), cancellationToken).Vhc();
             bytesRemaining -= bytesToWrite;
         }
 
-        connection.PreventReuse();
-        await connection.DisposeAsync();
+        streamConnection.PreventReuse();
+        await streamConnection.DisposeAsync();
 
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Download completed for random data. SizeMB: {SizeMb}, RemoteEp: {RemoteEp}",
-            sizeMb, VhLogger.Format(connection.RemoteEndPoint));
+            sizeMb, VhLogger.Format(streamConnection.RemoteEndPoint));
     }
 
-    private static async Task ServeFileAsync(IConnection connection, string filePath,
+    private static async Task ServeFileAsync(IStreamConnection streamConnection, string filePath,
         CancellationToken cancellationToken)
     {
         var fileInfo = new FileInfo(filePath);
@@ -133,28 +133,28 @@ internal class DownloadService(string? downloadsPath)
             // Log download start
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Download started. FileName: {FileName}, Size: {Size}, RemoteEp: {RemoteEp}",
-            fileInfo.FullName, fileInfo.Length, VhLogger.Format(connection.RemoteEndPoint));
+            fileInfo.FullName, fileInfo.Length, VhLogger.Format(streamConnection.RemoteEndPoint));
 
         // Determine content type
         var contentType = MimeTypeUtils.GetContentType(fileInfo.FullName);
 
         // Write HTTP response header
         var response = BuildOkResponse(fileInfo.Length, contentType, fileInfo.Name);
-        await connection.Stream.WriteAsync(response, cancellationToken).Vhc();
+        await streamConnection.Stream.WriteAsync(response, cancellationToken).Vhc();
 
         // Stream the file content
         await using var fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.Read,
             bufferSize: 64 * 1024, useAsync: true);
-        await fileStream.CopyToAsync(connection.Stream, cancellationToken).Vhc();
+        await fileStream.CopyToAsync(streamConnection.Stream, cancellationToken).Vhc();
 
         // Log download completion
-        connection.PreventReuse();
-        await connection.DisposeAsync();
+        streamConnection.PreventReuse();
+        await streamConnection.DisposeAsync();
 
         // Log download completion
         VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Download completed. FileName: {FileName}, RemoteEp: {RemoteEp}",
-            fileInfo.FullName, VhLogger.Format(connection.RemoteEndPoint));
+            fileInfo.FullName, VhLogger.Format(streamConnection.RemoteEndPoint));
 
     }
 

@@ -11,7 +11,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
 {
     private readonly int _receiveBufferSize = options.BufferSize.Receive;
     private readonly Memory<byte> _sendBuffer = new byte[options.BufferSize.Send];
-    private readonly IConnection _connection = options.Connection;
+    private readonly IStreamConnection _streamConnection = options.StreamConnection;
 
     public DateTime RequestTime { get; } = options.RequestTime;
     public override int OverheadLength => 0;
@@ -60,7 +60,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
                 await throttleTask.Vhc();
         }
 
-        await _connection.Stream.WriteAsync(buffer, cancellationToken).Vhc();
+        await _streamConnection.Stream.WriteAsync(buffer, cancellationToken).Vhc();
         trafficMeter?.OnSent(buffer.Length);
     }
 
@@ -69,7 +69,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
         var cancellationToken = CancellationToken;
 
         using var streamPacketReader =
-            new StreamPacketReader(_connection.Stream, _receiveBufferSize);
+            new StreamPacketReader(_streamConnection.Stream, _receiveBufferSize);
 
         // stop reading if State is not Connected (Such as getting the close request)
         while (!cancellationToken.IsCancellationRequested) {
@@ -93,7 +93,7 @@ public class StreamPacketChannel(StreamPacketChannelOptions options)
     protected override void DisposeManaged()
     {
         Stop();
-        _connection.Dispose();
+        _streamConnection.Dispose();
 
         base.DisposeManaged();
     }

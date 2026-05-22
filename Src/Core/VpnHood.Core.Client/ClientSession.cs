@@ -425,12 +425,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
             // PacketChannel should not be reused, otherwise its timespan will be meaningless
             if (lifespan != null) {
-                requestResult.Connection.PreventReuse();
+                requestResult.StreamConnection.PreventReuse();
             }
 
             // add the new channel
             var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
-                Connection = requestResult.Connection,
+                StreamConnection = requestResult.StreamConnection,
                 BufferSize = TunnelDefaults.ConnectionPacketBufferSize,
                 ChannelId = request.ChannelId,
                 RequestTime = request.RequestTime,
@@ -629,8 +629,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                         byteCts.Token)
                     .Vhc();
 
-                requestResult.Connection.PreventReuse();
-                requestResult.Connection.Dispose();
+                requestResult.StreamConnection.PreventReuse();
+                requestResult.StreamConnection.Dispose();
                 VhLogger.Instance.LogInformation("Session has been closed on the server successfully.");
             }
             catch (Exception ex) {

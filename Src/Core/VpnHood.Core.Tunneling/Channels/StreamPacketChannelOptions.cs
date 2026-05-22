@@ -5,7 +5,7 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public class StreamPacketChannelOptions : PacketChannelOptions
 {
-    public required IConnection Connection { get; init; }
+    public required IStreamConnection StreamConnection { get; init; }
     public TransferBufferSize BufferSize { get; set; } = TunnelDefaults.ConnectionPacketBufferSize;
     public required DateTime RequestTime { get; init; }
 }

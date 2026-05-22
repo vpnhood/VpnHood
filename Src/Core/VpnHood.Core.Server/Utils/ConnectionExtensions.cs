@@ -10,7 +10,7 @@ namespace VpnHood.Core.Server.Utils;
 
 public static class ConnectionExtensions
 {
-    extension(IConnection connection)
+    extension(IStreamConnection streamConnection)
     {
         public async Task WriteResponseAsync(SessionResponse sessionResponse,
             CancellationToken cancellationToken)
@@ -18,27 +18,27 @@ public static class ConnectionExtensions
             var responseData = StreamUtils.ObjectToJsonBuffer(sessionResponse);
 
             // If the client stream requires an HTTP response, write it to the client stream
-            if (connection.RequireHttpResponse) {
-                connection.RequireHttpResponse = false;
-                await connection.Stream.WriteAsync(HttpResponseBuilder.Ok(responseData.Length), cancellationToken).Vhc();
+            if (streamConnection.RequireHttpResponse) {
+                streamConnection.RequireHttpResponse = false;
+                await streamConnection.Stream.WriteAsync(HttpResponseBuilder.Ok(responseData.Length), cancellationToken).Vhc();
             }
 
             // Write the session response to the client stream
-            await connection.Stream.WriteAsync(responseData, cancellationToken).Vhc();
+            await streamConnection.Stream.WriteAsync(responseData, cancellationToken).Vhc();
         }
 
         public async Task DisposeAsync(SessionResponse sessionResponse, CancellationToken cancellationToken)
         {
             // Write the session response to the client stream
             try {
-                await connection.WriteResponseAsync(sessionResponse, cancellationToken).Vhc();
+                await streamConnection.WriteResponseAsync(sessionResponse, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                     "Could not dispose a Connection gracefully. ConnectionId: {ConnectionId}",
-                    connection.ConnectionId);
+                    streamConnection.ConnectionId);
 
-                connection.Dispose();
+                streamConnection.Dispose();
             }
         }
     }

@@ -307,14 +307,14 @@ public class Session : IDisposable
     }
 
     public async Task ProcessTcpPacketChannelRequest(TcpPacketChannelRequest request,
-        IConnection connection, CancellationToken cancellationToken)
+        IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
         // manage wait count
         Interlocked.Increment(ref _tcpConnectWaitCount);
         using var autoDispose = new AutoDispose(() => Interlocked.Decrement(ref _tcpConnectWaitCount));
 
         // send OK reply
-        await connection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
+        await streamConnection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
 
         // add channel
         VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
@@ -325,7 +325,7 @@ public class Session : IDisposable
             RequestTime = request.RequestTime,
             Blocking = false,
             AutoDisposePackets = true,
-            Connection = connection,
+            StreamConnection = streamConnection,
             ChannelId = request.ChannelId ?? request.RequestId,
             Lifespan = null,
             TrafficMeter = Tunnel.TrafficMeter
@@ -381,38 +381,38 @@ public class Session : IDisposable
         }
     }
 
-    internal Task ProcessUdpPacketRequest(UdpPacketRequest request, IConnection connection,
+    internal Task ProcessUdpPacketRequest(UdpPacketRequest request, IStreamConnection streamConnection,
         CancellationToken cancellationToken)
     {
         _ = request;
-        _ = connection;
+        _ = streamConnection;
         _ = cancellationToken;
         throw new NotImplementedException();
     }
 
-    internal async Task ProcessSessionStatusRequest(SessionStatusRequest request, IConnection connection,
+    internal async Task ProcessSessionStatusRequest(SessionStatusRequest request, IStreamConnection streamConnection,
         CancellationToken cancellationToken)
     {
         _ = request;
-        await connection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
+        await streamConnection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 
-    internal async Task ProcessRewardedAdRequest(RewardedAdRequest request, IConnection connection,
+    internal async Task ProcessRewardedAdRequest(RewardedAdRequest request, IStreamConnection streamConnection,
         CancellationToken cancellationToken)
     {
         SessionResponseEx = await _accessManager
             .Session_AddUsage(sessionId: SessionId, new Traffic(), adData: request.AdData, cancellationToken).Vhc();
-        await connection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
+        await streamConnection.DisposeAsync(SessionResponseEx, cancellationToken).Vhc();
     }
 
-    internal async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IConnection connection,
+    internal async Task ProcessTcpProxyRequest(StreamProxyChannelRequest request, IStreamConnection streamConnection,
         CancellationToken cancellationToken)
     {
         if (!AllowTcpProxy)
             throw new SessionException(SessionErrorCode.GeneralError, "TcpProxy is not allowed in this session.");
 
         TcpClient? tcpClientHost = null;
-        IConnection? tcpConnectionHost = null;
+        IStreamConnection? tcpConnectionHost = null;
         try {
             // manage wait count
             Interlocked.Increment(ref _tcpConnectWaitCount);
@@ -436,7 +436,7 @@ public class Session : IDisposable
                 VhLogger.Format(request.DestinationEndPoint));
 
             // Apply limitation before create connection to host
-            VerifyTcpChannelRequest(connection, request);
+            VerifyTcpChannelRequest(streamConnection, request);
 
             //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint);
@@ -447,7 +447,7 @@ public class Session : IDisposable
             // connect to requested destination
             try {
                 await tcpClientHost.ConnectAsync(request.DestinationEndPoint, cancellationToken).Vhc();
-                tcpConnectionHost = new TcpConnection(tcpClientHost, connectionId: request.RequestId,
+                tcpConnectionHost = new TcpStreamConnection(tcpClientHost, connectionId: request.RequestId,
                     connectionName: "host", isServer: true);
             }
             catch (Exception ex) {
@@ -464,11 +464,11 @@ public class Session : IDisposable
 
             // send response, using original cancellation token without timeout
             // ReSharper disable once PossiblyMistakenUseOfCancellationToken
-            await connection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
+            await streamConnection.WriteResponseAsync(SessionResponseEx, cancellationToken).Vhc();
 
             // add the connection
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Adding a ProxyChannel.");
-            var proxyChannel = new ProxyChannel(connection.ToString()!, tcpConnectionHost, connection,
+            var proxyChannel = new ProxyChannel(streamConnection.ToString()!, tcpConnectionHost, streamConnection,
                 _streamProxyBufferSize, Tunnel.TrafficMeter);
 
             Tunnel.AddChannel(proxyChannel, disposeIfFailed: true);
@@ -483,7 +483,7 @@ public class Session : IDisposable
         }
     }
 
-    private void VerifyTcpChannelRequest(IConnection connection, StreamProxyChannelRequest request)
+    private void VerifyTcpChannelRequest(IStreamConnection streamConnection, StreamProxyChannelRequest request)
     {
         lock (_verifyRequestLock) {
             // NetScan limit
@@ -493,14 +493,14 @@ public class Session : IDisposable
             if (TcpChannelCount + _tcpConnectWaitCount > _maxTcpChannelCount) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raise();
-                throw new MaxTcpChannelException(connection.RemoteEndPoint, this, request.RequestId);
+                throw new MaxTcpChannelException(streamConnection.RemoteEndPoint, this, request.RequestId);
             }
 
             // Check tcp wait limit
             if (TcpConnectWaitCount > _maxTcpConnectWaitCount) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raise();
-                throw new MaxTcpConnectWaitException(connection.RemoteEndPoint, this,
+                throw new MaxTcpConnectWaitException(streamConnection.RemoteEndPoint, this,
                     request.RequestId);
             }
         }

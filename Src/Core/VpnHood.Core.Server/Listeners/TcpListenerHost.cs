@@ -15,7 +15,7 @@ namespace VpnHood.Core.Server.Listeners;
 internal class TcpListenerHost(
     SessionManager sessionManager,
     CancellationToken cancellationToken,
-    Func<IConnection, CancellationToken, Task> processNewConnection)
+    Func<IStreamConnection, CancellationToken, Task> processNewConnection)
 {
     private readonly List<TcpListenerEntry> _listeners = [];
     private IReadOnlyList<CertificateHostName> _certificates = [];
@@ -145,7 +145,7 @@ internal class TcpListenerHost(
         await processNewConnection(connection, connectCts.Token).Vhc();
     }
 
-    private async Task<IConnection> CreateConnection(TcpClient tcpClient, CancellationToken ct)
+    private async Task<IStreamConnection> CreateConnection(TcpClient tcpClient, CancellationToken ct)
     {
         VhLogger.Instance.LogDebug(GeneralEventId.Request, "TLS Authenticating...");
         var sslStream = new SslStream(tcpClient.GetStream(), true);
@@ -159,7 +159,7 @@ internal class TcpListenerHost(
                 },
                 ct).Vhc();
 
-            var tcpConnection = new TcpConnection(tcpClient, sslStream, connectionName: "tunnel", isServer: true);
+            var tcpConnection = new TcpStreamConnection(tcpClient, sslStream, connectionName: "tunnel", isServer: true);
             return tcpConnection;
         }
         catch (Exception) {

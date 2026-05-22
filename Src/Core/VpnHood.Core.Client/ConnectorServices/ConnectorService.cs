@@ -101,7 +101,7 @@ internal class ConnectorService(
                 lock (Status) Status.ReusedConnectionSucceededCount++;
                 return new ConnectorRequestResult<T> {
                     Response = response,
-                    Connection = reusableConnection
+                    StreamConnection = reusableConnection
                 };
             }
             catch (SessionException) {
@@ -144,7 +144,7 @@ internal class ConnectorService(
             var response2 = await ReadSessionResponse<T>(connection.Stream, cancellationToken).Vhc();
             return new ConnectorRequestResult<T> {
                 Response = response2,
-                Connection = connection
+                StreamConnection = connection
             };
         }
         catch (SessionException) {
@@ -158,7 +158,7 @@ internal class ConnectorService(
                 connection.ConnectionId, requestId);
 
             // dispose the connection
-            (connection as ReusableConnection)?.PreventReuse();
+            (connection as ReusableStreamConnection)?.PreventReuse();
             connection.Dispose();
             throw;
         }

@@ -35,7 +35,7 @@ internal class ClientStreamHandler(
 
     public IClientHostStat Stat => _stat;
 
-    public async Task ProcessConnection(IConnection connection, IPEndPoint hostEndPoint, 
+    public async Task ProcessConnection(IStreamConnection streamConnection, IPEndPoint hostEndPoint, 
         CancellationToken cancellationToken)
     {
         try {
@@ -46,13 +46,13 @@ internal class ClientStreamHandler(
             // create a scope for the logger
             VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
                 "New TcpProxy Request. LocalPort: {LocalPort}, HostEp: {RemoteEp}",
-                connection.RemoteEndPoint.Port, hostEndPoint);
+                streamConnection.RemoteEndPoint.Port, hostEndPoint);
 
             var filterAction = FilterAction.Default;
 
             // Apply SNI filtering and update connection if needed
             if (domainFilterService.IsEnabled)
-                (connection, filterAction) = await ApplySniFiltering(connection, hostEndPoint, cancellationToken).Vhc();
+                (streamConnection, filterAction) = await ApplySniFiltering(streamConnection, hostEndPoint, cancellationToken).Vhc();
 
             // Filter by IP if SNI filtering result is default
             if (filterAction is FilterAction.Default && netFilter.IpFilter != null) 
@@ -70,14 +70,14 @@ internal class ClientStreamHandler(
                 case FilterAction.Include:
                     // Create and add to tunnel channel
                     VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Include a Host to VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
-                    await AddTunnelChannel(connection, hostEndPoint, cancellationToken).Vhc();
+                    await AddTunnelChannel(streamConnection, hostEndPoint, cancellationToken).Vhc();
                     _stat.TcpTunnelledCount++;
                     break;
 
                 default: // exclude
                     // Create and add to exclude channel
                     VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Exclude a Host from VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
-                    await AddPassthruChannel(connection, hostEndPoint, cancellationToken).Vhc();
+                    await AddPassthruChannel(streamConnection, hostEndPoint, cancellationToken).Vhc();
                     _stat.TcpPassthruCount++;
                     break;
             }
@@ -87,7 +87,7 @@ internal class ClientStreamHandler(
         }
     }
 
-    private async Task AddPassthruChannel(IConnection connection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
+    private async Task AddPassthruChannel(IStreamConnection streamConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
         // apply NetMapper
         if (netFilter.IpMapper?.ToHost(IpProtocol.Tcp, hostEndPoint.ToValue(), out var newEndPoint) == true)
@@ -100,7 +100,7 @@ internal class ClientStreamHandler(
         //log
         VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
             "Adding a new stream channel to bypass. HostEp: {HostEp}, ConnectionId: {ConnectionId}",
-            VhLogger.Format(hostEndPoint), connection.ConnectionId);
+            VhLogger.Format(hostEndPoint), streamConnection.ConnectionId);
 
         // set timeout
         using var timeoutCts = new CancellationTokenSource(tcpConnectTimeout);
@@ -109,11 +109,11 @@ internal class ClientStreamHandler(
         // connect to host
         var tcpClient = socketFactory.CreateTcpClient(hostEndPoint);
         await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
-        var hostConnection = new TcpConnection(tcpClient, connectionId: connection.ConnectionId, connectionName: "host", isServer: false);
+        var hostConnection = new TcpStreamConnection(tcpClient, connectionId: streamConnection.ConnectionId, connectionName: "host", isServer: false);
 
         try {
             // create and add the channel
-            var channel = new ProxyChannel(hostConnection.ToString(), connection, hostConnection, streamProxyBufferSize);
+            var channel = new ProxyChannel(hostConnection.ToString(), streamConnection, hostConnection, streamProxyBufferSize);
             proxyManager.AddChannel(channel, disposeOnFail: true);
         }
         catch {
@@ -123,7 +123,7 @@ internal class ClientStreamHandler(
     }
 
     private async Task AddTunnelChannel(
-        IConnection connection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
+        IStreamConnection streamConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
         if (hostEndPoint.IsV6() && !session.Status.IsIpV6SupportedByServer)
             throw new Exception("IPv6 is not supported by server.");
@@ -131,12 +131,12 @@ internal class ClientStreamHandler(
         //log
         VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel,
             "Adding a new stream channel to tunnel. HostEp: {HostEp}, ConnectionId: {ConnectionId}",
-            VhLogger.Format(hostEndPoint), connection.ConnectionId);
+            VhLogger.Format(hostEndPoint), streamConnection.ConnectionId);
 
 
         // Create the Request
         var request = new StreamProxyChannelRequest {
-            RequestId = connection.ConnectionId,
+            RequestId = streamConnection.ConnectionId,
             SessionId = sessionId,
             SessionKey = sessionKey,
             DestinationEndPoint = hostEndPoint
@@ -145,20 +145,20 @@ internal class ClientStreamHandler(
         // handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
         // wait just 100ms, because is some case such as FTPS with explicit encryption, client waits for server data
         // before sending the TLS hello, so there is no initial data to prefetch
-        var initContents = await ReadInitContents(connection.Stream, TimeSpan.FromMilliseconds(100), cancellationToken);
+        var initContents = await ReadInitContents(streamConnection.Stream, TimeSpan.FromMilliseconds(100), cancellationToken);
 
         // read the response
         var requestEx = new ClientRequestEx { Request = request, PostBuffer = initContents };
         var requestResult = await session.SendRequest<SessionResponse>(requestEx, cancellationToken).Vhc();
         try {
-            var proxyConnection = requestResult.Connection;
+            var proxyConnection = requestResult.StreamConnection;
 
             // account for prefetched init contents that bypassed the proxy channel
             if (initContents.Length > 0)
                 tunnel.TrafficMeter.OnSent(initContents.Length);
 
             // add stream proxy
-            var channel = new ProxyChannel(proxyConnection.ToString()!, connection, proxyConnection, streamProxyBufferSize, tunnel.TrafficMeter);
+            var channel = new ProxyChannel(proxyConnection.ToString()!, streamConnection, proxyConnection, streamProxyBufferSize, tunnel.TrafficMeter);
             tunnel.AddChannel(channel, disposeIfFailed: true);
         }
         catch {
@@ -187,21 +187,21 @@ internal class ClientStreamHandler(
         }
     }
 
-    private async Task<(IConnection Connection, FilterAction filterAction)> ApplySniFiltering(
-        IConnection connection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
+    private async Task<(IStreamConnection Connection, FilterAction filterAction)> ApplySniFiltering(
+        IStreamConnection streamConnection, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
     {
         // Filter by SNI (it log by its own observer, no need to log here)
         var filterResult = await domainFilterService.ProcessStream(
-            connection.Stream, hostEndPoint, cancellationToken).Vhc();
+            streamConnection.Stream, hostEndPoint, cancellationToken).Vhc();
 
         // update connection stream with ReadBufferedStream to pre-append the read data
         if (filterResult.ReadData.Length > 0)
-            connection = new ConnectionDecorator(connection,
-                new ReadBufferedStream(connection.Stream, leaveOpen: false, filterResult.ReadData.Span) {
+            streamConnection = new StreamConnectionDecorator(streamConnection,
+                new ReadBufferedStream(streamConnection.Stream, leaveOpen: false, filterResult.ReadData.Span) {
                     AllowBufferRefill = false
                 });
 
-        return (connection, filterResult.Action);
+        return (streamConnection, filterResult.Action);
     }
 
     private class ClientHostStat : IClientHostStat

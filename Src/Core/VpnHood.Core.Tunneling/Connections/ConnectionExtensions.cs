@@ -4,16 +4,16 @@ namespace VpnHood.Core.Tunneling.Connections;
 
 public static class ConnectionExtensions
 {
-    extension(IConnection connection)
+    extension(IStreamConnection streamConnection)
     {
         public IPEndPointPair ToEndPointPair()
         {
-            return new IPEndPointPair(connection.LocalEndPoint, connection.RemoteEndPoint);
+            return new IPEndPointPair(streamConnection.LocalEndPoint, streamConnection.RemoteEndPoint);
         }
 
         public void PreventReuse()
         {
-            if (connection is ReusableConnection reusableConnection)
+            if (streamConnection is ReusableStreamConnection reusableConnection)
                 reusableConnection.PreventReuse();
         }
     }

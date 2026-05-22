@@ -3,7 +3,7 @@ using VpnHood.Core.Tunneling.Connections;
 
 namespace VpnHood.Core.Server;
 
-internal class ServerConnection(IConnection connection) : ConnectionDecorator(connection)
+internal class ServerStreamConnection(IStreamConnection streamConnection) : StreamConnectionDecorator(streamConnection)
 {
     // it may be different from RemoteEndPoint.Address due to proxying
     public required IPAddress ClientIp { get; init; }

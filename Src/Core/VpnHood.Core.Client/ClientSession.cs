@@ -669,7 +669,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         PassthroughState.PassthroughForAd = false;
 
         // stop reusing tcp connections for faster disposal
-        _connectorService.AllowTcpReuse = false;
+        _connectorService.AllowStreamConnectionReuse = false;
 
         VhLogger.Instance.LogDebug("Disposing ClientHost...");
         _clientTcpHost.Dispose();

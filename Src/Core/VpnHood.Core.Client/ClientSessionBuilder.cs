@@ -125,7 +125,7 @@ internal class ClientSessionBuilder(
 
             using var requestResult = await connectorService.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
             requestResult.StreamConnection.PreventReuse();
-            connectorService.AllowTcpReuse = config.AllowTcpReuse;
+            connectorService.AllowStreamConnectionReuse = config.AllowTcpReuse;
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)

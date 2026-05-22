@@ -123,7 +123,8 @@ internal class ClientSessionBuilder(
                 Mtu = TunnelDefaults.MtuClient
             };
 
-            using var requestResult = await connectorService.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
+            using var requestSender = new RequestSender(connectorService);
+            using var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
             requestResult.StreamConnection.PreventReuse();
             connectorService.AllowStreamConnectionReuse = config.AllowTcpReuse;
 
@@ -166,10 +167,10 @@ internal class ClientSessionBuilder(
 
             connectorService.Init(
                 helloResponse.ProtocolVersion,
-                requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),
-                tcpReuseTimeout: helloResponse.TcpReuseTimeout,
                 serverSecret: helloResponse.ServerSecret,
+                tcpReuseTimeout: helloResponse.TcpReuseTimeout,
                 useWebSocket: config.UseWebSocket,
+                requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),
                 useQuic: channelProtocol == ChannelProtocol.Quic && hostQuicEndPoint != null,
                 quicEndPoint: hostQuicEndPoint);
 

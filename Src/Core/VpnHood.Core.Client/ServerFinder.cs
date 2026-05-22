@@ -338,10 +338,12 @@ public class ServerFinder(
             return;
 
         using var connector = CreateConnector(hostStatus.VpnEndPoint);
-        hostStatus.Available = await VerifyServerStatus(connector, queryTimeout, cancellationToken).Vhc();
+        using var requestSender = new RequestSender(connector);
+        hostStatus.Available = await VerifyServerStatus(connector, requestSender, queryTimeout, cancellationToken).Vhc();
     }
 
-    private static async Task<bool> VerifyServerStatus(ConnectorService connector, TimeSpan queryTimeout,
+    private static async Task<bool> VerifyServerStatus(ConnectorService connector,
+        RequestSender requestSender, TimeSpan queryTimeout,
         CancellationToken cancellationToken)
     {
         try {
@@ -353,7 +355,7 @@ public class ServerFinder(
             using var requestCts =
                 CancellationTokenSource.CreateLinkedTokenSource(queryTimeoutCts.Token, cancellationToken);
 
-            var requestResult = await connector
+            var requestResult = await requestSender
                 .SendRequest<SessionResponse>(new ServerCheckRequest { RequestId = UniqueIdFactory.Create() },
                     requestCts.Token)
                 .Vhc();
@@ -390,9 +392,9 @@ public class ServerFinder(
 
         connector.Init(
             protocolVersion: connector.ProtocolVersion, serverSecret: null,
-            requestTimeout: serverQueryTimeout,
             tcpReuseTimeout: TimeSpan.Zero,
             useWebSocket: false,
+            requestTimeout: serverQueryTimeout,
             useQuic: false,
             quicEndPoint: null);
 

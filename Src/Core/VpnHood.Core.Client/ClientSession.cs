@@ -34,6 +34,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly ClientPacketHandler _packetHandler;
     private readonly IClientTcpHost _clientTcpHost;
     private readonly ConnectorService _connectorService;
+    private readonly RequestSender _requestSender;
     private readonly ClientSessionStatus _status;
     private readonly Job _cleanupJob;
     private readonly CancellationTokenSource _cancellationTokenSource;
@@ -67,6 +68,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     {
         _netFilter = options.NetFilter;
         _connectorService = options.ConnectorService;
+        _requestSender = new RequestSender(_connectorService);
         _channelProtocol = options.ChannelProtocol;
         _oldChannelProtocol = options.ChannelProtocol;
         _useTcpProxy = options.UseTcpProxy;
@@ -494,7 +496,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         try {
             // create a connection and send the request 
-            var requestResult = await _connectorService.SendRequest<T>(request, cancellationToken).Vhc();
+            var requestResult = await _requestSender.SendRequest<T>(request, cancellationToken).Vhc();
             _status.Update(requestResult.Response.AccessUsage);
 
             // client is disposed meanwhile
@@ -620,7 +622,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 // don't use SendRequest because it can be disposed
                 var byeTimeout = TunnelDefaults.ByeTimeout.WhenNoDebugger();
                 using var byteCts = new CancellationTokenSource(byeTimeout);
-                using var requestResult = await _connectorService.SendRequest<SessionResponse>(
+                using var requestResult = await _requestSender.SendRequest<SessionResponse>(
                         new ByeRequest {
                             RequestId = UniqueIdFactory.Create(),
                             SessionId = Config.SessionId,
@@ -684,6 +686,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _proxyManager.Dispose();
 
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");
+        _requestSender.Dispose();
         _connectorService.Dispose();
 
         _cleanupJob.Dispose();

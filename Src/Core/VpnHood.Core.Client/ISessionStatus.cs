@@ -7,7 +7,7 @@ namespace VpnHood.Core.Client;
 
 public interface ISessionStatus
 {
-    ClientConnectorStatus ConnectorStatus { get; }
+    ConnectorStat ConnectorStatus { get; }
     Traffic Speed { get; }
     Traffic SessionTraffic { get; }
     Traffic SessionSplitTraffic { get; }

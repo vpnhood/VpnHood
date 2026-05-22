@@ -33,7 +33,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private readonly ProxyManager _proxyManager;
     private readonly ClientPacketHandler _packetHandler;
     private readonly IClientTcpHost _clientTcpHost;
-    private readonly ConnectorService _connectorService;
     private readonly RequestSender _requestSender;
     private readonly ClientSessionStatus _status;
     private readonly Job _cleanupJob;
@@ -67,8 +66,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         ClientSessionConfig config)
     {
         _netFilter = options.NetFilter;
-        _connectorService = options.ConnectorService;
-        _requestSender = new RequestSender(_connectorService);
+        _requestSender = options.RequestSender;
         _channelProtocol = options.ChannelProtocol;
         _oldChannelProtocol = options.ChannelProtocol;
         _useTcpProxy = options.UseTcpProxy;
@@ -153,7 +151,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             session: this,
             tunnel: _tunnel,
             domainFilteringService: options.DomainFilteringService,
-            connectorService: _connectorService,
+            requestSender: _requestSender,
             proxyManager: _proxyManager,
             streamHandler: streamHandler,
             packetHandler: _packetHandler,
@@ -303,8 +301,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             VhLogger.Instance.LogInformation("VpnProtocol is changed to {VpnProtocol}.", _channelProtocol);
             _tunnel.MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount;
             _oldChannelProtocol = _channelProtocol;
-            _connectorService.UseQuic = _channelProtocol == ChannelProtocol.Quic && Config.HostQuicEndPoint != null;
-            _connectorService.QuicEndPoint = Config.HostQuicEndPoint;
+            _requestSender.ConnectorService.UseQuic = _channelProtocol == ChannelProtocol.Quic && Config.HostQuicEndPoint != null;
+            _requestSender.ConnectorService.QuicEndPoint = Config.HostQuicEndPoint;
             _tunnel.RemoveChannels<IPacketChannel>();
             Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
         }
@@ -671,7 +669,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         PassthroughState.PassthroughForAd = false;
 
         // stop reusing tcp connections for faster disposal
-        _connectorService.AllowStreamConnectionReuse = false;
+        _requestSender.ConnectorService.AllowStreamConnectionReuse = false;
 
         VhLogger.Instance.LogDebug("Disposing ClientHost...");
         _clientTcpHost.Dispose();
@@ -687,7 +685,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");
         _requestSender.Dispose();
-        _connectorService.Dispose();
 
         _cleanupJob.Dispose();
         _clientUsageTracker?.Dispose();

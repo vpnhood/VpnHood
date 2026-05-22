@@ -1,8 +1,8 @@
-﻿namespace VpnHood.Core.Client.ConnectorServices;
+namespace VpnHood.Core.Client.ConnectorServices;
 
-public abstract class ClientConnectorStatus
+public class ConnectorStat(Func<int> freeConnectionCountFunc)
 {
-    public abstract int FreeConnectionCount { get; }
+    public int FreeConnectionCount => freeConnectionCountFunc();
     public int ReusedConnectionFailedCount { get; internal set; }
     public int ReusedConnectionSucceededCount { get; internal set; }
     public int CreatedConnectionCount { get; internal set; }

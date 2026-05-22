@@ -337,19 +337,17 @@ public class ServerFinder(
         if (hostStatus.Available is not null)
             return;
 
-        using var connector = CreateConnector(hostStatus.VpnEndPoint);
-        using var requestSender = new RequestSender(connector);
-        hostStatus.Available = await VerifyServerStatus(connector, requestSender, queryTimeout, cancellationToken).Vhc();
+        using var requestSender = CreateRequestSender(hostStatus.VpnEndPoint);
+        hostStatus.Available = await VerifyServerStatus(requestSender, queryTimeout, cancellationToken).Vhc();
     }
 
-    private static async Task<bool> VerifyServerStatus(ConnectorService connector,
-        RequestSender requestSender, TimeSpan queryTimeout,
+    private static async Task<bool> VerifyServerStatus(RequestSender requestSender, TimeSpan queryTimeout,
         CancellationToken cancellationToken)
     {
         try {
             VhLogger.Instance.LogInformation(GeneralEventId.Request,
                 "Check an endpoint reachability. EndPoint: {EndPoint}",
-                VhLogger.Format(connector.VpnEndPoint.TcpEndPoint));
+                VhLogger.Format(requestSender.ConnectorService.VpnEndPoint.TcpEndPoint));
 
             using var queryTimeoutCts = new CancellationTokenSource(queryTimeout); // timeout for each server query
             using var requestCts =
@@ -373,16 +371,16 @@ public class ServerFinder(
         }
         catch (Exception ex) {
             VhLogger.Instance.LogInformation(ex, "Could not get server status. EndPoint: {EndPoint}",
-                VhLogger.Format(connector.VpnEndPoint.TcpEndPoint));
+                VhLogger.Format(requestSender.ConnectorService.VpnEndPoint.TcpEndPoint));
 
             return false;
         }
     }
 
-    private ConnectorService CreateConnector(VpnEndPoint vpnEndPoint)
+    private RequestSender CreateRequestSender(VpnEndPoint vpnEndPoint)
     {
-        var connector = new ConnectorService(
-            options: new ConnectorServiceOptions(
+        var requestSender = new RequestSender(
+            new ConnectorServiceOptions(
                 VpnEndPoint: vpnEndPoint,
                 ProxyEndPointManager: proxyEndPointManager,
                 SocketFactory: socketFactory,
@@ -390,14 +388,14 @@ public class ServerFinder(
                 AllowTcpReuse: false)
         );
 
-        connector.Init(
-            protocolVersion: connector.ProtocolVersion, serverSecret: null,
+        requestSender.ConnectorService.Init(
+            protocolVersion: requestSender.ConnectorService.ProtocolVersion, serverSecret: null,
             tcpReuseTimeout: TimeSpan.Zero,
             useWebSocket: false,
             requestTimeout: serverQueryTimeout,
             useQuic: false,
             quicEndPoint: null);
 
-        return connector;
+        return requestSender;
     }
 }

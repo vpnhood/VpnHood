@@ -25,7 +25,7 @@ internal class ConnectorService : IDisposable
     private readonly TcpStreamConnectionFactory _tcpStreamConnectionFactory;
     private readonly QuicStreamConnectionFactory _quicStreamConnectionFactory;
 
-    public ClientConnectorStatus Status { get; }
+    public int FreeConnectionCount => _freeReusableStreamConnectionItems.Count;
     public TimeSpan StreamReuseTimeout { get; private set; }
     public int ProtocolVersion { get; private set; } = 8;
     public VpnEndPoint VpnEndPoint { get; init; }
@@ -40,7 +40,6 @@ internal class ConnectorService : IDisposable
     public ConnectorService(ConnectorServiceOptions options)
     {
         AllowStreamConnectionReuse = options.AllowTcpReuse;
-        Status = new ClientConnectorStatusImpl(this);
         StreamReuseTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
         VpnEndPoint = options.VpnEndPoint;
         RequestTimeout = options.RequestTimeout;
@@ -176,9 +175,7 @@ internal class ConnectorService : IDisposable
             : await _tcpStreamConnectionFactory.CreateConnection(streamId, onConnectAttempt, cancellationToken).Vhc();
 
         // Apply HTTP framing on top of the raw connection
-        var connection = await CreateHttpConnection(rawConnection, contentLength, cancellationToken).Vhc();
-        lock (Status) Status.CreatedConnectionCount++;
-        return connection;
+        return await CreateHttpConnection(rawConnection, contentLength, cancellationToken).Vhc();
     }
 
     public ReusableStreamConnection? GetFreeConnection()
@@ -316,10 +313,4 @@ internal class ConnectorService : IDisposable
             !StreamConnection.Connected;
     }
 
-    internal class ClientConnectorStatusImpl(ConnectorService connectorService)
-        : ClientConnectorStatus
-    {
-        // Note: Count is an approximate snapshot; not synchronized with actual queue operations.
-        public override int FreeConnectionCount => connectorService._freeReusableStreamConnectionItems.Count;
-    }
 }

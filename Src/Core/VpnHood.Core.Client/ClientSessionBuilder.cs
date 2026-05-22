@@ -86,20 +86,21 @@ internal class ClientSessionBuilder(
         bool allowRedirect,
         CancellationToken cancellationToken)
     {
-        ConnectorService? connectorService = null;
+        RequestSender? requestSender = null;
 
         try {
             VhLogger.Instance.LogInformation("Connecting to the server... EndPoint: {hostEndPoint}",
                 VhLogger.Format(vpnEndPoint.TcpEndPoint));
             setState(ClientState.Connecting);
 
-            connectorService = new ConnectorService(
-                options: new ConnectorServiceOptions(
+            requestSender = new RequestSender(
+                new ConnectorServiceOptions(
                     ProxyEndPointManager: proxyEndPointManager,
                     SocketFactory: socketFactory,
                     VpnEndPoint: vpnEndPoint,
                     RequestTimeout: config.TcpConnectTimeout,
                     AllowTcpReuse: false));
+            var connectorService = requestSender.ConnectorService;
 
             var clientInfo = new ClientInfo {
                 ClientId = config.ClientId,
@@ -123,7 +124,6 @@ internal class ClientSessionBuilder(
                 Mtu = TunnelDefaults.MtuClient
             };
 
-            using var requestSender = new RequestSender(connectorService);
             using var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
             requestResult.StreamConnection.PreventReuse();
             connectorService.AllowStreamConnectionReuse = config.AllowTcpReuse;
@@ -296,7 +296,7 @@ internal class ClientSessionBuilder(
                     SocketFactory = socketFactory,
                     Tracker = tracker,
                     AccessUsage = helloResponse.AccessUsage ?? new AccessUsage(),
-                    ConnectorService = connectorService,
+                    RequestSender = requestSender,
                     DomainFilteringService = domainFilteringService,
                     NetFilter = netFilter,
                     ChannelProtocol = channelProtocol,
@@ -336,11 +336,11 @@ internal class ClientSessionBuilder(
             return session;
         }
         catch (TimeoutException) {
-            connectorService?.Dispose();
+            requestSender?.Dispose();
             throw new ConnectionTimeoutException("Could not connect to the server in the given time.");
         }
         catch (RedirectHostException ex) {
-            connectorService?.Dispose();
+            requestSender?.Dispose();
             if (!allowRedirect) {
                 VhLogger.Instance.LogError(ex,
                     "The server replies with a redirect to another server again. We already redirected earlier. This is unexpected.");
@@ -363,7 +363,7 @@ internal class ClientSessionBuilder(
             return await Connect(redirectedEndPoint, false, cancellationToken).Vhc();
         }
         catch {
-            connectorService?.Dispose();
+            requestSender?.Dispose();
             throw;
         }
     }

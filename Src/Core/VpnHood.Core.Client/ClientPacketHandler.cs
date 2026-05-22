@@ -71,7 +71,7 @@ internal class ClientPacketHandler(
             return;
         }
 
-           // block
+        // block
         if (filterAction == FilterAction.Block)
             throw new NetFilterException("A packet has been dropped by the domain filter.");
 

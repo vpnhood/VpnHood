@@ -36,7 +36,7 @@ internal static class DtoConverters
         return ret;
     }
 
-    public static ConnectorStatus ToDto(this ClientConnectorStatus connectorStatus)
+    public static ConnectorStatus ToDto(this ConnectorStat connectorStatus)
     {
         var dto = new ConnectorStatus {
             CreatedConnectionCount = connectorStatus.CreatedConnectionCount,

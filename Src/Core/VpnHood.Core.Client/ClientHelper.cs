@@ -124,7 +124,7 @@ internal static class ClientHelper
         IPAddress hostIpAddress)
     {
         // exclude server if ProtectClient is not supported to prevent loop
-        if (!canProtectSocket)
+        if (!canProtectSocket || true) // todo: required for MS-QUIC as we can not protect its sockets
             includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
         // exclude local networks

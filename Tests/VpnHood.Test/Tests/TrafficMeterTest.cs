@@ -19,8 +19,6 @@ public class TrafficMeterTest : TestBase
             TestHelper.Test_TcpUpload(100_000, cancellationToken: TestCt),
             TestHelper.Test_TcpDownload(60_0000, cancellationToken: TestCt));
         
-        await Task.Delay(1000); //todo: remove
-
         Assert.IsGreaterThanOrEqualTo(100_000, clientServerDom.Client.Session!.Status.SessionTraffic.Sent,
             "TrafficMeter should track sent bytes.");
         Assert.IsGreaterThan(60_000, clientServerDom.Client.Session.Status.SessionTraffic.Received,

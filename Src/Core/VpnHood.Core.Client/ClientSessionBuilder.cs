@@ -186,7 +186,7 @@ internal class ClientSessionBuilder(
 
             var sessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
                 includeIpRanges: serverIncludeIpRangesByDevice.Intersect(config.IncludeIpRangesByDevice),
-                canProtectSocket: vpnAdapter.CanProtectSocket && false, //todo temporary
+                canProtectSocket: vpnAdapter.CanProtectSocket,
                 includeLocalNetwork: config.IncludeLocalNetwork,
                 catcherIps: config.UseOsTcpStack ? [config.TcpProxyCatcherAddressIpV4, config.TcpProxyCatcherAddressIpV6] : [],
                 hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address);

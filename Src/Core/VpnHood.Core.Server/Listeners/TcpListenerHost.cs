@@ -20,14 +20,14 @@ internal class TcpListenerHost(
 {
     private readonly List<TcpListenerEntry> _listeners = [];
     private IReadOnlyList<CertificateHostName> _certificates = [];
-    private int _disposed;
+    private bool _disposed;
 
     public IReadOnlyList<IPEndPoint> EndPoints =>
         _listeners.Select(x => (IPEndPoint)x.Listener.LocalEndpoint).ToArray();
 
     public async Task Configure(IPEndPoint[] ipEndPoints, IReadOnlyList<CertificateHostName> certificates)
     {
-        ObjectDisposedException.ThrowIf(_disposed != 0, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         _certificates = certificates;
 
@@ -183,7 +183,7 @@ internal class TcpListenerHost(
 
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         var tasks = _listeners.Select(x => x.StopAsync().AsTask()).ToList();

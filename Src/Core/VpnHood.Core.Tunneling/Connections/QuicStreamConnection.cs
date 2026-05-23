@@ -11,7 +11,7 @@ public sealed class QuicStreamConnection : IStreamConnection
 {
     private readonly QuicStream _stream;
     private bool _connected = true;
-    private int _disposed;
+    private bool _disposed;
 
     public QuicStreamConnection(QuicStream stream, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
         string connectionName, bool isServer, string? connectionId = null)
@@ -56,7 +56,7 @@ public sealed class QuicStreamConnection : IStreamConnection
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _disposed, true)) return;
         _connected = false;
         _stream.Dispose();
         Disposed?.Invoke(this, EventArgs.Empty);
@@ -67,7 +67,7 @@ public sealed class QuicStreamConnection : IStreamConnection
 
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _disposed, true)) return;
         _connected = false;
         await Stream.DisposeAsync();
         Disposed?.Invoke(this, EventArgs.Empty);

@@ -19,14 +19,14 @@ internal class QuicListenerHost(
 {
     private readonly List<QuicListenerEntry> _listeners = [];
     private IReadOnlyList<CertificateHostName> _certificates = [];
-    private int _disposed;
+    private bool _disposed;
 
     public IReadOnlyList<IPEndPoint> EndPoints =>
         _listeners.Select(x => x.Listener.LocalEndPoint).ToArray();
 
     public async Task Configure(IPEndPoint[] ipEndPoints, IReadOnlyList<CertificateHostName> certificates)
     {
-        ObjectDisposedException.ThrowIf(_disposed != 0, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         _certificates = certificates;
 
@@ -185,7 +185,7 @@ internal class QuicListenerHost(
 
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         var tasks = _listeners.Select(x => x.DisposeAsync().AsTask()).ToList();

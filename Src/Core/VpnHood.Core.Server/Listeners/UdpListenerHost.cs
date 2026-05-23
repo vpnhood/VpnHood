@@ -10,14 +10,14 @@ namespace VpnHood.Core.Server.Listeners;
 internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
 {
     private readonly List<UdpChannelTransmitter> _transmitters = [];
-    private int _disposed;
+    private bool _disposed;
 
     public IReadOnlyList<IPEndPoint> EndPoints =>
         _transmitters.Select(x => x.LocalEndPoint).ToArray();
 
     public void Configure(IPEndPoint[] udpEndPoints, TransferBufferSize? bufferSize)
     {
-        ObjectDisposedException.ThrowIf(_disposed != 0, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         // UDP port zero must be specified in preparation
         if (udpEndPoints.Any(x => x.Port == 0))
@@ -57,7 +57,7 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0) 
+        if (Interlocked.Exchange(ref _disposed, true)) 
             return;
 
         foreach (var transmitter in _transmitters)

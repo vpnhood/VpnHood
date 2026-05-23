@@ -12,14 +12,14 @@ public sealed class LocalTcpStream : Stream
     private readonly LocalTcpConnection _connection;
     private readonly LocalTcpStack _stack;
     private readonly CancellationTokenSource _cts = new();
-    private int _disposed;
+    private bool _disposed;
     internal LocalTcpStream(LocalTcpConnection connection, LocalTcpStack stack)
     {
         _connection = connection;
         _stack = stack;
     }
 
-    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
+    private bool IsDisposed => Volatile.Read(ref _disposed);
 
     /// <inheritdoc />
     public override bool CanRead => !IsDisposed;
@@ -128,7 +128,7 @@ public sealed class LocalTcpStream : Stream
     /// <inheritdoc />
     protected override void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         if (disposing) {
@@ -142,7 +142,7 @@ public sealed class LocalTcpStream : Stream
     /// <inheritdoc />
     public override async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         // Graceful close: drain buffered app->net bytes into TCP segments before FIN.

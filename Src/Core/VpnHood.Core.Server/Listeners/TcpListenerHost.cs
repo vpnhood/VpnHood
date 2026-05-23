@@ -16,15 +16,19 @@ internal class TcpListenerHost(
     SessionManager sessionManager,
     CancellationToken cancellationToken,
     Func<IStreamConnection, CancellationToken, Task> processNewConnection)
+    : IAsyncDisposable
 {
     private readonly List<TcpListenerEntry> _listeners = [];
     private IReadOnlyList<CertificateHostName> _certificates = [];
+    private int _disposed;
 
     public IReadOnlyList<IPEndPoint> EndPoints =>
         _listeners.Select(x => (IPEndPoint)x.Listener.LocalEndpoint).ToArray();
 
     public async Task Configure(IPEndPoint[] ipEndPoints, IReadOnlyList<CertificateHostName> certificates)
     {
+        ObjectDisposedException.ThrowIf(_disposed != 0, this);
+
         _certificates = certificates;
 
         if (ipEndPoints.Length == 0)
@@ -177,8 +181,11 @@ internal class TcpListenerHost(
         return certificate.Certificate;
     }
 
-    public async ValueTask StopAllAsync()
+    public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
         var tasks = _listeners.Select(x => x.StopAsync().AsTask()).ToList();
         await Task.WhenAll(tasks).Vhc();
         _listeners.Clear();

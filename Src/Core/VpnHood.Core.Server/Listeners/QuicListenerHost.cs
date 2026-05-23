@@ -15,15 +15,19 @@ internal class QuicListenerHost(
     SessionManager sessionManager,
     CancellationToken cancellationToken,
     Func<IStreamConnection, CancellationToken, Task> processNewConnection)
+    : IAsyncDisposable
 {
     private readonly List<QuicListenerEntry> _listeners = [];
     private IReadOnlyList<CertificateHostName> _certificates = [];
+    private int _disposed;
 
     public IReadOnlyList<IPEndPoint> EndPoints =>
         _listeners.Select(x => x.Listener.LocalEndPoint).ToArray();
 
     public async Task Configure(IPEndPoint[] ipEndPoints, IReadOnlyList<CertificateHostName> certificates)
     {
+        ObjectDisposedException.ThrowIf(_disposed != 0, this);
+
         _certificates = certificates;
 
         if (!QuicListener.IsSupported && ipEndPoints.Length > 0) {
@@ -39,7 +43,7 @@ internal class QuicListenerHost(
                      .Where(x => !ipEndPoints.Any(ep => ep.Equals(x.Listener.LocalEndPoint))).ToArray()) {
             VhLogger.Instance.LogInformation("Stop listening on QuicEndPoint: {QuicEndPoint}",
                 VhLogger.Format(entry.Listener.LocalEndPoint));
-            await entry.StopAsync().Vhc();
+            await entry.DisposeAsync().Vhc();
             _listeners.Remove(entry);
         }
 
@@ -179,19 +183,23 @@ internal class QuicListenerHost(
         await processNewConnection(serverConnection, connectCts.Token).Vhc();
     }
 
-    public async ValueTask StopAllAsync()
+    public async ValueTask DisposeAsync()
     {
-        var tasks = _listeners.Select(x => x.StopAsync().AsTask()).ToList();
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
+        var tasks = _listeners.Select(x => x.DisposeAsync().AsTask()).ToList();
         await Task.WhenAll(tasks).Vhc();
         _listeners.Clear();
     }
 
     private sealed class QuicListenerEntry(QuicListener listener, Task listenerTask, CancellationTokenSource cts)
+        : IAsyncDisposable
     {
         public QuicListener Listener => listener;
         public Task ListenerTask => listenerTask;
 
-        public async ValueTask StopAsync()
+        public async ValueTask DisposeAsync()
         {
             try { await cts.TryCancelAsync().Vhc(); } catch { /* ignore */ }
             try { await Listener.DisposeAsync().Vhc(); } catch { /* ignore */ }

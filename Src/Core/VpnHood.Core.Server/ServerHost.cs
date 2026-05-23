@@ -12,7 +12,6 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
@@ -28,7 +27,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
     private readonly DownloadService _downloadService;
     private readonly TcpListenerHost _tcpListenerHost;
     private readonly QuicListenerHost _quicListenerHost;
-    private readonly List<UdpChannelTransmitter> _udpChannelTransmitters = [];
+    private readonly UdpListenerHost _udpListenerHost;
     private readonly Job _cleanupConnectionsJob;
     private readonly AsyncLock _configureLock = new();
     private bool _disposed;
@@ -60,6 +59,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             sessionManager: _sessionManager,
             cancellationToken: _cancellationTokenSource.Token,
             processNewConnection: ProcessNewConnection);
+        _udpListenerHost = new UdpListenerHost(_sessionManager);
     }
 
     internal async Task Configure(ServerHostConfiguration configuration)
@@ -79,49 +79,9 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
         await _tcpListenerHost.Configure(configuration.TcpEndPoints, Certificates).Vhc();
         await _quicListenerHost.Configure(configuration.QuicEndPoints, Certificates).Vhc();
-        ConfigureUdpListeners(configuration.UdpEndPoints, configuration.UdpChannelBufferSize);
+        _udpListenerHost.Configure(configuration.UdpEndPoints, configuration.UdpChannelBufferSize);
     }
 
-
-    private void ConfigureUdpListeners(IPEndPoint[] udpEndPoints, TransferBufferSize? bufferSize)
-    {
-        // UDP port zero must be specified in preparation
-        if (udpEndPoints.Any(x => x.Port == 0))
-            throw new InvalidOperationException("UDP port has not been specified.");
-
-        // stop listeners that are not in the list
-        foreach (var udpChannelTransmitter in _udpChannelTransmitters
-                     .Where(x => !udpEndPoints.Contains(x.LocalEndPoint)).ToArray()) {
-            VhLogger.Instance.LogInformation("Stop listening on UdpEndPoint: {UdpEndPoint}",
-                VhLogger.Format(udpChannelTransmitter.LocalEndPoint));
-            udpChannelTransmitter.Dispose();
-            _udpChannelTransmitters.Remove(udpChannelTransmitter);
-        }
-
-        // start new listeners
-        foreach (var udpEndPoint in udpEndPoints) {
-            try {
-                // ignore already listening
-                if (_udpChannelTransmitters.Any(x => x.LocalEndPoint.Equals(udpEndPoint)))
-                    continue;
-
-                VhLogger.Instance.LogInformation("Start listening on UdpEndPoint: {UdpEndPoint}",
-                    VhLogger.Format(udpEndPoint));
-
-                var udpChannelTransmitter = ServerUdpChannelTransmitter.Create(udpEndPoint, _sessionManager);
-                _udpChannelTransmitters.Add(udpChannelTransmitter);
-            }
-            catch (Exception ex) {
-                ex.Data.Add("UdpEndPoint", udpEndPoint);
-                throw;
-            }
-        }
-
-        // reconfigure all transmitters
-        foreach (var udpChannelTransmitter in _udpChannelTransmitters) {
-            udpChannelTransmitter.BufferSize = bufferSize ?? TunnelDefaults.ServerUdpChannelBufferSize;
-        }
-    }
 
     private static async Task<int> ReadRequestVersion(IStreamConnection streamConnection, CancellationToken cancellationToken)
     {
@@ -511,7 +471,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponseEx.SessionId)}");
 
         // find udp/quic port that matches the same local IP address family
-        var udpPort = FindMatchingPort(_udpChannelTransmitters.Select(x => x.LocalEndPoint), streamConnection, "UDP");
+        var udpPort = FindMatchingPort(_udpListenerHost.EndPoints, streamConnection, "UDP");
         var quicPort = FindMatchingPort(_quicListenerHost.EndPoints, streamConnection, "QUIC");
 
         var helloResponse = new HelloResponse {
@@ -679,14 +639,14 @@ public class ServerHost : IDisposable, IAsyncDisposable
         _cleanupConnectionsJob.Dispose();
 
         // UDPs
-        VhLogger.Instance.LogDebug("Disposing UdpChannelTransmitters...");
-        foreach (var udpChannelClient in _udpChannelTransmitters)
-            udpChannelClient.Dispose();
-        _udpChannelTransmitters.Clear();
+        VhLogger.Instance.LogDebug("Disposing _udpListenerHost...");
+        _udpListenerHost.Dispose();
 
         // QUIC + TCPs in parallel
         VhLogger.Instance.LogDebug("Disposing QuicListeners and TcpListeners...");
-        await Task.WhenAll(_quicListenerHost.StopAllAsync().AsTask(), _tcpListenerHost.StopAllAsync().AsTask()).Vhc();
+        await Task.WhenAll(
+            _quicListenerHost.DisposeAsync().AsTask(), 
+            _tcpListenerHost.DisposeAsync().AsTask()).Vhc();
 
         // dispose connections
         VhLogger.Instance.LogDebug("Disposing Connections...");

@@ -65,7 +65,6 @@ internal class ConnectorService : IDisposable
     {
         AllowStreamReuse = options.AllowStreamReuse;
         Stat = new ConnectorStat(() => _freeReusableStreamConnectionItems.Count);
-        IdleConnectionTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
         VpnEndPoint = options.VpnEndPoint;
         RequestTimeout = options.RequestTimeout;
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
@@ -79,6 +78,9 @@ internal class ConnectorService : IDisposable
         _quicStreamConnectionFactory = new QuicStreamConnectionFactory(
             options.VpnEndPoint,
             UserCertificateValidationCallback);
+
+        // after quic
+        IdleConnectionTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
     }
 
     public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan tcpReuseTimeout, bool useWebSocket,

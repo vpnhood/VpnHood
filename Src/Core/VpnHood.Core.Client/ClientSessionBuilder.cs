@@ -93,19 +93,20 @@ internal class ClientSessionBuilder(
                 VhLogger.Format(vpnEndPoint.TcpEndPoint));
             setState(ClientState.Connecting);
 
-            requestSender = new RequestSender(
-                new ConnectorServiceOptions(
-                    ProxyEndPointManager: proxyEndPointManager,
-                    SocketFactory: socketFactory,
-                    VpnEndPoint: vpnEndPoint,
-                    RequestTimeout: config.TcpConnectTimeout,
-                    AllowTcpReuse: false));
-            var connectorService = requestSender.ConnectorService;
+            var connectorService = new ConnectorService(
+                new ConnectorServiceOptions {
+                    ProxyEndPointManager = proxyEndPointManager,
+                    SocketFactory = socketFactory,
+                    VpnEndPoint = vpnEndPoint,
+                    RequestTimeout = config.TcpConnectTimeout,
+                    AllowStreamReuse = false
+                });
+            requestSender = new RequestSender(connectorService);
 
             var clientInfo = new ClientInfo {
                 ClientId = config.ClientId,
                 ClientVersion = config.Version.ToString(3),
-                MinProtocolVersion = connectorService.ProtocolVersion,
+                MinProtocolVersion = requestSender.ConnectorService.ProtocolVersion,
                 MaxProtocolVersion = VpnHoodClientConfig.MaxProtocolVersion,
                 UserAgent = config.UserAgent
             };
@@ -126,7 +127,7 @@ internal class ClientSessionBuilder(
 
             using var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
             requestResult.StreamConnection.PreventReuse();
-            connectorService.AllowStreamConnectionReuse = config.AllowTcpReuse;
+            connectorService.AllowStreamReuse = config.AllowStreamReuse;
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)

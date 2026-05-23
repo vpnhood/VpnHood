@@ -150,7 +150,7 @@ public class ServerFinder(
     public async Task<VpnEndPoint> FindBestRedirectedServerAsync(ServerToken[] serverTokens,
         CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogInformation(GeneralEventId.Request, 
+        VhLogger.Instance.LogInformation(GeneralEventId.Request,
             "Finding best server from redirected endpoints... ServerLocation: {ServerLocation}", ServerLocation);
 
         if (!serverTokens.Any())
@@ -379,14 +379,16 @@ public class ServerFinder(
 
     private RequestSender CreateRequestSender(VpnEndPoint vpnEndPoint)
     {
-        var requestSender = new RequestSender(
-            new ConnectorServiceOptions(
-                VpnEndPoint: vpnEndPoint,
-                ProxyEndPointManager: proxyEndPointManager,
-                SocketFactory: socketFactory,
-                RequestTimeout: serverQueryTimeout,
-                AllowTcpReuse: false)
-        );
+        var connectorService = new ConnectorServiceOptions {
+            VpnEndPoint = vpnEndPoint,
+            ProxyEndPointManager = proxyEndPointManager,
+            SocketFactory = socketFactory,
+            RequestTimeout = serverQueryTimeout,
+            AllowStreamReuse = false
+        };
+
+        var requestSender = 
+            new RequestSender(new ConnectorService(connectorService));
 
         requestSender.ConnectorService.Init(
             protocolVersion: requestSender.ConnectorService.ProtocolVersion, serverSecret: null,

@@ -32,12 +32,12 @@ namespace VpnHood.Core.Client.ConnectorServices;
 /// Only TCP connections are added to the reuse pool. QUIC streams are not reused because each QUIC
 /// stream is already a lightweight, independent channel within the same QUIC connection.
 /// </remarks>
-internal class RequestSender(ConnectorServiceOptions connectorServiceOptions) : IDisposable
+internal class RequestSender(ConnectorService connectorService) : IDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private int _isDisposed;
 
-    public ConnectorService ConnectorService { get; } = new(connectorServiceOptions);
+    public ConnectorService ConnectorService { get; } = connectorService;
 
     public Task<ConnectorRequestResult<T>> SendRequest<T>(ClientRequest request,
         CancellationToken cancellationToken)

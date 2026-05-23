@@ -46,11 +46,15 @@ internal class ConnectorService : IDisposable
     private readonly QuicStreamConnectionFactory _quicStreamConnectionFactory;
 
     public ConnectorStat Stat { get; }
-    public TimeSpan StreamReuseTimeout { get; private set; }
     public int ProtocolVersion { get; private set; } = 8;
     public VpnEndPoint VpnEndPoint { get; init; }
     public TimeSpan RequestTimeout { get; set; }
     public bool UseQuic { get; set; }
+
+    public TimeSpan IdleConnectionTimeout {
+        get => _quicStreamConnectionFactory.IdleConnectionTimeout;
+        set => _quicStreamConnectionFactory.IdleConnectionTimeout = value;
+    }
 
     public IPEndPoint? QuicEndPoint {
         get => _quicStreamConnectionFactory.QuicEndPoint;
@@ -59,9 +63,9 @@ internal class ConnectorService : IDisposable
 
     public ConnectorService(ConnectorServiceOptions options)
     {
-        AllowStreamConnectionReuse = options.AllowTcpReuse;
+        AllowStreamReuse = options.AllowStreamReuse;
         Stat = new ConnectorStat(() => _freeReusableStreamConnectionItems.Count);
-        StreamReuseTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
+        IdleConnectionTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
         VpnEndPoint = options.VpnEndPoint;
         RequestTimeout = options.RequestTimeout;
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
@@ -82,7 +86,7 @@ internal class ConnectorService : IDisposable
     {
         _ = serverSecret;
         ProtocolVersion = protocolVersion;
-        StreamReuseTimeout = tcpReuseTimeout;
+        IdleConnectionTimeout = tcpReuseTimeout;
         _useWebSocket = useWebSocket;
         RequestTimeout = requestTimeout;
         UseQuic = useQuic;
@@ -157,7 +161,7 @@ internal class ConnectorService : IDisposable
         };
 
         // create a reusable connection
-        if (!AllowStreamConnectionReuse)
+        if (!AllowStreamReuse)
             return webSocketConnection;
 
         // If reuse is allowed, add the client stream to the shared collection
@@ -218,7 +222,7 @@ internal class ConnectorService : IDisposable
     private void ConnectionReuseCallback(ReusableStreamConnection streamConnection)
     {
         // Check if the connector service is disposed
-        if (_isDisposed != 0 || !AllowStreamConnectionReuse) {
+        if (_isDisposed != 0 || !AllowStreamReuse) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Disposing the reused client stream because the connector service is either disposed or reuse is no longer allowed. " +
                 "ConnectionId: {ConnectionId}", streamConnection.ConnectionId);
@@ -229,7 +233,7 @@ internal class ConnectorService : IDisposable
         }
 
         _freeReusableStreamConnectionItems.Enqueue(new ReusableConnectionItem {
-            IdleTimeout = StreamReuseTimeout,
+            IdleConnectionTimeout = IdleConnectionTimeout,
             StreamConnection = streamConnection
         });
     }
@@ -253,7 +257,7 @@ internal class ConnectorService : IDisposable
         return ValueTask.CompletedTask;
     }
 
-    private void PreventReuseSharedStreamConnections()
+    private void PreventReuseSharedStream()
     {
         lock (_sharedStreamConnections) {
             foreach (var connection in _sharedStreamConnections)
@@ -268,11 +272,11 @@ internal class ConnectorService : IDisposable
         }
     }
 
-    public bool AllowStreamConnectionReuse {
+    public bool AllowStreamReuse {
         get;
         set {
             if (!value)
-                PreventReuseSharedStreamConnections();
+                PreventReuseSharedStream();
             field = value;
         }
     }
@@ -305,7 +309,7 @@ internal class ConnectorService : IDisposable
             _quicStreamConnectionFactory.DisposeAsync().VhBlock();
 
             // Prevent reuse of client streams
-            PreventReuseSharedStreamConnections();
+            PreventReuseSharedStream();
 
             // Kill and remove all owned client streams
             while (_freeReusableStreamConnectionItems.TryDequeue(out var queueItem)) {
@@ -328,11 +332,11 @@ internal class ConnectorService : IDisposable
 
     private class ReusableConnectionItem
     {
-        public required TimeSpan IdleTimeout { get; init; }
+        public required TimeSpan IdleConnectionTimeout { get; init; }
         public required ReusableStreamConnection StreamConnection { get; init; }
         private DateTime EnqueueTime { get; } = FastDateTime.Now;
         public bool IsExpired =>
-            EnqueueTime + IdleTimeout <= FastDateTime.Now ||
+            EnqueueTime + IdleConnectionTimeout <= FastDateTime.Now ||
             !StreamConnection.Connected;
     }
 

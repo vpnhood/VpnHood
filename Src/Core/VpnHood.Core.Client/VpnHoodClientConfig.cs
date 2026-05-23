@@ -36,7 +36,7 @@ public class VpnHoodClientConfig
     public required bool IncludeLocalNetwork { get; init; }
     public required string? SessionName { get; init; }
     public required string UserAgent { get; init; }
-    public required bool AllowTcpReuse { get; init; }
+    public required bool AllowStreamReuse { get; init; }
     public required UserReview? UserReview { get; init; }
     public required bool IsTcpProxySupported { get; init; }
     public required bool UseWebSocket { get; init; }

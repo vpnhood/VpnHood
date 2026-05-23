@@ -3,10 +3,11 @@ using VpnHood.Core.Toolkit.Sockets;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 
-internal record ConnectorServiceOptions(
-    VpnEndPoint VpnEndPoint,
-    ProxyEndPointManager ProxyEndPointManager,
-    ISocketFactory SocketFactory,
-    TimeSpan RequestTimeout,
-    bool AllowTcpReuse
-);
+internal class ConnectorServiceOptions
+{
+    public required VpnEndPoint VpnEndPoint { get; init; }
+    public required ProxyEndPointManager ProxyEndPointManager { get; init; }
+    public required ISocketFactory SocketFactory { get; init; }
+    public required TimeSpan RequestTimeout { get; init; }
+    public required bool AllowStreamReuse { get; init; }
+}

@@ -83,7 +83,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IncludeIpRangesByDevice = options.IncludeIpRangesByDevice,
             DnsServers = options.DnsServers,
             SessionName = options.SessionName,
-            AllowTcpReuse = options.AllowTcpReuse,
+            AllowStreamReuse = options.AllowTcpReuse,
             UnstableTimeout = options.UnstableTimeout,
             AutoWaitTimeout = options.AutoWaitTimeout,
             Version = options.Version,

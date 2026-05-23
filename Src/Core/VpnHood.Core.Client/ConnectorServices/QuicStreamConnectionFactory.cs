@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Security;
 using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Connections;
 
@@ -15,89 +16,98 @@ namespace VpnHood.Core.Client.ConnectorServices;
 /// To avoid overwhelming a single connection, this factory enforces two limits per connection:
 /// <list type="bullet">
 ///   <item><term>MaxStreamsPerConnection</term><description>Maximum simultaneously open streams. When reached, a new QUIC connection is established.</description></item>
-///   <item><term>MaxLifetimeStreamsPerConnection</term><description>Maximum total streams ever opened on a connection. Once reached the connection is "retired" — no new streams are opened on it, and it is disposed automatically after all its active streams are closed.</description></item>
+///   <item><term>MaxLifetimeStreamsPerConnection</term><description>Maximum total streams ever opened on a connection. Once reached the connection is retired and disposed automatically after all its active streams are closed.</description></item>
 /// </list>
-/// Slot reservation (incrementing active/total counters) happens under the factory lock before the async
-/// stream-open call, preventing race conditions where two callers both see capacity and both proceed.
+/// These limits are soft limits, not strict hard caps.
+/// Capacity checks in <see cref="QuicStreamConnectionItem.CanOpenStream"/> are intentionally lock-free,
+/// so under heavy concurrency a small temporary exceed of stream/lifetime count can happen.
+/// This behavior is expected and acceptable by design.
+/// Idle items are cleaned by one periodic job based on each item's <c>ZeroActiveSince</c> timestamp.
 /// </remarks>
-internal class QuicStreamConnectionFactory(
-    VpnEndPoint vpnEndPoint,
-    RemoteCertificateValidationCallback certificateValidationCallback)
-    : IAsyncDisposable
+internal class QuicStreamConnectionFactory : IAsyncDisposable
 {
-    private readonly List<QuicStreamConnectionItem> _connections = [];
+    private readonly VpnEndPoint _vpnEndPoint;
+    private readonly RemoteCertificateValidationCallback _certificateValidationCallback;
+    private readonly List<QuicStreamConnectionItem> _items = [];
+    private readonly Job _cleanupJob;
     private int _isDisposed;
 
     public int MaxStreamsPerConnection { get; set; } = 30;
     public int MaxLifetimeStreamsPerConnection { get; set; } = 500;
+    public TimeSpan IdleConnectionTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public IPEndPoint? QuicEndPoint { get; set; }
 
-    public async Task<IStreamConnection> CreateConnection(string connectionId, CancellationToken cancellationToken)
+    public QuicStreamConnectionFactory(
+        VpnEndPoint vpnEndPoint,
+        RemoteCertificateValidationCallback certificateValidationCallback)
     {
-        var streamConnectionItem = GetOrCreateConnectionItem();
-
-        try {
-            var stream = await streamConnectionItem.OpenStreamAsync(vpnEndPoint, certificateValidationCallback, cancellationToken).Vhc();
-            var connection = new QuicStreamConnection(stream,
-                localEndPoint: streamConnectionItem.Connection.LocalEndPoint,
-                remoteEndPoint: streamConnectionItem.Connection.RemoteEndPoint,
-                connectionName: "tunnel",
-                isServer: false,
-                connectionId: connectionId);
-            connection.Disposed += (_, _) => OnStreamDisposed(streamConnectionItem);
-            return connection;
-        }
-        catch {
-            // Revert reservation on failure
-            lock (_connections) {
-                streamConnectionItem.ActiveStreamCount--;
-                streamConnectionItem.TotalStreamCount--;
-            }
-            throw;
-        }
+        _vpnEndPoint = vpnEndPoint;
+        _certificateValidationCallback = certificateValidationCallback;
+        _cleanupJob = new Job(Cleanup, "QuicStreamConnectionCleanup");
     }
 
-    private void OnStreamDisposed(QuicStreamConnectionItem streamConnectionItem)
+    public Task<IStreamConnection> CreateConnection(string connectionId, CancellationToken cancellationToken)
     {
-        lock (_connections) {
-            streamConnectionItem.ActiveStreamCount--;
-
-            // If retired and no active streams, dispose and remove
-            if (streamConnectionItem is { IsRetired: true, ActiveStreamCount: 0 }) {
-                _connections.Remove(streamConnectionItem);
-                _ = streamConnectionItem.SafeDisposeAsync();
-            }
-        }
+        var item = GetOrCreateConnectionItem();
+        return item.OpenStreamConnection(
+            _vpnEndPoint,
+            _certificateValidationCallback,
+            connectionId,
+            cancellationToken);
     }
 
     private QuicStreamConnectionItem GetOrCreateConnectionItem()
     {
-        lock (_connections) {
-            // Find a connection with available capacity
-            var item = _connections.FirstOrDefault(c => c.CanOpenStream);
-            if (item != null) 
+        lock (_items) {
+            var item = _items.FirstOrDefault(c => c.CanOpenStream);
+            if (item != null)
                 return item;
 
-            // Reserve the slot under lock to prevent over-subscription
-            item = new QuicStreamConnectionItem(this);
-            item.ActiveStreamCount++;
-            item.TotalStreamCount++;
-            _connections.Add(item);
+            var quicEndPoint = QuicEndPoint
+                ?? throw new InvalidOperationException("QuicEndPoint has not been set.");
+
+            item = new QuicStreamConnectionItem(
+                maxStreamsPerConnection: MaxStreamsPerConnection,
+                maxLifetimeStreamsPerConnection: MaxLifetimeStreamsPerConnection,
+                quicEndPoint: quicEndPoint);
+
+            _items.Add(item);
             return item;
         }
     }
 
-    public async ValueTask DisposeAsync()
+    private ValueTask Cleanup(CancellationToken cancellationToken)
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
+        _ = cancellationToken;
 
-        List<QuicStreamConnectionItem> connections;
-        lock (_connections) {
-            connections = [.. _connections];
-            _connections.Clear();
+        var disposeTasks = new List<Task>();
+
+        // Remove idle connections with no active streams if they have been idle for too long,
+        // if they are already dead, or if they have reached their lifetime stream limit.
+        lock (_items) {
+            foreach (var item in _items.Where(x=>x.ActiveStreamCount == 0).ToArray()) {
+                if (item.IsDead || item.ZeroActiveSince + IdleConnectionTimeout <= FastDateTime.Now) {
+                    _items.Remove(item);
+                    disposeTasks.Add(item.SafeDisposeAsync().AsTask());
+                }
+            }
         }
 
-        // dispose all connections outside the lock with parallelism
-        await Task.WhenAll(connections.Select(c => c.SafeDisposeAsync().AsTask())).Vhc();
+        return new ValueTask(Task.WhenAll(disposeTasks));
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return ValueTask.CompletedTask;
+
+        _cleanupJob.Dispose();
+
+        List<QuicStreamConnectionItem> connections;
+        lock (_items) {
+            connections = [.. _items];
+            _items.Clear();
+        }
+
+        return new ValueTask(Task.WhenAll(connections.Select(c => c.SafeDisposeAsync().AsTask())));
     }
 }

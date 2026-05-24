@@ -2,6 +2,10 @@
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 WORKDIR /app
+RUN apt-get update \
+	&& apt-get install -y bash wget sudo \
+	&& sudo su -c "bash <( wget -qO- https://github.com/vpnhood/VpnHood.App.Server/releases/latest/download/install-msquic2.sh)|| true" \
+	&& rm -rf /var/lib/apt/lists/*
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src

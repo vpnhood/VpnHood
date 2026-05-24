@@ -55,7 +55,9 @@ if [ "$composeUrl" = "" ]; then
 	composeUrl="https://github.com/vpnhood/VpnHood.App.Server/releases/latest/download/VpnHoodServer.docker.yml";
 fi
 
-# install docker & compose
+# -----------------------------------------------
+# Install Docker & Compose
+# -----------------------------------------------
 if [ "$installDocker" = "y" ]; then
 	# Update the apt package index
 	apt-get update;

@@ -3223,6 +3223,7 @@ export class AppFeatures implements IAppFeatures {
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
     isTcpProxySupported!: boolean;
+    isQuicSupported!: boolean;
     isSplitDomainSupported!: boolean;
     isUserReviewSupported!: boolean;
     isTv!: boolean;
@@ -3268,6 +3269,7 @@ export class AppFeatures implements IAppFeatures {
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : null as any;
             this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : null as any;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
+            this.isQuicSupported = _data["isQuicSupported"] !== undefined ? _data["isQuicSupported"] : null as any;
             this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
             this.isUserReviewSupported = _data["isUserReviewSupported"] !== undefined ? _data["isUserReviewSupported"] : null as any;
             this.isTv = _data["isTv"] !== undefined ? _data["isTv"] : null as any;
@@ -3329,6 +3331,7 @@ export class AppFeatures implements IAppFeatures {
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : null as any;
         data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : null as any;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
+        data["isQuicSupported"] = this.isQuicSupported !== undefined ? this.isQuicSupported : null as any;
         data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
         data["isUserReviewSupported"] = this.isUserReviewSupported !== undefined ? this.isUserReviewSupported : null as any;
         data["isTv"] = this.isTv !== undefined ? this.isTv : null as any;
@@ -3374,6 +3377,7 @@ export interface IAppFeatures {
     isAccountSupported: boolean;
     isBillingSupported: boolean;
     isTcpProxySupported: boolean;
+    isQuicSupported: boolean;
     isSplitDomainSupported: boolean;
     isUserReviewSupported: boolean;
     isTv: boolean;
@@ -3769,6 +3773,7 @@ export class AccessInfo implements IAccessInfo {
     maxCycleTraffic!: number;
     maxTotalTraffic!: number;
     maxDeviceCount!: number;
+    maxSpeedMbps?: Traffic | null;
     deviceLifeSpan!: number;
     devicesSummary?: AccessDevicesSummary | null;
 
@@ -3791,6 +3796,7 @@ export class AccessInfo implements IAccessInfo {
             this.maxCycleTraffic = _data["maxCycleTraffic"] !== undefined ? _data["maxCycleTraffic"] : null as any;
             this.maxTotalTraffic = _data["maxTotalTraffic"] !== undefined ? _data["maxTotalTraffic"] : null as any;
             this.maxDeviceCount = _data["maxDeviceCount"] !== undefined ? _data["maxDeviceCount"] : null as any;
+            this.maxSpeedMbps = _data["maxSpeedMbps"] ? Traffic.fromJS(_data["maxSpeedMbps"]) : null as any;
             this.deviceLifeSpan = _data["deviceLifeSpan"] !== undefined ? _data["deviceLifeSpan"] : null as any;
             this.devicesSummary = _data["devicesSummary"] ? AccessDevicesSummary.fromJS(_data["devicesSummary"]) : null as any;
         }
@@ -3813,6 +3819,7 @@ export class AccessInfo implements IAccessInfo {
         data["maxCycleTraffic"] = this.maxCycleTraffic !== undefined ? this.maxCycleTraffic : null as any;
         data["maxTotalTraffic"] = this.maxTotalTraffic !== undefined ? this.maxTotalTraffic : null as any;
         data["maxDeviceCount"] = this.maxDeviceCount !== undefined ? this.maxDeviceCount : null as any;
+        data["maxSpeedMbps"] = this.maxSpeedMbps ? this.maxSpeedMbps.toJSON() : null as any;
         data["deviceLifeSpan"] = this.deviceLifeSpan !== undefined ? this.deviceLifeSpan : null as any;
         data["devicesSummary"] = this.devicesSummary ? this.devicesSummary.toJSON() : null as any;
         return data;
@@ -3828,8 +3835,49 @@ export interface IAccessInfo {
     maxCycleTraffic: number;
     maxTotalTraffic: number;
     maxDeviceCount: number;
+    maxSpeedMbps?: Traffic | null;
     deviceLifeSpan: number;
     devicesSummary?: AccessDevicesSummary | null;
+}
+
+export class Traffic implements ITraffic {
+    sent!: number;
+    received!: number;
+
+    constructor(data?: ITraffic) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.sent = _data["sent"] !== undefined ? _data["sent"] : null as any;
+            this.received = _data["received"] !== undefined ? _data["received"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): Traffic {
+        data = typeof data === 'object' ? data : {};
+        let result = new Traffic();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["sent"] = this.sent !== undefined ? this.sent : null as any;
+        data["received"] = this.received !== undefined ? this.received : null as any;
+        return data;
+    }
+}
+
+export interface ITraffic {
+    sent: number;
+    received: number;
 }
 
 export class AccessDevicesSummary implements IAccessDevicesSummary {
@@ -4279,46 +4327,6 @@ export interface IAppConnectorStat {
     reusedConnectionSucceededCount: number;
     createdConnectionCount: number;
     requestCount: number;
-}
-
-export class Traffic implements ITraffic {
-    sent!: number;
-    received!: number;
-
-    constructor(data?: ITraffic) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.sent = _data["sent"] !== undefined ? _data["sent"] : null as any;
-            this.received = _data["received"] !== undefined ? _data["received"] : null as any;
-        }
-    }
-
-    static fromJS(data: any): Traffic {
-        data = typeof data === 'object' ? data : {};
-        let result = new Traffic();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["sent"] = this.sent !== undefined ? this.sent : null as any;
-        data["received"] = this.received !== undefined ? this.received : null as any;
-        return data;
-    }
-}
-
-export interface ITraffic {
-    sent: number;
-    received: number;
 }
 
 export class AppProxyEndPointManagerStatus implements IAppProxyEndPointManagerStatus {

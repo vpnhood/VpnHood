@@ -1,6 +1,5 @@
 using Ga4.Trackers;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering;

@@ -2,9 +2,11 @@
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 WORKDIR /app
+COPY ["Src/Apps/Server.Net/Pub/Linux/install-msquic.sh", "/tmp/install-msquic.sh"]
 RUN apt-get update \
-	&& apt-get install -y bash wget sudo \
-	&& sudo su -c "bash <( wget -qO- https://github.com/vpnhood/VpnHood.App.Server/releases/latest/download/install-msquic2.sh)|| true" \
+	&& apt-get install -y wget \
+	&& bash /tmp/install-msquic.sh || true \
+	&& rm -f /tmp/install-msquic.sh \
 	&& rm -rf /var/lib/apt/lists/*
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build

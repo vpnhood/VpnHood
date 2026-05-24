@@ -36,6 +36,7 @@ gh release create "$versionTag" `
 	--title "$versionTag" `
 	$releaseFlag `
 	-F $packageDir/ReleaseNote.txt `
+	$packageDir/linux-any/VpnHoodServer-linux-msquic.sh `
 	$packageDir/linux-any/VpnHoodServer-linux.sh `
 	$packageDir/linux-x64/VpnHoodServer-linux-x64.json `
 	$packageDir/linux-x64/VpnHoodServer-linux-x64.sh `

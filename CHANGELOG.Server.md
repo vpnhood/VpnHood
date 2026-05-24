@@ -1,3 +1,6 @@
+# Upcoming
+* Feature: Support QUIC on Windows and Linux
+
 # v7.9.813
 * Feature: Pause zombie servers for a while to save resources
 * Feature: Traffic throttling

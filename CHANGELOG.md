@@ -1,3 +1,6 @@
+# Upcoming
+* Feature: Support QUIC on Windows and Linux
+
 # v7.9.811
 * Update: Huge performance improvement in Cloak Mode
 * Fix: Lost connection after switching from mobile data to Wi-Fi on Android

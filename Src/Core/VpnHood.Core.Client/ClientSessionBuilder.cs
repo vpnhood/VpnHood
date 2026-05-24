@@ -3,7 +3,6 @@ using Ga4.Trackers.Ga4Tags;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net;
-using System.Net.Quic;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.ConnectorServices;
@@ -233,7 +232,7 @@ internal class ClientSessionBuilder(
                 CreatedTime = DateTime.UtcNow,
                 IsTcpPacketSupported = helloResponse.IsTcpPacketSupported,
                 IsTcpProxySupported = helloResponse.IsTcpProxySupported,
-                IsQuicChannelSupported = hostQuicEndPoint != null && QuicConnection.IsSupported,
+                IsQuicChannelSupported = hostQuicEndPoint != null,
                 ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse),
                 ServerLocationInfo = helloResponse.ServerLocation != null
                     ? ServerLocationInfo.Parse(helloResponse.ServerLocation)

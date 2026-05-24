@@ -1,5 +1,6 @@
-using Microsoft.Extensions.Logging;
 using System.Net;
+using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.Exceptions;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
@@ -11,7 +12,7 @@ using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 
-namespace VpnHood.Core.Client.ConnectorServices;
+namespace VpnHood.Core.Client;
 
 /// <summary>
 /// Sends binary protocol requests to the VPN server over streams provided by <see cref="ConnectorService"/>.

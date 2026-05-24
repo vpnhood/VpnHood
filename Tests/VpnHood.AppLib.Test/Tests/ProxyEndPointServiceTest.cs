@@ -58,7 +58,7 @@ public class ProxyEndPointServiceTest : TestAppBase
 
         // create server
         await using var dom = await AppClientServerDom.Create(TestAppHelper);
-        dom.App.UserSettings.DebugData1 += " " + DebugCommands.NoTcpReuse;
+        dom.App.UserSettings.DebugData1 += " " + DebugCommands.NoChannelReuse;
 
         // set proxy settings to use the local HTTP proxy
         dom.App.UserSettings.ProxySettings = new AppProxySettings {

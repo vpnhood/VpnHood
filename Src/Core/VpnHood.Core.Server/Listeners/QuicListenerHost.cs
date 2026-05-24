@@ -84,7 +84,7 @@ internal class QuicListenerHost(
         var options = new QuicServerConnectionOptions {
             DefaultStreamErrorCode = 0,
             DefaultCloseErrorCode = 0,
-            IdleTimeout = sessionManager.SessionOptions.TcpReuseTimeoutValue,
+            IdleTimeout = sessionManager.SessionOptions.ChannelIdleTimeoutValue,
             ServerAuthenticationOptions = new SslServerAuthenticationOptions {
                 ServerCertificateSelectionCallback = ServerCertificateSelectionCallback,
                 ApplicationProtocols = [SslApplicationProtocol.Http3], // just to look normal, we use HTTP 1.1 actually

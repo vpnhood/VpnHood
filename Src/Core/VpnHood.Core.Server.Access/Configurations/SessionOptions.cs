@@ -30,7 +30,7 @@ public class SessionOptions
     public TransferBufferSize? UdpProxyBufferSize { get; set; }
     public TransferBufferSize? UdpChannelBufferSize { get; set; }
     public TimeSpan? TcpConnectTimeout { get; set; }
-    public TimeSpan? TcpReuseTimeout { get; set; }
+    public TimeSpan? ChannelIdleTimeout { get; set; }
     public int? MaxTcpConnectWaitCount { get; set; }
     public int? MaxTcpChannelCount { get; set; }
     public int? NetScanLimit { get; set; }
@@ -76,7 +76,7 @@ public class SessionOptions
     public TimeSpan TcpConnectTimeoutValue => TcpConnectTimeout ?? TimeSpan.FromSeconds(30);
 
     [JsonIgnore]
-    public TimeSpan TcpReuseTimeoutValue => TcpReuseTimeout ?? TimeSpan.FromSeconds(40);
+    public TimeSpan ChannelIdleTimeoutValue => ChannelIdleTimeout ?? TimeSpan.FromSeconds(40);
 
     [JsonIgnore]
     public int MaxTcpConnectWaitCountValue => MaxTcpConnectWaitCount ?? 500;
@@ -110,7 +110,7 @@ public class SessionOptions
         if (obj.UdpProxyBufferSize != null) UdpProxyBufferSize = obj.UdpProxyBufferSize;
         if (obj.UdpChannelBufferSize != null) UdpChannelBufferSize = obj.UdpChannelBufferSize;
         if (obj.TcpConnectTimeout != null) TcpConnectTimeout = obj.TcpConnectTimeout;
-        if (obj.TcpReuseTimeout != null) TcpReuseTimeout = obj.TcpReuseTimeout;
+        if (obj.ChannelIdleTimeout != null) ChannelIdleTimeout = obj.ChannelIdleTimeout;
         if (obj.MaxTcpConnectWaitCount != null) MaxTcpConnectWaitCount = obj.MaxTcpConnectWaitCount;
         if (obj.MaxTcpChannelCount != null) MaxTcpChannelCount = obj.MaxTcpChannelCount;
         if (obj.NetScanLimit != null) NetScanLimit = obj.NetScanLimit;
@@ -136,7 +136,7 @@ public class SessionOptions
         UdpProxyBufferSize = UdpProxyBufferSizeValue;
         UdpChannelBufferSize = UdpChannelBufferSizeValue;
         TcpConnectTimeout = TcpConnectTimeoutValue;
-        TcpReuseTimeout = TcpReuseTimeoutValue;
+        ChannelIdleTimeout = ChannelIdleTimeoutValue;
         MaxTcpConnectWaitCount = MaxTcpConnectWaitCountValue;
         MaxTcpChannelCount = MaxTcpChannelCountValue;
         NetScanLimit = NetScanLimit;

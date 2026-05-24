@@ -10,8 +10,17 @@ namespace VpnHood.Core.Tunneling.Connections;
 public sealed class QuicStreamConnection : IStreamConnection
 {
     private readonly QuicStream _stream;
-    private bool _connected = true;
     private bool _disposed;
+    public event EventHandler? Disposed;
+    public string ConnectionName { get; }
+    public bool IsServer { get; }
+    public bool Connected { get; private set; } = true;
+    public Stream Stream => _stream;
+    public IPEndPoint LocalEndPoint { get; }
+
+    public IPEndPoint RemoteEndPoint { get; }
+
+    public bool RequireHttpResponse { get; set; }
 
     public QuicStreamConnection(QuicStream stream, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
         string connectionName, bool isServer, string? connectionId = null)
@@ -23,17 +32,6 @@ public sealed class QuicStreamConnection : IStreamConnection
         IsServer = isServer;
         ConnectionId = connectionId ?? UniqueIdFactory.Create();
     }
-
-    public event EventHandler? Disposed;
-    public string ConnectionName { get; }
-    public bool IsServer { get; }
-    public bool Connected => _connected;
-    public Stream Stream => _stream;
-    public IPEndPoint LocalEndPoint { get; }
-
-    public IPEndPoint RemoteEndPoint { get; }
-
-    public bool RequireHttpResponse { get; set; }
 
     public string ConnectionId {
         get;
@@ -57,7 +55,7 @@ public sealed class QuicStreamConnection : IStreamConnection
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, true)) return;
-        _connected = false;
+        Connected = false;
         _stream.Dispose();
         Disposed?.Invoke(this, EventArgs.Empty);
 
@@ -68,7 +66,7 @@ public sealed class QuicStreamConnection : IStreamConnection
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, true)) return;
-        _connected = false;
+        Connected = false;
         await Stream.DisposeAsync();
         Disposed?.Invoke(this, EventArgs.Empty);
 

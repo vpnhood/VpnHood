@@ -9,5 +9,5 @@ internal class ConnectorServiceOptions
     public required ProxyEndPointManager ProxyEndPointManager { get; init; }
     public required ISocketFactory SocketFactory { get; init; }
     public required TimeSpan RequestTimeout { get; init; }
-    public required bool AllowStreamReuse { get; init; }
+    public required bool AllowChannelReuse { get; init; }
 }

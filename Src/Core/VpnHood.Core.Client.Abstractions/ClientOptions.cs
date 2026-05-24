@@ -60,7 +60,7 @@ public class ClientOptions
     public TimeSpan MaxPacketChannelTimespan { get; set; } = TimeSpan.FromMinutes(10);
     public bool AllowAnonymousTracker { get; set; } = true;
     public bool AllowEndPointTracker { get; set; }
-    public bool AllowTcpReuse { get; set; } = true;
+    public bool AllowChannelReuse { get; set; } = true;
     public bool IsTcpProxySupported { get; set; } = true;
     public string? ServerLocation { get; set; }
     public ConnectPlanId PlanId { get; set; }

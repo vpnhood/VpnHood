@@ -140,7 +140,7 @@ public class ProxyEndPointManagerTest : TestBase
         httpProxyServer.Start();
 
         var clientOptions = TestHelper.CreateClientOptions();
-        clientOptions.AllowTcpReuse = false; // make sure not reuse connections
+        clientOptions.AllowChannelReuse = false; // make sure not reuse connections
         clientOptions.ProxyOptions = new ProxyOptions {
             ProxyEndPoints = [
                 new ProxyEndPoint {

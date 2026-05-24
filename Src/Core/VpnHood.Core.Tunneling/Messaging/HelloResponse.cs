@@ -31,7 +31,7 @@ public class HelloResponse : SessionResponse
     public IpRange[]? VpnAdapterIncludeIpRanges { get; set; }
     public string? GaMeasurementId { get; init; }
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromSeconds(60);
-    public TimeSpan TcpReuseTimeout { get; init; } = TimeSpan.FromSeconds(60);
+    public TimeSpan ChannelIdleTimeout { get; init; } = TimeSpan.FromSeconds(60);
     public AdRequirement AdRequirement { get; set; } = AdRequirement.None;
     public string? ServerLocation { get; set; }
     public string[] ServerTags { get; set; } = [];

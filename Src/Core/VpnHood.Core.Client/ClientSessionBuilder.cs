@@ -99,7 +99,7 @@ internal class ClientSessionBuilder(
                     SocketFactory = socketFactory,
                     VpnEndPoint = vpnEndPoint,
                     RequestTimeout = config.TcpConnectTimeout,
-                    AllowStreamReuse = false
+                    AllowChannelReuse = false
                 });
             requestSender = new RequestSender(connectorService);
 
@@ -127,7 +127,7 @@ internal class ClientSessionBuilder(
 
             using var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
             requestResult.StreamConnection.PreventReuse();
-            connectorService.AllowStreamReuse = config.AllowStreamReuse;
+            connectorService.AllowChannelReuse = config.AllowStreamReuse;
 
             var helloResponse = requestResult.Response;
             if (helloResponse.ClientPublicAddress is null)
@@ -169,7 +169,7 @@ internal class ClientSessionBuilder(
             connectorService.Init(
                 helloResponse.ProtocolVersion,
                 serverSecret: helloResponse.ServerSecret,
-                tcpReuseTimeout: helloResponse.TcpReuseTimeout,
+                channelIdleTimeout: helloResponse.ChannelIdleTimeout,
                 useWebSocket: config.UseWebSocket,
                 requestTimeout: helloResponse.RequestTimeout.WhenNoDebugger(),
                 useQuic: channelProtocol == ChannelProtocol.Quic && hostQuicEndPoint != null,

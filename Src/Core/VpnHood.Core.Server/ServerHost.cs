@@ -210,7 +210,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             ObjectDisposedException.ThrowIf(_disposed, this);
 
             // add client stream to reuse list and take the ownership
-            using var timeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.TcpReuseTimeoutValue);
+            using var timeoutCts = new CancellationTokenSource(_sessionManager.SessionOptions.ChannelIdleTimeoutValue);
             using var reusedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, _cancellationTokenSource.Token);
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
@@ -222,7 +222,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             if (requestVersion < 0)
                 return; // client stream has been closed
 
-            timeoutCts.CancelAfter(_sessionManager.SessionOptions.TcpReuseTimeoutValue); // reset timeout for new request
+            timeoutCts.CancelAfter(_sessionManager.SessionOptions.ChannelIdleTimeoutValue); // reset timeout for new request
             await ProcessConnection(streamConnection, requestVersion, clientIp: null, reusedCts.Token).Vhc();
 
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
@@ -496,7 +496,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             RequestTimeout = _sessionManager.SessionOptions.TcpConnectTimeoutValue +
                              TunnelDefaults.ClientRequestTimeoutDelta,
             // client should wait less to make sure server is not closing the connection
-            TcpReuseTimeout = _sessionManager.SessionOptions.TcpReuseTimeoutValue -
+            ChannelIdleTimeout = _sessionManager.SessionOptions.ChannelIdleTimeoutValue -
                               TunnelDefaults.ClientRequestTimeoutDelta,
             AccessKey = sessionResponseEx.AccessKey,
             DnsServers = DnsServers,

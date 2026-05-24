@@ -384,7 +384,7 @@ public class ServerFinder(
             ProxyEndPointManager = proxyEndPointManager,
             SocketFactory = socketFactory,
             RequestTimeout = serverQueryTimeout,
-            AllowStreamReuse = false
+            AllowChannelReuse = false
         };
 
         var requestSender = 
@@ -392,7 +392,7 @@ public class ServerFinder(
 
         requestSender.ConnectorService.Init(
             protocolVersion: requestSender.ConnectorService.ProtocolVersion, serverSecret: null,
-            tcpReuseTimeout: TimeSpan.Zero,
+            channelIdleTimeout: TimeSpan.Zero,
             useWebSocket: false,
             requestTimeout: serverQueryTimeout,
             useQuic: false,

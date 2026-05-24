@@ -37,13 +37,13 @@ namespace VpnHood.Core.Client.ConnectorServices;
 internal class ConnectorService : IDisposable
 {
     private const bool UseBuffer = true;
-    private readonly ConcurrentQueue<ReusableConnectionItem> _freeReusableStreamConnectionItems = new();
-    private readonly HashSet<ReusableStreamConnection> _sharedStreamConnections = new(50); // for preventing reuse
+    private readonly ConcurrentQueue<IdleConnectionItem> _idleConnectionItems = new();
+    private readonly HashSet<ReusableStreamConnection> _sharedConnections = new(50); // for preventing reuse
+    private readonly TcpStreamConnectionFactory _tcpConnectionFactory;
+    private readonly QuicStreamConnectionFactory _quicConnectionFactory;
     private readonly Job _cleanupJob;
     private int _isDisposed;
     private bool _useWebSocket;
-    private readonly TcpStreamConnectionFactory _tcpStreamConnectionFactory;
-    private readonly QuicStreamConnectionFactory _quicStreamConnectionFactory;
 
     public ConnectorStat Stat { get; }
     public int ProtocolVersion { get; private set; } = 8;
@@ -52,30 +52,30 @@ internal class ConnectorService : IDisposable
     public bool UseQuic { get; set; }
 
     public TimeSpan IdleConnectionTimeout {
-        get => _quicStreamConnectionFactory.IdleConnectionTimeout;
-        set => _quicStreamConnectionFactory.IdleConnectionTimeout = value;
+        get => _quicConnectionFactory.IdleConnectionTimeout;
+        set => _quicConnectionFactory.IdleConnectionTimeout = value;
     }
 
     public IPEndPoint? QuicEndPoint {
-        get => _quicStreamConnectionFactory.QuicEndPoint;
-        set => _quicStreamConnectionFactory.QuicEndPoint = value;
+        get => _quicConnectionFactory.QuicEndPoint;
+        set => _quicConnectionFactory.QuicEndPoint = value;
     }
 
     public ConnectorService(ConnectorServiceOptions options)
     {
-        AllowStreamReuse = options.AllowStreamReuse;
-        Stat = new ConnectorStat(() => _freeReusableStreamConnectionItems.Count);
+        AllowChannelReuse = options.AllowChannelReuse;
+        Stat = new ConnectorStat(() => _idleConnectionItems.Count);
         VpnEndPoint = options.VpnEndPoint;
         RequestTimeout = options.RequestTimeout;
         _cleanupJob = new Job(Cleanup, "ConnectorCleanup");
 
-        _tcpStreamConnectionFactory = new TcpStreamConnectionFactory(
+        _tcpConnectionFactory = new TcpStreamConnectionFactory(
             options.SocketFactory,
             options.ProxyEndPointManager,
             options.VpnEndPoint,
             UserCertificateValidationCallback);
 
-        _quicStreamConnectionFactory = new QuicStreamConnectionFactory(
+        _quicConnectionFactory = new QuicStreamConnectionFactory(
             options.VpnEndPoint,
             UserCertificateValidationCallback);
 
@@ -83,12 +83,12 @@ internal class ConnectorService : IDisposable
         IdleConnectionTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
     }
 
-    public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan tcpReuseTimeout, bool useWebSocket,
+    public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan channelIdleTimeout, bool useWebSocket,
         TimeSpan requestTimeout, bool useQuic, IPEndPoint? quicEndPoint)
     {
         _ = serverSecret;
         ProtocolVersion = protocolVersion;
-        IdleConnectionTimeout = tcpReuseTimeout;
+        IdleConnectionTimeout = channelIdleTimeout;
         _useWebSocket = useWebSocket;
         RequestTimeout = requestTimeout;
         UseQuic = useQuic;
@@ -163,13 +163,13 @@ internal class ConnectorService : IDisposable
         };
 
         // create a reusable connection
-        if (!AllowStreamReuse)
+        if (!AllowChannelReuse)
             return webSocketConnection;
 
         // If reuse is allowed, add the client stream to the shared collection
         var reusableConnection = new ReusableStreamConnection(webSocketConnection, ConnectionReuseCallback);
-        lock (_sharedStreamConnections)
-            _sharedStreamConnections.Add(reusableConnection);
+        lock (_sharedConnections)
+            _sharedConnections.Add(reusableConnection);
         return reusableConnection;
     }
 
@@ -198,8 +198,8 @@ internal class ConnectorService : IDisposable
     {
         // Create raw stream connection from appropriate factory
         var rawConnection = UseQuic
-            ? await _quicStreamConnectionFactory.CreateConnection(streamId, cancellationToken).Vhc()
-            : await _tcpStreamConnectionFactory.CreateConnection(streamId, onConnectAttempt, cancellationToken).Vhc();
+            ? await _quicConnectionFactory.CreateConnection(streamId, cancellationToken).Vhc()
+            : await _tcpConnectionFactory.CreateConnection(streamId, onConnectAttempt, cancellationToken).Vhc();
 
         // Apply HTTP framing on top of the raw connection
         var connection = await CreateHttpConnection(rawConnection, contentLength, cancellationToken).Vhc();
@@ -210,7 +210,7 @@ internal class ConnectorService : IDisposable
     public ReusableStreamConnection? GetFreeConnection()
     {
         // Kill all expired client streams
-        while (_freeReusableStreamConnectionItems.TryDequeue(out var queueItem)) {
+        while (_idleConnectionItems.TryDequeue(out var queueItem)) {
             if (!queueItem.IsExpired)
                 return queueItem.StreamConnection;
 
@@ -224,7 +224,7 @@ internal class ConnectorService : IDisposable
     private void ConnectionReuseCallback(ReusableStreamConnection streamConnection)
     {
         // Check if the connector service is disposed
-        if (_isDisposed != 0 || !AllowStreamReuse) {
+        if (_isDisposed != 0 || !AllowChannelReuse) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Disposing the reused client stream because the connector service is either disposed or reuse is no longer allowed. " +
                 "ConnectionId: {ConnectionId}", streamConnection.ConnectionId);
@@ -234,7 +234,7 @@ internal class ConnectorService : IDisposable
             return;
         }
 
-        _freeReusableStreamConnectionItems.Enqueue(new ReusableConnectionItem {
+        _idleConnectionItems.Enqueue(new IdleConnectionItem {
             IdleConnectionTimeout = IdleConnectionTimeout,
             StreamConnection = streamConnection
         });
@@ -243,8 +243,8 @@ internal class ConnectorService : IDisposable
     private ValueTask Cleanup(CancellationToken cancellationToken)
     {
         // Kill all expired client streams
-        while (_freeReusableStreamConnectionItems.TryPeek(out var queueItem) && queueItem.IsExpired) {
-            if (_freeReusableStreamConnectionItems.TryDequeue(out queueItem)) {
+        while (_idleConnectionItems.TryPeek(out var queueItem) && queueItem.IsExpired) {
+            if (_idleConnectionItems.TryDequeue(out queueItem)) {
                 queueItem.StreamConnection.PreventReuse();
                 queueItem.StreamConnection.Dispose();
             }
@@ -253,32 +253,32 @@ internal class ConnectorService : IDisposable
         // remove unconnected client streams from shared collection to reduce memory usage
         // it is just clearing the references, not disposing the streams.
         // The owner of the stream is responsible for disposing it
-        lock (_sharedStreamConnections)
-            _sharedStreamConnections.RemoveWhere(x => !x.Connected);
+        lock (_sharedConnections)
+            _sharedConnections.RemoveWhere(x => !x.Connected);
 
         return ValueTask.CompletedTask;
     }
 
-    private void PreventReuseSharedStream()
+    private void PreventReuseChannel()
     {
-        lock (_sharedStreamConnections) {
-            foreach (var connection in _sharedStreamConnections)
+        lock (_sharedConnections) {
+            foreach (var connection in _sharedConnections)
                 connection.PreventReuse();
 
             // release all free client streams
-            while (_freeReusableStreamConnectionItems.TryDequeue(out var queueItem)) {
+            while (_idleConnectionItems.TryDequeue(out var queueItem)) {
                 queueItem.StreamConnection.PreventReuse();
                 queueItem.StreamConnection.Dispose();
             }
-            _freeReusableStreamConnectionItems.Clear();
+            _idleConnectionItems.Clear();
         }
     }
 
-    public bool AllowStreamReuse {
+    public bool AllowChannelReuse {
         get;
         set {
             if (!value)
-                PreventReuseSharedStream();
+                PreventReuseChannel();
             field = value;
         }
     }
@@ -307,22 +307,22 @@ internal class ConnectorService : IDisposable
             _cleanupJob.Dispose();
 
             // Dispose connection factories
-            _tcpStreamConnectionFactory.Dispose();
-            _quicStreamConnectionFactory.DisposeAsync().VhBlock();
+            _tcpConnectionFactory.Dispose();
+            _quicConnectionFactory.DisposeAsync().VhBlock();
 
             // Prevent reuse of client streams
-            PreventReuseSharedStream();
+            PreventReuseChannel();
 
             // Kill and remove all owned client streams
-            while (_freeReusableStreamConnectionItems.TryDequeue(out var queueItem)) {
+            while (_idleConnectionItems.TryDequeue(out var queueItem)) {
                 queueItem.StreamConnection.PreventReuse();
                 queueItem.StreamConnection.Dispose();
             }
-            _freeReusableStreamConnectionItems.Clear();
+            _idleConnectionItems.Clear();
 
             // remove all shared client streams
-            lock (_sharedStreamConnections)
-                _sharedStreamConnections.Clear();
+            lock (_sharedConnections)
+                _sharedConnections.Clear();
         }
     }
 
@@ -332,7 +332,7 @@ internal class ConnectorService : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private class ReusableConnectionItem
+    private class IdleConnectionItem
     {
         public required TimeSpan IdleConnectionTimeout { get; init; }
         public required ReusableStreamConnection StreamConnection { get; init; }

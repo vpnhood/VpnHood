@@ -8,7 +8,7 @@ public static class DebugCommands
     public const string LogDebug = "/log:debug";
     public const string LogTrace = "/log:trace";
     public const string NullCapture = "/null-capture";
-    public const string NoTcpReuse = "/no-tcp-reuse";
+    public const string NoChannelReuse = "/no-channel-reuse";
     public const string WinDivert = "/windivert";
     public const string UserReview = "/user-review";
     public const string RemoteAccess = "/remote-access";
@@ -21,7 +21,7 @@ public static class DebugCommands
         LogDebug,
         LogTrace,
         KillSpaServer,
-        NoTcpReuse,
+        NoChannelReuse,
         NullCapture,
         UserReview,
         WinDivert,

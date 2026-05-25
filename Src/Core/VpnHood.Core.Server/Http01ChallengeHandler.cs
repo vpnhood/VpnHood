@@ -60,13 +60,14 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             // service is stopping
         }
-        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.BadRequest || ex.StatusCode == HttpStatusCode.TooManyRequests) {
-            VhLogger.Instance.LogDebug(GeneralEventId.AcmeChallenge, ex, "Invalid HTTP-01 challenge request (ignored).");
-            await TryWriteResponse(client, HttpResponseBuilder.Error(ex), linkedCt.Token).Vhc();
-        }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(GeneralEventId.AcmeChallenge, ex, "Could not process the HTTP-01 challenge.");
-            await TryWriteResponse(client, HttpResponseBuilder.Error(), linkedCt.Token).Vhc();
+            var logLevel = ex is HttpRequestException { StatusCode: HttpStatusCode.BadRequest }  
+                ? LogLevel.Debug // prevent log for crawler requests
+                : LogLevel.Error;
+
+            VhLogger.Instance.Log(logLevel, GeneralEventId.AcmeChallenge, ex, "Could not process the HTTP-01 challenge.");
+            await TryWriteResponse(client, HttpResponseBuilder.Error(ex), linkedCt.Token).Vhc();
+
         }
         finally {
             client.Dispose();
@@ -123,6 +124,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         var keyAuthorization = await keyAuthorizationFunc(token, cancellationToken);
         if (string.IsNullOrEmpty(keyAuthorization))
             throw new KeyNotFoundException();
+        
         return keyAuthorization;
     }
 

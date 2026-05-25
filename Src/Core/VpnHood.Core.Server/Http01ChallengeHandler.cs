@@ -45,23 +45,28 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
 
     private async Task HandleRequest(TcpClient client, CancellationToken cancellationToken)
     {
-        // prevent duplicate request from each ip if too many requests come in
-        using var lockAsyncResult = await AsyncLock.LockAsync(
-            IPAddressUtil.GetDosKey(client.Client.GetRemoteEndPoint().Address), TimeSpan.Zero, cancellationToken);
-        if (!lockAsyncResult.Succeeded)
-            throw new HttpRequestException("Too many requests from the same IP address.", null,
-                HttpStatusCode.TooManyRequests);
+        using var timeoutCt = new CancellationTokenSource(_requestTimeout);
+        using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCt.Token);
 
         try {
-            using var timeoutCt = new CancellationTokenSource(_requestTimeout);
-            using var linkedCt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCt.Token);
+            // prevent duplicate request from each ip if too many requests come in
+            using var lockAsyncResult = await AsyncLock.LockAsync(
+                IPAddressUtil.GetDosKey(client.Client.GetRemoteEndPoint().Address), TimeSpan.Zero, linkedCt.Token);
+            if (!lockAsyncResult.Succeeded)
+                throw new HttpRequestException("Too many requests from the same IP address.", null, HttpStatusCode.TooManyRequests);
+
             await HandleRequestCore(client, linkedCt.Token).Vhc();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
             // service is stopping
         }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.BadRequest || ex.StatusCode == HttpStatusCode.TooManyRequests) {
+            VhLogger.Instance.LogDebug(GeneralEventId.AcmeChallenge, ex, "Invalid HTTP-01 challenge request (ignored).");
+            await TryWriteResponse(client, HttpResponseBuilder.Error(ex), linkedCt.Token).Vhc();
+        }
         catch (Exception ex) {
             VhLogger.Instance.LogError(GeneralEventId.AcmeChallenge, ex, "Could not process the HTTP-01 challenge.");
+            await TryWriteResponse(client, HttpResponseBuilder.Error(), linkedCt.Token).Vhc();
         }
         finally {
             client.Dispose();
@@ -72,7 +77,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
     {
         VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge,
             "Receiving an HTTP request from {RemoteIp}...", client.Client.GetRemoteEndPoint());
-        await using var stream = client.GetStream();
+        var stream = client.GetStream();
         var headers = await HttpUtils.ParseHeadersAsync(stream, cancellationToken).Vhc()
                       ?? throw new Exception("Connection has been closed before receiving any request.");
 
@@ -81,7 +86,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         var requestParts = request.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (requestParts.Length < 2)
             throw new HttpRequestException(
-                $"Invalid HTTP-01 challenge request. RemoteIdp: {client.Client.GetRemoteEndPoint()}. Request: {request}",
+                $"Invalid HTTP-01 challenge request. RemoteEndPoint: {client.Client.GetRemoteEndPoint()}. Request: {request}",
                 null, HttpStatusCode.BadRequest);
 
         var method = requestParts[0];
@@ -100,12 +105,12 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         var token = method == "GET" && path.StartsWith(basePath)
             ? path[basePath.Length..]
             : throw new HttpRequestException(
-                $"Invalid HTTP-01 challenge request. RemoteIdp: {client.Client.GetRemoteEndPoint()}. Request: {request}",
+                $"Invalid HTTP-01 challenge request. RemoteEndPoint: {client.Client.GetRemoteEndPoint()}. Request: {request}",
                 null, HttpStatusCode.BadRequest);
 
         // Get key authorization
         VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "HTTP Challenge. Request: {request}", request);
-        var keyAuthorization = await GetKeyAuthorization(token, stream, cancellationToken);
+        var keyAuthorization = await GetKeyAuthorization(token, cancellationToken);
 
         // Send response
         await stream.WriteAsync(HttpResponseBuilder.Http01(keyAuthorization), cancellationToken).Vhc();
@@ -113,19 +118,24 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
         VhLogger.Instance.LogInformation(GeneralEventId.AcmeChallenge, "HTTP-01 challenge response sent.");
     }
 
-    private async Task<string> GetKeyAuthorization(string token, Stream outStream, CancellationToken cancellationToken)
+    private async Task<string> GetKeyAuthorization(string token, CancellationToken cancellationToken)
+    {
+        var keyAuthorization = await keyAuthorizationFunc(token, cancellationToken);
+        if (string.IsNullOrEmpty(keyAuthorization))
+            throw new KeyNotFoundException();
+        return keyAuthorization;
+    }
+
+    private static async Task TryWriteResponse(TcpClient client, ReadOnlyMemory<byte> response,
+        CancellationToken cancellationToken)
     {
         try {
-            var keyAuthorization = await keyAuthorizationFunc(token, cancellationToken);
-            return !string.IsNullOrEmpty(keyAuthorization)
-                ? keyAuthorization
-                : throw new KeyNotFoundException("Key authorization not found for token: " + token);
+            var stream = client.GetStream();
+            await stream.WriteAsync(response, cancellationToken).Vhc();
+            await stream.FlushAsync(cancellationToken).Vhc();
         }
-        catch (Exception ex) {
-            if (ex is NotSupportedException) ex = new KeyNotFoundException();
-            await outStream.WriteAsync(HttpResponseBuilder.Error(ex), cancellationToken).Vhc();
-            await outStream.FlushAsync(cancellationToken).Vhc();
-            throw;
+        catch {
+            // ignore; socket may already be closed
         }
     }
 

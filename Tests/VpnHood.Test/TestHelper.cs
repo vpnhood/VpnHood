@@ -129,13 +129,13 @@ public class TestHelper : IDisposable
         return new TestAccessManager(storagePath, options);
     }
 
-    public FileAccessManagerOptions CreateFileAccessManagerOptions(IPEndPoint[]? tcpEndPoints = null)
+    public FileAccessManagerOptions CreateFileAccessManagerOptions()
     {
         var options = new FileAccessManagerOptions {
             IsUnitTest = true,
             PublicEndPoints = null, // use TcpEndPoints
-            TcpEndPoints = tcpEndPoints ?? [VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback)],
-            QuicEndPoints = tcpEndPoints ?? [VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback)],
+            TcpEndPoints = [VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback)],
+            QuicEndPoints = [VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback)],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
             TrackingOptions = new TrackingOptions {
                 TrackClientIp = true,

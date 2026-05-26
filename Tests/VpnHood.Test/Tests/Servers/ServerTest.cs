@@ -125,8 +125,7 @@ public class ServerTest : TestBase
     [TestMethod]
     public async Task Reconfigure()
     {
-        var serverEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint]);
+        var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         using var accessManager = TestHelper.CreateAccessManager(fileAccessManagerOptions);
         var serverConfig = accessManager.ServerConfig;
         serverConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(500);

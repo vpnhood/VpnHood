@@ -85,16 +85,14 @@ public class ClientServerTest : TestBase
     public async Task Redirect_Server_By_ServerLocation()
     {
         // Create Server 1
-        var serverEndPoint1 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint1]);
+        var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         using var accessManager1 =
             TestHelper.CreateAccessManager(fileAccessManagerOptions1, serverLocation: "US/california");
         await using var server1 = await TestHelper.CreateServer(accessManager1);
         var token1 = accessManager1.CreateToken();
 
         // Create Server 2
-        var serverEndPoint2 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions(tcpEndPoints: [serverEndPoint2]);
+        var fileAccessManagerOptions2 = TestHelper.CreateFileAccessManagerOptions();
         using var accessManager2 = TestHelper.CreateAccessManager(fileAccessManagerOptions2, accessManager1.StoragePath,
             serverLocation: "UK/london");
         await using var server2 = await TestHelper.CreateServer(accessManager2);
@@ -111,7 +109,7 @@ public class ClientServerTest : TestBase
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
-        Assert.AreEqual(serverEndPoint2, client.RequiredSession.Config.HostTcpEndPoint);
+        Assert.AreEqual(server2.ServerHost.TcpEndPoints.First(), client.RequiredSession.Config.HostTcpEndPoint);
         Assert.AreEqual("UK/london", client.RequiredSession.Info.ServerLocationInfo?.ServerLocation);
     }
 

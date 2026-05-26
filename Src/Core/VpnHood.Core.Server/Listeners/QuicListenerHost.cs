@@ -4,6 +4,7 @@ using System.Net.Quic;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -141,7 +142,6 @@ internal class QuicListenerHost(
             }
         }
 
-        await listener.DisposeAsync();
         VhLogger.Instance.LogInformation("QUIC Listener has been stopped. LocalEp: {LocalEp}", VhLogger.Format(localEp));
     }
 
@@ -201,8 +201,8 @@ internal class QuicListenerHost(
 
         public async ValueTask DisposeAsync()
         {
-            try { await cts.TryCancelAsync().Vhc(); } catch { /* ignore */ }
-            try { await Listener.DisposeAsync().Vhc(); } catch { /* ignore */ }
+            await cts.TryCancelAsync().Vhc(); 
+            await Listener.SafeDisposeAsync().Vhc();
             try { await listenerTask.Vhc(); }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in stopping QuicListener.");

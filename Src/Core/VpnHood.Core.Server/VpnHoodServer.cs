@@ -516,6 +516,11 @@ public class VpnHoodServer : IAsyncDisposable
                 VhLogger.Instance.LogInformation("Reconfiguration was requested.");
                 await Configure(cancellationToken).Vhc();
             }
+
+            // reset last config error if the status is sent successfully and there is no config error
+            // if not, then any send status error will remain till next restart
+            if (status.ConfigError is null)
+                _configErrorTracker.RecordSuccess();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the server status.");

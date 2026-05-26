@@ -438,16 +438,16 @@ public static class VhUtils
         return string.IsNullOrEmpty(metadataAttribute?.Value) ? defaultValue : metadataAttribute.Value;
     }
 
-    public static bool TryDeleteFile(string filePath)
+    public static Exception? TryDeleteFile(string filePath)
     {
         try {
             if (File.Exists(filePath))
                 File.Delete(filePath);
 
-            return true;
+            return null;
         }
-        catch {
-            return false;
+        catch (Exception ex) {
+            return ex;
         }
     }
 

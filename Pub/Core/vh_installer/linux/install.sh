@@ -2,6 +2,7 @@
 echo "$productNameParam Installation for linux";
 
 # Default arguments
+releaseUrl="$(releaseUrlParam)";
 packageUrl="$(packageUrlParam)";
 versionTag="$(versionTagParam)";
 assemblyName="$(assemblyNameParam)";
@@ -76,6 +77,15 @@ if [ "$quiet" != "y" ]; then
 		fi;
 	fi;
 fi;
+
+# install ms-quic
+msquic_url="$releaseUrl/VpnHoodServer-linux-msquic.sh"
+if ! msquic_script=$(wget -qO- "$msquic_url"); then
+	echo "WARNING: Could not download MsQuic installer from: $msquic_url"
+	echo "WARNING: wget failed. Skipping MsQuic installation."
+elif ! bash <(printf '%s' "$msquic_script"); then
+	echo "WARNING: MsQuic installation failed. Skipping."
+fi
 
 # download & install Moudle
 if [ "$packageFile" = "" ]; then

@@ -9,6 +9,7 @@ param(
  
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
 $runtime = "$os-$cpu";
+$releaseUrl = "$repoBaseUrl/releases/download/$versionTag";
 
 # Get project infomration
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
@@ -60,7 +61,7 @@ $launcher_exeFile = "$versionTag/$assemblyName";
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 $module_installerFileName = $(Split-Path "$module_InstallerFile" -leaf);
-$module_installerUrl = "$repoBaseUrl/releases/download/$versionTag/$module_installerFileName";
+$module_installerUrl = "$releaseUrl/$module_installerFileName";
 
 # prepare publish folder
 try { Remove-Item -path "$publishDir" -Force -Recurse } catch {}
@@ -84,7 +85,8 @@ if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $laste
 # create installation script
 Write-Output "Creating installation script...";
 $installScript = Get-Content -Path "$template_installScriptFile" -Raw;
-$installScript = $installScript.Replace('$(packageUrlParam)', "$repoBaseUrl/releases/download/$versionTag/$module_packageFileName");
+$installScript = $installScript.Replace('$(releaseUrlParam)', "$releaseUrl");
+$installScript = $installScript.Replace('$(packageUrlParam)', "$releaseUrl/$module_packageFileName");
 $installScript = $installScript.Replace('$(versionTagParam)', "$versionTag");
 $installScript = $installScript.Replace('$(productNameParam)', "$productName");
 $installScript = $installScript.Replace('$(assemblyNameParam)', "$assemblyName");

@@ -41,6 +41,17 @@ $installAnyContent = $installAnyContent.Replace('$installerUrl_x64', $installerU
 $installAnyContent = $installAnyContent -replace "`r`n", $lineEnding;
 $installAnyContent | Out-File -FilePath $module_installScriptFile -Encoding ASCII -Force -NoNewline;
 
+# copy install-msquic.sh to VpnHoodServer-linux-msquic.sh and remove \r
+Write-Host "Copying msquic installer..." -ForegroundColor Green
+$msquicSrc = "$solutionDir/Src/Apps/Server.Net/Pub/Linux/install-msquic.sh";
+$msquicDst = "$moduleDirLatest/VpnHoodServer-linux-msquic.sh";
+New-Item -ItemType Directory -Path (Split-Path $msquicDst -Parent) -Force | Out-Null
+(Get-Content $msquicSrc -Raw) -replace "`r", "" | Out-File -FilePath $msquicDst -Encoding ASCII -Force -NoNewline
+if ($isLatest)
+{
+    Copy-Item -path "$msquicSrc" -Destination "$moduleDirLatest/VpnHoodServer-linux-msquic.sh" -Force -Recurse
+}
+
 # Copy the installer script to latest
 if ($isLatest)
 {

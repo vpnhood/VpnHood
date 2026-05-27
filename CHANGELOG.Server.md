@@ -1,5 +1,6 @@
 # v8.0.815
 * Feature: Support QUIC on Windows and Linux
+* Fix: Exceeding the 7-day threshold error
 
 # v7.9.813
 * Feature: Pause zombie servers for a while to save resources

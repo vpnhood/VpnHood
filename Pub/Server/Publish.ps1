@@ -14,13 +14,6 @@ Remove-Item "$packagesRootDir/$packageServerDirName/ReleaseNote.txt" -ErrorActio
 
 & "$solutionDir/Src/Apps/Server.Net/_publish.ps1";
 
-# copy install-msquic.sh to VpnHoodServer-linux-msquic.sh and remove \r
-Write-Host "Copying msquic installer..." -ForegroundColor Green
-$msquicSrc = "$solutionDir/Src/Apps/Server.Net/Pub/Linux/install-msquic.sh";
-$msquicDst = "$packagesRootDir/$packageServerDirName/linux-any/VpnHoodServer-linux-msquic.sh";
-New-Item -ItemType Directory -Path (Split-Path $msquicDst -Parent) -Force | Out-Null
-(Get-Content $msquicSrc -Raw) -replace "`r", "" | Out-File -FilePath $msquicDst -Encoding ASCII -Force -NoNewline
-
 if ($docker) {
 	& "$solutionDir/Src/Apps/Server.Net/Pub/publish_docker.ps1" -distribute $distribute;
 }

@@ -436,7 +436,7 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
-    public async Task HostErrors_reported_for_invalid_endpoint()
+    public async Task BadEndPoint_reported_for_invalid_endpoint()
     {
         // Arrange: occupy a port so the server can't bind to it
         using var accessManager = TestHelper.CreateAccessManager();

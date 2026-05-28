@@ -107,7 +107,7 @@ public class VpnHoodServer : IAsyncDisposable
                 await _configureTask.Vhc();
                 return;
 
-            case ServerState.Ready when _sendStatusTask.IsCompleted:
+            case ServerState.Ready or ServerState.BadConfig when _sendStatusTask.IsCompleted:
                 if (_configErrorTracker.IsPaused) return;
                 _sendStatusTask = SendStatusToAccessManager(true, cancellationToken);
                 await _sendStatusTask.Vhc();
@@ -275,10 +275,6 @@ public class VpnHoodServer : IAsyncDisposable
             //empty array means no error, null means not reported
             _endPointStatuses = endPointStatuses;
 
-            // make sure at least one tcp end point is working
-            if (!HasWorkingEndPointsStatus(_endPointStatuses))
-                throw new Exception("No working tcp end point is available after configuration!");
-
             // Reconfigure dns challenge
             _http01ChallengeService.Stop();
             if (serverConfig.EnableHttp01ChallengeValue)
@@ -286,21 +282,31 @@ public class VpnHoodServer : IAsyncDisposable
 
             // set config status
             _lastConfigCode = serverConfig.ConfigCode;
-            State = ServerState.Ready;
 
-            _lastConfigException = null;
-            _configErrorTracker.RecordSuccess();
-            
-            VhLogger.Instance.LogInformation("Server is ready!");
-    
+            // make sure at least one tcp end point is working
+            // We treat server as ready, because the configuration will not be change by retrying
+            // so don't throw and let 
+            if (!HasWorkingEndPointsStatus(_endPointStatuses)) 
+                throw new NoWorkingEndPointException("No working tcp end point is available after configuration.");
+
             // set status after successful configuration
+            _lastConfigException = null;
+            State = ServerState.Ready;
+            VhLogger.Instance.LogInformation("Server is ready!");
+            await SendStatusToAccessManager(false, cancellationToken).Vhc();
+        }
+        catch (NoWorkingEndPointException ex) {
+            State = ServerState.BadConfig;
+            _lastConfigException = ex;
+            SessionManager.Tracker?.TryTrackError(ex, "Bad Configuration!", "Configure");
+            VhLogger.Instance.LogError(ex, "Bad Configuration.");
+            _configErrorTracker.RecordError(ex);
             await SendStatusToAccessManager(false, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             State = ServerState.Waiting;
             _lastConfigException = ex;
             SessionManager.Tracker?.TryTrackError(ex, "Could not configure server!", "Configure");
-
             _configErrorTracker.RecordError(ex);
             VhLogger.Instance.LogError(ex,
                 "Could not configure server! Retrying after {TotalSeconds} seconds.",
@@ -536,7 +542,7 @@ public class VpnHoodServer : IAsyncDisposable
 
             // reset last config error if the status is sent successfully and there is no config error
             // if not, then any send status error will remain till next restart
-            if (status.ConfigError is null && HasWorkingEndPointsStatus(_endPointStatuses))
+            if (status.ConfigError is null)
                 _configErrorTracker.RecordSuccess();
 
             // mark end point statuses as sent so they won't be re-sent until next reconfigure

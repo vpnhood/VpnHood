@@ -8,6 +8,7 @@ public enum ServerState
     NotStarted,
     Waiting,
     Configuring,
+    BadConfig,
     Ready,
     Disposed
 }

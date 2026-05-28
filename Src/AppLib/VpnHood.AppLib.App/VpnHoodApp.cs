@@ -1179,7 +1179,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private void ReportError(Exception ex, string message, [CallerMemberName] string action = "n/a")
+    private void ReportError(Exception ex, string? message, [CallerMemberName] string action = "n/a")
     {
         _ = Services.Tracker.TryTrackError(ex, message, action);
         VhLogger.Instance.LogError(ex, message);

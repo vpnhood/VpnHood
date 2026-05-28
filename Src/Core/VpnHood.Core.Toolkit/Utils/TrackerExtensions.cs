@@ -38,24 +38,27 @@ public static class TrackerExtensions
             }
         }
 
-        public Task<bool> TryTrackError(Exception exception, string message, string action)
+        public Task<bool> TryTrackError(Exception exception, string? message, string action)
         {
             return tracker.TryTrackError(exception, message, action, false);
         }
 
-        public Task<bool> TryTrackWarningAsync(Exception exception, string message, string action)
+        public Task<bool> TryTrackWarningAsync(Exception exception, string? message, string action)
         {
             return tracker.TryTrackError(exception, message, action, true);
         }
 
-        private Task<bool> TryTrackError(Exception exception, string message,
+        private Task<bool> TryTrackError(Exception exception, string? message,
             string action, bool isWarning)
         {
+            message = string.IsNullOrEmpty(message) 
+                ? exception.Message : message + ", " + exception.Message;
+
             var trackEvent = new TrackEvent {
                 EventName = "vh_exception",
                 Parameters = new Dictionary<string, object?> {
                     { "method", action },
-                    { "message", message + ", " + exception.Message },
+                    { "message", message },
                     { "error_type", exception.GetType().Name },
                     { "error_level", isWarning ? "warning" : "error" }
                 }

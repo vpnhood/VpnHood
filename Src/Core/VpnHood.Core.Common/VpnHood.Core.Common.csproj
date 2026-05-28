@@ -28,6 +28,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="IpLocations\**" />
+	  <EmbeddedResource Remove="IpLocations\**" />
+	  <None Remove="IpLocations\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
@@ -40,10 +46,6 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="IpLocations\" />
 	</ItemGroup>
 
 </Project>

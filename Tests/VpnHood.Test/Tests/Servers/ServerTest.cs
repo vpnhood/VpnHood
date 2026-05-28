@@ -434,4 +434,30 @@ public class ServerTest : TestBase
         Assert.AreEqual(swapMemoryProvider.Info.TotalSize - swapMemoryProvider.Info.TotalUsed,
             serverStatus?.AvailableSwapMemory);
     }
+
+    [TestMethod]
+    public async Task HostErrors_reported_for_invalid_endpoint()
+    {
+        // Arrange: occupy a port so the server can't bind to it
+        using var accessManager = TestHelper.CreateAccessManager();
+        using var blocker = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+        blocker.Start();
+        var occupiedEndPoint = (IPEndPoint)blocker.LocalEndpoint;
+        accessManager.ServerConfig.TcpEndPoints = [occupiedEndPoint];
+
+        // autoStart: false because the server won't reach Ready state with a bad endpoint
+        await using var server = await TestHelper.CreateServer(accessManager, autoStart: false);
+        await server.Start(TestCt);
+
+        // Assert: the status reported to access manager contains EndPointStatuses with an error for the occupied endpoint
+        var endPointStatuses = accessManager.LastServerStatus?.EndPointStatuses;
+        Assert.IsNotNull(endPointStatuses, "EndPointStatuses should be reported");
+        Assert.IsTrue(endPointStatuses.Length > 0, "EndPointStatuses should have at least one entry");
+
+        var endPointError = endPointStatuses.FirstOrDefault(x =>
+            x.Protocol == ChannelProtocol.Tcp && x.EndPoint.Equals(occupiedEndPoint));
+        Assert.IsNotNull(endPointError, "EndPointStatuses should contain an entry for the occupied TCP endpoint");
+        Assert.IsNotNull(endPointError.Error, "The occupied endpoint entry should have a non-null error");
+        Assert.IsNotNull(accessManager.LastServerStatus?.ConfigError, "No TCP EndPoint error reported in ConfigError");
+    }
 }

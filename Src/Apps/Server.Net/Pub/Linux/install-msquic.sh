@@ -2,12 +2,6 @@
 # Install MsQuic Library
 # -----------------------------------------------
 install_msquic() {
-    # Skip if libmsquic is already installed
-    if find /usr/lib64 /usr/lib /usr/local/lib -name "libmsquic.so.2" 2>/dev/null | grep -q .; then
-        echo "MsQuic is already installed. Skipping."
-        return 0
-    fi
-
     echo "Installing MsQuic library..."
     export DEBIAN_FRONTEND=noninteractive
     export NEEDRESTART_MODE=a

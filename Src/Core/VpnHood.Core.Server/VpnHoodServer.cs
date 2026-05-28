@@ -44,8 +44,8 @@ public class VpnHoodServer : IAsyncDisposable
     private string? _tcpCongestionControl;
     private bool _isRestarted = true;
     private readonly Job _configureAndSendStatusJob;
-    private ServerHostEndPointStatus[]? _hostErrors;
-    private bool _hostErrorsSent;
+    private ServerHostEndPointStatus[] _endPointStatuses = [];
+    private bool _endPointStatusesSent;
 
     public ServerHost ServerHost { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version ?? new Version();
@@ -261,7 +261,7 @@ public class VpnHoodServer : IAsyncDisposable
             }
 
             // Reconfigure server host
-            _hostErrorsSent = false;
+            _endPointStatusesSent = false;
             var endPointStatuses = await ServerHost.Configure(new ServerHostConfiguration {
                 DnsServers = serverConfig.DnsServersValue,
                 TcpEndPoints = serverConfig.TcpEndPointsValue,
@@ -271,7 +271,13 @@ public class VpnHoodServer : IAsyncDisposable
                     .ToArray(),
                 UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue
             }).Vhc();
-            _hostErrors = endPointStatuses.Length > 0 ? endPointStatuses : null;
+
+            //empty array means no error, null means not reported
+            _endPointStatuses = endPointStatuses;
+
+            // make sure at least one tcp end point is working
+            if (!HasWorkingEndPointsStatus(_endPointStatuses))
+                throw new Exception("No working tcp end point is available after configuration!");
 
             // Reconfigure dns challenge
             _http01ChallengeService.Stop();
@@ -284,7 +290,7 @@ public class VpnHoodServer : IAsyncDisposable
 
             _lastConfigException = null;
             _configErrorTracker.RecordSuccess();
-
+            
             VhLogger.Instance.LogInformation("Server is ready!");
     
             // set status after successful configuration
@@ -481,6 +487,12 @@ public class VpnHoodServer : IAsyncDisposable
         }
     }
 
+    // return true if at least on tcp endpoint is working
+    private static bool HasWorkingEndPointsStatus(IReadOnlyList<ServerHostEndPointStatus> endPointStatuses)
+    {
+        return endPointStatuses.Any(x => x is { Protocol: ChannelProtocol.Tcp, Error: null });
+    }
+
     public async Task<ServerStatus> GetStatus()
     {
         var swapMemoryInfo = await TryGetSwapMemoryInfo();
@@ -502,7 +514,7 @@ public class VpnHoodServer : IAsyncDisposable
             },
             ConfigCode = _lastConfigCode,
             ConfigError = _lastConfigException?.ToApiError().ToJson(),
-            HostErrors = !_hostErrorsSent ? _hostErrors : null
+            EndPointStatuses = _endPointStatusesSent ? null : _endPointStatuses
         };
         return serverStatus;
     }
@@ -524,12 +536,12 @@ public class VpnHoodServer : IAsyncDisposable
 
             // reset last config error if the status is sent successfully and there is no config error
             // if not, then any send status error will remain till next restart
-            if (status.ConfigError is null)
+            if (status.ConfigError is null && HasWorkingEndPointsStatus(_endPointStatuses))
                 _configErrorTracker.RecordSuccess();
 
-            // mark host errors as sent so they won't be re-sent until next reconfig
-            if (status.HostErrors != null)
-                _hostErrorsSent = true;
+            // mark end point statuses as sent so they won't be re-sent until next reconfigure
+            if (status.EndPointStatuses != null)
+                _endPointStatusesSent = true;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the server status.");

@@ -44,6 +44,8 @@ public class VpnHoodServer : IAsyncDisposable
     private string? _tcpCongestionControl;
     private bool _isRestarted = true;
     private readonly Job _configureAndSendStatusJob;
+    private ServerHostEndPointStatus[]? _hostErrors;
+    private bool _hostErrorsSent;
 
     public ServerHost ServerHost { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version ?? new Version();
@@ -259,7 +261,8 @@ public class VpnHoodServer : IAsyncDisposable
             }
 
             // Reconfigure server host
-            await ServerHost.Configure(new ServerHostConfiguration {
+            _hostErrorsSent = false;
+            var endPointStatuses = await ServerHost.Configure(new ServerHostConfiguration {
                 DnsServers = serverConfig.DnsServersValue,
                 TcpEndPoints = serverConfig.TcpEndPointsValue,
                 UdpEndPoints = serverConfig.UdpEndPointsValue,
@@ -268,6 +271,7 @@ public class VpnHoodServer : IAsyncDisposable
                     .ToArray(),
                 UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue
             }).Vhc();
+            _hostErrors = endPointStatuses.Length > 0 ? endPointStatuses : null;
 
             // Reconfigure dns challenge
             _http01ChallengeService.Stop();
@@ -497,7 +501,8 @@ public class VpnHoodServer : IAsyncDisposable
                 Received = SessionManager.Sessions.Sum(x => x.Value.Tunnel.TrafficMeter.Speed.Received)
             },
             ConfigCode = _lastConfigCode,
-            ConfigError = _lastConfigException?.ToApiError().ToJson()
+            ConfigError = _lastConfigException?.ToApiError().ToJson(),
+            HostErrors = !_hostErrorsSent ? _hostErrors : null
         };
         return serverStatus;
     }
@@ -521,6 +526,10 @@ public class VpnHoodServer : IAsyncDisposable
             // if not, then any send status error will remain till next restart
             if (status.ConfigError is null)
                 _configErrorTracker.RecordSuccess();
+
+            // mark host errors as sent so they won't be re-sent until next reconfig
+            if (status.HostErrors != null)
+                _hostErrorsSent = true;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not send the server status.");

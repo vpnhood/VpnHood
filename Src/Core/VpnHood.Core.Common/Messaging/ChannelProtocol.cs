@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.Core.Client.Abstractions;
+namespace VpnHood.Core.Common.Messaging;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ChannelProtocol

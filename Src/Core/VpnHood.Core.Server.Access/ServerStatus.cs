@@ -18,5 +18,6 @@ public class ServerStatus
     public Traffic TunnelSpeed { get; set; } = new();
     public string? ConfigCode { get; set; }
     public string? ConfigError { get; set; }
+    public ServerHostEndPointStatus[]? HostErrors { get; set; }
     public SessionUsage[] SessionUsages { get; set; } = [];
 }

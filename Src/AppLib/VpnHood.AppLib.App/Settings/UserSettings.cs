@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
 

@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Exceptions;
 using VpnHood.Core.Server.Listeners;
 using VpnHood.Core.Server.Utils;
@@ -62,7 +63,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
         _udpListenerHost = new UdpListenerHost(_sessionManager);
     }
 
-    internal async Task Configure(ServerHostConfiguration configuration)
+    internal async Task<ServerHostEndPointStatus[]> Configure(ServerHostConfiguration configuration)
     {
         if (VhUtils.IsNullOrEmpty(configuration.Certificates))
             throw new ArgumentNullException(nameof(configuration.Certificates), "No certificate has been configured.");
@@ -77,9 +78,11 @@ public class ServerHost : IDisposable, IAsyncDisposable
         DnsServers = configuration.DnsServers;
         Certificates = configuration.Certificates.Select(x => new CertificateHostName(x)).ToArray();
 
-        await _tcpListenerHost.Configure(configuration.TcpEndPoints, Certificates).Vhc();
-        await _quicListenerHost.Configure(configuration.QuicEndPoints, Certificates).Vhc();
-        _udpListenerHost.Configure(configuration.UdpEndPoints, configuration.UdpChannelBufferSize);
+        var tcpStatuses = await _tcpListenerHost.Configure(configuration.TcpEndPoints, Certificates).Vhc();
+        var quicStatuses = await _quicListenerHost.Configure(configuration.QuicEndPoints, Certificates).Vhc();
+        var udpStatuses = await _udpListenerHost.Configure(configuration.UdpEndPoints, configuration.UdpChannelBufferSize);
+
+        return [.. tcpStatuses, .. quicStatuses, .. udpStatuses];
     }
 
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Messaging;
 

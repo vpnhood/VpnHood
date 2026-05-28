@@ -8,6 +8,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Core.Client.VpnServices.Host;

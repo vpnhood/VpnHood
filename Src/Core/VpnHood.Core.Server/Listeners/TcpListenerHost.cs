@@ -3,6 +3,9 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Server.Access;
+using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -25,13 +28,15 @@ internal class TcpListenerHost(
     public IReadOnlyList<IPEndPoint> EndPoints =>
         _listeners.Select(x => (IPEndPoint)x.Listener.LocalEndpoint).ToArray();
 
-    public async Task Configure(IPEndPoint[] ipEndPoints, IReadOnlyList<CertificateHostName> certificates)
+    public async Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
+        IReadOnlyList<IPEndPoint> ipEndPoints, 
+        IReadOnlyList<CertificateHostName> certificates)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         _certificates = certificates;
 
-        if (ipEndPoints.Length == 0)
+        if (ipEndPoints.Count == 0)
             throw new ArgumentNullException(nameof(ipEndPoints), "No TcpEndPoint has been configured.");
 
         // stop listeners that are not in the new list
@@ -43,14 +48,17 @@ internal class TcpListenerHost(
             _listeners.Remove(entry);
         }
 
-        if (_certificates.Count == 0 && ipEndPoints.Length > 0)
+        if (_certificates.Count == 0 && ipEndPoints.Count > 0)
             throw new InvalidOperationException("No certificate has been configured for TCP.");
 
         // start new listeners
+        var endPointStatuses = new List<ServerHostEndPointStatus>();
         foreach (var ipEndPoint in ipEndPoints) {
             // check already listening
-            if (_listeners.Any(x => x.Listener.LocalEndpoint.Equals(ipEndPoint)))
+            if (_listeners.Any(x => x.Listener.LocalEndpoint.Equals(ipEndPoint))) {
+                endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Tcp, EndPoint = ipEndPoint });
                 continue;
+            }
 
             try {
                 VhLogger.Instance.LogInformation("Start listening on TcpEndPoint: {TcpEndPoint}",
@@ -60,17 +68,22 @@ internal class TcpListenerHost(
                 var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 var task = ListenTask(tcpListener, cts.Token);
                 _listeners.Add(new TcpListenerEntry(tcpListener, task, cts));
+                endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Tcp, EndPoint = ipEndPoint });
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogInformation("Error listening on TcpEndPoint: {TcpEndPoint}",
+                VhLogger.Instance.LogError(ex, "Error listening on TcpEndPoint: {TcpEndPoint}",
                     VhLogger.Format(ipEndPoint));
-                ex.Data.Add("TcpEndPoint", ipEndPoint);
-                throw;
+                endPointStatuses.Add(new ServerHostEndPointStatus {
+                    Protocol = ChannelProtocol.Tcp,
+                    EndPoint = ipEndPoint,
+                    Error = ex.ToApiError()
+                });
             }
         }
 
         // remove listeners whose task already finished (e.g. stopped due to too many errors)
         _listeners.RemoveAll(x => x.ListenerTask.IsCompleted);
+        return endPointStatuses;
     }
 
     private async Task ListenTask(TcpListener listener, CancellationToken ct)

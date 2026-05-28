@@ -4,6 +4,9 @@ using System.Net.Quic;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Server.Access;
+using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -25,15 +28,16 @@ internal class QuicListenerHost(
     public IReadOnlyList<IPEndPoint> EndPoints =>
         _listeners.Select(x => x.Listener.LocalEndPoint).ToArray();
 
-    public async Task Configure(IPEndPoint[] ipEndPoints, IReadOnlyList<CertificateHostName> certificates)
+    public async Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
+        IReadOnlyList<IPEndPoint> ipEndPoints, 
+        IReadOnlyList<CertificateHostName> certificates)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         _certificates = certificates;
 
-        if (!QuicListener.IsSupported && ipEndPoints.Length > 0) {
-            VhLogger.Instance.LogWarning("QUIC is not supported on this platform.");
-            return;
+        if (!QuicListener.IsSupported && ipEndPoints.Count > 0) {
+            throw new NotSupportedException("QUIC is not supported on this platform.");
         }
 
         if (ipEndPoints.Any(x => x.Port == 0))
@@ -48,13 +52,16 @@ internal class QuicListenerHost(
             _listeners.Remove(entry);
         }
 
-        if (_certificates.Count == 0 && ipEndPoints.Length > 0)
+        if (_certificates.Count == 0 && ipEndPoints.Count > 0)
             throw new InvalidOperationException("No certificate has been configured for QUIC.");
 
         // start new listeners
+        var endPointStatuses = new List<ServerHostEndPointStatus>();
         foreach (var ipEndPoint in ipEndPoints) {
-            if (_listeners.Any(x => x.Listener.LocalEndPoint.Equals(ipEndPoint)))
+            if (_listeners.Any(x => x.Listener.LocalEndPoint.Equals(ipEndPoint))) {
+                endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Quic, EndPoint = ipEndPoint });
                 continue;
+            }
 
             VhLogger.Instance.LogInformation("Start listening on QuicEndPoint: {QuicEndPoint}",
                 VhLogger.Format(ipEndPoint));
@@ -68,15 +75,22 @@ internal class QuicListenerHost(
                 var listener = await QuicListener.ListenAsync(listenerOptions, cancellationToken).Vhc();
                 var task = ListenTask(listener, cts.Token);
                 _listeners.Add(new QuicListenerEntry(listener, task, cts));
+                endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Quic, EndPoint = ipEndPoint });
             }
             catch (Exception ex) {
-                ex.Data.Add("QuicEndPoint", ipEndPoint);
-                throw;
+                VhLogger.Instance.LogError(ex, "Error listening on QuicEndPoint: {QuicEndPoint}",
+                    VhLogger.Format(ipEndPoint));
+                endPointStatuses.Add(new ServerHostEndPointStatus {
+                    Protocol = ChannelProtocol.Quic,
+                    EndPoint = ipEndPoint,
+                    Error = ex.ToApiError()
+                });
             }
         }
 
         // remove listeners whose task already finished (e.g. stopped due to unexpected error)
         _listeners.RemoveAll(x => x.ListenerTask.IsCompleted);
+        return endPointStatuses;
     }
 
     private ValueTask<QuicServerConnectionOptions> QuicConnectionOptionsCallback(

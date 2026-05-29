@@ -116,7 +116,7 @@ public class ServerApp : IDisposable
             if (LogManager.Configuration != null)
                 LogManager.Configuration.Variables["mydir"] = storagePath;
             VhLogger.Instance = loggerFactory.CreateLogger("VpnHood");
-            VhLogger.Instance.LogWarning("Logger has been created. ConfigFilePath: {configFilePath}, LogLevel: {LogLevel}", 
+            VhLogger.Instance.LogInformation("Logger has been created. ConfigFilePath: {configFilePath}, LogLevel: {LogLevel}", 
                 configFilePath, VhLogger.MinLogLevel);
         }
         else {

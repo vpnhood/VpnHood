@@ -51,8 +51,8 @@ public class Session : IDisposable
     private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(
         "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
 
-    private readonly EventReporter _filterReporter = new("Some requests have been blocked.",
-        GeneralEventId.NetProtect);
+    private readonly EventReporter _filterBlockDestinationReporter = new("Some destinations have been blocked.", GeneralEventId.NetProtect);
+    private readonly EventReporter _filterBadSourceReporter = new("Some packets with invalid sources have been blocked.", GeneralEventId.NetProtect);
 
     private Traffic _prevTraffic = new();
     private int _tcpConnectWaitCount;
@@ -235,7 +235,7 @@ public class Session : IDisposable
         if (!ipPacket.SourceAddress.Equals(virtualIp)) {
             var ipeEndPointPair = ipPacket.GetEndPoints();
             LogTrack(ipPacket.Protocol, null, ipeEndPointPair.RemoteEndPoint.ToValue(), false, true, "NetFilter");
-            _filterReporter.Raise();
+            _filterBadSourceReporter.Raise();
             throw new NetFilterException(
                 $"Invalid tunnel packet source ip. SourceIp: {VhLogger.Format(ipPacket.SourceAddress)}");
         }
@@ -247,7 +247,7 @@ public class Session : IDisposable
         // filter before mapper because it supposes to filter user requests
         if (_netFilter.IpFilter?.Process(ipPacket.Protocol, ipPacket.GetDestinationEndPoint()) == FilterAction.Block) {
             LogTrack(ipPacket.Protocol, null, ipPacket.GetDestinationEndPoint(), false, true, "NetFilter");
-            _filterReporter.Raise();
+            _filterBlockDestinationReporter.Raise();
             throw new NetFilterException(
                 $"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(ipPacket.DestinationAddress)}");
         }
@@ -420,7 +420,7 @@ public class Session : IDisposable
             // filter before mapper because it supposes to filter user requests
             if (_netFilter.IpFilter?.Process(IpProtocol.Tcp, request.DestinationEndPoint.ToValue()) == FilterAction.Block) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "NetFilter");
-                _filterReporter.Raise();
+                _filterBlockDestinationReporter.Raise();
                 throw new NetFilterException(
                     $"Packet discarded due to the NetFilter's policies. DestinationIp: {VhLogger.Format(request.DestinationEndPoint)}");
             }
@@ -528,7 +528,8 @@ public class Session : IDisposable
         _netScanExceptionReporter.Dispose();
         _maxTcpChannelExceptionReporter.Dispose();
         _maxTcpConnectWaitExceptionReporter.Dispose();
-        _filterReporter.Dispose();
+        _filterBlockDestinationReporter.Dispose();
+        _filterBadSourceReporter.Dispose();
         NetScanDetector?.Dispose();
 
         // if there is no reason it is temporary

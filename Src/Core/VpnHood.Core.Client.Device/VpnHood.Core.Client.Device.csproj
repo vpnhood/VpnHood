@@ -39,4 +39,8 @@
 		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Exceptions\" />
+	</ItemGroup>
+
 </Project>

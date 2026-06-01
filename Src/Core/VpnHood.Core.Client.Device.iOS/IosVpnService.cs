@@ -50,31 +50,6 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         try { handler?.Invoke(error!); } catch { /* ignore */ }
     }
 
-    // P/Invoke: redirect native stdout/stderr fds to /dev/null so that any
-    // Console.Write* calls (including inside VhLoggerDecorator) complete instantly
-    // instead of blocking on the unread pipe that iOS provides to Extensions.
-    // Use "__Internal" (iOS convention) to resolve symbols from the process itself
-    // (libSystem is always linked in, so open/dup2/close are available).
-    [DllImport("__Internal")] private static extern int open(string path, int flags);
-    [DllImport("__Internal")] private static extern int dup2(int oldfd, int newfd);
-    [DllImport("__Internal")] private static extern int close(int fd);
-
-    private static void RedirectNativeStdoutToDevNull()
-    {
-        try
-        {
-            const int O_WRONLY = 1; // Darwin/iOS value
-            int fd = open("/dev/null", O_WRONLY);
-            if (fd >= 0)
-            {
-                dup2(fd, 1); // stdout
-                dup2(fd, 2); // stderr
-                close(fd);
-            }
-        }
-        catch { /* best-effort */ }
-    }
-
     /// Resolves the VPN service config folder:
     /// 1. ProviderConfiguration["VpnServiceConfigFolder"] — set by the App in IosDevice.StartVpnService (most reliable)
     /// 2. GetContainerUrl — shared App Group container

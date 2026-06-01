@@ -1,12 +1,4 @@
 namespace VpnHood.AppLib.Abstractions.AdExceptions;
 
-public class NoFillAdException : LoadAdException
-{
-    public NoFillAdException(string message) : base(message)
-    {
-    }
-
-    public NoFillAdException(string message, Exception innerException) : base(message, innerException)
-    {
-    }
-}
+public class NoFillAdException(string message, Exception? innerException = null)
+    : LoadAdException(message, innerException);

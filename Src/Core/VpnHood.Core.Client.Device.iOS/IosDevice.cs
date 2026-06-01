@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using NetworkExtension;
-using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
@@ -19,7 +18,6 @@ public class IosDevice : IDevice
     private readonly string _serverAddress;
 
     // Cached at construction time from the caller-supplied path (most reliable) or GetContainerUrl fallback.
-    private readonly string _vpnServiceConfigFolder;
 
     /// <param name="appGroupId">
     /// The App Group identifier shared by the host app and the Network Extension
@@ -51,15 +49,16 @@ public class IosDevice : IDevice
         _serverAddress = serverAddress;
 
         var containerPath = sharedContainerPath
-            ?? NSFileManager.DefaultManager.GetContainerUrl(appGroupId)?.Path
+            ?? NSFileManager.DefaultManager.GetContainerUrl(appGroupId).Path
             ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        _vpnServiceConfigFolder = Path.Combine(containerPath, "vpn-service");
+
+        VpnServiceConfigFolder = Path.Combine(containerPath, "vpn-service");
         VhLogger.Instance.LogInformation(
             "IosDevice created. VpnServiceConfigFolder={Folder} (sharedContainerPath={Provided})",
-            _vpnServiceConfigFolder, sharedContainerPath ?? "<not provided>");
+            VpnServiceConfigFolder, sharedContainerPath ?? "<not provided>");
     }
 
-    public string VpnServiceConfigFolder => _vpnServiceConfigFolder;
+    public string VpnServiceConfigFolder { get; }
 
     public bool IsBindProcessToVpnSupported => false;
     public bool IsTcpProxySupported => false;
@@ -90,11 +89,11 @@ public class IosDevice : IDevice
     {
         VhLogger.Instance.LogInformation(
             "StartVpnService: VpnServiceConfigFolder={Folder}, GetContainerUrl now={ContainerUrl}",
-            _vpnServiceConfigFolder,
-            NSFileManager.DefaultManager.GetContainerUrl(_appGroupId)?.AbsoluteString ?? "<null>");
+            VpnServiceConfigFolder,
+            NSFileManager.DefaultManager.GetContainerUrl(_appGroupId).AbsoluteString ?? "<null>");
 
         // Run an async NE op with a short timeout. On timeout, continue rather than throw
-        // (NEVPNManager callbacks may never resume under Mono AOT but the native op still runs).
+        // (NEVpnManager callbacks may never resume under Mono AOT but the native op still runs).
         static async Task TryStepAsync(Task task, TimeSpan timeout)
         {
             using var cts = new CancellationTokenSource(timeout);
@@ -131,7 +130,7 @@ public class IosDevice : IDevice
 
         // ---- Delete stale vpn.status ----
         try {
-            var statusPath = Path.Combine(_vpnServiceConfigFolder, "vpn.status");
+            var statusPath = Path.Combine(VpnServiceConfigFolder, "vpn.status");
             if (File.Exists(statusPath)) File.Delete(statusPath);
         }
         catch { /* ignore */ }
@@ -140,8 +139,9 @@ public class IosDevice : IDevice
         var providerProtocol = new NETunnelProviderProtocol();
         providerProtocol.ProviderBundleIdentifier = _providerBundleId;
         providerProtocol.ProviderConfiguration = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
-            new NSObject[] { (NSString)_vpnServiceConfigFolder },
-            new NSObject[] { (NSString)VpnServiceConfigFolderKey });
+            [(NSString)VpnServiceConfigFolder],
+            [(NSString)VpnServiceConfigFolderKey]);
+
         providerProtocol.ServerAddress = _serverAddress;
         providerProtocol.EnforceRoutes = true;
         providerProtocol.IncludeAllNetworks = false;
@@ -152,16 +152,14 @@ public class IosDevice : IDevice
         // ---- Save (short timeout; on timeout we continue and try Start anyway) ----
         var saveTcs = new TaskCompletionSource();
         _vpnManager.SaveToPreferences(nsError => {
-            if (nsError != null) saveTcs.TrySetException(new Exception(nsError.Description));
-            else saveTcs.TrySetResult();
+            saveTcs.TrySetException(new Exception(nsError.Description));
         });
         await TryStepAsync(saveTcs.Task, TimeSpan.FromSeconds(2));
 
         // ---- Load ----
         var loadTcs = new TaskCompletionSource();
         _vpnManager.LoadFromPreferences(nsError => {
-            if (nsError != null) loadTcs.TrySetException(new Exception(nsError.Description));
-            else loadTcs.TrySetResult();
+            loadTcs.TrySetException(new Exception(nsError.Description));
         });
         await TryStepAsync(loadTcs.Task, TimeSpan.FromSeconds(2));
 
@@ -171,7 +169,7 @@ public class IosDevice : IDevice
         }
         catch { /* ignore */ }
 
-        // ---- Poll NEVPNStatus quickly (10 × 200ms = 2s) ----
+        // ---- Poll NEVpnStatus quickly (10 × 200ms = 2s) ----
         for (var i = 0; i < 10; i++) {
             try {
                 var status = _vpnManager.Connection.Status;

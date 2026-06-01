@@ -1,12 +1,4 @@
-﻿namespace VpnHood.Core.Client.Abstractions.Exceptions;
+namespace VpnHood.Core.Client.Abstractions.Exceptions;
 
-public class UserCanceledException : OperationCanceledException
-{
-    public UserCanceledException(string message) : base(message)
-    {
-    }
-
-    public UserCanceledException(string message, Exception innerException) : base(message, innerException)
-    {
-    }
-}
+public class UserCanceledException(string message, Exception? innerException = null)
+    : OperationCanceledException(message, innerException);

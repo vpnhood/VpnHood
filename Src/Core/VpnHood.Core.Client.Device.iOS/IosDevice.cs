@@ -187,6 +187,6 @@ public class IosDevice : IDevice
 
     public IMessageClient CreateMessageClient()
     {
-        return new ProviderMessageClient(_vpnManager);
+        return new IosMessageClient(_vpnManager);
     }
 }

@@ -22,7 +22,7 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 
     // VpnService API transport for iOS: messages flow over NEPacketTunnelProvider's app message channel
     // (HandleAppMessage) instead of a TCP loopback socket.
-    private readonly IosMessageClient _messageClient = new();
+    private readonly IosMessageListener _messageListener = new();
 
     // Stored when StartTunnel is called; invoked once IosVpnAdapter applies network settings
     // (iOS terminates the extension if the completion handler runs before SetTunnelNetworkSettings).
@@ -158,7 +158,7 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
             try {
                 var sf = new SocketFactory();
                 _vpnServiceHost = new VpnServiceHost(configFolder, this, sf,
-                    netFilter: null, withLogger: false, messageListener: _messageClient);
+                    netFilter: null, withLogger: false, messageListener: _messageListener);
                 _ = _vpnServiceHost.TryConnect(true);
             }
             catch {
@@ -178,7 +178,7 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                 responseData = BuildApiErrorResponse(new InvalidOperationException("VpnServiceHost is not ready."));
             }
             else {
-                var responseBytes = _messageClient.ProcessMessageAsync(messageData.ToArray(),
+                var responseBytes = _messageListener.ProcessMessageAsync(messageData.ToArray(),
                     CancellationToken.None).GetAwaiter().GetResult();
                 responseData = NSData.FromArray(responseBytes);
             }

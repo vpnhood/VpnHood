@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Server.Utils;
 
-internal static class ServerUtil
+public static class ServerUtils
 {
     public static int GetFreeUdpPort(AddressFamily addressFamily, int? start)
     {
@@ -21,7 +21,11 @@ internal static class ServerUtil
                 break;
             }
             catch {
-                // try the next port
+                // try the next port but more
+                if (start < 1024) {
+                    start = 1024;
+                    port = 1023; // will be incremented to 1024 in the next loop
+                }
             }
         }
 

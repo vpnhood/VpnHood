@@ -123,7 +123,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             var httpMethod = httpRequestLine.Split(" ").FirstOrDefault();
             var upgrade = headers.GetValueOrDefault("Upgrade", "");
             var clientIpByProxy = headers.GetValueOrDefault("X-Forwarded-For", "");
-            var clientIp = ServerUtil.GetClientIpFromXForwarded(clientIpByProxy) ?? streamConnection.RemoteEndPoint.Address;
+            var clientIp = ServerUtils.GetClientIpFromXForwarded(clientIpByProxy) ?? streamConnection.RemoteEndPoint.Address;
             var isRevereProxy = !string.IsNullOrEmpty(clientIpByProxy);
 
             // Try to serve download file if requested

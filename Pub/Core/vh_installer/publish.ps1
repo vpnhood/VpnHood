@@ -34,6 +34,7 @@ $module_installScriptFile = "$moduleDir/$assemblyName-$os.$shellExt";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 # load install-any shell file and replace installerUrls
+Write-Host "Preparing installer script for any CPU..." -ForegroundColor Green
 $installAnyFile = "$PSScriptRoot/$os/install-any.$shellExt";
 $installAnyContent = Get-Content -Path $installAnyFile -Raw;
 $installAnyContent = $installAnyContent.Replace('$installerUrl_arm64', $installerUrl_arm64);
@@ -44,7 +45,7 @@ $installAnyContent | Out-File -FilePath $module_installScriptFile -Encoding ASCI
 # copy install-msquic.sh to VpnHoodServer-linux-msquic.sh and remove \r
 Write-Host "Copying msquic installer..." -ForegroundColor Green
 $msquicSrc = "$solutionDir/Src/Apps/Server.Net/Pub/Linux/install-msquic.sh";
-$msquicDst = "$moduleDirLatest/VpnHoodServer-linux-msquic.sh";
+$msquicDst = "$moduleDir/VpnHoodServer-linux-msquic.sh";
 New-Item -ItemType Directory -Path (Split-Path $msquicDst -Parent) -Force | Out-Null
 (Get-Content $msquicSrc -Raw) -replace "`r", "" | Out-File -FilePath $msquicDst -Encoding ASCII -Force -NoNewline
 if ($isLatest)

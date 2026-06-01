@@ -171,10 +171,10 @@ public class VpnHoodServer : IAsyncDisposable
 
             // get server info
             VhLogger.Instance.LogDebug("Finding free EndPoints...");
-            var freeUdpPortV4 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetwork, null);
-            var freeUdpPortV6 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetworkV6, freeUdpPortV4);
-            var freeQuicPortV4 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetwork, 443);
-            var freeQuicPortV6 = ServerUtil.GetFreeUdpPort(AddressFamily.InterNetworkV6, 443);
+            var freeUdpPortV4 = ServerUtils.GetFreeUdpPort(AddressFamily.InterNetwork, null);
+            var freeUdpPortV6 = ServerUtils.GetFreeUdpPort(AddressFamily.InterNetworkV6, freeUdpPortV4);
+            var freeQuicPortV4 = ServerUtils.GetFreeUdpPort(AddressFamily.InterNetwork, 443);
+            var freeQuicPortV6 = ServerUtils.GetFreeUdpPort(AddressFamily.InterNetworkV6, 443);
 
             VhLogger.Instance.LogDebug("Finding public addresses...");
             var privateIpAddresses = await IPAddressUtil.GetPrivateIpAddresses().Vhc();
@@ -221,8 +221,8 @@ public class VpnHoodServer : IAsyncDisposable
                 ? serverConfig.UpdateStatusIntervalValue // update status interval must be less than sync interval
                 : serverConfig.SessionOptions.SyncIntervalValue;
 
-            ServerUtil.ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
-            ServerUtil.ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
+            ServerUtils.ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
+            ServerUtils.ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
             var allServerIps = serverInfo.PublicIpAddresses
                 .Concat(serverInfo.PrivateIpAddresses)
                 .Concat(serverConfig.TcpEndPoints?.Select(x => x.Address) ?? []);

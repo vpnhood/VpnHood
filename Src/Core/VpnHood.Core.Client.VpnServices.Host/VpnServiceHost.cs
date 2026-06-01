@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -39,53 +40,29 @@ public class VpnServiceHost : IDisposable
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,
         NetFilter? netFilter,
-        bool withLogger = true,
-        int apiPort = 0,
-        byte[]? apiKey = null)
+        IMessageListener messageListener,
+        bool withLogger = true)
     {
-        VpshProbe("1-start");
         Context = new VpnServiceContext(configFolder);
-        VpshProbe("2-context");
         _socketFactory = socketFactory;
         _netFilter = netFilter;
         _vpnServiceHandler = vpnServiceHandler;
 
         // initialize logger
         _logService = withLogger ? new LogService(Context.LogFilePath) : null;
-        VpshProbe("3-logservice");
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
-        VpshProbe("4-tcpcloseeventid");
         var clientOptions = Context.TryReadClientOptions();
-        VpshProbe("5-clientoptions");
         if (_logService != null && clientOptions != null) {
             _logService.Start(clientOptions.LogServiceOptions);
         }
 
-        // start apiController
-        VpshProbe("6-before-apicontroller");
-        _apiController = new ApiController(this, apiPort, apiKey);
-        VpshProbe("7-after-apicontroller");
-        VhLogger.Instance.LogInformation("VpnServiceHost has been initiated...ApiEndPoint: {_apiController}",
-            _apiController.ApiEndPoint);
-        VpshProbe("8-after-loginformation");
+        // start apiController; the transport (IMessageListener) owns endpoint/key concerns
+        _apiController = new ApiController(this, messageListener);
+        VhLogger.Instance.LogInformation("VpnServiceHost has been initiated...");
 
-        // Write an initial ConnectionInfo so that the app side can discover this endpoint
-        // immediately via TCP polling (used by iOS fixed-endpoint IPC path where no shared
-        // filesystem is available to pass the endpoint via vpn.status).
+        // Write an initial ConnectionInfo so that the app side can discover the service state.
         _ = UpdateConnectionInfo(ClientState.Initializing, sessionName: null, exception: null,
             CancellationToken.None);
-        VpshProbe("9-done");
-    }
-
-    private static void VpshProbe(string stage)
-    {
-        try
-        {
-            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            System.IO.File.WriteAllText(System.IO.Path.Combine(docs, $"vpsh-{stage}.txt"),
-                $"{stage} at {DateTime.UtcNow:O}\n");
-        }
-        catch { }
     }
 
     private void VpnHoodClient_StateChanged(object? sender, EventArgs e)
@@ -261,9 +238,7 @@ public class VpnServiceHost : IDisposable
             ClientState = client.State,
             ClientStateProgress = client.StateProgress,
             ClientStateChangedTime = client.StateChangedTime,
-            Error = ex?.ToApiError() ?? client.LastException?.ToApiError(),
-            ApiEndPoint = _apiController.ApiEndPoint,
-            ApiKey = _apiController.ApiKey
+            Error = ex?.ToApiError() ?? client.LastException?.ToApiError()
         };
 
         await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken);
@@ -274,8 +249,6 @@ public class VpnServiceHost : IDisposable
     {
         var connectionInfo = new ConnectionInfo {
             CreatedTime = FastDateTime.Now,
-            ApiEndPoint = _apiController.ApiEndPoint,
-            ApiKey = _apiController.ApiKey,
             ProxyManagerStatus = null,
             SessionInfo = null,
             SessionStatus = null,

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Device.iOS;
@@ -184,8 +185,8 @@ public class IosDevice : IDevice
     {
     }
 
-    public IVpnServiceApiTransport CreateVpnServiceApiTransport()
+    public IMessageClient CreateMessageClient()
     {
-        return new ProviderMessageVpnServiceApiTransport(_vpnManager);
+        return new ProviderMessageClient(_vpnManager);
     }
 }

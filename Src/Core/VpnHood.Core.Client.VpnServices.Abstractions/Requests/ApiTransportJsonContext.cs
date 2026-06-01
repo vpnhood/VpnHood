@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 
@@ -8,6 +9,7 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(byte[]))]
 [JsonSerializable(typeof(ConnectionInfo))]
+[JsonSerializable(typeof(TcpApiBootstrap))]
 [JsonSerializable(typeof(ApiResponse<object>))]
 [JsonSerializable(typeof(ApiAdFailedRequest))]
 [JsonSerializable(typeof(ApiDisconnectRequest))]

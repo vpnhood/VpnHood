@@ -1,4 +1,5 @@
 ﻿using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -19,6 +20,7 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
             vpnServiceHandler: this, 
             socketFactory: new SocketFactory(), 
             netFilter: null,
+            messageListener: new TcpMessageListener(configFolder),
             withLogger: false);
     }
 

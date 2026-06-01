@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
@@ -42,6 +43,11 @@ public class TestDevice(
         _ = cancellationToken; // ignore cancellation token to simulate outer service start
         Task.Run(SimulateStartService, CancellationToken.None);
         return Task.CompletedTask;
+    }
+
+    public IMessageClient CreateMessageClient()
+    {
+        return new TcpMessageClient(VpnServiceConfigFolder);
     }
 
     public void BindProcessToVpn(bool value)

@@ -7,6 +7,7 @@ using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Sockets;
@@ -73,10 +74,11 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
             try {
                 VhLogger.Instance.LogDebug("Starting VPN service host. AlwaysOn: {AlwaysOn}", alwaysOn);
                 _vpnServiceHost ??= new VpnServiceHost(
-                    configFolder: VpnServiceConfigFolder, 
-                    vpnServiceHandler: this, 
+                    configFolder: VpnServiceConfigFolder,
+                    vpnServiceHandler: this,
                     netFilter: null,
-                    socketFactory: new SocketFactory());
+                    socketFactory: new SocketFactory(),
+                    messageListener: new TcpMessageListener(VpnServiceConfigFolder));
 
                 if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn))
                     StopSelf();

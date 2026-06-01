@@ -126,16 +126,6 @@ public class IpNetwork2
         }
     }
 
-    public IOrderedEnumerable<IpNetwork> Invert()
-    {
-        return new[] { this }
-            .ToIpRanges()
-            .Invert(
-                includeIPv4: AddressFamily == AddressFamily.InterNetwork,
-                includeIPv6: AddressFamily == AddressFamily.InterNetworkV6)
-            .ToIpNetworks();
-    }
-
     public IpRange ToIpRange()
     {
         return new IpRange(FirstIpAddress, LastIpAddress);

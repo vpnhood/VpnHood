@@ -5,62 +5,30 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.Core.Toolkit.Net;
 
-// check IpNetwork2 for AOT
 [JsonConverter(typeof(IpNetworkConverter))]
-public class IpNetwork
+public class IpNetwork2
 {
-    private BigInteger _firstIpAddressValue;
-    private BigInteger _lastIpAddressValue;
-    private bool _bigIntInitialized;
-    private void EnsureBigInt()
-    {
-        if (_bigIntInitialized) return;
-        // Defer BigInteger construction until first use; avoids triggering
-        // System.Numerics paths during iOS NE static init.
-        _firstIpAddressValue = new BigInteger(FirstIpAddress.GetAddressBytes(), isUnsigned: true, isBigEndian: true);
-        _lastIpAddressValue = new BigInteger(LastIpAddress.GetAddressBytes(), isUnsigned: true, isBigEndian: true);
-        _bigIntInitialized = true;
-    }    public IpNetwork(IPAddress prefix)
+    private readonly BigInteger _firstIpAddressValue;
+    private readonly BigInteger _lastIpAddressValue;
+
+    public IpNetwork2(IPAddress prefix)
         : this(prefix, prefix.AddressFamily == AddressFamily.InterNetwork ? 32 : 128)
     {
     }
 
-    public IpNetwork(IPAddress prefix, int prefixLength)
+    public IpNetwork2(IPAddress prefix, int prefixLength)
     {
-        // Inline AddressFamily check to avoid triggering IPAddressUtil static cctor
-        // (which has heavy eager static initializers that hang in iOS NE AOT sandbox).
-        var af = prefix.AddressFamily;
-        if (af != AddressFamily.InterNetwork && af != AddressFamily.InterNetworkV6)
-            throw new NotSupportedException($"{af} is not supported!");
+        IPAddressUtil.Verify(prefix);
 
         Prefix = prefix;
         PrefixLength = prefixLength;
-
-        // Compute first/last IP using byte arithmetic instead of BigInteger.
-        // BigInteger ops (left shifts, byte ctors) hang inside the iOS NetworkExtension
-        // AOT sandbox, so avoid them on the hot init path.
-        var prefixBytes = prefix.GetAddressBytes();
-        var byteCount = prefixBytes.Length;
-        var firstBytes = new byte[byteCount];
-        var lastBytes = new byte[byteCount];
-        var fullBytes = prefixLength / 8;
-        var remBits = prefixLength % 8;
-        for (var i = 0; i < fullBytes && i < byteCount; i++) {
-            firstBytes[i] = prefixBytes[i];
-            lastBytes[i] = prefixBytes[i];
-        }
-        if (fullBytes < byteCount) {
-            var maskByte = remBits == 0 ? (byte)0 : (byte)(0xFF << (8 - remBits));
-            firstBytes[fullBytes] = (byte)(prefixBytes[fullBytes] & maskByte);
-            lastBytes[fullBytes] = (byte)(firstBytes[fullBytes] | (byte)~maskByte);
-            for (var i = fullBytes + 1; i < byteCount; i++) {
-                firstBytes[i] = 0;
-                lastBytes[i] = 0xFF;
-            }
-        }
-
-        FirstIpAddress = new IPAddress(firstBytes);
-        LastIpAddress = new IPAddress(lastBytes);
+        var bits = prefix.AddressFamily == AddressFamily.InterNetworkV6 ? 128 : 32;
+        var mask = ((new BigInteger(1) << prefixLength) - 1) << (bits - prefixLength);
+        var maskNot = (new BigInteger(1) << bits - prefixLength) - 1;
+        _firstIpAddressValue = IPAddressUtil.ToBigInteger(Prefix) & mask;
+        _lastIpAddressValue = _firstIpAddressValue | maskNot;
+        FirstIpAddress = IPAddressUtil.FromBigInteger(_firstIpAddressValue, prefix.AddressFamily);
+        LastIpAddress = IPAddressUtil.FromBigInteger(_lastIpAddressValue, prefix.AddressFamily);
     }
 
     public IPAddress Prefix { get; }
@@ -71,46 +39,28 @@ public class IpNetwork
     public bool IsV6 => Prefix.AddressFamily == AddressFamily.InterNetworkV6;
     public IPAddress FirstIpAddress { get; }
     public IPAddress LastIpAddress { get; }
-    public BigInteger Total { get { EnsureBigInt(); return _lastIpAddressValue - _firstIpAddressValue + 1; } }
+    public BigInteger Total => _lastIpAddressValue - _firstIpAddressValue + 1;
 
-    public static IpNetwork AllV4 => _allV4 ??= new IpNetwork(IPAddress.Any, 0);
-    private static IpNetwork? _allV4;
+    public static IpNetwork AllV4 { get; } = Parse("0.0.0.0/0");
 
-    public static IpNetwork[] LocalNetworksV4 => _localNetworksV4 ??= [
+    public static IpNetwork[] LocalNetworksV4 { get; } = [
         Parse("10.0.0.0/8"),
         Parse("172.16.0.0/12"),
         Parse("192.168.0.0/16"),
         Parse("169.254.0.0/16")
     ];
-    private static IpNetwork[]? _localNetworksV4;
 
-    public static IpNetwork MulticastNetworkV4 => _multicastNetworkV4 ??= new(IPAddress.Parse("224.0.0.0"), 4);
-    private static IpNetwork? _multicastNetworkV4;
-    public static IpNetwork MulticastNetworkV6 => _multicastNetworkV6 ??= new(IPAddress.Parse("ff00::"), 8);
-    private static IpNetwork? _multicastNetworkV6;
-    public static IpNetwork[] MulticastNetworks => _multicastNetworks ??= [MulticastNetworkV4, MulticastNetworkV6];
-    private static IpNetwork[]? _multicastNetworks;
-    public static IpNetwork LoopbackNetworkV4 => _loopbackNetworkV4 ??= Parse("127.0.0.0/8");
-    private static IpNetwork? _loopbackNetworkV4;
-    public static IpNetwork LoopbackNetworkV6 => _loopbackNetworkV6 ??= Parse("::1/128");
-    private static IpNetwork? _loopbackNetworkV6;
-    public static IpNetwork[] LoopbackNetworks => _loopbackNetworks ??= [LoopbackNetworkV4, LoopbackNetworkV6];
-    private static IpNetwork[]? _loopbackNetworks;
-    public static IpNetwork AllV6 => _allV6 ??= new IpNetwork(IPAddress.IPv6Any, 0);
-    private static IpNetwork? _allV6;
-    public static IpNetwork AllGlobalUnicastV6 => _allGlobalUnicastV6 ??= Parse("2000::/3");
-    private static IpNetwork? _allGlobalUnicastV6;
-
-    // Lazy: AllGlobalUnicastV6.Invert() runs heavy LINQ/BigInteger chains that hang
-    // inside iOS NetworkExtension AOT sandbox when triggered as part of static cctor.
-    private static IpNetwork[]? _localNetworksV6;
-    public static IpNetwork[] LocalNetworksV6 => _localNetworksV6 ??= AllGlobalUnicastV6.Invert().ToArray();
-
-    private static IpNetwork[]? _localNetworks;
-    public static IpNetwork[] LocalNetworks => _localNetworks ??= LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
-
-    public static IpNetwork[] All => _all ??= [AllV4, AllV6];
-    private static IpNetwork[]? _all;
+    public static IpNetwork MulticastNetworkV4 { get; } = new(IPAddress.Parse("224.0.0.0"), 4);
+    public static IpNetwork MulticastNetworkV6 { get; } = new(IPAddress.Parse("ff00::"), 8);
+    public static IpNetwork[] MulticastNetworks { get; } = [MulticastNetworkV4, MulticastNetworkV6];
+    public static IpNetwork LoopbackNetworkV4 { get; } = Parse("127.0.0.0/8");
+    public static IpNetwork LoopbackNetworkV6 { get; } = Parse("::1/128");
+    public static IpNetwork[] LoopbackNetworks { get; } = [LoopbackNetworkV4, LoopbackNetworkV6];
+    public static IpNetwork AllV6 { get; } = Parse("::/0");
+    public static IpNetwork AllGlobalUnicastV6 { get; } = Parse("2000::/3");
+    public static IpNetwork[] LocalNetworksV6 { get; } = AllGlobalUnicastV6.Invert().ToArray();
+    public static IpNetwork[] LocalNetworks { get; } = LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
+    public static IpNetwork[] All { get; } = [AllV4, AllV6];
     public static IpNetwork[] None { get; } = [];
 
     public static IEnumerable<IpNetwork> FromRange(IPAddress firstIpAddress, IPAddress lastIpAddress)

@@ -8,22 +8,14 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
-internal class VpnServiceContext
+internal class VpnServiceContext(string configFolder)
 {
-    private readonly string _configFolder;
+    public string ConfigFilePath => Path.Combine(configFolder, ClientOptions.VpnConfigFileName);
+    public string StatusFilePath => Path.Combine(configFolder, ClientOptions.VpnStatusFileName);
+    public string LogFilePath => Path.Combine(configFolder, ClientOptions.VpnLogFileName);
+    public string ConfigFolder => configFolder;
 
-    public VpnServiceContext(string configFolder)
-    {
-        _configFolder = configFolder;
-        ConnectionInfo = DefaultConnectionInfo;
-    }
-
-    public string ConfigFilePath => Path.Combine(_configFolder, ClientOptions.VpnConfigFileName);
-    public string StatusFilePath => Path.Combine(_configFolder, ClientOptions.VpnStatusFileName);
-    public string LogFilePath => Path.Combine(_configFolder, ClientOptions.VpnLogFileName);
-    public string ConfigFolder => _configFolder;
-
-    public static ConnectionInfo DefaultConnectionInfo { get; } = new ConnectionInfo {
+    public static ConnectionInfo DefaultConnectionInfo { get; } = new() {
         ApiEndPoint = null,
         ApiKey = null,
         ProxyManagerStatus = null,
@@ -37,7 +29,7 @@ internal class VpnServiceContext
         SessionStatus = null
     };
 
-    public ConnectionInfo ConnectionInfo { get; private set; }
+    public ConnectionInfo ConnectionInfo { get; private set; } = DefaultConnectionInfo;
 
     public ClientOptions? TryReadClientOptions()
     {
@@ -71,11 +63,13 @@ internal class VpnServiceContext
             using var scopeLock = await _connectionInfoLock.LockAsync(cancellationToken);
             ConnectionInfo = connectionInfo;
 
+            // ToDo: double check 
+
             // source-generated STJ — reflection-based serialization hangs under iOS Mono AOT.
             var json = JsonSerializer.Serialize(connectionInfo, ApiTransportJsonContext.For<ConnectionInfo>());
 
             // iOS Mono interpreter: file I/O on the shared App Group container can hang the calling
-            // thread for ~30s on first access. Push the write to the thread pool so the calling task
+            // thread for ~30s on first access. Push to write to the thread pool so the calling task
             // can complete, with a 2-second hard ceiling.
             var pathCopy = StatusFilePath;
             var writeTask = Task.Run(() => {

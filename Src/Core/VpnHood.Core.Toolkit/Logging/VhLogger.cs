@@ -175,7 +175,7 @@ public static class VhLogger
 
     private class VhLoggerDecorator : ILogger
     {
-        private ILogger? _logger;
+        private ILogger? _logger; //todo: check AOT and set for TraceLogger
         private readonly AotPreserveHelper _aotPreserveHelper = new();
 
         // Default is NullLogger — callers that want console output must set

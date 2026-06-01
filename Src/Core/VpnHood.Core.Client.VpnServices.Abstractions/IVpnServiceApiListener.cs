@@ -4,6 +4,7 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 // Server-side transport for the VpnService API. Encapsulates how the host receives requests
 // (e.g. TCP loopback or platform native messages) and forwards them to an IVpnServiceApiRequestHandler.
+// ToDo: do abstraction
 public interface IVpnServiceApiListener : IDisposable
 {
     // The endpoint clients connect to, or null for transports without a network endpoint (e.g. message-based).

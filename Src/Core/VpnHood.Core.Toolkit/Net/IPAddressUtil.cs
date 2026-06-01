@@ -9,27 +9,28 @@ using VpnHood.Core.Toolkit.Utils;
 namespace VpnHood.Core.Toolkit.Net;
 
 // ReSharper disable once InconsistentNaming
+//TodOo
 public static class IPAddressUtil
 {
     // Lazy initialization to avoid running heavy static cctor on iOS NE AOT sandbox.
-    private static IPAddress[]? _googleDnsServers;
-    public static IPAddress[] GoogleDnsServers => _googleDnsServers ??= [
+    private static IReadOnlyList<IPAddress>? _googleDnsServers;
+    public static IReadOnlyList<IPAddress> GoogleDnsServers => _googleDnsServers ??= [
         IPAddress.Parse("8.8.8.8"),
         IPAddress.Parse("8.8.4.4"),
         IPAddress.Parse("2001:4860:4860::8888"),
         IPAddress.Parse("2001:4860:4860::8844")
     ];
 
-    private static IPAddress[]? _kidsSafeCloudflareDnsServers;
-    public static IPAddress[] KidsSafeCloudflareDnsServers => _kidsSafeCloudflareDnsServers ??= [
+    private static IReadOnlyList<IPAddress>? _kidsSafeCloudflareDnsServers;
+    public static IReadOnlyList<IPAddress> KidsSafeCloudflareDnsServers => _kidsSafeCloudflareDnsServers ??= [
         IPAddress.Parse("1.1.1.3"),
         IPAddress.Parse("1.0.0.3"),
         IPAddress.Parse("2606:4700:4700::1113"),
         IPAddress.Parse("2606:4700:4700::1003")
     ];
 
-    private static IPAddress[]? _reliableDnsServers;
-    public static IPAddress[] ReliableDnsServers => _reliableDnsServers ??= [
+    private static IReadOnlyList<IPAddress>? _reliableDnsServers;
+    public static IReadOnlyList<IPAddress> ReliableDnsServers => _reliableDnsServers ??= [
         GoogleDnsServers.First(x => x.IsV4()),
         GoogleDnsServers.First(x => x.IsV6()),
         KidsSafeCloudflareDnsServers.First(x => x.IsV4()),
@@ -58,7 +59,7 @@ public static class IPAddressUtil
         return new IPAddress(ulaBytes);
     }
 
-    public static async Task<IPAddress[]> GetPrivateIpAddresses()
+    public static async Task<IReadOnlyList<IPAddress>> GetPrivateIpAddresses()
     {
         var ret = new List<IPAddress>();
 
@@ -107,7 +108,7 @@ public static class IPAddressUtil
         return false;
     }
 
-    public static async Task<IPAddress[]> GetPublicIpAddresses(CancellationToken cancellationToken)
+    public static async Task<IReadOnlyList<IPAddress>> GetPublicIpAddresses(CancellationToken cancellationToken)
     {
         var ret = new List<IPAddress>();
 

@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Client.VpnServices.Manager.Exceptions;
+namespace VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 
 public class VpnServiceTimeoutException(string message, Exception? innerException = null)
     : TimeoutException(message, innerException)

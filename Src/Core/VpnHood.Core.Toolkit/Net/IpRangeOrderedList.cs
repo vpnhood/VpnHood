@@ -21,6 +21,7 @@ public class IpRangeOrderedList :
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public int Count => _orderedList.Count;
     // Lazy: eager `new([])` initializer in cctor hangs in iOS NE AOT sandbox (LINQ OrderBy path).
+    // todo: double check for AOT
     private static IpRangeOrderedList? _empty;
     public static IpRangeOrderedList Empty => _empty ??= new IpRangeOrderedList();
 

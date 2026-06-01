@@ -9,6 +9,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.Tokens;
 
+// todo: check AOT
 public class Token
 {
     [JsonPropertyName("v")]

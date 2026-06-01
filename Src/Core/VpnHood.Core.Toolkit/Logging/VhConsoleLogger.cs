@@ -36,10 +36,12 @@ public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true, 
                 var prevColor = Console.ForegroundColor;
                 Console.ForegroundColor = GetColor(logLevel);
                 Console.WriteLine(text);
+                System.Diagnostics.Trace.WriteLine(text);
                 Console.ForegroundColor = prevColor;
             }
             else {
                 Console.WriteLine(text);
+                System.Diagnostics.Trace.WriteLine(text);
             }
         }
     }

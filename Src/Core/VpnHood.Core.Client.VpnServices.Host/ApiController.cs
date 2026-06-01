@@ -21,13 +21,14 @@ internal class ApiController : IDisposable
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private VpnHoodClient VpnHoodClient => _vpnHoodService.RequiredClient;
     public IPEndPoint? ApiEndPoint { get; private set; }
-    public byte[] ApiKey { get; } = VhUtils.GenerateKey(keySizeInBit: 128);
+    public byte[] ApiKey { get; }
     public VpnServiceHost? ServiceContext { get; set; }
 
-    public ApiController(VpnServiceHost vpnHoodService)
+    public ApiController(VpnServiceHost vpnHoodService, int port = 0, byte[]? apiKey = null)
     {
+        ApiKey = apiKey ?? VhUtils.GenerateKey(keySizeInBit: 128);
         _vpnHoodService = vpnHoodService;
-        _tcpListener = new TcpListener(IPAddress.Loopback, 0);
+        _tcpListener = new TcpListener(IPAddress.Loopback, port);
         _ = Start(_cancellationTokenSource.Token);
         VhLogger.Instance.LogDebug("VpnService ApiController has been started. EndPoint: {EndPoint}", ApiEndPoint);
     }

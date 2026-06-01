@@ -3,6 +3,7 @@ using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -72,4 +73,10 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public Uri? RemoteSettingsUrl { get; set; }
     public int? WebUiPort { get; set; }
     public string? WebUiHostName { get; set; }
+
+    // Optional per-platform transport buffer sizes. Leave null to use the core defaults.
+    // Low-memory clients (e.g. iOS Network Extension under the ~50 MB jetsam limit) can lower these.
+    public TransferBufferSize? PacketChannelBufferSize { get; set; }
+    public TransferBufferSize? UdpProxyBufferSize { get; set; }
+    public TransferBufferSize? StreamProxyBufferSize { get; set; }
 }

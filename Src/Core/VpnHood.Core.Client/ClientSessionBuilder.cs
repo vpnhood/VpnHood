@@ -75,8 +75,23 @@ internal class ClientSessionBuilder(
         }
 
         setState(ClientState.FindingReachableServer);
-        var vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], linkedCts.Token).Vhc();
-        var allowRedirect = !serverFinder.CustomServerEndpoints.Any();
+        VpnEndPoint vpnEndPoint;
+        bool allowRedirect;
+        if (OperatingSystem.IsIOS()) {
+            // iOS Network Extension has a ~50 MB jetsam footprint limit. ServerFinder's reachability
+            // check performs an extra full TLS+HTTP ServerCheckRequest roundtrip, whose loaded native
+            // metadata pushes the process over the limit before the Hello completes. Skip it: resolve
+            // DNS only and let the Hello itself be the reachability test (one TLS roundtrip instead of two).
+            var endPoints = await serverFinder
+                .ResolveVpnEndPoints([token.ServerToken], serverFinder.IncludeIpV6, linkedCts.Token).Vhc();
+            vpnEndPoint = endPoints.FirstOrDefault()
+                ?? throw new UnreachableServerException();
+            allowRedirect = true;
+        }
+        else {
+            vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], linkedCts.Token).Vhc();
+            allowRedirect = !serverFinder.CustomServerEndpoints.Any();
+        }
         return await Connect(vpnEndPoint, allowRedirect, linkedCts.Token).Vhc();
     }
 
@@ -319,6 +334,7 @@ internal class ClientSessionBuilder(
                     TcpConnectTimeout = config.TcpConnectTimeout,
                     StreamProxyBufferSize = config.StreamProxyBufferSize,
                     UdpProxyBufferSize = config.UdpProxyBufferSize,
+                    PacketChannelBufferSize = config.PacketChannelBufferSize,
                     UnstableTimeout = config.UnstableTimeout,
                     AutoWaitTimeout = config.AutoWaitTimeout,
                     DnsConfig = dnsConfig,

@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Client.Device.UiContexts;
+﻿using System.Net;
+using VpnHood.Core.Client.Device.UiContexts;
 
 namespace VpnHood.Core.Client.Device;
 

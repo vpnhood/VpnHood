@@ -1,6 +1,7 @@
 ﻿using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Toolkit.Streams;
@@ -42,6 +43,20 @@ public static class StreamUtils
     {
         var message = await ReadMessageAsync(stream, maxLength, cancellationToken).Vhc();
         var ret = JsonSerializer.Deserialize<T>(message) ?? throw new Exception("Could not read Message!");
+        return ret;
+    }
+
+    public static Task<T> ReadObjectAsync<T>(Stream stream, JsonTypeInfo<T> jsonTypeInfo,
+        CancellationToken cancellationToken)
+    {
+        return ReadObjectAsync(stream, jsonTypeInfo, MaxMessageLength, cancellationToken);
+    }
+
+    public static async Task<T> ReadObjectAsync<T>(Stream stream, JsonTypeInfo<T> jsonTypeInfo, int maxLength,
+        CancellationToken cancellationToken)
+    {
+        var message = await ReadMessageAsync(stream, maxLength, cancellationToken).Vhc();
+        var ret = JsonSerializer.Deserialize(message, jsonTypeInfo) ?? throw new Exception("Could not read Message!");
         return ret;
     }
 
@@ -87,6 +102,24 @@ public static class StreamUtils
         return buffer;
     }
 
+    public static Memory<byte> ObjectToJsonBuffer<T>(T obj, JsonTypeInfo<T> jsonTypeInfo)
+    {
+        var jsonBuffer = JsonSerializer.SerializeToUtf8Bytes(obj, jsonTypeInfo);
+        Memory<byte> buffer = new byte[4 + jsonBuffer.Length];
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Span[..4], jsonBuffer.Length);
+        jsonBuffer.CopyTo(buffer[4..]);
+        return buffer;
+    }
+
+    public static Memory<byte> ObjectToJsonBuffer(object obj, JsonTypeInfo jsonTypeInfo)
+    {
+        var jsonBuffer = JsonSerializer.SerializeToUtf8Bytes(obj, jsonTypeInfo);
+        Memory<byte> buffer = new byte[4 + jsonBuffer.Length];
+        BinaryPrimitives.WriteInt32LittleEndian(buffer.Span[..4], jsonBuffer.Length);
+        jsonBuffer.CopyTo(buffer[4..]);
+        return buffer;
+    }
+
     public static void WriteObject(Stream stream, object obj)
     {
         stream.Write(ObjectToJsonBuffer(obj).Span);
@@ -95,5 +128,17 @@ public static class StreamUtils
     public static ValueTask WriteObjectAsync(Stream stream, object obj, CancellationToken cancellationToken)
     {
         return stream.WriteAsync(ObjectToJsonBuffer(obj), cancellationToken);
+    }
+
+    public static ValueTask WriteObjectAsync<T>(Stream stream, T obj, JsonTypeInfo<T> jsonTypeInfo,
+        CancellationToken cancellationToken)
+    {
+        return stream.WriteAsync(ObjectToJsonBuffer(obj, jsonTypeInfo), cancellationToken);
+    }
+
+    public static ValueTask WriteObjectAsync(Stream stream, object obj, JsonTypeInfo jsonTypeInfo,
+        CancellationToken cancellationToken)
+    {
+        return stream.WriteAsync(ObjectToJsonBuffer(obj, jsonTypeInfo), cancellationToken);
     }
 }

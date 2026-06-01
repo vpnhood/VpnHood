@@ -99,6 +99,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             UserReview = options.UserReview,
             StreamProxyBufferSize = options.StreamProxyBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize,
             UdpProxyBufferSize = options.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
+            PacketChannelBufferSize = options.PacketChannelBufferSize,
             UseWebSocket = options.DebugData1?.Contains("/disable-WebSocket", StringComparison.OrdinalIgnoreCase) is null or false,
             UseOsTcpStack = options.DebugData1?.Contains("/os-tcp-stack", StringComparison.OrdinalIgnoreCase) is true
         };

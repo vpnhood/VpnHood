@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -174,13 +175,25 @@ public static class VhLogger
 
     private class VhLoggerDecorator : ILogger
     {
-        public ILogger Logger { get; set; } = CreateConsoleLogger();
+        private ILogger? _logger;
         private readonly AotPreserveHelper _aotPreserveHelper = new();
+
+        // Default is NullLogger — callers that want console output must set
+        // VhLogger.Instance = VhLogger.CreateConsoleLogger() explicitly.
+        // This prevents LoggerFactory.Create() + Console.Write* from running
+        // during class initialization in environments without a readable stdout
+        // (e.g. iOS Network Extension).
+        public ILogger Logger
+        {
+            get => _logger ?? NullLogger.Instance;
+            set => _logger = value;
+        }
 
         public VhLoggerDecorator()
         {
-            // just desperate to make sure AotPreserveHelper is called.
-            Logger.LogInformation("A new LoggerDecorator has been created. InstanceId: {InstanceId}", _aotPreserveHelper.PreserveTypes());
+            // Preserve AOT types. Logger intentionally starts as NullLogger — callers
+            // must opt in to console output via VhLogger.Instance = VhLogger.CreateConsoleLogger().
+            _ = _aotPreserveHelper.PreserveTypes();
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,

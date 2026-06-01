@@ -16,13 +16,13 @@ public sealed class TcpVpnServiceApiTransport : IVpnServiceApiTransport
     private const int MaxResultLength = 0xFFFFFF;
     private TcpClient? _tcpClient;
 
-    public async Task<ApiResponse<T>> SendRequestAsync<T>(ConnectionInfo connectionInfo, IApiRequest request,
+    public async Task<ApiResponse<T>> SendRequest<T>(ConnectionInfo connectionInfo, IApiRequest request,
         CancellationToken cancellationToken)
     {
         var tcpClient = _tcpClient;
         if (tcpClient != null) {
             try {
-                return await SendOverClientAsync<T>(tcpClient, request, cancellationToken).Vhc();
+                return await Send<T>(tcpClient, request, cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(ex,
@@ -41,7 +41,7 @@ public sealed class TcpVpnServiceApiTransport : IVpnServiceApiTransport
             .Vhc();
 
         try {
-            return await SendOverClientAsync<T>(_tcpClient, request, cancellationToken).Vhc();
+            return await Send<T>(_tcpClient, request, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             Reset();
@@ -50,7 +50,7 @@ public sealed class TcpVpnServiceApiTransport : IVpnServiceApiTransport
         }
     }
 
-    private static async Task<ApiResponse<T>> SendOverClientAsync<T>(TcpClient tcpClient, IApiRequest request,
+    private static async Task<ApiResponse<T>> Send<T>(TcpClient tcpClient, IApiRequest request,
         CancellationToken cancellationToken)
     {
         var stream = tcpClient.GetStream();

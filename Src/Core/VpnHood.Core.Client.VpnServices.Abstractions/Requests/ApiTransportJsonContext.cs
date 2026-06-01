@@ -1,9 +1,9 @@
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
-using VpnHood.Core.Client.VpnServices.Abstractions;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 
+//todo: check ios AOT
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(byte[]))]

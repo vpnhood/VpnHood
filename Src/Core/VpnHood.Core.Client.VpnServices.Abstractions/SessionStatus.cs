@@ -1,5 +1,4 @@
-﻿using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;

@@ -11,13 +11,14 @@ namespace VpnHood.Core.Client.Abstractions;
 
 public class ClientOptions
 {
-    private static ClientOptions? _default;
-    public static ClientOptions Default => _default ??= new ClientOptions {
+    private static readonly Lazy<ClientOptions> DefaultLazy = new(() => new ClientOptions {
         ClientId = string.Empty,
         UseTcpProxy = true,
         AccessKey = SampleAccessKey,
         AppName = "VpnHoodEngine"
-    };
+    });
+
+    public static ClientOptions Default => DefaultLazy.Value;
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] IncludeIpRangesByApp { get; set; } = IpNetwork.All.ToIpRanges().ToArray();

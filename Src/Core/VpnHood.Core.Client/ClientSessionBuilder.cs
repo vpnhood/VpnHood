@@ -77,6 +77,8 @@ internal class ClientSessionBuilder(
         setState(ClientState.FindingReachableServer);
         VpnEndPoint vpnEndPoint;
         bool allowRedirect;
+
+        //todo: temporary workaround for iOS Network Extension jetsam issue. Refactor the code to avoid special handling for iOS.
         if (OperatingSystem.IsIOS()) {
             // iOS Network Extension has a ~50 MB jetsam footprint limit. ServerFinder's reachability
             // check performs an extra full TLS+HTTP ServerCheckRequest roundtrip, whose loaded native

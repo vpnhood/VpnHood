@@ -11,7 +11,7 @@ internal sealed class ProviderMessageVpnServiceApiTransport(NETunnelProviderMana
 {
     private const int MaxResultLength = 0xFFFFFF;
 
-    public async Task<ApiResponse<T>> SendRequestAsync<T>(ConnectionInfo connectionInfo, IApiRequest request,
+    public async Task<ApiResponse<T>> SendRequest<T>(ConnectionInfo connectionInfo, IApiRequest request,
         CancellationToken cancellationToken)
     {
         if (request is ApiGetConnectionInfoRequest) {
@@ -34,13 +34,11 @@ internal sealed class ProviderMessageVpnServiceApiTransport(NETunnelProviderMana
             ApiTransportJsonContext.Default.GetTypeInfo(request.GetType())!, cancellationToken);
 
         var responseDataTask = new TaskCompletionSource<NSData?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var cancellationRegistration = cancellationToken.Register(
+        await using var cancellationRegistration = cancellationToken.Register(
             () => responseDataTask.TrySetCanceled(cancellationToken));
 
-        var sent = providerSession.SendProviderMessage(NSData.FromArray(requestStream.ToArray()), out var sendError,
-            responseData => responseDataTask.TrySetResult(responseData));
-
-        if (!sent) {
+        if (!providerSession.SendProviderMessage(NSData.FromArray(requestStream.ToArray()), out var sendError,
+            responseData => responseDataTask.TrySetResult(responseData))) {
             throw new VpnServiceUnreachableException("VpnService is unreachable.",
                 sendError == null ? null : new Exception(sendError.LocalizedDescription));
         }

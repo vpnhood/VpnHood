@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Server;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<ServerState>))]
 public enum ServerState
 {
     NotStarted,

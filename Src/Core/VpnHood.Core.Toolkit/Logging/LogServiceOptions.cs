@@ -13,6 +13,6 @@ public class LogServiceOptions
     public bool SingleLineConsole { get; set; } = true;
     public string? CategoryName { get; set; } = "VpnHood";
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<LogLevel>))]
     public LogLevel MinLogLevel { get; set; } = LogLevel.Information;
 }

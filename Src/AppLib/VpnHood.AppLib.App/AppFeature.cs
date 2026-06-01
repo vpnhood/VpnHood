@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppLib;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<AppFeature>))]
 public enum AppFeature
 {
     QuickLaunch,

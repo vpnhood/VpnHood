@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<StatusQuality>))]
 public enum StatusQuality
 {
     Unknown,

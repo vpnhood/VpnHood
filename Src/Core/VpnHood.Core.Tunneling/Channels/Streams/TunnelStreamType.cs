@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<TunnelStreamType>))]
 public enum TunnelStreamType
 {
     Unknown,

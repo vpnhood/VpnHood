@@ -1,7 +1,5 @@
-using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using ObjCRuntime;
-using System.Runtime.InteropServices;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Client.VpnServices.Host;
@@ -150,7 +148,7 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // every TCP connect (including to the VpnHood server) hangs forever. The real routes
         // are installed by IosVpnAdapter.AdapterOpen once the VPN handshake completes.
         var placeholder = new NEPacketTunnelNetworkSettings("192.0.2.1") {
-            IPv4Settings = new NEIPv4Settings(new[] { "10.255.255.2" }, new[] { "255.255.255.0" }),
+            IPv4Settings = new NEIPv4Settings(["10.255.255.2"], ["255.255.255.0"]),
             Mtu = NSNumber.FromInt32(1500)
         };
         try { SetTunnelNetworkSettings(placeholder, null); } catch { /* ignore */ }

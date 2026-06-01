@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Common.Messaging;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<ChannelProtocol>))]
 public enum ChannelProtocol
 {
     Quic,

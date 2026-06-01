@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Client.Abstractions;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<AdRequestType>))]
 public enum AdRequestType
 {
     Rewarded,

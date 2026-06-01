@@ -4,7 +4,6 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Host;

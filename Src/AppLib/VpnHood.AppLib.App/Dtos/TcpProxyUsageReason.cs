@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.AppLib.Dtos;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<TcpProxyUsageReason>))]
 public enum TcpProxyUsageReason
 {
     /// <summary>The user can freely toggle TcpProxy on or off.</summary>

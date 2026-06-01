@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<ProxyProtocol>))]
 public enum ProxyProtocol
 {
     Socks4 = 1,

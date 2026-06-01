@@ -6,8 +6,8 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
-using VpnHood.Core.Client.Device.Exceptions;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 

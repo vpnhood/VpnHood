@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 
@@ -22,6 +23,12 @@ public static class JsonUtils
     public static T Deserialize<T>(string json, JsonSerializerOptions? options = null)
     {
         return JsonSerializer.Deserialize<T>(json, options) ??
+               throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
+    }
+
+    public static T Deserialize<T>(string json, JsonTypeInfo<T> jsonTypeInfo)
+    {
+        return JsonSerializer.Deserialize(json, jsonTypeInfo) ??
                throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
     }
 

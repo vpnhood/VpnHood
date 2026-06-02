@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Common.Messaging;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<SessionErrorCode>))]
 public enum SessionErrorCode
 {
     Ok,

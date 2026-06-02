@@ -47,6 +47,6 @@ public class AppSettings
     public string? DownloadsPath { get; set; }
     public string? ManagementSecret { get; set; }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
+    [JsonConverter(typeof(JsonStringEnumConverter<LogLevel>))]
     public LogLevel LogLevel { get; set; } = LogLevel.Information;
 }

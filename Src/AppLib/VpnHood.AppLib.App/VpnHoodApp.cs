@@ -56,6 +56,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TimeSpan _connectTimeout;
     private readonly TimeSpan _sessionTimeout;
     private readonly TimeSpan _tcpTimeout;
+    private readonly TransferBufferSize? _packetChannelBufferSize;
+    private readonly TransferBufferSize? _udpProxyBufferSize;
+    private readonly TransferBufferSize? _streamProxyBufferSize;
     private readonly LogService _logService;
     private readonly LogServiceOptions _logServiceOptions;
     private readonly AppPersistState _appPersistState;
@@ -104,6 +107,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _unstableTimeout = options.UnstableTimeout;
         _autoWaitTimeout = options.AutoWaitTimeout;
         _tcpTimeout = options.TcpTimeout;
+        _packetChannelBufferSize = options.PacketChannelBufferSize;
+        _udpProxyBufferSize = options.UdpProxyBufferSize;
+        _streamProxyBufferSize = options.StreamProxyBufferSize;
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
         _connectTimeout = options.ConnectTimeout;
@@ -748,6 +754,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 BlockIpRangesByApp = GetBlockIpRangesByApp(),
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
+                PacketChannelBufferSize = _packetChannelBufferSize,
+                UdpProxyBufferSize = _udpProxyBufferSize,
+                StreamProxyBufferSize = _streamProxyBufferSize,
                 ConnectTimeout = _tcpTimeout,
                 ServerQueryTimeout = _serverQueryTimeout,
                 UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),

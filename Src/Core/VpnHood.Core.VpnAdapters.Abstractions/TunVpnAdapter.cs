@@ -74,7 +74,10 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public IpNetwork? AdapterIpNetworkV6 { get; private set; }
     public IPAddress? GatewayIpV4 { get; private set; }
     public IPAddress? GatewayIpV6 { get; private set; }
-    public bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
+    // Made virtual so platform adapters (e.g. iOS NE) can override when the standard
+    // UdpClient-based discovery fails in the sandbox and always returns null.
+    // ToDo: iot check
+    public virtual bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool IsStarted { get; private set; }
     public event EventHandler? PrimaryAdapterIpChanged;
 

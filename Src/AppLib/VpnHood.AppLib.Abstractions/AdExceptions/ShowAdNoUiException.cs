@@ -1,22 +1,7 @@
-﻿namespace VpnHood.AppLib.Abstractions.AdExceptions;
+namespace VpnHood.AppLib.Abstractions.AdExceptions;
 
-public class ShowAdNoUiException : ShowAdException
+public class ShowAdNoUiException(string? message = null, Exception? innerException = null)
+    : ShowAdException(message ?? DefaultMessage, innerException)
 {
-    private const string Msg = "Could not show any ad because the app window was not open.";
-
-    public ShowAdNoUiException() : base(Msg)
-    {
-    }
-
-    public ShowAdNoUiException(Exception innerException) : base(Msg, innerException)
-    {
-    }
-
-    public ShowAdNoUiException(string msg) : base(msg)
-    {
-    }
-
-    public ShowAdNoUiException(string msg, Exception innerException) : base(msg, innerException)
-    {
-    }
+    private const string DefaultMessage = "Could not show any ad because the app window was not open.";
 }

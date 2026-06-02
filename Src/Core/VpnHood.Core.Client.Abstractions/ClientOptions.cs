@@ -11,7 +11,8 @@ namespace VpnHood.Core.Client.Abstractions;
 
 public class ClientOptions
 {
-    public static ClientOptions Default { get; } = new() {
+    private static ClientOptions? _default;
+    public static ClientOptions Default => _default ??= new ClientOptions {
         ClientId = string.Empty,
         UseTcpProxy = true,
         AccessKey = SampleAccessKey,
@@ -91,6 +92,9 @@ public class ClientOptions
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? StreamProxyBufferSize { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public TransferBufferSize? PacketChannelBufferSize { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public EndPointStrategy EndPointStrategy { get; set; }

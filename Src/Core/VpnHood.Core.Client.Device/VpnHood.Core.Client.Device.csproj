@@ -27,6 +27,14 @@
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <IsTrimmable>True</IsTrimmable>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <IsTrimmable>True</IsTrimmable>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
@@ -36,6 +44,11 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Exceptions\" />
 	</ItemGroup>
 
 </Project>

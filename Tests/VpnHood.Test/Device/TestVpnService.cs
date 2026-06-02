@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
@@ -28,6 +29,7 @@ public class TestVpnService
             this,
             socketFactory: new TestSocketFactory(),
             netFilter: netFilter,
+            messageListener: new TcpMessageListener(configFolder),
             withLogger: false);
     }
 

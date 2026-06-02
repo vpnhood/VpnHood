@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppLib.Services.Updaters;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<VersionStatus>))]
 public enum VersionStatus
 {
     Unknown,

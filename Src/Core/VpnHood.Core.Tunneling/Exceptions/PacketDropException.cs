@@ -1,12 +1,4 @@
-﻿namespace VpnHood.Core.Tunneling.Exceptions;
+namespace VpnHood.Core.Tunneling.Exceptions;
 
-public class PacketDropException : Exception
-{
-    public PacketDropException(string message) : base(message)
-    {
-    }
-
-    public PacketDropException(string message, Exception innerException) : base(message, innerException)
-    {
-    }
-}
+public class PacketDropException(string message, Exception? innerException = null)
+    : Exception(message, innerException);

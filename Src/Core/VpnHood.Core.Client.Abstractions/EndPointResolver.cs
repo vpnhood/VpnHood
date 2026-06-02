@@ -40,7 +40,7 @@ public static class EndPointResolver
         // if token does not have any endpoints nor host name, throw an exception 
         if (!serverToken.IsValidHostName && VhUtils.IsNullOrEmpty(serverToken.HostEndPoints))
             throw new InvalidOperationException(
-                "The token does not contain any server endpoints or a valid hostname. Please contact your provider’s support.");
+                "The token does not contain any server endpoints or a valid hostname. Please contact your providerï¿½s support.");
 
         // fix token only strategy
         if (strategy == EndPointStrategy.IpOnly) {

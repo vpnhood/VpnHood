@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppLib.Abstractions;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<AppAdType>))]
 public enum AppAdType
 {
     InterstitialAd,

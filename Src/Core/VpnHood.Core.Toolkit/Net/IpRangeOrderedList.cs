@@ -20,7 +20,10 @@ public class IpRangeOrderedList :
     public IEnumerator<IpRange> GetEnumerator() => _orderedList.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public int Count => _orderedList.Count;
-    public static IpRangeOrderedList Empty { get; } = new([]);
+    // Lazy: eager `new([])` initializer in cctor hangs in iOS NE AOT sandbox (LINQ OrderBy path).
+    // todo: double check for AOT
+    private static IpRangeOrderedList? _empty;
+    public static IpRangeOrderedList Empty => _empty ??= new IpRangeOrderedList();
 
     public IpRange this[int index] => _orderedList[index];
 
@@ -173,11 +176,16 @@ public class IpRangeOrderedList :
 
     private static List<IpRange> Sort(IEnumerable<IpRange> ipRanges)
     {
-        var sortedRanges = ipRanges.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
-        return Unify(sortedRanges);
+        // Avoid LINQ OrderBy: it hangs under iOS NetworkExtension Mono AOT.
+        var list = ipRanges as List<IpRange> != null
+            ? new List<IpRange>((List<IpRange>)ipRanges)
+            : new List<IpRange>(ipRanges);
+        var cmp = new IPAddressComparer();
+        list.Sort((a, b) => cmp.Compare(a.FirstIpAddress, b.FirstIpAddress));
+        return Unify(list);
     }
 
-    private static List<IpRange> Unify(IOrderedEnumerable<IpRange> sortedIpRanges)
+    private static List<IpRange> Unify(IEnumerable<IpRange> sortedIpRanges)
     {
         List<IpRange> res = [];
         foreach (var ipRange in sortedIpRanges) {

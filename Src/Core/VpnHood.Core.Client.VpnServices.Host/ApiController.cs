@@ -1,15 +1,11 @@
-﻿using System.Net;
-using System.Net.Sockets;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
-using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Tunneling;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 
@@ -17,66 +13,51 @@ internal class ApiController : IDisposable
 {
     private int _isDisposed;
     private readonly VpnServiceHost _vpnHoodService;
-    private readonly TcpListener _tcpListener;
+    private readonly IMessageListener _messageListener;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private VpnHoodClient VpnHoodClient => _vpnHoodService.RequiredClient;
-    public IPEndPoint? ApiEndPoint { get; private set; }
-    public byte[] ApiKey { get; } = VhUtils.GenerateKey(keySizeInBit: 128);
-    public VpnServiceHost? ServiceContext { get; set; }
 
-    public ApiController(VpnServiceHost vpnHoodService)
+    public ApiController(VpnServiceHost vpnHoodService, IMessageListener messageListener)
     {
         _vpnHoodService = vpnHoodService;
-        _tcpListener = new TcpListener(IPAddress.Loopback, 0);
-        _ = Start(_cancellationTokenSource.Token);
-        VhLogger.Instance.LogDebug("VpnService ApiController has been started. EndPoint: {EndPoint}", ApiEndPoint);
+        _messageListener = messageListener;
+
+        // start listening for messages; the transport owns connection/endpoint/key concerns
+        _ = _messageListener.Start(ProcessMessageAsync, _cancellationTokenSource.Token);
+        VhLogger.Instance.LogDebug("VpnService ApiController has been started.");
     }
 
-
-    private async Task Start(CancellationToken cancellationToken)
+    // Handle a single request message and return the response payload. The transport is
+    // responsible for framing, connections, endpoints and authentication.
+    public async Task<Memory<byte>> ProcessMessageAsync(Memory<byte> request, CancellationToken cancellationToken)
     {
         try {
-            _tcpListener.Start();
-            ApiEndPoint = (IPEndPoint)_tcpListener.LocalEndpoint;
+            // the request payload carries [len][requestType][len][requestBody] (StreamUtils framing)
+            using var requestStream = new MemoryStream(request.Length);
+            await requestStream.WriteAsync(request, cancellationToken).Vhc();
+            requestStream.Position = 0;
 
-            while (!cancellationToken.IsCancellationRequested) {
-                var client = await _tcpListener.AcceptTcpClientAsync(cancellationToken);
-                _ = ProcessClientAsync(client, cancellationToken);
-            }
+            var result = await ProcessRequestInternal(requestStream, cancellationToken).Vhc();
+            return BuildResponseBuffer(await UpdateConnectionInfo(cancellationToken).Vhc(), result, apiError: null);
         }
         catch (Exception ex) {
-            if (_isDisposed == 0)
-                VhLogger.Instance.LogError(ex, "VpnService host Listener has stopped.");
-        }
-        finally {
-            _tcpListener.Stop();
-            VhLogger.Instance.LogDebug("VpnService host Listener has been stopped. EndPoint: {EndPoint}", ApiEndPoint);
-            Dispose();
+            VhLogger.Instance.LogDebug(ex, "Could not handle API request.");
+            return BuildResponseBuffer(await UpdateConnectionInfo(cancellationToken).Vhc(),
+                result: null, apiError: ex.ToApiError());
         }
     }
 
-    private async Task ProcessClientAsync(TcpClient client, CancellationToken cancellationToken)
+    private static Memory<byte> BuildResponseBuffer(ConnectionInfo connectionInfo, object? result, ApiError? apiError)
     {
-        var clientEp = client.TryGetLocalEndPoint();
-        try {
-            await using var stream = client.GetStream();
+        var response = new ApiResponse<object> {
+            ConnectionInfo = connectionInfo,
+            ApiError = apiError,
+            Result = result
+        };
 
-            // read api key and compare
-            var apiKey = await StreamUtils.ReadObjectAsync<byte[]>(stream, cancellationToken);
-            if (!ApiKey.SequenceEqual(apiKey))
-                throw new Exception("Invalid API key.");
-
-            while (!cancellationToken.IsCancellationRequested)
-                await ProcessRequest(stream, cancellationToken);
-        }
-        catch (Exception ex) {
-            if (_isDisposed == 0)
-                VhLogger.Instance.LogError(GeneralEventId.Test, ex,
-                    "Could not handle API request. ClientEp: {ClientEp}", clientEp);
-        }
-        finally {
-            client.Dispose();
-        }
+        // raw JSON bytes; the transport adds its own framing
+        var jsonTypeInfo = ApiTransportJsonContext.For<ApiResponse<object>>();
+        return System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(response, jsonTypeInfo);
     }
 
     private async Task<ConnectionInfo> UpdateConnectionInfo(CancellationToken cancellationToken)
@@ -88,113 +69,73 @@ internal class ApiController : IDisposable
         return _vpnHoodService.Context.ConnectionInfo;
     }
 
-    private async Task ProcessRequest(Stream stream, CancellationToken cancellationToken)
-    {
-        try {
-            await ProcessRequestInternal(stream, cancellationToken);
-        }
-        catch (Exception ex) when (_isDisposed == 0) {
-            var response = new ApiResponse<object> {
-                ConnectionInfo = await UpdateConnectionInfo(cancellationToken),
-                ApiError = ex.ToApiError(),
-                Result = null
-            };
-
-            await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
-
-            // could not continue processing if the request is malformed, stream is likely desynchronized
-            if (ex is FormatException) {
-                stream.Close();
-                throw;
-            }
-        }
-    }
-
-    private async Task ProcessRequestInternal(Stream stream, CancellationToken cancellationToken)
+    private async Task<object?> ProcessRequestInternal(Stream stream, CancellationToken cancellationToken)
     {
         // read request type
-        var requestType = await StreamUtils.ReadObjectAsync<string>(stream, cancellationToken);
+        var requestType = await StreamUtils.ReadObjectAsync<string>(stream, cancellationToken).Vhc();
         VhLogger.Instance.LogTrace("ApiController is reading a request: {RequestType}", requestType);
 
         switch (requestType) {
             // handle connection info request
             case nameof(ApiGetConnectionInfoRequest):
                 await GetConnectionInfo(
-                    await StreamUtils.ReadObjectAsync<ApiGetConnectionInfoRequest>(stream, cancellationToken),
-                    cancellationToken);
-                await WriteResponseResult(stream, null, cancellationToken);
-                return;
+                    await StreamUtils.ReadObjectAsync<ApiGetConnectionInfoRequest>(stream, cancellationToken).Vhc(),
+                    cancellationToken).Vhc();
+                return null;
 
             case nameof(ApiSetAdOkRequest):
                 await SetAdOk(
-                    await StreamUtils.ReadObjectAsync<ApiSetAdOkRequest>(stream, cancellationToken),
-                    cancellationToken);
-                await WriteResponseResult(stream, null, cancellationToken);
-                return;
+                    await StreamUtils.ReadObjectAsync<ApiSetAdOkRequest>(stream, cancellationToken).Vhc(),
+                    cancellationToken).Vhc();
+                return null;
 
             // handle ad request
             case nameof(ApiAdFailedRequest):
                 await SetAdFailed(
-                    await StreamUtils.ReadObjectAsync<ApiAdFailedRequest>(stream, cancellationToken),
-                    cancellationToken);
-                await WriteResponseResult(stream, null, cancellationToken);
-                return;
+                    await StreamUtils.ReadObjectAsync<ApiAdFailedRequest>(stream, cancellationToken).Vhc(),
+                    cancellationToken).Vhc();
+                return null;
 
             // handle ad reward request
             case nameof(ApiSetWaitForAdRequest):
                 await SetWaitForAd(
-                    await StreamUtils.ReadObjectAsync<ApiSetWaitForAdRequest>(stream, cancellationToken),
-                    cancellationToken);
-                await WriteResponseResult(stream, null, cancellationToken);
-                return;
+                    await StreamUtils.ReadObjectAsync<ApiSetWaitForAdRequest>(stream, cancellationToken).Vhc(),
+                    cancellationToken).Vhc();
+                return null;
 
             case nameof(ApiReconfigureRequest):
                 await Reconfigure(
                     await StreamUtils.ReadObjectAsync<ApiReconfigureRequest>(stream, maxLength: 0xFFFFFF,
-                        cancellationToken),
-                    cancellationToken);
-                await WriteResponseResult(stream, null, cancellationToken);
-                return;
+                        cancellationToken).Vhc(),
+                    cancellationToken).Vhc();
+                return null;
 
             // handle disconnect request
             case nameof(ApiDisconnectRequest):
-                // write response before disconnecting
-                await WriteResponseResult(stream, null, cancellationToken);
-
-                // don't await and let dispose in the background so we can return the response quickly
                 await Disconnect(
-                    await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken),
-                    cancellationToken);
-                return;
+                    await StreamUtils.ReadObjectAsync<ApiDisconnectRequest>(stream, cancellationToken).Vhc(),
+                    cancellationToken).Vhc();
+                return null;
 
             default:
                 throw new InvalidOperationException($"Unknown request type: {requestType}");
         }
     }
 
-    private async Task WriteResponseResult(Stream stream, object? result, CancellationToken cancellationToken)
-    {
-        var response = new ApiResponse<object> {
-            ConnectionInfo = await UpdateConnectionInfo(cancellationToken),
-            ApiError = null,
-            Result = result
-        };
-
-        await StreamUtils.WriteObjectAsync(stream, response, cancellationToken);
-    }
-
     private Task GetConnectionInfo(ApiGetConnectionInfoRequest request, CancellationToken cancellationToken)
     {
         _ = request;
-        var connectionInfo = UpdateConnectionInfo(cancellationToken);
-        return connectionInfo;
+        return UpdateConnectionInfo(cancellationToken);
     }
 
     private Task Disconnect(ApiDisconnectRequest request, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
         _ = request;
-        return _vpnHoodService.TryDisconnect();
+
+        // don't await; let disconnect run in the background so we can return the response quickly
+        _ = _vpnHoodService.TryDisconnect();
+        return Task.CompletedTask;
     }
 
     private Task Reconfigure(ApiReconfigureRequest request, CancellationToken cancellationToken)
@@ -247,6 +188,7 @@ internal class ApiController : IDisposable
             return;
 
         _cancellationTokenSource.Cancel();
-        _tcpListener.Stop();
+        _cancellationTokenSource.Dispose();
+        _messageListener.Dispose();
     }
 }

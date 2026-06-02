@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -34,10 +35,12 @@ public class VpnServiceHost : IDisposable
     internal VpnServiceContext Context { get; }
     public static ConnectionInfo DefaultConnectionInfo => VpnServiceContext.DefaultConnectionInfo;
 
+    //todo: check for probes
     public VpnServiceHost(string configFolder,
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,
         NetFilter? netFilter,
+        IMessageListener messageListener,
         bool withLogger = true)
     {
         Context = new VpnServiceContext(configFolder);
@@ -53,10 +56,13 @@ public class VpnServiceHost : IDisposable
             _logService.Start(clientOptions.LogServiceOptions);
         }
 
-        // start apiController
-        _apiController = new ApiController(this);
-        VhLogger.Instance.LogInformation("VpnServiceHost has been initiated...ApiEndPoint: {_apiController}",
-            _apiController.ApiEndPoint);
+        // start apiController; the transport (IMessageListener) owns endpoint/key concerns
+        _apiController = new ApiController(this, messageListener);
+        VhLogger.Instance.LogInformation("VpnServiceHost has been initiated...");
+
+        // Write an initial ConnectionInfo so that the app side can discover the service state.
+        _ = UpdateConnectionInfo(ClientState.Initializing, sessionName: null, exception: null,
+            CancellationToken.None);
     }
 
     private void VpnHoodClient_StateChanged(object? sender, EventArgs e)
@@ -232,9 +238,7 @@ public class VpnServiceHost : IDisposable
             ClientState = client.State,
             ClientStateProgress = client.StateProgress,
             ClientStateChangedTime = client.StateChangedTime,
-            Error = ex?.ToApiError() ?? client.LastException?.ToApiError(),
-            ApiEndPoint = _apiController.ApiEndPoint,
-            ApiKey = _apiController.ApiKey
+            Error = ex?.ToApiError() ?? client.LastException?.ToApiError()
         };
 
         await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken);
@@ -245,8 +249,6 @@ public class VpnServiceHost : IDisposable
     {
         var connectionInfo = new ConnectionInfo {
             CreatedTime = FastDateTime.Now,
-            ApiEndPoint = _apiController.ApiEndPoint,
-            ApiKey = _apiController.ApiKey,
             ProxyManagerStatus = null,
             SessionInfo = null,
             SessionStatus = null,

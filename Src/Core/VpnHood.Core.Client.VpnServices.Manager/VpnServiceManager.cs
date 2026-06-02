@@ -1,17 +1,15 @@
-﻿using System.Net;
-using System.Net.Sockets;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Device;
 using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
-using VpnHood.Core.Client.VpnServices.Manager.Exceptions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -30,7 +28,7 @@ public class VpnServiceManager : IDisposable
     private readonly string _vpnStatusFilePath;
     private ConnectionInfo _connectionInfo;
     private DateTime? _connectionInfoRefreshedTime;
-    private TcpClient? _tcpClient;
+    private readonly IMessageClient _messageClient;
     private bool _isInitializing;
     private int _vpnServiceUnreachableCount;
     private CancellationTokenSource _updateConnectionInfoCts = new();
@@ -47,6 +45,7 @@ public class VpnServiceManager : IDisposable
         _vpnConfigFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnConfigFileName);
         _vpnStatusFilePath = Path.Combine(device.VpnServiceConfigFolder, ClientOptions.VpnStatusFileName);
         _device = device;
+        _messageClient = device.CreateMessageClient();
         _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath)
                           ?? BuildConnectionInfo(ClientState.None);
 
@@ -68,8 +67,6 @@ public class VpnServiceManager : IDisposable
             CreatedTime = null,
             SessionInfo = null,
             SessionStatus = null,
-            ApiEndPoint = null,
-            ApiKey = null,
             ClientState = clientState,
             ClientStateChangedTime = null,
             ClientStateProgress = null,
@@ -161,10 +158,9 @@ public class VpnServiceManager : IDisposable
             }
 
             _connectionInfo = connectionInfo;
-            _tcpClient = null; // reset the tcp client to make sure we create a new one 
             VhLogger.Instance.LogInformation(
-                "VpnService has started. EndPoint: {EndPoint}, ConnectionState: {ConnectionState}",
-                connectionInfo.ApiEndPoint, connectionInfo.ClientState);
+                "VpnService has started. ConnectionState: {ConnectionState}",
+                connectionInfo.ClientState);
         }
         catch (Exception ex) when (timeoutCts.IsCancellationRequested) {
             var serviceTimeoutException = new VpnServiceTimeoutException(
@@ -276,8 +272,7 @@ public class VpnServiceManager : IDisposable
             _connectionInfo = SetConnectionInfo(ClientState.None);
         }
         catch (VpnServiceUnreachableException ex) {
-            VhLogger.Instance.LogError(ex, "VpnService is unreachable. EndPoint: {EndPoint}", 
-                _connectionInfo.ApiEndPoint);
+            VhLogger.Instance.LogError(ex, "VpnService is unreachable.");
 
             // increment the count to stop the service if it is unreachable for too long
             _vpnServiceUnreachableCount++;
@@ -328,68 +323,26 @@ public class VpnServiceManager : IDisposable
 
     private async Task<ApiResponse<T>> SendRequestCore<T>(IApiRequest request, CancellationToken cancellationToken)
     {
-        // we have only one TcpClient, so we need to lock it
+        // we have only one message client, so we need to lock it
         // VpnService should not have long-running requests, so it is ok to lock it
         using var scopeLock = await _sendRequestLock.LockAsync(cancellationToken).Vhc();
-        const int maxResultLength = 0xFFFFFF;
-
-        var tcpClient = _tcpClient; // it may be reset to null while working
-        if (tcpClient != null) {
-            try {
-                // send request
-                await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request.GetType().Name, cancellationToken)
-                    .Vhc();
-                await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), request, cancellationToken).Vhc();
-                return await StreamUtils
-                    .ReadObjectAsync<ApiResponse<T>>(tcpClient.GetStream(), maxResultLength, cancellationToken).Vhc();
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogDebug(ex, "Could not send request to VpnService Host. EndPoint: {EndPoint}",
-                    tcpClient.TryGetRemoteEndPoint());
-                tcpClient.Dispose();
-                _tcpClient = null;
-            }
-        }
 
         // validate connection info
         var connectionInfo = _connectionInfo;
-        if (connectionInfo.Error != null) throw new VpnServiceNotReadyException("VpnService is not ready.");
-        if (connectionInfo.ApiEndPoint == null) throw new VpnServiceNotReadyException("ApiEndPoint is not available.");
-        if (connectionInfo.ApiKey == null) throw new VpnServiceNotReadyException("ApiKey is not available.");
-        _tcpClient = await ConnectToVpnService(connectionInfo.ApiEndPoint, connectionInfo.ApiKey, cancellationToken)
-            .Vhc();
+        if (connectionInfo.Error != null)
+            throw new VpnServiceNotReadyException("VpnService is not ready.");
 
-        // send request
-        try {
-            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request.GetType().Name, cancellationToken).Vhc();
-            await StreamUtils.WriteObjectAsync(_tcpClient.GetStream(), request, cancellationToken).Vhc();
-            return await StreamUtils
-                .ReadObjectAsync<ApiResponse<T>>(_tcpClient.GetStream(), maxResultLength, cancellationToken).Vhc();
-        }
-        catch (Exception ex) {
-            _tcpClient.Dispose();
-            _tcpClient = null;
-            throw new VpnServiceUnreachableException(
-                $"VpnService is unreachable. EndPoint: {connectionInfo.ApiEndPoint}", ex);
-        }
-    }
+        // build the request blob: [len][requestType][len][requestBody] (StreamUtils framing)
+        using var requestStream = new MemoryStream();
+        await StreamUtils.WriteObjectAsync(requestStream, request.GetType().Name, cancellationToken).Vhc();
+        await StreamUtils.WriteObjectAsync(requestStream, request, cancellationToken).Vhc();
 
-    private static async Task<TcpClient> ConnectToVpnService(IPEndPoint apiEndPoint, byte[] apiKey,
-        CancellationToken cancellationToken)
-    {
-        VhLogger.Instance.LogDebug("Connecting to VpnService Host... EndPoint: {EndPoint}", apiEndPoint);
-        var tcpClient = new TcpClient();
-        try {
-            await tcpClient.ConnectAsync(apiEndPoint, cancellationToken).Vhc();
-            await StreamUtils.WriteObjectAsync(tcpClient.GetStream(), apiKey, cancellationToken).Vhc();
-            VhLogger.Instance.LogDebug("Connected to VpnService Host. LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
-                tcpClient.TryGetLocalEndPoint(), tcpClient.TryGetRemoteEndPoint());
-            return tcpClient;
-        }
-        catch (Exception ex) {
-            tcpClient.Dispose();
-            throw new VpnServiceUnreachableException($"VpnService is unreachable. EndPoint: {apiEndPoint}", ex);
-        }
+        // send via the transport; connection reuse and reconnection are handled by the message client
+        var responseBuffer = await _messageClient.SendAsync(requestStream.ToArray(), cancellationToken).Vhc();
+
+        // the response is raw ApiResponse JSON bytes (no framing)
+        return JsonSerializer.Deserialize<ApiResponse<T>>(responseBuffer.Span)
+               ?? throw new VpnServiceUnreachableException("VpnService returned an empty response.");
     }
 
     /// <summary>
@@ -505,6 +458,6 @@ public class VpnServiceManager : IDisposable
         _updateConnectionInfoJob.Dispose();
         _updateConnectionInfoCts.TryCancel();
         _updateConnectionInfoCts.Dispose();
-        _tcpClient?.Dispose();
+        _messageClient.Dispose();
     }
 }

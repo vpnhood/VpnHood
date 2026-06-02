@@ -2,6 +2,7 @@
 
 namespace VpnHood.Core.Toolkit.Logging;
 
+// todo: create VhTraceLogger that writes to System.Diagnostics.Trace and use it in TraceLoggerProvider, then remove Trace.WriteLine from this class
 public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true, string? categoryName = null)
     : TextLogger(includeScopes, categoryName)
 {
@@ -36,10 +37,12 @@ public class VhConsoleLogger(bool includeScopes = true, bool singleLine = true, 
                 var prevColor = Console.ForegroundColor;
                 Console.ForegroundColor = GetColor(logLevel);
                 Console.WriteLine(text);
+                System.Diagnostics.Trace.WriteLine(text);
                 Console.ForegroundColor = prevColor;
             }
             else {
                 Console.WriteLine(text);
+                System.Diagnostics.Trace.WriteLine(text);
             }
         }
     }

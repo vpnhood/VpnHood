@@ -1,14 +1,7 @@
-﻿namespace VpnHood.AppLib.Abstractions.AdExceptions;
+namespace VpnHood.AppLib.Abstractions.AdExceptions;
 
-public class ShowAdException : AdException
+public class ShowAdException(string message, Exception? innerException = null)
+    : AdException(message, innerException)
 {
     public string? AdNetworkName { get; set; }
-
-    public ShowAdException(string message) : base(message)
-    {
-    }
-
-    public ShowAdException(string message, Exception innerException) : base(message, innerException)
-    {
-    }
 }

@@ -189,8 +189,8 @@ public class VpnHoodServer : IAsyncDisposable
             var serverInfo = new ServerInfo {
                 EnvironmentVersion = Environment.Version,
                 Version = ServerVersion,
-                PrivateIpAddresses = privateIpAddresses,
-                PublicIpAddresses = publicIpAddresses,
+                PrivateIpAddresses = privateIpAddresses.ToArray(),
+                PublicIpAddresses = publicIpAddresses.ToArray(),
                 Status = await GetStatus(),
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,

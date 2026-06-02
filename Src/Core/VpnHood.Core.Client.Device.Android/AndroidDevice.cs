@@ -6,8 +6,9 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Device.Droid.ActivityEvents;
 using VpnHood.Core.Client.Device.Droid.Utils;
-using VpnHood.Core.Client.Device.Exceptions;
 using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -200,6 +201,11 @@ public class AndroidDevice : IDevice
     }
 
     public static bool IsVpnServiceProcess => CurrentProcessName.Contains(AndroidVpnService.ProcessName);
+
+    public IMessageClient CreateMessageClient()
+    {
+        return new TcpMessageClient(VpnServiceConfigFolder);
+    }
 
     private static IEnumerable<(Network, NetworkCapabilities)> GetNetworkWithCapabilities(
         ConnectivityManager connectivityManager)

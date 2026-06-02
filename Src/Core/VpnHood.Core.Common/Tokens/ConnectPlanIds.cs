@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Common.Tokens;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<ConnectPlanId>))]
 public enum ConnectPlanId
 {
     Normal,

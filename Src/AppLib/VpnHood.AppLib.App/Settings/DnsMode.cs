@@ -2,7 +2,7 @@
 
 namespace VpnHood.AppLib.Settings;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<DnsMode>))]
 public enum DnsMode
 {
     Default,

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -15,13 +16,11 @@ internal class VpnServiceContext(string configFolder)
     public string ConfigFolder => configFolder;
 
     public static ConnectionInfo DefaultConnectionInfo { get; } = new() {
-        ApiEndPoint = null,
-        ApiKey = null,
         ProxyManagerStatus = null,
         ClientState = ClientState.Initializing,
         ClientStateProgress = null,
         ClientStateChangedTime = null,
-        CreatedTime = FastDateTime.Now,
+        CreatedTime = FastDateTime.UtcNow,
         Error = null,
         SessionInfo = null,
         SessionName = null,
@@ -43,9 +42,15 @@ internal class VpnServiceContext(string configFolder)
 
     public ClientOptions ReadClientOptions()
     {
-        // read from config file
         var json = File.ReadAllText(ConfigFilePath);
-        return JsonUtils.Deserialize<ClientOptions>(json);
+
+        // Use source-generated STJ (ClientOptionsJsonContext). Reflection-based STJ hangs/explodes
+        // metadata inside the iOS NetworkExtension under Mono AOT.
+        var opts = (ClientOptions?)JsonSerializer.Deserialize(json,
+            typeof(ClientOptions), ClientOptionsJsonContext.Default);
+        if (opts == null)
+            throw new InvalidDataException("ClientOptions could not be deserialized!");
+        return opts;
     }
 
     private readonly AsyncLock _connectionInfoLock = new();
@@ -55,9 +60,31 @@ internal class VpnServiceContext(string configFolder)
         try {
             using var scopeLock = await _connectionInfoLock.LockAsync(cancellationToken);
             ConnectionInfo = connectionInfo;
-            var json = JsonSerializer.Serialize(connectionInfo);
-            await FileUtils.WriteAllTextRetryAsync(StatusFilePath, json, timeout: TimeSpan.FromSeconds(2),
-                cancellationToken: cancellationToken);
+
+            // ToDo: double check 
+
+            // source-generated STJ — reflection-based serialization hangs under iOS Mono AOT.
+            var json = JsonSerializer.Serialize(connectionInfo, ApiTransportJsonContext.For<ConnectionInfo>());
+
+            // iOS Mono interpreter: file I/O on the shared App Group container can hang the calling
+            // thread for ~30s on first access. Push to write to the thread pool so the calling task
+            // can complete, with a 2-second hard ceiling.
+            var pathCopy = StatusFilePath;
+            var writeTask = Task.Run(() => {
+                try {
+                    File.WriteAllText(pathCopy, json);
+                    return true;
+                }
+                catch {
+                    return false;
+                }
+            }, CancellationToken.None);
+
+            var winner = await Task.WhenAny(writeTask, Task.Delay(TimeSpan.FromSeconds(2), cancellationToken))
+                .ConfigureAwait(false);
+            if (winner == writeTask)
+                await writeTask.ConfigureAwait(false);
+
             return true;
         }
         catch (OperationCanceledException) {

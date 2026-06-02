@@ -1,4 +1,5 @@
 ﻿using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
 namespace VpnHood.Core.Client.Device.Linux;
 
@@ -38,6 +39,11 @@ public class LinuxDevice(string storageFolder) : IDevice
 
         _vpnService.OnConnect();
         return Task.CompletedTask;
+    }
+
+    public IMessageClient CreateMessageClient()
+    {
+        return new TcpMessageClient(VpnServiceConfigFolder);
     }
 
     public void BindProcessToVpn(bool value)

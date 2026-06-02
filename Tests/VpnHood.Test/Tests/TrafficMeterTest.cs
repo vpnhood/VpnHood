@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Test.Dom;

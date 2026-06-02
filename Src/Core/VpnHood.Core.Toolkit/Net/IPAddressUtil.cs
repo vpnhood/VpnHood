@@ -9,23 +9,28 @@ using VpnHood.Core.Toolkit.Utils;
 namespace VpnHood.Core.Toolkit.Net;
 
 // ReSharper disable once InconsistentNaming
+//TodOo
 public static class IPAddressUtil
 {
-    public static IPAddress[] GoogleDnsServers { get; } = [
+    // Lazy initialization to avoid running heavy static cctor on iOS NE AOT sandbox.
+    private static IReadOnlyList<IPAddress>? _googleDnsServers;
+    public static IReadOnlyList<IPAddress> GoogleDnsServers => _googleDnsServers ??= [
         IPAddress.Parse("8.8.8.8"),
         IPAddress.Parse("8.8.4.4"),
         IPAddress.Parse("2001:4860:4860::8888"),
         IPAddress.Parse("2001:4860:4860::8844")
     ];
 
-    public static IPAddress[] KidsSafeCloudflareDnsServers { get; } = [
+    private static IReadOnlyList<IPAddress>? _kidsSafeCloudflareDnsServers;
+    public static IReadOnlyList<IPAddress> KidsSafeCloudflareDnsServers => _kidsSafeCloudflareDnsServers ??= [
         IPAddress.Parse("1.1.1.3"),
         IPAddress.Parse("1.0.0.3"),
         IPAddress.Parse("2606:4700:4700::1113"),
         IPAddress.Parse("2606:4700:4700::1003")
     ];
 
-    public static IPAddress[] ReliableDnsServers { get; } = [
+    private static IReadOnlyList<IPAddress>? _reliableDnsServers;
+    public static IReadOnlyList<IPAddress> ReliableDnsServers => _reliableDnsServers ??= [
         GoogleDnsServers.First(x => x.IsV4()),
         GoogleDnsServers.First(x => x.IsV6()),
         KidsSafeCloudflareDnsServers.First(x => x.IsV4()),
@@ -54,7 +59,7 @@ public static class IPAddressUtil
         return new IPAddress(ulaBytes);
     }
 
-    public static async Task<IPAddress[]> GetPrivateIpAddresses()
+    public static async Task<IReadOnlyList<IPAddress>> GetPrivateIpAddresses()
     {
         var ret = new List<IPAddress>();
 
@@ -103,7 +108,7 @@ public static class IPAddressUtil
         return false;
     }
 
-    public static async Task<IPAddress[]> GetPublicIpAddresses(CancellationToken cancellationToken)
+    public static async Task<IReadOnlyList<IPAddress>> GetPublicIpAddresses(CancellationToken cancellationToken)
     {
         var ret = new List<IPAddress>();
 
@@ -252,23 +257,29 @@ public static class IPAddressUtil
         if (ipAddress1 == null) return -1; // null is less than any address
         if (ipAddress2 == null) return +1; // any address is greater than null
 
-        Verify(ipAddress1);
-        Verify(ipAddress2);
-
-        // resolve mapped addresses
+        // iOS NetworkExtension AOT: avoid extension methods + stackalloc here,
+        // they cause silent hangs at first invocation in the NE sandbox.
         if (ipAddress1.IsIPv4MappedToIPv6) ipAddress1 = ipAddress1.MapToIPv4();
         if (ipAddress2.IsIPv4MappedToIPv6) ipAddress2 = ipAddress2.MapToIPv4();
 
-        // compare
-        if (ipAddress1.IsV4() && ipAddress2.IsV6())
-            return -1;
+        var af1 = ipAddress1.AddressFamily;
+        var af2 = ipAddress2.AddressFamily;
+        if (af1 != AddressFamily.InterNetwork && af1 != AddressFamily.InterNetworkV6)
+            throw new NotSupportedException($"{af1} is not supported!");
+        if (af2 != AddressFamily.InterNetwork && af2 != AddressFamily.InterNetworkV6)
+            throw new NotSupportedException($"{af2} is not supported!");
 
-        if (ipAddress1.IsV6() && ipAddress2.IsV4())
-            return +1;
+        if (af1 == AddressFamily.InterNetwork && af2 == AddressFamily.InterNetworkV6) return -1;
+        if (af1 == AddressFamily.InterNetworkV6 && af2 == AddressFamily.InterNetwork) return +1;
 
-        var span1 = ipAddress1.GetAddressBytesFast(stackalloc byte[16]);
-        var span2 = ipAddress2.GetAddressBytesFast(stackalloc byte[16]);
-        return span1.SequenceCompareTo(span2);
+        var b1 = ipAddress1.GetAddressBytes();
+        var b2 = ipAddress2.GetAddressBytes();
+        var len = b1.Length < b2.Length ? b1.Length : b2.Length;
+        for (var i = 0; i < len; i++) {
+            if (b1[i] < b2[i]) return -1;
+            if (b1[i] > b2[i]) return +1;
+        }
+        return b1.Length - b2.Length;
     }
 
     public static long ToLong(IPAddress ipAddress)
@@ -343,10 +354,14 @@ public static class IPAddressUtil
         return ipAddress;
     }
 
-    public static IPAddress MaxIPv6Value { get; } = IPAddress.Parse("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
-    public static IPAddress MinIPv6Value { get; } = IPAddress.Parse("::");
-    public static IPAddress MaxIPv4Value { get; } = IPAddress.Parse("255.255.255.255");
-    public static IPAddress MinIPv4Value { get; } = IPAddress.Parse("0.0.0.0");
+    private static IPAddress? _maxIPv6Value;
+    public static IPAddress MaxIPv6Value => _maxIPv6Value ??= IPAddress.Parse("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
+    private static IPAddress? _minIPv6Value;
+    public static IPAddress MinIPv6Value => _minIPv6Value ??= IPAddress.Parse("::");
+    private static IPAddress? _maxIPv4Value;
+    public static IPAddress MaxIPv4Value => _maxIPv4Value ??= IPAddress.Parse("255.255.255.255");
+    private static IPAddress? _minIPv4Value;
+    public static IPAddress MinIPv4Value => _minIPv4Value ??= IPAddress.Parse("0.0.0.0");
 
     public static bool IsMaxValue(IPAddress ipAddress)
     {

@@ -1,6 +1,5 @@
 ﻿using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 

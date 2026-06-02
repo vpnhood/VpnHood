@@ -62,7 +62,7 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 
         // Second choice: App Group shared container
         var containerUrl = NSFileManager.DefaultManager.GetContainerUrl(AppGroupId);
-        if (containerUrl?.Path is { } containerPath)
+        if (containerUrl.Path is { } containerPath)
             return Path.Combine(containerPath, "vpn-service");
 
         // Last resort — IPC will not work between App and Extension with this path

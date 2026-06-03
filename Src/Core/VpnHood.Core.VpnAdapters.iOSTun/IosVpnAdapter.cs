@@ -34,17 +34,38 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
     private static readonly NSNumber AfInet = NSNumber.FromInt32(2);
     private static readonly NSNumber AfInet6 = NSNumber.FromInt32(30);
 
+    // DIAGNOSTIC: per-direction packet counters so the host extension can tell whether traffic
+    // actually flows through the tunnel ("connected but no traffic" diagnosis). Interlocked,
+    // no per-packet allocation. Inbound = server->device (download), Outbound = device->server.
+    public static long InboundPackets;
+    public static long OutboundPackets;
+    public static long InboundV6Packets;   // server->device IPv6 only
+    public static long OutboundV6Packets;  // device->server IPv6 only
+
     protected override bool RestartAfterNetworkAddressChanged => false;
     public override bool IsNatSupported => false;
     public override bool IsAppFilterSupported => false;
     protected override bool IsSocketProtectedByBind => false;
 
-    // The iOS Network Extension sandbox blocks the UDP-connect trick that TunVpnAdapter uses to
-    // discover the primary adapter IP, so PrimaryAdapterIpV6 is always null even when the device
-    // has global IPv6. Returning true here tells the VpnHood server to provision IPv6 egress for
-    // this session, which is always correct: the virtual tunnel is always assigned both a v4 and
-    // a v6 virtual address (fd12::/48) regardless of the physical network.
-    public override bool IsIpVersionSupported(IpVersion ipVersion) => true;
+    // IPv6 is advertised as supported ONLY when the device can actually source global IPv6.
+    //
+    // The VpnHood server hands out a ULA virtual v6 address (TunnelDefaults.VirtualIpNetworkV6 =
+    // fd12:2020::/48, in fd00::/8) and NAT66s it. iOS RFC 6724 source-address selection will NOT
+    // use a ULA source (precedence 3) to reach global 2000::/3 destinations — especially on an
+    // IPv4-only physical link — so a forced-on v6 data path installs a ULA address + v6 default
+    // route that apps cannot source from: test-ipv6.com reports "0/10 no IPv6 detected" and
+    // happy-eyeballs adds latency. (The original working iOS adapter never overrode this and so
+    // inherited the base "v6 unsupported" behavior in the NE sandbox, where PrimaryAdapterIpV6 is
+    // always null — i.e. it ran cleanly over IPv4.)
+    //
+    // So: IPv4 is always supported; IPv6 is supported only when the assigned virtual v6 address is
+    // GLOBAL unicast (2000::/3). With today's ULA-only sessions this is false -> v6 stays cleanly
+    // OFF (the prior working behavior). Real dual-stack requires the SERVER to assign a global
+    // 2000::/3 virtual v6 address instead of a ULA (a server-side change), at which point this
+    // returns true and iOS will select the global v6 source.
+    public override bool IsIpVersionSupported(IpVersion ipVersion)
+        => ipVersion == IpVersion.IPv4 ||
+           (AdapterIpNetworkV6 != null && IpNetwork.AllGlobalUnicastV6.Contains(AdapterIpNetworkV6.Prefix));
 
     // CRITICAL (iOS): we CANNOT protect the tunnel's own transport socket the way desktop/
     // Android do (binding to the physical adapter IP does NOT make a raw .NET socket bypass
@@ -84,38 +105,23 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
                 _ipv4Networks.Select(x => x.Prefix.ToString()).ToArray(),
                 _ipv4Networks.Select(x => Ipv4MaskString(x.PrefixLength)).ToArray());
 
-            // Check if we are doing full tunneling (routing all internet traffic).
-            // If the core has split the default route into many specific routes to exclude the server or local IPs,
-            // we should recombine them on iOS into a single default route (0.0.0.0/0) in IncludedRoutes,
-            // and place the excluded server IP and local subnets into ExcludedRoutes.
-            // This is critical because iOS only registers the tunnel as the system's primary/default gateway
-            // and routes DNS properly if IncludedRoutes contains exactly 0.0.0.0/0.
-            bool isFullTunnel = _ipv4Routes.Count > 5 || _ipv4Routes.Any(r => r.DestinationAddress == "0.0.0.0" && r.DestinationSubnetMask == "0.0.0.0");
-
-            if (isFullTunnel)
-            {
-                settings.IPv4Settings.IncludedRoutes = new[] { new NEIPv4Route("0.0.0.0", "0.0.0.0") };
-                
-                var excludedList = new List<NEIPv4Route>
-                {
-                    // Exclude the VPN server's own IP to prevent routing loop
-                    new NEIPv4Route(remoteAddress, "255.255.255.255"),
-                    
-                    // Exclude local networks to allow local LAN access (since they were excluded from _ipv4Routes)
-                    new NEIPv4Route("10.0.0.0", "255.0.0.0"),
-                    new NEIPv4Route("172.16.0.0", "255.240.0.0"),
-                    new NEIPv4Route("192.168.0.0", "255.255.0.0"),
-                    new NEIPv4Route("169.254.0.0", "255.255.0.0")
-                };
-                
-                settings.IPv4Settings.ExcludedRoutes = excludedList.ToArray();
-                VhLogger.Instance.LogDebug("iOS: Configured IPv4 full-tunnel (0.0.0.0/0) with server and local network exclusions in ExcludedRoutes.");
-            }
-            else
-            {
-                settings.IPv4Settings.IncludedRoutes = _ipv4Routes.ToArray();
-                VhLogger.Instance.LogDebug($"iOS: Configured IPv4 split-tunnel with {_ipv4Routes.Count} custom routes.");
-            }
+            // Install the core's routes VERBATIM. With CanProtectSocket=false the core
+            // (ClientHelper.BuildIncludeIpRangesByDevice) has already split the default route into
+            // many specific routes that cover the whole internet EXCEPT the active VPN server's own
+            // IP (a single /32 hole, e.g. 15.204.89.227) and the local subnets, so the transport
+            // reaches the server over the physical interface.
+            //
+            // CRITICAL: do NOT recombine these into a single 0.0.0.0/0 IncludedRoutes. Doing so
+            // re-includes the server's /32 inside the tunnel (the ExcludedRoutes list cannot name it
+            // — the real server IP is only known as the gap in this route set, not via ServerAddress,
+            // which is the informational placeholder "1.1.1.1"). That loops the server connection
+            // back into its own non-forwarding tunnel and freezes ALL traffic (the client gets stuck
+            // in FindingReachableServer with 0 packets in/out). iOS treats this full split route set
+            // as the default gateway and routes DNS through it correctly.
+            settings.IPv4Settings.IncludedRoutes = _ipv4Routes.ToArray();
+            VhLogger.Instance.LogDebug(
+                "iOS: Configured IPv4 with {Count} routes from core (server IP excluded by omission).",
+                _ipv4Routes.Count);
         }
 
         // Set the default gateway for IPv6
@@ -125,36 +131,16 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
                 _ipv6Networks.Select(x => x.Prefix.ToString()).ToArray(),
                 _ipv6Networks.Select(x => NSNumber.FromInt32(x.PrefixLength)).ToArray());
 
-            // CRITICAL (iOS): iOS requires a global default IPv6 route (::/0) in IncludedRoutes
-            // to convince the system's DNS resolver and routing engine that general IPv6 internet
-            // access is available when the host physical link is IPv4-only. Without ::/0, iOS throttles
-            // or entirely disables AAAA lookups, preventing dual-stack transition over the tunnel.
-            bool isFullTunnelV6 = _ipv6Routes.Count > 5 || _ipv6Routes.Any(r => r.DestinationAddress == "::" && r.DestinationNetworkPrefixLength.Int32Value == 0);
-
-            if (isFullTunnelV6)
-            {
-                settings.IPv6Settings.IncludedRoutes = new[] { new NEIPv6Route("::", 0) };
-                
-                var v6ExcludedList = new List<NEIPv6Route>
-                {
-                    // Exclude link-local
-                    new NEIPv6Route("fe80::", 10)
-                };
-                
-                // Exclude the server's IPv6 address if it's IPv6
-                if (!string.IsNullOrEmpty(serverAddress) && IPAddress.TryParse(serverAddress, out var parsedAddr) && parsedAddr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
-                {
-                    v6ExcludedList.Add(new NEIPv6Route(parsedAddr.ToString(), 128));
-                }
-                
-                settings.IPv6Settings.ExcludedRoutes = v6ExcludedList.ToArray();
-                VhLogger.Instance.LogDebug("iOS: Configured IPv6 full-tunnel (::/0) with link-local and server exclusions in ExcludedRoutes.");
-            }
-            else
-            {
-                settings.IPv6Settings.IncludedRoutes = _ipv6Routes.ToArray();
-                VhLogger.Instance.LogDebug($"iOS: Configured IPv6 split-tunnel with {_ipv6Routes.Count} custom routes.");
-            }
+            // Install the core's IPv6 routes verbatim (same approach as IPv4).
+            // NOTE: forcing a literal ::/0 here does NOT fix "0/10 no IPv6 detected". When the
+            // server assigns the device a ULA (fd12::/48) and the physical link is IPv4-only, iOS
+            // (RFC 6724 source-address selection) will not use a ULA source for global IPv6, so apps
+            // get no usable v6 regardless of the installed route. Worse, ::/0 also captures the USB
+            // CoreDevice pairing tunnel's v6 and breaks `devicectl`. Real dual-stack therefore needs
+            // the server to hand out a GLOBAL (2000::/3) v6 address — a session/server concern — not
+            // a host-side route change.
+            settings.IPv6Settings.IncludedRoutes = _ipv6Routes.ToArray();
+            VhLogger.Instance.LogDebug("iOS: Configured IPv6 with {Count} routes from core.", _ipv6Routes.Count);
         }
 
         // Set DNS servers if any are provided
@@ -165,6 +151,30 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
         {
             settings.Mtu = NSNumber.FromInt32(_mtu.Value);
         }
+
+        // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install. This writes
+        // synchronously (unlike the SetTunnelNetworkSettings completion callback, which often
+        // never resumes under Mono AOT), so it is the reliable record of what we asked iOS for.
+        try
+        {
+            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var inc4 = settings.IPv4Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
+            var exc4 = settings.IPv4Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
+            var inc6 = settings.IPv6Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
+            File.WriteAllText(Path.Combine(docs, "ext-route-dump.txt"),
+                $"AdapterOpen at {DateTime.UtcNow:O}\n" +
+                $"remoteAddress(ServerAddress)={remoteAddress}\n" +
+                $"mtu={_mtu}\n" +
+                $"v4 addrs({_ipv4Networks.Count}): {string.Join(", ", _ipv4Networks.Select(n => n.ToString()))}\n" +
+                $"v4 routes-from-core({_ipv4Routes.Count}): {string.Join(", ", _ipv4Routes.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}"))}\n" +
+                $"v4 INCLUDED-applied: {string.Join(", ", inc4)}\n" +
+                $"v4 EXCLUDED-applied: {string.Join(", ", exc4)}\n" +
+                $"v6 addrs({_ipv6Networks.Count}): {string.Join(", ", _ipv6Networks.Select(n => n.ToString()))}\n" +
+                $"v6 routes-from-core({_ipv6Routes.Count}): {string.Join(", ", _ipv6Routes.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}"))}\n" +
+                $"v6 INCLUDED-applied: {string.Join(", ", inc6)}\n" +
+                $"dns({_dnsServers.Count}): {string.Join(", ", _dnsServers.Select(d => d.ToString()))}\n");
+        }
+        catch { /* best-effort */ }
 
         try
         {
@@ -321,7 +331,9 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
         // todo: optimize by using batch after we get first IOs release
         // Inbound packets (server -> device) must use the IP version as the protocol
         // family (AF_INET = 2, AF_INET6 = 30); passing 0 makes iOS drop the packet.
-        var protocolFamily = ipPacket.Version == IpVersion.IPv6 ? AfInet6 : AfInet;
+        var isV6 = ipPacket.Version == IpVersion.IPv6;
+        var protocolFamily = isV6 ? AfInet6 : AfInet;
+        if (isV6) Interlocked.Increment(ref InboundV6Packets); // DIAGNOSTIC
 
         // CRITICAL (download memory): copy straight from the packet buffer into a native NSData
         // WITHOUT first allocating a managed slice (buffer[offset..offset+length]). During a
@@ -345,6 +357,7 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
         _packetFlow.WritePackets(_writeDataArray, _writeProtoArray);
         data.Dispose();
 
+        Interlocked.Increment(ref InboundPackets); // DIAGNOSTIC: server -> device (download)
         return true;
     }
 
@@ -374,6 +387,7 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
                     // todo: for better performance try to use bytes and convert by Marshal, lets do it later
                     var buffer = packetBuffer.ToArray();
                     var ipPacket = PacketBuilder.Parse(buffer);
+                    if (ipPacket.Version == IpVersion.IPv6) Interlocked.Increment(ref OutboundV6Packets); // DIAGNOSTIC
                     OnPacketReceived(ipPacket);
                 }
                 catch
@@ -392,6 +406,8 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
             foreach (var protocol in protocols)
                 protocol.Dispose();
         }
+
+        Interlocked.Add(ref OutboundPackets, packets.Length); // DIAGNOSTIC: device -> server (upload)
 
         // CRITICAL: ReadPackets is a ONE-SHOT API. It delivers a single batch of outbound
         // packets and then stops. We must re-arm it by calling it again here, otherwise the

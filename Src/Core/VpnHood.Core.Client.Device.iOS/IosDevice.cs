@@ -151,16 +151,21 @@ public class IosDevice : IDevice
         _vpnManager.Enabled = true;
 
         // ---- Save (short timeout; on timeout we continue and try Start anyway) ----
+        // iOS calls the completion handler with nsError == null on success; only treat a
+        // non-null error as a failure. (Dereferencing nsError.Description unconditionally
+        // threw a NullReferenceException inside the ObjC block on success -> SIGABRT.)
         var saveTcs = new TaskCompletionSource();
         _vpnManager.SaveToPreferences(nsError => {
-            saveTcs.TrySetException(new Exception(nsError.Description));
+            if (nsError != null) saveTcs.TrySetException(new Exception(nsError.Description));
+            else saveTcs.TrySetResult();
         });
         await TryStepAsync(saveTcs.Task, TimeSpan.FromSeconds(2));
 
         // ---- Load ----
         var loadTcs = new TaskCompletionSource();
         _vpnManager.LoadFromPreferences(nsError => {
-            loadTcs.TrySetException(new Exception(nsError.Description));
+            if (nsError != null) loadTcs.TrySetException(new Exception(nsError.Description));
+            else loadTcs.TrySetResult();
         });
         await TryStepAsync(loadTcs.Task, TimeSpan.FromSeconds(2));
 

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO.Pipelines;
 using System.Net;
 using System.Security.Cryptography;
 using VpnHood.Core.Packets;
@@ -21,8 +22,23 @@ namespace VpnHood.Core.TcpStack;
 /// </remarks>
 public sealed class LocalTcpStack : ITcpStack
 {
-    // Max TCP window without window scaling.
-    private const ushort LoopbackWindowSize = 0xFFFF;
+    // Validated memory/timeout knobs for this stack and the connections it spawns.
+    private readonly LocalTcpStackOptions _options;
+    // Built once from _options and shared (immutably) by every connection's reassembly pipe.
+    private readonly PipeOptions _pipeOptions;
+
+    /// <summary>
+    /// Creates a TCP stack. When <paramref name="options"/> is null the footprint is chosen
+    /// automatically for the current platform via <see cref="LocalTcpStackOptions.ForCurrentPlatform"/>
+    /// (small on iOS/tvOS Network Extensions, full-size everywhere else) — so callers such as
+    /// ClientTcpHost don't need to know the platform and Android throughput is unaffected.
+    /// Pass an explicit <see cref="LocalTcpStackOptions"/> to override.
+    /// </summary>
+    public LocalTcpStack(LocalTcpStackOptions? options = null)
+    {
+        _options = (options ?? LocalTcpStackOptions.ForCurrentPlatform()).Validated();
+        _pipeOptions = _options.CreatePipeOptions();
+    }
 
     /// <summary>
     /// Gets or sets a value indicating whether verbose diagnostic information should be logged via VhLogger.
@@ -47,7 +63,7 @@ public sealed class LocalTcpStack : ITcpStack
     public LocalTcpListener Listen(IpEndPointValue localEndPoint)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        return _listeners.GetOrAdd(localEndPoint, ep => new LocalTcpListener(this, ep));
+        return _listeners.GetOrAdd(localEndPoint, ep => new LocalTcpListener(this, ep, _options.AcceptQueueCapacity));
     }
 
     /// <summary>
@@ -57,7 +73,7 @@ public sealed class LocalTcpStack : ITcpStack
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         lock (_anyListenerLock) {
-            return _anyListener ??= new LocalTcpListener(this, null);
+            return _anyListener ??= new LocalTcpListener(this, null, _options.AcceptQueueCapacity);
         }
     }
 
@@ -151,10 +167,19 @@ public sealed class LocalTcpStack : ITcpStack
             return;
         }
 
+        // Admission control: cap concurrent connections to bound aggregate buffer memory on
+        // constrained platforms (e.g. iOS). 0 = unbounded (default) and short-circuits with zero
+        // overhead, so the Android/desktop SYN path is unchanged.
+        if (_options.MaxConnections > 0 && _connections.Count >= _options.MaxConnections) {
+            SendRst(ipEndPointPair.Destination, ipEndPointPair.Source, tcpPacket);
+            return;
+        }
+
         var isnLocal = (uint)RandomNumberGenerator.GetInt32(int.MaxValue);
         var peerMss = ParseMssOption(tcpPacket.Options.Span);
         var peerWsShift = ParseWindowScaleOption(tcpPacket.Options.Span);
-        var connection = new LocalTcpConnection(ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss, listener, peerWsShift);
+        var connection = new LocalTcpConnection(
+            ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss, listener, peerWsShift, _options, _pipeOptions);
         connection.OnClosed += OnConnectionClosed;
 
         if (!_connections.TryAdd(ipEndPointPair, connection)) {
@@ -171,16 +196,16 @@ public sealed class LocalTcpStack : ITcpStack
 
     private void SendSynAck(LocalTcpConnection conn)
     {
-        // Advertise our MSS (1460) so the peer doesn't fall back to the default 536-byte MSS.
+        // Advertise our MSS (default 1460) so the peer doesn't fall back to the default 536-byte MSS.
         // Without this option, the peer will send us 536-byte packets which dramatically
         // increases packet count (≈2.7x) and slows down the receiving path.
         // Format: kind=2, len=4, value=MSS (16-bit big-endian).
         // Window Scale option (kind=3, len=3, shift=0): enables WS negotiation so the peer
-        // can advertise windows larger than 64 KB in its ACKs. Our own shift=0 keeps our
-        // advertised window at the raw 65535 value (peer multiplies by 2^0 = 1).
-        const ushort advertisedMss = 1460;
+        // can advertise windows larger than 64 KB in its ACKs. Our own shift stays 0 (we never
+        // advertise a window > 65535 — ReceiveWindowSize is validated to fit the 16-bit field).
+        var advertisedMss = _options.MaxMss;
         // MSS(4) + NOP(1) + WS(3) = 8 bytes, 4-byte aligned.
-        ReadOnlySpan<byte> options = [2, 4, advertisedMss >> 8, advertisedMss & 0xFF, 1, 3, 3, 0];
+        ReadOnlySpan<byte> options = [2, 4, (byte)(advertisedMss >> 8), (byte)(advertisedMss & 0xFF), 1, 3, 3, 0];
         var packet = PacketBuilder.BuildTcp(
             conn.IpEndPointPair.Destination, conn.IpEndPointPair.Source,
             options: options,
@@ -194,7 +219,7 @@ public sealed class LocalTcpStack : ITcpStack
         tcp.AcknowledgmentNumber = rcvNxt;
         tcp.Synchronize = true;
         tcp.Acknowledgment = true;
-        tcp.WindowSize = LoopbackWindowSize;
+        tcp.WindowSize = conn.AdvertisedWindow;
 
         SendPacket(packet);
     }
@@ -236,7 +261,7 @@ public sealed class LocalTcpStack : ITcpStack
         tcp.SequenceNumber = sndNxt;
         tcp.AcknowledgmentNumber = rcvNxt;
         tcp.Acknowledgment = true;
-        tcp.WindowSize = LoopbackWindowSize;
+        tcp.WindowSize = conn.AdvertisedWindow;
 
         SendPacket(packet);
     }

@@ -10,8 +10,7 @@ namespace VpnHood.Core.TcpStack;
 /// </summary>
 public sealed class LocalTcpListener : ITcpListener
 {
-    private readonly Channel<LocalTcpClient> _acceptQueue = Channel.CreateUnbounded<LocalTcpClient>(
-        new UnboundedChannelOptions { SingleReader = true });
+    private readonly Channel<LocalTcpClient> _acceptQueue;
 
     private readonly LocalTcpStack _stack;
     private int _stopped;
@@ -26,10 +25,21 @@ public sealed class LocalTcpListener : ITcpListener
     /// </summary>
     public bool IsAny => LocalEndPoint is null;
 
-    internal LocalTcpListener(LocalTcpStack stack, IpEndPointValue? localEndPoint)
+    /// <param name="acceptQueueCapacity">
+    /// Maximum number of accepted-but-not-yet-accepted clients to buffer. 0 or less = unbounded
+    /// (historical behavior). When bounded and full, <see cref="TryEnqueueAccept"/> returns false
+    /// (FullMode = Wait makes TryWrite fail rather than block), so the caller disposes the client.
+    /// </param>
+    internal LocalTcpListener(LocalTcpStack stack, IpEndPointValue? localEndPoint, int acceptQueueCapacity)
     {
         _stack = stack;
         LocalEndPoint = localEndPoint;
+        _acceptQueue = acceptQueueCapacity > 0
+            ? Channel.CreateBounded<LocalTcpClient>(new BoundedChannelOptions(acceptQueueCapacity) {
+                SingleReader = true,
+                FullMode = BoundedChannelFullMode.Wait // TryWrite returns false when full -> caller disposes
+            })
+            : Channel.CreateUnbounded<LocalTcpClient>(new UnboundedChannelOptions { SingleReader = true });
     }
 
     /// <summary>

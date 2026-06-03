@@ -20,30 +20,26 @@ internal sealed class LocalTcpConnection(
     uint isnRemote,
     ushort? peerMss,
     LocalTcpListener listener,
-    byte peerWsShift = 0,
-    TimeSpan? tcpTimeout = null)
+    byte peerWsShift,
+    LocalTcpStackOptions options,
+    PipeOptions pipeOptions)
     : IDisposable
 {
-    // Static TCP receive window advertised to the peer (no window scaling).
-    private const ushort LoopbackWindowSize = 0xFFFF;
+    // All memory/timeout sizing comes from the stack's validated options (see LocalTcpStackOptions).
+    // The values used on the data path below are cached into readonly fields once, here, so the
+    // hot path (send/recv/ACK) costs exactly what the old consts did — a field read, no recompute.
 
-    // Conservative fallback when peer SYN does not advertise an MSS.
-    private const ushort DefaultMss = 536;
+    // PERF: advertised TCP receive window. Defaults to 65535; must stay equal to the historical
+    // const on Android (default options) to preserve throughput. Fits the 16-bit window field
+    // because LocalTcpStackOptions validates ReceiveWindowSize <= 65535 (no window scaling).
+    private readonly ushort _advertisedWindow = (ushort)options.ReceiveWindowSize;
 
-    // Standard Ethernet MSS cap. Peer's advertised MSS is used when smaller.
-    private const ushort MaxMss = 1460;
+    private readonly TimeSpan _idleTimeout = options.IdleTimeout;
+    private readonly TimeSpan _idleCheckInterval = options.IdleCheckInterval;
 
-    private readonly TimeSpan _idleTimeout = tcpTimeout ?? TimeSpan.FromMinutes(15);
-    private static readonly TimeSpan IdleCheckInterval = TimeSpan.FromMinutes(1);
-
-    // Pipe options - for network -> app data only (stream reads).
-    private static readonly PipeOptions PipeOpts = new(
-        pauseWriterThreshold: LoopbackWindowSize,
-        resumeWriterThreshold: LoopbackWindowSize / 2,
-        useSynchronizationContext: false);
-
-    // Pipe for network -> app data (stream reads)
-    private readonly Pipe _netToAppPipe = new(PipeOpts);
+    // Pipe for network -> app data (stream reads). PipeOptions is built once per stack and shared
+    // by all of its connections (this object is immutable); each connection still owns its Pipe.
+    private readonly Pipe _netToAppPipe = new(pipeOptions);
 
     private readonly Lock _seqLock = new();
     private readonly CancellationTokenSource _cts = new();
@@ -62,7 +58,7 @@ internal sealed class LocalTcpConnection(
     private uint _sndNxt = isnLocal; // SYN sequence; bumped to ISN+1 after SYN-ACK is sent.
     private uint _sndUna = isnLocal; // Oldest unacknowledged byte.
     private readonly byte _peerWsShift = peerWsShift > 14 ? (byte)14 : peerWsShift; // Peer's window scale shift (RFC 1323).
-    private uint _peerWindow = LoopbackWindowSize; // Peer's last advertised receive window (scaled).
+    private uint _peerWindow = 0xFFFF; // Peer's last advertised receive window (scaled). Initial guess until the first ACK.
     private uint _rcvNxt = isnRemote + 1; // We have already "consumed" the peer's SYN.
     private int _unackedSegments; // Count of in-order data segments not yet acknowledged.
     private int _ackCount;
@@ -73,8 +69,10 @@ internal sealed class LocalTcpConnection(
     // On loopback we don't normally need retransmission, but TUN/kernel can drop
     // packets under heavy load (no real "loss" but the effect is identical).
     // RFC 5681 fast retransmit: 3 duplicate ACKs trigger retransmit of sndUna segment.
-    private const int RetxBufferSize = 64 * 1024; // bound in-flight unacked bytes
-    private readonly byte[] _retxBuffer = new byte[RetxBufferSize];
+    // PERF: capacity comes from options (RetxBufferSize, default 64 KB). Cached so the ring math
+    // (% _retxCapacity) is a field read, identical cost to the former const. Bounds in-flight bytes.
+    private readonly int _retxCapacity = options.RetxBufferSize;
+    private readonly byte[] _retxBuffer = new byte[options.RetxBufferSize];
     private int _retxRingStart;     // index in buffer corresponding to _sndUna
     private int _retxBufferLen;     // number of valid unacked bytes
     private uint _lastDupAck;
@@ -82,8 +80,11 @@ internal sealed class LocalTcpConnection(
     private long _retxCount;
     public IPEndPointPairValue IpEndPointPair => ipEndPointPair;
     public uint IsnLocal { get; } = isnLocal;
-    public ushort Mss { get; } = ClampMss(peerMss);
+    public ushort Mss { get; } = ClampMss(peerMss, options);
     public TcpConnectionState State { get; private set; } = TcpConnectionState.SynReceived;
+
+    /// <summary>The 16-bit TCP receive window this connection advertises on every outgoing segment.</summary>
+    public ushort AdvertisedWindow => _advertisedWindow;
 
     /// <summary>
     /// PipeReader for reading data received from network (used by LocalTcpStream)
@@ -95,12 +96,12 @@ internal sealed class LocalTcpConnection(
     /// </summary>
     public event Action<LocalTcpConnection>? OnClosed;
 
-    private static ushort ClampMss(ushort? peerMss)
+    private static ushort ClampMss(ushort? peerMss, LocalTcpStackOptions options)
     {
-        if (peerMss is null or 0) return DefaultMss;
+        if (peerMss is null or 0) return options.DefaultMss;
         var v = peerMss.Value;
-        if (v < 64) return 64;          // pathological lower bound
-        if (v > MaxMss) return MaxMss;
+        if (v < options.MinMss) return options.MinMss;  // pathological lower bound
+        if (v > options.MaxMss) return options.MaxMss;
         return v;
     }
 
@@ -162,7 +163,8 @@ internal sealed class LocalTcpConnection(
         }
 
         if (clientToEnqueue != null && !listener.TryEnqueueAccept(clientToEnqueue)) {
-            // Listener has been stopped: dispose client and reset the connection
+            // Listener has been stopped or its accept queue is full: dispose the unaccepted
+            // client (which tears down this connection via the stream's disposal).
             clientToEnqueue.Dispose();
         }
     }
@@ -218,7 +220,7 @@ internal sealed class LocalTcpConnection(
                     pw = _peerWindow; una = _sndUna; nxt = _sndNxt;
                     var inFlight = (long)(nxt - una);
                     var fromPeer = (int)Math.Max(0, _peerWindow - inFlight);
-                    var retxFree = RetxBufferSize - _retxBufferLen;
+                    var retxFree = _retxCapacity - _retxBufferLen;
                     allowable = Math.Min(fromPeer, retxFree);
                 }
 
@@ -236,7 +238,7 @@ internal sealed class LocalTcpConnection(
                     // expects a stimulus before it sends the window update.
                     // RFC 793: ZWP carries one byte of new data beyond the zero window.
                     using var zwpCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    zwpCts.CancelAfter(TimeSpan.FromMilliseconds(200));
+                    zwpCts.CancelAfter(options.ZeroWindowProbeInterval);
                     try { await _windowSignal.WaitAsync(zwpCts.Token); }
                     catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
                         // Timeout: send a ZWP using the actual next data byte to elicit a window update.
@@ -281,7 +283,7 @@ internal sealed class LocalTcpConnection(
                 tcp.SequenceNumber = seqForSegment;
                 tcp.AcknowledgmentNumber = ackForSegment;
                 tcp.Acknowledgment = true;
-                tcp.WindowSize = LoopbackWindowSize;
+                tcp.WindowSize = _advertisedWindow;
 
                 // Set PSH on the last segment of the current write.
                 if (offset + segLen >= data.Length)
@@ -329,7 +331,7 @@ internal sealed class LocalTcpConnection(
                         _retxRingStart = 0;
                     }
                     else {
-                        _retxRingStart = (_retxRingStart + n) % RetxBufferSize;
+                        _retxRingStart = (_retxRingStart + n) % _retxCapacity;
                         _retxBufferLen -= n;
                     }
                     _dupAckCount = 0;
@@ -459,9 +461,19 @@ internal sealed class LocalTcpConnection(
         //  - On loopback, the reader (the application) drains the pipe quickly.
         //  - Awaiting here would require restructuring TryHandleIncoming as async,
         //    and we're called from the packet-receive critical path.
-        // PauseWriterThreshold still bounds memory because every Pipe segment respects it
-        // when GetSpan/Advance are paired with FlushAsync; for very large bursts the writer
-        // is observably "busy" via UnflushedBytes which we can revisit if needed.
+        //
+        // KNOWN LIMITATION (memory bound is soft, not hard) — for the next maintainer:
+        // We advertise a FIXED window (_advertisedWindow) on every segment and ACK data as soon
+        // as it is buffered here, so PauseWriterThreshold is never actually observed (the flush
+        // ValueTask is discarded). If the application stops reading, the peer keeps getting ACKs
+        // and keeps sending, so this pipe can grow ~window/RTT without bound — dangerous on a
+        // memory-capped host (e.g. an iOS Network Extension can be jetsam-killed).
+        // Interim mitigation (shipped): a small ReceiveWindowSize + MaxConnections cap bound the
+        // aggregate. Proper fix (separate, low-risk change): advertise a DYNAMIC window equal to
+        // the free pipe space (ReceiveWindowSize - unread bytes), tracking app reads from
+        // LocalTcpStream.ReadAsync; when the pipe fills we advertise a smaller/zero window and the
+        // loopback peer stops, making ReceiveWindowSize a HARD cap. That only ever shrinks the
+        // advertised window, so it stays safe on loopback.
         _ = _netToAppPipe.Writer.FlushAsync();
     }
 
@@ -473,7 +485,7 @@ internal sealed class LocalTcpConnection(
     private async Task MonitorIdleAsync()
     {
         try {
-            using var timer = new PeriodicTimer(IdleCheckInterval);
+            using var timer = new PeriodicTimer(_idleCheckInterval);
             while (await timer.WaitForNextTickAsync(_cts.Token)) {
                 if (_disposed || State == TcpConnectionState.Closed)
                     break;
@@ -512,7 +524,7 @@ internal sealed class LocalTcpConnection(
             tcp.AcknowledgmentNumber = _rcvNxt;
             tcp.Finish = true;
             tcp.Acknowledgment = true;
-            tcp.WindowSize = LoopbackWindowSize;
+            tcp.WindowSize = _advertisedWindow;
 
             _sndNxt += 1; // FIN consumes one sequence number
 
@@ -574,7 +586,7 @@ internal sealed class LocalTcpConnection(
             tcp.SequenceNumber = probeSeq;
             tcp.AcknowledgmentNumber = probeAck;
             tcp.Acknowledgment = true;
-            tcp.WindowSize = LoopbackWindowSize;
+            tcp.WindowSize = _advertisedWindow;
 
             stack.SendPacket(probe);
             return 1;
@@ -594,9 +606,9 @@ internal sealed class LocalTcpConnection(
     private void AppendToRetxBufferLocked(ReadOnlySpan<byte> segment)
     {
         if (segment.Length == 0) return;
-        // Caller has already enforced (segment.Length <= RetxBufferSize - _retxBufferLen) via allowable cap.
-        var writeIdx = (_retxRingStart + _retxBufferLen) % RetxBufferSize;
-        var firstChunk = Math.Min(segment.Length, RetxBufferSize - writeIdx);
+        // Caller has already enforced (segment.Length <= _retxCapacity - _retxBufferLen) via allowable cap.
+        var writeIdx = (_retxRingStart + _retxBufferLen) % _retxCapacity;
+        var firstChunk = Math.Min(segment.Length, _retxCapacity - writeIdx);
         segment[..firstChunk].CopyTo(_retxBuffer.AsSpan(writeIdx));
         if (firstChunk < segment.Length)
             segment[firstChunk..].CopyTo(_retxBuffer.AsSpan(0));
@@ -616,7 +628,7 @@ internal sealed class LocalTcpConnection(
             if (_retxBufferLen == 0) return;
             var segLen = Math.Min(_retxBufferLen, Mss);
             payloadCopy = new byte[segLen];
-            var firstChunk = Math.Min(segLen, RetxBufferSize - _retxRingStart);
+            var firstChunk = Math.Min(segLen, _retxCapacity - _retxRingStart);
             Array.Copy(_retxBuffer, _retxRingStart, payloadCopy, 0, firstChunk);
             if (firstChunk < segLen)
                 Array.Copy(_retxBuffer, 0, payloadCopy, firstChunk, segLen - firstChunk);
@@ -630,7 +642,7 @@ internal sealed class LocalTcpConnection(
         tcp.SequenceNumber = seqForSegment;
         tcp.AcknowledgmentNumber = ackForSegment;
         tcp.Acknowledgment = true;
-        tcp.WindowSize = LoopbackWindowSize;
+        tcp.WindowSize = _advertisedWindow;
         tcp.Push = true;
 
         stack.SendPacket(packet);

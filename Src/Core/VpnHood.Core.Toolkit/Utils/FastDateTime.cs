@@ -7,7 +7,7 @@ public static class FastDateTime
     // accessing TimeZoneInfo.Local — which DateTime.Now relies on — can hang indefinitely.
     // To stay safe, we use UtcNow as the source on iOS.
     // ToDo: check AOT
-    private static readonly bool UseUtcSource = OperatingSystem.IsIOS();
+    private static readonly bool UseUtcSource = OperatingSystem.IsIOS() || OperatingSystem.IsTvOS();
 
     private static readonly Lock Locker = new();
     private static int _lastTickCount = Environment.TickCount;

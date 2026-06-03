@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -13,17 +12,12 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 // A loopback-TCP IMessageClient. It keeps a single persistent connection to the
 // TcpMessageListener and transparently reconnects when the connection drops. The endpoint
 // and API key are discovered from the bootstrap file written by the listener.
-public sealed class TcpMessageClient : IMessageClient
+public sealed class TcpMessageClient(string configFolder) : IMessageClient
 {
-    private readonly string _apiFilePath;
+    private readonly string _apiFilePath = TcpMessageTransport.GetApiFilePath(configFolder);
     private readonly AsyncLock _sendLock = new();
     private TcpClient? _tcpClient;
     private bool _isDisposed;
-
-    public TcpMessageClient(string configFolder)
-    {
-        _apiFilePath = TcpMessageTransport.GetApiFilePath(configFolder);
-    }
 
     public async Task<Memory<byte>> SendAsync(Memory<byte> request, CancellationToken cancellationToken)
     {

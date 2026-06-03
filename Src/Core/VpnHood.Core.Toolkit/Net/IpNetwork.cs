@@ -29,15 +29,14 @@ public class IpNetwork
     {
         // Inline AddressFamily check to avoid triggering IPAddressUtil static cctor
         // (which has heavy eager static initializers that hang in iOS NE AOT sandbox).
-        var af = prefix.AddressFamily;
-        if (af != AddressFamily.InterNetwork && af != AddressFamily.InterNetworkV6)
-            throw new NotSupportedException($"{af} is not supported!");
+        if (prefix.AddressFamily != AddressFamily.InterNetwork && prefix.AddressFamily != AddressFamily.InterNetworkV6)
+            throw new NotSupportedException($"{prefix.AddressFamily} is not supported!");
 
         Prefix = prefix;
         PrefixLength = prefixLength;
 
         // Compute first/last IP using byte arithmetic instead of BigInteger.
-        // BigInteger ops (left shifts, byte ctors) hang inside the iOS NetworkExtension
+        // BigInteger ops (left shifts, byte constructors) hang inside the iOS NetworkExtension
         // AOT sandbox, so avoid them on the hot init path.
         var prefixBytes = prefix.GetAddressBytes();
         var byteCount = prefixBytes.Length;

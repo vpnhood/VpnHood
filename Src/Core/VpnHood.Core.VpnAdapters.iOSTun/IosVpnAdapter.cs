@@ -47,25 +47,10 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
     public override bool IsAppFilterSupported => false;
     protected override bool IsSocketProtectedByBind => false;
 
-    // IPv6 is advertised as supported ONLY when the device can actually source global IPv6.
-    //
-    // The VpnHood server hands out a ULA virtual v6 address (TunnelDefaults.VirtualIpNetworkV6 =
-    // fd12:2020::/48, in fd00::/8) and NAT66s it. iOS RFC 6724 source-address selection will NOT
-    // use a ULA source (precedence 3) to reach global 2000::/3 destinations — especially on an
-    // IPv4-only physical link — so a forced-on v6 data path installs a ULA address + v6 default
-    // route that apps cannot source from: test-ipv6.com reports "0/10 no IPv6 detected" and
-    // happy-eyeballs adds latency. (The original working iOS adapter never overrode this and so
-    // inherited the base "v6 unsupported" behavior in the NE sandbox, where PrimaryAdapterIpV6 is
-    // always null — i.e. it ran cleanly over IPv4.)
-    //
-    // So: IPv4 is always supported; IPv6 is supported only when the assigned virtual v6 address is
-    // GLOBAL unicast (2000::/3). With today's ULA-only sessions this is false -> v6 stays cleanly
-    // OFF (the prior working behavior). Real dual-stack requires the SERVER to assign a global
-    // 2000::/3 virtual v6 address instead of a ULA (a server-side change), at which point this
-    // returns true and iOS will select the global v6 source.
-    public override bool IsIpVersionSupported(IpVersion ipVersion)
-        => ipVersion == IpVersion.IPv4 ||
-           (AdapterIpNetworkV6 != null && IpNetwork.AllGlobalUnicastV6.Contains(AdapterIpNetworkV6.Prefix));
+    // Force-enable IPv6 support on iOS. Even if the physical interface is IPv4-only or
+    // the server hands out a ULA virtual address (e.g. fd12:2020::/48), we want to provision
+    // and route IPv6 traffic through the tunnel.
+    public override bool IsIpVersionSupported(IpVersion ipVersion) => true;
 
     // CRITICAL (iOS): we CANNOT protect the tunnel's own transport socket the way desktop/
     // Android do (binding to the physical adapter IP does NOT make a raw .NET socket bypass
@@ -131,16 +116,25 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
                 _ipv6Networks.Select(x => x.Prefix.ToString()).ToArray(),
                 _ipv6Networks.Select(x => NSNumber.FromInt32(x.PrefixLength)).ToArray());
 
-            // Install the core's IPv6 routes verbatim (same approach as IPv4).
-            // NOTE: forcing a literal ::/0 here does NOT fix "0/10 no IPv6 detected". When the
-            // server assigns the device a ULA (fd12::/48) and the physical link is IPv4-only, iOS
-            // (RFC 6724 source-address selection) will not use a ULA source for global IPv6, so apps
-            // get no usable v6 regardless of the installed route. Worse, ::/0 also captures the USB
-            // CoreDevice pairing tunnel's v6 and breaks `devicectl`. Real dual-stack therefore needs
-            // the server to hand out a GLOBAL (2000::/3) v6 address — a session/server concern — not
-            // a host-side route change.
-            settings.IPv6Settings.IncludedRoutes = _ipv6Routes.ToArray();
-            VhLogger.Instance.LogDebug("iOS: Configured IPv6 with {Count} routes from core.", _ipv6Routes.Count);
+            // iOS requires a global default IPv6 route (::/0) in IncludedRoutes to convince the
+            // DNS resolver and routing engine that general IPv6 internet access is available when the
+            // host physical link is IPv4-only. Without ::/0, iOS throttles or disables AAAA lookups.
+            var routes = _ipv6Routes.ToList();
+            if (!routes.Any(r => r.DestinationAddress == "::" && r.DestinationNetworkPrefixLength.Int32Value == 0))
+            {
+                routes.Add(new NEIPv6Route("::", 0));
+            }
+            settings.IPv6Settings.IncludedRoutes = routes.ToArray();
+
+            // Exclude link-local to protect the USB CoreDevice pairing tunnel (keeps devicectl working)
+            var excludedRoutes = new List<NEIPv6Route> { new NEIPv6Route("fe80::", 10) };
+            if (!string.IsNullOrEmpty(serverAddress) && IPAddress.TryParse(serverAddress, out var parsedAddr) && parsedAddr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+            {
+                excludedRoutes.Add(new NEIPv6Route(parsedAddr.ToString(), 128));
+            }
+            settings.IPv6Settings.ExcludedRoutes = excludedRoutes.ToArray();
+
+            VhLogger.Instance.LogDebug("iOS: Configured IPv6 with {Count} routes (including injected default ::/0) and link-local exclusion.", routes.Count);
         }
 
         // Set DNS servers if any are provided

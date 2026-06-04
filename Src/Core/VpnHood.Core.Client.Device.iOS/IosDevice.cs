@@ -151,24 +151,47 @@ public class IosDevice : IDevice
         _vpnManager.Enabled = true;
 
         // ---- Save (short timeout; on timeout we continue and try Start anyway) ----
+        // iOS calls the completion handler with nsError == null on success; only treat a
+        // non-null error as a failure. (Dereferencing nsError.Description unconditionally
+        // threw a NullReferenceException inside the ObjC block on success -> SIGABRT.)
         var saveTcs = new TaskCompletionSource();
         _vpnManager.SaveToPreferences(nsError => {
-            saveTcs.TrySetException(new Exception(nsError.Description));
+            if (nsError != null) saveTcs.TrySetException(new Exception(nsError.Description));
+            else saveTcs.TrySetResult();
         });
         await TryStepAsync(saveTcs.Task, TimeSpan.FromSeconds(2));
 
         // ---- Load ----
         var loadTcs = new TaskCompletionSource();
         _vpnManager.LoadFromPreferences(nsError => {
-            loadTcs.TrySetException(new Exception(nsError.Description));
+            if (nsError != null) loadTcs.TrySetException(new Exception(nsError.Description));
+            else loadTcs.TrySetResult();
         });
         await TryStepAsync(loadTcs.Task, TimeSpan.FromSeconds(2));
 
         // ---- StartVpnTunnel (synchronous call into iOS) ----
-        try {
-            _vpnManager.Connection.StartVpnTunnel(out _);
+        // The error MUST be inspected: on reconnect StartVpnTunnel commonly returns
+        // NEVPNErrorConfigurationStale (the config was modified since this manager last loaded) or
+        // ...Disabled. Silently ignoring it is why the tunnel never comes back after the first
+        // connect/disconnect cycle. On failure, re-assert+save+reload the config and retry once.
+        if (!TryStartTunnel(out var startError) && startError != null) {
+            VhLogger.Instance.LogWarning(
+                "StartVpnTunnel failed (code={Code}): {Error}. Re-saving config and retrying...",
+                startError.Code, startError.LocalizedDescription);
+
+            _vpnManager.Enabled = true;
+            var reSaveTcs = new TaskCompletionSource();
+            _vpnManager.SaveToPreferences(e => { if (e != null) reSaveTcs.TrySetException(new Exception(e.Description)); else reSaveTcs.TrySetResult(); });
+            await TryStepAsync(reSaveTcs.Task, TimeSpan.FromSeconds(2));
+
+            var reLoadTcs = new TaskCompletionSource();
+            _vpnManager.LoadFromPreferences(_ => reLoadTcs.TrySetResult());
+            await TryStepAsync(reLoadTcs.Task, TimeSpan.FromSeconds(2));
+
+            if (!TryStartTunnel(out var retryError) && retryError != null)
+                VhLogger.Instance.LogError("StartVpnTunnel retry failed (code={Code}): {Error}",
+                    retryError.Code, retryError.LocalizedDescription);
         }
-        catch { /* ignore */ }
 
         // ---- Poll NEVpnStatus quickly (10 × 200ms = 2s) ----
         for (var i = 0; i < 10; i++) {
@@ -178,6 +201,20 @@ public class IosDevice : IDevice
             }
             catch { /* ignore */ }
             await Task.Delay(200, cancellationToken);
+        }
+    }
+
+    // Returns true if StartVpnTunnel was issued without an immediate error.
+    private bool TryStartTunnel(out NSError? error)
+    {
+        error = null;
+        try {
+            _vpnManager.Connection.StartVpnTunnel(out error);
+            return error == null;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "StartVpnTunnel threw.");
+            return false;
         }
     }
 

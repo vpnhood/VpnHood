@@ -69,6 +69,13 @@ public class LogService(string logFilePath) : IDisposable
             File.Delete(LogFilePath);
 
         var loggerFactory = LoggerFactory.Create(builder => {
+            // device (System.Diagnostics.Trace)
+            if (logServiceOptions.LogToDevice) {
+                var provider = new VhDeviceLoggerProvider(includeScopes: true);
+                _loggerProviders.Add(provider);
+                builder.AddProvider(provider);
+            }
+
             // console
             if (logServiceOptions.LogToConsole) // AddSimpleConsole does not support event id
             {

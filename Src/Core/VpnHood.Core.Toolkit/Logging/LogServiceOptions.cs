@@ -6,6 +6,7 @@ namespace VpnHood.Core.Toolkit.Logging;
 public class LogServiceOptions
 {
     public bool LogToConsole { get; set; } = true;
+    public bool LogToDevice { get; set; } = true;
     public bool LogToFile { get; set; } = true;
     public bool? LogAnonymous { get; set; }
     public bool AutoFlush { get; set; } = true;

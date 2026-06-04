@@ -53,7 +53,7 @@ internal sealed class IosMessageClient(NETunnelProviderManager vpnManager) : IMe
             ? null
             : NSArray.FromArray<NETunnelProviderManager>(managersArray)
                 .Select(m => m.Connection as NETunnelProviderSession)
-                .FirstOrDefault(s => s != null && s.Status is NEVpnStatus.Connected or NEVpnStatus.Connecting or NEVpnStatus.Reasserting or NEVpnStatus.Disconnecting)
+                .FirstOrDefault(s => s is { Status: NEVpnStatus.Connected or NEVpnStatus.Connecting or NEVpnStatus.Reasserting or NEVpnStatus.Disconnecting })
                 ?? NSArray.FromArray<NETunnelProviderManager>(managersArray)
                 .Select(m => m.Connection as NETunnelProviderSession)
                 .FirstOrDefault(s => s != null);

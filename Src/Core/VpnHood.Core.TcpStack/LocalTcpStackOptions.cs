@@ -22,7 +22,7 @@ public sealed class LocalTcpStackOptions
     /// Advertised TCP receive window, in bytes. Also sizes the network→app reassembly pipe
     /// (its <see cref="PipeOptions.PauseWriterThreshold"/>). This is the dominant per-connection
     /// receive-side memory cost.
-    /// <para>Range: 1..65535. The advertised value lives in the 16-bit TCP window field and we
+    /// <para>Range: 1..65535. The advertised value lives in the 16-bit TCP window field, and we
     /// do NOT advertise a window-scale shift (shift = 0), so values above 65535 are rejected.</para>
     /// Default: 65535. iOS typically shrinks this to 16–32 KB.
     /// </summary>
@@ -89,7 +89,7 @@ public sealed class LocalTcpStackOptions
     // ---- Aggregate bounds ----
 
     /// <summary>
-    /// Maximum number of simultaneous connections. New SYNs beyond this are answered with a RST.
+    /// Maximum number of simultaneous connections. New SYNs beyond this are answered with an RST.
     /// <para><c>0</c> (default) means unbounded and short-circuits the check entirely (zero
     /// overhead on the SYN path).</para>
     /// On iOS this caps the worst-case aggregate buffer memory:

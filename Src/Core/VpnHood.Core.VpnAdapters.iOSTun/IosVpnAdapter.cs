@@ -23,7 +23,7 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
     // Reused single-element argument arrays for WritePackets. WritePacket runs on a single
     // thread (PacketTransportBase uses SingleReader and one send loop), and WritePackets copies
-    // synchronously, so reusing these avoids allocating two managed arrays per packet.
+    // synchronously, so reusing these avoid allocating two managed arrays per packet.
     private readonly NSData[] _writeDataArray = new NSData[1];
     private readonly NSNumber[] _writeProtoArray = new NSNumber[1];
 
@@ -120,7 +120,7 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
             // DNS resolver and routing engine that general IPv6 internet access is available when the
             // host physical link is IPv4-only. Without ::/0, iOS throttles or disables AAAA lookups.
             var routes = _ipv6Routes.ToList();
-            if (!routes.Any(r => r.DestinationAddress == "::" && r.DestinationNetworkPrefixLength.Int32Value == 0))
+            if (!routes.Any(r => r is { DestinationAddress: "::", DestinationNetworkPrefixLength.Int32Value: 0 }))
             {
                 routes.Add(new NEIPv6Route("::", 0));
             }
@@ -330,7 +330,7 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
         if (isV6) Interlocked.Increment(ref InboundV6Packets); // DIAGNOSTIC
 
         // CRITICAL (download memory): copy straight from the packet buffer into a native NSData
-        // WITHOUT first allocating a managed slice (buffer[offset..offset+length]). During a
+        // WITHOUT first allocating a managed slice (buffer[offset . . offset+length]). During a
         // download this path runs thousands of times per second; the old per-packet slice was
         // ~10 MB/s of managed garbage that the periodic GC could not reclaim within a sub-second
         // burst, spiking phys_footprint past the ~50 MB iOS extension jetsam limit. NSData.FromBytes

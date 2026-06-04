@@ -51,7 +51,7 @@ public class ServerApp : IDisposable
 
     public ServerApp()
     {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger();
+        VhLogger.Instance = new VhConsoleLogger();
         AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
 
         // set storage folder

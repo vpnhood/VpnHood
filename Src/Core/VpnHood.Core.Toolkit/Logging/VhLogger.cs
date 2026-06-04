@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -26,14 +25,13 @@ public static class VhLogger
     public static LogLevel MinLogLevel { get; set; } = LogLevel.Information;
 
 
-    public static ILogger CreateConsoleLogger(LogLevel logLevel = LogLevel.Trace, bool singleLine = false)
+    public static ILogger CreateConsoleLogger(bool singleLine = false)
     {
         // VhConsoleLoggerProvider is compatible with Blazor WebAssembly
         using var provider = new VhConsoleLoggerProvider(singleLine: singleLine, includeScopes: true);
         using var loggerFactory = LoggerFactory.Create(builder => {
             // ReSharper disable once AccessToDisposedClosure
             builder.AddProvider(provider);
-            builder.SetMinimumLevel(logLevel);
         });
 
         var logger = loggerFactory.CreateLogger("");
@@ -165,17 +163,18 @@ public static class VhLogger
 
     public static void LogError(EventId eventId, Exception ex, string message, params object?[] args)
     {
+#pragma warning disable CA2254 // it is our log builder, not a simple logging 
         if (IsSocketCloseException(ex)) {
             Instance.LogDebug(TcpCloseEventId, message + $" Message: {ex.Message}", args);
             return;
         }
 
         Instance.LogError(eventId, ex, message, args);
+#pragma warning restore CA2254
     }
 
     private class VhLoggerDecorator : ILogger
     {
-        private ILogger? _logger; //todo: check AOT and set for TraceLogger
         private readonly AotPreserveHelper _aotPreserveHelper = new();
 
         // Default is NullLogger — callers that want console output must set
@@ -183,10 +182,9 @@ public static class VhLogger
         // This prevents LoggerFactory.Create() + Console.Write* from running
         // during class initialization in environments without a readable stdout
         // (e.g. iOS Network Extension).
-        public ILogger Logger
-        {
-            get => _logger ?? NullLogger.Instance;
-            set => _logger = value;
+        public ILogger Logger {
+            get => field ??= new VhDeviceLogger();
+            set;
         }
 
         public VhLoggerDecorator()

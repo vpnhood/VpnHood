@@ -42,7 +42,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
 
     private VpnHoodAppWin(string appId, string storageFolder)
     {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger();
+        VhLogger.Instance = new VhConsoleLogger();
         _appId = appId;
         _storageFolder = storageFolder;
 

@@ -172,14 +172,26 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 
     public override void HandleAppMessage(NSData? messageData, Action<NSData>? completionHandler)
     {
+        // CRITICAL: do NOT block here. iOS may deliver app messages on the provider/main thread, and
+        // blocking on ProcessMessageAsync with .GetAwaiter().GetResult() (sync-over-async) can
+        // deadlock when the continuation needs that same thread. The completion handler then never
+        // fires, so every App<->Extension RPC (status refresh, disconnect) times out — which shows up
+        // as a permanent "Connecting" state and broken disconnect/reconnect. Process asynchronously
+        // and invoke the completion handler from the continuation (it is safe from any thread).
+        _ = HandleAppMessageAsync(messageData, completionHandler);
+    }
+
+    private async Task HandleAppMessageAsync(NSData? messageData, Action<NSData>? completionHandler)
+    {
         NSData responseData;
         try {
             if (_vpnServiceHost == null || messageData == null) {
                 responseData = BuildApiErrorResponse(new InvalidOperationException("VpnServiceHost is not ready."));
             }
             else {
-                var responseBytes = _messageListener.ProcessMessageAsync(messageData.ToArray(),
-                    CancellationToken.None).GetAwaiter().GetResult();
+                var responseBytes = await _messageListener
+                    .ProcessMessageAsync(messageData.ToArray(), CancellationToken.None)
+                    .ConfigureAwait(false);
                 responseData = NSData.FromArray(responseBytes);
             }
         }

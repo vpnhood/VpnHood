@@ -18,6 +18,7 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
     private TcpListener? _tcpListener;
     private bool _disposed;
     public bool IsStarted { get; private set; }
+    public bool ThrottleRequests { get; set; } = true;
 
     public delegate Task<string> Http01KeyAuthorizationFunc(string token, CancellationToken cancellationToken);
 
@@ -50,9 +51,11 @@ public class Http01ChallengeHandler(IPAddress ipAddress, Http01KeyAuthorizationF
 
         try {
             // prevent duplicate request from each ip if too many requests come in
-            using var lockAsyncResult = await AsyncLock.LockAsync(
-                IPAddressUtil.GetDosKey(client.Client.GetRemoteEndPoint().Address), TimeSpan.Zero, linkedCt.Token);
-            if (!lockAsyncResult.Succeeded)
+            using var lockAsyncResult = ThrottleRequests
+                ? await AsyncLock.LockAsync(
+                    IPAddressUtil.GetDosKey(client.Client.GetRemoteEndPoint().Address), TimeSpan.Zero, linkedCt.Token)
+                : null;
+            if (lockAsyncResult is { Succeeded: false })
                 throw new HttpRequestException("Too many requests from the same IP address.", null, HttpStatusCode.TooManyRequests);
 
             await HandleRequestCore(client, linkedCt.Token).Vhc();

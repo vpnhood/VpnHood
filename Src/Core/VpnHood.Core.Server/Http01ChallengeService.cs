@@ -5,9 +5,11 @@ using static VpnHood.Core.Server.Http01ChallengeHandler;
 
 namespace VpnHood.Core.Server;
 
-public class Http01ChallengeService(Http01KeyAuthorizationFunc keyAuthorizationFunc)
+public class Http01ChallengeService(Http01KeyAuthorizationFunc keyAuthorizationFunc,
+    bool throttleRequests = true)
     : IDisposable
 {
+    public bool ThrottleRequests => throttleRequests;
     private readonly List<Http01ChallengeHandler> _services = [];
     private bool _disposed;
 
@@ -17,7 +19,10 @@ public class Http01ChallengeService(Http01KeyAuthorizationFunc keyAuthorizationF
         Stop();
 
         foreach (var ipAddress in ipAddresses) {
-            var service = new Http01ChallengeHandler(ipAddress, keyAuthorizationFunc);
+            var service = new Http01ChallengeHandler(ipAddress, keyAuthorizationFunc) {
+                ThrottleRequests = throttleRequests
+            };
+
             try {
                 service.Start();
                 _services.Add(service);

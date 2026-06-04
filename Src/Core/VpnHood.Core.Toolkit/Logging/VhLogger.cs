@@ -27,15 +27,7 @@ public static class VhLogger
 
     public static ILogger CreateConsoleLogger(bool singleLine = false)
     {
-        // VhConsoleLoggerProvider is compatible with Blazor WebAssembly
-        using var provider = new VhConsoleLoggerProvider(singleLine: singleLine, includeScopes: true);
-        using var loggerFactory = LoggerFactory.Create(builder => {
-            // ReSharper disable once AccessToDisposedClosure
-            builder.AddProvider(provider);
-        });
-
-        var logger = loggerFactory.CreateLogger("");
-        return logger;
+        return new VhConsoleLogger(singleLine);
     }
 
     public static string Format(EndPoint? endPoint)

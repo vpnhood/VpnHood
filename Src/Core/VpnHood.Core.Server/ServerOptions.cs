@@ -30,6 +30,7 @@ public class ServerOptions
     public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromMinutes(1);
     public IpNetwork VirtualIpNetworkV4 { get; init; } = TunnelDefaults.VirtualIpNetworkV4;
     public IpNetwork VirtualIpNetworkV6 { get; init; } = TunnelDefaults.VirtualIpNetworkV6;
+    public bool Http01ChallengeThrottling { get; init; } = true;
     public TimeSpan ConfigErrorStrikeDuration { get; init; } = TimeSpan.FromDays(7);
     public TimeSpan ConfigErrorRetryInterval { get; init; } = TimeSpan.FromMinutes(30); //todo: consider 6 hour
 }

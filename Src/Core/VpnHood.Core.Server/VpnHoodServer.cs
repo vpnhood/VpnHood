@@ -79,7 +79,8 @@ public class VpnHoodServer : IAsyncDisposable
             });
 
         _http01ChallengeService = new Http01ChallengeService((token, cancellationToken) =>
-            AccessManager.Acme_GetHttp01KeyAuthorization(token, cancellationToken));
+            AccessManager.Acme_GetHttp01KeyAuthorization(token, cancellationToken),
+            throttleRequests: options.Http01ChallengeThrottling);
         _autoDisposeAccessManager = options.AutoDisposeAccessManager;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _configErrorTracker = new ConfigErrorTracker(options.StoragePath, options.ConfigErrorStrikeDuration, options.ConfigErrorRetryInterval);

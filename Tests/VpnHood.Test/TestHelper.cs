@@ -227,7 +227,8 @@ public class TestHelper : IDisposable
             NetConfigurationProvider = netConfigurationProvider,
             SwapMemoryProvider = swapMemoryProvider,
             VpnAdapter = vpnAdapter,
-            PublicIpDiscovery = false //it slows down our tests
+            PublicIpDiscovery = false, //it slows down our tests
+            Http01ChallengeThrottling = false //avoid throttling concurrent challenge requests in tests
         };
 
         // Create server

@@ -32,9 +32,9 @@ public class CompositeIpLocationProvider(
         throw new Exception("No location provider could resolve the IP address.");
     }
 
-    public async Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
+    public Task<IpLocation> GetCurrentLocation(CancellationToken cancellationToken)
     {
-        return await _currentIpLocationProviders.GetCurrentLocation(cancellationToken);
+        return _currentIpLocationProviders.GetCurrentLocation(cancellationToken);
     }
 
     public void Dispose()

@@ -3,6 +3,7 @@
 public class ServerLocationOptions
 {
     public int? Normal { get; set; }
+    public int? NormalByRewardedAd { get; set; }
     public int? PremiumByTrial { get; set; }
     public int? PremiumByRewardedAd { get; set; }
     public bool PremiumByPurchase { get; set; }

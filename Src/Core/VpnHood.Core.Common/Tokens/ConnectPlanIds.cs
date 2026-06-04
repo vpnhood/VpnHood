@@ -6,6 +6,7 @@ namespace VpnHood.Core.Common.Tokens;
 public enum ConnectPlanId
 {
     Normal,
+    NormalByRewardedAd,
     PremiumByTrial,
     PremiumByRewardedAd,
     Status

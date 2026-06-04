@@ -101,6 +101,7 @@ public class ClientProfileTest : TestAppBase
             ClientCountries = ["*"],
             FreeLocations = ["US", "CA"],
             Normal = 10,
+            NormalByRewardedAd = 15,
             PremiumByPurchase = true,
             PremiumByRewardedAd = 20,
             PremiumByTrial = 30
@@ -132,15 +133,17 @@ public class ClientProfileTest : TestAppBase
         Assert.IsTrue(location.Options.HasPremium);
         Assert.IsTrue(location.Options.Prompt);
         Assert.AreEqual(defaultPolicy.Normal, location.Options.Normal);
+        Assert.AreEqual(defaultPolicy.NormalByRewardedAd, location.Options.NormalByRewardedAd);
         Assert.AreEqual(defaultPolicy.PremiumByRewardedAd, location.Options.PremiumByRewardedAd);
         Assert.AreEqual(defaultPolicy.PremiumByTrial, location.Options.PremiumByTrial);
 
-        // (US/*) there is no premium server here
+        // (US/*) there is no premium server here, but free-by-rewarded-ad is still offered so it prompts
         location = clientProfileInfo.LocationInfos.Single(x => x.ServerLocation == "US/*");
         Assert.IsTrue(location.Options.HasFree);
         Assert.IsFalse(location.Options.HasPremium);
-        Assert.IsFalse(location.Options.Prompt);
+        Assert.IsTrue(location.Options.Prompt);
         Assert.AreEqual(defaultPolicy.Normal, location.Options.Normal);
+        Assert.AreEqual(defaultPolicy.NormalByRewardedAd, location.Options.NormalByRewardedAd);
         Assert.IsNull(location.Options.PremiumByRewardedAd);
         Assert.IsNull(location.Options.PremiumByTrial);
 
@@ -150,6 +153,7 @@ public class ClientProfileTest : TestAppBase
         Assert.IsTrue(location.Options.HasPremium);
         Assert.IsTrue(location.Options.Prompt);
         Assert.IsNull(location.Options.Normal);
+        Assert.IsNull(location.Options.NormalByRewardedAd);
         Assert.AreEqual(defaultPolicy.PremiumByRewardedAd, location.Options.PremiumByRewardedAd);
         Assert.AreEqual(defaultPolicy.PremiumByTrial, location.Options.PremiumByTrial);
 
@@ -161,6 +165,7 @@ public class ClientProfileTest : TestAppBase
         Assert.IsTrue(location.Options.HasPremium);
         Assert.IsTrue(location.Options.Prompt);
         Assert.IsNull(location.Options.Normal);
+        Assert.IsNull(location.Options.NormalByRewardedAd);
         Assert.AreEqual(caPolicy.PremiumByRewardedAd, location.Options.PremiumByRewardedAd);
         Assert.AreEqual(caPolicy.PremiumByTrial, location.Options.PremiumByTrial);
 
@@ -173,6 +178,7 @@ public class ClientProfileTest : TestAppBase
         Assert.IsTrue(location.Options.HasPremium);
         Assert.IsFalse(location.Options.Prompt);
         Assert.AreEqual(0, location.Options.Normal);
+        Assert.IsNull(location.Options.NormalByRewardedAd);
         Assert.IsNull(location.Options.PremiumByRewardedAd);
         Assert.IsNull(location.Options.PremiumByTrial);
         Assert.IsFalse(location.Options.PremiumByPurchase);

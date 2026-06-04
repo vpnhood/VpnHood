@@ -11,6 +11,18 @@ internal sealed class IosMessageClient(NETunnelProviderManager vpnManager) : IMe
 {
     public async Task<Memory<byte>> SendAsync(Memory<byte> request, CancellationToken cancellationToken)
     {
+        // The provider session only exists once the manager's preferences are loaded. On a fresh app
+        // process (e.g. the app was untasked while the extension kept the VPN up, then reopened) the
+        // manager has not been loaded yet, so Connection is not a session and the channel looks
+        // "unreachable" even though the extension is running. Load on demand so the channel works
+        // (and the app can see the live status to disconnect/reconnect cleanly).
+        if (vpnManager.Connection is not NETunnelProviderSession) {
+            var loadTcs = new TaskCompletionSource();
+            vpnManager.LoadFromPreferences(_ => loadTcs.TrySetResult());
+            try { await Task.WhenAny(loadTcs.Task, Task.Delay(TimeSpan.FromSeconds(3), cancellationToken)); }
+            catch { /* ignore */ }
+        }
+
         if (vpnManager.Connection is not NETunnelProviderSession providerSession)
             throw new VpnServiceUnreachableException("VpnService is unreachable.",
                 new InvalidOperationException("NETunnelProviderSession is not available."));

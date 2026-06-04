@@ -17,11 +17,11 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
     private readonly string _apiFilePath = TcpMessageTransport.GetApiFilePath(configFolder);
     private readonly AsyncLock _sendLock = new();
     private TcpClient? _tcpClient;
-    private bool _isDisposed;
+    private bool _disposed;
 
     public async Task<Memory<byte>> SendAsync(Memory<byte> request, CancellationToken cancellationToken)
     {
-        ObjectDisposedException.ThrowIf(_isDisposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
 
         using var scopeLock = await _sendLock.LockAsync(cancellationToken).Vhc();
 
@@ -112,9 +112,9 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
 
     public void Dispose()
     {
-        if (_isDisposed)
+        if (_disposed)
             return;
-        _isDisposed = true;
+        _disposed = true;
 
         DisposeConnection();
     }

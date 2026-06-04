@@ -24,7 +24,7 @@ public class VpnServiceHost : IDisposable
     private readonly LogService? _logService;
     private CancellationTokenSource _connectCts = new();
     private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(3);
-    private int _isDisposed;
+    private bool _disposed;
     private bool _disconnectRequested;
 
     internal VpnHoodClient? Client { get; private set; }
@@ -97,7 +97,7 @@ public class VpnServiceHost : IDisposable
 
     public async Task<bool> TryConnect(bool forceReconnect = false, bool isAlwaysOn = false)
     {
-        if (_isDisposed == 1)
+        if (_disposed)
             return false;
 
         try {
@@ -285,7 +285,7 @@ public class VpnServiceHost : IDisposable
 
     public async Task TryDisconnect(Exception? exception = null)
     {
-        if (_isDisposed == 1)
+        if (_disposed)
             return;
 
         try {
@@ -311,7 +311,7 @@ public class VpnServiceHost : IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         // cancel connection if exists

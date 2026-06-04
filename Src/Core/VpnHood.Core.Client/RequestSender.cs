@@ -36,7 +36,7 @@ namespace VpnHood.Core.Client;
 internal class RequestSender(ConnectorService connectorService) : IDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private int _isDisposed;
+    private bool _disposed;
 
     public ConnectorService ConnectorService { get; } = connectorService;
 
@@ -219,7 +219,7 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return;
+        if (Interlocked.Exchange(ref _disposed, true)) return;
         _cancellationTokenSource.TryCancel();
         _cancellationTokenSource.Dispose();
         ConnectorService.Dispose();

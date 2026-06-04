@@ -11,7 +11,7 @@ public class Job : IDisposable
     private readonly TimeSpan _dueTime;
     private readonly int? _maxRetry;
     private long _currentFailedCount;
-    private int _isDisposed;
+    private bool _disposed;
     private readonly JobRunner _jobRunner;
     public TimeSpan Interval { get; set; }
     public long SucceededCount { get; private set; }
@@ -66,7 +66,7 @@ public class Job : IDisposable
 
     public void Start()
     {
-        if (_isDisposed != 0)
+        if (_disposed)
             throw new ObjectDisposedException(nameof(Job));
 
         if (IsStarted)
@@ -121,7 +121,7 @@ public class Job : IDisposable
 
     private async Task RunInternal(CancellationToken cancellationToken)
     {
-        if (_isDisposed != 0)
+        if (_disposed)
             throw new ObjectDisposedException(nameof(Job));
 
         // wait until we can run the job
@@ -159,7 +159,7 @@ public class Job : IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         _cancellationTokenSource.TryCancel();

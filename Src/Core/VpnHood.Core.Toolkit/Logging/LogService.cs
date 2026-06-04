@@ -7,7 +7,7 @@ public class LogService(string logFilePath) : IDisposable
 {
     private ILogger? _logger;
     private readonly List<ILoggerProvider> _loggerProviders = [];
-    private int _isDisposed;
+    private bool _disposed;
     private readonly Lock _isStoppingLock = new();
     public string LogFilePath { get; } = logFilePath;
     public string[] LogEvents { get; private set; } = [];
@@ -16,7 +16,7 @@ public class LogService(string logFilePath) : IDisposable
 
     public void Start(LogServiceOptions options, bool deleteOldReport = true)
     {
-        ObjectDisposedException.ThrowIf(_isDisposed == 1, this);
+        ObjectDisposedException.ThrowIf(_disposed, this);
         Stop();
 
         VhLogger.IsAnonymousMode = options.LogAnonymous is null or true;
@@ -111,7 +111,7 @@ public class LogService(string logFilePath) : IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
         Stop();
     }

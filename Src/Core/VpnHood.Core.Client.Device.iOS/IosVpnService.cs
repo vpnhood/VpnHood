@@ -27,7 +27,7 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     // Stored when StartTunnel is called; invoked once IosVpnAdapter applies network settings
     // (iOS terminates the extension if the completion handler runs before SetTunnelNetworkSettings).
     private Action<NSError>? _startTunnelCompletionHandler;
-    private int _completionFired;
+    private bool _completionFired;
 
     /// <summary>
     /// The App Group identifier shared with the host app (e.g. <c>group.com.example.client</c>).
@@ -41,7 +41,7 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     /// or fails (error != null). Safe to call multiple times — only the first call wins.
     public void CompleteStartTunnel(NSError? error)
     {
-        if (Interlocked.Exchange(ref _completionFired, 1) != 0)
+        if (Interlocked.Exchange(ref _completionFired, true))
             return;
         var handler = _startTunnelCompletionHandler;
         _startTunnelCompletionHandler = null;
@@ -94,10 +94,10 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     // immediately whenever the live heap crosses a low threshold (and periodically otherwise) so
     // the peak stays well below the limit. Native NSObject peers that escaped Dispose are only
     // reclaimed on finalization, so WaitForPendingFinalizers is essential.
-    private static int _memoryGuardStarted;
+    private static bool _memoryGuardStarted;
     private static void StartMemoryGuard()
     {
-        if (Interlocked.Exchange(ref _memoryGuardStarted, 1) == 1)
+        if (Interlocked.Exchange(ref _memoryGuardStarted, true))
             return;
 
         var thread = new Thread(() => {

@@ -23,7 +23,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private readonly Memory<byte> _writeChunkHeaderBuffer = new byte[ChunkHeaderLength];
     private Task? _closeStreamTask;
     private readonly Lock _closeStreamLock = new();
-    private int _isDisposed;
+    private bool _disposed;
     public override bool CanReuse => !_isConnectionClosed && _exception == null && AllowReuse;
     public int PreserveWriteBufferLength => ChunkHeaderLength;
 
@@ -45,7 +45,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ObjectDisposedException.ThrowIf(IsDisposed || _isDisposed == 1, this);
+        ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
 
         try {
             // support zero length buffer. It should just call the base stream write
@@ -106,7 +106,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ObjectDisposedException.ThrowIf(IsDisposed || _isDisposed == 1, this);
+        ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
 
         try {
             // support zero length buffer. It should just call the base stream write
@@ -126,7 +126,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     public async ValueTask WritePreservedAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ObjectDisposedException.ThrowIf(IsDisposed || _isDisposed == 1, this);
+        ObjectDisposedException.ThrowIf(IsDisposed || _disposed, this);
 
         try {
             // should not write a zero chunk if caller data is zero
@@ -348,7 +348,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
     protected override void Dispose(bool disposing)
     {
-        _isDisposed = 1; // don't return if already disposed. DisposeAsync may call set this
+        _disposed = true; // don't return if already disposed. DisposeAsync may call set this
 
         if (disposing) {
             if (CanReuse) {
@@ -366,7 +366,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
     public override async ValueTask DisposeAsync()
     {
-        _isDisposed = 1;
+        _disposed = true;
 
         // just ignore exceptions during close stream as close stream already handles logging
         if (CanReuse)

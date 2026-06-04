@@ -30,7 +30,7 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
     private readonly RemoteCertificateValidationCallback _certificateValidationCallback;
     private readonly List<QuicStreamConnectionItem> _items = [];
     private readonly Job _cleanupJob;
-    private int _isDisposed;
+    private bool _disposed;
 
     public int MaxStreamsPerConnection { get; set; } = 30;
     public int MaxLifetimeStreamsPerConnection { get; set; } = 500;
@@ -98,7 +98,7 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
 
     public ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) != 0) return ValueTask.CompletedTask;
+        if (Interlocked.Exchange(ref _disposed, true)) return ValueTask.CompletedTask;
 
         _cleanupJob.Dispose();
 

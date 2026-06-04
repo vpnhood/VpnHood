@@ -51,7 +51,7 @@ internal sealed class LocalTcpConnection(
     private bool _finReceived;
     private bool _sndNxtAfterSynSet;
     private bool _disposed;
-    private int _closedFlag;
+    private bool _closedFlag;
     private long _lastActivityTicks = Stopwatch.GetTimestamp();
     private bool _netToAppCompleted;
     private bool _appToNetCompleted;
@@ -650,7 +650,7 @@ internal sealed class LocalTcpConnection(
 
     private void Close()
     {
-        if (Interlocked.Exchange(ref _closedFlag, 1) != 0)
+        if (Interlocked.Exchange(ref _closedFlag, true))
             return;
 
         LocalTcpClient? abandoned;

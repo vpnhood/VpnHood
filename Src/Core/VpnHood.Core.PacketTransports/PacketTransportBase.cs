@@ -14,12 +14,12 @@ public abstract class PacketTransportBase : IPacketTransport
     private readonly bool _blocking;
     private readonly bool _singleMode;
     private readonly bool _passthrough;
-    private int _isDisposed;
-    private int _isDisposing;
+    private bool _disposed;
+    private bool _disposing;
     private readonly PacketTransportStat _stat = new();
     private bool _isSending;
-    protected bool IsDisposed => _isDisposed == 1;
-    protected bool IsDisposing => _isDisposing == 1;
+    protected bool IsDisposed => _disposed;
+    protected bool IsDisposing => _disposing;
     protected abstract ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets);
     protected virtual string Name => VhLogger.FormatType(this);
 
@@ -227,7 +227,7 @@ public abstract class PacketTransportBase : IPacketTransport
 
     public virtual void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposing, 1) == 1)
+        if (Interlocked.Exchange(ref _disposing, true))
             return;
 
         PreDispose();
@@ -237,14 +237,14 @@ public abstract class PacketTransportBase : IPacketTransport
 
     protected void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         if (disposing)
             DisposeManaged();
 
         DisposeUnmanaged();
-        _isDisposing = 0;
+        _disposing = false;
     }
 
     protected virtual void PreDispose()

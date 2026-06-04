@@ -11,7 +11,7 @@ namespace VpnHood.Core.Client.VpnServices.Host;
 
 internal class ApiController : IDisposable
 {
-    private int _isDisposed;
+    private bool _disposed;
     private readonly VpnServiceHost _vpnHoodService;
     private readonly IMessageListener _messageListener;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -184,7 +184,7 @@ internal class ApiController : IDisposable
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         _cancellationTokenSource.Cancel();

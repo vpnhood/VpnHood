@@ -13,7 +13,7 @@ public sealed class LocalTcpListener : ITcpListener
     private readonly Channel<LocalTcpClient> _acceptQueue;
 
     private readonly LocalTcpStack _stack;
-    private int _stopped;
+    private bool _stopped;
 
     /// <summary>
     /// The local endpoint this listener is bound to. Null = wildcard listener (any IPv4/IPv6).
@@ -48,7 +48,7 @@ public sealed class LocalTcpListener : ITcpListener
     /// </summary>
     internal bool TryEnqueueAccept(LocalTcpClient client)
     {
-        if (Volatile.Read(ref _stopped) != 0) return false;
+        if (Volatile.Read(ref _stopped)) return false;
         return _acceptQueue.Writer.TryWrite(client);
     }
 
@@ -84,7 +84,7 @@ public sealed class LocalTcpListener : ITcpListener
     /// </summary>
     public void Stop()
     {
-        if (Interlocked.Exchange(ref _stopped, 1) != 0) return;
+        if (Interlocked.Exchange(ref _stopped, true)) return;
 
         _acceptQueue.Writer.TryComplete();
 

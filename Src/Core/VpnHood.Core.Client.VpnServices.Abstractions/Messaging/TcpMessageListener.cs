@@ -19,7 +19,7 @@ public sealed class TcpMessageListener : IMessageListener
     private readonly byte[] _apiKey;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private MessageHandler? _messageHandler;
-    private int _isDisposed;
+    private bool _disposed;
 
     public IPEndPoint ApiEndPoint { get; }
 
@@ -64,7 +64,7 @@ public sealed class TcpMessageListener : IMessageListener
             }
         }
         catch (Exception ex) {
-            if (_isDisposed == 0)
+            if (!_disposed)
                 VhLogger.Instance.LogError(ex, "TcpMessageListener accept loop has stopped.");
         }
         finally {
@@ -95,7 +95,7 @@ public sealed class TcpMessageListener : IMessageListener
                 await TcpMessageTransport.WriteFrameAsync(stream, response, cancellationToken).Vhc();
             }
         }
-        catch (Exception ex) when (_isDisposed == 0) {
+        catch (Exception ex) when (!_disposed) {
             VhLogger.Instance.LogDebug(ex, "Could not handle API connection. ClientEp: {ClientEp}", clientEp);
         }
         finally {
@@ -105,7 +105,7 @@ public sealed class TcpMessageListener : IMessageListener
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         _cancellationTokenSource.Cancel();

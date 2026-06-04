@@ -21,17 +21,17 @@ namespace VpnHood.Core.Client.ConnectorServices;
 /// Supports two transport backends:
 /// <list type="bullet">
 ///   <item><term>TCP + TLS</term><description>Each tunnel request opens a new TLS-authenticated TCP connection via <see cref="TcpStreamConnectionFactory"/>. Connections that complete a request can be returned to the reuse pool.</description></item>
-///   <item><term>QUIC</term><description>Connections are opened as bidirectional streams on a pooled <see cref="System.Net.Quic.QuicConnection"/> via <see cref="QuicStreamConnectionFactory"/>. QUIC streams are independent and are NOT added to the reuse pool — each stream maps 1:1 to a request lifetime.</description></item>
+///   <item><term>QUIC</term><description>Connections are opened as bidirectional streams on a pooled <see cref="System.Net.Quic.QuicConnection"/> via <see cref="QuicStreamConnectionFactory"/>. QUIC streams are independent and are NOT added to the reuse pool ï¿½ each stream maps 1:1 to a request lifetime.</description></item>
 /// </list>
 /// HTTP framing (POST header or WebSocket upgrade) is applied on top of the raw stream before
-/// returning it — the server's <c>ProcessNewConnection</c> expects an HTTP/1.1 request regardless
+/// returning it ï¿½ the server's <c>ProcessNewConnection</c> expects an HTTP/1.1 request regardless
 /// of the underlying transport.
 /// <para>
 /// Our QUIC is a custom protocol, NOT HTTP/3. We use it purely as a transport layer,
 /// with the same binary request/response framing as TCP. <c>SslApplicationProtocol.Http3</c>
 /// is used only as the ALPN token during the TLS handshake.
 /// </para>
-/// Owned by <see cref="RequestSender"/> — created from <see cref="ConnectorServiceOptions"/>,
+/// Owned by <see cref="RequestSender"/> ï¿½ created from <see cref="ConnectorServiceOptions"/>,
 /// exposed via <see cref="RequestSender.ConnectorService"/>, and disposed by <see cref="RequestSender.Dispose"/>.
 /// </remarks>
 internal class ConnectorService : IDisposable
@@ -42,7 +42,7 @@ internal class ConnectorService : IDisposable
     private readonly TcpStreamConnectionFactory _tcpConnectionFactory;
     private readonly QuicStreamConnectionFactory _quicConnectionFactory;
     private readonly Job _cleanupJob;
-    private int _isDisposed;
+    private bool _disposed;
     private bool _useWebSocket;
 
     public ConnectorStat Stat { get; }
@@ -224,7 +224,7 @@ internal class ConnectorService : IDisposable
     private void ConnectionReuseCallback(ReusableStreamConnection streamConnection)
     {
         // Check if the connector service is disposed
-        if (_isDisposed != 0 || !AllowChannelReuse) {
+        if (_disposed || !AllowChannelReuse) {
             VhLogger.Instance.LogDebug(GeneralEventId.Stream,
                 "Disposing the reused client stream because the connector service is either disposed or reuse is no longer allowed. " +
                 "ConnectionId: {ConnectionId}", streamConnection.ConnectionId);
@@ -299,7 +299,7 @@ internal class ConnectorService : IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         if (disposing) {

@@ -10,7 +10,7 @@ namespace VpnHood.Core.Tunneling.Channels;
 
 public class ProxyChannel : IProxyChannel
 {
-    private int _isDisposed;
+    private bool _disposed;
     private readonly IStreamConnection _hostStreamConnection;
     private readonly IStreamConnection _tunnelStreamConnection;
     private readonly TransferBufferSize _tunnelBufferSize;
@@ -22,7 +22,7 @@ public class ProxyChannel : IProxyChannel
     private bool _isTunnelReadTaskFinished;
     private readonly Job _checkAliveJob;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private bool IsDisposed => _isDisposed == 1;
+    private bool IsDisposed => _disposed;
 
     public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
     public string ChannelId { get; }
@@ -237,7 +237,7 @@ public class ProxyChannel : IProxyChannel
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _isDisposed, 1) == 1)
+        if (Interlocked.Exchange(ref _disposed, true))
             return;
 
         _cancellationTokenSource.Cancel();

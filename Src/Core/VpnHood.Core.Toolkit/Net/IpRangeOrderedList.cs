@@ -177,6 +177,7 @@ public class IpRangeOrderedList :
     private static List<IpRange> Sort(IEnumerable<IpRange> ipRanges)
     {
         // Avoid LINQ OrderBy: it hangs under iOS NetworkExtension Mono AOT.
+        // todo: AOT check
         var list = ipRanges as List<IpRange> != null
             ? new List<IpRange>((List<IpRange>)ipRanges)
             : new List<IpRange>(ipRanges);

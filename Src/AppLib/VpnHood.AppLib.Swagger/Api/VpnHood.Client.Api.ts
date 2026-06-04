@@ -3223,7 +3223,6 @@ export class AppFeatures implements IAppFeatures {
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
     isTcpProxySupported!: boolean;
-    isQuicSupported!: boolean;
     isSplitDomainSupported!: boolean;
     isUserReviewSupported!: boolean;
     isTv!: boolean;
@@ -3269,7 +3268,6 @@ export class AppFeatures implements IAppFeatures {
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : null as any;
             this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : null as any;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
-            this.isQuicSupported = _data["isQuicSupported"] !== undefined ? _data["isQuicSupported"] : null as any;
             this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
             this.isUserReviewSupported = _data["isUserReviewSupported"] !== undefined ? _data["isUserReviewSupported"] : null as any;
             this.isTv = _data["isTv"] !== undefined ? _data["isTv"] : null as any;
@@ -3331,7 +3329,6 @@ export class AppFeatures implements IAppFeatures {
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : null as any;
         data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : null as any;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
-        data["isQuicSupported"] = this.isQuicSupported !== undefined ? this.isQuicSupported : null as any;
         data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
         data["isUserReviewSupported"] = this.isUserReviewSupported !== undefined ? this.isUserReviewSupported : null as any;
         data["isTv"] = this.isTv !== undefined ? this.isTv : null as any;
@@ -3377,7 +3374,6 @@ export interface IAppFeatures {
     isAccountSupported: boolean;
     isBillingSupported: boolean;
     isTcpProxySupported: boolean;
-    isQuicSupported: boolean;
     isSplitDomainSupported: boolean;
     isUserReviewSupported: boolean;
     isTv: boolean;
@@ -4673,6 +4669,7 @@ export interface IClientServerLocationInfo extends IServerLocationInfo {
 
 export class ServerLocationOptions implements IServerLocationOptions {
     normal?: number | null;
+    normalByRewardedAd?: number | null;
     premiumByTrial?: number | null;
     premiumByRewardedAd?: number | null;
     premiumByPurchase!: boolean;
@@ -4695,6 +4692,7 @@ export class ServerLocationOptions implements IServerLocationOptions {
     init(_data?: any) {
         if (_data) {
             this.normal = _data["normal"] !== undefined ? _data["normal"] : null as any;
+            this.normalByRewardedAd = _data["normalByRewardedAd"] !== undefined ? _data["normalByRewardedAd"] : null as any;
             this.premiumByTrial = _data["premiumByTrial"] !== undefined ? _data["premiumByTrial"] : null as any;
             this.premiumByRewardedAd = _data["premiumByRewardedAd"] !== undefined ? _data["premiumByRewardedAd"] : null as any;
             this.premiumByPurchase = _data["premiumByPurchase"] !== undefined ? _data["premiumByPurchase"] : null as any;
@@ -4717,6 +4715,7 @@ export class ServerLocationOptions implements IServerLocationOptions {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["normal"] = this.normal !== undefined ? this.normal : null as any;
+        data["normalByRewardedAd"] = this.normalByRewardedAd !== undefined ? this.normalByRewardedAd : null as any;
         data["premiumByTrial"] = this.premiumByTrial !== undefined ? this.premiumByTrial : null as any;
         data["premiumByRewardedAd"] = this.premiumByRewardedAd !== undefined ? this.premiumByRewardedAd : null as any;
         data["premiumByPurchase"] = this.premiumByPurchase !== undefined ? this.premiumByPurchase : null as any;
@@ -4732,6 +4731,7 @@ export class ServerLocationOptions implements IServerLocationOptions {
 
 export interface IServerLocationOptions {
     normal?: number | null;
+    normalByRewardedAd?: number | null;
     premiumByTrial?: number | null;
     premiumByRewardedAd?: number | null;
     premiumByPurchase: boolean;
@@ -5499,6 +5499,7 @@ export class ClientPolicy implements IClientPolicy {
     ao!: boolean;
     uo!: boolean;
     n?: number | null;
+    nbr?: number | null;
     pbt?: number | null;
     pbtdl?: string | null;
     pbr?: number | null;
@@ -5541,6 +5542,7 @@ export class ClientPolicy implements IClientPolicy {
             this.ao = _data["ao"] !== undefined ? _data["ao"] : null as any;
             this.uo = _data["uo"] !== undefined ? _data["uo"] : null as any;
             this.n = _data["n"] !== undefined ? _data["n"] : null as any;
+            this.nbr = _data["nbr"] !== undefined ? _data["nbr"] : null as any;
             this.pbt = _data["pbt"] !== undefined ? _data["pbt"] : null as any;
             this.pbtdl = _data["pbtdl"] !== undefined ? _data["pbtdl"] : null as any;
             this.pbr = _data["pbr"] !== undefined ? _data["pbr"] : null as any;
@@ -5574,6 +5576,7 @@ export class ClientPolicy implements IClientPolicy {
         data["ao"] = this.ao !== undefined ? this.ao : null as any;
         data["uo"] = this.uo !== undefined ? this.uo : null as any;
         data["n"] = this.n !== undefined ? this.n : null as any;
+        data["nbr"] = this.nbr !== undefined ? this.nbr : null as any;
         data["pbt"] = this.pbt !== undefined ? this.pbt : null as any;
         data["pbtdl"] = this.pbtdl !== undefined ? this.pbtdl : null as any;
         data["pbr"] = this.pbr !== undefined ? this.pbr : null as any;
@@ -5592,6 +5595,7 @@ export interface IClientPolicy {
     ao: boolean;
     uo: boolean;
     n?: number | null;
+    nbr?: number | null;
     pbt?: number | null;
     pbtdl?: string | null;
     pbr?: number | null;
@@ -5840,6 +5844,7 @@ export interface ISplitDomains {
 
 export enum ConnectPlanId {
     Normal = "Normal",
+    NormalByRewardedAd = "NormalByRewardedAd",
     PremiumByTrial = "PremiumByTrial",
     PremiumByRewardedAd = "PremiumByRewardedAd",
     Status = "Status",

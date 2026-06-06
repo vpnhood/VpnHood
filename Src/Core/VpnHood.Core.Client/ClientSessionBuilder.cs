@@ -78,22 +78,8 @@ internal class ClientSessionBuilder(
         VpnEndPoint vpnEndPoint;
         bool allowRedirect;
 
-        //todo: temporary workaround for iOS Network Extension jetsam issue. Refactor the code to avoid special handling for iOS.
-        if (OperatingSystem.IsIOS()) {
-            // iOS Network Extension has a ~50 MB jetsam footprint limit. ServerFinder's reachability
-            // check performs an extra full TLS+HTTP ServerCheckRequest roundtrip, whose loaded native
-            // metadata pushes the process over the limit before the Hello completes. Skip it: resolve
-            // DNS only and let the Hello itself be the reachability test (one TLS roundtrip instead of two).
-            var endPoints = await serverFinder
-                .ResolveVpnEndPoints([token.ServerToken], serverFinder.IncludeIpV6, linkedCts.Token).Vhc();
-            vpnEndPoint = endPoints.FirstOrDefault()
-                ?? throw new UnreachableServerException();
-            allowRedirect = true;
-        }
-        else {
-            vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], linkedCts.Token).Vhc();
-            allowRedirect = !serverFinder.CustomServerEndpoints.Any();
-        }
+        vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], linkedCts.Token).Vhc();
+        allowRedirect = !serverFinder.CustomServerEndpoints.Any();
         return await Connect(vpnEndPoint, allowRedirect, linkedCts.Token).Vhc();
     }
 

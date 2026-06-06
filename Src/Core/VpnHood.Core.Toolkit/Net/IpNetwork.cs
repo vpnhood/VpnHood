@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text.Json.Serialization;
@@ -72,44 +72,31 @@ public class IpNetwork
     public IPAddress LastIpAddress { get; }
     public BigInteger Total { get { EnsureBigInt(); return _lastIpAddressValue - _firstIpAddressValue + 1; } }
 
-    public static IpNetwork AllV4 => _allV4 ??= new IpNetwork(IPAddress.Any, 0);
-    private static IpNetwork? _allV4;
+    public static IpNetwork AllV4 => field ??= new IpNetwork(IPAddress.Any, 0);
 
-    public static IReadOnlyList<IpNetwork> LocalNetworksV4 => _localNetworksV4 ??= [
+    public static IReadOnlyList<IpNetwork> LocalNetworksV4 => field ??= [
         Parse("10.0.0.0/8"),
         Parse("172.16.0.0/12"),
         Parse("192.168.0.0/16"),
         Parse("169.254.0.0/16")
     ];
-    private static IReadOnlyList<IpNetwork>? _localNetworksV4;
 
-    public static IpNetwork MulticastNetworkV4 => _multicastNetworkV4 ??= new(IPAddress.Parse("224.0.0.0"), 4);
-    private static IpNetwork? _multicastNetworkV4;
-    public static IpNetwork MulticastNetworkV6 => _multicastNetworkV6 ??= new(IPAddress.Parse("ff00::"), 8);
-    private static IpNetwork? _multicastNetworkV6;
-    public static IReadOnlyList<IpNetwork> MulticastNetworks => _multicastNetworks ??= [MulticastNetworkV4, MulticastNetworkV6];
-    private static IReadOnlyList<IpNetwork>? _multicastNetworks;
-    public static IpNetwork LoopbackNetworkV4 => _loopbackNetworkV4 ??= Parse("127.0.0.0/8");
-    private static IpNetwork? _loopbackNetworkV4;
-    public static IpNetwork LoopbackNetworkV6 => _loopbackNetworkV6 ??= Parse("::1/128");
-    private static IpNetwork? _loopbackNetworkV6;
-    public static IReadOnlyList<IpNetwork> LoopbackNetworks => _loopbackNetworks ??= [LoopbackNetworkV4, LoopbackNetworkV6];
-    private static IReadOnlyList<IpNetwork>? _loopbackNetworks;
-    public static IpNetwork AllV6 => _allV6 ??= new IpNetwork(IPAddress.IPv6Any, 0);
-    private static IpNetwork? _allV6;
-    public static IpNetwork AllGlobalUnicastV6 => _allGlobalUnicastV6 ??= Parse("2000::/3");
-    private static IpNetwork? _allGlobalUnicastV6;
+    public static IpNetwork MulticastNetworkV4 => field ??= new(IPAddress.Parse("224.0.0.0"), 4);
+    public static IpNetwork MulticastNetworkV6 => field ??= new(IPAddress.Parse("ff00::"), 8);
+    public static IReadOnlyList<IpNetwork> MulticastNetworks => field ??= [MulticastNetworkV4, MulticastNetworkV6];
+    public static IpNetwork LoopbackNetworkV4 => field ??= Parse("127.0.0.0/8");
+    public static IpNetwork LoopbackNetworkV6 => field ??= Parse("::1/128");
+    public static IReadOnlyList<IpNetwork> LoopbackNetworks => field ??= [LoopbackNetworkV4, LoopbackNetworkV6];
+    public static IpNetwork AllV6 => field ??= new IpNetwork(IPAddress.IPv6Any, 0);
+    public static IpNetwork AllGlobalUnicastV6 => field ??= Parse("2000::/3");
 
     // Lazy: AllGlobalUnicastV6.Invert() runs heavy LINQ/BigInteger chains that hang
     // inside iOS NetworkExtension AOT sandbox when triggered as part of static cctor.
-    private static IReadOnlyList<IpNetwork>? _localNetworksV6;
-    public static IReadOnlyList<IpNetwork> LocalNetworksV6 => _localNetworksV6 ??= AllGlobalUnicastV6.Invert().ToArray();
+    public static IReadOnlyList<IpNetwork> LocalNetworksV6 => field ??= AllGlobalUnicastV6.Invert().ToArray();
 
-    private static IReadOnlyList<IpNetwork>? _localNetworks;
-    public static IReadOnlyList<IpNetwork> LocalNetworks => _localNetworks ??= LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
+    public static IReadOnlyList<IpNetwork> LocalNetworks => field ??= LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
 
-    public static IReadOnlyList<IpNetwork> All => _all ??= [AllV4, AllV6];
-    private static IReadOnlyList<IpNetwork>? _all;
+    public static IReadOnlyList<IpNetwork> All => field ??= [AllV4, AllV6];
     public static IReadOnlyList<IpNetwork> None { get; } = [];
 
     public static IEnumerable<IpNetwork> FromRange(IPAddress firstIpAddress, IPAddress lastIpAddress)

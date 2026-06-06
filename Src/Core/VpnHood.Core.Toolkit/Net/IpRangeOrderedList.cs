@@ -175,14 +175,8 @@ public class IpRangeOrderedList :
 
     private static List<IpRange> Sort(IEnumerable<IpRange> ipRanges)
     {
-        // Avoid LINQ OrderBy: it hangs under iOS NetworkExtension Mono AOT.
-        // todo: AOT check
-        var list = ipRanges as List<IpRange> != null
-            ? new List<IpRange>((List<IpRange>)ipRanges)
-            : new List<IpRange>(ipRanges);
-        var cmp = new IPAddressComparer();
-        list.Sort((a, b) => cmp.Compare(a.FirstIpAddress, b.FirstIpAddress));
-        return Unify(list);
+        var sortedRanges = ipRanges.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
+        return Unify(sortedRanges);
     }
 
     private static List<IpRange> Unify(IEnumerable<IpRange> sortedIpRanges)

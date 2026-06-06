@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -22,21 +22,18 @@ public class ApiClientBase : ApiClientCommon
         public required string Text { get; init; }
     }
 
-    protected JsonSerializerOptions JsonSerializerSettings => Settings.Value;
+    protected JsonSerializerOptions JsonSerializerSettings => field ??= CreateSerializerSettings();
     protected HttpClient? HttpClient;
-    protected readonly Lazy<JsonSerializerOptions> Settings;
     public ILogger Logger { get; set; } = NullLogger.Instance;
     public EventId LoggerEventId { get; set; } = new();
 
     public ApiClientBase(HttpClient httpClient)
     {
         HttpClient = httpClient;
-        Settings = new Lazy<JsonSerializerOptions>(CreateSerializerSettings);
     }
 
     protected ApiClientBase()
     {
-        Settings = new Lazy<JsonSerializerOptions>(CreateSerializerSettings);
     }
 
     protected virtual JsonSerializerOptions CreateSerializerSettings()

@@ -8,7 +8,7 @@ namespace VpnHood.App.Client;
 
 public static class ConnectAppResources
 {
-    private static readonly Lazy<AppResources> LazyResource = new(() => new AppResources {
+    public static AppResources Resources => field ??= new AppResources {
         IpLocationZipData = Ip2LocationLiteDb.ZipData,
         SpaZipData = ConnectSpaResources.SpaZipData,
         Colors = new AppResources.AppColors {
@@ -21,9 +21,7 @@ public static class ConnectAppResources
             SystemTrayConnectingIcon = new AppResources.IconData(ConnectSpaResources.SystemTrayConnectingIcon),
             SystemTrayDisconnectedIcon = new AppResources.IconData(ConnectSpaResources.SystemTrayDisconnectedIcon)
         }
-    });
-
-    public static AppResources Resources => LazyResource.Value;
+    };
 
     public static AppFeature[] PremiumFeatures { get; } = [
         AppFeature.CustomDns,

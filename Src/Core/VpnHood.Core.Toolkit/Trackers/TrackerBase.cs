@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
@@ -7,8 +7,7 @@ namespace Ga4.Trackers;
 
 public abstract class TrackerBase : ITracker
 {
-    private static readonly Lazy<HttpClient> HttpClientLazy = new(() => new HttpClient());
-    private static HttpClient HttpClient => HttpClientLazy.Value;
+    private static HttpClient HttpClient => field ??= new HttpClient();
     public required string MeasurementId { get; init; }
     public required string SessionId { get; set; }
     public required string ClientId { get; init; }

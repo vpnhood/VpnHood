@@ -50,45 +50,23 @@ internal class VpnServiceContext(string configFolder)
         return opts;
     }
 
-    private readonly AsyncLock _connectionInfoLock = new();
+    private readonly AsyncLock _writeLock = new();
 
     public async Task<bool> TryWriteConnectionInfo(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
         try {
-            using var scopeLock = await _connectionInfoLock.LockAsync(cancellationToken);
+            using var scopeLock = await _writeLock.LockAsync(cancellationToken);
             ConnectionInfo = connectionInfo;
 
-            // ToDo: double check 
-
             var json = JsonSerializer.Serialize(connectionInfo);
-
-            // iOS Mono interpreter: file I/O on the shared App Group container can hang the calling
-            // thread for ~30s on first access. Push to write to the thread pool so the calling task
-            // can complete, with a 2-second hard ceiling.
-            var pathCopy = StatusFilePath;
-            var writeTask = Task.Run(() => {
-                try {
-                    File.WriteAllText(pathCopy, json);
-                    return true;
-                }
-                catch {
-                    return false;
-                }
-            }, CancellationToken.None);
-
-            var winner = await Task.WhenAny(writeTask, Task.Delay(TimeSpan.FromSeconds(2), cancellationToken))
-                .ConfigureAwait(false);
-            if (winner == writeTask)
-                await writeTask.ConfigureAwait(false);
-
+            await File.WriteAllTextAsync(StatusFilePath, json, cancellationToken);
             return true;
         }
         catch (OperationCanceledException) {
-            return false; // operation was cancelled
+            return false;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}",
-                StatusFilePath);
+            VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}", StatusFilePath);
             return false;
         }
     }

@@ -29,37 +29,22 @@ public class IpNetwork
     {
         // Inline AddressFamily check to avoid triggering IPAddressUtil static cctor
         // (which has heavy eager static initializers that hang in iOS NE AOT sandbox).
-        if (prefix.AddressFamily != AddressFamily.InterNetwork && prefix.AddressFamily != AddressFamily.InterNetworkV6)
-            throw new NotSupportedException($"{prefix.AddressFamily} is not supported!");
+        var af = prefix.AddressFamily;
+        if (af != AddressFamily.InterNetwork && af != AddressFamily.InterNetworkV6)
+            throw new NotSupportedException($"{af} is not supported!");
 
         Prefix = prefix;
         PrefixLength = prefixLength;
 
-        // Compute first/last IP using byte arithmetic instead of BigInteger.
-        // BigInteger ops (left shifts, byte constructors) hang inside the iOS NetworkExtension
-        // AOT sandbox, so avoid them on the hot init path.
-        var prefixBytes = prefix.GetAddressBytes();
-        var byteCount = prefixBytes.Length;
-        var firstBytes = new byte[byteCount];
-        var lastBytes = new byte[byteCount];
-        var fullBytes = prefixLength / 8;
-        var remBits = prefixLength % 8;
-        for (var i = 0; i < fullBytes && i < byteCount; i++) {
-            firstBytes[i] = prefixBytes[i];
-            lastBytes[i] = prefixBytes[i];
-        }
-        if (fullBytes < byteCount) {
-            var maskByte = remBits == 0 ? (byte)0 : (byte)(0xFF << (8 - remBits));
-            firstBytes[fullBytes] = (byte)(prefixBytes[fullBytes] & maskByte);
-            lastBytes[fullBytes] = (byte)(firstBytes[fullBytes] | (byte)~maskByte);
-            for (var i = fullBytes + 1; i < byteCount; i++) {
-                firstBytes[i] = 0;
-                lastBytes[i] = 0xFF;
-            }
-        }
+        var bits = af == AddressFamily.InterNetworkV6 ? 128 : 32;
+        var mask = ((BigInteger.One << prefixLength) - 1) << (bits - prefixLength);
+        var maskNot = (BigInteger.One << (bits - prefixLength)) - 1;
 
-        FirstIpAddress = new IPAddress(firstBytes);
-        LastIpAddress = new IPAddress(lastBytes);
+        var first = IPAddressUtil.ToBigInteger(Prefix) & mask;
+        var last = first | maskNot;
+
+        FirstIpAddress = IPAddressUtil.FromBigInteger(first, af);
+        LastIpAddress = IPAddressUtil.FromBigInteger(last, af);
     }
 
     public IPAddress Prefix { get; }

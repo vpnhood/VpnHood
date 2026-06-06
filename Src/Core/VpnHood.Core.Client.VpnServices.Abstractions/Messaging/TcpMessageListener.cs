@@ -45,7 +45,7 @@ public sealed class TcpMessageListener : IMessageListener
             ApiEndPoint = ApiEndPoint,
             ApiKey = _apiKey
         };
-        var json = JsonSerializer.Serialize(bootstrap, ApiTransportJsonContext.For<TcpApiBootstrap>());
+        var json = JsonSerializer.Serialize(bootstrap);
         File.WriteAllText(_apiFilePath, json);
     }
 

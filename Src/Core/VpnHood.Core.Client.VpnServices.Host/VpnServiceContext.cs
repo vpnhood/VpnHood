@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -44,10 +44,7 @@ internal class VpnServiceContext(string configFolder)
     {
         var json = File.ReadAllText(ConfigFilePath);
 
-        // Use source-generated STJ (ClientOptionsJsonContext). Reflection-based STJ hangs/explodes
-        // metadata inside the iOS NetworkExtension under Mono AOT.
-        var opts = (ClientOptions?)JsonSerializer.Deserialize(json,
-            typeof(ClientOptions), ClientOptionsJsonContext.Default);
+        var opts = JsonSerializer.Deserialize<ClientOptions>(json);
         if (opts == null)
             throw new InvalidDataException("ClientOptions could not be deserialized!");
         return opts;
@@ -63,8 +60,7 @@ internal class VpnServiceContext(string configFolder)
 
             // ToDo: double check 
 
-            // source-generated STJ — reflection-based serialization hangs under iOS Mono AOT.
-            var json = JsonSerializer.Serialize(connectionInfo, ApiTransportJsonContext.For<ConnectionInfo>());
+            var json = JsonSerializer.Serialize(connectionInfo);
 
             // iOS Mono interpreter: file I/O on the shared App Group container can hang the calling
             // thread for ~30s on first access. Push to write to the thread pool so the calling task

@@ -209,8 +209,7 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
             ApiError = ex.ToApiError(),
             Result = null
         };
-        return NSData.FromArray(StreamUtils.ObjectToJsonBuffer(response,
-            ApiTransportJsonContext.For<ApiResponse<object>>()).ToArray());
+        return NSData.FromArray(StreamUtils.ObjectToJsonBuffer(response).ToArray());
     }
 
     public override void StopTunnel(NEProviderStopReason reason, Action completionHandler)

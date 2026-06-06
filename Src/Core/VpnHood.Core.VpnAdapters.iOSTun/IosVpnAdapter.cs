@@ -47,11 +47,6 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
     public override bool IsAppFilterSupported => false;
     protected override bool IsSocketProtectedByBind => false;
 
-    // Force-enable IPv6 support on iOS. Even if the physical interface is IPv4-only or
-    // the server hands out a ULA virtual address (e.g. fd12:2020::/48), we want to provision
-    // and route IPv6 traffic through the tunnel.
-    public override bool IsIpVersionSupported(IpVersion ipVersion) => true;
-
     // CRITICAL (iOS): we CANNOT protect the tunnel's own transport socket the way desktop/
     // Android do (binding to the physical adapter IP does NOT make a raw .NET socket bypass
     // a NEPacketTunnelProvider tunnel; iOS only auto-excludes connections made via its own

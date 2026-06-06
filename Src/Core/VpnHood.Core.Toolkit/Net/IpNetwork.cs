@@ -23,13 +23,14 @@ public class IpNetwork
 
         Prefix = prefix;
         PrefixLength = prefixLength;
-        var bits = af == AddressFamily.InterNetworkV6 ? 128 : 32;
+        var addressFamily = prefix.AddressFamily;
+        var bits = addressFamily.IsV6() ? 128 : 32;
         var mask = ((BigInteger.One << prefixLength) - 1) << (bits - prefixLength);
         var maskNot = (BigInteger.One << (bits - prefixLength)) - 1;
         _firstIpAddressValue = IPAddressUtil.ToBigInteger(Prefix) & mask;
         _lastIpAddressValue = _firstIpAddressValue | maskNot;
-        FirstIpAddress = IPAddressUtil.FromBigInteger(_firstIpAddressValue, af);
-        LastIpAddress = IPAddressUtil.FromBigInteger(_lastIpAddressValue, af);
+        FirstIpAddress = IPAddressUtil.FromBigInteger(_firstIpAddressValue, addressFamily);
+        LastIpAddress = IPAddressUtil.FromBigInteger(_lastIpAddressValue, addressFamily);
     }
 
     public IPAddress Prefix { get; }

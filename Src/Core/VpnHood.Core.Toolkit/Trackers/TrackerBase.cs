@@ -7,7 +7,8 @@ namespace Ga4.Trackers;
 
 public abstract class TrackerBase : ITracker
 {
-    private static HttpClient HttpClient => field ??= new HttpClient();
+    private static readonly Lazy<HttpClient> HttpClientLazy = new(() => new HttpClient());
+    private static HttpClient HttpClient => HttpClientLazy.Value;
     public required string MeasurementId { get; init; }
     public required string SessionId { get; set; }
     public required string ClientId { get; init; }

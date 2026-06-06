@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 
@@ -8,8 +8,8 @@ public static class TunnelUtils
 {
     public const int TestPortMin = 49150;
     public const int TestPortMax = 49190;
-    public static readonly IPAddress RemoteTestIpV4 = IPAddress.Parse("198.18.11.1");
-    public static readonly IPAddress RemoteTestIpV6 = IPAddress.Parse("2001:db8::1");
+    public static IPAddress RemoteTestIpV4 => field ??= IPAddress.Parse("198.18.11.1");
+    public static IPAddress RemoteTestIpV6 => field ??= IPAddress.Parse("2001:db8::1");
     public static readonly IPAddress LocalTestIpV4 = IPAddress.Loopback;
     public static readonly IPAddress LocalTestIpV6 = IPAddress.IPv6Loopback;
 

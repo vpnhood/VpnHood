@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Diagnostics.CodeAnalysis;
@@ -9,7 +9,6 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Common.Tokens;
 
-// todo: check AOT
 public class Token
 {
     [JsonPropertyName("v")]
@@ -62,8 +61,6 @@ public class Token
 
     public static Token FromAccessKey(string base64)
     {
-        TouchTokenJsonGraph();
-
         // remove token prefix
         base64 = base64.Trim().Trim('\"');
         foreach (var prefix in new[] { "vh://", "vhkey://", "vh:", "vhkey:" })
@@ -78,22 +75,5 @@ public class Token
             4 => JsonUtils.Deserialize<Token>(json),
             _ => throw new NotSupportedException($"Token version {tokenVersion.Version} is not supported!")
         };
-    }
-
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Token))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(TokenVersion))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ServerToken))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ClientPolicy))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(ArrayConverter<System.Net.IPEndPoint, IPEndPointConverter>))]
-    [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(IPEndPointConverter))]
-    private static void TouchTokenJsonGraph()
-    {
-        GC.KeepAlive(typeof(Token));
-        GC.KeepAlive(typeof(TokenVersion));
-        GC.KeepAlive(typeof(ServerToken));
-        GC.KeepAlive(typeof(ClientPolicy));
-        GC.KeepAlive(typeof(EndPointStrategy));
-        GC.KeepAlive(new ArrayConverter<System.Net.IPEndPoint, IPEndPointConverter>());
-        GC.KeepAlive(new IPEndPointConverter());
     }
 }

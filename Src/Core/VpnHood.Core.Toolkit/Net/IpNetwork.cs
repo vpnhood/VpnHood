@@ -9,42 +9,27 @@ namespace VpnHood.Core.Toolkit.Net;
 [JsonConverter(typeof(IpNetworkConverter))]
 public class IpNetwork
 {
-    private BigInteger _firstIpAddressValue;
-    private BigInteger _lastIpAddressValue;
-    private bool _bigIntInitialized;
-    private void EnsureBigInt()
-    {
-        if (_bigIntInitialized) return;
-        // Defer BigInteger construction until first use; avoids triggering
-        // System.Numerics paths during iOS NE static init.
-        _firstIpAddressValue = new BigInteger(FirstIpAddress.GetAddressBytes(), isUnsigned: true, isBigEndian: true);
-        _lastIpAddressValue = new BigInteger(LastIpAddress.GetAddressBytes(), isUnsigned: true, isBigEndian: true);
-        _bigIntInitialized = true;
-    }    public IpNetwork(IPAddress prefix)
+    private readonly BigInteger _firstIpAddressValue;
+    private readonly BigInteger _lastIpAddressValue;
+
+    public IpNetwork(IPAddress prefix)
         : this(prefix, prefix.AddressFamily == AddressFamily.InterNetwork ? 32 : 128)
     {
     }
 
     public IpNetwork(IPAddress prefix, int prefixLength)
     {
-        // Inline AddressFamily check to avoid triggering IPAddressUtil static cctor
-        // (which has heavy eager static initializers that hang in iOS NE AOT sandbox).
-        var af = prefix.AddressFamily;
-        if (af != AddressFamily.InterNetwork && af != AddressFamily.InterNetworkV6)
-            throw new NotSupportedException($"{af} is not supported!");
+        IPAddressUtil.Verify(prefix);
 
         Prefix = prefix;
         PrefixLength = prefixLength;
-
         var bits = af == AddressFamily.InterNetworkV6 ? 128 : 32;
         var mask = ((BigInteger.One << prefixLength) - 1) << (bits - prefixLength);
         var maskNot = (BigInteger.One << (bits - prefixLength)) - 1;
-
-        var first = IPAddressUtil.ToBigInteger(Prefix) & mask;
-        var last = first | maskNot;
-
-        FirstIpAddress = IPAddressUtil.FromBigInteger(first, af);
-        LastIpAddress = IPAddressUtil.FromBigInteger(last, af);
+        _firstIpAddressValue = IPAddressUtil.ToBigInteger(Prefix) & mask;
+        _lastIpAddressValue = _firstIpAddressValue | maskNot;
+        FirstIpAddress = IPAddressUtil.FromBigInteger(_firstIpAddressValue, af);
+        LastIpAddress = IPAddressUtil.FromBigInteger(_lastIpAddressValue, af);
     }
 
     public IPAddress Prefix { get; }
@@ -55,7 +40,7 @@ public class IpNetwork
     public bool IsV6 => Prefix.AddressFamily == AddressFamily.InterNetworkV6;
     public IPAddress FirstIpAddress { get; }
     public IPAddress LastIpAddress { get; }
-    public BigInteger Total { get { EnsureBigInt(); return _lastIpAddressValue - _firstIpAddressValue + 1; } }
+    public BigInteger Total => _lastIpAddressValue - _firstIpAddressValue + 1;
 
     public static IpNetwork AllV4 => field ??= new IpNetwork(IPAddress.Any, 0);
 
@@ -74,13 +59,8 @@ public class IpNetwork
     public static IReadOnlyList<IpNetwork> LoopbackNetworks => field ??= [LoopbackNetworkV4, LoopbackNetworkV6];
     public static IpNetwork AllV6 => field ??= new IpNetwork(IPAddress.IPv6Any, 0);
     public static IpNetwork AllGlobalUnicastV6 => field ??= Parse("2000::/3");
-
-    // Lazy: AllGlobalUnicastV6.Invert() runs heavy LINQ/BigInteger chains that hang
-    // inside iOS NetworkExtension AOT sandbox when triggered as part of static cctor.
     public static IReadOnlyList<IpNetwork> LocalNetworksV6 => field ??= AllGlobalUnicastV6.Invert().ToArray();
-
     public static IReadOnlyList<IpNetwork> LocalNetworks => field ??= LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
-
     public static IReadOnlyList<IpNetwork> All => field ??= [AllV4, AllV6];
     public static IReadOnlyList<IpNetwork> None { get; } = [];
 

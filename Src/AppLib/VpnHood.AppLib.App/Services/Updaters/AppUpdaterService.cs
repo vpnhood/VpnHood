@@ -12,7 +12,8 @@ public class AppUpdaterService : IDisposable
     private readonly Version _appVersion;
     private readonly AppUpdaterOptions _updateOptions;
     private string VersionCheckFilePath => Path.Combine(field, "version.json");
-    private readonly AppUpdaterData _data;
+    private readonly Lazy<AppUpdaterData> _lazyData;
+    private AppUpdaterData Data => _lazyData.Value;
     private bool _disposed;
 
     public AppUpdaterService(string storageFolderPath, Version appVersion,
@@ -21,8 +22,9 @@ public class AppUpdaterService : IDisposable
         VersionCheckFilePath = storageFolderPath;
         _appVersion = appVersion;
         _updateOptions = updateOptions;
-        _data = JsonUtils.TryDeserializeFile<AppUpdaterData>(VersionCheckFilePath) ??
-                new AppUpdaterData();
+        // defer reading version.json until update status is first queried
+        _lazyData = new Lazy<AppUpdaterData>(() =>
+            JsonUtils.TryDeserializeFile<AppUpdaterData>(VersionCheckFilePath) ?? new AppUpdaterData());
     }
 
     public AppUpdaterStatus Status {
@@ -30,9 +32,9 @@ public class AppUpdaterService : IDisposable
             var versionStatus = CalcVersionStatus();
             return new AppUpdaterStatus {
                 VersionStatus = versionStatus,
-                CheckedTime = _data.CheckedTime,
-                PublishInfo = _data.PublishInfo,
-                Prompt = _data.UpdaterAvailableSince == null &&
+                CheckedTime = Data.CheckedTime,
+                PublishInfo = Data.PublishInfo,
+                Prompt = Data.UpdaterAvailableSince == null &&
                          versionStatus is VersionStatus.Old or VersionStatus.Deprecated &&
                          !IsInPostponeTime
             };
@@ -40,27 +42,27 @@ public class AppUpdaterService : IDisposable
     }
 
     private bool IsInPostponeTime =>
-        _data.PostponeTime != null &&
-        DateTime.Now - _data.PostponeTime < _updateOptions.PostponePeriod &&
-        _appVersion.Equals(_data.PostponeVersion);
+        Data.PostponeTime != null &&
+        DateTime.Now - Data.PostponeTime < _updateOptions.PostponePeriod &&
+        _appVersion.Equals(Data.PostponeVersion);
 
     private VersionStatus CalcVersionStatus()
     {
-        if (_data.UpdaterAvailableSince != null)
+        if (Data.UpdaterAvailableSince != null)
             return VersionStatus.Old;
 
-        if (_data.PublishInfo == null)
+        if (Data.PublishInfo == null)
             return VersionStatus.Unknown;
 
         // wait for updater
-        if (DateTime.UtcNow - _data.PublishInfo.ReleaseDate < _data.PublishInfo.NotificationDelay)
+        if (DateTime.UtcNow - Data.PublishInfo.ReleaseDate < Data.PublishInfo.NotificationDelay)
             return VersionStatus.Latest; // assume the latest version is available to let store validate the app
 
         // set default notification delay
-        if (_appVersion <= _data.PublishInfo.DeprecatedVersion)
+        if (_appVersion <= Data.PublishInfo.DeprecatedVersion)
             return VersionStatus.Deprecated;
 
-        return _appVersion < _data.PublishInfo.Version
+        return _appVersion < Data.PublishInfo.Version
             ? VersionStatus.Old
             : VersionStatus.Latest;
     }
@@ -83,8 +85,8 @@ public class AppUpdaterService : IDisposable
 
         // reset postpone time and version if forced
         if (force) {
-            _data.PostponeTime = null; // reset postpone time if forced
-            _data.PostponeVersion = null; // reset postpone version if forced
+            Data.PostponeTime = null; // reset postpone time if forced
+            Data.PostponeVersion = null; // reset postpone version if forced
         }
 
         // check ui context
@@ -101,9 +103,9 @@ public class AppUpdaterService : IDisposable
         }
 
         // skip if already checked and not forced
-        if (!force && DateTime.Now - _data.CheckedTime < _updateOptions.CheckInterval) {
+        if (!force && DateTime.Now - Data.CheckedTime < _updateOptions.CheckInterval) {
             VhLogger.Instance.LogDebug("VersionCheck is postponed. CheckedTime: {CheckedTime}, Interval: {Interval}",
-                _data.CheckedTime, _updateOptions.CheckInterval);
+                Data.CheckedTime, _updateOptions.CheckInterval);
             return;
         }
 
@@ -111,7 +113,7 @@ public class AppUpdaterService : IDisposable
             // check by provider
             if (await TryUpdateByProvider(force, cancellationToken) ||
                 await TryUpdateByPublishInfoUrl(cancellationToken)) {
-                _data.CheckedTime = DateTime.Now;
+                Data.CheckedTime = DateTime.Now;
             }
         }
         finally {
@@ -127,16 +129,16 @@ public class AppUpdaterService : IDisposable
                 return false; // no updater provider. Job done
 
             if (!await updater.IsUpdateAvailable(AppUiContext.RequiredContext, cancellationToken)) {
-                _data.UpdaterAvailableSince = null;
+                Data.UpdaterAvailableSince = null;
                 return false; // no update available or could not handle the update
             }
 
             // update available time if not set
-            _data.UpdaterAvailableSince ??= DateTime.Now;
+            Data.UpdaterAvailableSince ??= DateTime.Now;
 
             // check if the update is available for the given delay
             if (!force && !IsInPostponeTime &&
-                DateTime.Now - _data.UpdaterAvailableSince < _updateOptions.PromptDelay)
+                DateTime.Now - Data.UpdaterAvailableSince < _updateOptions.PromptDelay)
                 return true; // handled
 
             // update available, try to update
@@ -144,7 +146,7 @@ public class AppUpdaterService : IDisposable
                 return false; // handled
 
             // update was handled so reset the UpdaterAvailableSince, till next check
-            _data.UpdaterAvailableSince = null;
+            Data.UpdaterAvailableSince = null;
             Postpone(); // this version is postponed because user either updated or skipped the update
             return true;
         }
@@ -168,11 +170,11 @@ public class AppUpdaterService : IDisposable
             // ReSharper disable once ShortLivedHttpClient
             using var httpClient = new HttpClient();
             var publishInfoJson = await httpClient.GetStringAsync(updateInfoUrl, cancellationToken).Vhc();
-            _data.PublishInfo = JsonUtils.Deserialize<PublishInfo>(publishInfoJson);
+            Data.PublishInfo = JsonUtils.Deserialize<PublishInfo>(publishInfoJson);
 
             VhLogger.Instance.LogInformation(
                 "The latest publish info has been retrieved. VersionStatus: {VersionStatus}, LatestVersion: {LatestVersion}",
-                CalcVersionStatus(), _data.PublishInfo.Version);
+                CalcVersionStatus(), Data.PublishInfo.Version);
 
             return true; // Job done
         }
@@ -186,8 +188,8 @@ public class AppUpdaterService : IDisposable
     public void Postpone()
     {
         // version status is unknown when the app container can do it
-        _data.PostponeTime = DateTime.Now;
-        _data.PostponeVersion = _appVersion;
+        Data.PostponeTime = DateTime.Now;
+        Data.PostponeVersion = _appVersion;
         Save();
     }
 
@@ -196,7 +198,7 @@ public class AppUpdaterService : IDisposable
         // It looks like TryCheckForUpdate could not handle exceptions in .NET 10 background tasks
         // The folder does not exist in test finalizer and test host crash so we try not to save if disposed
         if (!_disposed)
-            File.WriteAllText(VersionCheckFilePath, JsonSerializer.Serialize(_data));
+            File.WriteAllText(VersionCheckFilePath, JsonSerializer.Serialize(Data));
     }
 
     public void Dispose()

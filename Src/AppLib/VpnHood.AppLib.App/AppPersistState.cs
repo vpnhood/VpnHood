@@ -8,7 +8,10 @@ namespace VpnHood.AppLib;
 internal class AppPersistState(string filePath)
 {
     private readonly Lock _saveLock = new();
-    private readonly Data _data = JsonUtils.TryDeserializeFile<Data>(filePath) ?? new Data();
+    // defer reading state.json until the persisted state is first accessed
+    private readonly Lazy<Data> _lazyData =
+        new(() => JsonUtils.TryDeserializeFile<Data>(filePath) ?? new Data());
+    private Data _data => _lazyData.Value;
 
     private class Data
     {

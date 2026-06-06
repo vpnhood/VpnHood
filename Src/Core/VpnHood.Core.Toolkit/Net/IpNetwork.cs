@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.Core.Toolkit.Net;
 
-// check IpNetwork2 for AOT
 [JsonConverter(typeof(IpNetworkConverter))]
 public class IpNetwork
 {

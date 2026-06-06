@@ -141,9 +141,7 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
             settings.Mtu = NSNumber.FromInt32(_mtu.Value);
         }
 
-        // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install. This writes
-        // synchronously (unlike the SetTunnelNetworkSettings completion callback, which often
-        // never resumes under Mono AOT), so it is the reliable record of what we asked iOS for.
+        // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install.
         try
         {
             var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -167,42 +165,31 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
 
         try
         {
+            var tcs = new TaskCompletionSource<NSError?>();
             // CRITICAL: SetTunnelNetworkSettings MUST be called with a NON-NULL completion
             // handler AND on the main thread. iOS invokes the completion block internally;
             // a null block makes it dereference block->invoke at offset 0x10 → EXC_BAD_ACCESS
-            // (SIGSEGV / KERN_INVALID_ADDRESS at 0x10). AdapterOpen runs on a background
-            // VpnHood connect thread, where this crashes; the placeholder in StartTunnel
-            // survived only because it ran on the main thread as the first call.
-            // The managed callback may never resume under Mono AOT — that's fine, we don't
-            // rely on it; we just give iOS a valid (non-null) block to invoke. We fire it on
-            // the main thread and do not block waiting for the (possibly never-firing) callback.
+            // (SIGSEGV / KERN_INVALID_ADDRESS at 0x10).
             tunnelProvider.BeginInvokeOnMainThread(() =>
             {
                 try
                 {
                     // err == null means iOS accepted and applied the routing settings.
                     tunnelProvider.SetTunnelNetworkSettings(settings, err => {
-                        try
-                        {
-                            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                            var result = err == null ? "Success" : $"Error: {err.LocalizedDescription} (code={err.Code})";
-                            File.WriteAllText(Path.Combine(docs, "ext-probe-setsettings-result.txt"),
-                                $"SetTunnelNetworkSettings completed at {DateTime.UtcNow:O} with: {result}\n");
-                        }
-                        catch { }
+                        tcs.TrySetResult(err);
                     });
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                        File.WriteAllText(Path.Combine(docs, "ext-probe-setsettings-catch.txt"), ex.ToString());
-                    }
-                    catch { }
+                    tcs.TrySetException(ex);
                 }
             });
-            await Task.Yield();
+
+            var error = await tcs.Task.WaitAsync(cancellationToken);
+            if (error != null)
+            {
+                throw new Exception($"SetTunnelNetworkSettings failed: {error.LocalizedDescription} (code={error.Code})");
+            }
         }
         catch (Exception ex)
         {

@@ -128,6 +128,9 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     {
         StartMemoryGuard();
 
+        _startTunnelCompletionHandler = startTunnelCompletionHandler;
+        _completionFired = false;
+
         // NOTE (memory): the iOS-specific small packet/UDP buffer sizes (64 KB) are no longer set
         // here as TunnelDefaults statics. They now flow from the host app via AppOptions →
         // ClientOptions (PacketChannelBufferSize / UdpProxyBufferSize / StreamProxyBufferSize),
@@ -138,21 +141,6 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         var configFolder = ResolveConfigFolder();
         try { Directory.CreateDirectory(configFolder); } catch { /* ignore */ }
 
-        // Apply placeholder settings WITHOUT waiting for callback.
-        // Under Mono AOT the block-to-delegate marshaling for the completion handler
-        // never invokes the .NET callback, so fire-and-forget then signal start completion
-        // immediately. iOS finishes applying settings asynchronously and won't kill the
-        // extension as long as we DID call SetTunnelNetworkSettings before signaling start.
-        // CRITICAL: do NOT set IncludedRoutes here. A DefaultRoute on the placeholder makes
-        // iOS route ALL extension outbound traffic INTO our own (non-forwarding) tunnel, so
-        // every TCP connect (including to the VpnHood server) hangs forever. The real routes
-        // are installed by IosVpnAdapter.AdapterOpen once the VPN handshake completes.
-        var placeholder = new NEPacketTunnelNetworkSettings("192.0.2.1") {
-            IPv4Settings = new NEIPv4Settings(["10.255.255.2"], ["255.255.255.0"]),
-            Mtu = NSNumber.FromInt32(1500)
-        };
-        try { SetTunnelNetworkSettings(placeholder, null); } catch { /* ignore */ }
-
         // Kick off heavy VpnHood init off the main thread.
         _ = Task.Run(() => {
             try {
@@ -161,13 +149,11 @@ public abstract class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                     netFilter: null, withLogger: false, messageListener: _messageListener);
                 _ = _vpnServiceHost.TryConnect(true);
             }
-            catch {
-                /* ignore: state is reported back to the App via the connection info file */
+            catch (Exception ex) {
+                CompleteStartTunnel(new NSError(new NSString("VpnHood"), 1,
+                    NSDictionary.FromObjectAndKey((NSString)($"VpnHood init failed: {ex.Message}"), NSError.LocalizedDescriptionKey)));
             }
         });
-
-        // Tell iOS the tunnel start is done (success).
-        try { startTunnelCompletionHandler(null!); } catch { /* ignore */ }
     }
 
     public override void HandleAppMessage(NSData? messageData, Action<NSData>? completionHandler)

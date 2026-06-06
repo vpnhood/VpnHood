@@ -254,29 +254,18 @@ public static class IPAddressUtil
         if (ipAddress1 == null) return -1; // null is less than any address
         if (ipAddress2 == null) return +1; // any address is greater than null
 
-        // iOS NetworkExtension AOT: avoid extension methods + stackalloc here,
-        // they cause silent hangs at first invocation in the NE sandbox.
         if (ipAddress1.IsIPv4MappedToIPv6) ipAddress1 = ipAddress1.MapToIPv4();
         if (ipAddress2.IsIPv4MappedToIPv6) ipAddress2 = ipAddress2.MapToIPv4();
 
-        var af1 = ipAddress1.AddressFamily;
-        var af2 = ipAddress2.AddressFamily;
-        if (af1 != AddressFamily.InterNetwork && af1 != AddressFamily.InterNetworkV6)
-            throw new NotSupportedException($"{af1} is not supported!");
-        if (af2 != AddressFamily.InterNetwork && af2 != AddressFamily.InterNetworkV6)
-            throw new NotSupportedException($"{af2} is not supported!");
+        if (ipAddress1.IsV4() && ipAddress2.IsV6())
+            return -1;
 
-        if (af1 == AddressFamily.InterNetwork && af2 == AddressFamily.InterNetworkV6) return -1;
-        if (af1 == AddressFamily.InterNetworkV6 && af2 == AddressFamily.InterNetwork) return +1;
+        if (ipAddress1.IsV6() && ipAddress2.IsV4())
+            return +1;
 
-        var b1 = ipAddress1.GetAddressBytes();
-        var b2 = ipAddress2.GetAddressBytes();
-        var len = b1.Length < b2.Length ? b1.Length : b2.Length;
-        for (var i = 0; i < len; i++) {
-            if (b1[i] < b2[i]) return -1;
-            if (b1[i] > b2[i]) return +1;
-        }
-        return b1.Length - b2.Length;
+        var span1 = ipAddress1.GetAddressBytesFast(stackalloc byte[16]);
+        var span2 = ipAddress2.GetAddressBytesFast(stackalloc byte[16]);
+        return span1.SequenceCompareTo(span2);
     }
 
     public static long ToLong(IPAddress ipAddress)

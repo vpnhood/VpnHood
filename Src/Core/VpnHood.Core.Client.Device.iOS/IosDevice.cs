@@ -92,22 +92,13 @@ public class IosDevice : IDevice
             VpnServiceConfigFolder,
             NSFileManager.DefaultManager.GetContainerUrl(_appGroupId).AbsoluteString ?? "<null>");
 
-        // Run an async NE op with a short timeout. On timeout, continue rather than throw
-        // (NEVpnManager callbacks may never resume under Mono AOT but the native op still runs).
-        static async Task TryStepAsync(Task task, TimeSpan timeout)
-        {
-            using var cts = new CancellationTokenSource(timeout);
-            var done = await Task.WhenAny(task, Task.Delay(Timeout.InfiniteTimeSpan, cts.Token));
-            if (done == task) {
-                try { await task; }
-                catch { /* ignore step failure; subsequent steps continue */ }
-            }
-        }
-
         // ---- Pre-stop: detect stale tunnel ----
-        var preStopLoad = new TaskCompletionSource();
-        _vpnManager.LoadFromPreferences(_ => preStopLoad.TrySetResult());
-        await TryStepAsync(preStopLoad.Task, TimeSpan.FromSeconds(2));
+        try {
+            await LoadFromPreferencesAsync(_vpnManager);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "Pre-stop LoadFromPreferences failed.");
+        }
 
         NEVpnStatus initialStatus;
         try {
@@ -149,24 +140,11 @@ public class IosDevice : IDevice
         _vpnManager.LocalizedDescription = _localizedDescription;
         _vpnManager.Enabled = true;
 
-        // ---- Save (short timeout; on timeout we continue and try Start anyway) ----
-        // iOS calls the completion handler with nsError == null on success; only treat a
-        // non-null error as a failure. (Dereferencing nsError.Description unconditionally
-        // threw a NullReferenceException inside the ObjC block on success -> SIGABRT.)
-        var saveTcs = new TaskCompletionSource();
-        _vpnManager.SaveToPreferences(nsError => {
-            if (nsError != null) saveTcs.TrySetException(new Exception(nsError.Description));
-            else saveTcs.TrySetResult();
-        });
-        await TryStepAsync(saveTcs.Task, TimeSpan.FromSeconds(2));
+        // ---- Save ----
+        await SaveToPreferencesAsync(_vpnManager);
 
         // ---- Load ----
-        var loadTcs = new TaskCompletionSource();
-        _vpnManager.LoadFromPreferences(nsError => {
-            if (nsError != null) loadTcs.TrySetException(new Exception(nsError.Description));
-            else loadTcs.TrySetResult();
-        });
-        await TryStepAsync(loadTcs.Task, TimeSpan.FromSeconds(2));
+        await LoadFromPreferencesAsync(_vpnManager);
 
         // ---- StartVpnTunnel (synchronous call into iOS) ----
         // The error MUST be inspected: on reconnect StartVpnTunnel commonly returns
@@ -179,17 +157,11 @@ public class IosDevice : IDevice
                 startError.Code, startError.LocalizedDescription);
 
             _vpnManager.Enabled = true;
-            var reSaveTcs = new TaskCompletionSource();
-            _vpnManager.SaveToPreferences(e => { if (e != null) reSaveTcs.TrySetException(new Exception(e.Description)); else reSaveTcs.TrySetResult(); });
-            await TryStepAsync(reSaveTcs.Task, TimeSpan.FromSeconds(2));
-
-            var reLoadTcs = new TaskCompletionSource();
-            _vpnManager.LoadFromPreferences(_ => reLoadTcs.TrySetResult());
-            await TryStepAsync(reLoadTcs.Task, TimeSpan.FromSeconds(2));
+            await SaveToPreferencesAsync(_vpnManager);
+            await LoadFromPreferencesAsync(_vpnManager);
 
             if (!TryStartTunnel(out var retryError) && retryError != null)
-                VhLogger.Instance.LogError("StartVpnTunnel retry failed (code={Code}): {Error}",
-                    retryError.Code, retryError.LocalizedDescription);
+                throw new Exception($"StartVpnTunnel retry failed (code={retryError.Code}): {retryError.LocalizedDescription}");
         }
 
         // ---- Poll NEVpnStatus quickly (10 × 200ms = 2s) ----
@@ -215,6 +187,26 @@ public class IosDevice : IDevice
             VhLogger.Instance.LogError(ex, "StartVpnTunnel threw.");
             return false;
         }
+    }
+
+    private static Task SaveToPreferencesAsync(NEVpnManager manager)
+    {
+        var tcs = new TaskCompletionSource();
+        manager.SaveToPreferences(nsError => {
+            if (nsError != null) tcs.TrySetException(new Exception(nsError.LocalizedDescription));
+            else tcs.TrySetResult();
+        });
+        return tcs.Task;
+    }
+
+    private static Task LoadFromPreferencesAsync(NEVpnManager manager)
+    {
+        var tcs = new TaskCompletionSource();
+        manager.LoadFromPreferences(nsError => {
+            if (nsError != null) tcs.TrySetException(new Exception(nsError.LocalizedDescription));
+            else tcs.TrySetResult();
+        });
+        return tcs.Task;
     }
 
     public void Dispose()

@@ -20,8 +20,6 @@ public class IpRangeOrderedList :
     public IEnumerator<IpRange> GetEnumerator() => _orderedList.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public int Count => _orderedList.Count;
-    // Lazy: eager `new([])` initializer in cctor hangs in iOS NE AOT sandbox (LINQ OrderBy path).
-    // todo: double check for AOT
     public static IpRangeOrderedList Empty => field ??= new IpRangeOrderedList();
 
     public IpRange this[int index] => _orderedList[index];

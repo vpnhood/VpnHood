@@ -42,6 +42,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.IosTun2\VpnHood.Core.VpnAdapters.IosTun.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.IosTun\VpnHood.Core.VpnAdapters.IosTun.csproj" />
 	</ItemGroup>
 </Project>

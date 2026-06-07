@@ -35,9 +35,7 @@ public class AppProxyEndPointService
         _settingsService = settingsService;
         _hostCountryResolver = ipLocationProvider != null ? new HostCountryResolver(ipLocationProvider) : null;
         // defer reading proxy_infos.json (and creating its folder) until proxy data is first used
-        _lazyData = new Lazy<ServiceData>(() => {
-            return JsonUtils.TryDeserializeFile<ServiceData>(_customInfoFilePath) ?? new ServiceData();
-        });
+        _lazyData = new Lazy<ServiceData>(() => JsonUtils.TryDeserializeFile<ServiceData>(_customInfoFilePath) ?? new ServiceData());
         vpnServiceManager.Reconfigured += OnVpnServiceManagerOnReconfigured;
     }
 

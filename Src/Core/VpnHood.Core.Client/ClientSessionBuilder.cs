@@ -75,11 +75,9 @@ internal class ClientSessionBuilder(
         }
 
         setState(ClientState.FindingReachableServer);
-        VpnEndPoint vpnEndPoint;
-        bool allowRedirect;
 
-        vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], linkedCts.Token).Vhc();
-        allowRedirect = !serverFinder.CustomServerEndpoints.Any();
+        var vpnEndPoint = await serverFinder.FindReachableServerAsync([token.ServerToken], linkedCts.Token).Vhc();
+        var allowRedirect = !serverFinder.CustomServerEndpoints.Any();
         return await Connect(vpnEndPoint, allowRedirect, linkedCts.Token).Vhc();
     }
 

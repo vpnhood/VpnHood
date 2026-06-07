@@ -133,9 +133,7 @@
   <Folder Name="/Src/Core/Adapters/">
     <Project Path="Src/Core/VpnHood.Core.VpnAdapters.Abstractions/VpnHood.Core.VpnAdapters.Abstractions.csproj" />
     <Project Path="Src/Core/VpnHood.Core.VpnAdapters.AndroidTun/VpnHood.Core.VpnAdapters.AndroidTun.csproj" />
-    <Project Path="Src/Core/VpnHood.Core.VpnAdapters.IosTun/VpnHood.Core.VpnAdapters.IosTun.csproj">
-      <Build Solution="Debug|*" Project="false" />
-    </Project>
+    <Project Path="Src/Core/VpnHood.Core.VpnAdapters.IosTun/VpnHood.Core.VpnAdapters.IosTun.csproj" />
     <Project Path="Src/Core/VpnHood.Core.VpnAdapters.LinuxTun/VpnHood.Core.VpnAdapters.LinuxTun.csproj" />
     <Project Path="Src/Core/VpnHood.Core.VpnAdapters.WinDivert/VpnHood.Core.VpnAdapters.WinDivert.csproj" />
     <Project Path="Src/Core/VpnHood.Core.VpnAdapters.WinTun/VpnHood.Core.VpnAdapters.WinTun.csproj" />

@@ -142,7 +142,7 @@
   </Folder>
   <Folder Name="/Src/Core/Devices/">
     <Project Path="Src/Core/VpnHood.Core.Client.Device.Android/VpnHood.Core.Client.Device.Android.csproj" />
-    <Project Path="Src/Core/VpnHood.Core.Client.Device.Ios2/VpnHood.Core.Client.Device.Ios.csproj">
+    <Project Path="Src/Core/VpnHood.Core.Client.Device.Ios/VpnHood.Core.Client.Device.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="Src/Core/VpnHood.Core.Client.Device.Linux/VpnHood.Core.Client.Device.Linux.csproj" />

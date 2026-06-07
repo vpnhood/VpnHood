@@ -36,6 +36,7 @@ if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.PacketTransports/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.AndroidTun/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.IosTun/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.WinTun/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.LinuxTun/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.VpnAdapters.WinDivert/_publish.ps1";
@@ -52,6 +53,7 @@ if ($nugets) {
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Manager/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Devices.Abstractions/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Devices.Android/_publish.ps1";
+	& "$solutionDir/Src/Core/VpnHood.Core.Client.Devices.Ios/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Devices.Win/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Client.Devices.Linux/_publish.ps1";
 	& "$solutionDir/Src/Core/VpnHood.Core.Server/_publish.ps1";

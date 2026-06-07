@@ -35,7 +35,6 @@ public class VpnServiceHost : IDisposable
     internal VpnServiceContext Context { get; }
     public static ConnectionInfo DefaultConnectionInfo => VpnServiceContext.DefaultConnectionInfo;
 
-    //todo: check for probes
     public VpnServiceHost(string configFolder,
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,

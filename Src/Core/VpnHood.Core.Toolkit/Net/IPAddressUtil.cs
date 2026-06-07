@@ -9,7 +9,6 @@ using VpnHood.Core.Toolkit.Utils;
 namespace VpnHood.Core.Toolkit.Net;
 
 // ReSharper disable once InconsistentNaming
-//TodOo
 public static class IPAddressUtil
 {
     // Lazy initialization to avoid running heavy static cctor on iOS NE AOT sandbox.

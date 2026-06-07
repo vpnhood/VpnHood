@@ -71,10 +71,10 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         var isBillingSupported = VpnHoodApp.Instance.Features.IsBillingSupported;
         var isRewardedAdSupported = VpnHoodApp.Instance.AdManager.AdService.CanShowRewarded;
-        Options.Normal = 50;
-        Options.NormalByRewardedAd = 0; //todo;
+        Options.Normal = Options.HasFree ? policy.Normal : null;
+        Options.NormalByRewardedAd = Options.HasFree && isRewardedAdSupported ? policy.NormalByRewardedAd : null;
         Options.PremiumByTrial = Options.HasPremium ? policy.PremiumByTrial : null;
-        Options.PremiumByRewardedAd = 20; //todo
+        Options.PremiumByRewardedAd = Options.HasPremium && isRewardedAdSupported ? policy.PremiumByRewardedAd : null;
         Options.PremiumByPurchase = policy.PremiumByPurchase && (isBillingSupported || policy.PurchaseUrl != null);
         Options.PremiumByCode = policy.PremiumByCode;
 

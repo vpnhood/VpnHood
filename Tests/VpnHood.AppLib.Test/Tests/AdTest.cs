@@ -127,6 +127,29 @@ public class AdTest : TestAppBase
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
+    public async Task NormalByRewardedAd_must_require_rewarded_ad(bool acceptAd)
+    {
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
+
+        // create server
+        appDom.AccessManager.CanExtendPremiumByAd = true;
+        appDom.AccessManager.RejectAllAds = !acceptAd;
+
+        // connect: NormalByRewardedAd grants a (free) session in exchange for a rewarded ad
+        if (acceptAd) {
+            await appDom.Connect(ConnectPlanId.NormalByRewardedAd, cancellationToken: TestCt);
+            Assert.IsNull(appDom.App.State.SessionStatus?.SessionExpirationTime);
+        }
+        else {
+            var ex = await Assert.ThrowsExactlyAsync<SessionException>(() =>
+                appDom.Connect(ConnectPlanId.NormalByRewardedAd, cancellationToken: TestCt));
+            Assert.AreEqual(SessionErrorCode.RewardedAdRejected, ex.SessionResponse.ErrorCode);
+        }
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
     public async Task RewardedAd_expiration_must_be_increased_by_user(bool acceptAd)
     {
         // create server

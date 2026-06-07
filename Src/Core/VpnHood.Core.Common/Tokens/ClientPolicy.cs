@@ -20,6 +20,10 @@ public class ClientPolicy
     [JsonPropertyName("n")]
     public int? Normal { get; init; }
 
+    // ReSharper disable once StringLiteralTypo
+    [JsonPropertyName("nbr")]
+    public int? NormalByRewardedAd { get; init; }
+
     [JsonPropertyName("pbt")]
     public int? PremiumByTrial { get; init; }
 

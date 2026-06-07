@@ -149,8 +149,10 @@ public class SessionService : IDisposable
     private AdRequirement ProcessPlanId(Session session, AccessTokenData accessTokenData, ConnectPlanId planId)
     {
         switch (planId) {
-            // PremiumByRewardedAd is just used for test purpose in File Access Manager. 
+            // PremiumByRewardedAd and NormalByRewardedAd are just used for test purpose in File Access Manager.
+            // Both require a rewarded ad; the normal/premium distinction is enforced by the real access manager.
             case ConnectPlanId.PremiumByRewardedAd:
+            case ConnectPlanId.NormalByRewardedAd:
                 session.ExpirationTime = DateTime.UtcNow + _adRequiredTimeout;
                 return AdRequirement.Rewarded;
 

@@ -478,8 +478,8 @@
     <ROW Component="VpnHood.AppLib.Win.Common.WpfSpa.dll" ComponentId="{10EF9DE7-8FDD-4F54-B500-CF67FA44D5D0}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Win.Common.WpfSpa.dll"/>
     <ROW Component="VpnHood.AppLib.Win.Common.dll" ComponentId="{8DA734FD-0957-423D-BDBC-9CFBAA4582C0}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.AppLib.Win.Common.dll"/>
     <ROW Component="VpnHood.Core.Client.Abstractions.dll" ComponentId="{122F937D-A65A-42D2-90FD-8920D44F2E4B}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Abstractions.dll"/>
-    <ROW Component="VpnHood.Core.Client.Device.Win.dll" ComponentId="{E83D3E9C-CC7F-4731-B1A7-66DFEF9015F8}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Device.Win.dll"/>
-    <ROW Component="VpnHood.Core.Client.Device.dll" ComponentId="{7E5D98FC-3AA0-49F8-85CE-4E04B9066454}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Device.dll"/>
+    <ROW Component="VpnHood.Core.Client.Devices.Win.dll" ComponentId="{E83D3E9C-CC7F-4731-B1A7-66DFEF9015F8}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Devices.Win.dll"/>
+    <ROW Component="VpnHood.Core.Client.Devices.Abstractions.dll" ComponentId="{7E5D98FC-3AA0-49F8-85CE-4E04B9066454}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.Devices.Abstractions.dll"/>
     <ROW Component="VpnHood.Core.Client.VpnServices.Abstractions.dll" ComponentId="{3513C408-70D0-472F-84FD-28597BB979C8}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.VpnServices.Abstractions.dll"/>
     <ROW Component="VpnHood.Core.Client.VpnServices.Host.dll" ComponentId="{81D0106E-B9A7-4652-9965-44EA82AEB6D7}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.VpnServices.Host.dll"/>
     <ROW Component="VpnHood.Core.Client.VpnServices.Manager.dll" ComponentId="{0B60DE40-CF7E-4D99-A37B-E3F73EA0334F}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Core.Client.VpnServices.Manager.dll"/>
@@ -968,8 +968,8 @@
     <ROW File="VpnHood.AppLib.Win.Common.pdb" Component_="VpnHood.AppLib.Win.Common.dll" FileName="VPNHO~17.PDB|VpnHood.AppLib.Win.Common.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Win.Common.pdb" SelfReg="false"/>
     <ROW File="VpnHood.AppLib.Win.Common.WpfSpa.dll" Component_="VpnHood.AppLib.Win.Common.WpfSpa.dll" FileName="VPNHO~18.DLL|VpnHood.AppLib.Win.Common.WpfSpa.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Win.Common.WpfSpa.dll" SelfReg="false"/>
     <ROW File="VpnHood.AppLib.Win.Common.WpfSpa.pdb" Component_="VpnHood.AppLib.Win.Common.WpfSpa.dll" FileName="VPNHO~18.PDB|VpnHood.AppLib.Win.Common.WpfSpa.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Win.Common.WpfSpa.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Core.Client.Device.dll" Component_="VpnHood.Core.Client.Device.dll" FileName="VPNHO~19.DLL|VpnHood.Core.Client.Device.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Core.Client.Device.pdb" Component_="VpnHood.Core.Client.Device.dll" FileName="VPNHO~19.PDB|VpnHood.Core.Client.Device.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.Devices.Abstractions.dll" Component_="VpnHood.Core.Client.Devices.Abstractions.dll" FileName="VPNHO~19.DLL|VpnHood.Core.Client.Devices.Abstractions.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Devices.Abstractions.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.Devices.Abstractions.pdb" Component_="VpnHood.Core.Client.Devices.Abstractions.dll" FileName="VPNHO~19.PDB|VpnHood.Core.Client.Devices.Abstractions.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Devices.Abstractions.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.dll" Component_="VpnHood.Core.Client.dll" FileName="VPNHO~21.DLL|VpnHood.Core.Client.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.pdb" Component_="VpnHood.Core.Client.dll" FileName="VPNHO~21.PDB|VpnHood.Core.Client.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Common.dll" Component_="VpnHood.Core.Common.dll" FileName="VPNHO~22.DLL|VpnHood.Core.Common.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Common.dll" SelfReg="false"/>
@@ -993,8 +993,8 @@
     <ROW File="VpnHood.AppLib.Assets.Ip2LocationLite.dll" Component_="VpnHood.AppLib.Assets.Ip2LocationLite.dll" FileName="VPNHOO~3.DLL|VpnHood.AppLib.Assets.Ip2LocationLite.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.AppLib.Assets.Ip2LocationLite.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.Abstractions.dll" Component_="VpnHood.Core.Client.Abstractions.dll" FileName="VPNHOO~4.DLL|VpnHood.Core.Client.Abstractions.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Abstractions.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.Abstractions.pdb" Component_="VpnHood.Core.Client.Abstractions.dll" FileName="VPNHOO~2.PDB|VpnHood.Core.Client.Abstractions.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Abstractions.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Core.Client.Device.Win.dll" Component_="VpnHood.Core.Client.Device.Win.dll" FileName="VPNHOO~5.DLL|VpnHood.Core.Client.Device.Win.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.Win.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Core.Client.Device.Win.pdb" Component_="VpnHood.Core.Client.Device.Win.dll" FileName="VPNHOO~3.PDB|VpnHood.Core.Client.Device.Win.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Device.Win.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.Devices.Win.dll" Component_="VpnHood.Core.Client.Devices.Win.dll" FileName="VPNHOO~5.DLL|VpnHood.Core.Client.Devices.Win.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Devices.Win.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Core.Client.Devices.Win.pdb" Component_="VpnHood.Core.Client.Devices.Win.dll" FileName="VPNHOO~3.PDB|VpnHood.Core.Client.Devices.Win.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.Devices.Win.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.VpnServices.Abstractions.dll" Component_="VpnHood.Core.Client.VpnServices.Abstractions.dll" FileName="VPNHOO~6.DLL|VpnHood.Core.Client.VpnServices.Abstractions.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.VpnServices.Abstractions.dll" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.VpnServices.Abstractions.pdb" Component_="VpnHood.Core.Client.VpnServices.Abstractions.dll" FileName="VPNHOO~4.PDB|VpnHood.Core.Client.VpnServices.Abstractions.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.VpnServices.Abstractions.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Core.Client.VpnServices.Host.dll" Component_="VpnHood.Core.Client.VpnServices.Host.dll" FileName="VPNHOO~7.DLL|VpnHood.Core.Client.VpnServices.Host.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Connect.Win.Web\bin\Publish-web\VpnHood.Core.Client.VpnServices.Host.dll" SelfReg="false"/>
@@ -1645,7 +1645,7 @@
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.WebServer.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Win.Common.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Win.Common.WpfSpa.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Device.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Devices.Abstractions.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Common.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Tunneling.dll"/>
@@ -1664,7 +1664,7 @@
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Assets.ClassicSpa.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.AppLib.Assets.Ip2LocationLite.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Abstractions.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Device.Win.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.Devices.Win.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.VpnServices.Abstractions.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.VpnServices.Host.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Core.Client.VpnServices.Manager.dll"/>

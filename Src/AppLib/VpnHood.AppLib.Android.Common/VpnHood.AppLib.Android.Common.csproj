@@ -40,7 +40,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Android\VpnHood.Core.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Android\VpnHood.Core.Client.Devices.Android.csproj" />
 	</ItemGroup>
 
 </Project>

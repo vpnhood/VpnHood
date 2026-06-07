@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood client device provider for Linux</Description>
+		<Description>VpnHood Device abstraction</Description>
 		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.Core.Client.Devices</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -27,6 +28,14 @@
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <IsTrimmable>True</IsTrimmable>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <IsTrimmable>True</IsTrimmable>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
@@ -34,10 +43,13 @@
 		</None>
 	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Device.csproj" />
-    <ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
-    <ProjectReference Include="..\VpnHood.Core.VpnAdapters.LinuxTun\VpnHood.Core.VpnAdapters.LinuxTun.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Exceptions\" />
+	</ItemGroup>
 
 </Project>

@@ -141,13 +141,13 @@
     <Project Path="Src/Core/VpnHood.Core.VpnAdapters.WinTun/VpnHood.Core.VpnAdapters.WinTun.csproj" />
   </Folder>
   <Folder Name="/Src/Core/Devices/">
-    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Abstractions/VpnHood.Core.Client.Device.csproj" />
-    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Android/VpnHood.Core.Client.Device.Android.csproj" />
-    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Ios/VpnHood.Core.Client.Device.Ios.csproj">
+    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Abstractions/VpnHood.Core.Client.Devices.Abstractions.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Android/VpnHood.Core.Client.Devices.Android.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Ios/VpnHood.Core.Client.Devices.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>
-    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Linux/VpnHood.Core.Client.Device.Linux.csproj" />
-    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Win/VpnHood.Core.Client.Device.Win.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Linux/VpnHood.Core.Client.Devices.Linux.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Client.Devices.Win/VpnHood.Core.Client.Devices.Win.csproj" />
   </Folder>
   <Folder Name="/Src/Core/TcpStacks/">
     <Project Path="Src/Core/VpnHood.Core.TcpStack.Abstractions/VpnHood.Core.TcpStack.Abstractions.csproj" />

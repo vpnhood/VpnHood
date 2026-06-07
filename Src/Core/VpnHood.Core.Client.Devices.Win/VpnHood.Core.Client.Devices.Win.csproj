@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood Device abstraction</Description>
+		<Description>VpnHood client device provider for Windows</Description>
 		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
 
@@ -27,14 +27,6 @@
 		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-	  <IsTrimmable>True</IsTrimmable>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-	  <IsTrimmable>True</IsTrimmable>
-	</PropertyGroup>
-
 	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
@@ -43,12 +35,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.WinDivert\VpnHood.Core.VpnAdapters.WinDivert.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.WinTun\VpnHood.Core.VpnAdapters.WinTun.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Exceptions\" />
-	</ItemGroup>
 
 </Project>

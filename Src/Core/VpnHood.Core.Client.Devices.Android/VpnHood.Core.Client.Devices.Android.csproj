@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood client device provider for Windows</Description>
-		<TargetFramework>net10.0</TargetFramework>
+		<Description>VpnHood client device provider for Android</Description>
+		<TargetFramework>net10.0-android36.1</TargetFramework>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.Core.Client.Devices.Droid</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -28,18 +30,17 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
+		<None Include="..\..\..\VpnHood.png">
 			<Pack>True</Pack>
-			<PackagePath></PackagePath>
+			<PackagePath>\</PackagePath>
 		</None>
 	</ItemGroup>
-
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Device.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.WinDivert\VpnHood.Core.VpnAdapters.WinDivert.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.WinTun\VpnHood.Core.VpnAdapters.WinTun.csproj" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
 	</ItemGroup>
-
-
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.AndroidTun\VpnHood.Core.VpnAdapters.AndroidTun.csproj" />
+	</ItemGroup>
 </Project>

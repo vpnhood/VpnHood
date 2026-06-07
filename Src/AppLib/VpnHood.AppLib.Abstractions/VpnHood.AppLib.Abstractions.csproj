@@ -29,14 +29,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Device.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

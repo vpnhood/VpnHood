@@ -4,7 +4,7 @@ using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Services.Updaters;
-using VpnHood.Core.Client.Device.Droid.Utils;
+using VpnHood.Core.Client.Devices.Droid.Utils;
 
 namespace VpnHood.App.Connect.Droid.Web;
 

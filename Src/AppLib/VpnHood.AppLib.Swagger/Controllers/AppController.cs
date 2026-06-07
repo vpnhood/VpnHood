@@ -5,7 +5,7 @@ using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Devices;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 

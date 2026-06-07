@@ -2,7 +2,7 @@
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Devices;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement;

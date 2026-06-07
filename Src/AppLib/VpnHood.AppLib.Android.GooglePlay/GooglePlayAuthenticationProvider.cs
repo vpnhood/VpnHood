@@ -3,8 +3,8 @@ using AndroidX.Credentials;
 using AndroidX.Credentials.Exceptions;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
-using VpnHood.Core.Client.Device.Droid;
-using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.Devices.Droid;
+using VpnHood.Core.Client.Devices.UiContexts;
 using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;

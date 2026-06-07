@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer;
-using VpnHood.Core.Client.Device.Droid.ActivityEvents;
-using VpnHood.Core.Client.Device.Droid.Utils;
-using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
+using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Droid.Common.Activities;

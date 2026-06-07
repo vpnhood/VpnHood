@@ -7,7 +7,7 @@ using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using VpnHood.AppLib.WebServer;
-using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Win.Common.WpfSpa;

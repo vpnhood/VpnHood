@@ -5,7 +5,7 @@ using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;

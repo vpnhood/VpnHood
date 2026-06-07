@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
 

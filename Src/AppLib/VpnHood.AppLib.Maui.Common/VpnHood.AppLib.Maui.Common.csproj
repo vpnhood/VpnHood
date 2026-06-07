@@ -50,7 +50,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<ProjectReference Include="..\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device.Android\VpnHood.Core.Client.Device.Android.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Android\VpnHood.Core.Client.Device.Android.csproj" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">

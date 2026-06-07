@@ -1,5 +1,5 @@
 ﻿using System.Windows;
-using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Win.Common.WpfSpa;
 

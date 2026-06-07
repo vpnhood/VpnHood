@@ -29,7 +29,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Device\VpnHood.Core.Client.Device.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Device.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

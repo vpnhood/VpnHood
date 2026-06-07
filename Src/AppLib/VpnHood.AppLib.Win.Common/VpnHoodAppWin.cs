@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Win.Common.WinNative;
-using VpnHood.Core.Client.Device.Win;
+using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Common;
 using VpnHood.Core.Toolkit.Graphics;
 using VpnHood.Core.Toolkit.Logging;

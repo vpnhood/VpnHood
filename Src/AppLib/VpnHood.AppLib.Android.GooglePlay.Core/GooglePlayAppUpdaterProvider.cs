@@ -1,9 +1,9 @@
 ﻿using Android.Gms.Extensions;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Client.Device.Droid;
-using VpnHood.Core.Client.Device.Droid.Utils;
-using VpnHood.Core.Client.Device.UiContexts;
+using VpnHood.Core.Client.Devices.Droid;
+using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using Xamarin.Google.Android.Play.Core.AppUpdate;
 using Xamarin.Google.Android.Play.Core.AppUpdate.Install.Model;

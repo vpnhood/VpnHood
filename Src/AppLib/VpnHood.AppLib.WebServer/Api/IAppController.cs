@@ -1,7 +1,7 @@
 ﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
-using VpnHood.Core.Client.Device;
+using VpnHood.Core.Client.Devices;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 

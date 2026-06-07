@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Droid.Common;
-using VpnHood.Core.Client.Device.Droid;
+using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 

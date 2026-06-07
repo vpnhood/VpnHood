@@ -2,7 +2,7 @@
 using Android.Util;
 using Android.Views;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Client.Device.Droid.Utils;
+using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using Orientation = Android.Widget.Orientation;

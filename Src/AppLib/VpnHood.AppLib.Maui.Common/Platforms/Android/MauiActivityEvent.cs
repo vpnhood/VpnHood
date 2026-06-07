@@ -5,7 +5,7 @@ using Android.Content.Res;
 using Android.OS;
 using Android.Runtime;
 using Android.Views;
-using VpnHood.Core.Client.Device.Droid.ActivityEvents;
+using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 
 // ReSharper disable once CheckNamespace
 namespace VpnHood.AppLib.Maui.Common;

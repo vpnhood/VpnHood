@@ -18,7 +18,7 @@ namespace VpnHood.Core.Client.Devices.Ios;
 // The host Network Extension should subclass this type and register it under the expected
 // ObjC name, overriding <see cref="AppGroupId"/> with its own App Group identifier.
 [Register("IosVpnService")]
-public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler, IIosPacketTunnelProvider
+public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 {
     // Created in StartTunnel once the config folder is resolved from ProviderConfiguration.
     private VpnServiceHost? _vpnServiceHost;
@@ -228,7 +228,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler, IIosPac
             MaxPacketSendDelay = adapterSettings.MaxPacketSendDelay,
             QueueCapacity = adapterSettings.QueueCapacity,
             AutoMetric = adapterSettings.AutoMetric
-        });
+        }, CompleteStartTunnel);
     }
 
     public void ShowNotification(ConnectionInfo connectionInfo)

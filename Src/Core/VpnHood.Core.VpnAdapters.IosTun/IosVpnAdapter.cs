@@ -9,7 +9,10 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.VpnAdapters.IosTun;
 
-public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterSettings settings)
+public class IosVpnAdapter(
+    NEPacketTunnelProvider tunnelProvider, 
+    IosVpnAdapterSettings settings, 
+    Action<NSError?> completeStartTunnel)
     : TunVpnAdapter(settings)
 {
     private NEPacketTunnelFlow? _packetFlow;
@@ -195,7 +198,7 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
         {
             // Signal the deferred start-tunnel completion handler with the error so iOS
             // surfaces a failure instead of killing us silently.
-            (tunnelProvider as IIosPacketTunnelProvider)?.CompleteStartTunnel(
+            completeStartTunnel(
                 new NSError(new NSString("VpnHood"), 2,
                     NSDictionary.FromObjectAndKey((NSString)("SetTunnelNetworkSettings failed: " + ex.Message), NSError.LocalizedDescriptionKey)));
             throw;
@@ -205,7 +208,7 @@ public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterS
         VhLogger.Instance.LogDebug("iOS tun adapter has been established.");
 
         // Notify the deferred start-tunnel completion handler that the tunnel is live.
-        (tunnelProvider as IIosPacketTunnelProvider)?.CompleteStartTunnel(null);
+        completeStartTunnel(null);
     }
 
     protected override void AdapterClose()

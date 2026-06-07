@@ -7,7 +7,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
-namespace VpnHood.Core.VpnAdapters.iOSTun;
+namespace VpnHood.Core.VpnAdapters.IosTun;
 
 public class IosVpnAdapter(NEPacketTunnelProvider tunnelProvider, IosVpnAdapterSettings settings)
     : TunVpnAdapter(settings)

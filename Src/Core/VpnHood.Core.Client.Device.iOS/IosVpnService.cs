@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.VpnAdapters.iOSTun;
+using VpnHood.Core.VpnAdapters.IosTun;
 
 namespace VpnHood.Core.Client.Device.iOS;
 

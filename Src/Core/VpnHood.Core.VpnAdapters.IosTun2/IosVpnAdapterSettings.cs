@@ -1,5 +1,5 @@
 using VpnHood.Core.VpnAdapters.Abstractions;
 
-namespace VpnHood.Core.VpnAdapters.iOSTun;
+namespace VpnHood.Core.VpnAdapters.IosTun;
 
 public class IosVpnAdapterSettings : VpnAdapterSettings;

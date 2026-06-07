@@ -1,4 +1,4 @@
-namespace VpnHood.Core.VpnAdapters.iOSTun;
+namespace VpnHood.Core.VpnAdapters.IosTun;
 
 /// <summary>
 /// Implemented by the host NEPacketTunnelProvider (e.g. the Network Extension's IosVpnService)

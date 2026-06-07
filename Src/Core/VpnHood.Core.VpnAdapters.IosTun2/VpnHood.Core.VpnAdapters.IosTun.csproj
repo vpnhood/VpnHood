@@ -3,7 +3,7 @@
 		<Description>VpnHood VpnAdapter for iOS</Description>
 		<TargetFramework>net10.0-ios</TargetFramework>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.Core.VpnAdapters.iOSTun</RootNamespace>
+		<RootNamespace>VpnHood.Core.VpnAdapters.IosTun</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>

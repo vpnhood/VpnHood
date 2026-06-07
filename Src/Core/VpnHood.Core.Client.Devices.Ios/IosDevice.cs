@@ -130,8 +130,8 @@ public class IosDevice : IDevice
         var providerProtocol = new NETunnelProviderProtocol();
         providerProtocol.ProviderBundleIdentifier = _providerBundleId;
         providerProtocol.ProviderConfiguration = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
-            [(NSString)VpnServiceConfigFolder],
-            [(NSString)VpnServiceConfigFolderKey]);
+            [(NSString)VpnServiceConfigFolder, (NSString)_appGroupId],
+            [(NSString)VpnServiceConfigFolderKey, (NSString)"AppGroupId"]);
 
         providerProtocol.ServerAddress = _serverAddress;
         providerProtocol.EnforceRoutes = true;

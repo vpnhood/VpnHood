@@ -280,6 +280,7 @@ internal class ClientSessionBuilder(
                 throw new InvalidOperationException($"The server MTU is too small. MTU: {mtu}");
 
             var adapterOptions = new VpnAdapterOptions {
+                ServerIp = connectorService.VpnEndPoint.TcpEndPoint.Address,
                 Mtu = mtu - TunnelDefaults.MtuOverhead,
                 DnsServers = dnsConfig.DnsServers,
                 VirtualIpNetworkV4 = networkV4,

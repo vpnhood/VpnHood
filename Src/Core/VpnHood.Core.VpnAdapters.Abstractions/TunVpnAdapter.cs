@@ -32,6 +32,7 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     private bool _isRestartingAdapter;
     private bool _isStopping;
     private VpnAdapterOptions? _startOptions;
+    protected IPAddress? ServerIp => _startOptions?.ServerIp;
 
     // ReSharper disable once FieldCanBeMadeReadOnly.Local
     protected bool UseNat { get; private set; }

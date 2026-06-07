@@ -9,6 +9,7 @@ public class VpnAdapterOptions
     public static IReadOnlyList<IpNetwork> AllVRoutesIpV6 => field ??= [IpNetwork.Parse("::/1"), IpNetwork.Parse("8000::/1")];
     public static IReadOnlyList<IpNetwork> AllVRoutes => field ??= AllVRoutesIpV4.Concat(AllVRoutesIpV6).ToArray();
 
+    public IPAddress? ServerIp { get; init; }
     public required string? SessionName { get; init; }
     public IpNetwork? VirtualIpNetworkV4 { get; init; }
     public IpNetwork? VirtualIpNetworkV6 { get; init; }

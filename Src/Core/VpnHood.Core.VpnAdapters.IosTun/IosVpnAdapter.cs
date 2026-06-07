@@ -74,10 +74,9 @@ public class IosVpnAdapter(
         // so no routes are ever installed and no traffic enters the tunnel.
         // It is only informational for packet tunnels, so we prefer the real server IP
         // (from the protocol configuration) and fall back to a valid placeholder.
-        var remoteAddress = "192.0.2.1";
-        var serverAddress = tunnelProvider.ProtocolConfiguration?.ServerAddress;
-        if (!string.IsNullOrEmpty(serverAddress) && IPAddress.TryParse(serverAddress, out _))
-            remoteAddress = serverAddress;
+        var remoteAddress = ServerIp ?? IPAddress.Parse("192.0.2.1");
+        if (tunnelProvider.ProtocolConfiguration?.ServerAddress !=null && serverAddress.TryParse(out var parsedAddress))
+            remoteAddress = parsedAddress;
 
         var settings = new NEPacketTunnelNetworkSettings(remoteAddress);
 

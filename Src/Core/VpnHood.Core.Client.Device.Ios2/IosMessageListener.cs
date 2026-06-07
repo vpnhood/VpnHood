@@ -1,6 +1,6 @@
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
-namespace VpnHood.Core.Client.Device.iOS;
+namespace VpnHood.Core.Client.Device.Ios;
 
 // iOS IMessageListener. The iOS Network Extension receives app messages through
 // NEPacketTunnelProvider.HandleAppMessage (a private, secure channel) rather than a TCP

@@ -4,7 +4,7 @@ using VpnHood.Core.Client.Device.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 
-namespace VpnHood.Core.Client.Device.iOS;
+namespace VpnHood.Core.Client.Device.Ios;
 
 public class IosDevice : IDevice
 {

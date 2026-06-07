@@ -10,7 +10,7 @@ using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.IosTun;
 
-namespace VpnHood.Core.Client.Device.iOS;
+namespace VpnHood.Core.Client.Device.Ios;
 
 // The Objective-C class name MUST match NSExtensionPrincipalClass in the Extension's Info.plist.
 // The host Network Extension should subclass this type and register it under the expected

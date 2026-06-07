@@ -3,7 +3,7 @@
 		<Description>VpnHood client device provider for iOS</Description>
 		<TargetFramework>net10.0-ios</TargetFramework>
 		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.Core.Client.Device.iOS</RootNamespace>
+		<RootNamespace>VpnHood.Core.Client.Device.Ios</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>

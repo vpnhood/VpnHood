@@ -2,7 +2,7 @@ using NetworkExtension;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
-namespace VpnHood.Core.Client.Device.iOS;
+namespace VpnHood.Core.Client.Device.Ios;
 
 // iOS IMessageClient. Sends opaque request blobs to the Network Extension over
 // NETunnelProviderSession.SendProviderMessage (a private, secure channel) and returns the

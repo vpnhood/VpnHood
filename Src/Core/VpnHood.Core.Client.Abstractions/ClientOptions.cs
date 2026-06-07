@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
@@ -11,8 +11,7 @@ namespace VpnHood.Core.Client.Abstractions;
 
 public class ClientOptions
 {
-    private static ClientOptions? _default;
-    public static ClientOptions Default => _default ??= new ClientOptions {
+    public static ClientOptions Default => field ??= new ClientOptions {
         ClientId = string.Empty,
         UseTcpProxy = true,
         AccessKey = SampleAccessKey,

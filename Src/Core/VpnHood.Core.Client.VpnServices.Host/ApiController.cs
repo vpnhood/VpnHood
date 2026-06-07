@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
@@ -56,8 +56,7 @@ internal class ApiController : IDisposable
         };
 
         // raw JSON bytes; the transport adds its own framing
-        var jsonTypeInfo = ApiTransportJsonContext.For<ApiResponse<object>>();
-        return System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(response, jsonTypeInfo);
+        return System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(response);
     }
 
     private async Task<ConnectionInfo> UpdateConnectionInfo(CancellationToken cancellationToken)

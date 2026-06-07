@@ -1,4 +1,4 @@
-﻿using System.Buffers;
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -74,9 +74,15 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
     public IpNetwork? AdapterIpNetworkV6 { get; private set; }
     public IPAddress? GatewayIpV4 { get; private set; }
     public IPAddress? GatewayIpV6 { get; private set; }
-    // Made virtual so platform adapters (e.g. iOS NE) can override when the standard
-    // UdpClient-based discovery fails in the sandbox and always returns null.
-    // ToDo: iot check
+    /// <summary>
+    /// Checks if the physical device network/primary adapter supports the specified IP version.
+    /// </summary>
+    /// <remarks>
+    /// This is used to determine if the primary physical interface has connectivity/IP configuration
+    /// for the given IP version. It is typically used for routing and split-tunneling decisions,
+    /// and to check if the channel to the server can be established using this IP version.
+    /// It does NOT represent the capabilities of the virtual VPN adapter inside the tunnel.
+    /// </remarks>
     public virtual bool IsIpVersionSupported(IpVersion ipVersion) => GetPrimaryAdapterAddress(ipVersion) != null;
     public bool IsStarted { get; private set; }
     public event EventHandler? PrimaryAdapterIpChanged;

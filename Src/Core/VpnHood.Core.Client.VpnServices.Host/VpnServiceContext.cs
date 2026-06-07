@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -44,55 +44,29 @@ internal class VpnServiceContext(string configFolder)
     {
         var json = File.ReadAllText(ConfigFilePath);
 
-        // Use source-generated STJ (ClientOptionsJsonContext). Reflection-based STJ hangs/explodes
-        // metadata inside the iOS NetworkExtension under Mono AOT.
-        var opts = (ClientOptions?)JsonSerializer.Deserialize(json,
-            typeof(ClientOptions), ClientOptionsJsonContext.Default);
+        var opts = JsonSerializer.Deserialize<ClientOptions>(json);
         if (opts == null)
             throw new InvalidDataException("ClientOptions could not be deserialized!");
         return opts;
     }
 
-    private readonly AsyncLock _connectionInfoLock = new();
+    private readonly AsyncLock _writeLock = new();
 
     public async Task<bool> TryWriteConnectionInfo(ConnectionInfo connectionInfo, CancellationToken cancellationToken)
     {
         try {
-            using var scopeLock = await _connectionInfoLock.LockAsync(cancellationToken);
+            using var scopeLock = await _writeLock.LockAsync(cancellationToken);
             ConnectionInfo = connectionInfo;
 
-            // ToDo: double check 
-
-            // source-generated STJ — reflection-based serialization hangs under iOS Mono AOT.
-            var json = JsonSerializer.Serialize(connectionInfo, ApiTransportJsonContext.For<ConnectionInfo>());
-
-            // iOS Mono interpreter: file I/O on the shared App Group container can hang the calling
-            // thread for ~30s on first access. Push to write to the thread pool so the calling task
-            // can complete, with a 2-second hard ceiling.
-            var pathCopy = StatusFilePath;
-            var writeTask = Task.Run(() => {
-                try {
-                    File.WriteAllText(pathCopy, json);
-                    return true;
-                }
-                catch {
-                    return false;
-                }
-            }, CancellationToken.None);
-
-            var winner = await Task.WhenAny(writeTask, Task.Delay(TimeSpan.FromSeconds(2), cancellationToken))
-                .ConfigureAwait(false);
-            if (winner == writeTask)
-                await writeTask.ConfigureAwait(false);
-
+            var json = JsonSerializer.Serialize(connectionInfo);
+            await File.WriteAllTextAsync(StatusFilePath, json, cancellationToken);
             return true;
         }
         catch (OperationCanceledException) {
-            return false; // operation was cancelled
+            return false;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}",
-                StatusFilePath);
+            VhLogger.Instance.LogError(ex, "Could not save connection info to file. FilePath: {FilePath}", StatusFilePath);
             return false;
         }
     }

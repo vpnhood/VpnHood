@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Numerics;
@@ -13,24 +13,21 @@ namespace VpnHood.Core.Toolkit.Net;
 public static class IPAddressUtil
 {
     // Lazy initialization to avoid running heavy static cctor on iOS NE AOT sandbox.
-    private static IReadOnlyList<IPAddress>? _googleDnsServers;
-    public static IReadOnlyList<IPAddress> GoogleDnsServers => _googleDnsServers ??= [
+    public static IReadOnlyList<IPAddress> GoogleDnsServers => field ??= [
         IPAddress.Parse("8.8.8.8"),
         IPAddress.Parse("8.8.4.4"),
         IPAddress.Parse("2001:4860:4860::8888"),
         IPAddress.Parse("2001:4860:4860::8844")
     ];
 
-    private static IReadOnlyList<IPAddress>? _kidsSafeCloudflareDnsServers;
-    public static IReadOnlyList<IPAddress> KidsSafeCloudflareDnsServers => _kidsSafeCloudflareDnsServers ??= [
+    public static IReadOnlyList<IPAddress> KidsSafeCloudflareDnsServers => field ??= [
         IPAddress.Parse("1.1.1.3"),
         IPAddress.Parse("1.0.0.3"),
         IPAddress.Parse("2606:4700:4700::1113"),
         IPAddress.Parse("2606:4700:4700::1003")
     ];
 
-    private static IReadOnlyList<IPAddress>? _reliableDnsServers;
-    public static IReadOnlyList<IPAddress> ReliableDnsServers => _reliableDnsServers ??= [
+    public static IReadOnlyList<IPAddress> ReliableDnsServers => field ??= [
         GoogleDnsServers.First(x => x.IsV4()),
         GoogleDnsServers.First(x => x.IsV6()),
         KidsSafeCloudflareDnsServers.First(x => x.IsV4()),
@@ -354,14 +351,10 @@ public static class IPAddressUtil
         return ipAddress;
     }
 
-    private static IPAddress? _maxIPv6Value;
-    public static IPAddress MaxIPv6Value => _maxIPv6Value ??= IPAddress.Parse("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
-    private static IPAddress? _minIPv6Value;
-    public static IPAddress MinIPv6Value => _minIPv6Value ??= IPAddress.Parse("::");
-    private static IPAddress? _maxIPv4Value;
-    public static IPAddress MaxIPv4Value => _maxIPv4Value ??= IPAddress.Parse("255.255.255.255");
-    private static IPAddress? _minIPv4Value;
-    public static IPAddress MinIPv4Value => _minIPv4Value ??= IPAddress.Parse("0.0.0.0");
+    public static IPAddress MaxIPv6Value => field ??= IPAddress.Parse("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
+    public static IPAddress MinIPv6Value => field ??= IPAddress.Parse("::");
+    public static IPAddress MaxIPv4Value => field ??= IPAddress.Parse("255.255.255.255");
+    public static IPAddress MinIPv4Value => field ??= IPAddress.Parse("0.0.0.0");
 
     public static bool IsMaxValue(IPAddress ipAddress)
     {

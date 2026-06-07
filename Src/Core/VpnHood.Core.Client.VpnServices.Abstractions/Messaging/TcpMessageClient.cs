@@ -91,7 +91,7 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
 
         try {
             var json = File.ReadAllText(_apiFilePath);
-            var bootstrap = JsonSerializer.Deserialize(json, ApiTransportJsonContext.For<TcpApiBootstrap>());
+            var bootstrap = JsonSerializer.Deserialize<TcpApiBootstrap>(json);
             if (bootstrap == null)
                 throw new VpnServiceNotReadyException("VpnService API endpoint could not be deserialized.");
             return bootstrap;

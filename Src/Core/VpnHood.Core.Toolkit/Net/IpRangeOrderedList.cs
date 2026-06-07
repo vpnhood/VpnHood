@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Net;
 using System.Net.Sockets;
 
@@ -22,8 +22,7 @@ public class IpRangeOrderedList :
     public int Count => _orderedList.Count;
     // Lazy: eager `new([])` initializer in cctor hangs in iOS NE AOT sandbox (LINQ OrderBy path).
     // todo: double check for AOT
-    private static IpRangeOrderedList? _empty;
-    public static IpRangeOrderedList Empty => _empty ??= new IpRangeOrderedList();
+    public static IpRangeOrderedList Empty => field ??= new IpRangeOrderedList();
 
     public IpRange this[int index] => _orderedList[index];
 

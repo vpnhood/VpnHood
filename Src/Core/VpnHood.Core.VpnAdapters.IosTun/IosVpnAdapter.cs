@@ -6,6 +6,7 @@ using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.VpnAdapters.IosTun.Utils;
 
 namespace VpnHood.Core.VpnAdapters.IosTun;
 
@@ -154,17 +155,21 @@ public class IosVpnAdapter(
 
         try
         {
-            await IosCallbackTask.WaitAsync(
-                cb => tunnelProvider.SetTunnelNetworkSettings(settings, cb),
-                cancellationToken);
+            // The binding auto-generates SetTunnelNetworkSettingsAsync from the completion-handler
+            // overload: it throws NSErrorException when iOS reports a non-null NSError. iOS has no
+            // native cancellation for this call, so WaitAsync only abandons the await on cancel.
+            await tunnelProvider.SetTunnelNetworkSettingsAsync(settings).WaitAsync(cancellationToken);
+        }
+        catch (NSErrorException ex) {
+            completeStartTunnel(ex.Error);
+            throw;
         }
         catch (Exception ex)
         {
             // Signal the deferred start-tunnel completion handler with the error so iOS
-            // surfaces a failure instead of killing us silently.
-            completeStartTunnel(
-                new NSError(new NSString("VpnHood"), 2,
-                    NSDictionary.FromObjectAndKey((NSString)("SetTunnelNetworkSettings failed: " + ex.Message), NSError.LocalizedDescriptionKey)));
+            // surfaces a failure instead of killing us silently. ToNsExceptionError wraps the
+            // managed Exception in the built-in NSExceptionError (preserves type/message).
+            completeStartTunnel(ex.ToNsExceptionError());
             throw;
         }
 

@@ -1,11 +1,12 @@
 using Foundation;
 
-namespace VpnHood.Core.VpnAdapters.IosTun;
+namespace VpnHood.Core.VpnAdapters.IosTun.Utils;
 
 // Converts iOS native callback APIs (completion handlers) into awaitable Tasks.
+// On a non-null NSError the Task throws NSErrorException; on success it completes normally.
 // When the CancellationToken fires the returned Task transitions to Canceled immediately;
-// the native operation itself is not cancelled (iOS provides no cancellation path for most
-// NE settings calls).
+// the native operation itself is NOT cancelled (iOS provides no cancellation path for most
+// NE settings calls), the await is simply abandoned.
 public static class IosCallbackTask
 {
     public static Task WaitAsync(

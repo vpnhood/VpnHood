@@ -154,19 +154,9 @@ public class IosVpnAdapter(
 
         try
         {
-            var tcs = new TaskCompletionSource<NSError?>();
-            // CRITICAL: SetTunnelNetworkSettings MUST be called with a NON-NULL completion
-            // handler. Passing null causes a native EXC_BAD_ACCESS crash when iOS attempts
-            // to invoke the block.
-            tunnelProvider.SetTunnelNetworkSettings(settings, err => {
-                tcs.TrySetResult(err);
-            });
-
-            var error = await tcs.Task.WaitAsync(cancellationToken);
-            if (error != null)
-            {
-                throw new Exception($"SetTunnelNetworkSettings failed: {error.LocalizedDescription} (code={error.Code})");
-            }
+            await IosCallbackTask.WaitAsync(
+                cb => tunnelProvider.SetTunnelNetworkSettings(settings, cb),
+                cancellationToken);
         }
         catch (Exception ex)
         {

@@ -16,8 +16,8 @@ public class IosVpnAdapter(
     : TunVpnAdapter(settings)
 {
     private NEPacketTunnelFlow? _packetFlow;
-    private readonly List<NEIPv4Route> _ipv4Routes = [];
-    private readonly List<NEIPv6Route> _ipv6Routes = [];
+    private readonly List<IpNetwork> _ipv4Routes = [];
+    private readonly List<IpNetwork> _ipv6Routes = [];
     private readonly List<IPAddress> _dnsServers = [];
     private readonly List<IpNetwork> _ipv4Networks = [];
     private readonly List<IpNetwork> _ipv6Networks = [];
@@ -74,33 +74,24 @@ public class IosVpnAdapter(
         // so no routes are ever installed and no traffic enters the tunnel.
         // It is only informational for packet tunnels, so we prefer the real server IP
         // (from the protocol configuration) and fall back to a valid placeholder.
+        var serverAddress = ServerIp?.ToString() ?? tunnelProvider.ProtocolConfiguration?.ServerAddress;
         var remoteAddress = ServerIp ?? IPAddress.Parse("192.0.2.1");
-        if (tunnelProvider.ProtocolConfiguration?.ServerAddress !=null && serverAddress.TryParse(out var parsedAddress))
+        if (serverAddress != null && IPAddress.TryParse(serverAddress, out var parsedAddress))
             remoteAddress = parsedAddress;
 
-        var settings = new NEPacketTunnelNetworkSettings(remoteAddress);
+        var settings = new NEPacketTunnelNetworkSettings(remoteAddress.ToString());
 
         // Set the default gateway for IPv4 and IPv6
         if (_ipv4Networks.Count > 0)
         {
-            settings.IPv4Settings = new NEIPv4Settings(
+            settings.IPv4Settings = new NEIPv4Settings(  
                 _ipv4Networks.Select(x => x.Prefix.ToString()).ToArray(),
                 _ipv4Networks.Select(x => Ipv4MaskString(x.PrefixLength)).ToArray());
 
-            // Install the core's routes VERBATIM. With CanProtectSocket=false the core
-            // (ClientHelper.BuildIncludeIpRangesByDevice) has already split the default route into
-            // many specific routes that cover the whole internet EXCEPT the active VPN server's own
-            // IP (a single /32 hole, e.g. 15.204.89.227) and the local subnets, so the transport
-            // reaches the server over the physical interface.
-            //
-            // CRITICAL: do NOT recombine these into a single 0.0.0.0/0 IncludedRoutes. Doing so
-            // re-includes the server's /32 inside the tunnel (the ExcludedRoutes list cannot name it
-            // — the real server IP is only known as the gap in this route set, not via ServerAddress,
-            // which is the informational placeholder "1.1.1.1"). That loops the server connection
-            // back into its own non-forwarding tunnel and freezes ALL traffic (the client gets stuck
-            // in FindingReachableServer with 0 packets in/out). iOS treats this full split route set
-            // as the default gateway and routes DNS through it correctly.
-            settings.IPv4Settings.IncludedRoutes = _ipv4Routes.ToArray();
+            settings.IPv4Settings.IncludedRoutes = _ipv4Routes
+                .Select(r => new NEIPv4Route(r.Prefix.ToString(), Ipv4MaskString(r.PrefixLength)))
+                .ToArray();
+            
             VhLogger.Instance.LogDebug(
                 "iOS: Configured IPv4 with {Count} routes from core (server IP excluded by omission).",
                 _ipv4Routes.Count);
@@ -114,24 +105,20 @@ public class IosVpnAdapter(
                 _ipv6Networks.Select(x => NSNumber.FromInt32(x.PrefixLength)).ToArray());
 
             // iOS requires a global default IPv6 route (::/0) in IncludedRoutes to convince the
-            // DNS resolver and routing engine that general IPv6 internet access is available when the
+            // routing engine that general IPv6 internet access is available when the
             // host physical link is IPv4-only. Without ::/0, iOS throttles or disables AAAA lookups.
-            var routes = _ipv6Routes.ToList();
-            if (!routes.Any(r => r is { DestinationAddress: "::", DestinationNetworkPrefixLength.Int32Value: 0 }))
-            {
-                routes.Add(new NEIPv6Route("::", 0));
-            }
-            settings.IPv6Settings.IncludedRoutes = routes.ToArray();
-
-            // Exclude link-local to protect the USB CoreDevice pairing tunnel (keeps devicectl working)
-            var excludedRoutes = new List<NEIPv6Route> { new NEIPv6Route("fe80::", 10) };
-            if (!string.IsNullOrEmpty(serverAddress) && IPAddress.TryParse(serverAddress, out var parsedAddr) && parsedAddr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
-            {
-                excludedRoutes.Add(new NEIPv6Route(parsedAddr.ToString(), 128));
-            }
-            settings.IPv6Settings.ExcludedRoutes = excludedRoutes.ToArray();
-
-            VhLogger.Instance.LogDebug("iOS: Configured IPv6 with {Count} routes (including injected default ::/0) and link-local exclusion.", routes.Count);
+            // So we need to ignore our include list
+            // NOTE: On iOS, when there is no native IPv6, the default route ::/0 alone is not enough to convince the routing stack
+            // to send IPv6 traffic to the tunnel. We must also explicitly include a specific global unicast route (2000::/3).
+            var includes = IsIpVersionSupported(IpVersion.IPv6) 
+                ? _ipv6Routes 
+                : new List<IpNetwork> { IpNetwork.AllV6, IpNetwork.AllGlobalUnicastV6}.Concat(_ipv6Routes);
+            
+            settings.IPv6Settings.IncludedRoutes = includes
+                .Select(r => new NEIPv6Route(r.Prefix.ToString(), r.PrefixLength))
+                .ToArray();
+           
+            VhLogger.Instance.LogDebug("iOS: Configured IPv6 with {Count} routes (including injected default ::/0) and link-local exclusion.", includes.Count());
         }
 
         // Set DNS servers if any are provided
@@ -139,9 +126,7 @@ public class IosVpnAdapter(
             settings.DnsSettings = new NEDnsSettings(_dnsServers.Select(x=>x.ToString()) .ToArray());
 
         if (_mtu.HasValue)
-        {
             settings.Mtu = NSNumber.FromInt32(_mtu.Value);
-        }
 
         // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install.
         try
@@ -150,17 +135,19 @@ public class IosVpnAdapter(
             var inc4 = settings.IPv4Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
             var exc4 = settings.IPv4Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
             var inc6 = settings.IPv6Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
+            var exc6 = settings.IPv6Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
             File.WriteAllText(Path.Combine(docs, "ext-route-dump.txt"),
                 $"AdapterOpen at {DateTime.UtcNow:O}\n" +
                 $"remoteAddress(ServerAddress)={remoteAddress}\n" +
                 $"mtu={_mtu}\n" +
                 $"v4 addrs({_ipv4Networks.Count}): {string.Join(", ", _ipv4Networks.Select(n => n.ToString()))}\n" +
-                $"v4 routes-from-core({_ipv4Routes.Count}): {string.Join(", ", _ipv4Routes.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}"))}\n" +
+                $"v4 routes-from-core({_ipv4Routes.Count}): {string.Join(", ", _ipv4Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
                 $"v4 INCLUDED-applied: {string.Join(", ", inc4)}\n" +
                 $"v4 EXCLUDED-applied: {string.Join(", ", exc4)}\n" +
                 $"v6 addrs({_ipv6Networks.Count}): {string.Join(", ", _ipv6Networks.Select(n => n.ToString()))}\n" +
-                $"v6 routes-from-core({_ipv6Routes.Count}): {string.Join(", ", _ipv6Routes.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}"))}\n" +
+                $"v6 routes-from-core({_ipv6Routes.Count}): {string.Join(", ", _ipv6Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
                 $"v6 INCLUDED-applied: {string.Join(", ", inc6)}\n" +
+                $"v6 EXCLUDED-applied: {string.Join(", ", exc6)}\n" +
                 $"dns({_dnsServers.Count}): {string.Join(", ", _dnsServers.Select(d => d.ToString()))}\n");
         }
         catch { /* best-effort */ }
@@ -234,9 +221,9 @@ public class IosVpnAdapter(
     protected override Task AddRoute(IpNetwork ipNetwork, CancellationToken cancellationToken)
     {
         if (ipNetwork.IsV4)
-            _ipv4Routes.Add(new NEIPv4Route(ipNetwork.Prefix.ToString(), Ipv4MaskString(ipNetwork.PrefixLength)));
+            _ipv4Routes.Add(ipNetwork);
         else
-            _ipv6Routes.Add(new NEIPv6Route(ipNetwork.Prefix.ToString(), ipNetwork.PrefixLength));
+            _ipv6Routes.Add(ipNetwork);
 
         return Task.CompletedTask;
     }

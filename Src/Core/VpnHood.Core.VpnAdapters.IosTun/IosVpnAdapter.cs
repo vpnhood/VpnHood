@@ -87,13 +87,13 @@ public class IosVpnAdapter(
         {
             settings.IPv4Settings = new NEIPv4Settings(  
                 _ipv4Networks.Select(x => x.Prefix.ToString()).ToArray(),
-                _ipv4Networks.Select(x => Ipv4MaskString(x.PrefixLength)).ToArray());
+                _ipv4Networks.Select(x => x.SubnetMask.ToString()).ToArray());
 
             settings.IPv4Settings.IncludedRoutes = _ipv4Routes
-                .Select(r => new NEIPv4Route(r.Prefix.ToString(), Ipv4MaskString(r.PrefixLength)))
+                .Select(r => new NEIPv4Route(r.Prefix.ToString(), r.SubnetMask.ToString()))
                 .ToArray();
             
-            VhLogger.Instance.LogDebug(
+            VhLogger.Instance.LogDebug( 
                 "iOS: Configured IPv4 with {Count} routes from core (server IP excluded by omission).",
                 _ipv4Routes.Count);
         }
@@ -213,18 +213,6 @@ public class IosVpnAdapter(
 
     protected override Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken) =>
         throw new NotSupportedException("iOS does not support NAT.");
-
-    // Build a dotted-decimal IPv4 subnet mask in big-endian (network) order.
-    // NOTE: do NOT use IpNetwork.SubnetMask here — its CidrToSubnetMask uses
-    // byte[].Reverse() (LINQ, returns a new sequence that is discarded), leaving the
-    // mask in little-endian order. That produces a byte-reversed mask (e.g. /12 -> 0.0.240.255
-    // instead of 255.240.0.0). iOS silently rejects/ignores such IPv4 routes, so IPv4
-    // traffic never enters the tunnel while IPv6 (which uses a prefix length) does.
-    private static string Ipv4MaskString(int prefixLength)
-    {
-        var mask = prefixLength == 0 ? 0u : uint.MaxValue << (32 - prefixLength);
-        return $"{(mask >> 24) & 0xFF}.{(mask >> 16) & 0xFF}.{(mask >> 8) & 0xFF}.{mask & 0xFF}";
-    }
 
     protected override Task SetSessionName(string sessionName, CancellationToken cancellationToken)
         => Task.CompletedTask;

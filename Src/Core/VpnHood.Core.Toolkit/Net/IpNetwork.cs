@@ -106,10 +106,18 @@ public class IpNetwork
                 if (prefixLength is < 0 or > 32)
                     throw new ArgumentOutOfRangeException(nameof(prefixLength), "Invalid CIDR prefix length for IPv4.");
 
-                var mask = uint.MaxValue << (32 - prefixLength);
+                // Guard prefixLength 0: in C# the shift count is masked to 5 bits, so
+                // `uint.MaxValue << 32` is `<< 0` = 0xFFFFFFFF, which would wrongly yield the
+                // 255.255.255.255 mask for a /0 (default route) instead of 0.0.0.0.
+                var mask = prefixLength == 0 ? 0u : uint.MaxValue << (32 - prefixLength);
                 var maskIpV4Bytes = BitConverter.GetBytes(mask);
-                // ReSharper disable once CSharp14OverloadResolutionWithSpanBreakingChange
-                maskIpV4Bytes.Reverse();
+                // IPAddress expects bytes in network (big-endian) order. On a little-endian host
+                // BitConverter.GetBytes returns little-endian bytes, so reverse them in place.
+                // NOTE: use Array.Reverse, NOT maskIpV4Bytes.Reverse() — the latter binds to the
+                // LINQ/Enumerable overload that returns a discarded sequence (a no-op), which left
+                // the mask byte-reversed (e.g. /24 -> 0.255.255.255 instead of 255.255.255.0).
+                if (BitConverter.IsLittleEndian)
+                    Array.Reverse(maskIpV4Bytes);
                 return new IPAddress(maskIpV4Bytes);
 
             case AddressFamily.InterNetworkV6:

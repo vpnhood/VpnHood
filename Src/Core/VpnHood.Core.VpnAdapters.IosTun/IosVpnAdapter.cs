@@ -156,22 +156,10 @@ public class IosVpnAdapter(
         {
             var tcs = new TaskCompletionSource<NSError?>();
             // CRITICAL: SetTunnelNetworkSettings MUST be called with a NON-NULL completion
-            // handler AND on the main thread. iOS invokes the completion block internally;
-            // a null block makes it dereference block->invoke at offset 0x10 → EXC_BAD_ACCESS
-            // (SIGSEGV / KERN_INVALID_ADDRESS at 0x10).
-            tunnelProvider.BeginInvokeOnMainThread(() =>
-            {
-                try
-                {
-                    // err == null means iOS accepted and applied the routing settings.
-                    tunnelProvider.SetTunnelNetworkSettings(settings, err => {
-                        tcs.TrySetResult(err);
-                    });
-                }
-                catch (Exception ex)
-                {
-                    tcs.TrySetException(ex);
-                }
+            // handler. Passing null causes a native EXC_BAD_ACCESS crash when iOS attempts
+            // to invoke the block.
+            tunnelProvider.SetTunnelNetworkSettings(settings, err => {
+                tcs.TrySetResult(err);
             });
 
             var error = await tcs.Task.WaitAsync(cancellationToken);

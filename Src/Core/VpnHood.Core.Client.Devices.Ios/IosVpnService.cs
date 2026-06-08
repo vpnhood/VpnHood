@@ -101,46 +101,10 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         StartFootprintProbe(this);
     }
 
-    // Background memory guard: the iOS Network Extension has a hard ~50 MB jetsam limit.
-    // Under heavy download traffic the read path allocates a parsed IpPacket + a per-packet
-    // byte[] thousands of times per second, so the live managed heap can jump ~5 MB within a
-    // few hundred ms and push phys_footprint past the limit. Force a full GC + finalizer drain
-    // immediately whenever the live heap crosses a low threshold (and periodically otherwise) so
-    // the peak stays well below the limit. Native NSObject peers that escaped Dispose are only
-    // reclaimed on finalization, so WaitForPendingFinalizers is essential.
-    private static bool _memoryGuardStarted;
-    private static void StartMemoryGuard()
-    {
-        if (Interlocked.Exchange(ref _memoryGuardStarted, true))
-            return;
-
-        var thread = new Thread(() => {
-            var n = 0;
-            while (true) {
-                try {
-                    var live = GC.GetTotalMemory(false);
-                    if ((n % 10 == 0 && n > 0) || live > 5L * 1024 * 1024) {
-                        GC.Collect();
-                        GC.WaitForPendingFinalizers();
-                        GC.Collect();
-                    }
-                }
-                catch { /* ignore */ }
-                n++;
-                Thread.Sleep(100);
-            }
-            // ReSharper disable once FunctionNeverReturns
-        }) {
-            IsBackground = true,
-            Name = "VpnHoodExtMemoryGuard"
-        };
-        thread.Start();
-    }
 
     public override void StartTunnel(
         NSDictionary<NSString, NSObject>? options, Action<NSError> startTunnelCompletionHandler)
     {
-        StartMemoryGuard();
 
         _startTunnelCompletionHandler = startTunnelCompletionHandler;
         _completionFired = false;

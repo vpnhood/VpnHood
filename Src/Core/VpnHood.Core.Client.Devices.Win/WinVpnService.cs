@@ -20,7 +20,7 @@ public class WinVpnService : IVpnServiceHandler, IDisposable
             configFolder, 
             netFilter: null,
             vpnServiceHandler: this, 
-            socketFactory: new SocketFactory(), 
+            socketFactory: new SystemSocketFactory(), 
             messageListener: new TcpMessageListener(configFolder),
             withLogger: false);
     }

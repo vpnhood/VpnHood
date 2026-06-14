@@ -26,7 +26,7 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
         })
     {
         _proxyPool = new UdpProxyPool(new UdpProxyPoolOptions {
-            SocketFactory = new SocketFactory(),
+            SocketFactory = new BindingSocketFactory(new SystemSocketFactory()),
             PacketProxyCallbacks = this,
             UdpTimeout = TunnelDefaults.UdpTimeout,
             MaxClientCount = TunnelDefaults.MaxUdpClientCount,

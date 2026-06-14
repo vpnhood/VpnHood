@@ -354,12 +354,6 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
         }
     }
 
-    protected static void BindToAny(Socket socket)
-    {
-        var ipAddress = socket.AddressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any;
-        socket.Bind(new IPEndPoint(ipAddress, 0));
-    }
-
     protected virtual void BindSocketToIp(Socket socket, IPAddress address)
     {
         socket.Bind(new IPEndPoint(address, 0));
@@ -374,10 +368,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         // get the primary adapter IP
         var primaryAdapterIp = GetPrimaryAdapterAddress(socket.AddressFamily.IpVersion());
-        if (primaryAdapterIp == null) {
-            BindToAny(socket);
+        if (primaryAdapterIp == null)   
             return false;
-        }
 
         // bind the socket to the primary adapter IP
         BindSocketToIp(socket, primaryAdapterIp);
@@ -393,16 +385,12 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         // get the primary adapter IP
         var primaryAdapterIp = GetPrimaryAdapterAddress(socket.AddressFamily.IpVersion());
-        if (primaryAdapterIp == null) {
-            BindToAny(socket);
+        if (primaryAdapterIp == null) 
             return false;
-        }
 
         // could not protect loopback addresses or not needed at all, because loopback can not be routed
-        if (IPAddress.IsLoopback(primaryAdapterIp) != IPAddress.IsLoopback(remoteAddress)) {
-            BindToAny(socket);
+        if (IPAddress.IsLoopback(primaryAdapterIp) != IPAddress.IsLoopback(remoteAddress)) 
             return false;
-        }
 
         // bind the socket to the primary adapter IP and connect to the remote endpoint
         BindSocketToIp(socket, primaryAdapterIp);

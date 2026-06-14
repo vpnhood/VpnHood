@@ -194,7 +194,7 @@ public class TestHelper : IDisposable
 
     private async Task<VpnHoodServer> CreateServer(IAccessManager? accessManager,
         FileAccessManagerOptions? fileAccessManagerOptions,
-        bool autoStart, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
+        bool autoStart = true, TimeSpan? configureInterval = null, bool useHttpAccessManager = true,
         INetConfigurationProvider? netConfigurationProvider = null,
         ISwapMemoryProvider? swapMemoryProvider = null,
         IVpnAdapter? vpnAdapter = null,
@@ -245,7 +245,7 @@ public class TestHelper : IDisposable
     public ISocketFactory CreateTestSocketFactory(IVpnAdapter? vpnAdapter = null)
     {
         return vpnAdapter != null
-            ? new ConfiguringSocketFactory(new AdapterSocketFactory(vpnAdapter, new TestSocketFactory())) { KeepAlive = true, NoDelay = true }
+            ? new AdapterSocketFactory(new SystemSocketFactory(), vpnAdapter)
             : new TestSocketFactory();
     }
 
@@ -276,7 +276,7 @@ public class TestHelper : IDisposable
     {
         var proxyPool = new UdpProxyPoolOptions {
             PacketProxyCallbacks = callbacks,
-            SocketFactory = new TestSocketFactory(),
+            SocketFactory = new BindingSocketFactory(new TestSocketFactory()),
             AutoDisposePackets = false,
             UdpTimeout = TunnelDefaults.UdpTimeout,
             MaxClientCount = 10,

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
@@ -449,10 +450,13 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager, autoStart: false);
         await server.Start(TestCt);
 
+        // wait for bad config 
+        await VhTestUtil.AssertEqualsWait(ServerState.BadConfig, ()=>server.State, cancellationToken: TestCt);
+
         // Assert: the status reported to access manager contains EndPointStatuses with an error for the occupied endpoint
         var endPointStatuses = accessManager.LastServerStatus?.EndPointStatuses;
         Assert.IsNotNull(endPointStatuses, "EndPointStatuses should be reported");
-        Assert.IsTrue(endPointStatuses.Length > 0, "EndPointStatuses should have at least one entry");
+        Assert.IsNotEmpty(endPointStatuses, "EndPointStatuses should have at least one entry");
 
         var endPointError = endPointStatuses.FirstOrDefault(x =>
             x.Protocol == ChannelProtocol.Tcp && x.EndPoint.Equals(occupiedEndPoint));

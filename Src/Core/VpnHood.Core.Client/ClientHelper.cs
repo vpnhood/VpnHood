@@ -123,9 +123,8 @@ internal static class ClientHelper
         bool includeLocalNetwork,
         IPAddress hostIpAddress)
     {
-        // exclude server if ProtectClient is not supported to prevent loop
-        if (!canProtectSocket || true) // todo: required for MS-QUIC as we can not protect its sockets
-            includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
+        // exclude server even if VpnAdapter can protect socket, because we can not protect MS-QUIC sockets
+        includeIpRanges = includeIpRanges.Exclude(hostIpAddress);
 
         // exclude local networks
         if (!includeLocalNetwork) {

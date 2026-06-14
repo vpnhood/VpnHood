@@ -21,6 +21,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Core.Server;
 
@@ -46,6 +47,7 @@ public class VpnHoodServer : IAsyncDisposable
     private readonly Job _configureAndSendStatusJob;
     private ServerHostEndPointStatus[] _endPointStatuses = [];
     private bool _endPointStatusesSent;
+    private readonly ConfiguringSocketFactory _socketFactory;
 
     public ServerHost ServerHost { get; }
     public static Version ServerVersion => typeof(VpnHoodServer).Assembly.GetName().Version ?? new Version();
@@ -64,8 +66,9 @@ public class VpnHoodServer : IAsyncDisposable
         AccessManager = accessManager;
         _netFilter = options.NetFilter;
         _systemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
+        _socketFactory = new ConfiguringSocketFactory(new BindingSocketFactory(options.SocketFactory));
         SessionManager = new SessionManager(accessManager,
-            socketFactory: options.SocketFactory,
+            socketFactory: _socketFactory,
             tracker: options.Tracker,
             vpnAdapter: options.VpnAdapter,
             netFilter: options.NetFilter,
@@ -217,8 +220,8 @@ public class VpnHoodServer : IAsyncDisposable
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             SessionManager.ServerSecret = serverConfig.ServerSecret ?? SessionManager.ServerSecret;
-            _configureAndSendStatusJob.Interval = serverConfig.UpdateStatusIntervalValue <
-                                                  serverConfig.SessionOptions.SyncIntervalValue
+            _socketFactory.TcpKernelBufferSize = serverConfig.SessionOptions.TcpKernelBufferSize;
+            _configureAndSendStatusJob.Interval = serverConfig.UpdateStatusIntervalValue < serverConfig.SessionOptions.SyncIntervalValue
                 ? serverConfig.UpdateStatusIntervalValue // update status interval must be less than sync interval
                 : serverConfig.SessionOptions.SyncIntervalValue;
 

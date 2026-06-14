@@ -24,7 +24,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly IVpnAdapter _vpnAdapter;
-    private readonly ISocketFactory _socketFactory;
+    private readonly ConfiguringSocketFactory _socketFactory;
     private ClientState _lastState = ClientState.None;
     private readonly Lock _stateEventLock = new();
     private readonly ServerFinder _serverFinder;
@@ -107,12 +107,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
-        socketFactory = new ConfiguringSocketFactory(new AdapterSocketFactory(vpnAdapter, socketFactory)) {
+        socketFactory = vpnAdapter.CanProtectSocket ? new AdapterSocketFactory(socketFactory, vpnAdapter) : socketFactory;
+        _socketFactory = new ConfiguringSocketFactory(new BindingSocketFactory(socketFactory)) {
             KeepAlive = true,
             NoDelay = true,
             TcpKernelBufferSize = options.TcpKernelBufferSize
         };
-        _socketFactory = socketFactory;
+        socketFactory = _socketFactory;// make sure the decorated factory is used in the rest of the code
         _vpnAdapter = vpnAdapter;
         Tracker = tracker;
         ChannelProtocol = options.ChannelProtocol;

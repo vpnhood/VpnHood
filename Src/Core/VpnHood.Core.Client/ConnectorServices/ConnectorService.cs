@@ -201,10 +201,16 @@ internal class ConnectorService : IDisposable
             ? await _quicConnectionFactory.CreateConnection(streamId, cancellationToken).Vhc()
             : await _tcpConnectionFactory.CreateConnection(streamId, onConnectAttempt, cancellationToken).Vhc();
 
-        // Apply HTTP framing on top of the raw connection
-        var connection = await CreateHttpConnection(rawConnection, contentLength, cancellationToken).Vhc();
-        lock (Stat) Stat.CreatedConnectionCount++;
-        return connection;
+        try {
+            // Apply HTTP framing on top of the raw connection
+            var connection = await CreateHttpConnection(rawConnection, contentLength, cancellationToken).Vhc();
+            lock (Stat) Stat.CreatedConnectionCount++;
+            return connection;
+        }
+        catch {
+            rawConnection.Dispose();
+            throw;
+        }
     }
 
     public ReusableStreamConnection? GetFreeConnection()

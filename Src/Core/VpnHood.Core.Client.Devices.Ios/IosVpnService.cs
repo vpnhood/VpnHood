@@ -97,8 +97,6 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // VhLogger defaults to NullLogger — no console logger runs in this process.
         // Force class init now (safe: fast, no LoggerFactory or Console).
         _ = VhLogger.IsAnonymousMode;
-
-        StartFootprintProbe(this);
     }
 
 
@@ -210,82 +208,4 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         CancelTunnel(null);
     }
 
-    // ----- phys_footprint probe (TASK_VM_INFO via task_info) -----
-    [DllImport("__Internal")] private static extern int task_info(uint task, int flavor, byte[] taskInfo, ref uint count);
-    [DllImport("__Internal")] private static extern uint mach_task_self();
-
-    private const int TASK_VM_INFO = 22;          // mach/task_info.h flavor
-    private const int PhysFootprintOffset = 144;  // byte offset of phys_footprint in task_vm_info_data_t
-
-    private static long ReadPhysFootprintBytes()
-    {
-        var buffer = new byte[512];
-        uint count = (uint)(buffer.Length / 4);
-        var kr = task_info(mach_task_self(), TASK_VM_INFO, buffer, ref count);
-        if (kr != 0)
-            return -1;
-        return BitConverter.ToInt64(buffer, PhysFootprintOffset);
-    }
-
-    private static void StartFootprintProbe(IosVpnService provider)
-    {
-        var thread = new Thread(() => {
-            string logPath;
-            try {
-                logPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ext-mem.log");
-            }
-            catch { return; }
-
-            var docsDir = Path.GetDirectoryName(logPath)!;
-            var trafficPath = Path.Combine(docsDir, "ext-traffic.log");
-            var vpnLogDest = Path.Combine(docsDir, "vpn-ext.log");
-            string? vpnLogSrc = null;
-            var peakMb = 0.0;
-            var lastLoggedMb = double.MinValue;
-            var tick = 0;
-            while (true) {
-                try {
-                    var bytes = ReadPhysFootprintBytes();
-                    if (bytes > 0) {
-                        var mb = bytes / (1024.0 * 1024.0);
-                        var newPeak = mb > peakMb;
-                        if (newPeak) peakMb = mb;
-
-                        if (newPeak || Math.Abs(mb - lastLoggedMb) >= 1.0) {
-                            lastLoggedMb = mb;
-                            File.AppendAllText(logPath,
-                                $"{DateTime.UtcNow:HH:mm:ss.fff} phys_footprint={mb:F1}MB peak={peakMb:F1}MB" +
-                                (mb >= 50 ? " <<< NEAR 52MB JETSAM LIMIT" : "") + "\n");
-                        }
-                    }
-
-                    if (tick % 3 == 0) {
-                        File.WriteAllText(trafficPath,
-                            $"{DateTime.UtcNow:HH:mm:ss.fff} outbound(device->server)={IosVpnAdapter.OutboundPackets} " +
-                            $"inbound(server->device)={IosVpnAdapter.InboundPackets} " +
-                            $"| v6-out={IosVpnAdapter.OutboundV6Packets} v6-in={IosVpnAdapter.InboundV6Packets}\n");
-
-                        if (vpnLogSrc == null && !string.IsNullOrEmpty(provider.AppGroupId)) {
-                            var container = NSFileManager.DefaultManager.GetContainerUrl(provider.AppGroupId)?.Path;
-                            if (container != null) vpnLogSrc = Path.Combine(container, "vpn-service", "vpn.log");
-                        }
-
-                        if (vpnLogSrc != null && File.Exists(vpnLogSrc)) {
-                            using var src = new FileStream(vpnLogSrc, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                            using var dst = new FileStream(vpnLogDest, FileMode.Create, FileAccess.Write, FileShare.Read);
-                            src.CopyTo(dst);
-                        }
-                    }
-                }
-                catch { /* best-effort */ }
-                tick++;
-                Thread.Sleep(2000);
-            }
-        }) {
-            IsBackground = true,
-            Name = "VpnHoodExtFootprintProbe"
-        };
-        thread.Start();
-    }
 }

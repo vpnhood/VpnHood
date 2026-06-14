@@ -303,8 +303,8 @@ paket-files/
 .cr/personal
 
 # Python Tools for Visual Studio (PTVS)
-__pycache__/
 *.pyc
+__pycache__/
 
 # Cake - Uncomment if you are using it
 # tools/**

@@ -31,6 +31,7 @@ public class VpnHoodClientConfig
     public required TimeSpan AutoWaitTimeout { get; init; }
     public required TimeSpan UnstableTimeout { get; init; }
     public required TransferBufferSize StreamProxyBufferSize { get; init; }
+    public required TransferBufferSize? TcpKernelBufferSize { get; init; }
     public required TransferBufferSize? UdpProxyBufferSize { get; init; }
     public required TransferBufferSize? PacketChannelBufferSize { get; init; }
     public required string ClientId { get; init; }

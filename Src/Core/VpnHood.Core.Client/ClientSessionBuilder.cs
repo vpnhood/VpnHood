@@ -320,6 +320,7 @@ internal class ClientSessionBuilder(
                     SessionTimeout = config.SessionTimeout,
                     TcpConnectTimeout = config.TcpConnectTimeout,
                     StreamProxyBufferSize = config.StreamProxyBufferSize,
+                    TcpKernelBufferSize = config.TcpKernelBufferSize,
                     UdpProxyBufferSize = config.UdpProxyBufferSize,
                     PacketChannelBufferSize = config.PacketChannelBufferSize,
                     UnstableTimeout = config.UnstableTimeout,

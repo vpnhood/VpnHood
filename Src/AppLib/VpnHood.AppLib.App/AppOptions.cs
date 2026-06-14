@@ -79,4 +79,5 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public TransferBufferSize? PacketChannelBufferSize { get; set; }
     public TransferBufferSize? UdpProxyBufferSize { get; set; }
     public TransferBufferSize? StreamProxyBufferSize { get; set; }
+    public TransferBufferSize? TcpKernelBufferSize { get; set; }
 }

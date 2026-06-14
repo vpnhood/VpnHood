@@ -25,9 +25,15 @@ public class IosVpnAdapter(
     private int? _mtu;
 
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
-    // Reused single-element argument arrays for WritePackets. WritePacket runs on a single
-    // thread (PacketTransportBase uses SingleReader and one send loop), and WritePackets copies
-    // synchronously, so reusing these avoid allocating two managed arrays per packet.
+    // CRASH FIX (iOS, device-confirmed via symbolicated crash report): WritePacket reuses _writeBuffer,
+    // _writeDataArray and _writeProtoArray and disposes the NSData immediately — that is only safe from
+    // ONE thread. In TCP-proxy mode the user-space TCP stack emits inbound packets from many connection
+    // pump threads concurrently, so concurrent WritePacket calls raced on these shared fields and handed
+    // a disposed/garbled NSData to NEPacketTunnelFlow.WritePackets -> uncaught NSInvalidArgumentException
+    // -> SIGABRT (extension dies at ANY memory level, not jetsam). Serialize the entire native write.
+    private readonly object _writeLock = new();
+    // Reused single-element argument arrays for WritePackets (safe under _writeLock); WritePackets copies
+    // synchronously, so reusing these avoids allocating two managed arrays per packet.
     private readonly NSData[] _writeDataArray = new NSData[1];
     private readonly NSNumber[] _writeProtoArray = new NSNumber[1];
 
@@ -38,13 +44,6 @@ public class IosVpnAdapter(
     private static readonly NSNumber AfInet = NSNumber.FromInt32(2);
     private static readonly NSNumber AfInet6 = NSNumber.FromInt32(30);
 
-    // DIAGNOSTIC: per-direction packet counters so the host extension can tell whether traffic
-    // actually flows through the tunnel ("connected but no traffic" diagnosis). Interlocked,
-    // no per-packet allocation. Inbound = server->device (download), Outbound = device->server.
-    public static long InboundPackets;
-    public static long OutboundPackets;
-    public static long InboundV6Packets;   // server->device IPv6 only
-    public static long OutboundV6Packets;  // device->server IPv6 only
 
     protected override bool RestartAfterNetworkAddressChanged => false;
     public override bool IsNatSupported => false;
@@ -111,8 +110,13 @@ public class IosVpnAdapter(
             // So we need to ignore our include list
             // NOTE: On iOS, when there is no native IPv6, the default route ::/0 alone is not enough to convince the routing stack
             // to send IPv6 traffic to the tunnel. We must also explicitly include a specific global unicast route (2000::/3).
-            var includes = IsIpVersionSupported(IpVersion.IPv6) 
-                ? _ipv6Routes 
+            // SPLIT-TUNNEL FIX (device-measured 2026-06-10): only inject the global v6 routes when core
+            // actually asked for BROAD IPv6 coverage (a non-host include route). In route-level split
+            // mode the include list is just host routes (e.g. DNS /128s) — injecting ::/0 there silently
+            // dragged ALL IPv6 traffic (Safari prefers v6) into the tunnel, defeating the split.
+            var wantsBroadV6 = _ipv6Routes.Any(r => r.PrefixLength < 64);
+            var includes = IsIpVersionSupported(IpVersion.IPv6) || !wantsBroadV6
+                ? _ipv6Routes
                 : new List<IpNetwork> { IpNetwork.AllV6, IpNetwork.AllGlobalUnicastV6}.Concat(_ipv6Routes);
             
             settings.IPv6Settings.IncludedRoutes = includes
@@ -129,49 +133,6 @@ public class IosVpnAdapter(
         if (_mtu.HasValue)
             settings.Mtu = NSNumber.FromInt32(_mtu.Value);
 
-        // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install.
-        try
-        {
-            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            var inc4 = settings.IPv4Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
-            var exc4 = settings.IPv4Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
-            var inc6 = settings.IPv6Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
-            var exc6 = settings.IPv6Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
-            File.WriteAllText(Path.Combine(docs, "ext-route-dump.txt"),
-                $"AdapterOpen at {DateTime.UtcNow:O}\n" +
-                $"remoteAddress(ServerAddress)={remoteAddress}\n" +
-                $"mtu={_mtu}\n" +
-                $"v4 addrs({_ipv4Networks.Count}): {string.Join(", ", _ipv4Networks.Select(n => n.ToString()))}\n" +
-                $"v4 routes-from-core({_ipv4Routes.Count}): {string.Join(", ", _ipv4Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
-                $"v4 INCLUDED-applied: {string.Join(", ", inc4)}\n" +
-                $"v4 EXCLUDED-applied: {string.Join(", ", exc4)}\n" +
-                $"v6 addrs({_ipv6Networks.Count}): {string.Join(", ", _ipv6Networks.Select(n => n.ToString()))}\n" +
-                $"v6 routes-from-core({_ipv6Routes.Count}): {string.Join(", ", _ipv6Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
-                $"v6 INCLUDED-applied: {string.Join(", ", inc6)}\n" +
-                $"v6 EXCLUDED-applied: {string.Join(", ", exc6)}\n" +
-                $"dns({_dnsServers.Count}): {string.Join(", ", _dnsServers.Select(d => d.ToString()))}\n");
-        }
-        catch { /* best-effort */ }
-
-        try
-        {
-            // The binding auto-generates SetTunnelNetworkSettingsAsync from the completion-handler
-            // overload: it throws NSErrorException when iOS reports a non-null NSError. iOS has no
-            // native cancellation for this call, so WaitAsync only abandons the await on cancel.
-            await tunnelProvider.SetTunnelNetworkSettingsAsync(settings).WaitAsync(cancellationToken);
-        }
-        catch (NSErrorException ex) {
-            completeStartTunnel(ex.Error);
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // Signal the deferred start-tunnel completion handler with the error so iOS
-            // surfaces a failure instead of killing us silently. ToNsExceptionError wraps the
-            // managed Exception in the built-in NSExceptionError (preserves type/message).
-            completeStartTunnel(ex.ToNsExceptionError());
-            throw;
-        }
 
         _packetFlow = tunnelProvider.PacketFlow;
         VhLogger.Instance.LogDebug("iOS tun adapter has been established.");
@@ -251,49 +212,52 @@ public class IosVpnAdapter(
 
     protected override bool WritePacket(IpPacket ipPacket)
     {
-        if (_packetFlow == null)
+        // Capture the flow; AdapterClose may null it out concurrently.
+        var flow = _packetFlow;
+        if (flow == null)
             throw new InvalidOperationException("Packet flow is not initialized.");
 
-        // CRITICAL (memory): WritePackets marshals the [data]/[protocolFamily] managed arrays
-        // into temporary native NSArrays and NSData.FromArray creates internal native
-        // temporaries — all AUTORELEASED. This runs on a background packet thread whose
-        // autorelease pool is never drained by a run loop, so without our own pool those
-        // native temporaries accumulate across thousands of packets and push the extension
-        // past the ~50 MB jetsam limit (slow leak: ~50 MB after ~9000 writes). Drain per packet.
-        using var pool = new NSAutoreleasePool();
+        // CRASH FIX (iOS): serialize the ENTIRE native write — see _writeLock above.
+        lock (_writeLock) {
+            // CRITICAL (memory): WritePackets marshals the [data]/[protocolFamily] managed arrays
+            // into temporary native NSArrays and NSData.FromArray creates internal native
+            // temporaries — all AUTORELEASED. This runs on a background packet thread whose
+            // autorelease pool is never drained by a run loop, so without our own pool those
+            // native temporaries accumulate across thousands of packets and push the extension
+            // past the ~50 MB jetsam limit (slow leak: ~50 MB after ~9000 writes). Drain per packet.
+            using var pool = new NSAutoreleasePool();
 
-        var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
+            var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
 
-        // todo: optimize by using batch after we get first IOs release
-        // Inbound packets (server -> device) must use the IP version as the protocol
-        // family (AF_INET = 2, AF_INET6 = 30); passing 0 makes iOS drop the packet.
-        var isV6 = ipPacket.Version == IpVersion.IPv6;
-        var protocolFamily = isV6 ? AfInet6 : AfInet;
-        if (isV6) Interlocked.Increment(ref InboundV6Packets); // DIAGNOSTIC
+            // todo: optimize by using batch after we get first IOs release
+            // Inbound packets (server -> device) must use the IP version as the protocol
+            // family (AF_INET = 2, AF_INET6 = 30); passing 0 makes iOS drop the packet.
+            var isV6 = ipPacket.Version == IpVersion.IPv6;
+            var protocolFamily = isV6 ? AfInet6 : AfInet;
 
-        // CRITICAL (download memory): copy straight from the packet buffer into a native NSData
-        // WITHOUT first allocating a managed slice (buffer[offset . . offset+length]). During a
-        // download this path runs thousands of times per second; the old per-packet slice was
-        // ~10 MB/s of managed garbage that the periodic GC could not reclaim within a sub-second
-        // burst, spiking phys_footprint past the ~50 MB iOS extension jetsam limit. NSData.FromBytes
-        // copies exactly `length` bytes from the pinned pointer, so nothing managed is allocated
-        // for the payload. Reuse the single-element argument arrays too (single writer thread).
-        NSData data;
-        unsafe {
-            fixed (byte* p = &buffer[offset])
-                data = NSData.FromBytes((IntPtr)p, (nuint)length);
+            // CRITICAL (download memory): copy straight from the packet buffer into a native NSData
+            // WITHOUT first allocating a managed slice (buffer[offset . . offset+length]). During a
+            // download this path runs thousands of times per second; the old per-packet slice was
+            // ~10 MB/s of managed garbage that the periodic GC could not reclaim within a sub-second
+            // burst, spiking phys_footprint past the ~50 MB iOS extension jetsam limit. NSData.FromBytes
+            // copies exactly `length` bytes from the pinned pointer, so nothing managed is allocated
+            // for the payload.
+            NSData data;
+            unsafe {
+                fixed (byte* p = &buffer[offset])
+                    data = NSData.FromBytes((IntPtr)p, (nuint)length);
+            }
+
+            // Dispose the NSData immediately after WritePackets returns. WritePackets copies the
+            // bytes synchronously into the tunnel, so the native NSData can be freed right away.
+            // Without this, native memory accumulates until GC finalization (which lags far behind
+            // the packet rate) and the extension is jetsam-killed at ~50 MB.
+            _writeDataArray[0] = data;
+            _writeProtoArray[0] = protocolFamily;
+            flow.WritePackets(_writeDataArray, _writeProtoArray);
+            data.Dispose();
         }
 
-        // Dispose the NSData immediately after WritePackets returns. WritePackets copies the
-        // bytes synchronously into the tunnel, so the native NSData can be freed right away.
-        // Without this, native memory accumulates until GC finalization (which lags far behind
-        // the packet rate) and the extension is jetsam-killed at ~50 MB.
-        _writeDataArray[0] = data;
-        _writeProtoArray[0] = protocolFamily;
-        _packetFlow.WritePackets(_writeDataArray, _writeProtoArray);
-        data.Dispose();
-
-        Interlocked.Increment(ref InboundPackets); // DIAGNOSTIC: server -> device (download)
         return true;
     }
 
@@ -323,7 +287,6 @@ public class IosVpnAdapter(
                     // todo: for better performance try to use bytes and convert by Marshal, lets do it later
                     var buffer = packetBuffer.ToArray();
                     var ipPacket = PacketBuilder.Parse(buffer);
-                    if (ipPacket.Version == IpVersion.IPv6) Interlocked.Increment(ref OutboundV6Packets); // DIAGNOSTIC
                     OnPacketReceived(ipPacket);
                 }
                 catch
@@ -343,7 +306,6 @@ public class IosVpnAdapter(
                 protocol.Dispose();
         }
 
-        Interlocked.Add(ref OutboundPackets, packets.Length); // DIAGNOSTIC: device -> server (upload)
 
         // CRITICAL: ReadPackets is a ONE-SHOT API. It delivers a single batch of outbound
         // packets and then stops. We must re-arm it by calling it again here, otherwise the

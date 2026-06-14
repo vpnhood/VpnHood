@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
@@ -97,6 +97,14 @@ public class ProxyChannel : IProxyChannel
                     _hostStreamConnection.Stream.DisposeAsync().AsTask(),
                     _tunnelStreamConnection.Stream.DisposeAsync().AsTask())
                 .Vhc();
+
+            // Observe the other task's completion and catch any exception to avoid UnobservedTaskException
+            try {
+                await Task.WhenAll(tunnelReadTask, tunnelWriteTask).Vhc();
+            }
+            catch {
+                // Ignore. The exceptions are already logged inside CopyFromTunnelAsync / CopyToTunnelAsync
+            }
         }
         catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it
@@ -167,8 +175,11 @@ public class ProxyChannel : IProxyChannel
         var destinationPreserved = destination as IPreservedChunkStream;
         var preserveCount = destinationPreserved?.PreserveWriteBufferLength ?? 0;
 
-        // <<----------------- the MOST memory consuming in the APP! >> ----------------------
-        Memory<byte> readBuffer = new byte[bufferSize];
+        // Pooled buffer (was `new byte[bufferSize]` — the most allocation-heavy spot in the app under
+        // many concurrent channels). Rented once per pump direction, so the IMemoryOwner wrapper cost
+        // is negligible; Rent may return a larger buffer, so slice to the requested size.
+        using var readBufferOwner = System.Buffers.MemoryPool<byte>.Shared.Rent(bufferSize);
+        var readBuffer = readBufferOwner.Memory[..bufferSize];
         while (!sourceCt.IsCancellationRequested && !destinationCt.IsCancellationRequested) {
             // read from source
             var bytesRead = await source

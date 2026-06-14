@@ -28,6 +28,7 @@ internal class ClientStreamHandler(
     TimeSpan tcpConnectTimeout,
     NetFilter netFilter,
     TransferBufferSize streamProxyBufferSize,
+    TransferBufferSize? tcpKernelBufferSize,
     PassthroughState passthroughState)
 {
     private int _processingCount;
@@ -108,6 +109,15 @@ internal class ClientStreamHandler(
 
         // connect to host
         var tcpClient = socketFactory.CreateTcpClient(hostEndPoint);
+
+        // Apply the configured kernel socket buffer sizes (ClientOptions.TcpKernelBufferSize).
+        // Null leaves the OS defaults/auto-tuning untouched. Memory-constrained hosts can set small
+        // values to bound per-connection kernel memory charged to the process.
+        if (tcpKernelBufferSize?.Send > 0)
+            tcpClient.SendBufferSize = tcpKernelBufferSize.Value.Send;
+        if (tcpKernelBufferSize?.Receive > 0)
+            tcpClient.ReceiveBufferSize = tcpKernelBufferSize.Value.Receive;
+
         await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
         var hostConnection = new TcpStreamConnection(tcpClient, connectionId: streamConnection.ConnectionId, connectionName: "host", isServer: false);
 

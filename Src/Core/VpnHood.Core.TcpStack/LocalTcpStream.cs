@@ -53,19 +53,18 @@ public sealed class LocalTcpStream : Stream
     }
 
     /// <inheritdoc />
-    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-        // Avoid allocating linked CTS when possible
-        var ct = cancellationToken.CanBeCanceled 
-            ? CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken).Token 
-            : _cts.Token;
+        // Cancel the read when either the caller cancels or the stream is disposed (_cts).
+        // Dispose the linked CTS so it does not stay rooted on the parent tokens' registration lists.
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
 
         try
         {
             var reader = _connection.NetToAppReader;
-            var readResult = await reader.ReadAsync(ct);
+            var readResult = await reader.ReadAsync(linkedCts.Token);
 
             if (readResult.IsCanceled || readResult is { IsCompleted: true, Buffer.IsEmpty: true })
                 return 0;
@@ -95,17 +94,15 @@ public sealed class LocalTcpStream : Stream
     }
 
     /// <inheritdoc />
-    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-        var ct = cancellationToken.CanBeCanceled 
-            ? CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken).Token 
-            : _cts.Token;
-
+        // Cancel the write when either the caller cancels or the stream is disposed (see ReadAsync).
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
         try
         {
-            await _connection.SendAppDataAsync(buffer, ct);
+            await _connection.SendAppDataAsync(buffer, linkedCts.Token);
         }
         catch (OperationCanceledException) when (_cts.IsCancellationRequested)
         {

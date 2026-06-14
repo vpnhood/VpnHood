@@ -15,6 +15,7 @@ public class ClientSessionConfig
     public required TimeSpan TcpConnectTimeout { get; init; }
     public required TransferBufferSize? UdpProxyBufferSize { get; init; }
     public required TransferBufferSize StreamProxyBufferSize { get; init; }
+    public required TransferBufferSize? TcpKernelBufferSize { get; init; }
     public required TransferBufferSize? PacketChannelBufferSize { get; init; }
     public required int MaxPacketChannelCount { get; init; }
     public required Traffic? MaxSpeedMbps { get; init; }

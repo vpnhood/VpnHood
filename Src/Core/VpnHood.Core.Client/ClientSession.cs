@@ -50,6 +50,8 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     private bool _dropQuic;
     private bool _dropUdp;
     private DateTime? _lastConnectionErrorTime;
+    // AddPacketChannel retry-flood backoff (see ShouldManagePacketChannels): 1s, 2s, 4s ... capped at 15s
+    private readonly ExponentialBackoff _packetChannelBackoff = new(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(15));
 
     public event EventHandler? StateChanged;
     public ISessionStatus Status => _status;
@@ -125,6 +127,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             proxyManager: _proxyManager,
             netFilter: _netFilter,
             streamProxyBufferSize: Config.StreamProxyBufferSize,
+            tcpKernelBufferSize: Config.TcpKernelBufferSize,
             passthroughState: PassthroughState);
 
         // proxy host
@@ -209,7 +212,18 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
     }
 
     private bool ShouldManagePacketChannels {
-        get => _tunnel.PacketChannelCount < _tunnel.MaxPacketChannelCount;
+        get {
+            // already at capacity
+            if (_tunnel.PacketChannelCount >= _tunnel.MaxPacketChannelCount)
+                return false;
+
+            // RETRY-FLOOD FIX (device-measured 2026-06-10): this is checked per outgoing packet, so when
+            // channel creation kept failing ("Unexpected response" on the WebSocket upgrade) the client
+            // hammered the server with ~5 TLS handshakes/sec — 464 handshakes/323 requests in one minute —
+            // whose native transients alone jetsam-killed the iOS extension (a death spiral). The backoff
+            // window between FAILED attempts (1s, 2s, 4s ... capped at 15s) throttles the retries.
+            return _packetChannelBackoff.IsReady;
+        }
     }
 
     public ClientState State {
@@ -304,6 +318,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             _requestSender.ConnectorService.UseQuic = _channelProtocol == ChannelProtocol.Quic && Config.HostQuicEndPoint != null;
             _requestSender.ConnectorService.QuicEndPoint = Config.HostQuicEndPoint;
             _tunnel.RemoveChannels<IPacketChannel>();
+            _packetChannelBackoff.Reset(); // new protocol is a fresh start: clear the old protocol's retry-flood backoff
             Task.Run(() => ManagePacketChannels(_cancellationTokenSource.Token));
         }
 
@@ -386,7 +401,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             return;
 
         try {
-            // check is adding channels allowed
+            // check is adding channels allowed (includes the retry-flood backoff; see ShouldManagePacketChannels)
             if (!ShouldManagePacketChannels)
                 return;
 
@@ -395,8 +410,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 AddUdpChannel();
             else
                 await AddTcpPacketChannel(cancellationToken).Vhc();
+
+            _packetChannelBackoff.Reset();
         }
         catch (Exception ex) {
+            _packetChannelBackoff.OnFail();
             if (!_disposed)
                 VhLogger.LogError(GeneralEventId.PacketChannel, ex, "Could not Manage PacketChannels.");
         }

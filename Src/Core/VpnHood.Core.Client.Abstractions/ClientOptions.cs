@@ -96,6 +96,9 @@ public class ClientOptions
     public TransferBufferSize? PacketChannelBufferSize { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public TransferBufferSize? TcpKernelBufferSize { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public EndPointStrategy EndPointStrategy { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

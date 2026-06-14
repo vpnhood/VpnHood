@@ -28,7 +28,6 @@ internal class ClientStreamHandler(
     TimeSpan tcpConnectTimeout,
     NetFilter netFilter,
     TransferBufferSize streamProxyBufferSize,
-    TransferBufferSize? tcpKernelBufferSize,
     PassthroughState passthroughState)
 {
     private int _processingCount;
@@ -36,7 +35,7 @@ internal class ClientStreamHandler(
 
     public IClientHostStat Stat => _stat;
 
-    public async Task ProcessConnection(IStreamConnection streamConnection, IPEndPoint hostEndPoint, 
+    public async Task ProcessConnection(IStreamConnection streamConnection, IPEndPoint hostEndPoint,
         CancellationToken cancellationToken)
     {
         try {
@@ -56,15 +55,14 @@ internal class ClientStreamHandler(
                 (streamConnection, filterAction) = await ApplySniFiltering(streamConnection, hostEndPoint, cancellationToken).Vhc();
 
             // Filter by IP if SNI filtering result is default
-            if (filterAction is FilterAction.Default && netFilter.IpFilter != null) 
+            if (filterAction is FilterAction.Default && netFilter.IpFilter != null)
                 filterAction = netFilter.IpFilter.Process(IpProtocol.Tcp, hostEndPoint.ToValue());
 
             // PassthroughForAd overrides filter result to exclude if the host is in ad list
             if (passthroughState.PassthroughForAd)
                 filterAction = FilterAction.Exclude;
 
-            switch (filterAction)
-            {
+            switch (filterAction) {
                 case FilterAction.Block:
                     throw new NetFilterException("A host has been blocked.");
 
@@ -109,27 +107,25 @@ internal class ClientStreamHandler(
 
         // connect to host
         var tcpClient = socketFactory.CreateTcpClient(hostEndPoint);
-
-        // Apply the configured kernel socket buffer sizes (ClientOptions.TcpKernelBufferSize).
-        // Null leaves the OS defaults/auto-tuning untouched. Memory-constrained hosts can set small
-        // values to bound per-connection kernel memory charged to the process.
-        if (tcpKernelBufferSize?.Send > 0)
-            tcpClient.SendBufferSize = tcpKernelBufferSize.Value.Send;
-        if (tcpKernelBufferSize?.Receive > 0)
-            tcpClient.ReceiveBufferSize = tcpKernelBufferSize.Value.Receive;
-
-        await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
-        var hostConnection = new TcpStreamConnection(tcpClient, connectionId: streamConnection.ConnectionId, connectionName: "host", isServer: false);
-
         try {
-            // create and add the channel
-            var channel = new ProxyChannel(hostConnection.ToString(), streamConnection, hostConnection, streamProxyBufferSize);
-            proxyManager.AddChannel(channel, disposeOnFail: true);
+            await tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port, connectCts.Token).Vhc();
+            var hostConnection = new TcpStreamConnection(tcpClient, connectionId: streamConnection.ConnectionId, connectionName: "host", isServer: false);
+
+            try {
+                // create and add the channel
+                var channel = new ProxyChannel(hostConnection.ToString(), streamConnection, hostConnection, streamProxyBufferSize);
+                proxyManager.AddChannel(channel, disposeOnFail: true);
+            }
+            catch {
+                await hostConnection.DisposeAsync();
+                throw;
+            }
         }
         catch {
-            await hostConnection.DisposeAsync();
+            tcpClient.Dispose();
             throw;
         }
+
     }
 
     private async Task AddTunnelChannel(

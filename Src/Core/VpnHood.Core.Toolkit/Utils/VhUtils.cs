@@ -381,9 +381,11 @@ public static class VhUtils
         return timeSpan == TimeSpan.MaxValue || timeSpan == Timeout.InfiniteTimeSpan;
     }
 
-    public static void ConfigTcpClient(TcpClient tcpClient, 
-        int? sendBufferSize = null, 
-        int? receiveBufferSize = null, 
+    private static bool _hasKeepAliveError;
+
+    public static void ConfigTcpClient(TcpClient tcpClient,
+        int? sendBufferSize = null,
+        int? receiveBufferSize = null,
         bool? reuseAddress = null,
         bool? keepAlive = null,
         bool noDelay = true)
@@ -395,9 +397,16 @@ public static class VhUtils
             tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress,
                 reuseAddress.Value);
 
-        // keep alive
-        if (keepAlive != null)
-            tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, keepAlive.Value);
+        // keep alive (guarded: older/limited OSes may not support it; warn once then no-op)
+        if (keepAlive != null && !_hasKeepAliveError) {
+            try {
+                tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, keepAlive.Value);
+            }
+            catch (Exception ex) {
+                _hasKeepAliveError = true;
+                VhLogger.Instance.LogWarning(ex, "KeepAlive is not supported! Consider upgrading your OS.");
+            }
+        }
     }
 
     public static bool IsTcpClientHealthy(TcpClient tcpClient)

@@ -19,6 +19,7 @@ using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
@@ -244,7 +245,7 @@ public class TestHelper : IDisposable
     public ISocketFactory CreateTestSocketFactory(IVpnAdapter? vpnAdapter = null)
     {
         return vpnAdapter != null
-            ? new AdapterSocketFactory(vpnAdapter, new TestSocketFactory())
+            ? new ConfiguringSocketFactory(new AdapterSocketFactory(vpnAdapter, new TestSocketFactory())) { KeepAlive = true, NoDelay = true }
             : new TestSocketFactory();
     }
 

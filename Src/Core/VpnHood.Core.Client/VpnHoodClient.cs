@@ -14,6 +14,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
+using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
@@ -106,7 +107,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
-        socketFactory = new AdapterSocketFactory(vpnAdapter, socketFactory);
+        socketFactory = new ConfiguringSocketFactory(new AdapterSocketFactory(vpnAdapter, socketFactory)) {
+            KeepAlive = true,
+            NoDelay = true,
+            TcpKernelBufferSize = options.TcpKernelBufferSize
+        };
         _socketFactory = socketFactory;
         _vpnAdapter = vpnAdapter;
         Tracker = tracker;

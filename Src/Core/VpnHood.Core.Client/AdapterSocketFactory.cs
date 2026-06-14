@@ -1,43 +1,37 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Toolkit.Sockets;
-using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
 
-public class AdapterSocketFactory(
-    IVpnAdapter vpnAdapter,
-    ISocketFactory socketFactory)
-    : ISocketFactory
+// Creates sockets via the given factory and protects them (when supported) so they bypass the VPN
+// adapter. ProtectSocket binds the socket itself and rejects an already-bound one, so on the protect
+// path the socket is created unbound here rather than via the (binding) inner factory.
+// Keep-alive / no-delay / kernel buffer config is applied by the outer ConfiguringSocketFactory.
+public class AdapterSocketFactory(IVpnAdapter vpnAdapter, ISocketFactory socketFactory) : ISocketFactory
 {
     public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
     {
-        var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
-        if (vpnAdapter.CanProtectSocket)
-            vpnAdapter.ProtectSocket(tcpClient.Client, ipEndPoint.Address);
+        if (!vpnAdapter.CanProtectSocket)
+            return socketFactory.CreateTcpClient(ipEndPoint);
 
-        // config for client
-        socketFactory.SetKeepAlive(tcpClient.Client, true);
-        VhUtils.ConfigTcpClient(tcpClient);
+        var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
+        vpnAdapter.ProtectSocket(tcpClient.Client, ipEndPoint.Address);
         return tcpClient;
     }
 
     public UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
+        if (!vpnAdapter.CanProtectSocket)
+            return socketFactory.CreateUdpClient(addressFamily);
+
         // zero is needed to make sure OS assigns a free port and bind it
         var udpClient = new UdpClient(addressFamily);
-        if (udpClient.Client is null) 
+        if (udpClient.Client is null)
             throw new Exception("UdpClient socket is null.");
 
-        if (vpnAdapter.CanProtectSocket)
-            vpnAdapter.ProtectSocket(udpClient.Client);
-
+        vpnAdapter.ProtectSocket(udpClient.Client);
         return udpClient;
-    }
-
-    public void SetKeepAlive(Socket socket, bool enable)
-    {
-        socketFactory.SetKeepAlive(socket, enable);
     }
 }

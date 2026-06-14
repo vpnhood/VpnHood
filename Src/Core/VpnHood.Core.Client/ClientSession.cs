@@ -127,7 +127,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             proxyManager: _proxyManager,
             netFilter: _netFilter,
             streamProxyBufferSize: Config.StreamProxyBufferSize,
-            tcpKernelBufferSize: Config.TcpKernelBufferSize,
             passthroughState: PassthroughState);
 
         // proxy host

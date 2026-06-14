@@ -442,7 +442,9 @@ public class Session : IDisposable
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint);
             VhUtils.ConfigTcpClient(tcpClientHost,
                 sendBufferSize: _tcpKernelBufferSize?.Send,
-                receiveBufferSize: _tcpKernelBufferSize?.Receive);
+                receiveBufferSize: _tcpKernelBufferSize?.Receive,
+                keepAlive: true,
+                noDelay: true);
 
             // connect to requested destination
             try {

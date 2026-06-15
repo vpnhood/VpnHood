@@ -122,6 +122,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     public override void StartTunnel(
         NSDictionary<NSString, NSObject>? options, Action<NSError> startTunnelCompletionHandler)
     {
+        // REQUIRED — do not remove. Device-measured (2026-06-14): disabling this crashes the extension
+        // IMMEDIATELY on tunnel start, even with MONO_GC_PARAMS soft-heap-limit=8m + System.GC.ConserveMemory=9
+        // and the adapter's deterministic NSData Dispose. The forced GC.Collect + WaitForPendingFinalizers
+        // heartbeat drains native NSObject peers that no project-config GC setting drains promptly enough,
+        // so the init-time allocation burst (VpnServiceHost + TLS) blows the 52 MB jetsam cap without it.
         StartMemoryGuard();
 
         _startTunnelCompletionHandler = startTunnelCompletionHandler;

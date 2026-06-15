@@ -133,6 +133,54 @@ public class IosVpnAdapter(
         if (_mtu.HasValue)
             settings.Mtu = NSNumber.FromInt32(_mtu.Value);
 
+        // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install so the host
+        // extension can verify what actually reaches iOS ("connected but no traffic" diagnosis).
+        try
+        {
+            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var inc4 = settings.IPv4Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
+            var exc4 = settings.IPv4Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
+            var inc6 = settings.IPv6Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
+            var exc6 = settings.IPv6Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
+            File.WriteAllText(Path.Combine(docs, "ext-route-dump.txt"),
+                $"AdapterOpen at {DateTime.UtcNow:O}\n" +
+                $"remoteAddress(ServerAddress)={remoteAddress}\n" +
+                $"mtu={_mtu}\n" +
+                $"v4 addrs({_ipv4Networks.Count}): {string.Join(", ", _ipv4Networks.Select(n => n.ToString()))}\n" +
+                $"v4 routes-from-core({_ipv4Routes.Count}): {string.Join(", ", _ipv4Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
+                $"v4 INCLUDED-applied: {string.Join(", ", inc4)}\n" +
+                $"v4 EXCLUDED-applied: {string.Join(", ", exc4)}\n" +
+                $"v6 addrs({_ipv6Networks.Count}): {string.Join(", ", _ipv6Networks.Select(n => n.ToString()))}\n" +
+                $"v6 routes-from-core({_ipv6Routes.Count}): {string.Join(", ", _ipv6Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
+                $"v6 INCLUDED-applied: {string.Join(", ", inc6)}\n" +
+                $"v6 EXCLUDED-applied: {string.Join(", ", exc6)}\n" +
+                $"dns({_dnsServers.Count}): {string.Join(", ", _dnsServers.Select(d => d.ToString()))}\n");
+        }
+        catch { /* best-effort */ }
+
+        // CRITICAL: apply the network settings to iOS. Without this call the tunnel never
+        // installs its routes, the OS-level utun is never brought up (no VPN status-bar
+        // indicator), and NO traffic enters the tunnel — the client connects to the server
+        // but every flow stays on the physical interface. (Regression: this call was
+        // accidentally removed together with the route-dump probe in 97567f379.)
+        // The binding auto-generates SetTunnelNetworkSettingsAsync from the completion-handler
+        // overload: it throws NSErrorException when iOS reports a non-null NSError. iOS has no
+        // native cancellation for this call, so WaitAsync only abandons the await on cancel.
+        try
+        {
+            await tunnelProvider.SetTunnelNetworkSettingsAsync(settings).WaitAsync(cancellationToken);
+        }
+        catch (NSErrorException ex) {
+            completeStartTunnel(ex.Error);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Signal the deferred start-tunnel completion handler with the error so iOS
+            // surfaces a failure instead of killing us silently.
+            completeStartTunnel(ex.ToNsExceptionError());
+            throw;
+        }
 
         _packetFlow = tunnelProvider.PacketFlow;
         VhLogger.Instance.LogDebug("iOS tun adapter has been established.");

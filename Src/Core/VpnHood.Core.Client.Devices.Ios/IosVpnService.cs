@@ -15,8 +15,7 @@ using VpnHood.Core.VpnAdapters.IosTun;
 namespace VpnHood.Core.Client.Devices.Ios;
 
 // The Objective-C class name MUST match NSExtensionPrincipalClass in the Extension's Info.plist.
-// The host Network Extension should subclass this type and register it under the expected
-// ObjC name, overriding <see cref="AppGroupId"/> with its own App Group identifier.
+// The host Network Extension may subclass this type and register it under the expected ObjC name.
 [Register("IosVpnService")]
 public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 {
@@ -32,12 +31,6 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     private Action<NSError>? _startTunnelCompletionHandler;
     private bool _completionFired;
 
-    /// <summary>
-    /// The App Group identifier shared with the host app (e.g. <c>group.com.example.client</c>).
-    /// Must match the App Group used by the host <see cref="IosDevice"/>.
-    /// </summary>
-    public string? AppGroupId { get; private set; }
-
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
 
     /// Called by IosVpnAdapter.AdapterOpen after SetTunnelNetworkSettings succeeds (error == null)
@@ -52,32 +45,20 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     }
 
     /// Resolves the VPN service config folder:
-    /// 1. ProviderConfiguration["VpnServiceConfigFolder"] — set by the App in IosDevice.StartVpnService (most reliable)
-    /// 2. GetContainerUrl — shared App Group container
-    /// 3. LocalApplicationData — per-process fallback (IPC will NOT work with this)
+    /// 1. ProviderConfiguration["VpnServiceConfigFolder"] — set by the App in IosDevice.StartVpnService.
+    ///    This is the App-Group shared-container path; an App-Group container is mounted at the SAME
+    ///    absolute path in both the App and Extension processes, so the App passes the resolved path
+    ///    verbatim and the Extension does not need the App Group id to re-derive it.
+    /// 2. LocalApplicationData — per-process fallback (IPC will NOT work with this).
     public string ResolveConfigFolder()
     {
-        // First choice: path passed explicitly by the App via ProviderConfiguration
+        // Path passed explicitly by the App via ProviderConfiguration.
         var proto = ProtocolConfiguration as NETunnelProviderProtocol;
-        if (proto?.ProviderConfiguration != null)
-        {
-            if (proto.ProviderConfiguration[(NSString)"AppGroupId"] is NSString appIdStr)
-                AppGroupId = appIdStr.ToString();
+        if (proto?.ProviderConfiguration?[(NSString)VpnServiceConfigFolderKey] is NSString folderStr &&
+            !string.IsNullOrEmpty(folderStr))
+            return folderStr.ToString();
 
-            if (proto.ProviderConfiguration[(NSString)VpnServiceConfigFolderKey] is NSString folderStr &&
-                !string.IsNullOrEmpty(folderStr))
-                return folderStr.ToString();
-        }
-
-        // Second choice: App Group shared container
-        if (!string.IsNullOrEmpty(AppGroupId))
-        {
-            var containerUrl = NSFileManager.DefaultManager.GetContainerUrl(AppGroupId);
-            if (containerUrl?.Path is { } containerPath)
-                return Path.Combine(containerPath, "vpn-service");
-        }
-
-        // Last resort — IPC will not work between App and Extension with this path
+        // Last resort — IPC will not work between App and Extension with this path.
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
     }
@@ -100,9 +81,48 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     }
 
 
+    // Background memory guard: the iOS Network Extension has a hard ~52 MB jetsam limit.
+    // Under heavy FULL-TUNNEL download traffic the read path (OnPacketsReceived) allocates a parsed
+    // IpPacket + a per-packet byte[] (NSData.ToArray) thousands of times per second, so the live
+    // managed heap can jump ~5 MB within a few hundred ms and push phys_footprint past the limit.
+    // Force a full GC + finalizer drain immediately whenever the live heap crosses a low threshold
+    // (and periodically otherwise) so the peak stays well below the limit. Native NSObject peers that
+    // escaped Dispose are only reclaimed on finalization, so WaitForPendingFinalizers is essential.
+    // (Regression: removed in 9e9e05c80; restored — without it full tunnel jetsams under load while
+    // the memory-light DNS-only device-split mode did not, which is why it "worked before".)
+    private static bool _memoryGuardStarted;
+    private static void StartMemoryGuard()
+    {
+        if (Interlocked.Exchange(ref _memoryGuardStarted, true))
+            return;
+
+        var thread = new Thread(() => {
+            var n = 0;
+            while (true) {
+                try {
+                    var live = GC.GetTotalMemory(false);
+                    if ((n % 10 == 0 && n > 0) || live > 5L * 1024 * 1024) {
+                        GC.Collect();
+                        GC.WaitForPendingFinalizers();
+                        GC.Collect();
+                    }
+                }
+                catch { /* ignore */ }
+                n++;
+                Thread.Sleep(100);
+            }
+            // ReSharper disable once FunctionNeverReturns
+        }) {
+            IsBackground = true,
+            Name = "VpnHoodExtMemoryGuard"
+        };
+        thread.Start();
+    }
+
     public override void StartTunnel(
         NSDictionary<NSString, NSObject>? options, Action<NSError> startTunnelCompletionHandler)
     {
+        StartMemoryGuard();
 
         _startTunnelCompletionHandler = startTunnelCompletionHandler;
         _completionFired = false;
@@ -120,7 +140,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // Kick off heavy VpnHood init off the main thread.
         _ = Task.Run(() => {
             try {
-                var sf = new BindingSocketFactory();
+                var sf = new SystemSocketFactory();
                 _vpnServiceHost = new VpnServiceHost(configFolder, this, sf,
                     netFilter: null, withLogger: false, messageListener: _messageListener);
                 _ = _vpnServiceHost.TryConnect(true);

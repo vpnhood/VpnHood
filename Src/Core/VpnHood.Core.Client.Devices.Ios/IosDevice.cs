@@ -12,44 +12,37 @@ public class IosDevice : IDevice
 
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
 
-    private readonly string _appGroupId;
+    // NEVPNProtocol.ServerAddress is a REQUIRED field (SaveToPreferences fails / the Settings entry is
+    // invalid if it is nil), but it is purely cosmetic for a packet tunnel — it is only the text shown
+    // in iOS Settings. The IP actually used for routing comes from the core via the adapter's ServerIp,
+    // not from here. So we use 192.0.2.1 (RFC 5737 TEST-NET-1, guaranteed non-routable) as a placeholder
+    // — the same value the IosVpnAdapter falls back to — instead of a real public IP like 1.1.1.1.
+    private const string ServerAddress = "192.0.2.1";
+
     private readonly string _providerBundleId;
     private readonly string _localizedDescription;
-    private readonly string _serverAddress;
 
-    // Cached at construction time from the caller-supplied path (most reliable) or GetContainerUrl fallback.
-
-    /// <param name="appGroupId">
-    /// The App Group identifier shared by the host app and the Network Extension
-    /// (e.g. <c>group.com.example.client</c>). Must match the App Group used by the extension.
-    /// </param>
     /// <param name="providerBundleId">
     /// The Network Extension's bundle identifier (the Packet Tunnel Provider appex bundle id).
     /// </param>
     /// <param name="sharedContainerPath">
     /// Pre-computed App Group container path. Pass
     /// <c>NSFileManager.DefaultManager.GetContainerUrl(appGroupId)?.Path</c> from the app delegate
-    /// before calling <c>VpnHoodApp.Init</c> so the path is stable for the whole session.
-    /// If <c>null</c> the constructor falls back to GetContainerUrl, then to LocalApplicationData.
+    /// before calling <c>VpnHoodApp.Init</c> so the path is stable for the whole session. This path is
+    /// forwarded verbatim to the Extension via ProviderConfiguration — an App-Group container is mounted
+    /// at the same absolute path in both processes, so the Extension never needs the App Group id.
+    /// If <c>null</c> the constructor falls back to LocalApplicationData (App↔Extension IPC will NOT work).
     /// </param>
     /// <param name="localizedDescription">The VPN configuration name shown in iOS Settings.</param>
-    /// <param name="serverAddress">
-    /// The informational server address shown to iOS for the tunnel. Must be a valid IP literal.
-    /// </param>
     public IosDevice(
-        string appGroupId,
         string providerBundleId,
         string? sharedContainerPath = null,
-        string localizedDescription = "VpnHood",
-        string serverAddress = "1.1.1.1")
+        string localizedDescription = "VpnHood")
     {
-        _appGroupId = appGroupId;
         _providerBundleId = providerBundleId;
         _localizedDescription = localizedDescription;
-        _serverAddress = serverAddress;
 
         var containerPath = sharedContainerPath
-            ?? NSFileManager.DefaultManager.GetContainerUrl(appGroupId).Path
             ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
         VpnServiceConfigFolder = Path.Combine(containerPath, "vpn-service");
@@ -88,9 +81,8 @@ public class IosDevice : IDevice
     public async Task StartVpnService(CancellationToken cancellationToken)
     {
         VhLogger.Instance.LogInformation(
-            "StartVpnService: VpnServiceConfigFolder={Folder}, GetContainerUrl now={ContainerUrl}",
-            VpnServiceConfigFolder,
-            NSFileManager.DefaultManager.GetContainerUrl(_appGroupId).AbsoluteString ?? "<null>");
+            "StartVpnService: VpnServiceConfigFolder={Folder}",
+            VpnServiceConfigFolder);
 
         // ---- Pre-stop: detect stale tunnel ----
         try {
@@ -129,11 +121,13 @@ public class IosDevice : IDevice
         // ---- Build new protocol ----
         var providerProtocol = new NETunnelProviderProtocol();
         providerProtocol.ProviderBundleIdentifier = _providerBundleId;
+        // Forward the resolved shared-container path verbatim; the Extension resolves its config folder
+        // from this key alone (no App Group id needed — the container path is identical in both processes).
         providerProtocol.ProviderConfiguration = NSDictionary<NSString, NSObject>.FromObjectsAndKeys(
-            [(NSString)VpnServiceConfigFolder, (NSString)_appGroupId],
-            [(NSString)VpnServiceConfigFolderKey, (NSString)"AppGroupId"]);
+            [(NSString)VpnServiceConfigFolder],
+            [(NSString)VpnServiceConfigFolderKey]);
 
-        providerProtocol.ServerAddress = _serverAddress;
+        providerProtocol.ServerAddress = ServerAddress;
         providerProtocol.EnforceRoutes = true;
         providerProtocol.IncludeAllNetworks = false;
         _vpnManager.ProtocolConfiguration = providerProtocol;

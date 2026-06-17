@@ -44,6 +44,11 @@ public class IosVpnAdapter(
     private static readonly NSNumber AfInet = NSNumber.FromInt32(2);
     private static readonly NSNumber AfInet6 = NSNumber.FromInt32(30);
 
+    // DIAGNOSTIC: cumulative bytes through the tunnel, read by IosVpnService's memory probe to
+    // correlate phys_footprint growth with traffic. Use Interlocked to read/write.
+    public static long InboundBytes;   // server -> device (download), written via WritePacket
+    public static long OutboundBytes;  // device -> server (upload), read via OnPacketsReceived
+
 
     protected override bool RestartAfterNetworkAddressChanged => false;
     public override bool IsNatSupported => false;
@@ -276,6 +281,7 @@ public class IosVpnAdapter(
             using var pool = new NSAutoreleasePool();
 
             var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
+            Interlocked.Add(ref InboundBytes, length);
 
             // todo: optimize by using batch after we get first IOs release
             // Inbound packets (server -> device) must use the IP version as the protocol
@@ -332,9 +338,20 @@ public class IosVpnAdapter(
             {
                 try
                 {
-                    // todo: for better performance try to use bytes and convert by Marshal, lets do it later
-                    var buffer = packetBuffer.ToArray();
-                    var ipPacket = PacketBuilder.Parse(buffer);
+                    // MEMORY (jetsam spike fix): parse straight from the native NSData bytes via a
+                    // ReadOnlySpan instead of NSData.ToArray(). ToArray allocated a throwaway managed
+                    // byte[] PER PACKET — pure gen0 garbage ON TOP OF the pooled copy PacketBuilder.Parse
+                    // already makes. Under an outbound burst those churned the managed heap faster than the
+                    // GC heartbeat could reclaim, and that transient (~+2 MB gcLive) on top of the ~42 MB
+                    // native floor is what tipped phys_footprint over the ~52 MB jetsam line. Parse copies
+                    // the span into a pooled buffer, so the span over native memory only has to stay valid
+                    // for the duration of the call (it does — packetBuffer is disposed below).
+                    var len = (int)packetBuffer.Length;
+                    Interlocked.Add(ref OutboundBytes, len);
+                    IpPacket ipPacket;
+                    unsafe {
+                        ipPacket = PacketBuilder.Parse(new ReadOnlySpan<byte>((void*)packetBuffer.Bytes, len));
+                    }
                     OnPacketReceived(ipPacket);
                 }
                 catch

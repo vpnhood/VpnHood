@@ -128,6 +128,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // heartbeat drains native NSObject peers that no project-config GC setting drains promptly enough,
         // so the init-time allocation burst (VpnServiceHost + TLS) blows the 52 MB jetsam cap without it.
         StartMemoryGuard();
+        StartMemoryProbe();
 
         _startTunnelCompletionHandler = startTunnelCompletionHandler;
         _completionFired = false;
@@ -233,4 +234,109 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         CancelTunnel(null);
     }
 
+    // ----- DIAGNOSTIC memory probe: attribute phys_footprint to managed vs native -----
+    // The ~52 MB jetsam limit is enforced on phys_footprint (mach TASK_VM_INFO). The simple
+    // "log the one number" probe could not tell us WHERE the long-run climb lives, so this version
+    // breaks it down. Every ~2 s (and on any >=0.5 MB change) it appends one line to
+    // Documents/ext-mem.log:
+    //   footprint = phys_footprint                          -> the exact number iOS jetsam enforces
+    //   gcLive    = GC.GetTotalMemory(false)                -> live managed objects
+    //   gcHeap    = GC.GetGCMemoryInfo().HeapSizeBytes      -> managed heap incl. committed-but-free
+    //                                                          (may be 0 if unsupported on MonoVM)
+    //   native    = footprint - max(gcLive, gcHeap)         -> EVERYTHING not in the managed heap:
+    //                                                          NSObject peers, socket/TLS buffers,
+    //                                                          kernel-charged rcv buffers, code, stacks
+    //   dn/up     = cumulative MB written-inbound / read-outbound through the adapter
+    // Diagnosis key: the memory guard force-GCs the managed heap continuously, so if `native` climbs
+    // while `gcLive` stays flat, the climb is NATIVE (buffers/peers), not a managed leak — and the
+    // GC-based levers (soft-heap-limit, ConserveMemory) cannot fix it. Correlate with dn/up: a climb
+    // that tracks bytes-downloaded and never recedes is a per-traffic native leak; one that plateaus
+    // is a buffer high-water mark.
+    [DllImport("__Internal")] private static extern int task_info(uint task, int flavor, byte[] taskInfo, ref uint count);
+    [DllImport("__Internal")] private static extern uint mach_task_self();
+    private const int TASK_VM_INFO = 22;          // mach/task_info.h flavor
+    // task_vm_info_data_t field byte offsets (arm64). phys_footprint @144 is verified on-device.
+    private const int InternalOffset = 48;        // anonymous dirty memory: malloc, GC heap, thread stacks, buffers
+    private const int ExternalOffset = 64;        // file-backed: code/dylibs/AOT — NOT counted in phys_footprint
+    private const int CompressedOffset = 120;     // compressed anonymous pages — IS counted in phys_footprint
+    private const int PhysFootprintOffset = 144;  // the exact number iOS jetsam enforces
+
+    private struct VmInfo { public long Footprint, Internal, Compressed, External; }
+
+    private static bool TryReadVmInfo(out VmInfo info)
+    {
+        info = default;
+        var buffer = new byte[512];
+        var count = (uint)(buffer.Length / 4);
+        if (task_info(mach_task_self(), TASK_VM_INFO, buffer, ref count) != 0)
+            return false;
+        info.Footprint = BitConverter.ToInt64(buffer, PhysFootprintOffset);
+        info.Internal = BitConverter.ToInt64(buffer, InternalOffset);
+        info.Compressed = BitConverter.ToInt64(buffer, CompressedOffset);
+        info.External = BitConverter.ToInt64(buffer, ExternalOffset);
+        return true;
+    }
+
+    private static bool _memoryProbeStarted;
+    private static void StartMemoryProbe()
+    {
+        if (Interlocked.Exchange(ref _memoryProbeStarted, true))
+            return;
+
+        var thread = new Thread(() => {
+            string logPath;
+            try {
+                logPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ext-mem.log");
+            }
+            catch { return; }
+
+            const double mib = 1024.0 * 1024.0;
+            var peakMb = 0.0;
+            var lastLoggedMb = double.MinValue;
+            var tick = 0;
+            while (true) {
+                try {
+                    if (TryReadVmInfo(out var vm) && vm.Footprint > 0) {
+                        var mb = vm.Footprint / mib;
+                        if (mb > peakMb) peakMb = mb;
+
+                        // Log on any meaningful change, on a new peak, as a heartbeat, OR every sample
+                        // once we're within ~7 MB of the limit — so the sub-second burst spike that
+                        // actually crosses 52 MB is captured instead of slipping between samples.
+                        if (Math.Abs(mb - lastLoggedMb) >= 0.3 || mb >= peakMb || mb >= 45.0 || tick % 15 == 0) {
+                            lastLoggedMb = mb;
+                            var gcLive = GC.GetTotalMemory(false) / mib;
+                            double gcHeap = 0;
+                            try { gcHeap = GC.GetGCMemoryInfo().HeapSizeBytes / mib; }
+                            catch { /* not supported on this runtime */ }
+                            // anon = anonymous dirty (malloc/heap/stacks/buffers); comp = compressed anon;
+                            // both count toward footprint. code = file-backed (NOT in footprint), logged
+                            // for context. native-non-managed ≈ (anon+comp) - managed heap.
+                            var anon = vm.Internal / mib;
+                            var comp = vm.Compressed / mib;
+                            var code = vm.External / mib;
+                            var native = mb - Math.Max(gcLive, gcHeap);
+                            var dnMb = Interlocked.Read(ref IosVpnAdapter.InboundBytes) / mib;
+                            var upMb = Interlocked.Read(ref IosVpnAdapter.OutboundBytes) / mib;
+                            File.AppendAllText(logPath,
+                                $"{DateTime.UtcNow:HH:mm:ss.fff} footprint={mb:F1}MB peak={peakMb:F1}MB " +
+                                $"gcLive={gcLive:F1} gcHeap={gcHeap:F1} native={native:F1} " +
+                                $"anon={anon:F1} comp={comp:F1} code={code:F1} " +
+                                $"dn={dnMb:F1}MB up={upMb:F1}MB" +
+                                (mb >= 50 ? " <<< NEAR 52MB JETSAM" : "") + "\n");
+                        }
+                    }
+                }
+                catch { /* best-effort */ }
+                tick++;
+                Thread.Sleep(250);
+            }
+            // ReSharper disable once FunctionNeverReturns
+        }) {
+            IsBackground = true,
+            Name = "VpnHoodExtMemoryProbe"
+        };
+        thread.Start();
+    }
 }

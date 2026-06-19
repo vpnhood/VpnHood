@@ -47,27 +47,38 @@ echo "removing old docker containers and images..."
 if ($oldContainers) { docker rm -vf $oldContainers; }
 if ($oldImages) { docker rmi -f $oldImages; }
 
-# create name image
-docker build "$solutionDir" --no-cache -f "$projectDir/Dockerfile" -t ${serverDockerImage}:latest -t ${serverDockerImage}:$versionTag;
-if (!$?) {Throw("Could not buld the server docker."); }
+# multi-arch build. The Dockerfile is architecture-agnostic (portable .NET + arch-aware
+# libmsquic via apt/dnf), so a single buildx invocation produces both amd64 and arm64.
+$platforms = "linux/amd64,linux/arm64";
 
-if ($isLatest)
+# tags: always the version tag; add :latest only when this is the latest release
+$tagArgs = @("-t", "${serverDockerImage}:$versionTag");
+if ($isLatest) { $tagArgs += @("-t", "${serverDockerImage}:latest"); }
+
+# multi-arch needs the docker-container driver (the default 'docker' driver cannot build
+# multiple platforms). Reuse a dedicated builder, creating it on first run.
+docker buildx inspect vhbuilder *> $null;
+if (!$?) { docker buildx create --name vhbuilder --driver docker-container --use | Out-Null; }
+else { docker buildx use vhbuilder | Out-Null; }
+
+# ensure QEMU emulators are registered so the arm64 image can be built on an amd64 host
+docker run --privileged --rm tonistiigi/binfmt --install arm64 *> $null;
+
+if ($distribute)
 {
-	if ($distribute)
-	{
-		docker push ${serverDockerImage}:$versionTag;
-		docker push ${serverDockerImage}:latest;
-		if (!$?) { Throw("Could not push the server docker image."); }
-		echo "The server docker image has been pushed."
-	}
-	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
+	# a multi-arch manifest cannot be loaded into the local daemon; it must be pushed directly
+	docker buildx build "$solutionDir" --no-cache --platform $platforms -f "$projectDir/Dockerfile" @tagArgs --push;
+	if (!$?) { Throw("Could not build/push the server docker image."); }
+	echo "The server docker image (amd64 + arm64) has been pushed."
 }
 else
 {
-	if ($distribute)
-	{
-		docker push ${serverDockerImage}:$versionTag;
-		if (!$?) { Throw("Could not push the server docker image."); }
-		echo "The server docker image has been pushed."
-	}
+	# local build: a multi-arch manifest can't be --load'ed, so build the host arch only for testing
+	docker buildx build "$solutionDir" --no-cache -f "$projectDir/Dockerfile" @tagArgs --load;
+	if (!$?) { Throw("Could not build the server docker."); }
+}
+
+if ($isLatest)
+{
+	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
 }

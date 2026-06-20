@@ -54,7 +54,7 @@ public class IosDevice : IDevice
     public string VpnServiceConfigFolder { get; }
 
     public bool IsBindProcessToVpnSupported => false;
-    public bool IsTcpProxySupported => false;
+    public bool IsTcpProxySupported => true;
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsAlwaysOnSupported => false;

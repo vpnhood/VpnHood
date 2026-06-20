@@ -27,6 +27,12 @@ public sealed class LocalTcpStack : ITcpStack
     // Built once from _options and shared (immutably) by every connection's reassembly pipe.
     private readonly PipeOptions _pipeOptions;
 
+    /// <summary>Gets the diagnostic metrics for this stack instance.</summary>
+    public TcpStackDiagnostics Diagnostics { get; } = new();
+
+    /// <summary>Exposes the active stack's diagnostics globally for external processes (such as the iOS memory probe).</summary>
+    public static TcpStackDiagnostics? ActiveDiagnostics { get; private set; }
+
     /// <summary>
     /// Creates a TCP stack. When <paramref name="options"/> is null the footprint is chosen
     /// automatically for the current platform via <see cref="LocalTcpStackOptions.ForCurrentPlatform"/>
@@ -38,6 +44,9 @@ public sealed class LocalTcpStack : ITcpStack
     {
         _options = (options ?? LocalTcpStackOptions.ForCurrentPlatform()).Validated();
         _pipeOptions = _options.CreatePipeOptions();
+        Diagnostics.ConfiguredReceiveWindow = _options.ReceiveWindowSize;   // DIAGNOSTIC: confirm active profile
+        Diagnostics.ConfiguredMaxConnections = _options.MaxConnections;
+        ActiveDiagnostics = Diagnostics;
     }
 
     /// <summary>
@@ -179,13 +188,16 @@ public sealed class LocalTcpStack : ITcpStack
         var peerMss = ParseMssOption(tcpPacket.Options.Span);
         var peerWsShift = ParseWindowScaleOption(tcpPacket.Options.Span);
         var connection = new LocalTcpConnection(
-            ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss, listener, peerWsShift, _options, _pipeOptions);
+            ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss, listener, peerWsShift, _options, _pipeOptions, Diagnostics);
         connection.OnClosed += OnConnectionClosed;
 
         if (!_connections.TryAdd(ipEndPointPair, connection)) {
             connection.Dispose();
             return;
         }
+
+        // DIAGNOSTIC: track concurrent-connection count + high-water mark.
+        Diagnostics.SetConnectionCount(_connections.Count);
 
         SendSynAck(connection);
 
@@ -219,7 +231,7 @@ public sealed class LocalTcpStack : ITcpStack
         tcp.AcknowledgmentNumber = rcvNxt;
         tcp.Synchronize = true;
         tcp.Acknowledgment = true;
-        tcp.WindowSize = conn.AdvertisedWindow;
+        tcp.WindowSize = conn.UpdateAdvertisedWindow();
 
         SendPacket(packet);
     }
@@ -261,7 +273,7 @@ public sealed class LocalTcpStack : ITcpStack
         tcp.SequenceNumber = sndNxt;
         tcp.AcknowledgmentNumber = rcvNxt;
         tcp.Acknowledgment = true;
-        tcp.WindowSize = conn.AdvertisedWindow;
+        tcp.WindowSize = conn.UpdateAdvertisedWindow();
 
         SendPacket(packet);
     }
@@ -296,6 +308,7 @@ public sealed class LocalTcpStack : ITcpStack
     private void OnConnectionClosed(LocalTcpConnection conn)
     {
         _connections.TryRemove(conn.IpEndPointPair, out _);
+        Diagnostics.SetConnectionCount(_connections.Count);
     }
 
     /// <summary>
@@ -393,6 +406,9 @@ public sealed class LocalTcpStack : ITcpStack
             return;
 
         _disposed = true;
+
+        if (ActiveDiagnostics == Diagnostics)
+            ActiveDiagnostics = null;
 
         foreach (var kvp in _listeners) {
             if (_listeners.TryRemove(kvp.Key, out var listener))

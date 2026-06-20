@@ -36,6 +36,17 @@ public sealed class LocalTcpStackOptions
     /// </summary>
     public int? PipeResumeWriterThreshold { get; init; }
 
+    /// <summary>
+    /// Global cap (bytes) on the SUM of every connection's unread reassembly-pipe backlog. Each
+    /// connection's advertised window is additionally clamped by the remaining global headroom, so a
+    /// FEW active flows can use a large per-connection <see cref="ReceiveWindowSize"/> (full speed)
+    /// while MANY concurrent flows stay bounded in aggregate. This decouples per-flow throughput from
+    /// total memory — the key to surviving 100+ concurrent connections on a memory-capped host.
+    /// <para>Default: unbounded (<see cref="long.MaxValue"/>) so desktop/Android keep a pure
+    /// per-connection window. Constrained hosts (iOS) set a few MB.</para>
+    /// </summary>
+    public long GlobalReceiveBudget { get; init; } = long.MaxValue;
+
     // ---- Send / Download buffering (app stream -> stack -> tun) ----
 
     /// <summary>
@@ -119,11 +130,17 @@ public sealed class LocalTcpStackOptions
     /// ≈ 8 MB worst case for TCP buffers.</para>
     /// </summary>
     public static LocalTcpStackOptions Ios => new() {
-        ReceiveWindowSize = 16 * 1024,
+        // Large PER-CONNECTION window (the 16-bit max, no scaling) so a few active flows get full
+        // upload/download speed (throughput ≈ window / RTT), but a GLOBAL budget caps the aggregate so
+        // 100+ concurrent flows can't blow the 52 MB jetsam limit. A flow only consumes window when it
+        // is actively transferring; idle keep-alives sit near zero.
+        ReceiveWindowSize = 0xFFFF,
+        GlobalReceiveBudget = 6 * 1024 * 1024,
         RetxBufferSize = 16 * 1024,
-        MaxConnections = 256,
+        MaxConnections = 100, // Capped to prevent memory exhaustion under concurrent flow storms
         AcceptQueueCapacity = 128,
-        IdleTimeout = TimeSpan.FromMinutes(2),
+        IdleTimeout = TimeSpan.FromSeconds(20), // Reap idle keep-alive connections rapidly
+        IdleCheckInterval = TimeSpan.FromSeconds(5) // Check frequently to keep memory footprint bounded
     };
 
     /// <summary>

@@ -72,7 +72,8 @@ public sealed class LocalTcpStream : Stream
             var bytesToCopy = (int)Math.Min(buffer.Length, readResult.Buffer.Length);
             readResult.Buffer.Slice(0, bytesToCopy).CopyTo(buffer.Span);
             reader.AdvanceTo(readResult.Buffer.GetPosition(bytesToCopy));
-            
+            _connection.OnAppConsumed(bytesToCopy); // DIAGNOSTIC: pipe drained
+
             return bytesToCopy;
         }
         catch (OperationCanceledException) when (_cts.IsCancellationRequested)

@@ -319,10 +319,20 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                             var native = mb - Math.Max(gcLive, gcHeap);
                             var dnMb = Interlocked.Read(ref IosVpnAdapter.InboundBytes) / mib;
                             var upMb = Interlocked.Read(ref IosVpnAdapter.OutboundBytes) / mib;
+                            // TCP-stack diagnostics: concurrent connections + bytes parked in the
+                            // reassembly pipes + the active small-buffer profile.
+                            var diag = VpnHood.Core.TcpStack.LocalTcpStack.ActiveDiagnostics;
+                            var pipeBuf = (diag?.TotalPipeBufferedBytes ?? 0) / mib;
+                            var conn = diag?.ConnectionCount ?? 0;
+                            var peakConn = diag?.PeakConnectionCount ?? 0;
+                            var est = diag?.EstablishedConnections ?? 0;
+                            var winKb = (diag?.ConfiguredReceiveWindow ?? 0) / 1024;
+                            var maxC = diag?.ConfiguredMaxConnections ?? 0;
                             File.AppendAllText(logPath,
                                 $"{DateTime.UtcNow:HH:mm:ss.fff} footprint={mb:F1}MB peak={peakMb:F1}MB " +
                                 $"gcLive={gcLive:F1} gcHeap={gcHeap:F1} native={native:F1} " +
                                 $"anon={anon:F1} comp={comp:F1} code={code:F1} " +
+                                $"conn={conn} est={est} peakConn={peakConn} pipeBuf={pipeBuf:F1}MB win={winKb}KB maxC={maxC} " +
                                 $"dn={dnMb:F1}MB up={upMb:F1}MB" +
                                 (mb >= 50 ? " <<< NEAR 52MB JETSAM" : "") + "\n");
                         }

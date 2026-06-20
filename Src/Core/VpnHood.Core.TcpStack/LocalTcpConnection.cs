@@ -1,4 +1,4 @@
-using System.Diagnostics;
+ using System.Diagnostics;
 using System.IO.Pipelines;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
@@ -22,9 +22,11 @@ internal sealed class LocalTcpConnection(
     LocalTcpListener listener,
     byte peerWsShift,
     LocalTcpStackOptions options,
-    PipeOptions pipeOptions)
+    PipeOptions pipeOptions,
+    TcpStackDiagnostics diagnostics)
     : IDisposable
 {
+    private readonly TcpStackDiagnostics _diagnostics = diagnostics;
     // All memory/timeout sizing comes from the stack's validated options (see LocalTcpStackOptions).
     // The values used on the data path below are cached into readonly fields once, here, so the
     // hot path (send/recv/ACK) costs exactly what the old consts did — a field read, no recompute.
@@ -33,6 +35,7 @@ internal sealed class LocalTcpConnection(
     // const on Android (default options) to preserve throughput. Fits the 16-bit window field
     // because LocalTcpStackOptions validates ReceiveWindowSize <= 65535 (no window scaling).
     private readonly ushort _advertisedWindow = (ushort)options.ReceiveWindowSize;
+    private readonly long _globalReceiveBudget = options.GlobalReceiveBudget; // aggregate pipe cap across all connections
 
     private readonly TimeSpan _idleTimeout = options.IdleTimeout;
     private readonly TimeSpan _idleCheckInterval = options.IdleCheckInterval;
@@ -49,6 +52,7 @@ internal sealed class LocalTcpConnection(
 
     private bool _finSent;
     private bool _finReceived;
+    private bool _establishedCounted; // DIAGNOSTIC: whether we incremented LocalTcpStack.EstablishedConnections
     private bool _sndNxtAfterSynSet;
     private bool _disposed;
     private bool _closedFlag;
@@ -64,6 +68,15 @@ internal sealed class LocalTcpConnection(
     private int _ackCount;
     private int _lastZeroWinLogTick;
     private int _lastZwpLogTick;
+
+    // Dynamic receive-window flow control (all platforms). Bytes written into the net->app reassembly
+    // pipe but not yet read by the app (the proxy copy loop). The advertised TCP window is
+    // ReceiveWindowSize - _pipeUnread, so it shrinks toward 0 as the pipe fills (throttling the peer)
+    // and reopens (with a window-update ACK from OnAppConsumed) as the app drains. This makes
+    // ReceiveWindowSize a HARD cap on per-connection pipe memory instead of a soft one.
+    private long _pipeUnread;
+    private volatile bool _windowClosed; // set once we've advertised a (near-)zero window
+    private ushort _lastAdvertisedWindow = (ushort)options.ReceiveWindowSize;
 
     // Retransmission ring buffer: holds unacked bytes starting at _sndUna.
     // On loopback we don't normally need retransmission, but TUN/kernel can drop
@@ -83,8 +96,32 @@ internal sealed class LocalTcpConnection(
     public ushort Mss { get; } = ClampMss(peerMss, options);
     public TcpConnectionState State { get; private set; } = TcpConnectionState.SynReceived;
 
-    /// <summary>The 16-bit TCP receive window this connection advertises on every outgoing segment.</summary>
-    public ushort AdvertisedWindow => _advertisedWindow;
+    /// <summary>The 16-bit TCP receive window this connection advertises on every outgoing segment.
+    /// DYNAMIC: the configured maximum (<c>_advertisedWindow</c>) minus the unread backlog in the
+    /// reassembly pipe, so it shrinks to 0 as the pipe fills (real TCP flow control / backpressure)
+    /// and reopens as the app drains. Bounds per-connection receive memory on every platform.</summary>
+    public ushort AdvertisedWindow {
+        get {
+            // Per-connection headroom: the configured window minus this connection's unread backlog.
+            var perConnFree = _advertisedWindow - Interlocked.Read(ref _pipeUnread);
+            if (perConnFree <= 0) return 0;
+            // Global headroom: the shared budget minus the total backlog across ALL connections. This
+            // is what keeps a large per-connection window safe when many flows are active at once.
+            var globalFree = _globalReceiveBudget - _diagnostics.TotalPipeBufferedBytes;
+            var free = perConnFree < globalFree ? perConnFree : globalFree;
+            if (free <= 0) return 0;
+            return free >= _advertisedWindow ? _advertisedWindow : (ushort)free;
+        }
+    }
+
+    public ushort UpdateAdvertisedWindow()
+    {
+        lock (_seqLock) {
+            var win = AdvertisedWindow;
+            _lastAdvertisedWindow = win;
+            return win;
+        }
+    }
 
     /// <summary>
     /// PipeReader for reading data received from network (used by LocalTcpStream)
@@ -158,6 +195,8 @@ internal sealed class LocalTcpConnection(
         lock (_seqLock) {
             if (State != TcpConnectionState.SynReceived) return;
             State = TcpConnectionState.Established;
+            _establishedCounted = true;
+            _diagnostics.IncrementEstablishedConnections(); // DIAGNOSTIC
             clientToEnqueue = _pendingClient;
             _pendingClient = null;
         }
@@ -179,7 +218,18 @@ internal sealed class LocalTcpConnection(
     public void Dispose()
     {
         if (_disposed) return;
-        _disposed = true;
+
+        long remainingUnread = 0;
+        lock (_seqLock) {
+            if (_disposed) return;
+            _disposed = true;
+            remainingUnread = _pipeUnread;
+            _pipeUnread = 0;
+        }
+
+        if (remainingUnread > 0) {
+            _diagnostics.AddPipeBufferedBytes(-remainingUnread);
+        }
 
         try { _cts.Cancel(); } catch { /* ignore */ }
         // Note: do NOT dispose _cts here. Background tasks may still observe the token after
@@ -283,7 +333,7 @@ internal sealed class LocalTcpConnection(
                 tcp.SequenceNumber = seqForSegment;
                 tcp.AcknowledgmentNumber = ackForSegment;
                 tcp.Acknowledgment = true;
-                tcp.WindowSize = _advertisedWindow;
+                tcp.WindowSize = UpdateAdvertisedWindow(); // dynamic (flow-controlled) window
 
                 // Set PSH on the last segment of the current write.
                 if (offset + segLen >= data.Length)
@@ -375,12 +425,12 @@ internal sealed class LocalTcpConnection(
             bool finCloses;
 
             lock (_seqLock) {
-                var seqDiff = (long)seq - _rcvNxt;
+                var seqDiff = (int)(seq - _rcvNxt);
 
                 if (seqDiff < 0) {
                     // Retransmission: ACK without duplicating data.
                     var retransmitEnd = seq + (uint)payload.Length;
-                    if (retransmitEnd > _rcvNxt && payload.Length > 0) {
+                    if ((int)(retransmitEnd - _rcvNxt) > 0 && payload.Length > 0) {
                         var overlap = (int)(_rcvNxt - seq);
                         var newData = payload[overlap..];
                         if (newData.Length > 0) {
@@ -451,30 +501,60 @@ internal sealed class LocalTcpConnection(
 
     private void WriteToAppPipe(ReadOnlySpan<byte> data)
     {
+        // _seqLock is already held by the caller of WriteToAppPipe.
         if (_disposed || _netToAppCompleted) return;
 
         var span = _netToAppPipe.Writer.GetSpan(data.Length);
         data.CopyTo(span);
         _netToAppPipe.Writer.Advance(data.Length);
+        _diagnostics.AddPipeBufferedBytes(data.Length); // DIAGNOSTIC: pipe fill
 
-        // Synchronous-style flush; we discard the ValueTask intentionally because:
-        //  - On loopback, the reader (the application) drains the pipe quickly.
-        //  - Awaiting here would require restructuring TryHandleIncoming as async,
-        //    and we're called from the packet-receive critical path.
-        //
-        // KNOWN LIMITATION (memory bound is soft, not hard) — for the next maintainer:
-        // We advertise a FIXED window (_advertisedWindow) on every segment and ACK data as soon
-        // as it is buffered here, so PauseWriterThreshold is never actually observed (the flush
-        // ValueTask is discarded). If the application stops reading, the peer keeps getting ACKs
-        // and keeps sending, so this pipe can grow ~window/RTT without bound — dangerous on a
-        // memory-capped host (e.g. an iOS Network Extension can be jetsam-killed).
-        // Interim mitigation (shipped): a small ReceiveWindowSize + MaxConnections cap bound the
-        // aggregate. Proper fix (separate, low-risk change): advertise a DYNAMIC window equal to
-        // the free pipe space (ReceiveWindowSize - unread bytes), tracking app reads from
-        // LocalTcpStream.ReadAsync; when the pipe fills we advertise a smaller/zero window and the
-        // loopback peer stops, making ReceiveWindowSize a HARD cap. That only ever shrinks the
-        // advertised window, so it stays safe on loopback.
+        // FLOW CONTROL: track the unread backlog so AdvertisedWindow shrinks as the pipe fills. If the
+        // effective window is now 0 (this pipe is full OR the shared global budget is exhausted), mark
+        // it closed so OnAppConsumed sends a window-update ACK once headroom returns.
+        _pipeUnread += data.Length;
+        if (AdvertisedWindow == 0)
+            _windowClosed = true;
+
+        // Flush is fire-and-forget on this packet-receive critical path. That's now safe: the dynamic
+        // AdvertisedWindow throttles the peer, so this pipe is bounded by ~ReceiveWindowSize regardless
+        // of how fast the app drains it (the old fixed-window code could grow it without bound).
         _ = _netToAppPipe.Writer.FlushAsync();
+    }
+
+    /// Called by LocalTcpStream after the app drains bytes from the reassembly pipe. Lowers the unread
+    /// backlog (which reopens AdvertisedWindow) and, if the window had closed and is now back above
+    /// half, sends a window-update ACK so the throttled peer resumes immediately instead of waiting
+    /// for its zero-window-probe timer.
+    public void OnAppConsumed(long count)
+    {
+        if (count <= 0) return;
+
+        long actualConsumed = count;
+        ushort currentWin;
+        ushort lastWin;
+        lock (_seqLock) {
+            if (_disposed) return;
+            if (_pipeUnread < count)
+                actualConsumed = _pipeUnread;
+            _pipeUnread -= actualConsumed;
+            currentWin = AdvertisedWindow;
+            lastWin = _lastAdvertisedWindow;
+        }
+
+        if (actualConsumed > 0) {
+            _diagnostics.AddPipeBufferedBytes(-actualConsumed);
+        }
+
+        // Send a window update ACK if:
+        // 1. The window was closed (or near-closed) and has reopened significantly.
+        // 2. Or the window has opened up by at least 1/4 of the buffer size (e.g. 16 KB) to prevent
+        //    stalls and keep the peer's window sliding smoothly.
+        var windowOpenedSignificantly = currentWin - lastWin >= 16384;
+        if ((_windowClosed && currentWin >= 4096) || windowOpenedSignificantly) {
+            _windowClosed = false;
+            try { _stack?.SendAckOnly(this); } catch { /* best-effort window update */ }
+        }
     }
 
     private void Touch()
@@ -524,7 +604,7 @@ internal sealed class LocalTcpConnection(
             tcp.AcknowledgmentNumber = _rcvNxt;
             tcp.Finish = true;
             tcp.Acknowledgment = true;
-            tcp.WindowSize = _advertisedWindow;
+            tcp.WindowSize = UpdateAdvertisedWindow(); // dynamic (flow-controlled) window
 
             _sndNxt += 1; // FIN consumes one sequence number
 
@@ -586,7 +666,7 @@ internal sealed class LocalTcpConnection(
             tcp.SequenceNumber = probeSeq;
             tcp.AcknowledgmentNumber = probeAck;
             tcp.Acknowledgment = true;
-            tcp.WindowSize = _advertisedWindow;
+            tcp.WindowSize = UpdateAdvertisedWindow(); // dynamic (flow-controlled) window
 
             stack.SendPacket(probe);
             return 1;
@@ -642,7 +722,7 @@ internal sealed class LocalTcpConnection(
         tcp.SequenceNumber = seqForSegment;
         tcp.AcknowledgmentNumber = ackForSegment;
         tcp.Acknowledgment = true;
-        tcp.WindowSize = _advertisedWindow;
+        tcp.WindowSize = UpdateAdvertisedWindow(); // dynamic (flow-controlled) window
         tcp.Push = true;
 
         stack.SendPacket(packet);
@@ -663,6 +743,11 @@ internal sealed class LocalTcpConnection(
 
         // Dispose unaccepted client if handshake never completed.
         abandoned?.Dispose();
+
+        if (_establishedCounted) {
+            _establishedCounted = false;
+            _diagnostics.DecrementEstablishedConnections(); // DIAGNOSTIC
+        }
 
         CompleteNetToApp();
         _appToNetCompleted = true;

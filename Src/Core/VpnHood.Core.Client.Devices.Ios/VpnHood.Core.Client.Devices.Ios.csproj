@@ -43,5 +43,7 @@
 		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.IosTun\VpnHood.Core.VpnAdapters.IosTun.csproj" />
+		<!-- DIAGNOSTIC: the memory probe reads LocalTcpStack's static counters directly. -->
+		<ProjectReference Include="..\VpnHood.Core.TcpStack\VpnHood.Core.TcpStack.csproj" />
 	</ItemGroup>
 </Project>

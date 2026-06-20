@@ -187,8 +187,8 @@ public sealed class LocalTcpStackOptionsTest
     {
         using var def = new LocalTcpStack(LocalTcpStackOptions.Default);
         using var ios = new LocalTcpStack(LocalTcpStackOptions.Ios);
-        Assert.AreEqual(16 * 1024, LocalTcpStackOptions.Ios.ReceiveWindowSize);
-        Assert.AreEqual(256, LocalTcpStackOptions.Ios.MaxConnections);
+        Assert.AreEqual(0xFFFF, LocalTcpStackOptions.Ios.ReceiveWindowSize);
+        Assert.AreEqual(100, LocalTcpStackOptions.Ios.MaxConnections);
     }
 
     /// <summary>

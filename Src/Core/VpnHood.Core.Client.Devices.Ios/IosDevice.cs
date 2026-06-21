@@ -86,7 +86,7 @@ public class IosDevice : IDevice
 
         // ---- Pre-stop: detect stale tunnel ----
         try {
-            await LoadFromPreferencesAsync(_vpnManager);
+            await _vpnManager.LoadFromPreferencesAsync();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Pre-stop LoadFromPreferences failed.");
@@ -107,7 +107,8 @@ public class IosDevice : IDevice
             for (var i = 0; i < 8; i++) {
                 await Task.Delay(500, cancellationToken);
                 var s = _vpnManager.Connection.Status;
-                if (s is NEVpnStatus.Disconnected or NEVpnStatus.Invalid) break;
+                if (s is NEVpnStatus.Disconnected or NEVpnStatus.Invalid) 
+                    break;
             }
         }
 
@@ -135,10 +136,10 @@ public class IosDevice : IDevice
         _vpnManager.Enabled = true;
 
         // ---- Save ----
-        await SaveToPreferencesAsync(_vpnManager);
+        await _vpnManager.SaveToPreferencesAsync();
 
         // ---- Load ----
-        await LoadFromPreferencesAsync(_vpnManager);
+        await _vpnManager.LoadFromPreferencesAsync();
 
         // ---- StartVpnTunnel (synchronous call into iOS) ----
         // On failure, re-assert+save+reload the config and retry once; a second failure propagates.
@@ -149,8 +150,8 @@ public class IosDevice : IDevice
             VhLogger.Instance.LogWarning(ex, "StartVpnTunnel failed. Re-saving config and retrying...");
 
             _vpnManager.Enabled = true;
-            await SaveToPreferencesAsync(_vpnManager);
-            await LoadFromPreferencesAsync(_vpnManager);
+            await _vpnManager.SaveToPreferencesAsync();
+            await _vpnManager.LoadFromPreferencesAsync();
 
             StartTunnel();
         }
@@ -175,26 +176,6 @@ public class IosDevice : IDevice
         _vpnManager.Connection.StartVpnTunnel(out var error);
         if (error != null)
             throw new NSErrorException(error);
-    }
-
-    private static Task SaveToPreferencesAsync(NEVpnManager manager)
-    {
-        var tcs = new TaskCompletionSource();
-        manager.SaveToPreferences(nsError => {
-            if (nsError != null) tcs.TrySetException(new Exception(nsError.LocalizedDescription));
-            else tcs.TrySetResult();
-        });
-        return tcs.Task;
-    }
-
-    private static Task LoadFromPreferencesAsync(NEVpnManager manager)
-    {
-        var tcs = new TaskCompletionSource();
-        manager.LoadFromPreferences(nsError => {
-            if (nsError != null) tcs.TrySetException(new Exception(nsError.LocalizedDescription));
-            else tcs.TrySetResult();
-        });
-        return tcs.Task;
     }
 
     public void Dispose()

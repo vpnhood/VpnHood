@@ -66,7 +66,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     // Called by the .NET iOS runtime when ObjC creates the extension instance.
     // [Export("init")] is intentionally absent: iOS uses NEPacketTunnelProvider's init,
     // and .NET iOS wraps the resulting ObjC handle here. Adding [Export("init")] caused
-    // a null function-pointer in the ObjC dispatch table → EXC_BAD_ACCESS / CODESIGNING:
+    // a null function-pointer in the ObjC dispatch table → EXC_BAD_ACCESS / CODE-SIGNING:
     // Invalid Page at 0x0 inside -[PacketTunnelProvider init].
     protected IosVpnService(NativeHandle handle) : base(handle)
     {

@@ -25,7 +25,7 @@ public sealed class TcpStackDiagnostics
     /// <summary>Gets the aggregate number of bytes buffered across all connection reassembly pipes.</summary>
     public long TotalPipeBufferedBytes => Volatile.Read(ref _totalPipeBufferedBytes);
 
-    /// <summary>Gets the receive window size configured for this stack profile.</summary>
+    /// <summary>Gets the window size of receive configured for this stack profile.</summary>
     public int ConfiguredReceiveWindow { get; internal set; }
 
     /// <summary>Gets the maximum number of simultaneous connections configured for this stack.</summary>

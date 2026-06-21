@@ -133,7 +133,7 @@ public sealed class LocalTcpStackOptions
         // Large PER-CONNECTION window (the 16-bit max, no scaling) so a few active flows get full
         // upload/download speed (throughput ≈ window / RTT), but a GLOBAL budget caps the aggregate so
         // 100+ concurrent flows can't blow the 52 MB jetsam limit. A flow only consumes window when it
-        // is actively transferring; idle keep-alives sit near zero.
+        // is actively transferring; idle keep-alive sit near zero.
         ReceiveWindowSize = 0xFFFF,
         GlobalReceiveBudget = 6 * 1024 * 1024,
         RetxBufferSize = 16 * 1024,

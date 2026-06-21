@@ -268,9 +268,7 @@ public class IosVpnAdapter(
     protected override bool WritePacket(IpPacket ipPacket)
     {
         // Capture the flow; AdapterClose may null it out concurrently.
-        var flow = _packetFlow;
-        if (flow == null)
-            throw new InvalidOperationException("Packet flow is not initialized.");
+        var flow = _packetFlow ?? throw new InvalidOperationException("Packet flow is not initialized.");
 
         // CRASH FIX (iOS): serialize the ENTIRE native write — see _writeLock above.
         lock (_writeLock) {
@@ -334,44 +332,43 @@ public class IosVpnAdapter(
 
         // Drain native autorelease temporaries created while parsing this batch so they do
         // not accumulate and push the extension past the ~50 MB jetsam limit.
-        using (var pool = new NSAutoreleasePool())
-        {
-            foreach (var packetBuffer in packets)
-            {
-                try
-                {
-                    // MEMORY (jetsam spike fix): parse straight from the native NSData bytes via a
-                    // ReadOnlySpan instead of NSData.ToArray(). ToArray allocated a throwaway managed
-                    // byte[] PER PACKET — pure gen0 garbage ON TOP OF the pooled copy PacketBuilder.Parse
-                    // already makes. Under an outbound burst those churned the managed heap faster than the
-                    // GC heartbeat could reclaim, and that transient (~+2 MB gcLive) on top of the ~42 MB
-                    // native floor is what tipped phys_footprint over the ~52 MB jetsam line. Parse copies
-                    // the span into a pooled buffer, so the span over native memory only has to stay valid
-                    // for the duration of the call (it does — packetBuffer is disposed below).
-                    var len = (int)packetBuffer.Length;
-                    Interlocked.Add(ref OutboundBytes, len);
-                    IpPacket ipPacket;
-                    unsafe {
-                        ipPacket = PacketBuilder.Parse(new ReadOnlySpan<byte>((void*)packetBuffer.Bytes, len));
-                    }
-                    OnPacketReceived(ipPacket);
-                }
-                catch
-                {
-                    // ignore malformed packet so a single bad packet never breaks the read loop
-                }
-                finally
-                {
-                    // Release the native NSData peer now instead of waiting for GC finalization.
-                    packetBuffer.Dispose();
-                }
-            }
+        using var pool = new NSAutoreleasePool();
 
-            // The protocol-family NSNumber wrappers are unused (we re-derive the family from the
-            // parsed packet). Release their native peers now so they do not pile up either.
-            foreach (var protocol in protocols)
-                protocol.Dispose();
+        foreach (var packetBuffer in packets)
+        {
+            try
+            {
+                // MEMORY (jetsam spike fix): parse straight from the native NSData bytes via a
+                // ReadOnlySpan instead of NSData.ToArray(). ToArray allocated a throwaway managed
+                // byte[] PER PACKET — pure gen0 garbage ON TOP OF the pooled copy PacketBuilder.Parse
+                // already makes. Under an outbound burst those churned the managed heap faster than the
+                // GC heartbeat could reclaim, and that transient (~+2 MB gcLive) on top of the ~42 MB
+                // native floor is what tipped phys_footprint over the ~52 MB jetsam line. Parse copies
+                // the span into a pooled buffer, so the span over native memory only has to stay valid
+                // for the duration of the call (it does — packetBuffer is disposed below).
+                var len = (int)packetBuffer.Length;
+                Interlocked.Add(ref OutboundBytes, len);
+                IpPacket ipPacket;
+                unsafe {
+                    ipPacket = PacketBuilder.Parse(new ReadOnlySpan<byte>((void*)packetBuffer.Bytes, len));
+                }
+                OnPacketReceived(ipPacket);
+            }
+            catch
+            {
+                // ignore malformed packet so a single bad packet never breaks the read loop
+            }
+            finally
+            {
+                // Release the native NSData peer now instead of waiting for GC finalization.
+                packetBuffer.Dispose();
+            }
         }
+
+        // The protocol-family NSNumber wrappers are unused (we re-derive the family from the
+        // parsed packet). Release their native peers now so they do not pile up either.
+        foreach (var protocol in protocols)
+            protocol.Dispose();
 
 
         // CRITICAL: ReadPackets is a ONE-SHOT API. It delivers a single batch of outbound

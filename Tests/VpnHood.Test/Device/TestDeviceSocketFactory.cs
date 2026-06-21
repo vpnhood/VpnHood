@@ -1,11 +1,16 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using VpnHood.Core.Quic.Abstractions;
+using VpnHood.Core.Quic.Abstractions.MsQuic;
 using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Test.Device;
 
 public class TestDeviceSocketFactory(TestDevice testDevice) : ISocketFactory
 {
+    private readonly ISocketFactory _quicFactory = new MsQuicSocketFactory(new SystemSocketFactory());
+
     public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
     {
         var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
@@ -23,4 +28,7 @@ public class TestDeviceSocketFactory(TestDevice testDevice) : ISocketFactory
 
         return udpClient;
     }
+
+    public bool IsQuicSupported => _quicFactory.IsQuicSupported;
+    public IQuicClient CreateQuicClient() => _quicFactory.CreateQuicClient();
 }

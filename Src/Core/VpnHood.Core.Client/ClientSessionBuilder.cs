@@ -233,8 +233,8 @@ internal class ClientSessionBuilder(
                 CreatedTime = DateTime.UtcNow,
                 IsTcpPacketSupported = helloResponse.IsTcpPacketSupported,
                 IsTcpProxySupported = helloResponse.IsTcpProxySupported,
-                IsQuicChannelSupported = hostQuicEndPoint != null,
-                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse),
+                IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.IsQuicSupported,
+                ChannelProtocols = ChannelProtocolValidator.GetChannelProtocols(helloResponse, socketFactory.IsQuicSupported),
                 ServerLocationInfo = helloResponse.ServerLocation != null
                     ? ServerLocationInfo.Parse(helloResponse.ServerLocation)
                     : null

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
@@ -20,4 +21,7 @@ public class AdapterSocketFactory(ISocketFactory socketFactory, IVpnAdapter vpnA
         vpnAdapter.ProtectSocket(udpClient.Client);
         return udpClient;
     }
+
+    public bool IsQuicSupported => socketFactory.IsQuicSupported;
+    public IQuicClient CreateQuicClient() => socketFactory.CreateQuicClient();
 }

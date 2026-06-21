@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>The core of VpnHood server. It can listen and accept connections from VpnHood clients</Description>
+		<Description>VpnHood QUIC Abstractions. A minimal transport abstraction over the QUIC surface used by VpnHood, independent of any concrete QUIC implementation.</Description>
 		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
 
@@ -32,14 +32,6 @@
 			<Pack>True</Pack>
 			<PackagePath></PackagePath>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.Core.Filtering.Abstractions\VpnHood.Core.Filtering.Abstractions.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Quic.Abstractions\VpnHood.Core.Quic.Abstractions.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.Server.Access\VpnHood.Core.Server.Access.csproj" />
-		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

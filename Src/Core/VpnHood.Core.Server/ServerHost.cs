@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Server.Exceptions;
 using VpnHood.Core.Server.Listeners;
@@ -46,7 +47,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
     public bool Started => !_disposed && !_cancellationTokenSource.IsCancellationRequested;
     public string? DownloadPath => _downloadService.DownloadPath;
 
-    public ServerHost(SessionManager sessionManager, string? downloadsPath)
+    public ServerHost(SessionManager sessionManager, string? downloadsPath, IQuicServer? quicServer)
     {
         _sessionManager = sessionManager;
         _downloadService = new DownloadService(downloadsPath);
@@ -57,6 +58,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
             cancellationToken: _cancellationTokenSource.Token,
             processNewConnection: ProcessNewConnection);
         _quicListenerHost = new QuicListenerHost(
+            quicServer: quicServer,
             sessionManager: _sessionManager,
             cancellationToken: _cancellationTokenSource.Token,
             processNewConnection: ProcessNewConnection);

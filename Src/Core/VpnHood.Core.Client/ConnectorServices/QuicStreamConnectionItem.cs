@@ -1,9 +1,7 @@
 using System.Net;
-using System.Net.Quic;
 using System.Net.Security;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
@@ -21,11 +19,12 @@ namespace VpnHood.Core.Client.ConnectorServices;
 /// therefore under race a small temporary exceed is acceptable by design.
 /// </remarks>
 internal class QuicStreamConnectionItem(
+    IQuicClient quicClient,
     int maxStreamsPerConnection,
     int maxLifetimeStreamsPerConnection,
     IPEndPoint quicEndPoint) : IAsyncDisposable
 {
-    private QuicConnection? _connection;
+    private IQuicConnection? _connection;
     private readonly AsyncLock _connectLock = new();
     private readonly Lock _usageLock = new();
 
@@ -49,7 +48,7 @@ internal class QuicStreamConnectionItem(
         ActiveStreamCount < maxStreamsPerConnection && 
         TotalStreamCount < maxLifetimeStreamsPerConnection;
 
-    public QuicConnection Connection =>
+    public IQuicConnection Connection =>
         _connection ?? throw new InvalidOperationException("QUIC connection has not been established yet.");
 
     public async Task<IStreamConnection> OpenStreamConnection(
@@ -62,7 +61,7 @@ internal class QuicStreamConnectionItem(
 
         try {
             _connection ??= await ConnectAsync(vpnEndPoint, certificateValidationCallback, cancellationToken).Vhc();
-            var stream = await _connection.OpenOutboundStreamAsync(QuicStreamType.Bidirectional, cancellationToken).Vhc();
+            var stream = await _connection.OpenOutboundStreamAsync(cancellationToken).Vhc();
 
             lock (_usageLock) {
                 TotalStreamCount++;
@@ -96,7 +95,7 @@ internal class QuicStreamConnectionItem(
         }
     }
 
-    private ValueTask<QuicConnection> ConnectAsync(
+    private ValueTask<IQuicConnection> ConnectAsync(
         VpnEndPoint vpnEndPoint,
         RemoteCertificateValidationCallback certificateValidationCallback,
         CancellationToken cancellationToken)
@@ -105,21 +104,13 @@ internal class QuicStreamConnectionItem(
             "Establishing a new QUIC connection to the Server... EndPoint: {EndPoint}",
             VhLogger.Format(quicEndPoint));
 
-        var options = new QuicClientConnectionOptions {
+        var options = new QuicClientConnectOptions {
             RemoteEndPoint = quicEndPoint,
-            DefaultStreamErrorCode = 0,
-            DefaultCloseErrorCode = 0,
-            ClientAuthenticationOptions = new SslClientAuthenticationOptions {
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                ApplicationProtocols = [SslApplicationProtocol.Http3],
-                RemoteCertificateValidationCallback = certificateValidationCallback,
-                EnabledSslProtocols = SslProtocols.Tls13,
-                TargetHost = vpnEndPoint.HostName,
-                EncryptionPolicy = EncryptionPolicy.RequireEncryption
-            }
+            TargetHost = vpnEndPoint.HostName,
+            CertificateValidationCallback = certificateValidationCallback
         };
 
-        return QuicConnection.ConnectAsync(options, cancellationToken);
+        return quicClient.ConnectAsync(options, cancellationToken);
     }
 
     public ValueTask DisposeAsync()

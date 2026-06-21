@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
+using VpnHood.Core.Quic.Abstractions.MsQuic;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.LinuxTun;
@@ -17,8 +18,8 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
     {
         _vpnServiceHost = new VpnServiceHost(
             configFolder: configFolder, 
-            vpnServiceHandler: this, 
-            socketFactory: new SystemSocketFactory(), 
+            vpnServiceHandler: this,
+            socketFactory: new MsQuicSocketFactory(new SystemSocketFactory()),
             netFilter: null,
             messageListener: new TcpMessageListener(configFolder),
             withLogger: false);

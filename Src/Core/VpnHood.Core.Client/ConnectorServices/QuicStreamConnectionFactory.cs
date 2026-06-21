@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Security;
+using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Utils;
@@ -26,6 +27,7 @@ namespace VpnHood.Core.Client.ConnectorServices;
 /// </remarks>
 internal class QuicStreamConnectionFactory : IAsyncDisposable
 {
+    private readonly IQuicClient _quicClient;
     private readonly VpnEndPoint _vpnEndPoint;
     private readonly RemoteCertificateValidationCallback _certificateValidationCallback;
     private readonly List<QuicStreamConnectionItem> _items = [];
@@ -38,9 +40,11 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
     public IPEndPoint? QuicEndPoint { get; set; }
 
     public QuicStreamConnectionFactory(
+        IQuicClient quicClient,
         VpnEndPoint vpnEndPoint,
         RemoteCertificateValidationCallback certificateValidationCallback)
     {
+        _quicClient = quicClient;
         _vpnEndPoint = vpnEndPoint;
         _certificateValidationCallback = certificateValidationCallback;
         _cleanupJob = new Job(Cleanup, "QuicStreamConnectionCleanup");
@@ -67,6 +71,7 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
                 ?? throw new InvalidOperationException("QuicEndPoint has not been set.");
 
             item = new QuicStreamConnectionItem(
+                quicClient: _quicClient,
                 maxStreamsPerConnection: MaxStreamsPerConnection,
                 maxLifetimeStreamsPerConnection: MaxLifetimeStreamsPerConnection,
                 quicEndPoint: quicEndPoint);

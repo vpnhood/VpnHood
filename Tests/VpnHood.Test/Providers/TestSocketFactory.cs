@@ -1,5 +1,7 @@
-﻿using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Quic.Abstractions.MsQuic;
+using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Test.Providers;
 
-public class TestSocketFactory : SystemSocketFactory;
+// Wraps SystemSocketFactory with MsQuic so QUIC-channel tests work on platforms where MsQuic is available.
+public class TestSocketFactory() : MsQuicSocketFactory(new SystemSocketFactory());

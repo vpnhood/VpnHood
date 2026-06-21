@@ -1,10 +1,8 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
-using System.Net.Quic;
-using System.Net.Security;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Server.Access;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Extensions;
@@ -16,6 +14,7 @@ using VpnHood.Core.Tunneling.Connections;
 namespace VpnHood.Core.Server.Listeners;
 
 internal class QuicListenerHost(
+    IQuicServer? quicServer,
     SessionManager sessionManager,
     CancellationToken cancellationToken,
     Func<IStreamConnection, CancellationToken, Task> processNewConnection)
@@ -29,14 +28,14 @@ internal class QuicListenerHost(
         _listeners.Select(x => x.Listener.LocalEndPoint).ToArray();
 
     public async Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
-        IReadOnlyList<IPEndPoint> ipEndPoints, 
+        IReadOnlyList<IPEndPoint> ipEndPoints,
         IReadOnlyList<CertificateHostName> certificates)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         _certificates = certificates;
 
-        if (!QuicListener.IsSupported && ipEndPoints.Count > 0) {
+        if (quicServer is null && ipEndPoints.Count > 0) {
             throw new NotSupportedException("QUIC is not supported on this platform.");
         }
 
@@ -68,11 +67,11 @@ internal class QuicListenerHost(
             try {
                 var listenerOptions = new QuicListenerOptions {
                     ListenEndPoint = ipEndPoint,
-                    ApplicationProtocols = [SslApplicationProtocol.Http3],
-                    ConnectionOptionsCallback = QuicConnectionOptionsCallback
+                    IdleTimeout = sessionManager.SessionOptions.ChannelIdleTimeoutValue,
+                    ServerCertificateSelector = SelectCertificate
                 };
                 var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                var listener = await QuicListener.ListenAsync(listenerOptions, cancellationToken).Vhc();
+                var listener = await quicServer!.ListenAsync(listenerOptions, cancellationToken).Vhc();
                 var task = ListenTask(listener, cts.Token);
                 _listeners.Add(new QuicListenerEntry(listener, task, cts));
                 endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Quic, EndPoint = ipEndPoint });
@@ -93,26 +92,7 @@ internal class QuicListenerHost(
         return endPointStatuses;
     }
 
-    private ValueTask<QuicServerConnectionOptions> QuicConnectionOptionsCallback(
-        QuicConnection quicConnection, SslClientHelloInfo sslClientHelloInfo, CancellationToken ct)
-    {
-        var options = new QuicServerConnectionOptions {
-            DefaultStreamErrorCode = 0,
-            DefaultCloseErrorCode = 0,
-            IdleTimeout = sessionManager.SessionOptions.ChannelIdleTimeoutValue,
-            ServerAuthenticationOptions = new SslServerAuthenticationOptions {
-                ServerCertificateSelectionCallback = ServerCertificateSelectionCallback,
-                ApplicationProtocols = [SslApplicationProtocol.Http3], // just to look normal, we use HTTP 1.1 actually
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                ClientCertificateRequired = false,
-                EncryptionPolicy = EncryptionPolicy.RequireEncryption,
-                EnabledSslProtocols = SslProtocols.Tls13
-            }
-        };
-        return new ValueTask<QuicServerConnectionOptions>(options);
-    }
-
-    private X509Certificate ServerCertificateSelectionCallback(object sender, string? hostname)
+    private X509Certificate SelectCertificate(string? hostname)
     {
         var certificate =
             _certificates.SingleOrDefault(x => x.HostName.Equals(hostname, StringComparison.OrdinalIgnoreCase))
@@ -121,7 +101,7 @@ internal class QuicListenerHost(
         return certificate.Certificate;
     }
 
-    private async Task ListenTask(QuicListener listener, CancellationToken ct)
+    private async Task ListenTask(IQuicListener listener, CancellationToken ct)
     {
         var localEp = listener.LocalEndPoint;
         var errorCounter = 0;
@@ -159,7 +139,7 @@ internal class QuicListenerHost(
         VhLogger.Instance.LogInformation("QUIC Listener has been stopped. LocalEp: {LocalEp}", VhLogger.Format(localEp));
     }
 
-    private async Task AcceptStreams(QuicConnection quicConnection, CancellationToken ct)
+    private async Task AcceptStreams(IQuicConnection quicConnection, CancellationToken ct)
     {
         var remoteEp = quicConnection.RemoteEndPoint;
 
@@ -180,7 +160,7 @@ internal class QuicListenerHost(
         }
     }
 
-    private async Task TryProcessStream(QuicConnection quicConnection, QuicStream stream, CancellationToken ct)
+    private async Task TryProcessStream(IQuicConnection quicConnection, Stream stream, CancellationToken ct)
     {
         var connection = new QuicStreamConnection(stream,
             localEndPoint: quicConnection.LocalEndPoint,
@@ -207,15 +187,15 @@ internal class QuicListenerHost(
         _listeners.Clear();
     }
 
-    private sealed class QuicListenerEntry(QuicListener listener, Task listenerTask, CancellationTokenSource cts)
+    private sealed class QuicListenerEntry(IQuicListener listener, Task listenerTask, CancellationTokenSource cts)
         : IAsyncDisposable
     {
-        public QuicListener Listener => listener;
+        public IQuicListener Listener => listener;
         public Task ListenerTask => listenerTask;
 
         public async ValueTask DisposeAsync()
         {
-            await cts.TryCancelAsync().Vhc(); 
+            await cts.TryCancelAsync().Vhc();
             await Listener.SafeDisposeAsync().Vhc();
             try { await listenerTask.Vhc(); }
             catch (Exception ex) {

@@ -10,6 +10,7 @@ using VpnHood.App.Server.Providers.Linux;
 using VpnHood.App.Server.Providers.Win;
 using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Quic.Abstractions.MsQuic;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Managers;
@@ -286,6 +287,7 @@ public class ServerApp : IDisposable
                 SystemInfoProvider = systemInfoProvider,
                 NetConfigurationProvider = configurationProvider,
                 SwapMemoryProvider = swapMemoryProvider,
+                QuicServer = MsQuicServer.IsSupported ? new MsQuicServer() : null,
                 StoragePath = InternalStoragePath,
                 Config = AppSettings.ServerConfig,
                 DownloadsPath = _downloadsPath,

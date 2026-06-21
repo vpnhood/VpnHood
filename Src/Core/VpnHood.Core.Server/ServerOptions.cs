@@ -1,5 +1,6 @@
 ﻿using Ga4.Trackers;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
 using VpnHood.Core.Server.SystemInformation;
@@ -14,6 +15,12 @@ namespace VpnHood.Core.Server;
 public class ServerOptions
 {
     public ISocketFactory SocketFactory { get; init; } = new SystemSocketFactory();
+
+    /// <summary>
+    /// QUIC listener provider (e.g. MsQuicServer). Null disables QUIC; if QUIC endpoints are then
+    /// configured the server reports them as unsupported on this platform.
+    /// </summary>
+    public IQuicServer? QuicServer { get; init; }
     public ITracker? Tracker { get; init; }
     public ISystemInfoProvider? SystemInfoProvider { get; init; }
     public NetFilter NetFilter { get; init; } = new();

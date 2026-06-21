@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
-using System.Net.Quic;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Utils;
@@ -9,7 +8,7 @@ namespace VpnHood.Core.Tunneling.Connections;
 
 public sealed class QuicStreamConnection : IStreamConnection
 {
-    private readonly QuicStream _stream;
+    private readonly Stream _stream;
     private bool _disposed;
     public event EventHandler? Disposed;
     public string ConnectionName { get; }
@@ -22,7 +21,7 @@ public sealed class QuicStreamConnection : IStreamConnection
 
     public bool RequireHttpResponse { get; set; }
 
-    public QuicStreamConnection(QuicStream stream, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+    public QuicStreamConnection(Stream stream, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
         string connectionName, bool isServer, string? connectionId = null)
     {
         _stream = stream;

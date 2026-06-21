@@ -7,6 +7,7 @@ using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Quic.Abstractions.MsQuic;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Configurations;
@@ -221,6 +222,7 @@ public class TestHelper : IDisposable
         // ser server options
         var serverOptions = new ServerOptions {
             SocketFactory = socketFactory ?? new TestSocketFactory(),
+            QuicServer = MsQuicServer.IsSupported ? new MsQuicServer() : null,
             ConfigureInterval = configureInterval ?? new ServerOptions().ConfigureInterval,
             AutoDisposeAccessManager = autoDisposeAccessManager,
             StoragePath = WorkingPath,
@@ -245,7 +247,7 @@ public class TestHelper : IDisposable
     public ISocketFactory CreateTestSocketFactory(IVpnAdapter? vpnAdapter = null)
     {
         return vpnAdapter != null
-            ? new AdapterSocketFactory(new SystemSocketFactory(), vpnAdapter)
+            ? new AdapterSocketFactory(new TestSocketFactory(), vpnAdapter)
             : new TestSocketFactory();
     }
 

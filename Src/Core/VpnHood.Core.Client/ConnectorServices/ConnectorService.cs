@@ -40,7 +40,8 @@ internal class ConnectorService : IDisposable
     private readonly ConcurrentQueue<IdleConnectionItem> _idleConnectionItems = new();
     private readonly HashSet<ReusableStreamConnection> _sharedConnections = new(50); // for preventing reuse
     private readonly TcpStreamConnectionFactory _tcpConnectionFactory;
-    private readonly QuicStreamConnectionFactory _quicConnectionFactory;
+    private readonly QuicStreamConnectionFactory? _quicConnectionFactory; // null when the socket factory has no QUIC support
+    private TimeSpan _idleConnectionTimeout;
     private readonly Job _cleanupJob;
     private bool _disposed;
     private bool _useWebSocket;
@@ -51,14 +52,12 @@ internal class ConnectorService : IDisposable
     public TimeSpan RequestTimeout { get; set; }
     public bool UseQuic { get; set; }
 
-    public TimeSpan IdleConnectionTimeout {
-        get => _quicConnectionFactory.IdleConnectionTimeout;
-        set => _quicConnectionFactory.IdleConnectionTimeout = value;
-    }
 
     public IPEndPoint? QuicEndPoint {
-        get => _quicConnectionFactory.QuicEndPoint;
-        set => _quicConnectionFactory.QuicEndPoint = value;
+        get => _quicConnectionFactory?.QuicEndPoint;
+        set {
+            _quicConnectionFactory?.QuicEndPoint = value;
+        }
     }
 
     public ConnectorService(ConnectorServiceOptions options)
@@ -75,12 +74,15 @@ internal class ConnectorService : IDisposable
             options.VpnEndPoint,
             UserCertificateValidationCallback);
 
-        _quicConnectionFactory = new QuicStreamConnectionFactory(
-            options.VpnEndPoint,
-            UserCertificateValidationCallback);
+        _quicConnectionFactory = options.SocketFactory.IsQuicSupported
+            ? new QuicStreamConnectionFactory(
+                options.SocketFactory.CreateQuicClient(),
+                options.VpnEndPoint,
+                UserCertificateValidationCallback)
+            : null;
 
-        // after quic
-        IdleConnectionTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
+        // after quic (propagates to the QUIC factory if present)
+        _idleConnectionTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
     }
 
     public void Init(int protocolVersion, byte[]? serverSecret, TimeSpan channelIdleTimeout, bool useWebSocket,
@@ -88,11 +90,13 @@ internal class ConnectorService : IDisposable
     {
         _ = serverSecret;
         ProtocolVersion = protocolVersion;
-        IdleConnectionTimeout = channelIdleTimeout;
+        _idleConnectionTimeout = channelIdleTimeout;
+        _quicConnectionFactory?.IdleConnectionTimeout = channelIdleTimeout;
         _useWebSocket = useWebSocket;
         RequestTimeout = requestTimeout;
         UseQuic = useQuic;
         QuicEndPoint = quicEndPoint;
+
     }
 
     private static string BuildRequestPath(string? pathBase)
@@ -197,8 +201,11 @@ internal class ConnectorService : IDisposable
         Action? onConnectAttempt, CancellationToken cancellationToken)
     {
         // Create raw stream connection from appropriate factory
+        if (UseQuic && _quicConnectionFactory == null)
+            throw new InvalidOperationException("QUIC is not supported by the current socket factory.");
+
         var rawConnection = UseQuic
-            ? await _quicConnectionFactory.CreateConnection(streamId, cancellationToken).Vhc()
+            ? await _quicConnectionFactory!.CreateConnection(streamId, cancellationToken).Vhc()
             : await _tcpConnectionFactory.CreateConnection(streamId, onConnectAttempt, cancellationToken).Vhc();
 
         try {
@@ -241,7 +248,7 @@ internal class ConnectorService : IDisposable
         }
 
         _idleConnectionItems.Enqueue(new IdleConnectionItem {
-            IdleConnectionTimeout = IdleConnectionTimeout,
+            IdleConnectionTimeout = _idleConnectionTimeout,
             StreamConnection = streamConnection
         });
     }
@@ -314,7 +321,7 @@ internal class ConnectorService : IDisposable
 
             // Dispose connection factories
             _tcpConnectionFactory.Dispose();
-            _quicConnectionFactory.DisposeAsync().VhBlock();
+            _quicConnectionFactory?.DisposeAsync().VhBlock();
 
             // Prevent reuse of client streams
             PreventReuseChannel();

@@ -8,13 +8,12 @@ namespace VpnHood.Core.Client;
 
 internal static class ChannelProtocolValidator
 {
-    public static ChannelProtocol[] GetChannelProtocols(HelloResponse helloResponse)
+    public static ChannelProtocol[] GetChannelProtocols(HelloResponse helloResponse, bool isQuicSupported)
     {
         var channelProtocols = new List<ChannelProtocol> { ChannelProtocol.Tcp };
         if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= 11 })
             channelProtocols.Add(ChannelProtocol.Udp);
-        if (helloResponse is { QuicPort: > 0 } &&
-            System.Net.Quic.QuicConnection.IsSupported)
+        if (helloResponse is { QuicPort: > 0 } && isQuicSupported)
             channelProtocols.Add(ChannelProtocol.Quic);
 
         return channelProtocols.ToArray();

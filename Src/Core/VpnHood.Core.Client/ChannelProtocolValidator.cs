@@ -13,7 +13,7 @@ internal static class ChannelProtocolValidator
         var channelProtocols = new List<ChannelProtocol> { ChannelProtocol.Tcp };
         if (helloResponse is { UdpPort: > 0, ProtocolVersion: >= 11 })
             channelProtocols.Add(ChannelProtocol.Udp);
-        if (helloResponse is { QuicPort: > 0, ProtocolVersion: >= 13 } &&
+        if (helloResponse is { QuicPort: > 0 } &&
             System.Net.Quic.QuicConnection.IsSupported)
             channelProtocols.Add(ChannelProtocol.Quic);
 

@@ -1,4 +1,5 @@
 using System.Buffers;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.TcpStack;
@@ -7,7 +8,7 @@ namespace VpnHood.Core.TcpStack;
 /// A standard .NET Stream implementation for TCP connections through the local TCP stack.
 /// Provides async read/write operations over TCP connections using System.IO.Pipelines for efficiency.
 /// </summary>
-public sealed class LocalTcpStream : Stream
+public sealed class LocalTcpStream : AsyncStream
 {
     private readonly LocalTcpConnection _connection;
     private readonly LocalTcpStack _stack;
@@ -28,32 +29,7 @@ public sealed class LocalTcpStream : Stream
     public override bool CanWrite => !IsDisposed;
 
     /// <inheritdoc />
-    public override bool CanSeek => false;
-
-    /// <inheritdoc />
-    public override long Length => throw new NotSupportedException();
-
-    /// <inheritdoc />
-    public override long Position
-    {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
-
-    /// <inheritdoc />
-    public override int Read(byte[] buffer, int offset, int count)
-    {
-        throw new NotSupportedException("Read is not supported in synchronous mode. Use ReadAsync instead.");
-    }
-
-    /// <inheritdoc />
-    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-    {
-        return ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
-    }
-
-    /// <inheritdoc />
-    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+    public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
@@ -83,19 +59,7 @@ public sealed class LocalTcpStream : Stream
     }
 
     /// <inheritdoc />
-    public override void Write(byte[] buffer, int offset, int count)
-    {
-        throw new NotSupportedException("Write is not supported in synchronous mode. Use WriteAsync instead.");
-    }
-
-    /// <inheritdoc />
-    public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-    {
-        return WriteAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
-    }
-
-    /// <inheritdoc />
-    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
@@ -112,16 +76,7 @@ public sealed class LocalTcpStream : Stream
     }
 
     /// <inheritdoc />
-    public override void Flush() { }
-
-    /// <inheritdoc />
     public override Task FlushAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    /// <inheritdoc />
-    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-    /// <inheritdoc />
-    public override void SetLength(long value) => throw new NotSupportedException();
 
     /// <inheritdoc />
     protected override void Dispose(bool disposing)
@@ -144,9 +99,9 @@ public sealed class LocalTcpStream : Stream
             return;
 
         // Graceful close: drain buffered app->net bytes into TCP segments before FIN.
-        await VhUtils.TryInvokeAsync("GracefulCloseAsync", 
+        await VhUtils.TryInvokeAsync("GracefulCloseAsync",
             () => _connection.GracefulCloseAsync(_stack)).ConfigureAwait(false);
-        
+
         await _cts.TryCancelAsync();
         _cts.Dispose();
 

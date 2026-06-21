@@ -26,7 +26,6 @@ internal sealed class LocalTcpConnection(
     TcpStackDiagnostics diagnostics)
     : IDisposable
 {
-    private readonly TcpStackDiagnostics _diagnostics = diagnostics;
     // All memory/timeout sizing comes from the stack's validated options (see LocalTcpStackOptions).
     // The values used on the data path below are cached into readonly fields once, here, so the
     // hot path (send/recv/ACK) costs exactly what the old consts did — a field read, no recompute.
@@ -34,7 +33,6 @@ internal sealed class LocalTcpConnection(
     // PERF: advertised TCP receive window. Defaults to 65535; must stay equal to the historical
     // const on Android (default options) to preserve throughput. Fits the 16-bit window field
     // because LocalTcpStackOptions validates ReceiveWindowSize <= 65535 (no window scaling).
-    private readonly ushort _advertisedWindow = (ushort)options.ReceiveWindowSize;
     private readonly long _globalReceiveBudget = options.GlobalReceiveBudget; // aggregate pipe cap across all connections
 
     private readonly TimeSpan _idleTimeout = options.IdleTimeout;
@@ -103,16 +101,16 @@ internal sealed class LocalTcpConnection(
     public ushort AdvertisedWindow {
         get {
             // Per-connection headroom: the configured window minus this connection's unread backlog.
-            var perConnFree = _advertisedWindow - Interlocked.Read(ref _pipeUnread);
+            var perConnFree = field - Interlocked.Read(ref _pipeUnread);
             if (perConnFree <= 0) return 0;
             // Global headroom: the shared budget minus the total backlog across ALL connections. This
             // is what keeps a large per-connection window safe when many flows are active at once.
-            var globalFree = _globalReceiveBudget - _diagnostics.TotalPipeBufferedBytes;
+            var globalFree = _globalReceiveBudget - diagnostics.TotalPipeBufferedBytes;
             var free = perConnFree < globalFree ? perConnFree : globalFree;
             if (free <= 0) return 0;
-            return free >= _advertisedWindow ? _advertisedWindow : (ushort)free;
+            return free >= field ? field : (ushort)free;
         }
-    }
+    } = (ushort)options.ReceiveWindowSize;
 
     public ushort UpdateAdvertisedWindow()
     {
@@ -196,7 +194,7 @@ internal sealed class LocalTcpConnection(
             if (State != TcpConnectionState.SynReceived) return;
             State = TcpConnectionState.Established;
             _establishedCounted = true;
-            _diagnostics.IncrementEstablishedConnections(); // DIAGNOSTIC
+            diagnostics.IncrementEstablishedConnections(); // DIAGNOSTIC
             clientToEnqueue = _pendingClient;
             _pendingClient = null;
         }
@@ -219,7 +217,7 @@ internal sealed class LocalTcpConnection(
     {
         if (_disposed) return;
 
-        long remainingUnread = 0;
+        long remainingUnread;
         lock (_seqLock) {
             if (_disposed) return;
             _disposed = true;
@@ -228,7 +226,7 @@ internal sealed class LocalTcpConnection(
         }
 
         if (remainingUnread > 0) {
-            _diagnostics.AddPipeBufferedBytes(-remainingUnread);
+            diagnostics.AddPipeBufferedBytes(-remainingUnread);
         }
 
         try { _cts.Cancel(); } catch { /* ignore */ }
@@ -507,7 +505,7 @@ internal sealed class LocalTcpConnection(
         var span = _netToAppPipe.Writer.GetSpan(data.Length);
         data.CopyTo(span);
         _netToAppPipe.Writer.Advance(data.Length);
-        _diagnostics.AddPipeBufferedBytes(data.Length); // DIAGNOSTIC: pipe fill
+        diagnostics.AddPipeBufferedBytes(data.Length); // DIAGNOSTIC: pipe fill
 
         // FLOW CONTROL: track the unread backlog so AdvertisedWindow shrinks as the pipe fills. If the
         // effective window is now 0 (this pipe is full OR the shared global budget is exhausted), mark
@@ -543,7 +541,7 @@ internal sealed class LocalTcpConnection(
         }
 
         if (actualConsumed > 0) {
-            _diagnostics.AddPipeBufferedBytes(-actualConsumed);
+            diagnostics.AddPipeBufferedBytes(-actualConsumed);
         }
 
         // Send a window update ACK if:
@@ -746,7 +744,7 @@ internal sealed class LocalTcpConnection(
 
         if (_establishedCounted) {
             _establishedCounted = false;
-            _diagnostics.DecrementEstablishedConnections(); // DIAGNOSTIC
+            diagnostics.DecrementEstablishedConnections(); // DIAGNOSTIC
         }
 
         CompleteNetToApp();

@@ -88,7 +88,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     // Force a full GC + finalizer drain immediately whenever the live heap crosses a low threshold
     // (and periodically otherwise) so the peak stays well below the limit. Native NSObject peers that
     // escaped Dispose are only reclaimed on finalization, so WaitForPendingFinalizers is essential.
-    // (Regression: removed in 9e9e05c80; restored — without it full tunnel jetsams under load while
+    // (Regression: removed in 9e9e05c80; restored — without it full tunnel jetsam under load while
     // the memory-light DNS-only device-split mode did not, which is why it "worked before".)
     private static bool _memoryGuardStarted;
     private static void StartMemoryGuard()

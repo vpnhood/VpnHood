@@ -141,21 +141,18 @@ public class IosDevice : IDevice
         await LoadFromPreferencesAsync(_vpnManager);
 
         // ---- StartVpnTunnel (synchronous call into iOS) ----
-        // The error MUST be inspected: on reconnect StartVpnTunnel commonly returns
-        // NEVPNErrorConfigurationStale (the config was modified since this manager last loaded) or
-        // ...Disabled. Silently ignoring it is why the tunnel never comes back after the first
-        // connect/disconnect cycle. On failure, re-assert+save+reload the config and retry once.
-        if (!TryStartTunnel(out var startError) && startError != null) {
-            VhLogger.Instance.LogWarning(
-                "StartVpnTunnel failed (code={Code}): {Error}. Re-saving config and retrying...",
-                startError.Code, startError.LocalizedDescription);
+        // On failure, re-assert+save+reload the config and retry once; a second failure propagates.
+        try {
+            StartTunnel();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "StartVpnTunnel failed. Re-saving config and retrying...");
 
             _vpnManager.Enabled = true;
             await SaveToPreferencesAsync(_vpnManager);
             await LoadFromPreferencesAsync(_vpnManager);
 
-            if (!TryStartTunnel(out var retryError) && retryError != null)
-                throw new Exception($"StartVpnTunnel retry failed (code={retryError.Code}): {retryError.LocalizedDescription}");
+            StartTunnel();
         }
 
         // ---- Poll NEVpnStatus quickly (10 × 200ms = 2s) ----
@@ -169,18 +166,15 @@ public class IosDevice : IDevice
         }
     }
 
-    // Returns true if StartVpnTunnel was issued without an immediate error.
-    private bool TryStartTunnel(out NSError? error)
+    // Starts the tunnel and surfaces the synchronous out-NSError as a managed exception.
+    // On reconnect StartVpnTunnel commonly reports NEVPNErrorConfigurationStale (the config was
+    // modified since this manager last loaded) or ...Disabled; silently ignoring it is why the
+    // tunnel never comes back after the first connect/disconnect cycle.
+    private void StartTunnel()
     {
-        error = null;
-        try {
-            _vpnManager.Connection.StartVpnTunnel(out error);
-            return error == null;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "StartVpnTunnel threw.");
-            return false;
-        }
+        _vpnManager.Connection.StartVpnTunnel(out var error);
+        if (error != null)
+            throw new NSErrorException(error);
     }
 
     private static Task SaveToPreferencesAsync(NEVpnManager manager)

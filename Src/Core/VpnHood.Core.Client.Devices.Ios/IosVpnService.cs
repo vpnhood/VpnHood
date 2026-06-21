@@ -242,7 +242,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     //   footprint = phys_footprint                          -> the exact number iOS jetsam enforces
     //   gcLive    = GC.GetTotalMemory(false)                -> live managed objects
     //   gcHeap    = GC.GetGCMemoryInfo().HeapSizeBytes      -> managed heap incl. committed-but-free
-    //                                                          (may be 0 if unsupported on MonoVM)
+    //                                                          (maybe 0 if unsupported on MonoVM)
     //   native    = footprint - max(gcLive, gcHeap)         -> EVERYTHING not in the managed heap:
     //                                                          NSObject peers, socket/TLS buffers,
     //                                                          kernel-charged rcv buffers, code, stacks

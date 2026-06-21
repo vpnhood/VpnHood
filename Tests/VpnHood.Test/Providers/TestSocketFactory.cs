@@ -2,7 +2,4 @@
 
 namespace VpnHood.Test.Providers;
 
-public class TestSocketFactory() : SystemSocketFactory
-{
-
-}
+public class TestSocketFactory() : SystemSocketFactory;

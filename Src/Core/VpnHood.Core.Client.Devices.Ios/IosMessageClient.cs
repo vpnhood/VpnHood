@@ -72,25 +72,24 @@ internal sealed class IosMessageClient(NETunnelProviderManager vpnManager) : IMe
             return _session = ownSession;
 
         // 3. App relaunched while the extension kept running: find the live saved session.
-        NSArray? managersArray = null;
-        try { managersArray = await NETunnelProviderManager.LoadAllFromPreferencesAsync(); }
-        catch { /* ignore */ }
-
-        var session = managersArray == null
-            ? null
-            : NSArray.FromArray<NETunnelProviderManager>(managersArray)
-                .Select(m => m.Connection as NETunnelProviderSession)
-                .FirstOrDefault(IsLive);
-
-        if (session != null)
-            return _session = session;
-
-        // No live session. Do NOT fall back to a Disconnected/Invalid session: messaging one can wake
-        // a dead extension or return stale data (the false-"Connected"-at-launch bug). Fail fast so the
-        // manager transitions to Disposed/None on the next poll.
-        _session = null;
-        throw new VpnServiceUnreachableException("VpnService is unreachable.",
-            new InvalidOperationException("No live NETunnelProviderSession is available."));
+        // Do NOT fall back to a Disconnected/Invalid session: messaging one can wake a dead extension
+        // or return stale data (the false-"Connected"-at-launch bug). Fail fast so the manager
+        // transitions to Disposed/None on the next poll.
+        try {
+            var managersArray = await NETunnelProviderManager.LoadAllFromPreferencesAsync();
+            var liveSessions = managersArray.ToArray<NETunnelProviderManager>()
+                .Select(m => m?.Connection as NETunnelProviderSession)
+                .Where(IsLive);
+                
+            var liveSession = liveSessions.FirstOrDefault() 
+                ?? throw new VpnServiceUnreachableException("VpnService is unreachable. No live provider sessions found.");
+              
+            return liveSession; 
+        }
+        catch (Exception ex) {
+            _session = null;
+            throw new VpnServiceUnreachableException("VpnService is unreachable.", ex);
+        }
     }
 
     public void Dispose()

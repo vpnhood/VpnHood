@@ -31,9 +31,9 @@ public class IosVpnAdapter(
     // pump threads concurrently, so concurrent WritePacket calls raced on these shared fields and handed
     // a disposed/garbled NSData to NEPacketTunnelFlow.WritePackets -> uncaught NSInvalidArgumentException
     // -> SIGABRT (extension dies at ANY memory level, not jetsam). Serialize the entire native write.
-    private readonly object _writeLock = new();
+    private readonly Lock _writeLock = new();
     // Reused single-element argument arrays for WritePackets (safe under _writeLock); WritePackets copies
-    // synchronously, so reusing these avoids allocating two managed arrays per packet.
+    // synchronously, so reusing this avoids allocating two managed arrays per packet.
     private readonly NSData[] _writeDataArray = new NSData[1];
     private readonly NSNumber[] _writeProtoArray = new NSNumber[1];
 
@@ -79,7 +79,7 @@ public class IosVpnAdapter(
         // so no routes are ever installed and no traffic enters the tunnel.
         // It is only informational for packet tunnels, so we prefer the real server IP
         // (from the protocol configuration) and fall back to a valid placeholder.
-        var serverAddress = ServerIp?.ToString() ?? tunnelProvider.ProtocolConfiguration?.ServerAddress;
+        var serverAddress = ServerIp?.ToString() ?? tunnelProvider.ProtocolConfiguration.ServerAddress;
         var remoteAddress = ServerIp ?? IPAddress.Parse("192.0.2.1");
         if (serverAddress != null && IPAddress.TryParse(serverAddress, out var parsedAddress))
             remoteAddress = parsedAddress;
@@ -124,10 +124,12 @@ public class IosVpnAdapter(
                 ? _ipv6Routes
                 : new List<IpNetwork> { IpNetwork.AllV6, IpNetwork.AllGlobalUnicastV6}.Concat(_ipv6Routes);
             
+            // ReSharper disable once PossibleMultipleEnumeration
             settings.IPv6Settings.IncludedRoutes = includes
                 .Select(r => new NEIPv6Route(r.Prefix.ToString(), r.PrefixLength))
                 .ToArray();
            
+            // ReSharper disable once PossibleMultipleEnumeration
             VhLogger.Instance.LogDebug("iOS: Configured IPv6 with {Count} routes (including injected default ::/0) and link-local exclusion.", includes.Count());
         }
 
@@ -147,24 +149,24 @@ public class IosVpnAdapter(
             var exc4 = settings.IPv4Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
             var inc6 = settings.IPv6Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
             var exc6 = settings.IPv6Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
-            File.WriteAllText(Path.Combine(docs, "ext-route-dump.txt"),
+            await File.WriteAllTextAsync(Path.Combine(docs, "ext-route-dump.txt"),
                 $"AdapterOpen at {DateTime.UtcNow:O}\n" +
                 $"remoteAddress(ServerAddress)={remoteAddress}\n" +
                 $"mtu={_mtu}\n" +
-                $"v4 addrs({_ipv4Networks.Count}): {string.Join(", ", _ipv4Networks.Select(n => n.ToString()))}\n" +
+                $"v4 address({_ipv4Networks.Count}): {string.Join(", ", _ipv4Networks.Select(n => n.ToString()))}\n" +
                 $"v4 routes-from-core({_ipv4Routes.Count}): {string.Join(", ", _ipv4Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
                 $"v4 INCLUDED-applied: {string.Join(", ", inc4)}\n" +
                 $"v4 EXCLUDED-applied: {string.Join(", ", exc4)}\n" +
-                $"v6 addrs({_ipv6Networks.Count}): {string.Join(", ", _ipv6Networks.Select(n => n.ToString()))}\n" +
+                $"v6 address({_ipv6Networks.Count}): {string.Join(", ", _ipv6Networks.Select(n => n.ToString()))}\n" +
                 $"v6 routes-from-core({_ipv6Routes.Count}): {string.Join(", ", _ipv6Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
                 $"v6 INCLUDED-applied: {string.Join(", ", inc6)}\n" +
                 $"v6 EXCLUDED-applied: {string.Join(", ", exc6)}\n" +
-                $"dns({_dnsServers.Count}): {string.Join(", ", _dnsServers.Select(d => d.ToString()))}\n");
+                $"dns({_dnsServers.Count}): {string.Join(", ", _dnsServers.Select(d => d.ToString()))}\n", cancellationToken);
         }
         catch { /* best-effort */ }
 
         // CRITICAL: apply the network settings to iOS. Without this call the tunnel never
-        // installs its routes, the OS-level utun is never brought up (no VPN status-bar
+        // installs its routes, the OS-level tun is never brought up (no VPN status-bar
         // indicator), and NO traffic enters the tunnel — the client connects to the server
         // but every flow stays on the physical interface. (Regression: this call was
         // accidentally removed together with the route-dump probe in 97567f379.)
@@ -274,7 +276,7 @@ public class IosVpnAdapter(
         lock (_writeLock) {
             // CRITICAL (memory): WritePackets marshals the [data]/[protocolFamily] managed arrays
             // into temporary native NSArrays and NSData.FromArray creates internal native
-            // temporaries — all AUTORELEASED. This runs on a background packet thread whose
+            // temporaries — all AUTORELEASE. This runs on a background packet thread whose
             // autorelease pool is never drained by a run loop, so without our own pool those
             // native temporaries accumulate across thousands of packets and push the extension
             // past the ~50 MB jetsam limit (slow leak: ~50 MB after ~9000 writes). Drain per packet.
@@ -330,7 +332,7 @@ public class IosVpnAdapter(
         if (flow == null)
             return;
 
-        // Drain native autoreleased temporaries created while parsing this batch so they do
+        // Drain native autorelease temporaries created while parsing this batch so they do
         // not accumulate and push the extension past the ~50 MB jetsam limit.
         using (var pool = new NSAutoreleasePool())
         {

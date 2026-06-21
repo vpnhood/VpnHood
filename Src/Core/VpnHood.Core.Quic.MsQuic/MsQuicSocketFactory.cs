@@ -1,8 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
+using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Sockets;
 
-namespace VpnHood.Core.Quic.Abstractions.MsQuic;
+namespace VpnHood.Core.Quic.MsQuic;
 
 /// <summary>
 /// An <see cref="ISocketFactory"/> decorator that adds MsQuic-based QUIC client support on platforms

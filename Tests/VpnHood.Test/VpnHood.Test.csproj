@@ -30,7 +30,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\Src\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
-		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Quic.Abstractions.MsQuic\VpnHood.Core.Quic.Abstractions.MsQuic.csproj" />
+		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Quic.MsQuic\VpnHood.Core.Quic.MsQuic.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server.Access.FileAccessManager\VpnHood.Core.Server.Access.FileAccessManager.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Server\VpnHood.Core.Server.csproj" />
 		<ProjectReference Include="..\..\Src\Core\VpnHood.Core.Client.Devices.Win\VpnHood.Core.Client.Devices.Win.csproj" />

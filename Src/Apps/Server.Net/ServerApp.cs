@@ -10,7 +10,7 @@ using VpnHood.App.Server.Providers.Linux;
 using VpnHood.App.Server.Providers.Win;
 using VpnHood.Core.Common;
 using VpnHood.Core.Common.Exceptions;
-using VpnHood.Core.Quic.Abstractions.MsQuic;
+using VpnHood.Core.Quic.MsQuic;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
 using VpnHood.Core.Server.Access.Managers;

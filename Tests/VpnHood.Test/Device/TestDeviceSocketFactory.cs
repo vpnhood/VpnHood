@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Quic.Abstractions.MsQuic;
+using VpnHood.Core.Quic.MsQuic;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Tunneling.Sockets;
 

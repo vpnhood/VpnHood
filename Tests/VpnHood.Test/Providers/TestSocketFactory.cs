@@ -1,4 +1,4 @@
-using VpnHood.Core.Quic.Abstractions.MsQuic;
+using VpnHood.Core.Quic.MsQuic;
 using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Test.Providers;

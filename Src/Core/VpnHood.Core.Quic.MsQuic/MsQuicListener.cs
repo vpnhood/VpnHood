@@ -1,8 +1,9 @@
 using System.Net;
 using System.Net.Quic;
+using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Quic.Abstractions.MsQuic;
+namespace VpnHood.Core.Quic.MsQuic;
 
 internal sealed class MsQuicListener(QuicListener listener) : IQuicListener
 {

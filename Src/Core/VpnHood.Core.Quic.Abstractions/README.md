@@ -30,7 +30,7 @@ default stream/close error codes `0`, and `QuicStreamType.Bidirectional`.
 
 ## How it is wired into VpnHood
 
-The concrete implementation lives in **`VpnHood.Core.Quic.Abstractions.MsQuic`** (`MsQuicClient`,
+The concrete implementation lives in **`VpnHood.Core.Quic.MsQuic`** (`MsQuicClient`,
 `MsQuicServer`, `MsQuicConnection`, `MsQuicListener`, `MsQuicSocketFactory`). It owns the
 `Microsoft.Native.Quic.MsQuic.OpenSSL` native package. `MsQuicClient.IsSupported` /
 `MsQuicServer.IsSupported` report platform availability.

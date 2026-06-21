@@ -37,7 +37,7 @@
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
     <ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
-    <ProjectReference Include="..\VpnHood.Core.Quic.Abstractions.MsQuic\VpnHood.Core.Quic.Abstractions.MsQuic.csproj" />
+    <ProjectReference Include="..\VpnHood.Core.Quic.MsQuic\VpnHood.Core.Quic.MsQuic.csproj" />
     <ProjectReference Include="..\VpnHood.Core.VpnAdapters.LinuxTun\VpnHood.Core.VpnAdapters.LinuxTun.csproj" />
   </ItemGroup>
 

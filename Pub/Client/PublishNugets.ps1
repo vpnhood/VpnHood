@@ -9,7 +9,7 @@ $bump = $bump -eq "1";
 # generic
 & "$solutionDir/Src/Core/VpnHood.Core.Toolkit/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.Quic.Abstractions/_publish.ps1";
-& "$solutionDir/Src/Core/VpnHood.Core.Quic.Abstractions.MsQuic/_publish.ps1";
+& "$solutionDir/Src/Core/VpnHood.Core.Quic.MsQuic/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.Packets/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.TcpStack.Abstractions/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.TcpStack./_publish.ps1";

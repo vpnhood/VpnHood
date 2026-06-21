@@ -16,6 +16,7 @@
   </Folder>
   <Folder Name="/Pub/Client/">
     <File Path="Pub/Client/Publish.ps1" />
+    <File Path="Pub/Client/PublishNugets.ps1" />
     <File Path="Pub/Client/PublishToGithub.ps1" />
   </Folder>
   <Folder Name="/Pub/Connect/">
@@ -125,7 +126,7 @@
     <Project Path="Src/Core/VpnHood.Core.Proxies.EndPointManagement.Abstractions/VpnHood.Core.Proxies.EndPointManagement.Abstractions.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Proxies.EndPointManagement/VpnHood.Core.Proxies.EndPointManagement.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Quic.Abstractions/VpnHood.Core.Quic.Abstractions.csproj" />
-    <Project Path="Src/Core/VpnHood.Core.Quic.Abstractions.MsQuic/VpnHood.Core.Quic.Abstractions.MsQuic.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Quic.MsQuic/VpnHood.Core.Quic.MsQuic.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Server.Access.FileAccessManager/VpnHood.Core.Server.Access.FileAccessManager.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Server.Access/VpnHood.Core.Server.Access.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj" />

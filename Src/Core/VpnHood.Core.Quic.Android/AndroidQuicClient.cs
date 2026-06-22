@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Quic;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Quic.Droid.Interop;
+using VpnHood.Core.Toolkit.Utils;
 using static Microsoft.Quic.MsQuic;
 
 namespace VpnHood.Core.Quic.Droid;
@@ -31,14 +32,14 @@ public sealed class AndroidQuicClient : IQuicClient
         var reg = cancellationToken.Register(
             static s => ((AndroidQuicConnectionState)s!).Connected.TrySetCanceled(), state);
         try {
-            await state.Connected.Task.ConfigureAwait(false);
+            await state.Connected.Task.Vhc();
         }
         catch {
             CloseHandles(conn, config, gch);
             throw;
         }
         finally {
-            await reg.DisposeAsync().ConfigureAwait(false);
+            await reg.DisposeAsync().Vhc();
         }
 
         return CreateConnection(conn, config, gch, state, options.RemoteEndPoint);

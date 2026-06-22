@@ -14,7 +14,7 @@ namespace VpnHood.Core.Quic.Ios;
 /// </remarks>
 internal sealed class IosQuicStream(NWConnection connection) : Stream
 {
-    private int _disposed;
+    private bool _disposed;
 
     public override bool CanRead => true;
     public override bool CanWrite => true;
@@ -79,7 +79,10 @@ internal sealed class IosQuicStream(NWConnection connection) : Stream
 
     protected override void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 0 && disposing) {
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
+        if (disposing) {
             try { connection.Cancel(); } catch { /* ignore */ }
             connection.Dispose();
         }

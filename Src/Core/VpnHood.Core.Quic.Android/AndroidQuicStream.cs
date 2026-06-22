@@ -21,7 +21,7 @@ internal sealed class AndroidQuicStream : Stream
     private GCHandle _gch;
     private readonly Pipe _recvPipe = new(new PipeOptions(useSynchronizationContext: false));
     private readonly ConcurrentDictionary<IntPtr, TaskCompletionSource> _pendingSends = new();
-    private int _disposed;
+    private bool _disposed;
 
     private AndroidQuicStream() { }
 
@@ -191,17 +191,18 @@ internal sealed class AndroidQuicStream : Stream
 
     protected override unsafe void Dispose(bool disposing)
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 0) {
-            if (_stream != null) {
-                try { MsQuicApi.Table->StreamShutdown(_stream, QUIC_STREAM_SHUTDOWN_FLAGS.GRACEFUL, 0); } catch { /* ignore */ }
-                MsQuicApi.Table->StreamClose(_stream); // blocks until callbacks drained
-                _stream = null;
-            }
-            try { _recvPipe.Writer.Complete(); } catch { /* ignore */ }
-            try { _recvPipe.Reader.Complete(); } catch { /* ignore */ }
-            FailPendingSends();
-            if (_gch.IsAllocated) _gch.Free();
+        if (Interlocked.Exchange(ref _disposed, true))
+            return;
+
+        if (_stream != null) {
+            try { MsQuicApi.Table->StreamShutdown(_stream, QUIC_STREAM_SHUTDOWN_FLAGS.GRACEFUL, 0); } catch { /* ignore */ }
+            MsQuicApi.Table->StreamClose(_stream); // blocks until callbacks drained
+            _stream = null;
         }
+        try { _recvPipe.Writer.Complete(); } catch { /* ignore */ }
+        try { _recvPipe.Reader.Complete(); } catch { /* ignore */ }
+        FailPendingSends();
+        if (_gch.IsAllocated) _gch.Free();
         base.Dispose(disposing);
     }
 }

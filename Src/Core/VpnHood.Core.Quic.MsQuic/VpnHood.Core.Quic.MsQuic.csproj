@@ -39,9 +39,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- VpnHood.Core.Tunneling provides SystemSocketFactory and transitively references
-		     VpnHood.Core.Toolkit / VpnHood.Core.Quic.Abstractions -->
-		<ProjectReference Include="..\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
+		<!-- VpnHood.Core.Toolkit provides SystemSocketFactory and transitively references
+		     VpnHood.Core.Quic.Abstractions -->
+		<ProjectReference Include="..\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
 	</ItemGroup>
 
 </Project>

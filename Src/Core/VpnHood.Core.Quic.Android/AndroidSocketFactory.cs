@@ -1,5 +1,5 @@
 using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Toolkit.Sockets;
 
 namespace VpnHood.Core.Quic.Droid;
 
@@ -9,7 +9,7 @@ namespace VpnHood.Core.Quic.Droid;
 /// System.Net.Quic, whose TLS certificate validation is incompatible with Android's crypto backend.
 /// TCP/UDP creation is inherited from the base factory.
 /// </summary>
-public class AndroidQuicSocketFactory : SystemSocketFactory
+public class AndroidSocketFactory : SystemSocketFactory
 {
     public override bool IsQuicSupported => AndroidQuicClient.IsSupported;
 

@@ -55,8 +55,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- VpnHood.Core.Tunneling provides SystemSocketFactory and transitively Quic.Abstractions / Toolkit. -->
-		<ProjectReference Include="..\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
+		<!-- VpnHood.Core.Toolkit provides SystemSocketFactory and transitively Quic.Abstractions. -->
+		<ProjectReference Include="..\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
 	</ItemGroup>
 
 	<!-- msquic fork's generated C# bindings (compiled into this assembly; types are internal to Microsoft.Quic). -->

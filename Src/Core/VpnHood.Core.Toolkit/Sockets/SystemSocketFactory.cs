@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Toolkit.Sockets;
 
 namespace VpnHood.Core.Toolkit.Sockets;
 

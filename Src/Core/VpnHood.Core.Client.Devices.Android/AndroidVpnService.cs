@@ -77,7 +77,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                     configFolder: VpnServiceConfigFolder,
                     vpnServiceHandler: this,
                     netFilter: null,
-                    socketFactory: new AndroidQuicSocketFactory(),
+                    socketFactory: new AndroidSocketFactory(),
                     messageListener: new TcpMessageListener(VpnServiceConfigFolder));
 
                 if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn))

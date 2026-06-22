@@ -1,5 +1,5 @@
 using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Toolkit.Sockets;
 
 namespace VpnHood.Core.Quic.MsQuic;
 

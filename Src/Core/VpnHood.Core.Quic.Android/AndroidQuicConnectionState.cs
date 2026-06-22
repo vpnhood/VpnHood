@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Security;
 using System.Runtime.InteropServices;
 using System.Threading.Channels;
@@ -12,8 +13,7 @@ internal sealed class AndroidQuicConnectionState
 {
     public readonly TaskCompletionSource Connected = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public readonly TaskCompletionSource Shutdown = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    public readonly Channel<IntPtr> InboundStreams =
-        Channel.CreateUnbounded<IntPtr>(new UnboundedChannelOptions { SingleWriter = true });
+    public readonly Channel<Stream> InboundStreams = Channel.CreateUnbounded<Stream>();
 
     public required RemoteCertificateValidationCallback CertificateValidationCallback { get; init; }
     public required string TargetHost { get; init; }

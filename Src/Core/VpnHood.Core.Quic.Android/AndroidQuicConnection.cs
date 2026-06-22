@@ -23,7 +23,7 @@ internal sealed class AndroidQuicConnection : IQuicConnection
     private unsafe QUIC_HANDLE* _configuration;
     private GCHandle _gch;
     private readonly AndroidQuicConnectionState _state;
-    private int _disposed;
+    private bool _disposed;
 
     public IPEndPoint RemoteEndPoint { get; }
     public IPEndPoint LocalEndPoint { get; }
@@ -162,22 +162,23 @@ internal sealed class AndroidQuicConnection : IQuicConnection
 
     public unsafe ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 0) {
-            _state.InboundStreams.Writer.TryComplete();
-            while (_state.InboundStreams.Reader.TryRead(out var stream)) {
-                try { stream.Dispose(); } catch { /* ignore */ }
-            }
-            if (_connection != null) {
-                try { MsQuicApi.Table->ConnectionShutdown(_connection, QUIC_CONNECTION_SHUTDOWN_FLAGS.NONE, 0); } catch { /* ignore */ }
-                MsQuicApi.Table->ConnectionClose(_connection); // blocks until callbacks drained
-                _connection = null;
-            }
-            if (_configuration != null) {
-                MsQuicApi.Table->ConfigurationClose(_configuration);
-                _configuration = null;
-            }
-            if (_gch.IsAllocated) _gch.Free();
+        if (Interlocked.Exchange(ref _disposed, true))
+            return ValueTask.CompletedTask;
+
+        _state.InboundStreams.Writer.TryComplete();
+        while (_state.InboundStreams.Reader.TryRead(out var stream)) {
+            try { stream.Dispose(); } catch { /* ignore */ }
         }
+        if (_connection != null) {
+            try { MsQuicApi.Table->ConnectionShutdown(_connection, QUIC_CONNECTION_SHUTDOWN_FLAGS.NONE, 0); } catch { /* ignore */ }
+            MsQuicApi.Table->ConnectionClose(_connection); // blocks until callbacks drained
+            _connection = null;
+        }
+        if (_configuration != null) {
+            MsQuicApi.Table->ConfigurationClose(_configuration);
+            _configuration = null;
+        }
+        if (_gch.IsAllocated) _gch.Free();
         return ValueTask.CompletedTask;
     }
 }

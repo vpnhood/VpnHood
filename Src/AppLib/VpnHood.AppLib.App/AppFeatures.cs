@@ -1,5 +1,4 @@
-﻿using System.Net.Quic;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Converters;
 
@@ -18,6 +17,7 @@ public class AppFeatures
     public required bool IsAccountSupported { get; init; }
     public required bool IsBillingSupported { get; init; }
     public required bool IsTcpProxySupported { get; init; }
+    public required bool IsQuicSupported { get; init; }
     public required bool IsSplitDomainSupported { get; init; }
     public required bool IsUserReviewSupported { get; init; }
     public required bool IsTv { get; init; }
@@ -32,15 +32,7 @@ public class AppFeatures
     public required bool IsAdSupported { get; set; }
     public required int? WebUiPort { get; set; }
     public required AppFeature[] PremiumFeatures { get; init; }
-    public IReadOnlyList<ChannelProtocol> ChannelProtocols {
-        get {
-            var protocols = new List<ChannelProtocol> { ChannelProtocol.Tcp, ChannelProtocol.Udp };
-            if (QuicConnection.IsSupported)
-                protocols.Add(ChannelProtocol.Quic);
-            return protocols.ToArray(); 
-        }
-    }
-
+    public required IReadOnlyList<ChannelProtocol> ChannelProtocols { get; init; }
     public required object? CustomData { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]

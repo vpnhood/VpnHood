@@ -1,5 +1,6 @@
 ﻿using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
+using VpnHood.Core.Quic.MsQuic;
 
 namespace VpnHood.Core.Client.Devices.Linux;
 
@@ -12,6 +13,7 @@ public class LinuxDevice(string storageFolder) : IDevice
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsTcpProxySupported => true;
+    public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsTv => false;
 
     public DeviceMemInfo MemInfo {

@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 using CoreFoundation;
 using Network;
+using ObjCRuntime;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -27,7 +28,14 @@ public sealed class IosQuicClient : IQuicClient
         // QUIC parameters: ALPN "h3" (the desktop uses SslApplicationProtocol.Http3 purely as the ALPN
         // token — our QUIC is a custom transport, not HTTP/3) and the pinned-certificate verify bridge.
         var parameters = NWParameters.CreateQuic(quicOptions => {
-            var quic = (NWProtocolQuicOptions)quicOptions;
+            // The .NET Network binding types this callback's argument as the base NWProtocolOptions even
+            // though the underlying native object is a QUIC options block. A direct C# cast to
+            // NWProtocolQuicOptions throws InvalidCastException (the managed wrapper is literally
+            // NWProtocolOptions) — which, thrown on this native trampoline thread, SIGABRTs the process.
+            // Re-wrap the SAME native handle as NWProtocolQuicOptions (owns:false — the parameters own
+            // the native object); setters then mutate the real options block used by the connection.
+            var quic = Runtime.GetINativeObject<NWProtocolQuicOptions>(quicOptions.Handle, owns: false)
+                ?? throw new IOException("Failed to access QUIC protocol options.");
             quic.AddTlsApplicationProtocol("h3");
             quic.InitialMaxStreamsBidirectional = (ulong)options.MaxInboundBidirectionalStreams;
             IosQuicTls.Configure(quic.SecProtocolOptions, options.TargetHost,

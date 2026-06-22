@@ -35,7 +35,7 @@ public class AppFeatures
     public IReadOnlyList<ChannelProtocol> ChannelProtocols {
         get {
             var protocols = new List<ChannelProtocol> { ChannelProtocol.Tcp, ChannelProtocol.Udp };
-            if (QuicConnection.IsSupported)
+            //if (QuicConnection.IsSupported) //todp
                 protocols.Add(ChannelProtocol.Quic);
             return protocols.ToArray(); 
         }

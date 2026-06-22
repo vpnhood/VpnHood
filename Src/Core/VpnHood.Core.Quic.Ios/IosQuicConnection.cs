@@ -1,7 +1,9 @@
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading.Channels;
 using CoreFoundation;
 using Network;
+using ObjCRuntime;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -32,12 +34,18 @@ internal sealed class IosQuicConnection(
 
     public async ValueTask<Stream> OpenOutboundStreamAsync(CancellationToken cancellationToken)
     {
-        // Open a new bidirectional outgoing stream over the existing QUIC tunnel.
-        // NOTE (verify on-device): for a multiplex group, a null endpoint asks Network.framework to
-        // create a brand-new stream over the group's tunnel; we pass the tunnel endpoint + fresh quic
-        // options. If extraction returns null, the tunnel is no longer able to open streams.
-        var streamOptions = new NWProtocolQuicOptions { StreamIsUnidirectional = false };
-        var stream = connectionGroup.ExtractConnection(endpoint, streamOptions)
+        // Open a new bidirectional outgoing stream over the existing QUIC tunnel. For a multiplex group a
+        // NULL endpoint tells Network.framework to create a brand-new stream over the group's existing
+        // tunnel (this is what Swift's NWConnection(from: group) does). The managed
+        // NWConnectionGroup.ExtractConnection NREs on a null endpoint and fails with a generic NWError on
+        // Start() when given the tunnel endpoint, so call the native function directly with NULL.
+        // Pass NULL endpoint AND NULL protocol options: this is exactly Swift's NWConnection(from: group),
+        // which extracts a new bidirectional stream that inherits the group's tunnel + QUIC options. A
+        // fresh NWProtocolQuicOptions instead makes the extracted connection try to stand up its own
+        // transport and Start() fails with ENETDOWN (Posix 50).
+        var streamHandle = nw_connection_group_extract_connection(
+            (IntPtr)connectionGroup.GetCheckedHandle(), IntPtr.Zero, IntPtr.Zero);
+        var stream = Runtime.GetINativeObject<NWConnection>(streamHandle, owns: true)
             ?? throw new IOException("Failed to open a new QUIC stream over the tunnel.");
 
         return await StartStreamAsync(stream, cancellationToken).Vhc();
@@ -66,7 +74,8 @@ internal sealed class IosQuicConnection(
                         break;
                     case NWConnectionState.Failed:
                     case NWConnectionState.Cancelled:
-                        tcs.TrySetException(new IOException($"QUIC stream failed to start: {error}"));
+                        tcs.TrySetException(new IOException(
+                            $"QUIC stream failed to start: state={state} domain={error?.ErrorDomain} code={error?.ErrorCode}"));
                         break;
                 }
             });
@@ -83,6 +92,13 @@ internal sealed class IosQuicConnection(
             throw;
         }
     }
+
+    // Native Network.framework entry point. The managed NWConnectionGroup.ExtractConnection binding
+    // requires a non-null endpoint (it dereferences it), but opening a new QUIC stream over a multiplex
+    // group requires a NULL endpoint. Returns a +1-retained nw_connection_t (owns:true on wrap).
+    [DllImport("/System/Library/Frameworks/Network.framework/Network")]
+    private static extern IntPtr nw_connection_group_extract_connection(
+        IntPtr group, IntPtr endpoint, IntPtr protocolOptions);
 
     public ValueTask DisposeAsync()
     {

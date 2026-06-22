@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace VpnHood.Core.TcpStack;
 
 /// <summary>

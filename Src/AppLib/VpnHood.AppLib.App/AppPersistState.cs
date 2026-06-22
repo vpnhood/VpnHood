@@ -9,11 +9,11 @@ internal class AppPersistState(string filePath)
 {
     private readonly Lock _saveLock = new();
     // defer reading state.json until the persisted state is first accessed
-    private readonly Lazy<Data> _lazyData =
-        new(() => JsonUtils.TryDeserializeFile<Data>(filePath) ?? new Data());
-    private Data _data => _lazyData.Value;
+    private readonly Lazy<PersistData> _lazyData =
+        new(() => JsonUtils.TryDeserializeFile<PersistData>(filePath) ?? new PersistData());
+    private PersistData Data => _lazyData.Value;
 
-    private class Data
+    private class PersistData
     {
         public ApiError? LastError { get; set; }
         public ApiError? LastClearedError { get; set; }
@@ -24,66 +24,66 @@ internal class AppPersistState(string filePath)
     }
 
     public int SuccessfulConnectionsCount {
-        get => _data.SuccessfulConnectionsCount;
+        get => Data.SuccessfulConnectionsCount;
         set {
-            if (_data.SuccessfulConnectionsCount == value)
+            if (Data.SuccessfulConnectionsCount == value)
                 return;
-            _data.SuccessfulConnectionsCount = value;
+            Data.SuccessfulConnectionsCount = value;
             Save();
         }
     }
 
     public ApiError? LastError {
-        get => _data.LastError;
+        get => Data.LastError;
         set {
-            if (Equals(_data.LastError, value))
+            if (Equals(Data.LastError, value))
                 return;
 
-            _data.LastError = value;
+            Data.LastError = value;
             Save();
         }
     }
 
     public ApiError? LastClearedError {
-        get => _data.LastClearedError;
+        get => Data.LastClearedError;
         set {
-            if (Equals(_data.LastClearedError, value))
+            if (Equals(Data.LastClearedError, value))
                 return;
 
-            _data.LastClearedError = value;
+            Data.LastClearedError = value;
             Save();
         }
     }
 
     public bool HasDiagnoseRequested {
-        get => _data.HasDiagnoseRequested;
+        get => Data.HasDiagnoseRequested;
         set {
             if (HasDiagnoseRequested == value)
                 return;
 
-            _data.HasDiagnoseRequested = value;
+            Data.HasDiagnoseRequested = value;
             Save();
         }
     }
 
     public DateTime UpdateIgnoreTime {
-        get => _data.UpdateIgnoreTime;
+        get => Data.UpdateIgnoreTime;
         set {
-            if (_data.UpdateIgnoreTime == value)
+            if (Data.UpdateIgnoreTime == value)
                 return;
 
-            _data.UpdateIgnoreTime = value;
+            Data.UpdateIgnoreTime = value;
             Save();
         }
     }
 
     public DateTime? ConnectRequestTime {
-        get => _data.ConnectRequestTime;
+        get => Data.ConnectRequestTime;
         set {
-            if (_data.ConnectRequestTime == value)
+            if (Data.ConnectRequestTime == value)
                 return;
 
-            _data.ConnectRequestTime = value;
+            Data.ConnectRequestTime = value;
             Save();
         }
     }
@@ -100,7 +100,7 @@ internal class AppPersistState(string filePath)
             if (string.IsNullOrEmpty(filePath))
                 return; // loading
 
-            var json = JsonSerializer.Serialize(_data, new JsonSerializerOptions { WriteIndented = true });
+            var json = JsonSerializer.Serialize(Data, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(filePath, json, Encoding.UTF8);
         }
     }

@@ -1,5 +1,3 @@
-using Foundation;
-
 namespace VpnHood.Core.VpnAdapters.IosTun.Utils;
 
 public static class ExceptionExtensions

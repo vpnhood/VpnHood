@@ -1,10 +1,10 @@
 using System.Runtime.InteropServices;
-using Foundation;
 using NetworkExtension;
 using ObjCRuntime;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Client.VpnServices.Host;
+using VpnHood.Core.Quic.Ios;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
@@ -146,7 +146,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // Kick off heavy VpnHood init off the main thread.
         _ = Task.Run(() => {
             try {
-                var sf = new SystemSocketFactory();
+                var sf = new IosQuicSocketFactory(new SystemSocketFactory());
                 _vpnServiceHost = new VpnServiceHost(configFolder, this, sf,
                     netFilter: null, withLogger: false, messageListener: _messageListener);
                 _ = _vpnServiceHost.TryConnect(true);
@@ -254,7 +254,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     // is a buffer high-water mark.
     [DllImport("__Internal")] private static extern int task_info(uint task, int flavor, byte[] taskInfo, ref uint count);
     [DllImport("__Internal")] private static extern uint mach_task_self();
-    private const int TASK_VM_INFO = 22;          // mach/task_info.h flavor
+    private const int TaskVmInfo = 22;          // mach/task_info.h flavor
     // task_vm_info_data_t field byte offsets (arm64). phys_footprint @144 is verified on-device.
     private const int InternalOffset = 48;        // anonymous dirty memory: malloc, GC heap, thread stacks, buffers
     private const int ExternalOffset = 64;        // file-backed: code/dylibs/AOT — NOT counted in phys_footprint
@@ -268,7 +268,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         info = default;
         var buffer = new byte[512];
         var count = (uint)(buffer.Length / 4);
-        if (task_info(mach_task_self(), TASK_VM_INFO, buffer, ref count) != 0)
+        if (task_info(mach_task_self(), TaskVmInfo, buffer, ref count) != 0)
             return false;
         info.Footprint = BitConverter.ToInt64(buffer, PhysFootprintOffset);
         info.Internal = BitConverter.ToInt64(buffer, InternalOffset);
@@ -321,7 +321,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                             var upMb = Interlocked.Read(ref IosVpnAdapter.OutboundBytes) / mib;
                             // TCP-stack diagnostics: concurrent connections + bytes parked in the
                             // reassembly pipes + the active small-buffer profile.
-                            var diag = VpnHood.Core.TcpStack.LocalTcpStack.ActiveDiagnostics;
+                            var diag = TcpStack.LocalTcpStack.ActiveDiagnostics;
                             var pipeBuf = (diag?.TotalPipeBufferedBytes ?? 0) / mib;
                             var conn = diag?.ConnectionCount ?? 0;
                             var peakConn = diag?.PeakConnectionCount ?? 0;

@@ -18,6 +18,7 @@ public sealed class MsQuicClient : IQuicClient
             RemoteEndPoint = options.RemoteEndPoint,
             DefaultStreamErrorCode = 0,
             DefaultCloseErrorCode = 0,
+            MaxInboundBidirectionalStreams = options.MaxInboundBidirectionalStreams,
             ClientAuthenticationOptions = new SslClientAuthenticationOptions {
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                 ApplicationProtocols = [SslApplicationProtocol.Http3],

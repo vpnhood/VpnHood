@@ -1,5 +1,3 @@
-using Foundation;
-
 namespace VpnHood.Core.VpnAdapters.IosTun.Utils;
 
 // Converts iOS native callback APIs (completion handlers) into awaitable Tasks.

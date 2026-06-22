@@ -30,10 +30,15 @@ default stream/close error codes `0`, and `QuicStreamType.Bidirectional`.
 
 ## How it is wired into VpnHood
 
-The concrete implementation lives in **`VpnHood.Core.Quic.MsQuic`** (`MsQuicClient`,
-`MsQuicServer`, `MsQuicConnection`, `MsQuicListener`, `MsQuicSocketFactory`). It owns the
-`Microsoft.Native.Quic.MsQuic.OpenSSL` native package. `MsQuicClient.IsSupported` /
-`MsQuicServer.IsSupported` report platform availability.
+Implementations:
+
+- **`VpnHood.Core.Quic.MsQuic`** (Windows / Linux) — `MsQuicClient`, `MsQuicServer`,
+  `MsQuicConnection`, `MsQuicListener`, `MsQuicSocketFactory`. Owns the
+  `Microsoft.Native.Quic.MsQuic.OpenSSL` native package. `MsQuicClient.IsSupported` /
+  `MsQuicServer.IsSupported` report platform availability. Client **and** server.
+- **`VpnHood.Core.Quic.Ios`** (iOS 15+) — `IosQuicClient`, `IosQuicConnection`, `IosQuicStream`,
+  `IosQuicSocketFactory`, built on Apple's Network.framework (`NWMultiplexGroup` /
+  `NWConnectionGroup` / `NWProtocolQuicOptions`). **Client only** (iOS is never a server).
 
 ### Client — through `ISocketFactory`
 `ISocketFactory` (in `VpnHood.Core.Toolkit`) exposes QUIC capability:
@@ -46,7 +51,8 @@ IQuicClient CreateQuicClient(); // throws NotSupportedException when !IsQuicSupp
 The per-platform `VpnService` picks the socket factory, which is the seam that decides QUIC support:
 
 - Windows / Linux `VpnService` → `new MsQuicSocketFactory(new SystemSocketFactory())` (QUIC enabled).
-- Android / iOS `VpnService` → plain `new SystemSocketFactory()` (`IsQuicSupported == false`) until a
+- iOS `VpnService` → `new IosQuicSocketFactory(new SystemSocketFactory())` (QUIC enabled, iOS 15+).
+- Android `VpnService` → plain `new SystemSocketFactory()` (`IsQuicSupported == false`) until a
   native implementation exists.
 
 The socket factory flows `VpnService → VpnHoodClient → ConnectorService`, where
@@ -59,11 +65,13 @@ The server QUIC listener provider is passed explicitly (not via `ISocketFactory`
 `ServerOptions.QuicServer` → `VpnHoodServer` → `ServerHost` → `QuicListenerHost`. `ServerApp` sets it
 to `MsQuicServer.IsSupported ? new MsQuicServer() : null`.
 
-## Adding an iOS / Android implementation later
+## Adding the Android implementation later
 
-1. Implement `IQuicClient` + `IQuicConnection` (and `IQuicServer`/`IQuicListener` if a server is ever
-   needed) backed by the platform's native QUIC — likely P/Invoke to a self-built `libmsquic`, since
-   `System.Net.Quic` is unavailable there.
+iOS is done via Network.framework (see `VpnHood.Core.Quic.Ios`). Android is the remaining gap —
+`System.Net.Quic`/MsQuic is unsupported there.
+
+1. Implement `IQuicClient` + `IQuicConnection` backed by a native QUIC library — e.g. P/Invoke to a
+   self-built `libmsquic.so`, or a JNI binding to a Java/Kotlin QUIC library.
 2. Expose it through an `ISocketFactory` whose `IsQuicSupported` is `true` and whose `CreateQuicClient()`
    returns your `IQuicClient`.
 3. Have that platform's `VpnService` construct/use that socket factory instead of `SystemSocketFactory`.

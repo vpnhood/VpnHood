@@ -1,0 +1,106 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Android implementation of the VpnHood QUIC abstractions. Drives MsQuic (libmsquic.so) directly via P/Invoke bindings (no System.Net.Quic), validating the peer certificate against VpnHood's pinned hash.</Description>
+		<TargetFramework>net10.0-android36.1</TargetFramework>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+		<!-- "Droid" (not "Android") avoids clashing with the Android SDK's global "Android" namespace,
+		     matching VpnHood.Core.Client.Devices.Android (RootNamespace VpnHood.Core.Client.Devices.Droid). -->
+		<RootNamespace>VpnHood.Core.Quic.Droid</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<!-- Suppress warnings from the generated msquic C# bindings (compiled in below). -->
+		<NoWarn>$(NoWarn);CS8632;CS0169;CS0649;CS0414;IDE0073;SYSLIB0057</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<PathMap>$(SolutionDir)=.</PathMap>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>8.0.821</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
+
+	<!-- The sibling VpnHood.Core.Quic.MsQuic.AndroidNative repo provides BOTH the native libmsquic.so
+	     (built artifacts) AND the msquic C# P/Invoke bindings (src/cs/lib). Both are required to build
+	     Android QUIC. The native libmsquic.so is large and externally built: it is copied into the
+	     git-ignored native\ folder at build time and must NEVER be committed. -->
+	<PropertyGroup>
+		<MsQuicAndroidRepo>$(MSBuildThisFileDirectory)..\..\..\..\VpnHood.Core.Quic.MsQuic.AndroidNative</MsQuicAndroidRepo>
+		<MsQuicBindingDir>$(MsQuicAndroidRepo)\src\cs\lib</MsQuicBindingDir>
+		<MsQuicArtifactsDir>$(MsQuicAndroidRepo)\android\artifacts\android</MsQuicArtifactsDir>
+		<AndroidNativeStageDir>$(MSBuildThisFileDirectory)native</AndroidNativeStageDir>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+		<None Remove="native\**" />
+		<Content Remove="native\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- VpnHood.Core.Tunneling provides SystemSocketFactory and transitively Quic.Abstractions / Toolkit. -->
+		<ProjectReference Include="..\VpnHood.Core.Tunneling\VpnHood.Core.Tunneling.csproj" />
+	</ItemGroup>
+
+	<!-- msquic fork's generated C# bindings (compiled into this assembly; types are internal to Microsoft.Quic). -->
+	<ItemGroup>
+		<Compile Include="$(MsQuicBindingDir)\msquic.cs" Link="MsQuic\msquic.cs" />
+		<Compile Include="$(MsQuicBindingDir)\msquic_generated.cs" Link="MsQuic\msquic_generated.cs" />
+		<Compile Include="$(MsQuicBindingDir)\msquic_generated_windows.cs" Link="MsQuic\msquic_generated_windows.cs" />
+		<Compile Include="$(MsQuicBindingDir)\msquic_generated_linux.cs" Link="MsQuic\msquic_generated_linux.cs" />
+		<Compile Include="$(MsQuicBindingDir)\msquic_generated_macos.cs" Link="MsQuic\msquic_generated_macos.cs" />
+		<Compile Include="$(MsQuicBindingDir)\msquic_extensions.cs" Link="MsQuic\msquic_extensions.cs" />
+		<Compile Include="$(MsQuicBindingDir)\MsQuicException.cs" Link="MsQuic\MsQuicException.cs" />
+	</ItemGroup>
+
+	<!-- Bundle ONLY libmsquic.so per ABI (no OpenSSL libs needed — msquic statically links its own). -->
+	<PropertyGroup>
+		<MsQuicNativeAvailable>false</MsQuicNativeAvailable>
+		<MsQuicNativeAvailable Condition="Exists('$(MsQuicArtifactsDir)\arm64_Release_openssl\libmsquic.so') And Exists('$(MsQuicArtifactsDir)\x64_Release_openssl\libmsquic.so')">true</MsQuicNativeAvailable>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(MsQuicNativeAvailable)'=='true'">
+		<AndroidNativeLibrary Include="$(AndroidNativeStageDir)\arm64-v8a\libmsquic.so">
+			<Abi>arm64-v8a</Abi>
+			<Visible>false</Visible>
+		</AndroidNativeLibrary>
+		<AndroidNativeLibrary Include="$(AndroidNativeStageDir)\x86_64\libmsquic.so">
+			<Abi>x86_64</Abi>
+			<Visible>false</Visible>
+		</AndroidNativeLibrary>
+	</ItemGroup>
+
+	<Target Name="CheckMsQuicBindings" BeforeTargets="BeforeCompile"
+			Condition="!Exists('$(MsQuicBindingDir)\msquic_generated.cs')">
+		<Error Text="msquic C# bindings not found at '$(MsQuicBindingDir)'. The sibling VpnHood.Core.Quic.MsQuic.AndroidNative repo is required to build Android QUIC." />
+	</Target>
+
+	<Target Name="CopyMsQuicNative" BeforeTargets="BeforeBuild" Condition="'$(MsQuicNativeAvailable)'=='true'">
+		<Copy SourceFiles="$(MsQuicArtifactsDir)\arm64_Release_openssl\libmsquic.so"
+			  DestinationFiles="$(AndroidNativeStageDir)\arm64-v8a\libmsquic.so" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="$(MsQuicArtifactsDir)\x64_Release_openssl\libmsquic.so"
+			  DestinationFiles="$(AndroidNativeStageDir)\x86_64\libmsquic.so" SkipUnchangedFiles="true" />
+		<Message Importance="high" Text="VpnHood.Core.Quic.Android: bundled libmsquic.so (arm64-v8a, x86_64)." />
+	</Target>
+
+	<Target Name="WarnMsQuicNativeMissing" BeforeTargets="BeforeBuild" Condition="'$(MsQuicNativeAvailable)'!='true'">
+		<Warning Text="libmsquic.so not found under '$(MsQuicArtifactsDir)'. QUIC will be unavailable on Android at runtime (the client falls back to TCP). Build the VpnHood.Core.Quic.MsQuic.AndroidNative project to produce it." />
+	</Target>
+
+</Project>

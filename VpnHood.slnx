@@ -150,6 +150,7 @@
   </Folder>
   <Folder Name="/Src/Core/Quic/">
     <Project Path="Src/Core/VpnHood.Core.Quic.Abstractions/VpnHood.Core.Quic.Abstractions.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Quic.Android/VpnHood.Core.Quic.Android.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Quic.Ios/VpnHood.Core.Quic.Ios.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>

@@ -9,8 +9,8 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
+using VpnHood.Core.Quic.Droid;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.AndroidTun;
 
@@ -77,7 +77,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                     configFolder: VpnServiceConfigFolder,
                     vpnServiceHandler: this,
                     netFilter: null,
-                    socketFactory: new SystemSocketFactory(),
+                    socketFactory: new AndroidQuicSocketFactory(),
                     messageListener: new TcpMessageListener(VpnServiceConfigFolder));
 
                 if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn))

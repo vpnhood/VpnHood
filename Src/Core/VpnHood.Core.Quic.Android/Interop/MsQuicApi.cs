@@ -12,73 +12,45 @@ namespace VpnHood.Core.Quic.Droid.Interop;
 /// </summary>
 internal static unsafe class MsQuicApi
 {
-    private static readonly object InitLock = new();
-    private static QUIC_API_TABLE* _table;
-    private static QUIC_HANDLE* _registration;
-    private static bool _initialized;
-    private static bool _supported;
-
-    public static QUIC_API_TABLE* Table {
-        get {
-            EnsureInitialized();
-            return _table;
-        }
+    // The native handles, opened at most once. Kept in a single immutable object published atomically by
+    // Lazy<T> (ExecutionAndPublication), so there is no hand-rolled double-checked locking — i.e. no field
+    // read both inside and outside a lock.
+    private sealed class Handles(QUIC_API_TABLE* apiTable, QUIC_HANDLE* registrationHandle)
+    {
+        public readonly QUIC_API_TABLE* ApiTable = apiTable;
+        public readonly QUIC_HANDLE* RegistrationHandle = registrationHandle;
     }
 
-    public static QUIC_HANDLE* Registration {
-        get {
-            EnsureInitialized();
-            return _registration;
-        }
-    }
+    private static readonly Lazy<Handles?> LazyHandles = new(TryOpen);
+
+    public static QUIC_API_TABLE* Table => GetHandles().ApiTable;
+
+    public static QUIC_HANDLE* Registration => GetHandles().RegistrationHandle;
 
     /// <summary>True if libmsquic.so loaded and the API/registration opened successfully.</summary>
-    public static bool IsSupported {
-        get {
-            try {
-                EnsureInitialized();
-                return _supported;
-            }
-            catch {
-                return false;
-            }
-        }
-    }
+    public static bool IsSupported => LazyHandles.Value != null;
 
-    private static void EnsureInitialized()
+    private static Handles GetHandles() =>
+        LazyHandles.Value ?? throw new NotSupportedException("MsQuic (libmsquic.so) is not available on this device.");
+
+    // Returns null (instead of throwing) when msquic is unavailable, so IsSupported reports false and the
+    // client falls back to TCP. Runs at most once.
+    private static Handles? TryOpen()
     {
-        if (_initialized) {
-            if (!_supported)
-                throw new NotSupportedException("MsQuic (libmsquic.so) is not available on this device.");
-            return;
+        try {
+            var table = Open();
+            // AppName must outlive RegistrationOpen; intentionally leaked (process lifetime).
+            var appName = (sbyte*)Marshal.StringToCoTaskMemUTF8("VpnHood");
+            var regConfig = new QUIC_REGISTRATION_CONFIG {
+                AppName = appName,
+                ExecutionProfile = QUIC_EXECUTION_PROFILE.LOW_LATENCY
+            };
+            QUIC_HANDLE* reg;
+            ThrowIfFailure(table->RegistrationOpen(&regConfig, &reg));
+            return new Handles(table, reg);
         }
-
-        lock (InitLock) {
-            if (!_initialized) {
-                try {
-                    var table = Open();
-                    // AppName must outlive RegistrationOpen; intentionally leaked (process lifetime).
-                    var appName = (sbyte*)Marshal.StringToCoTaskMemUTF8("VpnHood");
-                    var regConfig = new QUIC_REGISTRATION_CONFIG {
-                        AppName = appName,
-                        ExecutionProfile = QUIC_EXECUTION_PROFILE.LOW_LATENCY
-                    };
-                    QUIC_HANDLE* reg;
-                    ThrowIfFailure(table->RegistrationOpen(&regConfig, &reg));
-                    _table = table;
-                    _registration = reg;
-                    _supported = true;
-                }
-                catch {
-                    _supported = false;
-                }
-                finally {
-                    _initialized = true;
-                }
-            }
+        catch {
+            return null;
         }
-
-        if (!_supported)
-            throw new NotSupportedException("MsQuic (libmsquic.so) is not available on this device.");
     }
 }

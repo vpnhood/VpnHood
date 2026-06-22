@@ -3,7 +3,6 @@ using System.Net.Security;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Quic;
 using VpnHood.Core.Quic.Abstractions;
@@ -12,21 +11,6 @@ using VpnHood.Core.Toolkit.Logging;
 using static Microsoft.Quic.MsQuic;
 
 namespace VpnHood.Core.Quic.Droid;
-
-/// <summary>
-/// Shared state for a connection's unmanaged callback. Lives behind a <see cref="GCHandle"/> that is
-/// passed to MsQuic as the callback context, so the static callback can route events to managed state.
-/// </summary>
-internal sealed class AndroidQuicConnectionState
-{
-    public readonly TaskCompletionSource Connected = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    public readonly TaskCompletionSource Shutdown = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    public readonly Channel<IntPtr> InboundStreams =
-        Channel.CreateUnbounded<IntPtr>(new UnboundedChannelOptions { SingleWriter = true });
-
-    public required RemoteCertificateValidationCallback CertificateValidationCallback { get; init; }
-    public required string TargetHost { get; init; }
-}
 
 /// <summary>
 /// A QUIC connection backed by MsQuic (libmsquic.so) via our own P/Invoke bindings — bypassing
@@ -76,7 +60,7 @@ internal sealed class AndroidQuicConnection : IQuicConnection
     private static unsafe Stream WrapInbound(IntPtr handle) => AndroidQuicStream.FromInbound((QUIC_HANDLE*)handle);
 
     // Routes a connection event to managed state. Static (UnmanagedCallersOnly) -> resolves state via ctx.
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     internal static unsafe int ConnectionCallback(QUIC_HANDLE* connection, void* ctx, QUIC_CONNECTION_EVENT* evt)
     {
         var state = (AndroidQuicConnectionState)GCHandle.FromIntPtr((IntPtr)ctx).Target!;
@@ -143,7 +127,11 @@ internal sealed class AndroidQuicConnection : IQuicConnection
                 try {
                     var chainBytes = new ReadOnlySpan<byte>(chainPtr->Buffer, (int)chainPtr->Length).ToArray();
                     var extra = new X509Certificate2Collection();
+                    // The portable Chain buffer is a PKCS#7 / concatenated-DER bundle; X509CertificateLoader
+                    // has no multi-certificate importer, so the (obsolete) Import is still the right call here.
+#pragma warning disable SYSLIB0057
                     extra.Import(chainBytes);
+#pragma warning restore SYSLIB0057
                     chain.ChainPolicy.ExtraStore.AddRange(extra);
                     intermediateCount = extra.Count;
                 }

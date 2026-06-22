@@ -10,9 +10,9 @@ using static Microsoft.Quic.MsQuic;
 namespace VpnHood.Core.Quic.Droid;
 
 /// <summary>
-/// Adapts a single MsQuic stream to a <see cref="Stream"/>. Inbound data delivered by msquic's
+/// Adapts a single MsQuic stream to a <see cref="Stream"/>. Inbound data delivered by msquic
 /// RECEIVE callback is copied into a <see cref="Pipe"/> that <see cref="ReadAsync(Memory{byte},CancellationToken)"/>
-/// drains; writes are issued via StreamSend and awaited until SEND_COMPLETE (backpressure).
+/// drains; writes are issued via StreamSend and await it until SEND_COMPLETE (backpressure).
 /// Pointer work is confined to <c>unsafe</c> members so the async members compile.
 /// </summary>
 internal sealed class AndroidQuicStream : Stream
@@ -50,7 +50,7 @@ internal sealed class AndroidQuicStream : Stream
         var stream = new AndroidQuicStream { _stream = handle };
         stream._gch = GCHandle.Alloc(stream);
         MsQuicApi.Table->SetCallbackHandler(handle,
-            (void*)(delegate* unmanaged[Cdecl]<QUIC_HANDLE*, void*, QUIC_STREAM_EVENT*, int>)&StreamCallback,
+            (delegate* unmanaged[Cdecl]<QUIC_HANDLE*, void*, QUIC_STREAM_EVENT*, int>)&StreamCallback,
             (void*)GCHandle.ToIntPtr(stream._gch));
         return stream;
     }
@@ -177,7 +177,7 @@ internal sealed class AndroidQuicStream : Stream
                 tcs.TrySetException(new IOException("QUIC stream shut down."));
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static unsafe int StreamCallback(QUIC_HANDLE* stream, void* ctx, QUIC_STREAM_EVENT* evt)
     {
         var self = (AndroidQuicStream)GCHandle.FromIntPtr((IntPtr)ctx).Target!;

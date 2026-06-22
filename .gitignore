@@ -353,7 +353,3 @@ MigrationBackup/
 
 #
 *.tmp.csproj
-
-# Android QUIC native binary (libmsquic.so) — built externally by the
-# VpnHood.Core.Quic.MsQuic.AndroidNative repo and copied in at build time. Never commit it.
-/Src/Core/VpnHood.Core.Quic.Android/native/

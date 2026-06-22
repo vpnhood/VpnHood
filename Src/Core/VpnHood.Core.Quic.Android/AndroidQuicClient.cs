@@ -107,7 +107,7 @@ public sealed class AndroidQuicClient : IQuicClient
         }
     }
 
-    // Builds an MsQuic QUIC_ADDR (sockaddr) from an IPEndPoint (port stored in network byte order).
+    // Builds an MsQuic QUIC_ADDR (socketAddr) from an IPEndPoint (port stored in network byte order).
     private static unsafe QuicAddr ToQuicAddr(IPEndPoint endPoint)
     {
         var addr = new QuicAddr();

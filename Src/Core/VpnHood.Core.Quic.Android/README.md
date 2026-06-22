@@ -49,10 +49,13 @@ we never touch OpenSSL from managed code).
 | `AndroidQuicConnection : IQuicConnection` | Owns the connection handle; routes the unmanaged connection callback; opens outbound / accepts inbound streams; performs **certificate validation**. |
 | `AndroidQuicStream : Stream` | An async `Stream` over one msquic stream: RECEIVE → a `Pipe` that `ReadAsync` drains; `WriteAsync` → `StreamSend` awaited until `SEND_COMPLETE` (backpressure). |
 
-The MsQuic C# bindings (`Microsoft.Quic` namespace) are **compiled in** from the sibling
-`VpnHood.Core.Quic.MsQuic.AndroidNative` repo (`src/cs/lib/msquic*.cs`) — see the csproj `<Compile>`
-items. Unmanaged callbacks are `[UnmanagedCallersOnly(CallConvs=[CallConvCdecl])]` statics that
-resolve the managed instance from a `GCHandle` passed as the callback context.
+This project is **pure managed code**. The native `libmsquic.so` and the MsQuic C# P/Invoke bindings
+(`Microsoft.Quic` namespace) both come from the self-contained package
+**`VpnHood.Core.Quic.MsQuic.AndroidNative`**, which this project references (a local `ProjectReference`
+today, the published NuGet later). That package exposes the `Microsoft.Quic` binding types as **public**
+API, so all native-linking complexity is hidden behind one reference. Unmanaged callbacks here are
+`[UnmanagedCallersOnly(CallConvs=[CallConvCdecl])]` statics that resolve the managed instance from a
+`GCHandle` passed as the callback context.
 
 ### Certificate validation (the important part)
 
@@ -89,14 +92,16 @@ name did not match `TargetHost` → validation failed.)
 
 ## Native dependency & build
 
-Only **`libmsquic.so`** is bundled (per ABI, via `<AndroidNativeLibrary>`); msquic statically links
-its own OpenSSL, so no `libcrypto`/`libssl`/.NET-OpenSSL-shim is needed.
+This project bundles **no** native libraries itself. Everything native comes from the referenced
+**`VpnHood.Core.Quic.MsQuic.AndroidNative`** package, which ships the prebuilt **`libmsquic.so`** per ABI
+(committed in that package's `native/` folder) plus the `Microsoft.Quic` bindings. msquic statically
+links its own OpenSSL, so no `libcrypto`/`libssl`/.NET-OpenSSL-shim is needed.
 
-- `libmsquic.so` and the `src/cs/lib` C# bindings both come from the sibling repo
-  **`VpnHood.Core.Quic.MsQuic.AndroidNative`** (a msquic+OpenSSL fork). See its
-  `android/DEV-GUIDE.md` for how the `.so` is produced (`build-android.ps1`).
-- The `.so` is copied at build time into the git-ignored `native/` folder and **must never be
-  committed** (large external binary). `.gitignore` excludes `/Src/Core/VpnHood.Core.Quic.Android/native/`.
+- That package lives in the sibling repo **`VpnHood.Core.Quic.MsQuic.AndroidNative`** (a msquic+OpenSSL
+  fork) at `android/VpnHood.Core.Quic.MsQuic.AndroidNative/`. See its `android/DEV-GUIDE.md` for how the
+  `.so` is produced (`build-android.ps1`); the package commits the binary so consumers never build it.
+- The `<AndroidNativeLibrary>` items in that package flow **transitively** into any consuming APK
+  (`lib/<abi>/libmsquic.so`), through this project and on to the app.
 - Only **arm64-v8a** and **x86_64** are produced. 32-bit devices have no `libmsquic.so`, so
   `IsQuicSupported` is `false` there and the client transparently falls back to TCP.
 

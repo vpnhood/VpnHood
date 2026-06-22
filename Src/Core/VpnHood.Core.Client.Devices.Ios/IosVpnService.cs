@@ -8,7 +8,6 @@ using VpnHood.Core.Quic.Ios;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
-using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.IosTun;
 
@@ -146,7 +145,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // Kick off heavy VpnHood init off the main thread.
         _ = Task.Run(() => {
             try {
-                var sf = new IosQuicSocketFactory(new SystemSocketFactory());
+                var sf = new IosQuicSocketFactory();
                 _vpnServiceHost = new VpnServiceHost(configFolder, this, sf,
                     netFilter: null, withLogger: false, messageListener: _messageListener);
                 _ = _vpnServiceHost.TryConnect(true);

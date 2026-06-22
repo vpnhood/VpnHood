@@ -3,13 +3,12 @@ using System.Net.Sockets;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Quic.MsQuic;
 using VpnHood.Core.Toolkit.Sockets;
-using VpnHood.Core.Tunneling.Sockets;
 
 namespace VpnHood.Test.Device;
 
 public class TestDeviceSocketFactory(TestDevice testDevice) : ISocketFactory
 {
-    private readonly ISocketFactory _quicFactory = new MsQuicSocketFactory(new SystemSocketFactory());
+    private readonly ISocketFactory _quicFactory = new MsQuicSocketFactory();
 
     public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
     {

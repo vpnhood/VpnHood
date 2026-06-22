@@ -2,7 +2,6 @@
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Quic.MsQuic;
-using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.WinDivert;
 using VpnHood.Core.VpnAdapters.WinTun;
@@ -21,7 +20,7 @@ public class WinVpnService : IVpnServiceHandler, IDisposable
             configFolder, 
             netFilter: null,
             vpnServiceHandler: this,
-            socketFactory: new MsQuicSocketFactory(new SystemSocketFactory()),
+            socketFactory: new MsQuicSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),
             withLogger: false);
     }

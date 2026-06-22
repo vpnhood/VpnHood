@@ -50,8 +50,8 @@ IQuicClient CreateQuicClient(); // throws NotSupportedException when !IsQuicSupp
 
 The per-platform `VpnService` picks the socket factory, which is the seam that decides QUIC support:
 
-- Windows / Linux `VpnService` → `new MsQuicSocketFactory(new SystemSocketFactory())` (QUIC enabled).
-- iOS `VpnService` → `new IosQuicSocketFactory(new SystemSocketFactory())` (QUIC enabled, iOS 15+).
+- Windows / Linux `VpnService` → `new MsQuicSocketFactory()` (QUIC enabled).
+- iOS `VpnService` → `new IosQuicSocketFactory()` (QUIC enabled, iOS 15+).
 - Android `VpnService` → plain `new SystemSocketFactory()` (`IsQuicSupported == false`) until a
   native implementation exists.
 

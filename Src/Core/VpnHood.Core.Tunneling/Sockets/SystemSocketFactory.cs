@@ -7,20 +7,20 @@ namespace VpnHood.Core.Tunneling.Sockets;
 
 public class SystemSocketFactory : ISocketFactory
 {
-    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
+    public virtual TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
     {
         var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
         return tcpClient;
     }
 
-    public UdpClient CreateUdpClient(AddressFamily addressFamily)
+    public virtual UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
         var udpClient = new UdpClient(addressFamily);
         return udpClient;
     }
 
-    public bool IsQuicSupported => false;
-
-    public IQuicClient CreateQuicClient() =>
+    public virtual bool IsQuicSupported => false;
+     
+    public virtual IQuicClient CreateQuicClient() =>
         throw new NotSupportedException("QUIC is not supported by this socket factory.");
 }

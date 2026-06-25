@@ -1,0 +1,137 @@
+name: Publish Client (All Platforms)
+
+# Builds the client for each platform in parallel, then (optionally) creates ONE
+# GitHub release with all assets using the real Pub/Client/PublishToGithub.ps1
+# (changelog header bump + release notes + asset upload), exactly like a normal
+# release. Version/prerelease come from Pub/PubVersion.json in the checked-out commit.
+#
+# Currently wired: Linux + Windows. Android is added later.
+#
+# Secrets:
+#   ADVINST_LICENSE                              Advanced Installer license (Windows)
+#   AZURE_* + VH_SIGN_*                          OPTIONAL code signing (Windows). If
+#       absent, the MSI builds unsigned. If present, signing runs and a failure is fatal.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit to build"
+        required: false
+        default: "development"
+      publish_release:
+        description: "Create the GitHub release"
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.inputs.ref }}" }
+      - uses: actions/setup-dotnet@v4
+        with: { global-json-file: global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Credentials stub
+        shell: pwsh
+        run: |
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
+      - name: Build Linux client
+        shell: pwsh
+        run: & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Linux.Web/_publish.ps1"
+        env: { DOTNET_NOLOGO: "1", DOTNET_CLI_TELEMETRY_OPTOUT: "1" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-linux
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ env.MODULE_DIR }}/linux-x64/**
+            ${{ env.MODULE_DIR }}/linux-arm64/**
+            ${{ env.MODULE_DIR }}/linux-any/**
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.inputs.ref }}" }
+      - uses: actions/setup-dotnet@v4
+        with: { global-json-file: global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Set up Advanced Installer
+        uses: caphyon/advinst-github-action@main
+        with: { advinst-license: "${{ secrets.ADVINST_LICENSE }}" }
+      - name: Credentials stub
+        shell: pwsh
+        run: |
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
+      - name: Build Windows client MSI
+        shell: pwsh
+        run: & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1"
+        env:
+          DOTNET_NOLOGO: "1"
+          DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+          # Optional code signing — empty unless configured; PublishWinApp skips when absent.
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          VH_SIGN_ACCOUNT: ${{ secrets.VH_SIGN_ACCOUNT }}
+          VH_SIGN_PROFILE: ${{ secrets.VH_SIGN_PROFILE }}
+          VH_SIGN_ENDPOINT: ${{ secrets.VH_SIGN_ENDPOINT }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-windows
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ env.MODULE_DIR }}/**
+
+  release:
+    needs: [build-linux, build-windows]
+    if: ${{ github.event.inputs.publish_release == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.inputs.ref }}" }
+      - uses: actions/setup-dotnet@v4
+        with: { global-json-file: global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Credentials stub
+        shell: pwsh
+        run: |
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
+      # Reassemble the Pub/bin/<tag>/VpnHoodClient layout PublishToGithub.ps1 expects.
+      - uses: actions/download-artifact@v4
+        with: { name: client-linux, path: "${{ env.MODULE_DIR }}" }
+      - uses: actions/download-artifact@v4
+        with: { name: client-windows, path: "${{ env.MODULE_DIR }}/windows-web" }
+      - name: Create GitHub release (real publish flow)
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VH_PUBLISH_REPO: ${{ github.repository }}
+        run: & "$env:GITHUB_WORKSPACE/Pub/Client/PublishToGithub.ps1"

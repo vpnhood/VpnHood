@@ -65,9 +65,39 @@ dotnet publish $projectDir `
 
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 
+# --- Optional code signing (Microsoft Trusted Signing) ---
+# Runs ONLY when all signing credentials are provided via environment: the Azure
+# service-principal vars plus the VpnHood Trusted Signing target. Without them the
+# build is intentionally UNSIGNED and does not fail. When signing IS configured, any
+# failure is fatal so a silently-unsigned package is never shipped.
+$signEnabled = [bool]($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET `
+	-and $env:VH_SIGN_ACCOUNT -and $env:VH_SIGN_PROFILE -and $env:VH_SIGN_ENDPOINT);
+$script:signToolReady = $false;
+function Invoke-VhSign([string[]]$files) {
+	if (-not $signEnabled) { return; }
+	if (-not $script:signToolReady) {
+		dotnet tool install --global sign 2>$null | Out-Null;  # idempotent (no-op if already installed)
+		$script:signToolReady = $true;
+	}
+	Write-Host "Signing via Trusted Signing: $($files -join ', ')" -ForegroundColor Cyan;
+	sign code trusted-signing $files `
+		--trusted-signing-account "$env:VH_SIGN_ACCOUNT" `
+		--trusted-signing-certificate-profile "$env:VH_SIGN_PROFILE" `
+		--trusted-signing-endpoint "$env:VH_SIGN_ENDPOINT";
+	if ($LASTEXITCODE -ne 0) { Throw "Code signing failed (exit $LASTEXITCODE)."; }
+}
+if (-not $signEnabled) { Write-Host "Code signing skipped: no signing credentials configured (unsigned build)." -ForegroundColor Yellow; }
+
+# sign the published executable before packaging, so the MSI contains a signed exe
+Invoke-VhSign @("$publishDir/$assemblyName.exe");
+
 # Build Setup
 $buildPacakgeFile = "$aipFolder/release/$packageFileTitle-win-x64.msi";
 & $advinstallerFile /build "$aipFile";
+if ($LASTEXITCODE -ne 0) { Throw "AdvancedInstaller build failed (exit $LASTEXITCODE)."; }
+
+# sign the built installer
+Invoke-VhSign @("$buildPacakgeFile");
 
 #####
 # copy to module

@@ -78,6 +78,10 @@ jobs:
 
       - name: Upload Linux client artifacts
         uses: actions/upload-artifact@v4
+        # Best-effort inspection artifact; the GitHub release below is the real
+        # deliverable, so a transient upload hiccup (e.g. ECONNRESET on finalize)
+        # must not block the publish.
+        continue-on-error: true
         with:
           name: vpnhood-client-linux
           if-no-files-found: error

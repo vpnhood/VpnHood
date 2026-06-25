@@ -126,7 +126,12 @@ if ("$module_packageFile" -Like "*.zip")
 }
 else
 {
-    tar -czf "$module_packageFile" -C "$publishDir/" *;
+    # Pack the version folder explicitly. Do NOT use a "*" glob: it is expanded
+    # against the current working directory (not -C) and GNU tar (Linux) then
+    # fails, silently producing an empty archive. Naming $versionTag is portable
+    # across GNU tar and bsdtar (Windows) and keeps the same entry layout.
+    tar -czf "$module_packageFile" -C "$publishDir" "$versionTag";
+    if ($LASTEXITCODE -ne 0) { Throw "tar exited with error code: $LASTEXITCODE"; }
 }
 
 if ($isLatest)

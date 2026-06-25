@@ -7,7 +7,9 @@ $solutionDir = Split-Path -parent (Split-Path -parent $PSScriptRoot);
 $gitDir = "$solutionDir/.git";
 $vhDir = Split-Path -parent $solutionDir;
 $pubDir = "$solutionDir/Pub";
-$msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
+if ($env:ProgramFiles) {
+	$msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
+}
 $userDir = "$solutionDir/../.user";
 $credentials = (Get-Content "$userDir/credentials.json" | Out-String | ConvertFrom-Json);
 $nugetApiKey = $credentials.NugetApiKey;

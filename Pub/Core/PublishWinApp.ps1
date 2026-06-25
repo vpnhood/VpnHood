@@ -46,7 +46,17 @@ $script:signToolReady = $false;
 function Invoke-VhSign([string[]]$files) {
 	if (-not $signEnabled) { return; }
 	if (-not $script:signToolReady) {
-		dotnet tool install --global sign 2>$null | Out-Null;  # idempotent (no-op if already installed)
+		# Ensure the dotnet global-tools dir is on PATH for THIS process — a freshly
+		# installed global tool is not added to the current process's PATH automatically.
+		$toolsDir = if ($env:USERPROFILE) { Join-Path $env:USERPROFILE ".dotnet\tools" } else { Join-Path $env:HOME ".dotnet/tools" };
+		$sep = [IO.Path]::PathSeparator;
+		if (($env:PATH -split [regex]::Escape($sep)) -notcontains $toolsDir) { $env:PATH = "$toolsDir$sep$env:PATH"; }
+		# Install the Microsoft 'sign' CLI (no-op/non-fatal if already present), then
+		# verify it actually resolves before relying on it.
+		dotnet tool install --global sign 2>&1 | Out-Null;
+		if (-not (Get-Command sign -ErrorAction SilentlyContinue)) {
+			Throw "The 'sign' CLI is not available after 'dotnet tool install --global sign' (check PATH/install).";
+		}
 		$script:signToolReady = $true;
 	}
 	Write-Host "Signing via Trusted Signing: $($files -join ', ')" -ForegroundColor Cyan;

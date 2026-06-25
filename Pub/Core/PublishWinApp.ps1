@@ -17,8 +17,20 @@ Write-Host;
 Write-Host "*** Building $packageFileTitle for Windows ..." -BackgroundColor Blue -ForegroundColor White;
 
 # Init script
-$advinstallerFile = (Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Caphyon\Advanced Installer" -Name "InstallRoot").InstallRoot;
-$advinstallerFile = Join-Path $advinstallerFile "bin\x86\AdvancedInstaller.com";
+# Locate AdvancedInstaller.com. In CI the Caphyon action exposes the install via the
+# AdvancedInstallerRoot env var (no registry key); locally it's found via the registry.
+$advinstallerFile = $null;
+if ($env:AdvancedInstallerRoot) {
+	$advinstallerFile = Get-ChildItem -Path $env:AdvancedInstallerRoot -Recurse -Filter "AdvancedInstaller.com" -ErrorAction SilentlyContinue |
+		Select-Object -First 1 -ExpandProperty FullName;
+}
+if (-not $advinstallerFile) {
+	$advinstallerRoot = (Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Caphyon\Advanced Installer" -Name "InstallRoot").InstallRoot;
+	$advinstallerFile = Join-Path $advinstallerRoot "bin\x86\AdvancedInstaller.com";
+}
+if (-not $advinstallerFile -or -not (Test-Path $advinstallerFile)) {
+	throw "Could not locate AdvancedInstaller.com (AdvancedInstallerRoot='$env:AdvancedInstallerRoot').";
+}
 $publishDir = "$projectDir/bin/Publish-$distribution";
 $aipFile= "$solutionDir/$aipFileR";
 $aipFolder = Split-Path -parent $aipFile;

@@ -15,7 +15,7 @@ Await and ConfigureAwait
 - For UI code such as android UI, always use .ConfigureAwait(false) when it is required.
 
 Documentation
-- The wiki repo (at $(SolutionDir)/../VpnHood.wiki) holds end-user documentation, not development/internal docs. Update it only when I request; keep developer docs inside this repo.
+- The wiki repo is a separate repository located at ..\VpnHood.wiki relative to this repo (i.e. $(SolutionDir)/../VpnHood.wiki). It holds end-user documentation, not development/internal docs. Update it only when I request; keep developer docs inside this repo.
 
 QUIC
 - Our QUIC is a custom protocol, not HTTP3. We use it a transport protocol and the protocol is exactly same as HTTP2, so we use it same TCP

@@ -98,7 +98,7 @@ This project bundles **no** native libraries itself. Everything native comes fro
 links its own OpenSSL, so no `libcrypto`/`libssl`/.NET-OpenSSL-shim is needed.
 
 - That package lives in the sibling repo **`VpnHood.Core.Quic.MsQuic.AndroidNative`** (a msquic+OpenSSL
-  fork) at `android/VpnHood.Core.Quic.MsQuic.AndroidNative/`. See its `android/DEV-GUIDE.md` for how the
+  fork) at `android/AndroidNative/`. See its `android/DEV-GUIDE.md` for how the
   `.so` is produced (`build-android.ps1`); the package commits the binary so consumers never build it.
 - The `<AndroidNativeLibrary>` items in that package flow **transitively** into any consuming APK
   (`lib/<abi>/libmsquic.so`), through this project and on to the app.

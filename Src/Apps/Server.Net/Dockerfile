@@ -23,6 +23,9 @@ COPY ["Src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj", "VpnHood.Core.S
 COPY ["Src/Core/VpnHood.Core.Server.Access/VpnHood.Core.Server.Access.csproj", "VpnHood.Core.Server.Access/"]
 RUN dotnet restore "VpnHood.App.Server.Net/VpnHood.App.Server.Net.csproj"
 COPY . .
+# The repo's global.json pins an SDK (11 preview) only needed by the full solution.
+# Everything built here targets net10.0, so drop the pin and use the image's SDK 10.x.
+RUN rm -f global.json
 WORKDIR "/src/Src/Apps/Server.Net"
 RUN dotnet build "VpnHood.App.Server.Net.csproj" -c Release -p:SolutionDir=. -p:TargetFramework=net10.0 -o /app/build
 

@@ -47,7 +47,8 @@ jobs:
           '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
       - name: Build Linux client
         shell: pwsh
-        run: & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Linux.Web/_publish.ps1"
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Linux.Web/_publish.ps1"
         env: { DOTNET_NOLOGO: "1", DOTNET_CLI_TELEMETRY_OPTOUT: "1" }
       - uses: actions/upload-artifact@v4
         with:
@@ -83,7 +84,8 @@ jobs:
           '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
       - name: Build Windows client MSI
         shell: pwsh
-        run: & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1"
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1"
         env:
           DOTNET_NOLOGO: "1"
           DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -134,4 +136,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           VH_PUBLISH_REPO: ${{ github.repository }}
-        run: & "$env:GITHUB_WORKSPACE/Pub/Client/PublishToGithub.ps1"
+        run: |
+          & "$env:GITHUB_WORKSPACE/Pub/Client/PublishToGithub.ps1"

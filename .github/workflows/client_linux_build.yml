@@ -76,15 +76,18 @@ jobs:
         shell: pwsh
         run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/$env:MODULE_DIR" | Select-Object FullName, Length
 
-      - name: Upload Linux client artifacts
+      # Inspection artifact ONLY for build-only runs. When publishing a release,
+      # the release already holds the files, so we create no Actions-storage
+      # artifact at all. Actions storage is quota-limited, so build-only artifacts
+      # also expire after 1 day. continue-on-error keeps a flaky upload non-fatal.
+      - name: Upload Linux client artifacts (inspection only)
+        if: ${{ github.event.inputs.publish_release != 'true' }}
         uses: actions/upload-artifact@v4
-        # Best-effort inspection artifact; the GitHub release below is the real
-        # deliverable, so a transient upload hiccup (e.g. ECONNRESET on finalize)
-        # must not block the publish.
         continue-on-error: true
         with:
           name: vpnhood-client-linux
           if-no-files-found: error
+          retention-days: 1
           path: |
             ${{ env.MODULE_DIR }}/linux-x64/**
             ${{ env.MODULE_DIR }}/linux-arm64/**

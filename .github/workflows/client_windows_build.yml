@@ -1,19 +1,19 @@
-name: Build Windows Client (PoC)
+name: Build Windows Client
 
-# Proof-of-concept: builds the VpnHood Windows client MSI on a GitHub-hosted
-# Windows runner. It reuses the EXISTING publish scripts unchanged:
+# Builds the VpnHood Windows client MSI on a GitHub-hosted Windows runner,
+# reusing the EXISTING publish scripts unchanged:
 #   Src/Apps/Client.Win.Web/_publish.ps1
 #     -> Pub/Core/PublishWinApp.ps1  (dotnet publish + AdvancedInstaller.com /build)
 #
-# Advanced Installer is installed and licensed by the official Caphyon action.
-# That action also populates the registry key PublishWinApp.ps1 reads to locate
-# AdvancedInstaller.com, so the script runs without modification.
+# Advanced Installer is installed + licensed by the official Caphyon action,
+# which also sets the registry key PublishWinApp.ps1 reads to find the tool.
 #
-# Like the Linux PoC, this does NOT bump the version, create a release, or push.
-# The MSI is uploaded as a workflow artifact for inspection.
+# Build-only: produces the MSI as a short-lived workflow artifact (no release).
+# The MSI is built UNSIGNED (the .aip carries no signer). To ship signed builds,
+# add a code-signing certificate under your own identity to the .aip + its secrets.
 #
-# Prerequisite: add the license as a repo secret (value is in ../.user/AdvancedInstallerKey.txt):
-#   gh secret set ADVINST_LICENSE < ../.user/AdvancedInstallerKey.txt
+# Secrets:
+#   ADVINST_LICENSE   (required) Advanced Installer license id
 
 on:
   workflow_dispatch:
@@ -33,29 +33,35 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref }}
 
-      # Same SDK fix as Linux: install the exact preview pinned by global.json.
       - name: Set up .NET (pinned by global.json)
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
 
-      # Installs + registers Advanced Installer, puts AdvancedInstaller.com on PATH,
-      # and sets HKLM\...\Caphyon\Advanced Installer\InstallRoot (used by PublishWinApp.ps1).
-      # No advinst-version pin: latest is fine (auto-upgrading the .aip is acceptable).
+      # Resolve version -> tag -> module dir from PubVersion.json (prerelease
+      # outputs land in Pub/bin/v<ver>-prerelease/..., not Pub/bin/latest/...).
+      - name: Resolve version and paths
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Building VpnHoodClient $tag"
+
+      # Installs + registers Advanced Installer; latest version is fine.
       - name: Set up Advanced Installer
         uses: caphyon/advinst-github-action@main
         with:
           advinst-license: ${{ secrets.ADVINST_LICENSE }}
 
-      # Common.ps1 reads ../.user/credentials.json at load time for the NuGet key,
-      # which the Windows client build never uses. A stub lets the scripts run as-is.
+      # Common.ps1 reads ../.user/credentials.json at load; stub it (NuGet key unused here).
       - name: Create credentials stub
         shell: pwsh
         run: |
           $userDir = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $userDir -Force | Out-Null
           '{ "NugetApiKey": "" }' | Out-File -FilePath (Join-Path $userDir "credentials.json") -Encoding ascii -Force
-          Write-Host "Wrote stub credentials to $userDir/credentials.json"
 
       - name: Build Windows client MSI
         shell: pwsh
@@ -64,25 +70,18 @@ jobs:
         env:
           DOTNET_NOLOGO: "1"
           DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-          # The .aip signs VpnHoodClient.exe/updater.exe via Azure Trusted Signing
-          # (account "Vh-Signing", cert "OmegaHood-CodeSigning"). Advanced Installer
-          # authenticates with a service principal through DefaultAzureCredential.
-          # The SP "vpnhood-ci-signing" holds only the "Artifact Signing Certificate
-          # Profile Signer" role, scoped to that one cert profile. Its values live in
-          # ../.user/AzureSigningCredential.json; push them to repo secrets with:
-          #   gh secret set AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: List produced artifacts
         shell: pwsh
-        run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/Pub/bin/latest/VpnHoodClient/windows-web" | Select-Object FullName, Length
+        run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/$env:MODULE_DIR" | Select-Object FullName, Length
 
+      # Short-lived inspection artifact (Actions storage is quota-limited).
       - name: Upload Windows client artifacts
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: vpnhood-client-windows
           if-no-files-found: error
+          retention-days: 1
           path: |
-            Pub/bin/latest/VpnHoodClient/windows-web/**
+            ${{ env.MODULE_DIR }}/**

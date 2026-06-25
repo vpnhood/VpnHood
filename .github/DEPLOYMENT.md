@@ -25,9 +25,6 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `GH_TOKEN` | `publish_store_package.yml` | Optional | A PAT used only if you need broader scope than `GITHUB_TOKEN`; otherwise it falls back to `GITHUB_TOKEN`. |
 | `PLAY_JSON_KEY` | `publish_store_package.yml`, `publish_store_contents.yml` | Required for Play | Google Play service-account JSON (whole file contents). |
 | `ADVINST_LICENSE` | `client_windows_build.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
-| `AZURE_TENANT_ID` | `client_windows_build.yml` | Required for signed Windows | Entra tenant ID of the code-signing service principal. |
-| `AZURE_CLIENT_ID` | `client_windows_build.yml` | Required for signed Windows | App (client) ID of the signing service principal. |
-| `AZURE_CLIENT_SECRET` | `client_windows_build.yml` | Required for signed Windows | Client secret of the signing service principal. |
 
 ## Per-platform setup
 
@@ -43,26 +40,15 @@ No secrets required. Builds self-contained `linux-x64` / `linux-arm64` packages.
 - Track mapping is automatic: prereleases → `alpha`, stable → `production`.
 
 ### Windows client — `client_windows_build.yml`
-The MSI is built with **Advanced Installer** and the binaries are **code-signed via
-Azure Trusted Signing**. You need both an AI license and an Azure signing identity.
+The MSI is built with **Advanced Installer** on a `windows-latest` runner.
 
-1. **`ADVINST_LICENSE`** — your Advanced Installer license ID.
-2. **Azure Trusted Signing** — the `.aip` signs against a specific Trusted Signing
-   account + certificate profile. Point it at your own, then create a **least-privilege
-   service principal** scoped to *only* your certificate profile:
-   ```bash
-   SCOPE="/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.CodeSigning/codeSigningAccounts/<account>/certificateProfiles/<profile>"
-   az ad sp create-for-rbac \
-     --name "ci-signing" \
-     --role "Artifact Signing Certificate Profile Signer" \
-     --scopes "$SCOPE"
-   ```
-   Store the resulting `tenant` / `appId` / `password` as `AZURE_TENANT_ID` /
-   `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`. Advanced Installer picks these up via
-   `DefaultAzureCredential` at build time. The client secret expires (default 1 year) —
-   rotate it in the app registration's **Certificates & secrets** blade.
-   > If you don't have Trusted Signing, edit the `.aip` to disable signing or use a
-   > different signing method; then the Azure secrets are not needed.
+- **`ADVINST_LICENSE`** — your Advanced Installer license ID. The Caphyon action
+  installs and registers Advanced Installer with it.
+
+**Code signing:** the MSI and its executables are currently built **unsigned** — the
+`.aip` files carry no signer. To ship signed builds, configure a signing certificate
+under **your own organization's identity** in the `.aip` (e.g. Azure Trusted Signing or
+a PFX) and add the corresponding secrets. Do not reuse a third-party/previous signer.
 
 ### iOS client
 Not applicable yet — there is no iOS app project in the repo.

@@ -51,11 +51,12 @@ function Invoke-VhSign([string[]]$files) {
 		$toolsDir = if ($env:USERPROFILE) { Join-Path $env:USERPROFILE ".dotnet\tools" } else { Join-Path $env:HOME ".dotnet/tools" };
 		$sep = [IO.Path]::PathSeparator;
 		if (($env:PATH -split [regex]::Escape($sep)) -notcontains $toolsDir) { $env:PATH = "$toolsDir$sep$env:PATH"; }
-		# Install the Microsoft 'sign' CLI (no-op/non-fatal if already present), then
-		# verify it actually resolves before relying on it.
-		dotnet tool install --global sign 2>&1 | Out-Null;
+		# Install the Microsoft 'sign' CLI. It ships ONLY as prerelease NuGet versions,
+		# so --prerelease is required. Capture output so a failure is diagnosable.
+		$installLog = dotnet tool install --global sign --prerelease 2>&1;
 		if (-not (Get-Command sign -ErrorAction SilentlyContinue)) {
-			Throw "The 'sign' CLI is not available after 'dotnet tool install --global sign' (check PATH/install).";
+			Write-Host ($installLog -join "`n");
+			Throw "The 'sign' CLI is not available after 'dotnet tool install --global sign --prerelease' (check PATH/install).";
 		}
 		$script:signToolReady = $true;
 	}

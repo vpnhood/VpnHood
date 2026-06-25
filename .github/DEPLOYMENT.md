@@ -24,7 +24,9 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `GITHUB_TOKEN` | all release/publish workflows | Automatic | Provided by GitHub; no action needed. |
 | `GH_TOKEN` | `publish_store_package.yml` | Optional | A PAT used only if you need broader scope than `GITHUB_TOKEN`; otherwise it falls back to `GITHUB_TOKEN`. |
 | `PLAY_JSON_KEY` | `publish_store_package.yml`, `publish_store_contents.yml` | Required for Play | Google Play service-account JSON (whole file contents). |
-| `ADVINST_LICENSE` | `client_windows_build.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
+| `ADVANCED_INSTALLER_LICENSE` | `client_windows_build.yml`, `client_publish.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
+| `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` | `client_publish.yml` | Optional (Windows signing) | Service principal for Azure Trusted Signing. All three (plus the `VH_SIGN_*` set) must be present for signing to run. |
+| `VH_SIGN_ACCOUNT` / `VH_SIGN_PROFILE` / `VH_SIGN_ENDPOINT` | `client_publish.yml` | Optional (Windows signing) | Trusted Signing target: account name, certificate profile, and regional endpoint. |
 
 ## Per-platform setup
 
@@ -42,13 +44,22 @@ No secrets required. Builds self-contained `linux-x64` / `linux-arm64` packages.
 ### Windows client — `client_windows_build.yml`
 The MSI is built with **Advanced Installer** on a `windows-latest` runner.
 
-- **`ADVINST_LICENSE`** — your Advanced Installer license ID. The Caphyon action
-  installs and registers Advanced Installer with it.
+- **`ADVANCED_INSTALLER_LICENSE`** — your Advanced Installer license ID. The Caphyon
+  action installs and registers Advanced Installer with it.
 
-**Code signing:** the MSI and its executables are currently built **unsigned** — the
-`.aip` files carry no signer. To ship signed builds, configure a signing certificate
-under **your own organization's identity** in the `.aip` (e.g. Azure Trusted Signing or
-a PFX) and add the corresponding secrets. Do not reuse a third-party/previous signer.
+**Code signing (optional, `client_publish.yml`):** signing is **off unless all six
+signing secrets are present**, in which case the build signs the executable and the MSI
+via Microsoft Trusted Signing (`sign` CLI) and a signing failure is fatal. The `.aip`
+files themselves carry no signer. To enable it under **your own organization's identity**:
+
+- `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` — a service principal with
+  the *Trusted Signing Certificate Profile Signer* role, scoped to your signing account.
+- `VH_SIGN_ACCOUNT` — your Trusted Signing account name.
+- `VH_SIGN_PROFILE` — the certificate profile to sign with.
+- `VH_SIGN_ENDPOINT` — the regional endpoint, e.g. `https://wus2.codesigning.azure.net/`.
+
+Do not reuse a third-party/previous signer — the published identity comes from the
+certificate profile, so verify it resolves to **your** organization before shipping.
 
 ### iOS client
 Not applicable yet — there is no iOS app project in the repo.

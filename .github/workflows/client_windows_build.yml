@@ -13,7 +13,7 @@ name: Build Windows Client
 # add a code-signing certificate under your own identity to the .aip + its secrets.
 #
 # Secrets:
-#   ADVINST_LICENSE   (required) Advanced Installer license id
+#   ADVANCED_INSTALLER_LICENSE   (required) Advanced Installer license id
 
 on:
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
       - name: Set up Advanced Installer
         uses: caphyon/advinst-github-action@main
         with:
-          advinst-license: ${{ secrets.ADVINST_LICENSE }}
+          advinst-license: ${{ secrets.ADVANCED_INSTALLER_LICENSE }}
 
       # Common.ps1 reads ../.user/credentials.json at load; stub it (NuGet key unused here).
       - name: Create credentials stub

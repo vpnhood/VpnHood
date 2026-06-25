@@ -8,7 +8,7 @@ name: Publish Client (All Platforms)
 # Currently wired: Linux + Windows. Android is added later.
 #
 # Secrets:
-#   ADVINST_LICENSE                              Advanced Installer license (Windows)
+#   ADVANCED_INSTALLER_LICENSE                   Advanced Installer license (Windows)
 #   AZURE_* + VH_SIGN_*                          OPTIONAL code signing (Windows). If
 #       absent, the MSI builds unsigned. If present, signing runs and a failure is fatal.
 
@@ -62,6 +62,16 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # Optional code signing — empty unless configured; PublishWinApp skips when absent.
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      VH_SIGN_ACCOUNT: ${{ secrets.VH_SIGN_ACCOUNT }}
+      VH_SIGN_PROFILE: ${{ secrets.VH_SIGN_PROFILE }}
+      VH_SIGN_ENDPOINT: ${{ secrets.VH_SIGN_ENDPOINT }}
     steps:
       - uses: actions/checkout@v4
         with: { ref: "${{ github.event.inputs.ref }}" }
@@ -75,27 +85,35 @@ jobs:
           "MODULE_DIR=Pub/bin/$tag/VpnHoodClient/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Set up Advanced Installer
         uses: caphyon/advinst-github-action@main
-        with: { advinst-license: "${{ secrets.ADVINST_LICENSE }}" }
+        with: { advinst-license: "${{ secrets.ADVANCED_INSTALLER_LICENSE }}" }
       - name: Credentials stub
         shell: pwsh
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
-      - name: Build Windows client MSI
+      - name: Build Windows client binary (dotnet publish)
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1"
-        env:
-          DOTNET_NOLOGO: "1"
-          DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-          # Optional code signing — empty unless configured; PublishWinApp skips when absent.
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          VH_SIGN_ACCOUNT: ${{ secrets.VH_SIGN_ACCOUNT }}
-          VH_SIGN_PROFILE: ${{ secrets.VH_SIGN_PROFILE }}
-          VH_SIGN_ENDPOINT: ${{ secrets.VH_SIGN_ENDPOINT }}
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1" -stage publish
+      - name: Package Windows client MSI (Advanced Installer)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1" -stage package
+      - name: Report MSI signature
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "$env:GITHUB_WORKSPACE/Pub/bin" -Recurse -Filter "VpnHoodClient-win-x64.msi" | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $msi) { Write-Host "::warning::MSI not found for signature report"; return }
+          $sig = Get-AuthenticodeSignature $msi
+          Write-Host "MSI: $msi"
+          Write-Host "Signature status: $($sig.Status)"
+          if ($sig.SignerCertificate) {
+            Write-Host "Signer subject : $($sig.SignerCertificate.Subject)"
+            Write-Host "Signer issuer  : $($sig.SignerCertificate.Issuer)"
+          } else {
+            Write-Host "UNSIGNED (no signer certificate)."
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: client-windows

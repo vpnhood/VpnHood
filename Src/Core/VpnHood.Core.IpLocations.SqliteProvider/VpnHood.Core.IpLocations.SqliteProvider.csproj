@@ -34,9 +34,29 @@
 		</None>
 	</ItemGroup>
 
+	<PropertyGroup>
+		<!--Microsoft.Data.Sqlite version, and the version the e_sqlite3 override below was last verified against.
+		    When you bump MicrosoftDataSqliteVersion, the build warns until you re-check the override and bump
+		    SqliteOverrideVerifiedAgainst to match (see the WarnOnSqliteOverrideReview target).-->
+		<MicrosoftDataSqliteVersion>10.0.9</MicrosoftDataSqliteVersion>
+		<SqliteOverrideVerifiedAgainst>10.0.9</SqliteOverrideVerifiedAgainst>
+	</PropertyGroup>
+
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="$(MicrosoftDataSqliteVersion)" />
+		<!--Override the bundled native SQLite binary to a patched build. Microsoft.Data.Sqlite still pins the vulnerable
+		    SQLitePCLRaw.lib.e_sqlite3 2.1.11 (GHSA-2m69-gcr7-jv3q, e_sqlite3 <= 2.1.11); 3.50.3 ships patched SQLite.
+		    REMOVE THIS once MDS pins a patched SQLitePCLRaw: delete this line, build, and if NU1903 does not return it's
+		    no longer needed. Pinned: 2026/06/24-->
+		<PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
 	</ItemGroup>
+
+	<!--Reminder to revisit the e_sqlite3 override whenever Microsoft.Data.Sqlite is upgraded (the fix will arrive as a
+	    new MDS version that re-pins a patched SQLitePCLRaw). Fires until SqliteOverrideVerifiedAgainst is bumped to match.-->
+	<Target Name="WarnOnSqliteOverrideReview" BeforeTargets="Build"
+			Condition="'$(MicrosoftDataSqliteVersion)' != '$(SqliteOverrideVerifiedAgainst)'">
+		<Warning Text="Microsoft.Data.Sqlite was upgraded to $(MicrosoftDataSqliteVersion) (e_sqlite3 override last verified against $(SqliteOverrideVerifiedAgainst)). Re-check the SQLitePCLRaw.lib.e_sqlite3 override: remove it, build, and see if NU1903 (GHSA-2m69-gcr7-jv3q) returns. If not, delete the override; either way set SqliteOverrideVerifiedAgainst to $(MicrosoftDataSqliteVersion)." />
+	</Target>
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.IpLocations\VpnHood.Core.IpLocations.csproj" />

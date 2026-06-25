@@ -3,6 +3,10 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<IsPackable>false</IsPackable>
 		<UseVSTest>true</UseVSTest>
+		<!--MSTest.Sdk injects the test packages implicitly; override its bundled versions via these properties, NOT
+		    PackageReference Update (which is a no-op against the SDK's late .targets Include). MSTestVersion defaults to
+		    the SDK's bundled version, so only the VSTest platform needs pinning to the latest.-->
+		<MicrosoftNETTestSdkVersion>18.7.0</MicrosoftNETTestSdkVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -31,18 +35,6 @@
 	<ItemGroup>
 		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.737" />
 		<PackageReference Include="VpnHood.Core.Proxies" Version="7.4.768" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.7.0" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <PackageReference Update="MSTest.TestAdapter" Version="4.2.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <PackageReference Update="MSTest.TestFramework" Version="4.2.2" />
 	</ItemGroup>
 
 </Project>

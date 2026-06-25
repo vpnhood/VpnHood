@@ -29,9 +29,9 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { ref: "${{ github.event.inputs.ref }}" }
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with: { global-json-file: global.json }
       - name: Resolve module dir
         shell: pwsh
@@ -50,7 +50,7 @@ jobs:
         run: |
           & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Linux.Web/_publish.ps1"
         env: { DOTNET_NOLOGO: "1", DOTNET_CLI_TELEMETRY_OPTOUT: "1" }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: client-linux
           if-no-files-found: error
@@ -73,9 +73,9 @@ jobs:
       VH_SIGN_PROFILE: ${{ secrets.VH_SIGN_PROFILE }}
       VH_SIGN_ENDPOINT: ${{ secrets.VH_SIGN_ENDPOINT }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { ref: "${{ github.event.inputs.ref }}" }
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with: { global-json-file: global.json }
       - name: Resolve module dir
         shell: pwsh
@@ -114,7 +114,7 @@ jobs:
           } else {
             Write-Host "UNSIGNED (no signer certificate)."
           }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: client-windows
           if-no-files-found: error
@@ -128,9 +128,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with: { ref: "${{ github.event.inputs.ref }}" }
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with: { global-json-file: global.json }
       - name: Resolve module dir
         shell: pwsh
@@ -145,9 +145,9 @@ jobs:
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
       # Reassemble the Pub/bin/<tag>/VpnHoodClient layout PublishToGithub.ps1 expects.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with: { name: client-linux, path: "${{ env.MODULE_DIR }}" }
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with: { name: client-windows, path: "${{ env.MODULE_DIR }}/windows-web" }
       - name: Create GitHub release (real publish flow)
         shell: pwsh

@@ -31,13 +31,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.ref }}
 
       # Installs the exact SDK pinned in global.json (a .NET 11 preview).
       - name: Set up .NET (pinned by global.json)
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
@@ -82,7 +82,7 @@ jobs:
       # also expire after 1 day. continue-on-error keeps a flaky upload non-fatal.
       - name: Upload Linux client artifacts (inspection only)
         if: ${{ github.event.inputs.publish_release != 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         continue-on-error: true
         with:
           name: vpnhood-client-linux

@@ -128,8 +128,29 @@ jobs:
           retention-days: 1
           path: ${{ env.MODULE_DIR }}/**
 
+  # Android is split into one matrix leg per store variant so they build in parallel
+  # (Google AAB / Web APK / Web arm64 APK are independent outputs). Trade-off: each leg
+  # repeats the Android workload + SDK provisioning (the bulk of the time), but on a
+  # public repo the runner minutes are free and wall-clock drops. Each leg uploads its
+  # own artifact (client-android-<id>); the release job stitches the three back together.
   build-android:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: google-aab
+            label: Google AAB
+            script: Src/Apps/Client.Android.Google/_publish.ps1
+            outdir: android-google
+          - id: web-apk
+            label: Web APK
+            script: Src/Apps/Client.Android.Web/_publish.ps1
+            outdir: android-web
+          - id: web-arm64
+            label: Web arm64 APK
+            script: Src/Apps/Client.Android.Web/_publish-arm64.ps1
+            outdir: android-arm64-web
     env:
       DOTNET_NOLOGO: "1"
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -168,28 +189,17 @@ jobs:
         shell: pwsh
         run: |
           & "$env:GITHUB_WORKSPACE/Pub/Core/PrepareCiAndroidSigning.ps1"
-      # Mirrors the android block of Pub/Client/Publish.ps1 (Google AAB, Web APK, Web arm64 APK).
-      - name: Build Android client (Google AAB)
+      # One store variant per leg (see matrix). Mirrors the android block of Pub/Client/Publish.ps1.
+      - name: Build Android client (${{ matrix.label }})
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Google/_publish.ps1"
-      - name: Build Android client (Web APK)
-        shell: pwsh
-        run: |
-          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Web/_publish.ps1"
-      - name: Build Android client (Web arm64 APK)
-        shell: pwsh
-        run: |
-          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Web/_publish-arm64.ps1"
+          & "$env:GITHUB_WORKSPACE/${{ matrix.script }}"
       - uses: actions/upload-artifact@v7
         with:
-          name: client-android
+          name: client-android-${{ matrix.id }}
           if-no-files-found: error
           retention-days: 1
-          path: |
-            ${{ env.MODULE_DIR }}/android-google/**
-            ${{ env.MODULE_DIR }}/android-web/**
-            ${{ env.MODULE_DIR }}/android-arm64-web/**
+          path: ${{ env.MODULE_DIR }}/${{ matrix.outdir }}/**
 
   release:
     needs: [build-linux, build-windows, build-android]
@@ -219,8 +229,14 @@ jobs:
         with: { name: client-linux, path: "${{ env.MODULE_DIR }}" }
       - uses: actions/download-artifact@v8
         with: { name: client-windows, path: "${{ env.MODULE_DIR }}/windows-web" }
+      # Android comes back as three per-variant artifacts (matrix build); each restores
+      # into its own subdir so the layout matches what PublishToGithub.ps1 expects.
       - uses: actions/download-artifact@v8
-        with: { name: client-android, path: "${{ env.MODULE_DIR }}" }
+        with: { name: client-android-google-aab, path: "${{ env.MODULE_DIR }}/android-google" }
+      - uses: actions/download-artifact@v8
+        with: { name: client-android-web-apk, path: "${{ env.MODULE_DIR }}/android-web" }
+      - uses: actions/download-artifact@v8
+        with: { name: client-android-web-arm64, path: "${{ env.MODULE_DIR }}/android-arm64-web" }
       - name: Create GitHub release (real publish flow)
         shell: pwsh
         env:

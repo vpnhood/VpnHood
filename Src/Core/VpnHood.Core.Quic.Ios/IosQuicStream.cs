@@ -24,19 +24,19 @@ internal sealed class IosQuicStream : Stream
     private readonly Action<NWError?> _writeCallback;
 
     private Memory<byte> _readBuffer;
-    private readonly ReadValueTaskSource _readSource = new();
-    private readonly WriteValueTaskSource _writeSource = new();
+    private readonly ValueTaskSource<int> _readSource = new();
+    private readonly ValueTaskSource<bool> _writeSource = new();
 
     private CancellationTokenRegistration _readReg;
     private CancellationTokenRegistration _writeReg;
     private byte[]? _writeRentedArray;
 
     private static readonly Action<object?> CancelReadCallback = (state) => {
-        ((ReadValueTaskSource?)state)?.TrySetException(new OperationCanceledException());
+        ((ValueTaskSource<int>?)state)?.TrySetException(new OperationCanceledException());
     };
 
     private static readonly Action<object?> CancelWriteCallback = (state) => {
-        ((WriteValueTaskSource?)state)?.TrySetException(new OperationCanceledException());
+        ((ValueTaskSource<bool>?)state)?.TrySetException(new OperationCanceledException());
     };
 
     public override bool CanRead => true;
@@ -131,7 +131,7 @@ internal sealed class IosQuicStream : Stream
         if (error != null)
             _writeSource.TrySetException(new IOException($"QUIC stream send failed: {error}"));
         else
-            _writeSource.TrySetResult();
+            _writeSource.TrySetResult(true);
     }
 
     public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
@@ -161,9 +161,9 @@ internal sealed class IosQuicStream : Stream
         base.Dispose(disposing);
     }
 
-    private sealed class ReadValueTaskSource : IValueTaskSource<int>
+    private sealed class ValueTaskSource<T> : IValueTaskSource<T>, IValueTaskSource
     {
-        private ManualResetValueTaskSourceCore<int> _core;
+        private ManualResetValueTaskSourceCore<T> _core;
         private int _state;
 
         public short Version => _core.Version;
@@ -174,7 +174,7 @@ internal sealed class IosQuicStream : Stream
             _core.Reset();
         }
 
-        public bool TrySetResult(int result)
+        public bool TrySetResult(T result)
         {
             if (Interlocked.CompareExchange(ref _state, 1, 0) == 0) {
                 _core.SetResult(result);
@@ -192,45 +192,12 @@ internal sealed class IosQuicStream : Stream
             return false;
         }
 
-        public int GetResult(short token) => _core.GetResult(token);
+        public T GetResult(short token) => _core.GetResult(token);
+
+        void IValueTaskSource.GetResult(short token) => _core.GetResult(token);
+
         public ValueTaskSourceStatus GetStatus(short token) => _core.GetStatus(token);
-        public void OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags) =>
-            _core.OnCompleted(continuation, state, token, flags);
-    }
 
-    private sealed class WriteValueTaskSource : IValueTaskSource
-    {
-        private ManualResetValueTaskSourceCore<bool> _core;
-        private int _state;
-
-        public short Version => _core.Version;
-
-        public void Reset()
-        {
-            _state = 0;
-            _core.Reset();
-        }
-
-        public bool TrySetResult()
-        {
-            if (Interlocked.CompareExchange(ref _state, 1, 0) == 0) {
-                _core.SetResult(true);
-                return true;
-            }
-            return false;
-        }
-
-        public bool TrySetException(Exception ex)
-        {
-            if (Interlocked.CompareExchange(ref _state, 1, 0) == 0) {
-                _core.SetException(ex);
-                return true;
-            }
-            return false;
-        }
-
-        public void GetResult(short token) => _core.GetResult(token);
-        public ValueTaskSourceStatus GetStatus(short token) => _core.GetStatus(token);
         public void OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags) =>
             _core.OnCompleted(continuation, state, token, flags);
     }

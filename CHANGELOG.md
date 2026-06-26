@@ -1,4 +1,4 @@
-# Upcoming
+# v8.0.824
 * Feature: Support QUIC on Windows and Linux
 
 # v7.9.811

@@ -71,11 +71,14 @@ public sealed class IosQuicClient : IQuicClient
             connectionGroup.Start();
 
             await tcs.Task.Vhc();
+            connectionGroup.SetStateChangedHandler(null!);
             return new IosQuicConnection(connectionGroup, multiplexGroup, endpoint, queue,
                 options.RemoteEndPoint, inboundStreams);
         }
         catch {
             inboundStreams.Writer.TryComplete();
+            try { connectionGroup.SetStateChangedHandler(null!); } catch { /* ignore */ }
+            try { connectionGroup.SetNewConnectionHandler(null!); } catch { /* ignore */ }
             try { connectionGroup.Cancel(); } catch { /* ignore */ }
             connectionGroup.Dispose();
             multiplexGroup.Dispose();

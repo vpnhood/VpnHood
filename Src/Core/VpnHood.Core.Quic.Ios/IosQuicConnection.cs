@@ -84,9 +84,11 @@ internal sealed class IosQuicConnection(
             stream.Start();
 
             await tcs.Task.Vhc();
+            stream.SetStateChangeHandler(null!);
             return new IosQuicStream(stream);
         }
         catch {
+            try { stream.SetStateChangeHandler(null!); } catch { /* ignore */ }
             try { stream.Cancel(); } catch { /* ignore */ }
             stream.Dispose();
             throw;
@@ -109,6 +111,8 @@ internal sealed class IosQuicConnection(
             pending.Dispose();
         }
 
+        try { connectionGroup.SetStateChangedHandler(null!); } catch { /* ignore */ }
+        try { connectionGroup.SetNewConnectionHandler(null!); } catch { /* ignore */ }
         try { connectionGroup.Cancel(); } catch { /* ignore */ }
         connectionGroup.Dispose();
         multiplexGroup.Dispose();

@@ -54,18 +54,15 @@
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
-	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json')">
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AppSettings</_Parameter1>
-			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json"))</_Parameter2>
-		</AssemblyAttribute>
-	</ItemGroup>
-
-	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json')">
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>AppSettings_Environment</_Parameter1>
-			<_Parameter2>$([System.IO.File]::ReadAllText("$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json"))</_Parameter2>
-		</AssemblyAttribute>
+	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.
+	     Conditional so a fork without them still builds; AppConfigs reads them at startup. -->
+	<ItemGroup>
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json"
+			LogicalName="AppSettings.json"
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json"
+			LogicalName="AppSettings_Environment.json"
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json')" />
 	</ItemGroup>
 
 	<ItemGroup>

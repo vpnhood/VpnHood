@@ -84,8 +84,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public static AppConfigs Load()
     {
         var appConfigs = new AppConfigs();
-        appConfigs.Merge("AppSettings");
-        appConfigs.Merge("AppSettings_Environment");
+        appConfigs.LoadConfig();
         return appConfigs;
     }
 

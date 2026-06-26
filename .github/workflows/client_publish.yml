@@ -50,7 +50,7 @@ jobs:
         run: |
           & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Linux.Web/_publish.ps1"
         env: { DOTNET_NOLOGO: "1", DOTNET_CLI_TELEMETRY_OPTOUT: "1" }
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: client-linux
           if-no-files-found: error
@@ -114,7 +114,7 @@ jobs:
           } else {
             Write-Host "UNSIGNED (no signer certificate)."
           }
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: client-windows
           if-no-files-found: error
@@ -145,9 +145,9 @@ jobs:
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
       # Reassemble the Pub/bin/<tag>/VpnHoodClient layout PublishToGithub.ps1 expects.
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with: { name: client-linux, path: "${{ env.MODULE_DIR }}" }
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with: { name: client-windows, path: "${{ env.MODULE_DIR }}/windows-web" }
       - name: Create GitHub release (real publish flow)
         shell: pwsh

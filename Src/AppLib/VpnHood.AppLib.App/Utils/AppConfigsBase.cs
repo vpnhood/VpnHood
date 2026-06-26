@@ -21,6 +21,13 @@ public class AppConfigsBase<T> : Singleton<T> where T : Singleton<T>
             JsonSerializerExt.PopulateObject(this, json, typeof(T));
     }
 
+    // Reads an embedded text resource (e.g. a secret embedded by the app csproj). Returns null when the
+    // resource was not embedded, so a fork without it falls back to in-code defaults.
+    protected string? ReadResourceText(string resourceName)
+    {
+        return ReadResource(typeof(T).Assembly, resourceName);
+    }
+
     private static string? ReadResource(Assembly assembly, string resourceName)
     {
         using var stream = assembly.GetManifestResourceStream(resourceName);

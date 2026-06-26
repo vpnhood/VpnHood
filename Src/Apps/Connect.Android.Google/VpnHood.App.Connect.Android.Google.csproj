@@ -65,6 +65,19 @@
 			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\appsettings.$(Configuration).json')" />
 	</ItemGroup>
 
+	<!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret.
+	     The configuration-specific file wins (Debug embeds access-key-default.Debug.txt), otherwise the
+	     base access-key-default.txt is used. Both are optional: a fork without them falls back to the
+	     in-code default in AppConfigs. -->
+	<ItemGroup>
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.$(Configuration).txt"
+			LogicalName="access_key_default.txt"
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.$(Configuration).txt')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.txt"
+			LogicalName="access_key_default.txt"
+			Condition="!Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.$(Configuration).txt') And Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.txt')" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<AndroidResource Update="Resources\xml\locales_config.xml">
 			<SubType>Designer</SubType>

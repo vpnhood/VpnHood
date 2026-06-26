@@ -50,9 +50,7 @@ if ($LASTEXITCODE -eq 0) {
 # publish new release
 Write-Host "create new release: $versionTag";
 
-# Assets to attach.
-# --- TEMP: Linux + Windows. Uncomment the android-* entries once the Android
-#          build leg is wired into the pipeline. ---
+# Assets to attach (Linux + Windows + Android).
 $assets = @(
 	"$packageDir/linux-x64/$packageFileTitle-linux-x64.tar.gz",
 	"$packageDir/linux-x64/$packageFileTitle-linux-x64.json",
@@ -64,14 +62,14 @@ $assets = @(
 
 	"$packageDir/windows-web/$packageFileTitle-win-x64.msi",
 	"$packageDir/windows-web/$packageFileTitle-win-x64.json",
-	"$packageDir/windows-web/$packageFileTitle-win-x64.txt"
+	"$packageDir/windows-web/$packageFileTitle-win-x64.txt",
 
-	# "$packageDir/android-google/$packageFileTitle-android.aab",
-	# "$packageDir/android-google/$packageFileTitle-android.aab.json",
-	# "$packageDir/android-web/$packageFileTitle-android-web.apk",
-	# "$packageDir/android-web/$packageFileTitle-android-web.json",
-	# "$packageDir/android-arm64-web/$packageFileTitle-android-arm64-web.apk",
-	# "$packageDir/android-arm64-web/$packageFileTitle-android-arm64-web.json"
+	"$packageDir/android-google/$packageFileTitle-android.aab",
+	"$packageDir/android-google/$packageFileTitle-android.aab.json",
+	"$packageDir/android-web/$packageFileTitle-android-web.apk",
+	"$packageDir/android-web/$packageFileTitle-android-web.json",
+	"$packageDir/android-arm64-web/$packageFileTitle-android-arm64-web.apk",
+	"$packageDir/android-arm64-web/$packageFileTitle-android-arm64-web.json"
 );
 
 gh release create "$versionTag" `

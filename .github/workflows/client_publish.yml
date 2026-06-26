@@ -5,12 +5,19 @@ name: Publish Client (All Platforms)
 # (changelog header bump + release notes + asset upload), exactly like a normal
 # release. Version/prerelease come from Pub/PubVersion.json in the checked-out commit.
 #
-# Currently wired: Linux + Windows. Android is added later.
+# Wired: Linux + Windows + Android (Google AAB, Web APK, Web arm64 APK).
+#
+# NOTE: the Android client projects currently have AOT disabled (grep "TEMP-CI-AOT-OFF")
+# to keep CI release builds fast while the pipeline is being wired. Re-enable before a
+# production release.
 #
 # Secrets:
 #   ADVANCED_INSTALLER_LICENSE                   Advanced Installer license (Windows)
 #   AZURE_* + VH_SIGN_*                          OPTIONAL code signing (Windows). If
 #       absent, the MSI builds unsigned. If present, signing runs and a failure is fatal.
+#   ANDROID_KEYSTORE_WEB_*  / ANDROID_KEYSTORE_GOOGLE_*   OPTIONAL Android signing
+#       (BASE64 + PASS + ALIAS each). If both groups are absent, an ephemeral throwaway
+#       keystore is generated so the build completes (NOT release/Play-Store grade).
 
 on:
   workflow_dispatch:
@@ -121,8 +128,71 @@ jobs:
           retention-days: 1
           path: ${{ env.MODULE_DIR }}/**
 
+  build-android:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # Optional Android signing — empty unless configured; PrepareCiAndroidSigning.ps1
+      # falls back to an ephemeral keystore when these are absent.
+      ANDROID_KEYSTORE_WEB_BASE64: ${{ secrets.ANDROID_KEYSTORE_WEB_BASE64 }}
+      ANDROID_KEYSTORE_WEB_PASS: ${{ secrets.ANDROID_KEYSTORE_WEB_PASS }}
+      ANDROID_KEYSTORE_WEB_ALIAS: ${{ secrets.ANDROID_KEYSTORE_WEB_ALIAS }}
+      ANDROID_KEYSTORE_GOOGLE_BASE64: ${{ secrets.ANDROID_KEYSTORE_GOOGLE_BASE64 }}
+      ANDROID_KEYSTORE_GOOGLE_PASS: ${{ secrets.ANDROID_KEYSTORE_GOOGLE_PASS }}
+      ANDROID_KEYSTORE_GOOGLE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_GOOGLE_ALIAS }}
+    steps:
+      - uses: actions/checkout@v5
+        with: { ref: "${{ github.event.inputs.ref }}" }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: global.json }
+      # .NET Android needs a JDK 17 on PATH (keytool + the build tooling).
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Install .NET Android workload
+        shell: pwsh
+        run: dotnet workload install android
+      # Provision the Android SDK platform/build-tools the project targets (auto-accepts licenses).
+      - name: Provision Android SDK
+        shell: pwsh
+        run: |
+          dotnet build "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Web/VpnHood.App.Client.Android.Web.csproj" `
+            -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=True -p:AndroidSdkPath="$env:ANDROID_HOME"
+      - name: Credentials + Android signing config
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Pub/Core/PrepareCiAndroidSigning.ps1"
+      # Mirrors the android block of Pub/Client/Publish.ps1 (Google AAB, Web APK, Web arm64 APK).
+      - name: Build Android client (Google AAB)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Google/_publish.ps1"
+      - name: Build Android client (Web APK)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Web/_publish.ps1"
+      - name: Build Android client (Web arm64 APK)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Web/_publish-arm64.ps1"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: client-android
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ env.MODULE_DIR }}/android-google/**
+            ${{ env.MODULE_DIR }}/android-web/**
+            ${{ env.MODULE_DIR }}/android-arm64-web/**
+
   release:
-    needs: [build-linux, build-windows]
+    needs: [build-linux, build-windows, build-android]
     if: ${{ github.event.inputs.publish_release == 'true' }}
     runs-on: ubuntu-latest
     permissions:
@@ -149,6 +219,8 @@ jobs:
         with: { name: client-linux, path: "${{ env.MODULE_DIR }}" }
       - uses: actions/download-artifact@v8
         with: { name: client-windows, path: "${{ env.MODULE_DIR }}/windows-web" }
+      - uses: actions/download-artifact@v8
+        with: { name: client-android, path: "${{ env.MODULE_DIR }}" }
       - name: Create GitHub release (real publish flow)
         shell: pwsh
         env:

@@ -22,10 +22,6 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        // UDP port zero must be specified in preparation
-        if (ipEndPoints.Any(x => x.Port == 0))
-            throw new InvalidOperationException("UDP port has not been specified.");
-
         // stop transmitters that are not in the list
         foreach (var transmitter in _transmitters
                      .Where(x => !ipEndPoints.Contains(x.LocalEndPoint)).ToArray()) {
@@ -39,6 +35,9 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
         var endPointStatuses = new List<ServerHostEndPointStatus>();
         foreach (var ipEndPoint in ipEndPoints) {
             try {
+                if (ipEndPoint.Port == 0)
+                    throw new InvalidOperationException("UDP port has not been specified.");
+
                 if (_transmitters.Any(x => x.LocalEndPoint.Equals(ipEndPoint))) {
                     endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Udp, EndPoint = ipEndPoint });
                     continue;

@@ -35,13 +35,6 @@ internal class QuicListenerHost(
 
         _certificates = certificates;
 
-        if (quicServer is null && ipEndPoints.Count > 0) {
-            throw new NotSupportedException("QUIC is not supported on this platform.");
-        }
-
-        if (ipEndPoints.Any(x => x.Port == 0))
-            throw new InvalidOperationException("QUIC port has not been specified.");
-
         // stop listeners that are no longer in the list
         foreach (var entry in _listeners
                      .Where(x => !ipEndPoints.Any(ep => ep.Equals(x.Listener.LocalEndPoint))).ToArray()) {
@@ -50,9 +43,6 @@ internal class QuicListenerHost(
             await entry.DisposeAsync().Vhc();
             _listeners.Remove(entry);
         }
-
-        if (_certificates.Count == 0 && ipEndPoints.Count > 0)
-            throw new InvalidOperationException("No certificate has been configured for QUIC.");
 
         // start new listeners
         var endPointStatuses = new List<ServerHostEndPointStatus>();
@@ -65,13 +55,24 @@ internal class QuicListenerHost(
             VhLogger.Instance.LogInformation("Start listening on QuicEndPoint: {QuicEndPoint}",
                 VhLogger.Format(ipEndPoint));
             try {
+                if (ipEndPoint.Port == 0)
+                    throw new InvalidOperationException("QUIC port has not been specified.");
+
+                if (_certificates.Count == 0)
+                    throw new InvalidOperationException("No certificate has been configured for QUIC.");
+
+                // QUIC provider is unavailable on this platform (e.g. msquic is not installed).
+                // Throw here so it is recorded as a per-endpoint error below instead of failing the whole configuration.
+                if (quicServer is null)
+                    throw new NotSupportedException("QUIC is not supported on this platform.");
+
                 var listenerOptions = new QuicListenerOptions {
                     ListenEndPoint = ipEndPoint,
                     IdleTimeout = sessionManager.SessionOptions.ChannelIdleTimeoutValue,
                     ServerCertificateSelector = SelectCertificate
                 };
                 var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                var listener = await quicServer!.ListenAsync(listenerOptions, cancellationToken).Vhc();
+                var listener = await quicServer.ListenAsync(listenerOptions, cancellationToken).Vhc();
                 var task = ListenTask(listener, cts.Token);
                 _listeners.Add(new QuicListenerEntry(listener, task, cts));
                 endPointStatuses.Add(new ServerHostEndPointStatus { Protocol = ChannelProtocol.Quic, EndPoint = ipEndPoint });

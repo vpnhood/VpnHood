@@ -48,9 +48,6 @@ internal class TcpListenerHost(
             _listeners.Remove(entry);
         }
 
-        if (_certificates.Count == 0 && ipEndPoints.Count > 0)
-            throw new InvalidOperationException("No certificate has been configured for TCP.");
-
         // start new listeners
         var endPointStatuses = new List<ServerHostEndPointStatus>();
         foreach (var ipEndPoint in ipEndPoints) {
@@ -61,6 +58,12 @@ internal class TcpListenerHost(
             }
 
             try {
+                if (ipEndPoint.Port == 0)
+                    throw new InvalidOperationException("TCP port has not been specified.");
+
+                if (_certificates.Count == 0)
+                    throw new InvalidOperationException("No certificate has been configured for TCP.");
+
                 VhLogger.Instance.LogInformation("Start listening on TcpEndPoint: {TcpEndPoint}",
                     VhLogger.Format(ipEndPoint));
                 var tcpListener = new TcpListener(ipEndPoint);

@@ -11,6 +11,7 @@ public interface IDevice : IDisposable
     bool IsIncludeAppsSupported { get; }
     bool IsBindProcessToVpnSupported { get; }
     bool IsTcpProxySupported { get; }
+    bool IsQuicSupported { get; }
     string OsInfo { get; }
     DeviceMemInfo? MemInfo { get; }
     DeviceAppInfo[] InstalledApps { get; }

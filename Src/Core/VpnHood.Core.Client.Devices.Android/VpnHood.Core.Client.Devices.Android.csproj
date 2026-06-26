@@ -41,6 +41,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Host\VpnHood.Core.Client.VpnServices.Host.csproj" />
+		<ProjectReference Include="..\VpnHood.Core.Quic.Android\VpnHood.Core.Quic.Android.csproj" />
 		<ProjectReference Include="..\VpnHood.Core.VpnAdapters.AndroidTun\VpnHood.Core.VpnAdapters.AndroidTun.csproj" />
 	</ItemGroup>
 </Project>

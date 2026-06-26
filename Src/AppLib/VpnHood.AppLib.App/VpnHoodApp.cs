@@ -159,6 +159,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // set the default server location if not set
         var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
 
+        var protocols = new List<ChannelProtocol> { ChannelProtocol.Tcp, ChannelProtocol.Udp };
+        if (_device.IsQuicSupported)
+            protocols.Add(ChannelProtocol.Quic);
+
         // initialize features
         Features = new AppFeatures {
             Version = appVersion,
@@ -175,6 +179,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.BillingProvider != null,
             IsTcpProxySupported = device.IsTcpProxySupported,
+            IsQuicSupported = device.IsQuicSupported,
             IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
             IsUserReviewSupported = options.UserReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
@@ -187,7 +192,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             CustomData = options.CustomData,
             PremiumFeatures = options.PremiumFeatures,
             IsAdSupported = options.AdProviderItems.Any(),
-            IsProxySupported = true
+            IsProxySupported = true,
+            ChannelProtocols = protocols.ToArray()
         };
 
         // create tracker

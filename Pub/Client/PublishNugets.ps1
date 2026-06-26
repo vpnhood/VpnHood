@@ -8,9 +8,6 @@ $bump = $bump -eq "1";
 
 # generic
 & "$solutionDir/Src/Core/VpnHood.Core.Toolkit/_publish.ps1";
-& "$solutionDir/Src/Core/VpnHood.Core.Quic.Abstractions/_publish.ps1";
-& "$solutionDir/Src/Core/VpnHood.Core.Quic.MsQuic/_publish.ps1";
-& "$solutionDir/Src/Core/VpnHood.Core.Quic.Ios/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.Packets/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.TcpStack.Abstractions/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.TcpStack./_publish.ps1";
@@ -32,6 +29,10 @@ $bump = $bump -eq "1";
 & "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Abstractions/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Host/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.Client.VpnServices.Manager/_publish.ps1";
+& "$solutionDir/Src/Core/VpnHood.Core.Quic.Abstractions/_publish.ps1";
+& "$solutionDir/Src/Core/VpnHood.Core.Quic.MsQuic/_publish.ps1";
+& "$solutionDir/Src/Core/VpnHood.Core.Quic.Ios/_publish.ps1";
+& "$solutionDir/Src/Core/VpnHood.Core.Quic.Android/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.Client.Devices.Abstractions/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.Client.Devices.Android/_publish.ps1";
 & "$solutionDir/Src/Core/VpnHood.Core.Client.Devices.Ios/_publish.ps1";

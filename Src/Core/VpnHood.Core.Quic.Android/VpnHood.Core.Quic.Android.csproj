@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Android implementation of the VpnHood QUIC abstractions (IQuicClient/IQuicConnection/Stream) over MsQuic. All native linking (libmsquic.so) and the Microsoft.Quic P/Invoke bindings are provided by the VpnHood.Core.Quic.MsQuic.AndroidNative package; this project is pure managed code.</Description>
+		<TargetFramework>net10.0-android36.1</TargetFramework>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+		<!-- "Droid" (not "Android") avoids clashing with the Android SDK's global "Android" namespace,
+		     matching VpnHood.Core.Client.Devices.Android (RootNamespace VpnHood.Core.Client.Devices.Droid). -->
+		<RootNamespace>VpnHood.Core.Quic.Droid</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IncludeSymbols>True</IncludeSymbols>
+		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+		<LangVersion>latest</LangVersion>
+		<!-- Our managed P/Invoke wrappers (MsQuicApi, AndroidQuicClient/Connection/Stream) use pointers. -->
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Release'">
+		<PathMap>$(SolutionDir)=.</PathMap>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+		<Company>OmegaHood LLC</Company>
+		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+		<PackageIcon>VpnHood.png</PackageIcon>
+		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+		<Version>8.0.821</Version>
+		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="VpnHood.Core.Quic.MsQuic.AndroidNative" Version="8.0.5" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- VpnHood.Core.Toolkit provides SystemSocketFactory and transitively Quic.Abstractions. -->
+		<ProjectReference Include="..\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
+		<!-- All native QUIC complexity (the committed libmsquic.so per ABI + the Microsoft.Quic P/Invoke
+		     bindings) lives in this self-contained, published package. It is built and published by the
+		     fork's GitHub Actions on every push (version 8.0.<run#>); floating on 8.0.* always restores
+		     the newest published build. -->
+	</ItemGroup>
+
+</Project>

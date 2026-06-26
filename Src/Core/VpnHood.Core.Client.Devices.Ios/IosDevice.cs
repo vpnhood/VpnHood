@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
+using VpnHood.Core.Quic.Ios;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Devices.Ios;
@@ -55,6 +56,7 @@ public class IosDevice : IDevice
 
     public bool IsBindProcessToVpnSupported => false;
     public bool IsTcpProxySupported => true;
+    public bool IsQuicSupported => IosQuicClient.IsSupported;
     public bool IsExcludeAppsSupported => false;
     public bool IsIncludeAppsSupported => false;
     public bool IsAlwaysOnSupported => false;

@@ -8,6 +8,7 @@ using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
+using VpnHood.Core.Quic.Droid;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -23,6 +24,7 @@ public class AndroidDevice : IDevice
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
     public bool IsTcpProxySupported => true;
+    public bool IsQuicSupported => AndroidQuicClient.IsSupported;
     public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
     public bool IsTv => AndroidUtil.IsTv();

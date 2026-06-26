@@ -4,8 +4,8 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
-using Xamarin.Google.Android.Play.Core.Review;
-using Xamarin.Google.Android.Play.Core.Review.Testing;
+using Google.Android.Play.Core.Review;
+using Google.Android.Play.Core.Review.Testing;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 

@@ -145,7 +145,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // Kick off heavy VpnHood init off the main thread.
         _ = Task.Run(() => {
             try {
-                var sf = new IosQuicSocketFactory();
+                var sf = new IosSocketFactory();
                 _vpnServiceHost = new VpnServiceHost(configFolder, this, sf,
                     netFilter: null, withLogger: false, messageListener: _messageListener);
                 _ = _vpnServiceHost.TryConnect(true);

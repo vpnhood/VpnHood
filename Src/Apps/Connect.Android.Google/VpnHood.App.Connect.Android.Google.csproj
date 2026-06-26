@@ -75,10 +75,31 @@
 		</AndroidResource>
 	</ItemGroup>
 
+	<PropertyGroup>
+		<!--Firebase.Analytics version, and the version the DataStore.Preferences pin below was last verified against.
+		    Firebase.Common (pulled in via Firebase.Analytics) is what drags in the stale DataStore.Preferences; when you
+		    bump FirebaseAnalyticsVersion the build warns until you re-check the pin and bump DataStorePinVerifiedAgainst
+		    to match (see the WarnOnDataStorePinReview target).-->
+		<FirebaseAnalyticsVersion>123.2.0</FirebaseAnalyticsVersion>
+		<DataStorePinVerifiedAgainst>123.2.0</DataStorePinVerifiedAgainst>
+	</PropertyGroup>
+
 	<ItemGroup>
-		<PackageReference Include="Xamarin.Firebase.Analytics" Version="123.0.0.3" />
-		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="120.0.4.1" />
+		<PackageReference Include="Xamarin.Firebase.Analytics" Version="$(FirebaseAnalyticsVersion)" />
+		<PackageReference Include="Xamarin.Firebase.Crashlytics" Version="120.0.6" />
+		<!--Align AndroidX DataStore.Preferences with the core DataStore 1.2.1 pulled in by GooglePlayServices.Ads/Firebase.Sessions.
+		    Firebase.Common otherwise drags in DataStore.Preferences 1.2.0.2 which caps the core at <1.2.1 (NU1608).
+		    REMOVE THIS once Firebase.Common ships DataStore.Preferences >= 1.2.1: delete this line, build, and if NU1608
+		    does not return it's no longer needed. Pinned: 2026/06/24-->
+		<PackageReference Include="Xamarin.AndroidX.DataStore.Preferences" Version="1.2.1" />
 	</ItemGroup>
+
+	<!--Reminder to revisit the DataStore.Preferences pin whenever Firebase.Analytics is upgraded (the stale transitive
+	    Preferences arrives via Firebase.Common). Fires until DataStorePinVerifiedAgainst is bumped to match.-->
+	<Target Name="WarnOnDataStorePinReview" BeforeTargets="Build"
+			Condition="'$(FirebaseAnalyticsVersion)' != '$(DataStorePinVerifiedAgainst)'">
+		<Warning Text="Xamarin.Firebase.Analytics was upgraded to $(FirebaseAnalyticsVersion) (DataStore.Preferences pin last verified against $(DataStorePinVerifiedAgainst)). Re-check the Xamarin.AndroidX.DataStore.Preferences pin: remove it, build, and see if NU1608 returns. If not, delete the pin; either way set DataStorePinVerifiedAgainst to $(FirebaseAnalyticsVersion)." />
+	</Target>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.Ads.AdMob\VpnHood.AppLib.Android.Ads.AdMob.csproj" />
@@ -91,11 +112,6 @@
 
 	<ItemGroup>
 		<GoogleServicesJson Include="Properties\google-services.json" />
-	</ItemGroup>
-
-	<!--Fix SDK Built Error 1/17/2026-->
-	<ItemGroup>
-	  <Folder Include="Docs\" />
 	</ItemGroup>
 
 </Project>

@@ -1,5 +1,6 @@
 ﻿using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
+using VpnHood.Core.Quic.MsQuic;
 
 namespace VpnHood.Core.Client.Devices.Win;
 
@@ -12,6 +13,7 @@ public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
     public bool IsExcludeAppsSupported => isDebugMode;
     public bool IsIncludeAppsSupported => isDebugMode;
     public bool IsTcpProxySupported => true;
+    public bool IsQuicSupported => MsQuicClient.IsSupported;
     public bool IsTv => false;
 
     public DeviceMemInfo MemInfo {

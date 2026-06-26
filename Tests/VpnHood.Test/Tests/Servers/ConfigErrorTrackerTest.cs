@@ -1,4 +1,5 @@
 using System.Text.Json;
+using VpnHood.Core.Quic.MsQuic;
 using VpnHood.Core.Server;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Providers;
@@ -40,6 +41,7 @@ public class ConfigErrorTrackerTest : TestBase
     {
         return new VpnHoodServer(accessManager, new ServerOptions {
             SocketFactory = new TestSocketFactory(),
+            QuicServer = MsQuicServer.IsSupported ? new MsQuicServer() : null,
             StoragePath = TestHelper.WorkingPath,
             AutoDisposeAccessManager = false,
             PublicIpDiscovery = false,

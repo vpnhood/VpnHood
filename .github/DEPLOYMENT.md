@@ -27,8 +27,8 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `ADVANCED_INSTALLER_LICENSE` | `client_windows_build.yml`, `client_publish.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
 | `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` | `client_publish.yml` | Optional (Windows signing) | Service principal for Azure Trusted Signing. All three (plus the `VH_SIGN_*` set) must be present for signing to run. |
 | `VH_SIGN_ACCOUNT` / `VH_SIGN_PROFILE` / `VH_SIGN_ENDPOINT` | `client_publish.yml` | Optional (Windows signing) | Trusted Signing target: account name, certificate profile, and regional endpoint. |
-| `ANDROID_KEYSTORE_WEB_BASE64` / `_PASS` / `_ALIAS` | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Web + Web-arm64 APKs, plus its store password and key alias. |
-| `ANDROID_KEYSTORE_GOOGLE_BASE64` / `_PASS` / `_ALIAS` | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Google AAB, plus its store password and key alias. |
+| `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64` / `_PASS` | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Google AAB, plus its store password. The key alias is auto-detected from the keystore — no need to match ours. |
+| `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `_PASS` | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Web + Web-arm64 APKs, plus its store password. Alias auto-detected. |
 
 ## Per-platform setup
 
@@ -42,17 +42,22 @@ on the runner, and the Android SDK is auto-provisioned.
 
 **Signing (optional):** signing config is built by `Pub/Core/PrepareCiAndroidSigning.ps1`.
 
-- If you set both keystore groups below, the real keystores are used.
-- If they are absent, an **ephemeral throwaway keystore** is generated so the build still
+- Each keystore below is independent: set a key's group and its real keystore is used.
+- If a key's secrets are absent, an **ephemeral throwaway keystore** is generated so the build still
   completes — but those artifacts are **not** release/Play-Store grade. Never upload the
   production app-signing key to a public/test repo just to make a test build pass.
 
 To sign with real keys (encode the keystore first: `base64 -w0 my.keystore`):
 
-- `ANDROID_KEYSTORE_WEB_BASE64` / `ANDROID_KEYSTORE_WEB_PASS` / `ANDROID_KEYSTORE_WEB_ALIAS`
-  — the keystore that signs the **Web** and **Web-arm64** APKs.
-- `ANDROID_KEYSTORE_GOOGLE_BASE64` / `ANDROID_KEYSTORE_GOOGLE_PASS` / `ANDROID_KEYSTORE_GOOGLE_ALIAS`
-  — the keystore that signs the **Google** AAB.
+- `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64` / `ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS`
+  — the keystore that signs the **Client Google** AAB.
+- `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `ANDROID_KEYSTORE_CLIENT_WEB_PASS`
+  — the keystore that signs the **Client Web** and **Web-arm64** APKs.
+
+Key aliases are **auto-detected** from each keystore at publish time, so you can use your own
+keystore without matching our alias or editing the repo (override via an `alias` field in
+`Pub/Core/android-signing.json` only for a multi-entry keystore). (Connect publishing, when wired
+into CI, uses `ANDROID_KEYSTORE_CONNECT_BASE64` / `_PASS` the same way.)
 
 > The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
 > CI builds fast. Re-enable it before shipping a production release.

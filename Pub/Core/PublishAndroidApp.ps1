@@ -37,11 +37,42 @@ $module_packageFile = "$moduleDir/$module_baseFileName.$packageExt";
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-# android
-$nodeName = "Android.$packageFileTitle.$distribution";
-$keystore = Join-Path "$solutionDir/../.user/" $credentials.$nodeName.KeyStoreFile
-$keystorePass = $credentials.$nodeName.KeyStorePass
-$keystoreAlias = $credentials.$nodeName.KeyStoreAlias
+# android signing — resolve from the non-secret manifest + per-key secrets in .user/<dir>/
+# (keystore.p12 + keystore_pass.txt). The manifest handles distribution fan-out so secrets
+# are never duplicated; CI materializes the same files from GitHub secrets.
+$signing = (Get-Content "$PSScriptRoot/android-signing.json" -Raw | ConvertFrom-Json)."$packageFileTitle.$distribution";
+if ($null -eq $signing) { Throw "No android-signing.json entry for '$packageFileTitle.$distribution'." }
+$keystoreDir = Join-Path "$solutionDir/../.user/" $signing.dir
+$keystore = Join-Path $keystoreDir "keystore.p12"
+$keystorePass = (Get-Content (Join-Path $keystoreDir "keystore_pass.txt") -Raw).Trim()
+# Key alias resolution, in priority order:
+#   1. explicit "alias" in android-signing.json (override),
+#   2. keystore_alias.txt next to the keystore (written locally / by CI),
+#   3. auto-detect from the keystore.
+# Auto-detect (3) is valid ONLY when the keystore holds exactly one PrivateKeyEntry (only a key
+# entry can sign); on 0 or >1 it fails and asks for an explicit alias. A fork can therefore drop in
+# a bare keystore (auto-detect) or ship an alias file, without editing the repo.
+$keystoreAlias = $signing.alias
+$aliasFile = Join-Path $keystoreDir "keystore_alias.txt"
+if ([string]::IsNullOrWhiteSpace($keystoreAlias) -and (Test-Path $aliasFile)) {
+	$keystoreAlias = (Get-Content $aliasFile -Raw).Trim()
+}
+if ([string]::IsNullOrWhiteSpace($keystoreAlias)) {
+	$keyAliases = @()
+	$current = $null
+	foreach ($line in (& keytool -list -v -keystore $keystore -storepass $keystorePass 2>&1)) {
+		$s = $line.ToString()
+		if ($s -match '^Alias name:\s*(.+?)\s*$') { $current = $Matches[1] }
+		elseif ($s -match '^Entry type:\s*PrivateKeyEntry' -and $current) { $keyAliases += $current; $current = $null }
+	}
+	if ($keyAliases.Count -eq 0) {
+		Throw "No PrivateKeyEntry found in '$keystore' (add an explicit alias to android-signing.json)."
+	}
+	if ($keyAliases.Count -gt 1) {
+		Throw "Keystore '$keystore' has multiple key entries ($($keyAliases -join ', ')); set an explicit 'alias' for '$packageFileTitle.$distribution' in android-signing.json."
+	}
+	$keystoreAlias = $keyAliases[0]
+}
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
 $appIconXml = Join-Path $projectDir "Resources/mipmap-anydpi-v26/ic_launcher.xml";
 $appIconXmlDoc = [xml](Get-Content $appIconXml);

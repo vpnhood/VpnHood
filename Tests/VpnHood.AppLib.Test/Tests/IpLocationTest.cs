@@ -1,7 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Net;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
@@ -66,10 +65,9 @@ public class IpLocationTest : TestAppBase
         if (!Directory.Exists(projectFolder))
             throw new DirectoryNotFoundException("Ip2Location Project was not found.");
 
-        // find token
-        var userSecretFile = Path.Combine(vhFolder, ".user", "credentials.json");
-        var document = JsonDocument.Parse(await File.ReadAllTextAsync(userSecretFile));
-        var ip2LocationToken = document.RootElement.GetProperty("Ip2LocationToken").GetString();
+        // find token (stored as its own secret file under .user, see Pub/Core secret layout)
+        var userSecretFile = Path.Combine(vhFolder, ".user", "ip2location_token.txt");
+        var ip2LocationToken = (await File.ReadAllTextAsync(userSecretFile)).Trim();
         ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);
 
         await Ip2LocationDbParser.UpdateLocalDb(ipLocationFile, ip2LocationToken, forIpRange: true);

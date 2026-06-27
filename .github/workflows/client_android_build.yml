@@ -8,8 +8,8 @@ name: Build Android Client
 #     -> Pub/Core/PublishAndroidApp.ps1 -> Pub/Core/Common.ps1
 #
 # Signing: Pub/Core/PrepareCiAndroidSigning.ps1 uses the real keystores when the
-# ANDROID_KEYSTORE_WEB_* / ANDROID_KEYSTORE_GOOGLE_* secrets are set, otherwise it
-# generates an ephemeral throwaway keystore (build completes, NOT release-grade).
+# ANDROID_KEYSTORE_CLIENT_GOOGLE_* / ANDROID_KEYSTORE_CLIENT_WEB_* secrets are set, otherwise
+# it generates an ephemeral throwaway keystore (build completes, NOT release-grade).
 #
 # NOTE: the Android client projects currently have AOT disabled (grep "TEMP-CI-AOT-OFF")
 # to keep CI builds fast. Re-enable before a production release.
@@ -30,12 +30,10 @@ jobs:
     env:
       DOTNET_NOLOGO: "1"
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-      ANDROID_KEYSTORE_WEB_BASE64: ${{ secrets.ANDROID_KEYSTORE_WEB_BASE64 }}
-      ANDROID_KEYSTORE_WEB_PASS: ${{ secrets.ANDROID_KEYSTORE_WEB_PASS }}
-      ANDROID_KEYSTORE_WEB_ALIAS: ${{ secrets.ANDROID_KEYSTORE_WEB_ALIAS }}
-      ANDROID_KEYSTORE_GOOGLE_BASE64: ${{ secrets.ANDROID_KEYSTORE_GOOGLE_BASE64 }}
-      ANDROID_KEYSTORE_GOOGLE_PASS: ${{ secrets.ANDROID_KEYSTORE_GOOGLE_PASS }}
-      ANDROID_KEYSTORE_GOOGLE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_GOOGLE_ALIAS }}
+      ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64 }}
+      ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS }}
+      ANDROID_KEYSTORE_CLIENT_WEB_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_BASE64 }}
+      ANDROID_KEYSTORE_CLIENT_WEB_PASS: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_PASS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5

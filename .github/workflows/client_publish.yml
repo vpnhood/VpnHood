@@ -15,8 +15,8 @@ name: Publish Client (All Platforms)
 #   ADVANCED_INSTALLER_LICENSE                   Advanced Installer license (Windows)
 #   AZURE_* + VH_SIGN_*                          OPTIONAL code signing (Windows). If
 #       absent, the MSI builds unsigned. If present, signing runs and a failure is fatal.
-#   ANDROID_KEYSTORE_WEB_*  / ANDROID_KEYSTORE_GOOGLE_*   OPTIONAL Android signing
-#       (BASE64 + PASS + ALIAS each). If both groups are absent, an ephemeral throwaway
+#   ANDROID_KEYSTORE_CLIENT_GOOGLE_*  / ANDROID_KEYSTORE_CLIENT_WEB_*   OPTIONAL Android signing
+#       (BASE64 + PASS each). If a key's secrets are absent, an ephemeral throwaway
 #       keystore is generated so the build completes (NOT release/Play-Store grade).
 
 on:
@@ -51,7 +51,7 @@ jobs:
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
+          '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
       - name: Build Linux client
         shell: pwsh
         run: |
@@ -98,7 +98,7 @@ jobs:
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
+          '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
       - name: Build Windows client binary (dotnet publish)
         shell: pwsh
         run: |
@@ -156,12 +156,10 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       # Optional Android signing — empty unless configured; PrepareCiAndroidSigning.ps1
       # falls back to an ephemeral keystore when these are absent.
-      ANDROID_KEYSTORE_WEB_BASE64: ${{ secrets.ANDROID_KEYSTORE_WEB_BASE64 }}
-      ANDROID_KEYSTORE_WEB_PASS: ${{ secrets.ANDROID_KEYSTORE_WEB_PASS }}
-      ANDROID_KEYSTORE_WEB_ALIAS: ${{ secrets.ANDROID_KEYSTORE_WEB_ALIAS }}
-      ANDROID_KEYSTORE_GOOGLE_BASE64: ${{ secrets.ANDROID_KEYSTORE_GOOGLE_BASE64 }}
-      ANDROID_KEYSTORE_GOOGLE_PASS: ${{ secrets.ANDROID_KEYSTORE_GOOGLE_PASS }}
-      ANDROID_KEYSTORE_GOOGLE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_GOOGLE_ALIAS }}
+      ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64 }}
+      ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS }}
+      ANDROID_KEYSTORE_CLIENT_WEB_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_BASE64 }}
+      ANDROID_KEYSTORE_CLIENT_WEB_PASS: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_PASS }}
     steps:
       - uses: actions/checkout@v5
         with: { ref: "${{ github.event.inputs.ref }}" }
@@ -223,7 +221,7 @@ jobs:
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '{ "NugetApiKey": "" }' | Out-File (Join-Path $u "credentials.json") -Encoding ascii -Force
+          '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
       # Reassemble the Pub/bin/<tag>/VpnHoodClient layout PublishToGithub.ps1 expects.
       - uses: actions/download-artifact@v8
         with: { name: client-linux, path: "${{ env.MODULE_DIR }}" }

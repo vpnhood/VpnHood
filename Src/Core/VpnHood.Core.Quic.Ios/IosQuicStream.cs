@@ -79,50 +79,48 @@ internal sealed class IosQuicStream : AsyncStream
             _readReg = cancellationToken.Register(CancelReadCallback, _readSource);
 
         var maximumLength = (uint)Math.Min(buffer.Length, MaxReceiveLength);
-        using (new NSAutoreleasePool()) {
-            _connection.ReceiveReadOnlyData(minimumIncompleteLength: 1, maximumLength: maximumLength, _readCallback);
-        }
+        using var pool = new NSAutoreleasePool();
+        _connection.ReceiveReadOnlyData(minimumIncompleteLength: 1, maximumLength: maximumLength, _readCallback);
 
         return new ValueTask<int>(_readSource, _readSource.Version);
     }
 
     private void OnReadCompleted(ReadOnlySpan<byte> data, NWContentContext? context, bool isComplete, NWError? error)
     {
-        using (new NSAutoreleasePool()) {
-            _readReg.Dispose();
+        using var pool = new NSAutoreleasePool();
+        _readReg.Dispose();
 
-            var buffer = _readBuffer;
-            _readBuffer = default;
+        var buffer = _readBuffer;
+        _readBuffer = default;
 
-            try {
-                // Claim completion BEFORE touching the buffer. If cancellation or Dispose already completed
-                // this read, the caller's buffer may have been returned to the shared pool (and re-rented by
-                // another channel) — copying native data into it would corrupt unrelated memory. Reserving
-                // first also keeps the buffer alive: the consumer's read can't unwind until we publish.
-                if (!_readSource.TryReserve())
-                    return;
+        try {
+            // Claim completion BEFORE touching the buffer. If cancellation or Dispose already completed
+            // this read, the caller's buffer may have been returned to the shared pool (and re-rented by
+            // another channel) — copying native data into it would corrupt unrelated memory. Reserving
+            // first also keeps the buffer alive: the consumer's read can't unwind until we publish.
+            if (!_readSource.TryReserve())
+                return;
 
-                if (error != null) {
-                    _readSource.SetReservedException(new IOException($"QUIC stream receive failed: {error}"));
-                    return;
-                }
-
-                if (isComplete)
-                    _readEof = true;
-
-                // Empty completion is EOF (n == 0). A non-empty final chunk (isComplete == true) is still
-                // returned here; the NEXT read arms a receive that returns empty -> 0, i.e. standard EOF.
-                var n = 0;
-                if (!data.IsEmpty && !buffer.IsEmpty) {
-                    n = Math.Min(data.Length, buffer.Length);
-                    data[..n].CopyTo(buffer.Span);
-                }
-                _readSource.SetReservedResult(n);
+            if (error != null) {
+                _readSource.SetReservedException(new IOException($"QUIC stream receive failed: {error}"));
+                return;
             }
-            finally {
-                context?.Dispose();
-                error?.Dispose();
+
+            if (isComplete)
+                _readEof = true;
+
+            // Empty completion is EOF (n == 0). A non-empty final chunk (isComplete == true) is still
+            // returned here; the NEXT read arms a receive that returns empty -> 0, i.e. standard EOF.
+            var n = 0;
+            if (!data.IsEmpty && !buffer.IsEmpty) {
+                n = Math.Min(data.Length, buffer.Length);
+                data[..n].CopyTo(buffer.Span);
             }
+            _readSource.SetReservedResult(n);
+        }
+        finally {
+            context?.Dispose();
+            error?.Dispose();
         }
     }
 
@@ -136,21 +134,19 @@ internal sealed class IosQuicStream : AsyncStream
 
         _writeSource.Reset();
 
-        if (cancellationToken.CanBeCanceled) {
+        if (cancellationToken.CanBeCanceled)
             _writeReg = cancellationToken.Register(CancelWriteCallback, _writeSource);
-        }
 
-        using (new NSAutoreleasePool()) {
-            if (MemoryMarshal.TryGetArray(buffer, out var segment)) {
-                // isComplete: false -> more data may follow on this stream (do not signal FIN).
-                _connection.Send(segment.Array!, segment.Offset, segment.Count, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
-            }
-            else {
-                var rented = ArrayPool<byte>.Shared.Rent(buffer.Length);
-                _writeRentedArray = rented;
-                buffer.CopyTo(rented);
-                _connection.Send(rented, 0, buffer.Length, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
-            }
+        using var pool = new NSAutoreleasePool();
+        if (MemoryMarshal.TryGetArray(buffer, out var segment)) {
+            // isComplete: false -> more data may follow on this stream (do not signal FIN).
+            _connection.Send(segment.Array!, segment.Offset, segment.Count, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
+        }
+        else {
+            var rented = ArrayPool<byte>.Shared.Rent(buffer.Length);
+            _writeRentedArray = rented;
+            buffer.CopyTo(rented);
+            _connection.Send(rented, 0, buffer.Length, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
         }
 
         return new ValueTask(_writeSource, _writeSource.Version);
@@ -158,21 +154,20 @@ internal sealed class IosQuicStream : AsyncStream
 
     private void OnWriteCompleted(NWError? error)
     {
-        using (new NSAutoreleasePool()) {
-            _writeReg.Dispose();
+        using var pool = new NSAutoreleasePool();
+        _writeReg.Dispose();
 
-            var rented = Interlocked.Exchange(ref _writeRentedArray, null);
-            if (rented != null) {
-                ArrayPool<byte>.Shared.Return(rented);
-            }
+        var rented = Interlocked.Exchange(ref _writeRentedArray, null);
+        if (rented != null) {
+            ArrayPool<byte>.Shared.Return(rented);
+        }
 
-            if (error != null) {
-                _writeSource.TrySetException(new IOException($"QUIC stream send failed: {error}"));
-                error.Dispose();
-            }
-            else {
-                _writeSource.TrySetResult();
-            }
+        if (error != null) {
+            _writeSource.TrySetException(new IOException($"QUIC stream send failed: {error}"));
+            error.Dispose();
+        }
+        else {
+            _writeSource.TrySetResult();
         }
     }
 

@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: QUIC server stops after some errors
+
 # v8.0.815
 * Feature: Support QUIC on Windows and Linux
 * Fix: Exceeding the 7-day threshold error

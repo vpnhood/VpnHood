@@ -129,17 +129,23 @@ internal class QuicListenerHost(
                 if (ct.IsCancellationRequested)
                     break;
 
-                errorCounter++;
-                if (errorCounter > maxErrorCount) {
-                    VhLogger.Instance.LogError(ex,
-                        "Too many unexpected errors in QUIC AcceptConnectionAsync. Stopping the Listener... LocalEndPint: {LocalEndPint}",
-                        localEp);
-                    break;
-                }
-
                 VhLogger.Instance.LogError(GeneralEventId.Request, ex,
                     "ServerHost could not AcceptQuicConnection. LocalEndPint: {LocalEndPint}, ErrorCounter: {ErrorCounter}",
                     localEp, errorCounter);
+
+                // We cannot tell a per-connection fault from permanent damage (IP change, socket unbound)
+                // by exception type: msquic collapses them into a generic QuicException/SocketException, and
+                // .NET already drops failed handshakes internally. Persistence is the reliable signal instead:
+                // a transient error is cleared by the next successful accept (errorCounter reset above), while
+                // permanent damage keeps throwing. The short delay below stops a broken listener from
+                // hot-spinning and makes maxErrorCount a meaningful time window rather than a microsecond burst.
+                errorCounter++;
+                if (errorCounter > maxErrorCount) {
+                    VhLogger.Instance.LogError(ex,
+                        "Too many unexpected errors in QUIC AcceptConnectionAsync. Waiting 60 seconds...",
+                        localEp);
+                    await Task.Delay(TimeSpan.FromSeconds(60), ct).Vhc();
+                }
             }
         }
 

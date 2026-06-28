@@ -10,13 +10,10 @@ namespace VpnHood.Core.TcpStack;
 /// All metrics are updated thread-safely.
 /// </summary>
 /// <remarks>
-/// This type also owns the lifecycle logging for established connections: callers just report the
-/// establish/release events (via <see cref="IncrementEstablishedConnections"/> /
-/// <see cref="DecrementEstablishedConnections"/>) and the counter + log line are produced together,
-/// so the running live count can never drift from what is logged. The lines are emitted at
-/// Information level (not the verbose hot-path traces) so they always show up in catlog without
-/// needing VerboseLogging — grep for "[TcpStack]" (or "+CONN" / "-CONN") to watch stream
-/// creation/teardown and the running total.
+/// This type also owns the lifecycle logging for established connections: callers report the establish/release
+/// events (via <see cref="IncrementEstablishedConnections"/> / <see cref="DecrementEstablishedConnections"/>)
+/// and the counter + log line are produced together, so the running live count can never drift from what is
+/// logged. Lines are at Debug level — grep catlog for "[TcpStack]" (or "+CONN" / "-CONN").
 /// </remarks>
 public sealed class TcpStackDiagnostics
 {
@@ -67,8 +64,7 @@ public sealed class TcpStackDiagnostics
 
     /// <summary>
     /// Records that an established connection was released: drops the live established count and logs the
-    /// event (with the teardown <paramref name="reason"/>) so TCP-stack stream teardown can be monitored
-    /// via catlog.
+    /// event (with the teardown <paramref name="reason"/>) so TCP-stack stream teardown can be monitored via catlog.
     /// </summary>
     internal void DecrementEstablishedConnections(IPEndPointPairValue endPointPair, string reason)
     {
@@ -77,9 +73,5 @@ public sealed class TcpStackDiagnostics
             "[TcpStack] -CONN released({Reason}) {EndPointPair} live={LiveEstablished}", reason, endPointPair, live);
     }
 
-    internal void AddPipeBufferedBytes(long bytes)
-    {
-        if (bytes == 0) return; // no-op delta (e.g. nothing left unread on dispose / nothing consumed)
-        Interlocked.Add(ref _totalPipeBufferedBytes, bytes);
-    }
+    internal void AddPipeBufferedBytes(long bytes) => Interlocked.Add(ref _totalPipeBufferedBytes, bytes);
 }

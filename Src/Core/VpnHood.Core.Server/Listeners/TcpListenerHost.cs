@@ -124,17 +124,16 @@ internal class TcpListenerHost(
                 if (ct.IsCancellationRequested)
                     break;
 
-                errorCounter++;
-                if (errorCounter > maxErrorCount) {
-                    VhLogger.Instance.LogError(
-                        "Too many unexpected errors in AcceptTcpClient. Stopping the Listener... LocalEndPint: {LocalEndPint}",
-                        localEp);
-                    break;
-                }
-
                 VhLogger.Instance.LogError(GeneralEventId.Request, ex,
                     "ServerHost could not AcceptTcpClient. LocalEndPint: {LocalEndPint}, ErrorCounter: {ErrorCounter}",
                     localEp, errorCounter);
+
+                errorCounter++;
+                if (errorCounter > maxErrorCount) {
+                    VhLogger.Instance.LogError(ex,
+                        "Too many unexpected errors in AcceptTcpClient. Waiting 60 seconds...");
+                    await Task.Delay(TimeSpan.FromSeconds(60), ct).Vhc();
+                }
             }
         }
 

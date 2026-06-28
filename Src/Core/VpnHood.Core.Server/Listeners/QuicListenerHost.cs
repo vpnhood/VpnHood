@@ -142,8 +142,7 @@ internal class QuicListenerHost(
                 errorCounter++;
                 if (errorCounter > maxErrorCount) {
                     VhLogger.Instance.LogError(ex,
-                        "Too many unexpected errors in QUIC AcceptConnectionAsync. Waiting 60 seconds...",
-                        localEp);
+                        "Too many unexpected errors in QUIC AcceptConnectionAsync. Waiting 60 seconds...");
                     await Task.Delay(TimeSpan.FromSeconds(60), ct).Vhc();
                 }
             }

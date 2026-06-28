@@ -1,7 +1,9 @@
 using Foundation;
+using Microsoft.Extensions.Logging;
 using Network;
 using System.Buffers;
 using System.Runtime.InteropServices;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -56,9 +58,10 @@ internal sealed class IosQuicStream : AsyncStream
         _connection = connection;
         _readCallback = OnReadCompleted;
         _writeCallback = OnWriteCompleted;
+        // ToDo: remove diagnose
         _id = Interlocked.Increment(ref IosQuicClient.StreamSeq);
         var live = Interlocked.Increment(ref IosQuicClient.LiveStreamCount);
-        IosQuicClient.DeviceLog($"[VHQUIC] +open id={_id} live={live}");
+        VhLogger.Instance.LogInformation("[VHQUIC] +open id={Id} live={Live}", _id, live);
     }
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
@@ -178,8 +181,9 @@ internal sealed class IosQuicStream : AsyncStream
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
+        // ToDo: remove diagnose
         var live = Interlocked.Decrement(ref IosQuicClient.LiveStreamCount);
-        IosQuicClient.DeviceLog($"[VHQUIC] -close id={_id} live={live}");
+        VhLogger.Instance.LogInformation("[VHQUIC] -close id={Id} live={Live}", _id, live);
 
         if (disposing) {
             VhUtils.TryInvoke(() => _connection.Cancel());

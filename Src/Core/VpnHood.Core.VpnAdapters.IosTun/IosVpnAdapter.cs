@@ -44,6 +44,7 @@ public class IosVpnAdapter(
     private static readonly NSNumber AfInet = NSNumber.FromInt32(2);
     private static readonly NSNumber AfInet6 = NSNumber.FromInt32(30);
 
+    // ToDo: remove diagnose
     // DIAGNOSTIC: cumulative bytes through the tunnel, read by IosVpnService's memory probe to
     // correlate phys_footprint growth with traffic. Use Interlocked to read/write.
     public static long InboundBytes;   // server -> device (download), written via WritePacket
@@ -140,6 +141,7 @@ public class IosVpnAdapter(
         if (_mtu.HasValue)
             settings.Mtu = NSNumber.FromInt32(_mtu.Value);
 
+        // ToDo: remove diagnose
         // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install so the host
         // extension can verify what actually reaches iOS ("connected but no traffic" diagnosis).
         try

@@ -4,13 +4,13 @@ using Microsoft.Extensions.Logging;
 namespace VpnHood.Core.Toolkit.Logging;
 
 // deviceLoggerProviderFactory: optional platform hook for the "device" log sink. When LogToDevice is
-// enabled, this factory is invoked once per Start() to create the device ILoggerProvider; if null, the
-// default VhDeviceLoggerProvider (System.Diagnostics.Trace) is used. It is a factory (not an instance)
-// because the LoggerFactory owns and disposes its providers each Start/Stop cycle — a fresh provider is
-// needed per cycle. iOS passes a provider backed by os_log; other platforms pass nothing.
+// enabled, this factory is invoked once per Start() (with the includeScopes flag) to create the device
+// ILoggerProvider; if null, the default VhDeviceLoggerProvider (System.Diagnostics.Trace) is used. It is a
+// factory (not an instance) because the LoggerFactory owns and disposes its providers each Start/Stop cycle
+// — a fresh provider is needed per cycle. iOS passes a provider backed by os_log; other platforms pass nothing.
 public class LogService(
-    string logFilePath, 
-    Func<ILoggerProvider>? deviceLoggerProviderFactory = null)
+    string logFilePath,
+    Func<bool, ILoggerProvider>? deviceLoggerProviderFactory = null)
     : IDisposable
 {
     private ILogger? _logger;
@@ -84,9 +84,10 @@ public class LogService(
         var loggerFactory = LoggerFactory.Create(builder => {
             // device sink: platform-supplied provider (e.g. os_log on iOS) or the default
             // VhDeviceLoggerProvider (System.Diagnostics.Trace).
+            const bool includeScopes = true;
             if (logServiceOptions.LogToDevice)
-                builder.AddProvider(deviceLoggerProviderFactory?.Invoke()
-                                    ?? new VhDeviceLoggerProvider(includeScopes: true));
+                builder.AddProvider(deviceLoggerProviderFactory?.Invoke(includeScopes)
+                                    ?? new VhDeviceLoggerProvider(includeScopes));
 
             // console
             if (logServiceOptions.LogToConsole) // AddSimpleConsole does not support event id

@@ -25,6 +25,20 @@ internal sealed class IosQuicConnection(
 {
     public IPEndPoint RemoteEndPoint => remoteEndPoint;
 
+    // Per-stream queue pool. Network.framework delivers a connection's callbacks (receive, FIN/close,
+    // state, AND Cancel teardown) serially on its assigned queue. Putting ALL streams on one serial
+    // queue means a download burst saturates that single thread with receive callbacks, starving stream
+    // completion + Cancel — so dead streams (native NWConnections) pile up until the 52 MB jetsam kill.
+    // Spreading streams across several serial queues lets teardown run in parallel with other streams'
+    // data; each stream still uses ONE queue, so its own callbacks stay correctly serialized.
+    private readonly DispatchQueue[] _streamQueues = [
+        new("VpnHood.Quic.Ios.S0"), new("VpnHood.Quic.Ios.S1"),
+        new("VpnHood.Quic.Ios.S2"), new("VpnHood.Quic.Ios.S3"),
+        new("VpnHood.Quic.Ios.S4"), new("VpnHood.Quic.Ios.S5"),
+        new("VpnHood.Quic.Ios.S6"), new("VpnHood.Quic.Ios.S7")
+    ];
+    private int _streamQueueIndex = -1;
+
     // Network.framework does not surface the local UDP endpoint of a QUIC tunnel; VpnHood uses these
     // only for diagnostics, so a family-appropriate placeholder is sufficient.
     public IPEndPoint LocalEndPoint { get; } =
@@ -80,7 +94,8 @@ internal sealed class IosQuicConnection(
                 }
             });
 
-            stream.SetQueue(queue);
+            var streamQueue = _streamQueues[(uint)Interlocked.Increment(ref _streamQueueIndex) % (uint)_streamQueues.Length];
+            stream.SetQueue(streamQueue);
             stream.Start();
 
             await tcs.Task.Vhc();
@@ -88,8 +103,8 @@ internal sealed class IosQuicConnection(
             return new IosQuicStream(stream);
         }
         catch {
-            try { stream.SetStateChangeHandler(null!); } catch { /* ignore */ }
-            try { stream.Cancel(); } catch { /* ignore */ }
+            VhUtils.TryInvoke(() => stream.SetStateChangeHandler(null!));
+            VhUtils.TryInvoke(() => stream.Cancel());
             stream.Dispose();
             throw;
         }
@@ -107,16 +122,18 @@ internal sealed class IosQuicConnection(
         // Stop accepting, then drain and discard any inbound streams that were never accepted.
         inboundStreams.Writer.TryComplete();
         while (inboundStreams.Reader.TryRead(out var pending)) {
-            try { pending.Cancel(); } catch { /* ignore */ }
+            VhUtils.TryInvoke(() => pending.Cancel());
             pending.Dispose();
         }
 
-        try { connectionGroup.SetStateChangedHandler(null!); } catch { /* ignore */ }
-        try { connectionGroup.SetNewConnectionHandler(null!); } catch { /* ignore */ }
-        try { connectionGroup.Cancel(); } catch { /* ignore */ }
+        VhUtils.TryInvoke(() => connectionGroup.SetStateChangedHandler(null!));
+        VhUtils.TryInvoke(() => connectionGroup.SetNewConnectionHandler(null!));
+        VhUtils.TryInvoke(() => connectionGroup.Cancel());
         connectionGroup.Dispose();
         multiplexGroup.Dispose();
         endpoint.Dispose();
+        foreach (var streamQueue in _streamQueues)
+            VhUtils.TryInvoke(() => streamQueue.Dispose());
         return ValueTask.CompletedTask;
     }
 }

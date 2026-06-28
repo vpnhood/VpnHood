@@ -464,4 +464,38 @@ public class ServerTest : TestBase
         Assert.IsNotNull(endPointError.Error, "The occupied endpoint entry should have a non-null error");
         Assert.IsNotNull(accessManager.LastServerStatus?.ConfigError, "No TCP EndPoint error reported in ConfigError");
     }
+
+    [TestMethod]
+    public async Task Bad_Quic_endpoint_should_not_halt_configuration()
+    {
+        // Arrange: occupy a UDP port and point QUIC at it so the listener fails to bind.
+        // A single bad endpoint must be recorded per-endpoint and must NOT fail the whole
+        // server configuration. (Port 0 can't be used here: the access manager treats port 0
+        // as "auto-assign" and replaces it with a free port.)
+        using var accessManager = TestHelper.CreateAccessManager();
+        using var blocker = new System.Net.Sockets.UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var occupiedEndPoint = (IPEndPoint)blocker.Client.LocalEndPoint!;
+        accessManager.ServerConfig.QuicEndPoints = [occupiedEndPoint];
+
+        await using var server = await TestHelper.CreateServer(accessManager);
+
+        // Assert: the server still reaches Ready (TCP works); it must NOT halt on the bad QUIC endpoint.
+        Assert.AreEqual(ServerState.Ready, server.State);
+
+        // and configuration as a whole must not be reported as failed
+        Assert.IsNull(accessManager.LastServerStatus?.ConfigError,
+            "A bad QUIC endpoint must not fail the whole server configuration.");
+
+        // Assert: the QUIC endpoint is reported as an errored endpoint in status (ignored, but surfaced).
+        var endPointStatuses = accessManager.LastEndPointStatuses;
+        Assert.IsNotNull(endPointStatuses, "EndPointStatuses should be reported");
+
+        var quicStatus = endPointStatuses.FirstOrDefault(x => x.Protocol == ChannelProtocol.Quic);
+        Assert.IsNotNull(quicStatus, "EndPointStatuses should contain an entry for the QUIC endpoint");
+        Assert.IsNotNull(quicStatus.Error, "The bad QUIC endpoint should report a non-null error");
+
+        // a working TCP endpoint must still be present and error-free
+        Assert.Contains(x => x is { Protocol: ChannelProtocol.Tcp, Error: null }, endPointStatuses,
+            "A working TCP endpoint should still be configured.");
+    }
 }

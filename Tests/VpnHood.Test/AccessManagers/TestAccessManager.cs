@@ -20,6 +20,10 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     public DateTime? LastConfigureTime { get; private set; }
     public ServerInfo? LastServerInfo { get; private set; }
     public ServerStatus? LastServerStatus { get; private set; }
+
+    // The server reports EndPointStatuses only once per (re)configuration; later periodic status
+    // updates carry null. Retain the last non-null snapshot so tests don't race to overwrite.
+    public ServerHostEndPointStatus[]? LastEndPointStatuses { get; private set; }
     public Dictionary<string, ServerToken?> ServerLocations { get; set; } = new();
     public bool RejectAllAds { get; set; }
     public bool CanExtendPremiumByAd { get; set; }
@@ -54,6 +58,8 @@ public class TestAccessManager(string storagePath, FileAccessManagerOptions opti
     {
         var ret = await base.Server_UpdateStatus(serverStatus, cancellationToken);
         LastServerStatus = serverStatus;
+        if (serverStatus.EndPointStatuses != null)
+            LastEndPointStatuses = serverStatus.EndPointStatuses;
         return ret;
     }
 

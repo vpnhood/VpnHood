@@ -1,9 +1,23 @@
+using Microsoft.Extensions.Logging;
+using VpnHood.Core.TcpStack.Abstractions;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
+
 namespace VpnHood.Core.TcpStack;
 
 /// <summary>
 /// Encapsulates live diagnostic metrics and performance counters for a <see cref="LocalTcpStack"/> instance.
 /// All metrics are updated thread-safely.
 /// </summary>
+/// <remarks>
+/// This type also owns the lifecycle logging for established connections: callers just report the
+/// establish/release events (via <see cref="IncrementEstablishedConnections"/> /
+/// <see cref="DecrementEstablishedConnections"/>) and the counter + log line are produced together,
+/// so the running live count can never drift from what is logged. The lines are emitted at
+/// Information level (not the verbose hot-path traces) so they always show up in catlog without
+/// needing VerboseLogging — grep for "[TcpStack]" (or "+CONN" / "-CONN") to watch stream
+/// creation/teardown and the running total.
+/// </remarks>
 public sealed class TcpStackDiagnostics
 {
     private int _connectionCount;
@@ -40,7 +54,32 @@ public sealed class TcpStackDiagnostics
         } while (Interlocked.CompareExchange(ref _peakConnectionCount, count, peak) != peak);
     }
 
-    internal void IncrementEstablishedConnections() => Interlocked.Increment(ref _establishedConnections);
-    internal void DecrementEstablishedConnections() => Interlocked.Decrement(ref _establishedConnections);
-    internal void AddPipeBufferedBytes(long bytes) => Interlocked.Add(ref _totalPipeBufferedBytes, bytes);
+    /// <summary>
+    /// Records that a connection completed its handshake: bumps the live established count and logs the
+    /// event so TCP-stack stream creation can be monitored via catlog.
+    /// </summary>
+    internal void IncrementEstablishedConnections(IPEndPointPairValue endPointPair)
+    {
+        var live = Interlocked.Increment(ref _establishedConnections);
+        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStackDiag,
+            "[TcpStack] +CONN established {EndPointPair} live={LiveEstablished}", endPointPair, live);
+    }
+
+    /// <summary>
+    /// Records that an established connection was released: drops the live established count and logs the
+    /// event (with the teardown <paramref name="reason"/>) so TCP-stack stream teardown can be monitored
+    /// via catlog.
+    /// </summary>
+    internal void DecrementEstablishedConnections(IPEndPointPairValue endPointPair, string reason)
+    {
+        var live = Interlocked.Decrement(ref _establishedConnections);
+        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStackDiag,
+            "[TcpStack] -CONN released({Reason}) {EndPointPair} live={LiveEstablished}", reason, endPointPair, live);
+    }
+
+    internal void AddPipeBufferedBytes(long bytes)
+    {
+        if (bytes == 0) return; // no-op delta (e.g. nothing left unread on dispose / nothing consumed)
+        Interlocked.Add(ref _totalPipeBufferedBytes, bytes);
+    }
 }

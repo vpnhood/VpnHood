@@ -205,10 +205,13 @@ internal sealed class LocalTcpConnection(
             if (State != TcpConnectionState.SynReceived) return;
             State = TcpConnectionState.Established;
             _establishedCounted = true;
-            diagnostics.IncrementEstablishedConnections(); // DIAGNOSTIC
             clientToEnqueue = _pendingClient;
             _pendingClient = null;
         }
+
+        // Off the hot _seqLock: the State==SynReceived guard above guarantees exactly one thread reaches
+        // here, so the count+log can run outside the lock (mirrors the Close/Dispose decrement pattern).
+        diagnostics.IncrementEstablishedConnections(ipEndPointPair); // DIAGNOSTIC (counts + logs)
 
         if (clientToEnqueue != null && !listener.TryEnqueueAccept(clientToEnqueue)) {
             // Listener has been stopped or its accept queue is full: dispose the unaccepted
@@ -243,10 +246,9 @@ internal sealed class LocalTcpConnection(
             _establishedCounted = false;
         }
 
-        if (remainingUnread > 0)
-            diagnostics.AddPipeBufferedBytes(-remainingUnread);
+        diagnostics.AddPipeBufferedBytes(-remainingUnread);
         if (decrementEstablished)
-            diagnostics.DecrementEstablishedConnections(); // DIAGNOSTIC
+            diagnostics.DecrementEstablishedConnections(ipEndPointPair, "dispose"); // DIAGNOSTIC (counts + logs)
 
         // A direct Dispose() — DropAllConnections, LocalTcpStack.Dispose, or a failed _connections.TryAdd —
         // does NOT go through Close(), so it must unblock the app side itself: complete the net->app pipe so
@@ -575,9 +577,7 @@ internal sealed class LocalTcpConnection(
             lastWin = _lastAdvertisedWindow;
         }
 
-        if (actualConsumed > 0) {
-            diagnostics.AddPipeBufferedBytes(-actualConsumed);
-        }
+        diagnostics.AddPipeBufferedBytes(-actualConsumed);
 
         // Send a window update ACK if:
         // 1. The window was closed (or near-closed) and has reopened to at least _windowReopenFloor.
@@ -816,7 +816,7 @@ internal sealed class LocalTcpConnection(
         abandoned?.Dispose();
 
         if (decrementEstablished)
-            diagnostics.DecrementEstablishedConnections(); // DIAGNOSTIC
+            diagnostics.DecrementEstablishedConnections(ipEndPointPair, "close"); // DIAGNOSTIC (counts + logs)
 
         CompleteNetToApp();
         _appToNetCompleted = true;

@@ -24,7 +24,8 @@ public sealed class LocalTcpStackOptions
     /// receive-side memory cost.
     /// <para>Range: 1..65535. The advertised value lives in the 16-bit TCP window field, and we
     /// do NOT advertise a window-scale shift (shift = 0), so values above 65535 are rejected.</para>
-    /// Default: 65535. iOS typically shrinks this to 16–32 KB.
+    /// Default: 65535. The iOS preset KEEPS the full 65535 per-connection window (so a few active flows
+    /// get full speed) and instead bounds aggregate memory via <see cref="GlobalReceiveBudget"/>.
     /// </summary>
     public int ReceiveWindowSize { get; init; } = 0xFFFF;
 
@@ -209,6 +210,11 @@ public sealed class LocalTcpStackOptions
 
         if (MaxConnections < 0)
             throw new ArgumentException($"{nameof(MaxConnections)} must be ≥ 0; was {MaxConnections}.");
+
+        // A non-positive budget would make every connection's AdvertisedWindow return 0 forever
+        // (a silent receive deadlock), so reject it here rather than dead-stall at runtime.
+        if (GlobalReceiveBudget < 1)
+            throw new ArgumentException($"{nameof(GlobalReceiveBudget)} must be ≥ 1; was {GlobalReceiveBudget}.");
 
         return this;
     }

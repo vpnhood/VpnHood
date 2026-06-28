@@ -3,10 +3,18 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Core.Toolkit.Logging;
 
-public class LogService(string logFilePath) : IDisposable
+// deviceLoggerProviderFactory: optional platform hook for the "device" log sink. When LogToDevice is
+// enabled, this factory is invoked once per Start() to create the device ILoggerProvider; if null, the
+// default VhDeviceLoggerProvider (System.Diagnostics.Trace) is used. It is a factory (not an instance)
+// because the LoggerFactory owns and disposes its providers each Start/Stop cycle — a fresh provider is
+// needed per cycle. iOS passes a provider backed by os_log; other platforms pass nothing.
+public class LogService(
+    string logFilePath, 
+    Func<ILoggerProvider>? deviceLoggerProviderFactory = null)
+    : IDisposable
 {
     private ILogger? _logger;
-    private readonly List<ILoggerProvider> _loggerProviders = [];
+    private ILoggerFactory? _loggerFactory;
     private bool _disposed;
     private readonly Lock _isStoppingLock = new();
     public string LogFilePath { get; } = logFilePath;
@@ -40,17 +48,20 @@ public class LogService(string logFilePath) : IDisposable
             VhLogger.Instance.LogDebug("LogService is stopping...");
 
             VhLogger.Instance = VhLogger.CreateConsoleLogger();
-            foreach (var loggerProvider in _loggerProviders)
-                loggerProvider.Dispose();
-            _loggerProviders.Clear();
+
+            // The factory owns its providers; disposing it disposes them once, at the end of the
+            // Start/Stop cycle (not while the logger is still in use).
+            _loggerFactory?.Dispose();
+            _loggerFactory = null;
             _logger = null;
         }
     }
 
     private ILogger CreateLogger(LogServiceOptions logServiceOptions, bool deleteOldReport)
     {
-        using var loggerFactory = CreateLoggerFactory(logServiceOptions, deleteOldReport);
-        var logger = loggerFactory.CreateLogger(logServiceOptions.CategoryName ?? "");
+        // Keep the factory for the lifetime of this Start/Stop cycle; it is disposed in Stop().
+        _loggerFactory = CreateLoggerFactory(logServiceOptions, deleteOldReport);
+        var logger = _loggerFactory.CreateLogger(logServiceOptions.CategoryName ?? "");
 
         logger = new FilterLogger(logger, (_, eventId) => {
             if (logServiceOptions.LogEventNames.Contains(eventId.Name, StringComparer.OrdinalIgnoreCase))
@@ -68,28 +79,22 @@ public class LogService(string logFilePath) : IDisposable
         if (deleteOldReport && File.Exists(LogFilePath))
             File.Delete(LogFilePath);
 
+        // The returned LoggerFactory owns every provider added below and disposes them when it is
+        // disposed (in Stop()); no separate provider tracking is needed.
         var loggerFactory = LoggerFactory.Create(builder => {
-            // device (System.Diagnostics.Trace)
-            if (logServiceOptions.LogToDevice) {
-                var provider = new VhDeviceLoggerProvider(includeScopes: true);
-                _loggerProviders.Add(provider);
-                builder.AddProvider(provider);
-            }
+            // device sink: platform-supplied provider (e.g. os_log on iOS) or the default
+            // VhDeviceLoggerProvider (System.Diagnostics.Trace).
+            if (logServiceOptions.LogToDevice)
+                builder.AddProvider(deviceLoggerProviderFactory?.Invoke()
+                                    ?? new VhDeviceLoggerProvider(includeScopes: true));
 
             // console
             if (logServiceOptions.LogToConsole) // AddSimpleConsole does not support event id
-            {
-                var provider = new VhConsoleLoggerProvider(includeScopes: true,
-                    singleLine: logServiceOptions.SingleLineConsole);
-                _loggerProviders.Add(provider);
-                builder.AddProvider(provider);
-            }
+                builder.AddProvider(new VhConsoleLoggerProvider(includeScopes: true,
+                    singleLine: logServiceOptions.SingleLineConsole));
 
-            if (logServiceOptions.LogToFile) {
-                var provider = new FileLoggerProvider(LogFilePath, autoFlush: logServiceOptions.AutoFlush);
-                _loggerProviders.Add(provider);
-                builder.AddProvider(provider);
-            }
+            if (logServiceOptions.LogToFile)
+                builder.AddProvider(new FileLoggerProvider(LogFilePath, autoFlush: logServiceOptions.AutoFlush));
 
             builder.SetMinimumLevel(logServiceOptions.MinLogLevel);
         });

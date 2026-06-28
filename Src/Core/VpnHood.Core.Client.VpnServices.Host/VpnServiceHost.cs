@@ -40,15 +40,17 @@ public class VpnServiceHost : IDisposable
         ISocketFactory socketFactory,
         NetFilter? netFilter,
         IMessageListener messageListener,
-        bool withLogger = true)
+        bool withLogger = true,
+        Func<bool, ILoggerProvider>? deviceLoggerProviderFactory = null)
     {
         Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
         _netFilter = netFilter;
         _vpnServiceHandler = vpnServiceHandler;
 
-        // initialize logger
-        _logService = withLogger ? new LogService(Context.LogFilePath) : null;
+        // initialize logger. deviceLoggerProviderFactory lets a platform supply its own device log sink
+        // (e.g. os_log on iOS); when null the LogService falls back to its default VhDeviceLoggerProvider.
+        _logService = withLogger ? new LogService(Context.LogFilePath, deviceLoggerProviderFactory) : null;
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
         var clientOptions = Context.TryReadClientOptions();
         if (_logService != null && clientOptions != null) {

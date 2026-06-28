@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Converters;
 

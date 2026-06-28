@@ -1,7 +1,9 @@
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading.Channels;
 using CoreFoundation;
 using Network;
+using ObjCRuntime;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -23,6 +25,20 @@ internal sealed class IosQuicConnection(
 {
     public IPEndPoint RemoteEndPoint => remoteEndPoint;
 
+    // Per-stream queue pool. Network.framework delivers a connection's callbacks (receive, FIN/close,
+    // state, AND Cancel teardown) serially on its assigned queue. Putting ALL streams on one serial
+    // queue means a download burst saturates that single thread with receive callbacks, starving stream
+    // completion + Cancel — so dead streams (native NWConnections) pile up until the 52 MB jetsam kill.
+    // Spreading streams across several serial queues lets teardown run in parallel with other streams'
+    // data; each stream still uses ONE queue, so its own callbacks stay correctly serialized.
+    private readonly DispatchQueue[] _streamQueues = [
+        new("VpnHood.Quic.Ios.S0"), new("VpnHood.Quic.Ios.S1"),
+        new("VpnHood.Quic.Ios.S2"), new("VpnHood.Quic.Ios.S3"),
+        new("VpnHood.Quic.Ios.S4"), new("VpnHood.Quic.Ios.S5"),
+        new("VpnHood.Quic.Ios.S6"), new("VpnHood.Quic.Ios.S7")
+    ];
+    private int _streamQueueIndex = -1;
+
     // Network.framework does not surface the local UDP endpoint of a QUIC tunnel; VpnHood uses these
     // only for diagnostics, so a family-appropriate placeholder is sufficient.
     public IPEndPoint LocalEndPoint { get; } =
@@ -32,12 +48,18 @@ internal sealed class IosQuicConnection(
 
     public async ValueTask<Stream> OpenOutboundStreamAsync(CancellationToken cancellationToken)
     {
-        // Open a new bidirectional outgoing stream over the existing QUIC tunnel.
-        // NOTE (verify on-device): for a multiplex group, a null endpoint asks Network.framework to
-        // create a brand-new stream over the group's tunnel; we pass the tunnel endpoint + fresh quic
-        // options. If extraction returns null, the tunnel is no longer able to open streams.
-        var streamOptions = new NWProtocolQuicOptions { StreamIsUnidirectional = false };
-        var stream = connectionGroup.ExtractConnection(endpoint, streamOptions)
+        // Open a new bidirectional outgoing stream over the existing QUIC tunnel. For a multiplex group a
+        // NULL endpoint tells Network.framework to create a brand-new stream over the group's existing
+        // tunnel (this is what Swift's NWConnection(from: group) does). The managed
+        // NWConnectionGroup.ExtractConnection NREs on a null endpoint and fails with a generic NWError on
+        // Start() when given the tunnel endpoint, so call the native function directly with NULL.
+        // Pass NULL endpoint AND NULL protocol options: this is exactly Swift's NWConnection(from: group),
+        // which extracts a new bidirectional stream that inherits the group's tunnel + QUIC options. A
+        // fresh NWProtocolQuicOptions instead makes the extracted connection try to stand up its own
+        // transport and Start() fails with ENETDOWN (Posix 50).
+        var streamHandle = nw_connection_group_extract_connection(
+            (IntPtr)connectionGroup.GetCheckedHandle(), IntPtr.Zero, IntPtr.Zero);
+        var stream = Runtime.GetINativeObject<NWConnection>(streamHandle, owns: true)
             ?? throw new IOException("Failed to open a new QUIC stream over the tunnel.");
 
         return await StartStreamAsync(stream, cancellationToken).Vhc();
@@ -66,37 +88,52 @@ internal sealed class IosQuicConnection(
                         break;
                     case NWConnectionState.Failed:
                     case NWConnectionState.Cancelled:
-                        tcs.TrySetException(new IOException($"QUIC stream failed to start: {error}"));
+                        tcs.TrySetException(new IOException(
+                            $"QUIC stream failed to start: state={state} domain={error?.ErrorDomain} code={error?.ErrorCode}"));
                         break;
                 }
             });
 
-            stream.SetQueue(queue);
+            var streamQueue = _streamQueues[(uint)Interlocked.Increment(ref _streamQueueIndex) % (uint)_streamQueues.Length];
+            stream.SetQueue(streamQueue);
             stream.Start();
 
             await tcs.Task.Vhc();
+            stream.SetStateChangeHandler(null!);
             return new IosQuicStream(stream);
         }
         catch {
-            try { stream.Cancel(); } catch { /* ignore */ }
+            VhUtils.TryInvoke(() => stream.SetStateChangeHandler(null!));
+            VhUtils.TryInvoke(() => stream.Cancel());
             stream.Dispose();
             throw;
         }
     }
+
+    // Native Network.framework entry point. The managed NWConnectionGroup.ExtractConnection binding
+    // requires a non-null endpoint (it dereferences it), but opening a new QUIC stream over a multiplex
+    // group requires a NULL endpoint. Returns a +1-retained nw_connection_t (owns:true on wrap).
+    [DllImport("/System/Library/Frameworks/Network.framework/Network")]
+    private static extern IntPtr nw_connection_group_extract_connection(
+        IntPtr group, IntPtr endpoint, IntPtr protocolOptions);
 
     public ValueTask DisposeAsync()
     {
         // Stop accepting, then drain and discard any inbound streams that were never accepted.
         inboundStreams.Writer.TryComplete();
         while (inboundStreams.Reader.TryRead(out var pending)) {
-            try { pending.Cancel(); } catch { /* ignore */ }
+            VhUtils.TryInvoke(() => pending.Cancel());
             pending.Dispose();
         }
 
-        try { connectionGroup.Cancel(); } catch { /* ignore */ }
+        VhUtils.TryInvoke(() => connectionGroup.SetStateChangedHandler(null!));
+        VhUtils.TryInvoke(() => connectionGroup.SetNewConnectionHandler(null!));
+        VhUtils.TryInvoke(() => connectionGroup.Cancel());
         connectionGroup.Dispose();
         multiplexGroup.Dispose();
         endpoint.Dispose();
+        foreach (var streamQueue in _streamQueues)
+            VhUtils.TryInvoke(() => streamQueue.Dispose());
         return ValueTask.CompletedTask;
     }
 }

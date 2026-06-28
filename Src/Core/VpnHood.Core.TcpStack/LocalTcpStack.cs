@@ -2,10 +2,12 @@ using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Net;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.TcpStack.Abstractions;
 using VpnHood.Core.TcpStack.Primitives;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.TcpStack;
@@ -128,8 +130,12 @@ public sealed class LocalTcpStack : ITcpStack
         try {
             ProcessIncomingInternal(ipPacket);
         }
-        catch {
-            // Silently ignore malformed packets
+        catch (Exception ex) {
+            // Never let a malformed/unexpected packet disrupt the receive loop. Surface it only under
+            // verbose logging so a genuine bug isn't hidden behind a blind catch.
+            if (VerboseLogging)
+                VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag, ex,
+                    "TcpStack dropped a packet it could not process.");
         }
     }
 
@@ -169,10 +175,18 @@ public sealed class LocalTcpStack : ITcpStack
             return;
         }
 
-        // SYN retransmit for a connection that's still in SynReceived: re-send SYN-ACK
+        // SYN for a 4-tuple we already track.
         if (_connections.TryGetValue(ipEndPointPair, out var existingConn)) {
             if (existingConn.State == TcpConnectionState.SynReceived)
+                // SYN retransmit before our SYN-ACK was acknowledged: re-send SYN-ACK.
                 SendSynAck(existingConn);
+            else
+                // SYN on an already-established/closing connection (RFC 9293/5961): the peer most likely
+                // abandoned the old connection and reused the 4-tuple. Send a challenge ACK; if the old
+                // connection is truly dead on the peer's side it replies with RST, which closes our stale
+                // entry and lets the peer's SYN-retransmit open a fresh one. Previously this SYN was
+                // silently dropped, black-holing the new connection until the idle timeout.
+                SendAckOnly(existingConn);
             return;
         }
 

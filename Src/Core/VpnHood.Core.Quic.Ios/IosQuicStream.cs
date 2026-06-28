@@ -1,4 +1,10 @@
+using Foundation;
+using Microsoft.Extensions.Logging;
 using Network;
+using System.Buffers;
+using System.Runtime.InteropServices;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Quic.Ios;
@@ -8,83 +14,192 @@ namespace VpnHood.Core.Quic.Ios;
 /// to a <see cref="Stream"/>, the surface VpnHood's tunneling code consumes.
 /// </summary>
 /// <remarks>
-/// Network.framework send/receive are callback based; each call is bridged to a
-/// <see cref="TaskCompletionSource"/>. Reads use the read-only-span receive overload so the native
-/// buffer is copied synchronously inside the callback (the span must not escape it).
+/// Network.framework send/receive are callback based. Each <see cref="ReadAsync(Memory{byte},CancellationToken)"/>
+/// arms exactly one native receive sized to the caller's buffer and copies the bytes straight in — no
+/// intermediate buffer and no read-ahead, so an idle stream holds no pending native receive. Both read and
+/// write are bridged to reusable <see cref="ReusableValueTaskSource"/> instances to avoid per-call
+/// allocations. Sync I/O is unsupported (inherited from <see cref="AsyncStream"/>).
 /// </remarks>
-internal sealed class IosQuicStream(NWConnection connection) : Stream
+internal sealed class IosQuicStream : AsyncStream
 {
+    private readonly NWConnection _connection;
+    private readonly int _id;
     private bool _disposed;
 
-    public override bool CanRead => true;
-    public override bool CanWrite => true;
-    public override bool CanSeek => false;
-    public override long Length => throw new NotSupportedException();
-    public override long Position {
-        get => throw new NotSupportedException();
-        set => throw new NotSupportedException();
-    }
+    private readonly NWConnectionReceiveReadOnlySpanCompletion _readCallback;
+    private readonly Action<NWError?> _writeCallback;
 
-    public override void Flush() { }
-    public override Task FlushAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    private readonly ReusableValueTaskSource<int> _readSource = new();
+    private CancellationTokenRegistration _readReg;
+    private Memory<byte> _readBuffer;
+    private bool _readEof;
 
-    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    private readonly ReusableValueTaskSource _writeSource = new();
+    private CancellationTokenRegistration _writeReg;
+    private byte[]? _writeRentedArray;
+
+    // Cap a single native receive so download bursts buffer in NATIVE memory in bounded chunks even if a
+    // caller hands us a very large buffer. The QUIC flow-control window (IosQuicClient) is the real ceiling.
+    private const int MaxReceiveLength = 16 * 1024;
+
+    private static readonly Action<object?> CancelReadCallback = (state) => {
+        ((ReusableValueTaskSource<int>?)state)?.TrySetException(new OperationCanceledException());
+    };
+
+    private static readonly Action<object?> CancelWriteCallback = (state) => {
+        ((ReusableValueTaskSource?)state)?.TrySetException(new OperationCanceledException());
+    };
+
+    public override bool CanRead => !_disposed;
+    public override bool CanWrite => !_disposed;
+
+    public IosQuicStream(NWConnection connection) : base()
     {
-        var tcs = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var reg = cancellationToken.Register(() => tcs.TrySetCanceled());
-
-        // minimumIncompleteLength: 1 -> return as soon as any data is available (stream semantics).
-        connection.ReceiveReadOnlyData(minimumIncompleteLength: 1, maximumLength: (uint)count,
-            (data, _, _, error) => {
-                if (error != null) {
-                    tcs.TrySetException(new IOException($"QUIC stream receive failed: {error}"));
-                    return;
-                }
-
-                if (!data.IsEmpty)
-                    data.CopyTo(buffer.AsSpan(offset, count));
-
-                // A completed context with no further data is the stream FIN -> EOF (0 bytes).
-                tcs.TrySetResult(data.Length);
-            });
-
-        return await tcs.Task.Vhc();
+        _connection = connection;
+        _readCallback = OnReadCompleted;
+        _writeCallback = OnWriteCompleted;
+        // ToDo: remove diagnose
+        _id = Interlocked.Increment(ref IosQuicClient.StreamSeq);
+        var live = Interlocked.Increment(ref IosQuicClient.LiveStreamCount);
+        VhLogger.Instance.LogInformation("[VHQUIC] +open id={Id} live={Live}", _id, live);
     }
 
-    public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var reg = cancellationToken.Register(() => tcs.TrySetCanceled());
+        if (cancellationToken.IsCancellationRequested)
+            return ValueTask.FromCanceled<int>(cancellationToken);
 
-        // isComplete: false -> more data may follow on this stream (do not signal FIN).
-        connection.Send(buffer, offset, count, NWContentContext.DefaultMessage, isComplete: false,
-            error => {
-                if (error != null)
-                    tcs.TrySetException(new IOException($"QUIC stream send failed: {error}"));
-                else
-                    tcs.TrySetResult();
-            });
+        if (_disposed || _readEof || buffer.IsEmpty)
+            return ValueTask.FromResult(0);
 
-        await tcs.Task.Vhc();
+        _readSource.Reset();
+        _readBuffer = buffer;
+
+        if (cancellationToken.CanBeCanceled)
+            _readReg = cancellationToken.Register(CancelReadCallback, _readSource);
+
+        var maximumLength = (uint)Math.Min(buffer.Length, MaxReceiveLength);
+        using var pool = new NSAutoreleasePool();
+        _connection.ReceiveReadOnlyData(minimumIncompleteLength: 1, maximumLength: maximumLength, _readCallback);
+
+        return new ValueTask<int>(_readSource, _readSource.Version);
     }
 
-    public override int Read(byte[] buffer, int offset, int count) =>
-        ReadAsync(buffer, offset, count, CancellationToken.None).GetAwaiter().GetResult();
+    private void OnReadCompleted(ReadOnlySpan<byte> data, NWContentContext? context, bool isComplete, NWError? error)
+    {
+        using var pool = new NSAutoreleasePool();
+        _readReg.Dispose();
 
-    public override void Write(byte[] buffer, int offset, int count) =>
-        WriteAsync(buffer, offset, count, CancellationToken.None).GetAwaiter().GetResult();
+        var buffer = _readBuffer;
+        _readBuffer = default;
 
-    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-    public override void SetLength(long value) => throw new NotSupportedException();
+        try {
+            // Claim completion BEFORE touching the buffer. If cancellation or Dispose already completed
+            // this read, the caller's buffer may have been returned to the shared pool (and re-rented by
+            // another channel) — copying native data into it would corrupt unrelated memory. Reserving
+            // first also keeps the buffer alive: the consumer's read can't unwind until we publish.
+            if (!_readSource.TryReserve())
+                return;
+
+            if (error != null) {
+                _readSource.SetReservedException(new IOException($"QUIC stream receive failed: {error}"));
+                return;
+            }
+
+            if (isComplete)
+                _readEof = true;
+
+            // Empty completion is EOF (n == 0). A non-empty final chunk (isComplete == true) is still
+            // returned here; the NEXT read arms a receive that returns empty -> 0, i.e. standard EOF.
+            var n = 0;
+            if (!data.IsEmpty && !buffer.IsEmpty) {
+                n = Math.Min(data.Length, buffer.Length);
+                data[..n].CopyTo(buffer.Span);
+            }
+            _readSource.SetReservedResult(n);
+        }
+        finally {
+            context?.Dispose();
+            error?.Dispose();
+        }
+    }
+
+    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return ValueTask.FromCanceled(cancellationToken);
+
+        if (_disposed)
+            return ValueTask.FromException(new ObjectDisposedException(nameof(IosQuicStream)));
+
+        _writeSource.Reset();
+
+        if (cancellationToken.CanBeCanceled)
+            _writeReg = cancellationToken.Register(CancelWriteCallback, _writeSource);
+
+        using var pool = new NSAutoreleasePool();
+        if (MemoryMarshal.TryGetArray(buffer, out var segment)) {
+            // isComplete: false -> more data may follow on this stream (do not signal FIN).
+            _connection.Send(segment.Array!, segment.Offset, segment.Count, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
+        }
+        else {
+            var rented = ArrayPool<byte>.Shared.Rent(buffer.Length);
+            _writeRentedArray = rented;
+            buffer.CopyTo(rented);
+            _connection.Send(rented, 0, buffer.Length, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
+        }
+
+        return new ValueTask(_writeSource, _writeSource.Version);
+    }
+
+    private void OnWriteCompleted(NWError? error)
+    {
+        using var pool = new NSAutoreleasePool();
+        _writeReg.Dispose();
+
+        var rented = Interlocked.Exchange(ref _writeRentedArray, null);
+        if (rented != null) {
+            ArrayPool<byte>.Shared.Return(rented);
+        }
+
+        if (error != null) {
+            _writeSource.TrySetException(new IOException($"QUIC stream send failed: {error}"));
+            error.Dispose();
+        }
+        else {
+            _writeSource.TrySetResult();
+        }
+    }
 
     protected override void Dispose(bool disposing)
     {
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
+        // ToDo: remove diagnose
+        var live = Interlocked.Decrement(ref IosQuicClient.LiveStreamCount);
+        VhLogger.Instance.LogInformation("[VHQUIC] -close id={Id} live={Live}", _id, live);
+
         if (disposing) {
-            try { connection.Cancel(); } catch { /* ignore */ }
-            connection.Dispose();
+            VhUtils.TryInvoke(() => _connection.Cancel());
+            _connection.Dispose();
+
+            // Dispose the pending cancellation registrations (the native callbacks that normally dispose them
+            // may never fire after Cancel()). Safe no-ops if default/already disposed.
+            _readReg.Dispose();
+            _writeReg.Dispose();
+
+            // Unblock any pending read/write and reclaim an in-flight write's rented buffer. The native
+            // receive/send completions may also fire later (or be dropped entirely after Cancel()); the
+            // value-task source's state guard makes a second completion a no-op, and Interlocked.Exchange
+            // makes the buffer return idempotent. Done after Cancel()/Dispose() so the native send is no
+            // longer reading the array.
+            _readSource.TrySetResult(0);
+
+            var rented = Interlocked.Exchange(ref _writeRentedArray, null);
+            if (rented != null)
+                ArrayPool<byte>.Shared.Return(rented);
+            _writeSource.TrySetResult();
         }
         base.Dispose(disposing);
     }

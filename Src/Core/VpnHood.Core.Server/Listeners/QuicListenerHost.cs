@@ -24,8 +24,10 @@ internal class QuicListenerHost(
     private IReadOnlyList<CertificateHostName> _certificates = [];
     private bool _disposed;
 
+    // only report listeners that are still running; a listener whose task has finished
+    // (e.g. stopped due to an unrecoverable error) must not be advertised in the Hello response
     public IReadOnlyList<IPEndPoint> EndPoints =>
-        _listeners.Select(x => x.Listener.LocalEndPoint).ToArray();
+        _listeners.Where(x => !x.ListenerTask.IsCompleted).Select(x => x.Listener.LocalEndPoint).ToArray();
 
     public async Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
         IReadOnlyList<IPEndPoint> ipEndPoints,
@@ -112,6 +114,10 @@ internal class QuicListenerHost(
             try {
                 var quicConnection = await listener.AcceptConnectionAsync(ct).Vhc();
                 _ = AcceptStreams(quicConnection, ct);
+
+                // a successful accept proves the listener is healthy; reset the counter so that only
+                // sustained (unrecoverable) failures trip the stop, not isolated per-connection errors
+                errorCounter = 0;
             }
             catch (OperationCanceledException) {
                 break;
@@ -125,7 +131,7 @@ internal class QuicListenerHost(
 
                 errorCounter++;
                 if (errorCounter > maxErrorCount) {
-                    VhLogger.Instance.LogError(
+                    VhLogger.Instance.LogError(ex,
                         "Too many unexpected errors in QUIC AcceptConnectionAsync. Stopping the Listener... LocalEndPint: {LocalEndPint}",
                         localEp);
                     break;

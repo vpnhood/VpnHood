@@ -291,6 +291,94 @@ public sealed class LocalTcpStackTest
         await stream.DisposeAsync();
     }
 
+    /// <summary>
+    /// Regression test for the QUIC + TcpProxy download collapse (40 -> 3 Mbps).
+    /// Encodes the Zero Window Probe forward-progress invariant in
+    /// <c>LocalTcpConnection.SendZeroWindowProbe</c>: while the peer's receive window is stuck at zero,
+    /// every probe must carry a NEW byte at the send frontier (advancing the sequence number) — never
+    /// merely retransmit the oldest unacked byte. A probe that does not advance the sequence number never
+    /// elicits a window-update ACK from the peer, so the sender deadlocks. A kernel TCP transport hides this
+    /// behind large socket buffers; QUIC's tight per-stream window exposes it as a throughput collapse.
+    /// The pre-fix code retransmitted <c>_sndUna</c> (returning 0) once the retx ring held data, so probes
+    /// stalled at a single sequence number and the write never drained.
+    /// </summary>
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task ZeroWindowProbe_ShouldMakeForwardProgress()
+    {
+        // Arrange — fast probe interval so several probes fire within the test window.
+        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50)
+        });
+        var sentPackets = new List<IpPacket>();
+        object lockObj = new();
+        tcpStack.OnPacketSend = packet =>
+        {
+            lock (lockObj) sentPackets.Add(packet);
+        };
+
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+
+        // Complete handshake.
+        var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
+        tcpStack.ProcessIncoming(synPacket);
+
+        IpPacket synAckPacket;
+        lock (lockObj) { synAckPacket = sentPackets[0]; }
+        var serverSeq = synAckPacket.ExtractTcp().SequenceNumber;
+
+        var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1);
+        tcpStack.ProcessIncoming(ackPacket);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+        var stream = await acceptTask.WaitAsync(cts.Token);
+
+        // Slam the peer window shut so the server can only make progress via Zero Window Probes.
+        var zeroWinAck = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0);
+        tcpStack.ProcessIncoming(zeroWinAck);
+
+        lock (lockObj) sentPackets.Clear();
+
+        // Act — server writes a multi-byte payload that can ONLY drain one byte per probe.
+        var payload = new byte[] { 0xA1, 0xB2, 0xC3, 0xD4 };
+        var writeTask = stream.Stream.WriteAsync(payload, 0, payload.Length, cts.Token);
+
+        // The write completes only if probes keep advancing and drain the whole payload (forward progress).
+        // The pre-fix bug would stall the write here until the cancellation timeout.
+        try {
+            await writeTask.WaitAsync(TimeSpan.FromSeconds(2), cts.Token);
+        }
+        catch (TimeoutException) {
+            Assert.Fail("Write stalled under a zero peer window — Zero Window Probes are not making " +
+                        "forward progress (the QUIC+TcpProxy download-collapse regression).");
+        }
+
+        // Assert — the probes carried *distinct, advancing* sequence numbers covering the whole payload,
+        // proving each probe sent a fresh byte rather than retransmitting _sndUna.
+        IpPacket[] snapshot;
+        lock (lockObj) { snapshot = sentPackets.ToArray(); }
+
+        var probeSeqs = snapshot
+            .Where(p => p.ExtractTcp().Payload.Length > 0)
+            .Select(p => p.ExtractTcp().SequenceNumber)
+            .Distinct()
+            .ToList();
+
+        Assert.IsTrue(probeSeqs.Count >= 2,
+            $"Zero Window Probes must advance the sequence number (forward progress), but only " +
+            $"{probeSeqs.Count} distinct probe sequence number(s) were sent — the sender is stuck " +
+            "retransmitting the same byte (regression).");
+
+        // The frontier should have advanced across the full payload (first byte at serverSeq+1).
+        Assert.AreEqual(serverSeq + (uint)payload.Length, probeSeqs.Max(),
+            "Probes should have advanced through the entire payload.");
+
+        await stream.DisposeAsync();
+    }
+
     private static async Task<ITcpClient> AcceptConnectionAsync(ITcpListener listener)
     {
         await foreach (var client in listener.AcceptAllAsync())
@@ -305,14 +393,15 @@ public sealed class LocalTcpStackTest
         IPAddress dstIp, int dstPort,
         bool syn = false, bool ack = false, bool fin = false, bool psh = false, bool rst = false,
         uint seq = 0, uint ackNum = 0,
-        byte[]? payload = null)
+        byte[]? payload = null,
+        ushort window = 65535)
     {
         var packet = PacketBuilder.BuildTcp(
             new IPEndPoint(srcIp, srcPort),
             new IPEndPoint(dstIp, dstPort),
             ReadOnlySpan<byte>.Empty,
             payload ?? ReadOnlySpan<byte>.Empty);
-        
+
         var tcp = packet.ExtractTcp();
         tcp.Synchronize = syn;
         tcp.Acknowledgment = ack;
@@ -321,7 +410,7 @@ public sealed class LocalTcpStackTest
         tcp.Reset = rst;
         tcp.SequenceNumber = seq;
         tcp.AcknowledgmentNumber = ackNum;
-        tcp.WindowSize = 65535;
+        tcp.WindowSize = window;
         
         packet.UpdateAllChecksums();
         return packet;

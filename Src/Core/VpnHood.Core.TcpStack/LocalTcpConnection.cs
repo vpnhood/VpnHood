@@ -699,10 +699,14 @@ internal sealed class LocalTcpConnection(
     /// <summary>
     /// Sends a Zero Window Probe to elicit a window-update ACK from a peer that advertised a zero
     /// (or too-small) window.
-    /// FIX: Progress guarantee. We must ALWAYS send a new byte at _sndNxt and advance _sndNxt (returning
-    /// consumed = 1) even if the retx buffer is full. Otherwise, if we retransmit the oldest byte at _sndUna,
-    /// we can deadlock when the peer's window is closed because duplicate bytes do not advance the sequence number
-    /// and do not trigger a window reopening ACK from the peer's stack.
+    /// INVARIANT (forward progress — do NOT remove): a ZWP must ALWAYS carry a NEW byte at _sndNxt,
+    /// advance _sndNxt, and return consumed = 1 — even when the retx ring is full. It must never merely
+    /// retransmit the oldest unacked byte at _sndUna. A duplicate (already-sent) byte does not advance the
+    /// sequence number, so the peer's stack treats it as a stale retransmit and never emits a window-update
+    /// ACK; the sender then deadlocks. Over a kernel TCP transport this stall is masked by large OS socket
+    /// buffers, but over QUIC's tight per-stream window it collapses throughput to a trickle (the
+    /// QUIC+TcpProxy download regression — see ZeroWindowProbe_ShouldMakeForwardProgress and the
+    /// quic-proxy-download-regression record). Regression-tested; breaking this re-opens the deadlock.
     /// To keep the retx-ring invariants, we only append the probe byte to the retx buffer if there is room.
     /// </summary>
     private int SendZeroWindowProbe(LocalTcpStack stack, byte probeByte)

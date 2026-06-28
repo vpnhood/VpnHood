@@ -54,8 +54,12 @@ public sealed class LocalTcpStack : ITcpStack
     /// <summary>
     /// Gets or sets a value indicating whether verbose diagnostic information should be logged via VhLogger.
     /// This is useful for debugging TCP connection issues (e.g., retransmissions, zero-window probes).
+    /// Backed by <see cref="TcpStackDiagnostics.VerboseLogging"/> so the diagnoser owns all trace gating.
     /// </summary>
-    public bool VerboseLogging { get; set; }
+    public bool VerboseLogging {
+        get => Diagnostics.VerboseLogging;
+        set => Diagnostics.VerboseLogging = value;
+    }
 
     private readonly ConcurrentDictionary<IPEndPointPairValue, LocalTcpConnection> _connections = new();
     private readonly ConcurrentDictionary<IpEndPointValue, LocalTcpListener> _listeners = new();

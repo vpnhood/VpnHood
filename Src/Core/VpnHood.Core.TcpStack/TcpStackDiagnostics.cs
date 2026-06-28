@@ -58,8 +58,10 @@ public sealed class TcpStackDiagnostics
     internal void IncrementEstablishedConnections(IPEndPointPairValue endPointPair)
     {
         var live = Interlocked.Increment(ref _establishedConnections);
-        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStackDiag,
-            "[TcpStack] +CONN established {EndPointPair} live={LiveEstablished}", endPointPair, live);
+        if (VerboseLogging) {
+            VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStackDiag,
+                "[TcpStack] +CONN established {EndPointPair} live={LiveEstablished}", endPointPair, live);
+        }
     }
 
     /// <summary>
@@ -69,9 +71,80 @@ public sealed class TcpStackDiagnostics
     internal void DecrementEstablishedConnections(IPEndPointPairValue endPointPair, string reason)
     {
         var live = Interlocked.Decrement(ref _establishedConnections);
-        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStackDiag,
-            "[TcpStack] -CONN released({Reason}) {EndPointPair} live={LiveEstablished}", reason, endPointPair, live);
+        if (VerboseLogging) {
+            VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStackDiag,
+                "[TcpStack] -CONN released({Reason}) {EndPointPair} live={LiveEstablished}", reason, endPointPair, live);
+        }
     }
 
     internal void AddPipeBufferedBytes(long bytes) => Interlocked.Add(ref _totalPipeBufferedBytes, bytes);
+
+    // --- Verbose data-path tracing -------------------------------------------------------------
+    // All hot-path trace logging lives here so LocalTcpConnection/LocalTcpStack stay free of
+    // formatting, gating and throttling concerns. Each method is a no-op (a single bool read) when
+    // VerboseLogging is off, so leaving the call sites in the data path costs nothing in production.
+    // Throttling is per-stack (this object is one-per-stack); messages carry the endpoint pair so
+    // they remain attributable across connections.
+
+    private long _lastZeroWinLogTick;
+    private long _lastZwpLogTick;
+
+    /// <summary>
+    /// Gets or sets whether verbose data-path trace logging is emitted. Mirrors
+    /// <c>LocalTcpStack.VerboseLogging</c> (the stack forwards to this single flag).
+    /// </summary>
+    public bool VerboseLogging { get; set; }
+
+    // Best-effort throttle: a race between threads may let two lines through, which is fine for a trace.
+    private static bool ShouldLog(ref long lastTick, int minIntervalMs = 500)
+    {
+        var now = Environment.TickCount64;
+        if (now - Interlocked.Read(ref lastTick) <= minIntervalMs) return false;
+        Interlocked.Exchange(ref lastTick, now);
+        return true;
+    }
+
+    /// <summary>Traces a sender parked on a (near-)zero peer window (throttled).</summary>
+    internal void TraceZeroWindowWait(IPEndPointPairValue endPointPair, int offset, int dataLength,
+        uint peerWindow, uint sndUna, uint sndNxt)
+    {
+        if (!VerboseLogging || !ShouldLog(ref _lastZeroWinLogTick)) return;
+        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag,
+            "[TcpStack] zero-win wait {EndPointPair} offset={Offset}/{DataLength} pw={PeerWindow} sndUna={SndUna} sndNxt={SndNxt} inFlight={InFlight}",
+            endPointPair, offset, dataLength, peerWindow, sndUna, sndNxt, (long)(sndNxt - sndUna));
+    }
+
+    /// <summary>Traces a Zero Window Probe firing (throttled).</summary>
+    internal void TraceZeroWindowProbe(IPEndPointPairValue endPointPair, int offset, uint peerWindow)
+    {
+        if (!VerboseLogging || !ShouldLog(ref _lastZwpLogTick)) return;
+        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag,
+            "[TcpStack] ZWP fire {EndPointPair} offset={Offset} pw={PeerWindow}", endPointPair, offset, peerWindow);
+    }
+
+    /// <summary>
+    /// Traces a processed ACK, but only for significant events (zero/low advertised window, a
+    /// non-advancing payload-less ACK, or a periodic heartbeat) to avoid log spam.
+    /// </summary>
+    internal void TraceAck(IPEndPointPairValue endPointPair, int ackCount, uint ack, uint prevUna,
+        uint sndNxt, long diff, ushort windowSize, uint peerWindow, int payloadLength,
+        int windowSignal, int dupAckCount)
+    {
+        if (!VerboseLogging) return;
+        var significant = windowSize == 0 || peerWindow < 4096 ||
+                          (diff <= 0 && payloadLength == 0) || ackCount % 5000 == 0;
+        if (!significant) return;
+        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag,
+            "[ACK#{AckCount}] {EndPointPair} ack={Ack} prevUna={PrevUna} nxt={SndNxt} diff={Diff} winRaw={WindowSize} pw={PeerWindow} payload={PayloadLength} sig={WindowSignal} dup={DupAckCount}",
+            ackCount, endPointPair, ack, prevUna, sndNxt, diff, windowSize, peerWindow, payloadLength, windowSignal, dupAckCount);
+    }
+
+    /// <summary>Traces a fast-retransmit event.</summary>
+    internal void TraceFastRetransmit(IPEndPointPairValue endPointPair, long retxCount, uint sndUna, int retxBufferLen)
+    {
+        if (!VerboseLogging) return;
+        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag,
+            "[RETX#{RetxCount}] {EndPointPair} fast retransmit at sndUna={SndUna} retxLen={RetxBufferLen}",
+            retxCount, endPointPair, sndUna, retxBufferLen);
+    }
 }

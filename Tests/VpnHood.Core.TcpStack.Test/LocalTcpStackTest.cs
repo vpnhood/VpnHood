@@ -191,6 +191,76 @@ public sealed class LocalTcpStackTest
         await stream.DisposeAsync();
     }
 
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task FullSizeDataPacketsWithoutPsh_ShouldAckEverySecondSegment()
+    {
+        // Arrange
+        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            DefaultMss = 512,
+            MaxMss = 512,
+            RetxBufferSize = 1024
+        });
+        var sentPackets = new List<IpPacket>();
+        object lockObj = new();
+        tcpStack.OnPacketSend = packet => {
+            lock (lockObj) sentPackets.Add(packet);
+        };
+
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+
+        var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
+        tcpStack.ProcessIncoming(synPacket);
+        var synAckTcp = sentPackets[0].ExtractTcp();
+        var serverSeq = synAckTcp.SequenceNumber;
+
+        var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1);
+        tcpStack.ProcessIncoming(ackPacket);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var stream = await acceptTask.WaitAsync(cts.Token);
+        lock (lockObj) sentPackets.Clear();
+
+        // Act - two full-size non-PSH segments should produce one cumulative ACK, not two ACK packets.
+        var segment1 = new byte[512];
+        var segment2 = new byte[512];
+        RandomNumberGenerator.Fill(segment1);
+        RandomNumberGenerator.Fill(segment2);
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1, payload: segment1));
+        await Task.Delay(100, cts.Token);
+
+        lock (lockObj) {
+            Assert.IsFalse(sentPackets.Any(p => p.ExtractTcp().Payload.Length == 0 && p.ExtractTcp().AcknowledgmentNumber == 1513),
+                "The first full-size non-PSH segment should be ACK-thinned.");
+        }
+
+        tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1513, ackNum: serverSeq + 1, payload: segment2));
+
+        await WaitForCondition(() => {
+            lock (lockObj) {
+                return sentPackets.Any(p => {
+                    var tcp = p.ExtractTcp();
+                    return tcp.Acknowledgment && tcp.Payload.Length == 0 && tcp.AcknowledgmentNumber == 2025;
+                });
+            }
+        }, cts.Token, 1000);
+
+        lock (lockObj) {
+            var pureAcks = sentPackets.Count(p => {
+                var tcp = p.ExtractTcp();
+                return tcp.Acknowledgment && tcp.Payload.Length == 0;
+            });
+            Assert.AreEqual(1, pureAcks, "Two full-size non-PSH segments should produce one cumulative ACK.");
+        }
+
+        await stream.DisposeAsync();
+    }
+
     /// <summary>
     /// Tests server writing data back to client
     /// </summary>

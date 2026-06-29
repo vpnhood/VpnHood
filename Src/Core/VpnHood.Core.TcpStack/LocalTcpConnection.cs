@@ -68,6 +68,7 @@ internal sealed class LocalTcpConnection(
     private readonly byte _peerWsShift = peerWsShift > 14 ? (byte)14 : peerWsShift; // Peer's window scale shift (RFC 1323).
     private uint _peerWindow = 0xFFFF; // Peer's last advertised receive window (scaled). Initial guess until the first ACK.
     private uint _rcvNxt = isnRemote + 1; // We have already "consumed" the peer's SYN.
+    private int _unackedSegments; // Count of in-order full-size data segments not yet acknowledged.
     private int _ackCount;
 
     // Dynamic receive-window flow control (all platforms). Bytes written into the net->app reassembly
@@ -470,6 +471,21 @@ internal sealed class LocalTcpConnection(
 
                 needsAck = payload.Length > 0;
                 finCloses = false;
+
+                // Allocation-free delayed ACK policy:
+                // - ACK PSH/FIN and short segments immediately so request tails don't stall.
+                // - For normal full-size data, ACK every 2nd segment to avoid flooding the iOS packet path.
+                if (needsAck && !flags.HasFlag(TcpFlags.Fin) && !flags.HasFlag(TcpFlags.Psh) &&
+                    payload.Length >= Mss) {
+                    _unackedSegments++;
+                    if (_unackedSegments < 2)
+                        needsAck = false;
+                    else
+                        _unackedSegments = 0;
+                }
+                else if (needsAck) {
+                    _unackedSegments = 0;
+                }
 
                 if (flags.HasFlag(TcpFlags.Fin)) {
                     _rcvNxt += 1;

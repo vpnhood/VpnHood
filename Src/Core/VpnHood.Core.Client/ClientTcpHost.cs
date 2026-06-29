@@ -36,10 +36,7 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         using var logScope = VhLogger.Instance.BeginScope("ClientTcpHost");
         VhLogger.Instance.LogInformation("Starting ClientTcpHost (TcpStack)...");
         _tcpStack = new LocalTcpStack {
-            OnPacketSend = packet => PacketReceived?.Invoke(this, packet),
-            // Emit the stack's verbose data-path traces only when the app is already in debug logging;
-            // off (no overhead) in production. Trace-level lines still need MinLogLevel = Trace to surface.
-            VerboseLogging = VhLogger.MinLogLevel <= LogLevel.Debug
+            OnPacketSend = packet => PacketReceived?.Invoke(this, packet)
         };
         _listener = _tcpStack.ListenAny();
         Task.Run(() => AcceptLoop(_listener, _cancellationTokenSource.Token));

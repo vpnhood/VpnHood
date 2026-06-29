@@ -84,8 +84,14 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public static AppConfigs Load()
     {
         var appConfigs = new AppConfigs();
-        appConfigs.Merge("AppSettings");
-        appConfigs.Merge("AppSettings_Environment");
+        appConfigs.LoadConfig();
+
+        // The default access key is embedded as its own resource (per configuration) so it can be
+        // sourced from a GitHub secret. When present it overrides the in-code/json default.
+        var accessKey = appConfigs.ReadResourceText("access_key_default.txt");
+        if (!string.IsNullOrWhiteSpace(accessKey))
+            appConfigs.DefaultAccessKey = accessKey.Trim();
+
         return appConfigs;
     }
 

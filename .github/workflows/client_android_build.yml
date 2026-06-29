@@ -1,0 +1,109 @@
+name: Build Android Client
+
+# Builds the VpnHood Android client packages on a GitHub-hosted Ubuntu runner,
+# reusing the EXISTING publish scripts unchanged:
+#   Src/Apps/Client.Android.Google/_publish.ps1        -> Google AAB
+#   Src/Apps/Client.Android.Web/_publish.ps1           -> Web APK
+#   Src/Apps/Client.Android.Web/_publish-arm64.ps1     -> Web arm64 APK
+#     -> Pub/Core/PublishAndroidApp.ps1 -> Pub/Core/Common.ps1
+#
+# Signing: Pub/Core/PrepareCiAndroidSigning.ps1 uses the real keystores when the
+# ANDROID_KEYSTORE_CLIENT_GOOGLE_* / ANDROID_KEYSTORE_CLIENT_WEB_* secrets are set, otherwise
+# it generates an ephemeral throwaway keystore (build completes, NOT release-grade).
+#
+# NOTE: the Android client projects currently have AOT disabled (grep "TEMP-CI-AOT-OFF")
+# to keep CI builds fast. Re-enable before a production release.
+#
+# Build-only: produces the packages as short-lived workflow artifacts (no release).
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit to build"
+        required: false
+        default: "development"
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64 }}
+      ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS }}
+      ANDROID_KEYSTORE_CLIENT_WEB_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_BASE64 }}
+      ANDROID_KEYSTORE_CLIENT_WEB_PASS: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_PASS }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Set up .NET (pinned by global.json)
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      # .NET Android needs a JDK 17 on PATH (keytool + the build tooling).
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Resolve version and paths
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "TAG=$tag" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Building VpnHoodClient $tag (Android)"
+
+      - name: Install .NET Android workload
+        shell: pwsh
+        run: dotnet workload install android
+
+      # Provision the Android SDK platform/build-tools the project targets (auto-accepts licenses).
+      - name: Provision Android SDK
+        shell: pwsh
+        run: |
+          dotnet build "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Web/VpnHood.App.Client.Android.Web.csproj" `
+            -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=True -p:AndroidSdkPath="$env:ANDROID_HOME"
+
+      - name: Credentials + Android signing config
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Pub/Core/PrepareCiAndroidSigning.ps1"
+
+      - name: Build Android client (Google AAB)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Google/_publish.ps1"
+
+      - name: Build Android client (Web APK)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Web/_publish.ps1"
+
+      - name: Build Android client (Web arm64 APK)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Web/_publish-arm64.ps1"
+
+      - name: List produced artifacts
+        shell: pwsh
+        run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/$env:MODULE_DIR" -Include *.apk,*.aab,*.json | Select-Object FullName, Length
+
+      - name: Upload Android client artifacts
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: vpnhood-client-android
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ env.MODULE_DIR }}/android-google/**
+            ${{ env.MODULE_DIR }}/android-web/**
+            ${{ env.MODULE_DIR }}/android-arm64-web/**

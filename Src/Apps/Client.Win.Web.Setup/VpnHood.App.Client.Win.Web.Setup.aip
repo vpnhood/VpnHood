@@ -549,7 +549,7 @@
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
-    <ROW File="updater.exe" Component_="updater.exe" FileName="updater.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="&lt;AI_STUBS&gt;updater.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="updater.exe" Component_="updater.exe" FileName="updater.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="&lt;AI_STUBS&gt;updater.exe" SelfReg="false" DigSign="false"/>
     <ROW File="Microsoft.Extensions.Configuration.Abstractions.dll" Component_="Microsoft.Extensions.Configuration.Abstractions.dll" FileName="MICROS~1.DLL|Microsoft.Extensions.Configuration.Abstractions.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\Microsoft.Extensions.Configuration.Abstractions.dll" SelfReg="false"/>
     <ROW File="Microsoft.Extensions.Configuration.Binder.dll" Component_="Microsoft.Extensions.Configuration.Binder.dll" FileName="MICROS~2.DLL|Microsoft.Extensions.Configuration.Binder.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\Microsoft.Extensions.Configuration.Binder.dll" SelfReg="false"/>
     <ROW File="Microsoft.Extensions.Configuration.dll" Component_="Microsoft.Extensions.Configuration.dll" FileName="MICROS~3.DLL|Microsoft.Extensions.Configuration.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\Microsoft.Extensions.Configuration.dll" SelfReg="false"/>
@@ -572,7 +572,7 @@
     <ROW File="SharpPcap.dll" Component_="SharpPcap.dll" FileName="SHARPP~1.DLL|SharpPcap.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\SharpPcap.dll" SelfReg="false"/>
     <ROW File="VpnHoodClient.deps.json" Component_="VpnHoodClient.deps.json" FileName="VPNHOO~1.JSO|VpnHoodClient.deps.json" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHoodClient.deps.json" SelfReg="false"/>
     <ROW File="VpnHoodClient.dll" Component_="VpnHoodClient.dll" FileName="VPNHOO~8.DLL|VpnHoodClient.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHoodClient.dll" SelfReg="false"/>
-    <ROW File="VpnHoodClient.exe_1" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~1.EXE|VpnHoodClient.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHoodClient.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="VpnHoodClient.exe_1" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~1.EXE|VpnHoodClient.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHoodClient.exe" SelfReg="false" DigSign="false"/>
     <ROW File="VpnHoodClient.pdb" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~8.PDB|VpnHoodClient.pdb" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHoodClient.pdb" SelfReg="false"/>
     <ROW File="VpnHoodClient.runtimeconfig.json" Component_="VpnHoodClient.deps.json" FileName="VPNHOO~2.JSO|VpnHoodClient.runtimeconfig.json" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\VpnHoodClient.runtimeconfig.json" SelfReg="false"/>
     <ROW File="Accessibility.dll" Component_="Accessibility.dll" FileName="ACCESS~1.DLL|Accessibility.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\Client.Win.Web\bin\Publish-web\Accessibility.dll" SelfReg="false"/>
@@ -1066,9 +1066,6 @@
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
-  </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
-    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="[|ProductName]" SignOptions="7" SignTool="7" UseSha256="1" Subject="CN=NetFreedom Pioneers, O=NetFreedom Pioneers, S=California, C=US, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=California, OID.1.3.6.1.4.1.311.60.2.1.3=US, SERIALNUMBER=3506245" TSEndPoint="https://wus2.codesigning.azure.net/" TSAccountName="Vh-Signing" TSCertName="OmegaHood-CodeSigning"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DynamicPropertyComponent">
     <ROW Property="ProductVersion" Type="3" SourcePath="..\..\..\Pub\PubVersion.json" PathInSource="Root\Version"/>

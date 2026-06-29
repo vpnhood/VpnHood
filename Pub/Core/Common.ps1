@@ -7,10 +7,14 @@ $solutionDir = Split-Path -parent (Split-Path -parent $PSScriptRoot);
 $gitDir = "$solutionDir/.git";
 $vhDir = Split-Path -parent $solutionDir;
 $pubDir = "$solutionDir/Pub";
-$msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
+if ($env:ProgramFiles) {
+	$msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
+}
 $userDir = "$solutionDir/../.user";
-$credentials = (Get-Content "$userDir/credentials.json" | Out-String | ConvertFrom-Json);
-$nugetApiKey = $credentials.NugetApiKey;
+# Secrets live as discrete files under .user/ (one value per file) so they map 1:1 to GitHub
+# secrets. Android keystores/passwords resolve per-app in PublishAndroidApp.ps1; here we only
+# need the global NuGet token. Missing file -> empty (a fork without secrets still builds).
+$nugetApiKey = if (Test-Path "$userDir/nuget_apikey.txt") { (Get-Content "$userDir/nuget_apikey.txt" -Raw).Trim() } else { "" };
 $msverbosity = "minimal";
 
 # Version

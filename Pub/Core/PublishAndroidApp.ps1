@@ -37,11 +37,39 @@ $module_packageFile = "$moduleDir/$module_baseFileName.$packageExt";
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-# android
-$nodeName = "Android.$packageFileTitle.$distribution";
-$keystore = Join-Path "$solutionDir/../.user/" $credentials.$nodeName.KeyStoreFile
-$keystorePass = $credentials.$nodeName.KeyStorePass
-$keystoreAlias = $credentials.$nodeName.KeyStoreAlias
+# android signing — keystore + sidecars live in .user/<packageFileTitle>/<store>/. The store folder
+# is derived (the google distribution -> google; web and arm64-web share the web key), so no signing
+# manifest is needed. CI materializes the same files from GitHub secrets.
+$store = if ($distribution -eq 'google') { 'google' } else { 'web' }
+$keystoreDir = Join-Path "$solutionDir/../.user/" "$packageFileTitle/$store"
+$keystore = Join-Path $keystoreDir "keystore.p12"
+$keystorePass = (Get-Content (Join-Path $keystoreDir "keystore_pass.txt") -Raw).Trim()
+# Key alias resolution, in priority order:
+#   1. keystore_alias.txt next to the keystore (written locally / by CI),
+#   2. auto-detect from the keystore — valid ONLY when it holds exactly one PrivateKeyEntry (only a
+#      key entry can sign); on 0 or >1 it fails and asks for an explicit keystore_alias.txt.
+# A fork can therefore drop in a bare keystore (auto-detect) or ship an alias file.
+$keystoreAlias = $null
+$aliasFile = Join-Path $keystoreDir "keystore_alias.txt"
+if (Test-Path $aliasFile) {
+	$keystoreAlias = (Get-Content $aliasFile -Raw).Trim()
+}
+if ([string]::IsNullOrWhiteSpace($keystoreAlias)) {
+	$keyAliases = @()
+	$current = $null
+	foreach ($line in (& keytool -list -v -keystore $keystore -storepass $keystorePass 2>&1)) {
+		$s = $line.ToString()
+		if ($s -match '^Alias name:\s*(.+?)\s*$') { $current = $Matches[1] }
+		elseif ($s -match '^Entry type:\s*PrivateKeyEntry' -and $current) { $keyAliases += $current; $current = $null }
+	}
+	if ($keyAliases.Count -eq 0) {
+		Throw "No PrivateKeyEntry found in '$keystore' (add a keystore_alias.txt next to it)."
+	}
+	if ($keyAliases.Count -gt 1) {
+		Throw "Keystore '$keystore' has multiple key entries ($($keyAliases -join ', ')); add a keystore_alias.txt next to it naming the one to use."
+	}
+	$keystoreAlias = $keyAliases[0]
+}
 $manifestFile = Join-Path $projectDir "Properties/AndroidManifest.xml";
 $appIconXml = Join-Path $projectDir "Resources/mipmap-anydpi-v26/ic_launcher.xml";
 $appIconXmlDoc = [xml](Get-Content $appIconXml);

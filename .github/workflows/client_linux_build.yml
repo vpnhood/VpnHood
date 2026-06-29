@@ -1,0 +1,119 @@
+name: Publish Linux Client
+
+# Builds the VpnHood Linux client on a GitHub-hosted Ubuntu runner using the
+# EXISTING publish scripts, then optionally creates a GitHub release with the
+# Linux assets. The version (and prerelease flag) is read from Pub/PubVersion.json
+# in the checked-out commit — CI does not bump or push the version.
+#
+# Reuses, unchanged:
+#   Src/Apps/Client.Linux.Web/_publish.ps1
+#     -> Pub/Core/vh_installer/publish.ps1 -> publish_impl.ps1
+#     -> Pub/Core/Common.ps1 (+ VersionBump.ps1)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit to build"
+        required: false
+        default: "development"
+      publish_release:
+        description: "Create a GitHub release with the built assets"
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to create the release / upload assets
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      # Installs the exact SDK pinned in global.json (a .NET 11 preview).
+      - name: Set up .NET (pinned by global.json)
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      # Resolve version -> tag -> module dir from PubVersion.json. Prerelease
+      # outputs land in Pub/bin/v<ver>-prerelease/... (not Pub/bin/latest/...),
+      # so the paths must be derived, not hardcoded.
+      - name: Resolve version and paths
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          $moduleDir = "Pub/bin/$tag/VpnHoodClient"
+          "TAG=$tag"               | Out-File -FilePath $env:GITHUB_ENV -Append
+          "IS_PRERELEASE=$($v.Prerelease.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "MODULE_DIR=$moduleDir"  | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Building VpnHoodClient $tag -> $moduleDir"
+
+      # Common.ps1 reads ../.user/nuget_apikey.txt at load time for the NuGet key.
+      # The Linux client build never uses that key, so a stub lets the scripts run.
+      - name: Create nuget key stub
+        shell: pwsh
+        run: |
+          $userDir = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
+          New-Item -ItemType Directory -Path $userDir -Force | Out-Null
+          '' | Out-File -FilePath (Join-Path $userDir "nuget_apikey.txt") -Encoding ascii -Force
+
+      - name: Build Linux client (x64 + arm64 + any)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Linux.Web/_publish.ps1"
+        env:
+          DOTNET_NOLOGO: "1"
+          DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+      - name: List produced artifacts
+        shell: pwsh
+        run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/$env:MODULE_DIR" | Select-Object FullName, Length
+
+      # Inspection artifact ONLY for build-only runs. When publishing a release,
+      # the release already holds the files, so we create no Actions-storage
+      # artifact at all. Actions storage is quota-limited, so build-only artifacts
+      # also expire after 1 day. continue-on-error keeps a flaky upload non-fatal.
+      - name: Upload Linux client artifacts (inspection only)
+        if: ${{ github.event.inputs.publish_release != 'true' }}
+        uses: actions/upload-artifact@v7
+        continue-on-error: true
+        with:
+          name: vpnhood-client-linux
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ env.MODULE_DIR }}/linux-x64/**
+            ${{ env.MODULE_DIR }}/linux-arm64/**
+            ${{ env.MODULE_DIR }}/linux-any/**
+
+      # Opt-in: create a GitHub release with the Linux assets (mirrors the Linux
+      # portion of Pub/Client/PublishToGithub.ps1). --prerelease is set when
+      # PubVersion.json has Prerelease=true.
+      - name: Create GitHub release (Linux assets)
+        if: ${{ github.event.inputs.publish_release == 'true' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $flag = if ($env:IS_PRERELEASE -eq "true") { "--prerelease" } else { "--latest" }
+          $assets = @(
+            "$env:MODULE_DIR/linux-x64/VpnHoodClient-linux-x64.tar.gz",
+            "$env:MODULE_DIR/linux-x64/VpnHoodClient-linux-x64.json",
+            "$env:MODULE_DIR/linux-x64/VpnHoodClient-linux-x64.sh",
+            "$env:MODULE_DIR/linux-arm64/VpnHoodClient-linux-arm64.tar.gz",
+            "$env:MODULE_DIR/linux-arm64/VpnHoodClient-linux-arm64.json",
+            "$env:MODULE_DIR/linux-arm64/VpnHoodClient-linux-arm64.sh",
+            "$env:MODULE_DIR/linux-any/VpnHoodClient-linux.sh"
+          )
+          # Replace an existing release with the same tag (idempotent re-runs).
+          gh release view  "$env:TAG" --repo "$env:GITHUB_REPOSITORY" 2>$null && `
+            gh release delete "$env:TAG" --repo "$env:GITHUB_REPOSITORY" --cleanup-tag --yes
+          gh release create "$env:TAG" --repo "$env:GITHUB_REPOSITORY" --title "$env:TAG" `
+            --notes "Linux client $env:TAG (CI build)" $flag $assets

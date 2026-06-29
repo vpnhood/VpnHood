@@ -25,20 +25,6 @@ internal sealed class IosQuicConnection(
 {
     public IPEndPoint RemoteEndPoint => remoteEndPoint;
 
-    // Per-stream queue pool. Network.framework delivers a connection's callbacks (receive, FIN/close,
-    // state, AND Cancel teardown) serially on its assigned queue. Putting ALL streams on one serial
-    // queue means a download burst saturates that single thread with receive callbacks, starving stream
-    // completion + Cancel — so dead streams (native NWConnections) pile up until the 52 MB jetsam kill.
-    // Spreading streams across several serial queues lets teardown run in parallel with other streams'
-    // data; each stream still uses ONE queue, so its own callbacks stay correctly serialized.
-    private readonly DispatchQueue[] _streamQueues = [
-        new("VpnHood.Quic.Ios.S0"), new("VpnHood.Quic.Ios.S1"),
-        new("VpnHood.Quic.Ios.S2"), new("VpnHood.Quic.Ios.S3"),
-        new("VpnHood.Quic.Ios.S4"), new("VpnHood.Quic.Ios.S5"),
-        new("VpnHood.Quic.Ios.S6"), new("VpnHood.Quic.Ios.S7")
-    ];
-    private int _streamQueueIndex = -1;
-
     // Network.framework does not surface the local UDP endpoint of a QUIC tunnel; VpnHood uses these
     // only for diagnostics, so a family-appropriate placeholder is sufficient.
     public IPEndPoint LocalEndPoint { get; } =
@@ -94,8 +80,7 @@ internal sealed class IosQuicConnection(
                 }
             });
 
-            var streamQueue = _streamQueues[(uint)Interlocked.Increment(ref _streamQueueIndex) % (uint)_streamQueues.Length];
-            stream.SetQueue(streamQueue);
+            stream.SetQueue(queue);
             stream.Start();
 
             await tcs.Task.Vhc();
@@ -132,8 +117,7 @@ internal sealed class IosQuicConnection(
         connectionGroup.Dispose();
         multiplexGroup.Dispose();
         endpoint.Dispose();
-        foreach (var streamQueue in _streamQueues)
-            VhUtils.TryInvoke(() => streamQueue.Dispose());
+        VhUtils.TryInvoke(queue.Dispose);
         return ValueTask.CompletedTask;
     }
 }

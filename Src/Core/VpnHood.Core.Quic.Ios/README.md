@@ -71,15 +71,13 @@ not. That bug and its forward-progress invariant live in
 `Tests/VpnHood.Core.TcpStack.Test`. **If you shrink these windows, re-verify the TcpStack send path
 under sustained download.**
 
-## Threading — per-stream serial queues
+## Threading
 
-Network.framework delivers a connection's callbacks (receive, FIN/close, state, **and `Cancel`
-teardown**) **serially on its assigned queue**. Putting every stream on one serial queue means a
-download burst saturates that thread with receive callbacks and **starves stream completion +
-`Cancel`** → dead `NWConnection`s pile up until jetsam. `IosQuicConnection` therefore round-robins
-streams across **8 serial queues** (`VpnHood.Quic.Ios.S0..S7`): each stream still uses exactly one
-queue (its own callbacks stay correctly serialized), but teardown on one stream runs in parallel
-with another stream's data.
+Network.framework delivers a connection's callbacks (receive, FIN/close, state, and `Cancel`
+teardown) serially on its assigned queue. The QUIC tunnel and extracted streams currently share the
+same `VpnHood.Quic.Ios` queue. Stream callbacks are therefore serialized through one queue; the
+native-memory cap is handled by QUIC flow-control windows and bounded receives rather than a
+per-stream queue pool.
 
 ## Native interop gotchas
 

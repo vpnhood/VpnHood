@@ -27,10 +27,21 @@ public class IosVpnAdapter(
     private const int MaxWriteBatchSize = 32;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
 
-    // The write path reuses _writeBuffer and the batch arrays, so native writes must be serialized.
-    // Batching is especially important for TCP-proxy downloads where many MSS-sized packets are emitted
-    // back-to-back into the iOS tunnel.
+    // Core drains its send channel from a SINGLE consumer (Channel SingleReader=true, and this
+    // transport is non-passthrough), so SendPacketsAsync is never invoked concurrently and this lock
+    // is uncontended on the normal path. It is kept only as defensive serialization of the shared
+    // _writeBuffer / batch arrays in case a direct or passthrough write path is ever added, and is
+    // taken once per drain (not per packet), so the cost is negligible.
+    // NOTE (history): an earlier comment claimed concurrent WritePacket calls from TCP-proxy pump
+    // threads raced here. That diagnosis was wrong — pump threads only enqueue to the channel; the
+    // native write has always been serialized by the single consumer. The real crash was a
+    // garbled/null NSData handed to WritePackets, not a data race.
     private readonly Lock _writeLock = new();
+
+    // Reused, allocation-free batch arrays. NEPacketTunnelFlow.WritePackets walks the FULL array
+    // length, so a partial (final) chunk must be handed an exactly-sized array — a trailing null
+    // would SIGABRT natively. _partialWrite*Batches[n] is a pre-allocated array of length n used for
+    // a chunk of n<32; the full 32-wide arrays are used when a chunk is exactly MaxWriteBatchSize.
     private readonly NSData[] _writeDataBatch = new NSData[MaxWriteBatchSize];
     private readonly NSNumber[] _writeProtocolBatch = new NSNumber[MaxWriteBatchSize];
     private readonly NSData[][] _partialWriteDataBatches = CreatePartialWriteBatches<NSData>();
@@ -266,24 +277,33 @@ public class IosVpnAdapter(
 
     protected override void WaitForTunWrite() => Thread.Sleep(10);
 
+    // Single-packet write (required by the base contract; the batched SendPacketsAsync below is the
+    // actual hot path). Writes one packet through the same lock/pool/batch machinery.
     protected override bool WritePacket(IpPacket ipPacket)
     {
-        WriteSinglePacket(ipPacket);
+        // Capture the flow; AdapterClose may null it out concurrently.
+        var flow = _packetFlow ?? throw new InvalidOperationException("Packet flow is not initialized.");
+
+        lock (_writeLock) {
+            using var pool = new NSAutoreleasePool();
+            try {
+                FillWriteBatchSlot(ipPacket, 0);
+                FlushWriteBatch(flow, 1);
+            }
+            finally {
+                ClearWriteBatch(1);
+            }
+        }
+
         return true;
     }
 
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
     {
-        WritePacketBatch(ipPackets);
-        return ValueTask.CompletedTask;
-    }
-
-    private void WritePacketBatch(IReadOnlyList<IpPacket> ipPackets)
-    {
         // Capture the flow; AdapterClose may null it out concurrently.
         var flow = _packetFlow ?? throw new InvalidOperationException("Packet flow is not initialized.");
         if (ipPackets.Count == 0)
-            return;
+            return ValueTask.CompletedTask;
 
         lock (_writeLock) {
             // NEPacketTunnelFlow creates autoreleased native temporaries while marshaling arrays.
@@ -301,23 +321,8 @@ public class IosVpnAdapter(
                 }
             }
         }
-    }
 
-    private void WriteSinglePacket(IpPacket ipPacket)
-    {
-        // Capture the flow; AdapterClose may null it out concurrently.
-        var flow = _packetFlow ?? throw new InvalidOperationException("Packet flow is not initialized.");
-
-        lock (_writeLock) {
-            using var pool = new NSAutoreleasePool();
-            try {
-                FillWriteBatchSlot(ipPacket, 0);
-                FlushWriteBatch(flow, 1);
-            }
-            finally {
-                ClearWriteBatch(1);
-            }
-        }
+        return ValueTask.CompletedTask;
     }
 
     private void FillWriteBatch(IReadOnlyList<IpPacket> ipPackets, int batchStart, int batchCount)

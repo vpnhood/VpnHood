@@ -1,8 +1,9 @@
 {
-  "// description": "Maps each logical Android signing key (the GitHub-secret prefix ANDROID_KEYSTORE_<name>_BASE64 / _PASS / optional _ALIAS) to the .user store folder(s) it materializes into. Connect shares one key across both of its store folders. The key ALIAS is NOT stored here — it is auto-detected from the keystore (or supplied via the optional _ALIAS secret) at materialize time.",
+  "// description": "Maps each logical Android signing key (the GitHub-secret prefix ANDROID_KEYSTORE_<name>_BASE64 / _PASSWORD / optional _ALIAS) to the .user store folder(s) it materializes into. Each store folder has its own key entry here even when two folders happen to use the same physical key (e.g. Connect google/web) — they are still provided as separate secrets. The key ALIAS is NOT stored here — it is auto-detected from the keystore (or supplied via the optional _ALIAS secret) at materialize time.",
   "keys": [
-    { "name": "CLIENT_GOOGLE", "dirs": [ "VpnHoodClient/google" ] },
-    { "name": "CLIENT_WEB",    "dirs": [ "VpnHoodClient/web" ] },
-    { "name": "CONNECT",       "dirs": [ "VpnHoodConnect/google", "VpnHoodConnect/web" ] }
+    { "name": "CLIENT_GOOGLE",  "dirs": [ "VpnHoodClient/google" ] },
+    { "name": "CLIENT_WEB",     "dirs": [ "VpnHoodClient/web" ] },
+    { "name": "CONNECT_GOOGLE", "dirs": [ "VpnHoodConnect/google" ] },
+    { "name": "CONNECT_WEB",    "dirs": [ "VpnHoodConnect/web" ] }
   ]
 }

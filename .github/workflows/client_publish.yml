@@ -157,9 +157,9 @@ jobs:
       # Optional Android signing — empty unless configured; PrepareCiAndroidSigning.ps1
       # falls back to an ephemeral keystore when these are absent.
       ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64 }}
-      ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS }}
+      ANDROID_KEYSTORE_CLIENT_GOOGLE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_PASSWORD }}
       ANDROID_KEYSTORE_CLIENT_WEB_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_BASE64 }}
-      ANDROID_KEYSTORE_CLIENT_WEB_PASS: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_PASS }}
+      ANDROID_KEYSTORE_CLIENT_WEB_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
         with: { ref: "${{ github.event.inputs.ref }}" }

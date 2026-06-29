@@ -27,8 +27,10 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `ADVANCED_INSTALLER_LICENSE` | `client_windows_build.yml`, `client_publish.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
 | `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` | `client_publish.yml` | Optional (Windows signing) | Service principal for Azure Trusted Signing. All three (plus the `VH_SIGN_*` set) must be present for signing to run. |
 | `VH_SIGN_ACCOUNT` / `VH_SIGN_PROFILE` / `VH_SIGN_ENDPOINT` | `client_publish.yml` | Optional (Windows signing) | Trusted Signing target: account name, certificate profile, and regional endpoint. |
-| `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64` / `_PASS` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Google AAB, plus its store password. The key alias is auto-detected; set `_ALIAS` only for a multi-entry keystore. |
-| `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `_PASS` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
+| `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Google AAB, plus its store password. The key alias is auto-detected; set `_ALIAS` only for a multi-entry keystore. |
+| `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
+| `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Google AAB, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Web. |
+| `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Web APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Google. |
 
 ## Per-platform setup
 
@@ -49,16 +51,20 @@ on the runner, and the Android SDK is auto-provisioned.
 
 To sign with real keys (encode the keystore first: `base64 -w0 my.keystore`):
 
-- `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64` / `ANDROID_KEYSTORE_CLIENT_GOOGLE_PASS`
+- `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64` / `ANDROID_KEYSTORE_CLIENT_GOOGLE_PASSWORD`
   — the keystore that signs the **Client Google** AAB.
-- `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `ANDROID_KEYSTORE_CLIENT_WEB_PASS`
+- `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `ANDROID_KEYSTORE_CLIENT_WEB_PASSWORD`
   — the keystore that signs the **Client Web** and **Web-arm64** APKs.
 
 Key aliases are **auto-detected** from each keystore at publish time, so you can use your own
 keystore without matching our alias or editing the repo. Only if your keystore holds **more than one
 key entry** (auto-detect won't guess) set the optional `ANDROID_KEYSTORE_<NAME>_ALIAS` secret naming
-the key to use — e.g. `ANDROID_KEYSTORE_CLIENT_GOOGLE_ALIAS`. (Connect publishing, when wired into
-CI, uses `ANDROID_KEYSTORE_CONNECT_BASE64` / `_PASS` — and optional `_ALIAS` — the same way.)
+the key to use — e.g. `ANDROID_KEYSTORE_CLIENT_GOOGLE_ALIAS`.
+
+Connect publishing, when wired into CI, uses `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` and
+`ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` — each with an optional `_ALIAS` — the same way. They
+are separate secrets even though you may load the **same** keystore bytes into both (Connect signs its
+Google and Web builds with one key); providing them separately keeps each store folder self-contained.
 
 > The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
 > CI builds fast. Re-enable it before shipping a production release.

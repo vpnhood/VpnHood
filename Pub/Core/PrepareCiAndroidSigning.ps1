@@ -12,9 +12,10 @@
 # Each key is decided INDEPENDENTLY (mirrors the gated Windows signing):
 #
 #   * REAL signing — when both secrets are present for that key:
-#       ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64 / _PASS
-#       ANDROID_KEYSTORE_CLIENT_WEB_BASE64    / _PASS
-#       ANDROID_KEYSTORE_CONNECT_BASE64       / _PASS
+#       ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64  / _PASSWORD
+#       ANDROID_KEYSTORE_CLIENT_WEB_BASE64     / _PASSWORD
+#       ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64 / _PASSWORD
+#       ANDROID_KEYSTORE_CONNECT_WEB_BASE64    / _PASSWORD
 #     An optional ANDROID_KEYSTORE_<NAME>_ALIAS picks the key in a MULTI-entry keystore; for the
 #     usual single-key keystore it's unneeded (the alias is auto-detected).
 #
@@ -39,8 +40,9 @@ $userDir = Join-Path (Split-Path -Parent $solutionDir) ".user";
 $ephemeralAlias = "vpnhood";
 
 # logical key (GitHub-secret prefix) -> target .user dir(s), loaded from the signing map.
-# Connect is one key copied into both of its store folders (per-store layout kept). The alias is
-# NOT in this map — it's auto-detected from the keystore (or the optional _ALIAS secret).
+# Each store folder is its own secret (Connect's google/web are separate keys here even though the
+# same physical key may back both). The alias is NOT in this map — it's auto-detected from the
+# keystore (or the optional _ALIAS secret).
 $mapFile = Join-Path $PSScriptRoot "android-signing.json";
 $keys = (Get-Content $mapFile -Raw | ConvertFrom-Json).keys |
     ForEach-Object { @{ Name = $_.name; Dirs = @($_.dirs) } };
@@ -62,11 +64,11 @@ function Get-SingleKeyAlias([string]$ks, [string]$pass) {
 $realKeys = @(); $ephemeralKeys = @();
 foreach ($k in $keys) {
     $b64 = Get-Env "ANDROID_KEYSTORE_$($k.Name)_BASE64";
-    $pw = Get-Env "ANDROID_KEYSTORE_$($k.Name)_PASS";
+    $pw = Get-Env "ANDROID_KEYSTORE_$($k.Name)_PASSWORD";
     # optional: only needed for a multi-entry keystore where auto-detect can't pick one key.
     $aliasOverride = Get-Env "ANDROID_KEYSTORE_$($k.Name)_ALIAS";
     if ($b64 -and -not $pw) {
-        Write-Host "::warning::ANDROID_KEYSTORE_$($k.Name)_BASE64 is set but _PASS is missing; using an ephemeral keystore for $($k.Name).";
+        Write-Host "::warning::ANDROID_KEYSTORE_$($k.Name)_BASE64 is set but _PASSWORD is missing; using an ephemeral keystore for $($k.Name).";
     }
 
     $real = [bool]$b64 -and [bool]$pw;

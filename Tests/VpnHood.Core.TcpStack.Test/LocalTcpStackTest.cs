@@ -54,6 +54,40 @@ public sealed class LocalTcpStackTest
         await stream.DisposeAsync();
     }
 
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task TcpHandshake_InvalidFinalAck_ShouldNotAcceptConnection()
+    {
+        // Arrange
+        var tcpStack = new LocalTcpStack();
+        var sentPackets = new List<IpPacket>();
+        tcpStack.OnPacketSend = sentPackets.Add;
+
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+
+        var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
+        tcpStack.ProcessIncoming(synPacket);
+        var synAckTcp = sentPackets[0].ExtractTcp();
+
+        // Act - wrong ACK number must not complete the handshake.
+        var badAckPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: synAckTcp.SequenceNumber);
+        tcpStack.ProcessIncoming(badAckPacket);
+
+        var wasAccepted = await Task.WhenAny(acceptTask, Task.Delay(200)) == acceptTask;
+        Assert.IsFalse(wasAccepted, "Connection must not be accepted until the SYN-ACK is acknowledged.");
+
+        // A later valid ACK should still complete the half-open connection.
+        var goodAckPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: synAckTcp.SequenceNumber + 1);
+        tcpStack.ProcessIncoming(goodAckPacket);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        var stream = await acceptTask.WaitAsync(cts.Token);
+        await stream.DisposeAsync();
+    }
+
     /// <summary>
     /// Tests data transfer through LocalTcpStack
     /// </summary>
@@ -100,6 +134,59 @@ public sealed class LocalTcpStackTest
         var bytesRead = await stream.Stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
 
         Assert.AreEqual(5, bytesRead, "Should read 5 bytes");
+
+        await stream.DisposeAsync();
+    }
+
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task DataPacketWithoutPsh_ShouldBeAckedImmediately()
+    {
+        // Arrange
+        var tcpStack = new LocalTcpStack();
+        var sentPackets = new List<IpPacket>();
+        object lockObj = new();
+        tcpStack.OnPacketSend = packet => {
+            lock (lockObj) sentPackets.Add(packet);
+        };
+
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var acceptTask = AcceptConnectionAsync(listener);
+
+        var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
+        tcpStack.ProcessIncoming(synPacket);
+        var synAckTcp = sentPackets[0].ExtractTcp();
+        var serverSeq = synAckTcp.SequenceNumber;
+
+        var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1);
+        tcpStack.ProcessIncoming(ackPacket);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        var stream = await acceptTask.WaitAsync(cts.Token);
+        lock (lockObj) sentPackets.Clear();
+
+        // Act - a single non-PSH segment must still get an ACK without allocating delayed-ACK work.
+        var testData = "Hello"u8.ToArray();
+        var dataPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+            ack: true, seq: 1001, ackNum: serverSeq + 1, payload: testData);
+        tcpStack.ProcessIncoming(dataPacket);
+
+        await WaitForCondition(() => {
+            lock (lockObj) {
+                return sentPackets.Any(p => {
+                    var tcp = p.ExtractTcp();
+                    return tcp.Acknowledgment && tcp.Payload.Length == 0 && tcp.AcknowledgmentNumber == 1006;
+                });
+            }
+        }, cts.Token, 1000);
+
+        lock (lockObj) {
+            Assert.IsTrue(sentPackets.Any(p => {
+                var tcp = p.ExtractTcp();
+                return tcp.Acknowledgment && tcp.Payload.Length == 0 && tcp.AcknowledgmentNumber == 1006;
+            }), "A lone non-PSH data segment should be ACKed immediately.");
+        }
 
         await stream.DisposeAsync();
     }
@@ -441,6 +528,26 @@ public sealed class LocalTcpStackTest
         Assert.IsTrue(bStillOpen, "Protected connection B should remain open (read blocks, no EOF).");
     }
 
+    [TestMethod]
+    [Timeout(5000)]
+    public async Task StopListening_ByEndpoint_CompletesAcceptLoop()
+    {
+        var tcpStack = new LocalTcpStack();
+        var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
+        var completed = false;
+
+        var acceptLoop = Task.Run(async () => {
+            await foreach (var _ in listener.AcceptAllAsync()) { }
+            completed = true;
+        });
+
+        Assert.IsTrue(tcpStack.StopListening(new IpEndPointValue(ServerIp, ServerPort)));
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        await acceptLoop.WaitAsync(cts.Token);
+        Assert.IsTrue(completed, "StopListening(endpoint) should stop the listener and complete AcceptAllAsync.");
+    }
+
     /// <summary>
     /// At the MaxConnections cap, if every existing connection is too recently active (idle below
     /// EvictionMinIdle), a new SYN is rejected with an RST — the historical behavior — and no connection
@@ -770,4 +877,3 @@ public sealed class LocalTcpStackTest
             await Task.Delay(5, ct);
     }
 }
-

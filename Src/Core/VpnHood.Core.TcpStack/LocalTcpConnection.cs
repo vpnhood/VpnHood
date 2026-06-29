@@ -68,7 +68,6 @@ internal sealed class LocalTcpConnection(
     private readonly byte _peerWsShift = peerWsShift > 14 ? (byte)14 : peerWsShift; // Peer's window scale shift (RFC 1323).
     private uint _peerWindow = 0xFFFF; // Peer's last advertised receive window (scaled). Initial guess until the first ACK.
     private uint _rcvNxt = isnRemote + 1; // We have already "consumed" the peer's SYN.
-    private int _unackedSegments; // Count of in-order data segments not yet acknowledged.
     private int _ackCount;
 
     // Dynamic receive-window flow control (all platforms). Bytes written into the net->app reassembly
@@ -220,6 +219,18 @@ internal sealed class LocalTcpConnection(
     {
         lock (_seqLock) {
             return (_sndNxt, _rcvNxt);
+        }
+    }
+
+    public bool IsValidHandshakeAck(uint seq, uint ack, TcpFlags flags)
+    {
+        if (!flags.HasFlag(TcpFlags.Ack))
+            return false;
+
+        lock (_seqLock) {
+            return State == TcpConnectionState.SynReceived &&
+                   seq == _rcvNxt &&
+                   ack == _sndNxt;
         }
     }
 
@@ -459,19 +470,6 @@ internal sealed class LocalTcpConnection(
 
                 needsAck = payload.Length > 0;
                 finCloses = false;
-
-                // Delayed ACK: only ACK every 2nd in-order data segment to halve ACK traffic.
-                // FIN/PSH packets bypass the delay and ACK immediately.
-                if (needsAck && !flags.HasFlag(TcpFlags.Fin) && !flags.HasFlag(TcpFlags.Psh)) {
-                    _unackedSegments++;
-                    if (_unackedSegments < 2)
-                        needsAck = false;
-                    else
-                        _unackedSegments = 0;
-                }
-                else if (needsAck) {
-                    _unackedSegments = 0;
-                }
 
                 if (flags.HasFlag(TcpFlags.Fin)) {
                     _rcvNxt += 1;

@@ -105,7 +105,11 @@ public sealed class LocalTcpStack : ITcpStack
     /// </summary>
     public bool StopListening(IpEndPointValue localEndPoint)
     {
-        return _listeners.TryRemove(localEndPoint, out _);
+        if (!_listeners.TryRemove(localEndPoint, out var listener))
+            return false;
+
+        listener.Stop();
+        return true;
     }
 
     /// <summary>
@@ -259,15 +263,22 @@ public sealed class LocalTcpStack : ITcpStack
 
     private void HandleExistingConnection(LocalTcpConnection conn, TcpPacket tcpPacket)
     {
-        // Transition from SynReceived to Established on first valid ACK
-        if (conn.State == TcpConnectionState.SynReceived && tcpPacket.Acknowledgment)
-            conn.MarkEstablished();
-
         var flags = (TcpFlags)0;
         if (tcpPacket.Finish) flags |= TcpFlags.Fin;
         if (tcpPacket.Reset) flags |= TcpFlags.Rst;
         if (tcpPacket.Acknowledgment) flags |= TcpFlags.Ack;
         if (tcpPacket.Push) flags |= TcpFlags.Psh;
+
+        // Transition from SynReceived to Established only after the ACK proves it
+        // acknowledges our SYN-ACK and continues from the peer SYN.
+        if (conn.State == TcpConnectionState.SynReceived && !tcpPacket.Reset) {
+            if (!conn.IsValidHandshakeAck(tcpPacket.SequenceNumber, tcpPacket.AcknowledgmentNumber, flags)) {
+                SendSynAck(conn);
+                return;
+            }
+
+            conn.MarkEstablished();
+        }
 
         var (handled, needsAck) = conn.TryHandleIncoming(
             tcpPacket.SequenceNumber,

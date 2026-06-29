@@ -1,11 +1,8 @@
 {
-  "//": "Non-secret Android signing map. Resolves <packageFileTitle>.<distribution> to the keystore folder under .user/. The secrets (keystore.p12 + keystore_pass.txt) live in .user/<dir>/ locally, or are materialized there from GitHub secrets by PrepareCiAndroidSigning.ps1. Distribution fan-out (arm64-web shares the web key; all Connect distributions share one key) lives here so secrets are never duplicated. The key alias is auto-detected from the keystore by PublishAndroidApp.ps1, so a fork can use its own keystore without editing this file; add an optional \"alias\" to an entry only to override (e.g. a multi-entry keystore).",
-
-  "VpnHoodClient.google":     { "dir": "VpnHoodClient/google" },
-  "VpnHoodClient.web":        { "dir": "VpnHoodClient/web" },
-  "VpnHoodClient.arm64-web":  { "dir": "VpnHoodClient/web" },
-
-  "VpnHoodConnect.google":    { "dir": "VpnHoodConnect/google" },
-  "VpnHoodConnect.web":       { "dir": "VpnHoodConnect/web" },
-  "VpnHoodConnect.arm64-web": { "dir": "VpnHoodConnect/web" }
+  "// description": "Maps each logical Android signing key (the GitHub-secret prefix ANDROID_KEYSTORE_<name>_BASE64 / _PASS / optional _ALIAS) to the .user store folder(s) it materializes into. Connect shares one key across both of its store folders. The key ALIAS is NOT stored here — it is auto-detected from the keystore (or supplied via the optional _ALIAS secret) at materialize time.",
+  "keys": [
+    { "name": "CLIENT_GOOGLE", "dirs": [ "VpnHoodClient/google" ] },
+    { "name": "CLIENT_WEB",    "dirs": [ "VpnHoodClient/web" ] },
+    { "name": "CONNECT",       "dirs": [ "VpnHoodConnect/google", "VpnHoodConnect/web" ] }
+  ]
 }

@@ -1,7 +1,6 @@
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
 & "$SolutionDir/Pub/Core/PublishAndroidApp.ps1" $PSScriptRoot  `
-	-packageFileTitle "VpnHoodConnect" `
-	-packageId "com.vpnhood.connect.android" `
+	-appFolder "VpnHoodConnect" `
 	-distribution "google" `
 	-connect `
 	-aab;

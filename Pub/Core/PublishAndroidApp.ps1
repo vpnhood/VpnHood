@@ -1,7 +1,9 @@
 param(
 	[Parameter(Mandatory=$true)] [String]$projectDir,
-	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
-	[Parameter(Mandatory=$true)] [String]$packageId,
+	# The .user/<appFolder>/ config folder name. Also the bin module dir name and the default artifact
+	# title. packageId, an optional title override, and repo-url are read from that folder; each falls
+	# back to the committed project default when its .user file is absent.
+	[Parameter(Mandatory=$true)] [String]$appFolder,
 	[Parameter(Mandatory=$true)] [String]$distribution,
 	# Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client; the URL itself is resolved below.
 	[switch]$connect,
@@ -13,20 +15,25 @@ param(
 # store: google distribution -> google; web and arm64-web share the web key/id (same as the keystore).
 $store = if ($distribution -eq 'google') { 'google' } else { 'web' }
 
-# Per-app config from .user/<packageFileTitle>/ (item-per-file: repo-url.txt, package-title.txt,
-# <store>/package-id.txt). Lets a fork build its own app without editing the repo. $appFolder stays the
-# default so .user lookups (keystore, config files) and the bin module dir are stable; the optional
-# title override only renames the published artifacts.
-$appFolder = $packageFileTitle;
-$appConfig = Get-AppPublishConfig $appFolder;
-if ($appConfig.packageId[$store]) { $packageId = $appConfig.packageId[$store]; }
-if ($appConfig.packageFileTitle)  { $packageFileTitle = $appConfig.packageFileTitle; }
-$repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
-
 # clean up any leftover temp project files
 Get-ChildItem -Path $projectDir -File -Filter "*.tmp.csproj" | Remove-Item -Force;
 
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
+
+# Per-app identity from .user/<appFolder>/ (item-per-file), so a fork builds its OWN app without editing
+# the repo. Each value falls back to the committed project default when its .user file is absent:
+#   packageId        <- .user/<appFolder>/<store>/package-id.txt  else the csproj <ApplicationId>
+#   packageFileTitle <- .user/<appFolder>/package-title.txt       else $appFolder (renames artifacts only)
+#   repoUrl          <- .user/<appFolder>/repo-url.txt            else the resolved publish repo
+# See AppPublishConfig.ps1.
+$appConfig = Get-AppPublishConfig $appFolder;
+$packageId = if ($appConfig.packageId[$store]) {
+		$appConfig.packageId[$store]
+	} else {
+		([Xml](Get-Content $projectFile)).Project.PropertyGroup.ApplicationId | Where-Object { $_ } | Select-Object -First 1
+	}
+$packageFileTitle = if ($appConfig.packageFileTitle) { $appConfig.packageFileTitle } else { $appFolder }
+$repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
 
 Write-Host "";
 Write-Host "*** Publishing $projectFile ..." -BackgroundColor Blue -ForegroundColor White;

@@ -1,6 +1,7 @@
 param(
 	[Parameter(Mandatory=$true)] [String]$projectDir,
-	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
+	# The .user/<appFolder>/ config folder name; also the bin module dir name and default artifact title.
+	[Parameter(Mandatory=$true)] [String]$appFolder,
 	[Parameter(Mandatory=$true)] [String]$aipFileR,
 	[Parameter(Mandatory=$true)] [String]$distribution,
 	[Parameter(Mandatory=$true)] [String]$installationPageUrl,
@@ -15,12 +16,11 @@ param(
 
 . "$PSScriptRoot/Common.ps1"
 
-# Per-app config from .user/<packageFileTitle>/ (item-per-file: repo-url.txt + package-title.txt; no
-# packageId on Windows). $appFolder stays the default so the .user/module lookups are stable; the
-# optional title override only renames the published artifacts. See AppPublishConfig.ps1.
-$appFolder = $packageFileTitle;
+# Per-app config from .user/<appFolder>/ (item-per-file: repo-url.txt + package-title.txt; no packageId
+# on Windows). The optional title override only renames the published artifacts; .user/module lookups
+# stay keyed by $appFolder. See AppPublishConfig.ps1.
 $appConfig = Get-AppPublishConfig $appFolder;
-if ($appConfig.packageFileTitle) { $packageFileTitle = $appConfig.packageFileTitle; }
+$packageFileTitle = if ($appConfig.packageFileTitle) { $appConfig.packageFileTitle } else { $appFolder }
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
 
 $doPublish = $stage -in @("all", "publish");

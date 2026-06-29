@@ -298,6 +298,12 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         if (Interlocked.Exchange(ref _memoryProbeStarted, true))
             return;
 
+        // Let the TCP stack annotate its +CONN/-CONN lifecycle logs with the live jetsam footprint
+        // (phys_footprint in MB) so memory can be tracked against the ~52 MB limit per connection event.
+        const double probeMib = 1024.0 * 1024.0;
+        TcpStack.TcpStackDiagnostics.FootprintMbProvider =
+            () => TryReadVmInfo(out var vm) && vm.Footprint > 0 ? vm.Footprint / probeMib : 0.0;
+
         var thread = new Thread(() => {
             string logPath;
             try {

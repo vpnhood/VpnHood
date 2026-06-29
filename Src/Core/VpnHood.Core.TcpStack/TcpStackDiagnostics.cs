@@ -40,6 +40,27 @@ public sealed class TcpStackDiagnostics
     /// <summary>Gets the maximum number of simultaneous connections configured for this stack.</summary>
     public int ConfiguredMaxConnections { get; internal set; }
 
+    /// <summary>
+    /// Optional hook that returns the process's current memory footprint in MB (the number the host's
+    /// memory limit is enforced against — e.g. iOS jetsam's <c>phys_footprint</c>). When set, the
+    /// connection lifecycle logs append <c>mem=NN.N/52MB</c> so footprint can be tracked against the
+    /// limit at every establish/release. Left <c>null</c> on platforms that don't supply it (Windows/
+    /// Android) → the logs simply omit the memory field. Set once by the host (e.g. the iOS service).
+    /// </summary>
+    public static Func<double>? FootprintMbProvider { get; set; }
+
+    private static string FootprintSuffix()
+    {
+        // If the provider is null, we don't have a footprint to report (e.g. Windows/Android). If it throws, we
+        var provider = FootprintMbProvider;
+        if (provider == null) 
+            return "n/a";
+        
+        // Best-effort: if the provider throws, just omit the field rather than crashing the stack.
+        try { return $" mem={provider():F1}MB"; }
+        catch { return ""; }
+    }
+
     internal void SetConnectionCount(int count)
     {
         Volatile.Write(ref _connectionCount, count);
@@ -61,8 +82,9 @@ public sealed class TcpStackDiagnostics
         // Low-frequency lifecycle event (one per connection): logged at Information (parity with VHQUIC
         // +open/-close) and UNGATED so it's visible in catlog without raising the log level or enabling the
         // per-packet hot-path traces. Volume is per-connection, not per-packet, so it never floods.
-        VhLogger.Instance.LogInformation(TcpStackEventIds.TcpStackDiag,
-            "[TcpStack] +CONN established {EndPointPair} live={LiveEstablished}", endPointPair, live);
+        VhLogger.Instance.LogInformation(TcpStackEventIds.TcpStack,
+            "[TcpStack] +CONN established {EndPointPair} live={LiveEstablished}{Memory}",
+            endPointPair, live, FootprintSuffix());
     }
 
     /// <summary>
@@ -74,8 +96,9 @@ public sealed class TcpStackDiagnostics
         var live = Interlocked.Decrement(ref _establishedConnections);
         // Low-frequency lifecycle event (one per connection): see IncrementEstablishedConnections — logged
         // at Information (VHQUIC parity), ungated, so it's visible in catlog without the hot-path traces.
-        VhLogger.Instance.LogInformation(TcpStackEventIds.TcpStackDiag,
-            "[TcpStack] -CONN released({Reason}) {EndPointPair} live={LiveEstablished}", reason, endPointPair, live);
+        VhLogger.Instance.LogInformation(TcpStackEventIds.TcpStack,
+            "[TcpStack] -CONN released({Reason}) {EndPointPair} live={LiveEstablished}{Memory}",
+            reason, endPointPair, live, FootprintSuffix());
     }
 
     internal void AddPipeBufferedBytes(long bytes) => Interlocked.Add(ref _totalPipeBufferedBytes, bytes);
@@ -110,7 +133,7 @@ public sealed class TcpStackDiagnostics
         uint peerWindow, uint sndUna, uint sndNxt)
     {
         if (!VerboseLogging || !ShouldLog(ref _lastZeroWinLogTick)) return;
-        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag,
+        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack,
             "[TcpStack] zero-win wait {EndPointPair} offset={Offset}/{DataLength} pw={PeerWindow} sndUna={SndUna} sndNxt={SndNxt} inFlight={InFlight}",
             endPointPair, offset, dataLength, peerWindow, sndUna, sndNxt, (long)(sndNxt - sndUna));
     }
@@ -119,7 +142,7 @@ public sealed class TcpStackDiagnostics
     internal void TraceZeroWindowProbe(IPEndPointPairValue endPointPair, int offset, uint peerWindow)
     {
         if (!VerboseLogging || !ShouldLog(ref _lastZwpLogTick)) return;
-        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag,
+        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack,
             "[TcpStack] ZWP fire {EndPointPair} offset={Offset} pw={PeerWindow}", endPointPair, offset, peerWindow);
     }
 
@@ -135,7 +158,7 @@ public sealed class TcpStackDiagnostics
         var significant = windowSize == 0 || peerWindow < 4096 ||
                           (diff <= 0 && payloadLength == 0) || ackCount % 5000 == 0;
         if (!significant) return;
-        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag,
+        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack,
             "[ACK#{AckCount}] {EndPointPair} ack={Ack} prevUna={PrevUna} nxt={SndNxt} diff={Diff} winRaw={WindowSize} pw={PeerWindow} payload={PayloadLength} sig={WindowSignal} dup={DupAckCount}",
             ackCount, endPointPair, ack, prevUna, sndNxt, diff, windowSize, peerWindow, payloadLength, windowSignal, dupAckCount);
     }
@@ -144,7 +167,7 @@ public sealed class TcpStackDiagnostics
     internal void TraceFastRetransmit(IPEndPointPairValue endPointPair, long retxCount, uint sndUna, int retxBufferLen)
     {
         if (!VerboseLogging) return;
-        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag,
+        VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack,
             "[RETX#{RetxCount}] {EndPointPair} fast retransmit at sndUna={SndUna} retxLen={RetxBufferLen}",
             retxCount, endPointPair, sndUna, retxBufferLen);
     }

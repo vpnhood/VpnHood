@@ -150,7 +150,7 @@ public sealed class LocalTcpStackOptions
         ReceiveWindowSize = 0xFFFF,
         GlobalReceiveBudget = 6 * 1024 * 1024,
         RetxBufferSize = 16 * 1024,
-        MaxConnections = 100, // Capped to prevent memory exhaustion under concurrent flow storms
+        MaxConnections = 50, // Capped to prevent memory exhaustion under concurrent flow storms
         // Under cap pressure, evict the most-idle flow (idle ≥ 15 s) to admit a new one instead of
         // rejecting it; live transfers (idle ≈ 0) are protected. Frees the victim's QUIC stream/native
         // NWConnection immediately rather than waiting for the 20 s idle reaper.

@@ -138,7 +138,7 @@ public sealed class LocalTcpStack : ITcpStack
             // Never let a malformed/unexpected packet disrupt the receive loop. Surface it only under
             // verbose logging so a genuine bug isn't hidden behind a blind catch.
             if (VerboseLogging)
-                VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStackDiag, ex,
+                VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack, ex,
                     "TcpStack dropped a packet it could not process.");
         }
     }
@@ -348,7 +348,7 @@ public sealed class LocalTcpStack : ITcpStack
         if (victim == null)
             return false; // every connection is too recently active → reject the newcomer
 
-        VhLogger.Instance.LogWarning(TcpStackEventIds.TcpStackDiag,
+        VhLogger.Instance.LogWarning(TcpStackEventIds.TcpStack,
             "[TcpStack] Killing idle connection {EndPointPair} (idle={IdleSeconds:F1}s) to admit a new one: " +
             "the connection cap ({MaxConnections}) is reached. This is forced by the iOS Network Extension " +
             "memory restriction.",

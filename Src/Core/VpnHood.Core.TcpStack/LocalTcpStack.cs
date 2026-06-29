@@ -196,8 +196,11 @@ public sealed class LocalTcpStack : ITcpStack
 
         // Admission control: cap concurrent connections to bound aggregate buffer memory on
         // constrained platforms (e.g. iOS). 0 = unbounded (default) and short-circuits with zero
-        // overhead, so the Android/desktop SYN path is unchanged.
-        if (_options.MaxConnections > 0 && _connections.Count >= _options.MaxConnections) {
+        // overhead, so the Android/desktop SYN path is unchanged. When full, try to evict the most
+        // idle ("most unused") connection to make room (EvictionMinIdle); if none qualifies, fall
+        // back to rejecting the new SYN with an RST — the historical behavior.
+        if (_options.MaxConnections > 0 && _connections.Count >= _options.MaxConnections &&
+            !TryEvictForAdmission()) {
             SendRst(ipEndPointPair.Destination, ipEndPointPair.Source, tcpPacket);
             return;
         }
@@ -327,6 +330,53 @@ public sealed class LocalTcpStack : ITcpStack
     {
         _connections.TryRemove(conn.IpEndPointPair, out _);
         Diagnostics.SetConnectionCount(_connections.Count);
+    }
+
+    /// <summary>
+    /// At the <see cref="LocalTcpStackOptions.MaxConnections"/> cap, closes the single most idle
+    /// ("most unused") connection to free a slot for a new one — but only if its idle time meets
+    /// <see cref="LocalTcpStackOptions.EvictionMinIdle"/>, so actively-transferring flows are never
+    /// killed. Closing the victim propagates EOF to its consumer (the proxy's QUIC stream / TCP
+    /// channel), tearing down the whole upstream flow immediately. Returns true if a slot was freed.
+    /// </summary>
+    private bool TryEvictForAdmission()
+    {
+        if (_options.EvictionMinIdle == TimeSpan.MaxValue)
+            return false; // eviction disabled → caller falls back to RST (historical behavior)
+
+        var victim = FindMostIdleEvictable(_options.EvictionMinIdle);
+        if (victim == null)
+            return false; // every connection is too recently active → reject the newcomer
+
+        VhLogger.Instance.LogWarning(TcpStackEventIds.TcpStackDiag,
+            "[TcpStack] Killing idle connection {EndPointPair} (idle={IdleSeconds:F1}s) to admit a new one: " +
+            "the connection cap ({MaxConnections}) is reached. This is forced by the iOS Network Extension " +
+            "memory restriction.",
+            victim.IpEndPointPair, victim.IdleDuration.TotalSeconds, _options.MaxConnections);
+
+        // Close() is synchronous: it removes the victim from _connections (via OnConnectionClosed),
+        // completes its pipes (consumer reads EOF), and unblocks its sender — freeing the slot now.
+        victim.Close();
+        return true;
+    }
+
+    /// <summary>
+    /// Returns the single most idle ("most unused") connection whose idle time is at least
+    /// <paramref name="minIdle"/>, or <c>null</c> when none qualifies (every connection is more
+    /// recently active than the threshold).
+    /// </summary>
+    private LocalTcpConnection? FindMostIdleEvictable(TimeSpan minIdle)
+    {
+        LocalTcpConnection? best = null;
+        var bestIdle = minIdle; // a candidate must beat the threshold first, then each other
+        foreach (var conn in _connections.Values) {
+            if (conn.IsClosed) continue;
+            var idle = conn.IdleDuration;
+            if (idle < bestIdle) continue;
+            best = conn;
+            bestIdle = idle;
+        }
+        return best;
     }
 
     /// <summary>

@@ -590,6 +590,12 @@ internal sealed class LocalTcpConnection(
         Interlocked.Exchange(ref _lastActivityTicks, Stopwatch.GetTimestamp());
     }
 
+    /// <summary>Time since the last send/receive activity on this connection (drives LRU eviction).</summary>
+    internal TimeSpan IdleDuration => Stopwatch.GetElapsedTime(Interlocked.Read(ref _lastActivityTicks));
+
+    /// <summary>True once this connection has been closed/disposed (skip it when picking an eviction victim).</summary>
+    internal bool IsClosed => Volatile.Read(ref _closedFlag) || _disposed;
+
     private async Task MonitorIdleAsync()
     {
         try {
@@ -784,7 +790,7 @@ internal sealed class LocalTcpConnection(
         stack.SendPacket(packet);
     }
 
-    private void Close()
+    internal void Close()
     {
         if (Interlocked.Exchange(ref _closedFlag, true))
             return;

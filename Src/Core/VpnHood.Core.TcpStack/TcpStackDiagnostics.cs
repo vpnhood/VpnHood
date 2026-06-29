@@ -58,10 +58,10 @@ public sealed class TcpStackDiagnostics
     internal void IncrementEstablishedConnections(IPEndPointPairValue endPointPair)
     {
         var live = Interlocked.Increment(ref _establishedConnections);
-        // Low-frequency lifecycle event (one per connection): logged at Debug WITHOUT the VerboseLogging
-        // gate so it can be monitored via catlog by just raising the app log level, without turning on the
-        // per-packet hot-path traces (which flood the iOS extension). The level filter controls visibility.
-        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStackDiag,
+        // Low-frequency lifecycle event (one per connection): logged at Information (parity with VHQUIC
+        // +open/-close) and UNGATED so it's visible in catlog without raising the log level or enabling the
+        // per-packet hot-path traces. Volume is per-connection, not per-packet, so it never floods.
+        VhLogger.Instance.LogInformation(TcpStackEventIds.TcpStackDiag,
             "[TcpStack] +CONN established {EndPointPair} live={LiveEstablished}", endPointPair, live);
     }
 
@@ -73,8 +73,8 @@ public sealed class TcpStackDiagnostics
     {
         var live = Interlocked.Decrement(ref _establishedConnections);
         // Low-frequency lifecycle event (one per connection): see IncrementEstablishedConnections — logged
-        // at Debug without the VerboseLogging gate so catlog monitoring needs only a raised log level.
-        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStackDiag,
+        // at Information (VHQUIC parity), ungated, so it's visible in catlog without the hot-path traces.
+        VhLogger.Instance.LogInformation(TcpStackEventIds.TcpStackDiag,
             "[TcpStack] -CONN released({Reason}) {EndPointPair} live={LiveEstablished}", reason, endPointPair, live);
     }
 

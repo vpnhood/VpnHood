@@ -1,10 +1,26 @@
 param(
     [Parameter(Mandatory = $true)] [string]$projectDir,
-    [Parameter(Mandatory = $true)] [string]$repoBaseUrl,
+    # Optional: an explicit release base URL (Server passes one). When omitted it is taken from the
+    # per-app .user override or resolved from the current repo (see below).
+    [Parameter(Mandatory = $false)] [string]$repoBaseUrl,
     [Parameter(Mandatory = $true)] [string]$publishDirName,
     [Parameter(Mandatory = $true)] [string]$launcherName,
-    [Parameter(Mandatory = $true)] [string]$os
+    [Parameter(Mandatory = $true)] [string]$os,
+    # Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client.
+    [switch]$connect
 )
+
+# Per-app config + repo resolution. publish_impl.ps1 sources Common.ps1, but we need these before the
+# first call to pass a resolved -repoBaseUrl, so dot-source the (side-effect-free) helpers here. The
+# config lives at .user/<publishDirName>/publish.json (publishDirName is the app's packageFileTitle).
+# Linux has no packageId, so only repoUrl is read here.
+. "$PSScriptRoot/../ResolvePublishRepo.ps1";
+. "$PSScriptRoot/../AppPublishConfig.ps1";
+$appConfig = Get-AppPublishConfig $publishDirName;
+$repoBaseUrl =
+    if ($appConfig.repoUrl) { $appConfig.repoUrl }
+    elseif (-not [string]::IsNullOrWhiteSpace($repoBaseUrl)) { $repoBaseUrl }   # explicit (e.g. Server)
+    else { Resolve-PublishRepoUrl -Connect:$connect };
 
 # Build x64
 . "$PSScriptRoot/publish_impl.ps1" `

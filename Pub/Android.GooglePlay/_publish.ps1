@@ -34,8 +34,8 @@ $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 # publish info
 $json = @{
 	Version = $versionParam; 	
-	UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_infoFileName";
-	PackageUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName";
+	UpdateInfoUrl = "$publishRepoUrl/releases/latest/download/$module_infoFileName";
+	PackageUrl = "$publishRepoUrl/releases/download/$versionTag/$module_packageFileName";
 	InstallationPageUrl = "https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client";
 	GooglePlayUrl = "https://play.google.com/store/apps/details?id=com.vpnhood.client.android";
 	ReleaseDate = "$releaseDate";

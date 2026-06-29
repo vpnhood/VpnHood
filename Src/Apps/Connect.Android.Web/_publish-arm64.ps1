@@ -3,6 +3,6 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-packageFileTitle "VpnHoodConnect" `
 	-packageId "com.vpnhood.connect.android.web" `
 	-distribution "arm64-web" `
-	-repoUrl "https://github.com/vpnhood/VpnHood.App.Connect" `
+	-connect `
 	-archs "android-arm64" `
 	-apk;

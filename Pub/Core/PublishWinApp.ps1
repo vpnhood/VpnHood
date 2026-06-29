@@ -3,8 +3,9 @@ param(
 	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
 	[Parameter(Mandatory=$true)] [String]$aipFileR,
 	[Parameter(Mandatory=$true)] [String]$distribution,
-	[Parameter(Mandatory=$true)] [String]$repoUrl,
 	[Parameter(Mandatory=$true)] [String]$installationPageUrl,
+	# Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client; the URL itself is resolved below.
+	[switch]$connect,
 	# Which phase to run. "all" (default) does the full local flow in one process.
 	# CI splits it into two separately-labeled steps: "publish" compiles the binary,
 	# "package" wraps it in the MSI. Both stages share the same computed paths and the
@@ -13,6 +14,14 @@ param(
 )
 
 . "$PSScriptRoot/Common.ps1"
+
+# Per-app config from .user/<packageFileTitle>/ (item-per-file: repo-url.txt + package-title.txt; no
+# packageId on Windows). $appFolder stays the default so the .user/module lookups are stable; the
+# optional title override only renames the published artifacts. See AppPublishConfig.ps1.
+$appFolder = $packageFileTitle;
+$appConfig = Get-AppPublishConfig $appFolder;
+if ($appConfig.packageFileTitle) { $packageFileTitle = $appConfig.packageFileTitle; }
+$repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
 
 $doPublish = $stage -in @("all", "publish");
 $doPackage = $stage -in @("all", "package");
@@ -26,9 +35,9 @@ $publishDir = "$projectDir/bin/Publish-$distribution";
 $aipFile = "$solutionDir/$aipFileR";
 $aipFolder = Split-Path -parent $aipFile;
 
-# module paths
-$moduleDir = "$packagesRootDir/$packageFileTitle/windows-$distribution";
-$moduleDirLatest = "$packagesRootDirLatest/$packageFileTitle/windows-$distribution";
+# module paths (dir keyed by the stable app folder; file names use the artifact title)
+$moduleDir = "$packagesRootDir/$appFolder/windows-$distribution";
+$moduleDirLatest = "$packagesRootDirLatest/$appFolder/windows-$distribution";
 $module_infoFile = "$moduleDir/$packageFileTitle-win-x64.json";
 $module_packageFile = [System.IO.Path]::ChangeExtension($module_infoFile, ".msi");
 $module_updaterConfigFile = [System.IO.Path]::ChangeExtension($module_infoFile, ".txt");

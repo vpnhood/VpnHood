@@ -6,9 +6,15 @@ Write-Host "*** Publish VpnHood! CONNECT to GitHub" -BackgroundColor Blue
 # set Variables
 $env:GITHUB_TOKEN = Get-Content "$userDir/github_publish_apikey.txt";
 $packageFileTitle = $packageConnectDirName;
+# Honor an optional artifact-title override (.user/<dir>/package-title.txt) so the asset file names
+# here match what the build produced. The package DIR stays keyed by the stable folder name.
+$titleOverride = (Get-AppPublishConfig $packageConnectDirName).packageFileTitle;
+if ($titleOverride) { $packageFileTitle = $titleOverride; }
 $packageDir = "$releaseRootDir/$packageConnectDirName";
 $packageLatestDir = "$releaseRootDir/$packageConnectDirName";
-$repoName = "vpnhood/VpnHood.App.Connect";
+# Connect releases to VH_CONNECT_PUBLISH_REPO when set, else the same repo as the client (the
+# current repo by default). Resolved in Common.ps1 (see ResolvePublishRepo.ps1).
+$repoName = $connectPublishRepo;
 
 # update CHANGELOG
 $changeLog = Get-Content "$solutionDir/CHANGELOG.md" -Raw;

@@ -32,6 +32,45 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Google AAB, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Web. |
 | `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Web APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Google. |
 
+## Building your own app (fork-friendly)
+
+The publish scripts are written so a fork can build and release its **own** app without editing any
+committed file. Two things are configurable:
+
+**1. Release repository (where artifacts are published and what the generated `*.json` update URLs
+point to).** Resolved in this order:
+
+1. `VH_PUBLISH_REPO` env/secret — `owner/repo` (Connect can be split off with `VH_CONNECT_PUBLISH_REPO`;
+   unset = same repo as the client).
+2. `GITHUB_REPOSITORY` — automatically set in GitHub Actions, so a fork's CI publishes **to itself**.
+3. The clone's `origin` remote (local desktop builds).
+4. If nothing resolves, an obvious placeholder (`https://your-company-domain/your-product`) so the
+   build still succeeds and the unconfigured URL is visible in the generated JSON.
+
+**2. Per-app identity (optional, never committed).** Stored one-value-per-file under the app's `.user`
+folder, next to its keystores — the same convention as every other `.user` value, so each maps 1:1 to
+a GitHub **variable** and CI can write it as a single file:
+
+```
+.user/VpnHoodClient/repo-url.txt              release repo for this app  (per app)
+.user/VpnHoodClient/package-title.txt         artifact title override    (per app)
+.user/VpnHoodClient/google/package-id.txt     application id of the AAB  (per store)
+.user/VpnHoodClient/web/package-id.txt         application id of the APKs (per store)
+.user/VpnHoodClient/google/keystore.p12 …     (keystore, as before)
+.user/VpnHoodConnect/…                          (same shape)
+```
+
+- `repo-url.txt` — overrides the resolved release repo for that app (else the resolution above applies).
+- `<store>/package-id.txt` — the built application id (`/p:ApplicationId`); `google` = the Play AAB,
+  `web` = the Web + arm64 APKs — keyed by store exactly like the keystore folders. Windows and Linux
+  builds have no packageId.
+- `package-title.txt` — renames the **published artifacts** only (Android/Windows). The `.user` folder
+  stays keyed by the default name, and Linux artifact names come from the csproj `AssemblyName`, so the
+  title does not apply there. Most forks leave it at the default.
+
+Any absent/blank file keeps the project default, so an unmodified clone builds exactly as before.
+(`.user` lives outside the repo and is never committed; create these files when you want to override.)
+
 ## Per-platform setup
 
 ### Linux client — `client_linux_build.yml`

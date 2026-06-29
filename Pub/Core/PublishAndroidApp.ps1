@@ -1,13 +1,27 @@
 param(
-	[Parameter(Mandatory=$true)] [String]$projectDir, 
+	[Parameter(Mandatory=$true)] [String]$projectDir,
 	[Parameter(Mandatory=$true)] [String]$packageFileTitle,
 	[Parameter(Mandatory=$true)] [String]$packageId,
 	[Parameter(Mandatory=$true)] [String]$distribution,
-	[Parameter(Mandatory=$true)] [String]$repoUrl,
+	# Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client; the URL itself is resolved below.
+	[switch]$connect,
 	[String]$archs = "",
 	[switch]$apk, [switch]$aab)
 
 . "$PSScriptRoot/Common.ps1"
+
+# store: google distribution -> google; web and arm64-web share the web key/id (same as the keystore).
+$store = if ($distribution -eq 'google') { 'google' } else { 'web' }
+
+# Per-app config from .user/<packageFileTitle>/ (item-per-file: repo-url.txt, package-title.txt,
+# <store>/package-id.txt). Lets a fork build its own app without editing the repo. $appFolder stays the
+# default so .user lookups (keystore, config files) and the bin module dir are stable; the optional
+# title override only renames the published artifacts.
+$appFolder = $packageFileTitle;
+$appConfig = Get-AppPublishConfig $appFolder;
+if ($appConfig.packageId[$store]) { $packageId = $appConfig.packageId[$store]; }
+if ($appConfig.packageFileTitle)  { $packageFileTitle = $appConfig.packageFileTitle; }
+$repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
 
 # clean up any leftover temp project files
 Get-ChildItem -Path $projectDir -File -Filter "*.tmp.csproj" | Remove-Item -Force;
@@ -23,9 +37,9 @@ if ($rollout -le 0 -or $rollout -gt 100) { $rollout = 100; }
 #update project version
 UpdateProjectVersion $projectFile;
 
-# prepare module folders
-$moduleDir = "$packagesRootDir/$packageFileTitle/android-$distribution";
-$moduleDirLatest = "$packagesRootDirLatest/$packageFileTitle/android-$distribution";
+# prepare module folders (keyed by the stable app folder, not the overridable artifact title)
+$moduleDir = "$packagesRootDir/$appFolder/android-$distribution";
+$moduleDirLatest = "$packagesRootDirLatest/$appFolder/android-$distribution";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 $packageExt = if ($apk) { "apk" } else { "aab" };
@@ -37,11 +51,10 @@ $module_packageFile = "$moduleDir/$module_baseFileName.$packageExt";
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-# android signing — keystore + sidecars live in .user/<packageFileTitle>/<store>/. The store folder
-# is derived (the google distribution -> google; web and arm64-web share the web key), so no signing
-# manifest is needed. CI materializes the same files from GitHub secrets.
-$store = if ($distribution -eq 'google') { 'google' } else { 'web' }
-$keystoreDir = Join-Path "$solutionDir/../.user/" "$packageFileTitle/$store"
+# android signing — keystore + sidecars live in .user/<appFolder>/<store>/ (same folder as the per-app
+# config files). The store folder was derived above ($store), so no signing manifest is needed. CI
+# materializes the same files from GitHub secrets.
+$keystoreDir = Join-Path "$solutionDir/../.user/" "$appFolder/$store"
 $keystore = Join-Path $keystoreDir "keystore.p12"
 $keystorePass = (Get-Content (Join-Path $keystoreDir "keystore_pass.txt") -Raw).Trim()
 # Key alias resolution, in priority order:

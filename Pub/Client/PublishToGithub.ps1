@@ -11,11 +11,15 @@ if (-not $env:GITHUB_TOKEN -and (Test-Path $tokenFile)) {
 	$env:GITHUB_TOKEN = Get-Content $tokenFile;
 }
 $packageFileTitle = $packageClientDirName;
+# Honor an optional artifact-title override (.user/<dir>/package-title.txt) so the asset file names
+# here match what the build produced. The package DIR stays keyed by the stable folder name.
+$titleOverride = (Get-AppPublishConfig $packageClientDirName).packageFileTitle;
+if ($titleOverride) { $packageFileTitle = $titleOverride; }
 $packageDir = "$releaseRootDir/$packageClientDirName";
 $packageLatestDir = "$releaseRootDir/$packageClientDirName";
-# Target repo is overridable so we can publish to a fork for testing without
-# touching production. Defaults to the real repo.
-$repoName = if ($env:VH_PUBLISH_REPO) { $env:VH_PUBLISH_REPO } else { "vpnhood/VpnHood" };
+# Target repo: defaults to the CURRENT repo (so a fork publishes to itself) and is overridable
+# with VH_PUBLISH_REPO. Resolved in Common.ps1 (see ResolvePublishRepo.ps1).
+$repoName = $publishRepo;
 
 # update CHANGELOG
 $changeLog = Get-Content "$solutionDir/CHANGELOG.md" -Raw;

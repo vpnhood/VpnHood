@@ -26,6 +26,16 @@ $packageServerDirName = "VpnHoodServer";
 $packageClientDirName = "VpnHoodClient";
 $packageConnectDirName = "VpnHoodConnect";
 
+# Resolve the publish target repo(s). Defaults to the CURRENT repo so a fork publishes to itself;
+# override with VH_PUBLISH_REPO (client) / VH_CONNECT_PUBLISH_REPO (connect). See ResolvePublishRepo.ps1.
+# AppPublishConfig provides Get-AppPublishConfig for per-app .user/<packageFileTitle>/ config files.
+. "$PSScriptRoot/ResolvePublishRepo.ps1";
+. "$PSScriptRoot/AppPublishConfig.ps1";
+$publishRepo = Resolve-PublishRepoSlug;
+$publishRepoUrl = Resolve-PublishRepoUrl;
+$connectPublishRepo = Resolve-PublishRepoSlug -Connect;
+$connectPublishRepoUrl = Resolve-PublishRepoUrl -Connect;
+
 # Prepare the latest folder
 $packagesRootDirLatest = "$pubDir/bin/latest";
 

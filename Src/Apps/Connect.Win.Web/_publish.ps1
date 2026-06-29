@@ -4,5 +4,5 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-packageFileTitle "VpnHoodConnect" `
 	-aipFileR "Src/Apps/Connect.Win.Web.Setup/VpnHood.App.Connect.Win.Web.Setup.aip" `
 	-distribution "web" `
-	-repoUrl "https://github.com/vpnhood/VpnHood.App.Connect" `
+	-connect `
 	-installationPageUrl "https://www.vpnhood.com"

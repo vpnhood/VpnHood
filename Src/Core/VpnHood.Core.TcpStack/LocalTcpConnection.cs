@@ -599,6 +599,44 @@ internal sealed class LocalTcpConnection(
         }
     }
 
+    /// <summary>
+    /// Periodic re-advertisement of a receive window that closed under flow control and has since
+    /// reopened, for a flow whose app has gone quiet. <see cref="OnAppConsumed"/> is the only other
+    /// path that sends a window-update ACK, and it only fires while THIS flow is draining bytes. But
+    /// the window can also reopen because OTHER flows drained and freed the shared
+    /// <see cref="LocalTcpStackOptions.GlobalReceiveBudget"/> — at which point this flow advertises
+    /// a healthy window again but, with its own app stalled at the zero-window we sent, no drain
+    /// occurs to deliver that update. The peer then stays frozen until its own zero-window persist
+    /// timer expires (hundreds of ms to seconds) — the "upload freezes then suddenly resumes" stall.
+    /// The stack's window sweep calls this so the update goes out within a sweep interval instead.
+    /// Returns true if a window-update ACK was sent.
+    /// </summary>
+    internal bool PollWindowReopen()
+    {
+        // Lock-free pre-check: only a flow we've throttled to (near-)zero is a candidate.
+        if (!_windowClosed || _disposed || _appToNetCompleted)
+            return false;
+
+        bool reopened;
+        lock (_seqLock) {
+            if (!_windowClosed || _disposed || _appToNetCompleted)
+                return false;
+            // Only re-advertise once the window is genuinely back above the real floor — not a tiny
+            // slot still pinned by per-connection backlog or a tight global budget (matches the
+            // _windowClosed-clear condition in OnAppConsumed). If it's still small, stay closed and
+            // let a later sweep (or an OnAppConsumed drain) carry it.
+            reopened = AdvertisedWindow >= _windowReopenFloor;
+            if (reopened)
+                _windowClosed = false;
+        }
+
+        if (!reopened)
+            return false;
+
+        try { _stack?.SendAckOnly(this); } catch { /* best-effort window update */ }
+        return true;
+    }
+
     private void Touch()
     {
         Interlocked.Exchange(ref _lastActivityTicks, Stopwatch.GetTimestamp());

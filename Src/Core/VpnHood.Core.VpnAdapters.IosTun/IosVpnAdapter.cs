@@ -24,18 +24,28 @@ public class IosVpnAdapter(
     private readonly List<IpNetwork> _ipv6Networks = [];
     private int? _mtu;
 
+    private const int MaxWriteBatchSize = 32;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
-    // CRASH FIX (iOS, device-confirmed via symbolicated crash report): WritePacket reuses _writeBuffer,
-    // _writeDataArray and _writeProtoArray and disposes the NSData immediately — that is only safe from
-    // ONE thread. In TCP-proxy mode the user-space TCP stack emits inbound packets from many connection
-    // pump threads concurrently, so concurrent WritePacket calls raced on these shared fields and handed
-    // a disposed/garbled NSData to NEPacketTunnelFlow.WritePackets -> uncaught NSInvalidArgumentException
-    // -> SIGABRT (extension dies at ANY memory level, not jetsam). Serialize the entire native write.
+
+    // Core drains its send channel from a SINGLE consumer (Channel SingleReader=true, and this
+    // transport is non-passthrough), so SendPacketsAsync is never invoked concurrently and this lock
+    // is uncontended on the normal path. It is kept only as defensive serialization of the shared
+    // _writeBuffer / batch arrays in case a direct or passthrough write path is ever added, and is
+    // taken once per drain (not per packet), so the cost is negligible.
+    // NOTE (history): an earlier comment claimed concurrent WritePacket calls from TCP-proxy pump
+    // threads raced here. That diagnosis was wrong — pump threads only enqueue to the channel; the
+    // native write has always been serialized by the single consumer. The real crash was a
+    // garbled/null NSData handed to WritePackets, not a data race.
     private readonly Lock _writeLock = new();
-    // Reused single-element argument arrays for WritePackets (safe under _writeLock); WritePackets copies
-    // synchronously, so reusing this avoids allocating two managed arrays per packet.
-    private readonly NSData[] _writeDataArray = new NSData[1];
-    private readonly NSNumber[] _writeProtoArray = new NSNumber[1];
+
+    // Reused, allocation-free batch arrays. NEPacketTunnelFlow.WritePackets walks the FULL array
+    // length, so a partial (final) chunk must be handed an exactly-sized array — a trailing null
+    // would SIGABRT natively. _partialWrite*Batches[n] is a pre-allocated array of length n used for
+    // a chunk of n<32; the full 32-wide arrays are used when a chunk is exactly MaxWriteBatchSize.
+    private readonly NSData[] _writeDataBatch = new NSData[MaxWriteBatchSize];
+    private readonly NSNumber[] _writeProtocolBatch = new NSNumber[MaxWriteBatchSize];
+    private readonly NSData[][] _partialWriteDataBatches = CreatePartialWriteBatches<NSData>();
+    private readonly NSNumber[][] _partialWriteProtocolBatches = CreatePartialWriteBatches<NSNumber>();
 
     // Cache the protocol-family numbers (AF_INET = 2, AF_INET6 = 30). Allocating a fresh
     // NSNumber per packet leaks native memory because the native peer is only freed on GC
@@ -44,6 +54,7 @@ public class IosVpnAdapter(
     private static readonly NSNumber AfInet = NSNumber.FromInt32(2);
     private static readonly NSNumber AfInet6 = NSNumber.FromInt32(30);
 
+    // ToDo: remove diagnose
     // DIAGNOSTIC: cumulative bytes through the tunnel, read by IosVpnService's memory probe to
     // correlate phys_footprint growth with traffic. Use Interlocked to read/write.
     public static long InboundBytes;   // server -> device (download), written via WritePacket
@@ -140,6 +151,7 @@ public class IosVpnAdapter(
         if (_mtu.HasValue)
             settings.Mtu = NSNumber.FromInt32(_mtu.Value);
 
+        // ToDo: remove diagnose
         // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install so the host
         // extension can verify what actually reaches iOS ("connected but no traffic" diagnosis).
         try
@@ -265,54 +277,112 @@ public class IosVpnAdapter(
 
     protected override void WaitForTunWrite() => Thread.Sleep(10);
 
+    // Single-packet write (required by the base contract; the batched SendPacketsAsync below is the
+    // actual hot path). Writes one packet through the same lock/pool/batch machinery.
     protected override bool WritePacket(IpPacket ipPacket)
     {
         // Capture the flow; AdapterClose may null it out concurrently.
         var flow = _packetFlow ?? throw new InvalidOperationException("Packet flow is not initialized.");
 
-        // CRASH FIX (iOS): serialize the ENTIRE native write — see _writeLock above.
         lock (_writeLock) {
-            // CRITICAL (memory): WritePackets marshals the [data]/[protocolFamily] managed arrays
-            // into temporary native NSArrays and NSData.FromArray creates internal native
-            // temporaries — all AUTORELEASE. This runs on a background packet thread whose
-            // autorelease pool is never drained by a run loop, so without our own pool those
-            // native temporaries accumulate across thousands of packets and push the extension
-            // past the ~50 MB jetsam limit (slow leak: ~50 MB after ~9000 writes). Drain per packet.
             using var pool = new NSAutoreleasePool();
-
-            var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
-            Interlocked.Add(ref InboundBytes, length);
-
-            // todo: optimize by using batch after we get first IOs release
-            // Inbound packets (server -> device) must use the IP version as the protocol
-            // family (AF_INET = 2, AF_INET6 = 30); passing 0 makes iOS drop the packet.
-            var isV6 = ipPacket.Version == IpVersion.IPv6;
-            var protocolFamily = isV6 ? AfInet6 : AfInet;
-
-            // CRITICAL (download memory): copy straight from the packet buffer into a native NSData
-            // WITHOUT first allocating a managed slice (buffer[offset . . offset+length]). During a
-            // download this path runs thousands of times per second; the old per-packet slice was
-            // ~10 MB/s of managed garbage that the periodic GC could not reclaim within a sub-second
-            // burst, spiking phys_footprint past the ~50 MB iOS extension jetsam limit. NSData.FromBytes
-            // copies exactly `length` bytes from the pinned pointer, so nothing managed is allocated
-            // for the payload.
-            NSData data;
-            unsafe {
-                fixed (byte* p = &buffer[offset])
-                    data = NSData.FromBytes((IntPtr)p, (nuint)length);
+            try {
+                FillWriteBatchSlot(ipPacket, 0);
+                FlushWriteBatch(flow, 1);
             }
-
-            // Dispose the NSData immediately after WritePackets returns. WritePackets copies the
-            // bytes synchronously into the tunnel, so the native NSData can be freed right away.
-            // Without this, native memory accumulates until GC finalization (which lags far behind
-            // the packet rate) and the extension is jetsam-killed at ~50 MB.
-            _writeDataArray[0] = data;
-            _writeProtoArray[0] = protocolFamily;
-            flow.WritePackets(_writeDataArray, _writeProtoArray);
-            data.Dispose();
+            finally {
+                ClearWriteBatch(1);
+            }
         }
 
         return true;
+    }
+
+    protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
+    {
+        // Capture the flow; AdapterClose may null it out concurrently.
+        var flow = _packetFlow ?? throw new InvalidOperationException("Packet flow is not initialized.");
+        if (ipPackets.Count == 0)
+            return ValueTask.CompletedTask;
+
+        lock (_writeLock) {
+            // NEPacketTunnelFlow creates autoreleased native temporaries while marshaling arrays.
+            // This runs on a packet worker, so keep an explicit pool around each send drain.
+            using var pool = new NSAutoreleasePool();
+
+            for (var batchStart = 0; batchStart < ipPackets.Count; batchStart += MaxWriteBatchSize) {
+                var batchCount = Math.Min(MaxWriteBatchSize, ipPackets.Count - batchStart);
+                try {
+                    FillWriteBatch(ipPackets, batchStart, batchCount);
+                    FlushWriteBatch(flow, batchCount);
+                }
+                finally {
+                    ClearWriteBatch(batchCount);
+                }
+            }
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    private void FillWriteBatch(IReadOnlyList<IpPacket> ipPackets, int batchStart, int batchCount)
+    {
+        for (var i = 0; i < batchCount; i++)
+            FillWriteBatchSlot(ipPackets[batchStart + i], i);
+    }
+
+    private void FillWriteBatchSlot(IpPacket ipPacket, int slot)
+    {
+        var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
+        Interlocked.Add(ref InboundBytes, length);
+
+        // Inbound packets (server -> device) must use the IP version as the protocol family.
+        _writeProtocolBatch[slot] = ipPacket.Version == IpVersion.IPv6 ? AfInet6 : AfInet;
+
+        // Copy directly from the packet buffer into native NSData. Avoiding a managed slice here
+        // matters because this path runs at full packet rate during downloads.
+        unsafe {
+            fixed (byte* p = &buffer[offset])
+                _writeDataBatch[slot] = NSData.FromBytes((IntPtr)p, (nuint)length);
+        }
+    }
+
+    private void FlushWriteBatch(NEPacketTunnelFlow flow, int batchCount)
+    {
+        var dataBatch = _writeDataBatch;
+        var protocolBatch = _writeProtocolBatch;
+
+        if (batchCount != MaxWriteBatchSize) {
+            dataBatch = _partialWriteDataBatches[batchCount];
+            protocolBatch = _partialWriteProtocolBatches[batchCount];
+            Array.Copy(_writeDataBatch, dataBatch, batchCount);
+            Array.Copy(_writeProtocolBatch, protocolBatch, batchCount);
+        }
+
+        flow.WritePackets(dataBatch, protocolBatch);
+    }
+
+    private void ClearWriteBatch(int batchCount)
+    {
+        for (var i = 0; i < batchCount; i++) {
+            _writeDataBatch[i]?.Dispose();
+            _writeDataBatch[i] = null!;
+            _writeProtocolBatch[i] = null!;
+        }
+
+        if (batchCount == MaxWriteBatchSize)
+            return;
+
+        Array.Clear(_partialWriteDataBatches[batchCount]);
+        Array.Clear(_partialWriteProtocolBatches[batchCount]);
+    }
+
+    private static T[][] CreatePartialWriteBatches<T>()
+    {
+        var batches = new T[MaxWriteBatchSize][];
+        for (var i = 0; i < batches.Length; i++)
+            batches[i] = new T[i];
+        return batches;
     }
 
     protected override void StartReadingPackets()

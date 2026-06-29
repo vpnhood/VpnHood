@@ -140,8 +140,20 @@ install_msquic() {
         local tmp_deb
         tmp_deb=$(mktemp /tmp/packages-microsoft-prod.XXXXXX.deb)
 
+        # Tell apt to WAIT for the dpkg lock instead of failing. apt-get is fail-fast by default, and
+        # on first boot the lock is usually held by unattended-upgrades/cloud-init — that race is what
+        # makes a fresh install start the server permanently without QUIC. Setting this once as a
+        # drop-in applies to every apt-get below, so we don't repeat a flag on each command.
+        # (The feed package is installed via apt-get rather than `dpkg -i` so it honors this too —
+        # a direct dpkg call does not read apt config.)
+        # The drop-in is temporary: the RETURN trap removes it so we don't permanently change apt.
+        local apt_lock_conf=/etc/apt/apt.conf.d/99-vpnhood-msquic
+        mkdir -p /etc/apt/apt.conf.d
+        echo 'DPkg::Lock::Timeout "60";' > "$apt_lock_conf"
+        trap 'rm -f "$apt_lock_conf"' RETURN
+
         if wget -nv -O "$tmp_deb" "$feed_url"; then
-            if ! dpkg -i "$tmp_deb"; then
+            if ! apt-get install -y "$tmp_deb"; then
                 rm -f "$tmp_deb"
                 echo "WARNING: Failed to install Microsoft package feed."
                 return 1

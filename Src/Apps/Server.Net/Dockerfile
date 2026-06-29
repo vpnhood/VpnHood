@@ -9,7 +9,10 @@ RUN apt-get update \
 	&& rm -f /tmp/install-msquic.sh \
 	&& rm -rf /var/lib/apt/lists/*
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# Pin the SDK/build stage to the native build host (amd64) so dotnet never runs under
+# QEMU emulation. The publish output is portable IL (no RID), so the same build serves
+# both amd64 and arm64 — only the small runtime image below is built per-arch.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY ["Src/Apps/Server.Net/NLog.xsd", "VpnHood.App.Server.App.Net/"]
 COPY ["Src/Apps/Server.Net/NLog.config", "VpnHood.App.Server.Net/"]

@@ -8,7 +8,10 @@ using VpnHood.Core.VpnAdapters.WinDivert;
 
 namespace VpnHood.Core.TcpStack.Test;
 
+// WinDivert is a Windows-only kernel driver (loads kernel32.dll); these integration tests can only
+// run on Windows. On other platforms MSTest skips them instead of failing on the missing native lib.
 [TestClass]
+[OSCondition(OperatingSystems.Windows)]
 public sealed class TcpStackIntegrationTest
 {
     private static readonly IPAddress TestServerIp = IPAddress.Parse("11.0.0.1");

@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using ObjCRuntime;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -29,6 +30,14 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     // (iOS terminates the extension if the completion handler runs before SetTunnelNetworkSettings).
     private Action<NSError>? _startTunnelCompletionHandler;
     private bool _completionFired;
+
+    // os_log subsystem for the host LogService's device sink (IosDeviceLoggerProvider). Read from the running
+    // bundle's identifier (inside an extension process, MainBundle is the .appex, so this is the extension's
+    // bundle id) so it stays correct for any extension/product that hosts this provider — no hardcoded id.
+    // Lets LogToDevice output surface in Console.app / `log stream --device` even though the extension's
+    // stdout is /dev/null. The os_log category is taken from each logger's MEL category name.
+    private static string OsLogSubsystem => NSBundle.MainBundle.BundleIdentifier ?? "IosVpnService";
+
 
     private const string VpnServiceConfigFolderKey = "VpnServiceConfigFolder";
 
@@ -127,6 +136,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // heartbeat drains native NSObject peers that no project-config GC setting drains promptly enough,
         // so the init-time allocation burst (VpnServiceHost + TLS) blows the 52 MB jetsam cap without it.
         StartMemoryGuard();
+        // ToDo: remove diagnose
         StartMemoryProbe();
 
         _startTunnelCompletionHandler = startTunnelCompletionHandler;
@@ -146,8 +156,13 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         _ = Task.Run(() => {
             try {
                 var sf = new IosSocketFactory();
+                // withLogger: true so the host runs the standard LogService (LogToDevice/LogToFile come from
+                // the app's LogServiceOptions). deviceLoggerProviderFactory routes LogToDevice to os_log
+                // (IosDeviceLoggerProvider) instead of the default Trace sink (which is /dev/null in an extension).
                 _vpnServiceHost = new VpnServiceHost(configFolder, this, sf,
-                    netFilter: null, withLogger: false, messageListener: _messageListener);
+                    netFilter: null, withLogger: true, messageListener: _messageListener,
+                    deviceLoggerProviderFactory: includeScopes => new IosDeviceLoggerProvider(
+                        OsLogSubsystem, includeScopes));
                 _ = _vpnServiceHost.TryConnect(true);
             }
             catch (Exception ex) {
@@ -233,6 +248,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         CancelTunnel(null);
     }
 
+    // ToDo: remove diagnose
     // ----- DIAGNOSTIC memory probe: attribute phys_footprint to managed vs native -----
     // The ~52 MB jetsam limit is enforced on phys_footprint (mach TASK_VM_INFO). The simple
     // "log the one number" probe could not tell us WHERE the long-run climb lives, so this version
@@ -282,6 +298,12 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         if (Interlocked.Exchange(ref _memoryProbeStarted, true))
             return;
 
+        // Let the TCP stack annotate its +CONN/-CONN lifecycle logs with the live jetsam footprint
+        // (phys_footprint in MB) so memory can be tracked against the ~52 MB limit per connection event.
+        const double probeMib = 1024.0 * 1024.0;
+        TcpStack.TcpStackDiagnostics.FootprintMbProvider =
+            () => TryReadVmInfo(out var vm) && vm.Footprint > 0 ? vm.Footprint / probeMib : 0.0;
+
         var thread = new Thread(() => {
             string logPath;
             try {
@@ -327,11 +349,12 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                             var est = diag?.EstablishedConnections ?? 0;
                             var winKb = (diag?.ConfiguredReceiveWindow ?? 0) / 1024;
                             var maxC = diag?.ConfiguredMaxConnections ?? 0;
+                            var qStreams = IosQuicClient.LiveStreamCount; // live native QUIC streams (NWConnections)
                             File.AppendAllText(logPath,
                                 $"{DateTime.UtcNow:HH:mm:ss.fff} footprint={mb:F1}MB peak={peakMb:F1}MB " +
                                 $"gcLive={gcLive:F1} gcHeap={gcHeap:F1} native={native:F1} " +
                                 $"anon={anon:F1} comp={comp:F1} code={code:F1} " +
-                                $"conn={conn} est={est} peakConn={peakConn} pipeBuf={pipeBuf:F1}MB win={winKb}KB maxC={maxC} " +
+                                $"conn={conn} est={est} peakConn={peakConn} qStreams={qStreams} pipeBuf={pipeBuf:F1}MB win={winKb}KB maxC={maxC} " +
                                 $"dn={dnMb:F1}MB up={upMb:F1}MB" +
                                 (mb >= 50 ? " <<< NEAR 52MB JETSAM" : "") + "\n");
                         }

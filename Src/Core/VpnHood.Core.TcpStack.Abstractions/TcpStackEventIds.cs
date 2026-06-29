@@ -11,5 +11,5 @@ public static class TcpStackEventIds
     /// <summary>
     /// EventId for verbose TCP connection diagnostics (ACK, window, retransmission, etc.)
     /// </summary>
-    public static readonly EventId TcpStackDiag = new(10001, "TcpStackVerbose");
+    public static readonly EventId TcpStack = new(10001, "TcpStack");
 }

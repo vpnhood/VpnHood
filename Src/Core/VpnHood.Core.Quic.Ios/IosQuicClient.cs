@@ -1,7 +1,10 @@
 using System.Threading.Channels;
 using CoreFoundation;
+using Microsoft.Extensions.Logging;
 using Network;
+using ObjCRuntime;
 using VpnHood.Core.Quic.Abstractions;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Quic.Ios;
@@ -13,6 +16,18 @@ namespace VpnHood.Core.Quic.Ios;
 public sealed class IosQuicClient : IQuicClient
 {
     public static bool IsSupported => OperatingSystem.IsIOSVersionAtLeast(15);
+
+    // ToDo: remove diagnose
+    // DIAGNOSTIC: live count of open QUIC streams (= native NWConnections). Maintained by IosQuicStream;
+    // exposed here (public) so the memory probe in another assembly can show whether streams are released
+    // promptly at flow-end (drops) or linger (stays high) on iOS.
+    public static int LiveStreamCount;
+
+    // DIAGNOSTIC: monotonic id assigned to each QUIC stream so open/close lines can be paired in the log.
+    // Stream open/close events are logged directly via VhLogger.Instance in IosQuicStream; with LogToFile
+    // they land in the pullable log file and with LogToDevice they also reach the iOS unified log
+    // (Console.app) through the injected IosDeviceLoggerProvider (os_log).
+    public static int StreamSeq;
 
     public async ValueTask<IQuicConnection> ConnectAsync(
         QuicClientConnectOptions options, CancellationToken cancellationToken)
@@ -27,9 +42,30 @@ public sealed class IosQuicClient : IQuicClient
         // QUIC parameters: ALPN "h3" (the desktop uses SslApplicationProtocol.Http3 purely as the ALPN
         // token — our QUIC is a custom transport, not HTTP/3) and the pinned-certificate verify bridge.
         var parameters = NWParameters.CreateQuic(quicOptions => {
-            var quic = (NWProtocolQuicOptions)quicOptions;
+            // The .NET Network binding types this callback's argument as the base NWProtocolOptions even
+            // though the underlying native object is a QUIC options block. A direct C# cast to
+            // NWProtocolQuicOptions throws InvalidCastException (the managed wrapper is literally
+            // NWProtocolOptions) — which, thrown on this native trampoline thread, SIGABRTs the process.
+            // Re-wrap the SAME native handle as NWProtocolQuicOptions (owns:false — the parameters own
+            // the native object); setters then mutate the real options block used by the connection.
+            var quic = Runtime.GetINativeObject<NWProtocolQuicOptions>(quicOptions.Handle, owns: false)
+                ?? throw new IOException("Failed to access QUIC protocol options.");
             quic.AddTlsApplicationProtocol("h3");
             quic.InitialMaxStreamsBidirectional = (ulong)options.MaxInboundBidirectionalStreams;
+
+            // BACKPRESSURE / NATIVE-MEMORY CAP (iOS 52 MB jetsam fix). Without an explicit QUIC
+            // receive window, Network.framework advertises a large default, so on a download burst the
+            // server floods each stream and the inbound data buffers in NATIVE memory faster than the
+            // proxy drains it — phys_footprint spiked +16 MB in ~1 s at only ~25 streams and jetsam-killed
+            // the extension. These windows are QUIC flow control: the server may not send more than the
+            // window until we consume and send window updates, bounding native receive buffering.
+            //   - bidi-local: per-stream window for streams WE open (the proxy's download streams).
+            //   - InitialMaxData: connection-wide aggregate across all streams (the real ceiling).
+            // ~1 MB aggregate keeps ~80 Mbps @ 100 ms RTT while capping the burst far under the limit.
+            quic.InitialMaxStreamDataBidirectionalLocal = 64 * 1024;
+            quic.InitialMaxStreamDataBidirectionalRemote = 64 * 1024;
+            quic.InitialMaxData = 1024 * 1024;
+
             IosQuicTls.Configure(quic.SecProtocolOptions, options.TargetHost,
                 options.CertificateValidationCallback, queue);
         });
@@ -63,15 +99,19 @@ public sealed class IosQuicClient : IQuicClient
             connectionGroup.Start();
 
             await tcs.Task.Vhc();
+            connectionGroup.SetStateChangedHandler(null!);
             return new IosQuicConnection(connectionGroup, multiplexGroup, endpoint, queue,
                 options.RemoteEndPoint, inboundStreams);
         }
         catch {
             inboundStreams.Writer.TryComplete();
-            try { connectionGroup.Cancel(); } catch { /* ignore */ }
+            VhUtils.TryInvoke(() => connectionGroup.SetStateChangedHandler(null!));
+            VhUtils.TryInvoke(() => connectionGroup.SetNewConnectionHandler(null!));
+            VhUtils.TryInvoke(() => connectionGroup.Cancel());
             connectionGroup.Dispose();
             multiplexGroup.Dispose();
             endpoint.Dispose();
+            VhUtils.TryInvoke(queue.Dispose);
             throw;
         }
     }

@@ -1,0 +1,6 @@
+# Scripts executed on Linux must always use LF, even when the repo is checked out
+# on Windows (where core.autocrlf=true would otherwise convert them to CRLF and
+# break them: bash fails with "syntax error near unexpected token $'{\r'").
+# These are consumed by the Linux server installers and Docker builds.
+*.sh    text eol=lf
+*.bash  text eol=lf

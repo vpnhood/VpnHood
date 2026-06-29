@@ -109,6 +109,19 @@ public sealed class LocalTcpStackOptions
     public int MaxConnections { get; init; }
 
     /// <summary>
+    /// When <see cref="MaxConnections"/> is reached, the minimum idle time a connection must have had
+    /// (no send/receive activity) before it may be force-evicted to admit a NEW connection. The most
+    /// idle ("most unused") eligible connection is closed immediately, which propagates EOF to its
+    /// consumer (e.g. the proxy's QUIC stream or TCP channel) so the whole upstream flow tears down.
+    /// If no connection has been idle this long, the new SYN is rejected with an RST — the historical
+    /// behavior. Actively-transferring flows (idle ≈ 0) are therefore never evicted.
+    /// <para><see cref="TimeSpan.MaxValue"/> (default) DISABLES eviction entirely → identical to the
+    /// historical "reject when full" behavior. Only consulted when <see cref="MaxConnections"/> &gt; 0,
+    /// so desktop/Android (unbounded by default) are unaffected.</para>
+    /// </summary>
+    public TimeSpan EvictionMinIdle { get; init; } = TimeSpan.MaxValue;
+
+    /// <summary>
     /// Capacity of a listener's pending-accept queue. When full, additional accepted connections
     /// are rejected (and disposed) rather than buffered.
     /// <para><c>0</c> or less (default) means an unbounded queue, matching historical behavior.</para>
@@ -137,7 +150,11 @@ public sealed class LocalTcpStackOptions
         ReceiveWindowSize = 0xFFFF,
         GlobalReceiveBudget = 6 * 1024 * 1024,
         RetxBufferSize = 16 * 1024,
-        MaxConnections = 100, // Capped to prevent memory exhaustion under concurrent flow storms
+        MaxConnections = 50, // Capped to prevent memory exhaustion under concurrent flow storms
+        // Under cap pressure, evict the most-idle flow (idle ≥ 15 s) to admit a new one instead of
+        // rejecting it; live transfers (idle ≈ 0) are protected. Frees the victim's QUIC stream/native
+        // NWConnection immediately rather than waiting for the 20 s idle reaper.
+        EvictionMinIdle = TimeSpan.FromSeconds(15),
         AcceptQueueCapacity = 128,
         IdleTimeout = TimeSpan.FromSeconds(20), // Reap idle keep-alive connections rapidly
         IdleCheckInterval = TimeSpan.FromSeconds(5) // Check frequently to keep memory footprint bounded
@@ -209,6 +226,9 @@ public sealed class LocalTcpStackOptions
 
         if (MaxConnections < 0)
             throw new ArgumentException($"{nameof(MaxConnections)} must be ≥ 0; was {MaxConnections}.");
+
+        if (EvictionMinIdle < TimeSpan.Zero)
+            throw new ArgumentException($"{nameof(EvictionMinIdle)} must be ≥ 0; was {EvictionMinIdle}.");
 
         return this;
     }

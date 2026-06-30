@@ -3,9 +3,10 @@
 # materialize it by writing a single file — no JSON to assemble. Anyone who forks the repo can build
 # their OWN apps without editing a committed file. Layout (all optional; blank/absent = project default):
 #
-#   .user/<packageFileTitle>/repo-url.txt            release repo for this app (per app)
-#   .user/<packageFileTitle>/package-title.txt       artifact title override (per app; renames output only)
-#   .user/<packageFileTitle>/<store>/package-id.txt  built application id (per store: google | web)
+#   .user/<packageFileTitle>/repo-url.txt              release repo for this app (per app)
+#   .user/<packageFileTitle>/package-title.txt         artifact title override (per app; renames output only)
+#   .user/<packageFileTitle>/installation-page-url.txt Windows install/download page shown to users (per app)
+#   .user/<packageFileTitle>/<store>/package-id.txt    built application id (per store: google | web)
 #
 # packageId is per store the same way keystores are: 'google' (the Play AAB) and 'web' (the web +
 # arm64-web APKs). Windows/Linux builds have no packageId. The title override renames published
@@ -27,9 +28,10 @@ function Get-AppPublishConfig {
     $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot);
     $appDir = Join-Path "$repoRoot/../.user" $packageFileTitle;
 
-    $result = @{ repoUrl = $null; packageFileTitle = $null; packageId = @{} };
-    $result.repoUrl          = Get-UserConfigValue (Join-Path $appDir "repo-url.txt");
-    $result.packageFileTitle = Get-UserConfigValue (Join-Path $appDir "package-title.txt");
+    $result = @{ repoUrl = $null; packageFileTitle = $null; installationPageUrl = $null; packageId = @{} };
+    $result.repoUrl             = Get-UserConfigValue (Join-Path $appDir "repo-url.txt");
+    $result.packageFileTitle    = Get-UserConfigValue (Join-Path $appDir "package-title.txt");
+    $result.installationPageUrl = Get-UserConfigValue (Join-Path $appDir "installation-page-url.txt");
     foreach ($store in @('google', 'web')) {
         $val = Get-UserConfigValue (Join-Path $appDir "$store/package-id.txt");
         if ($val) { $result.packageId[$store] = $val; }

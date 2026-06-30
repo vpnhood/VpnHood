@@ -52,18 +52,21 @@ folder, next to its keystores — the same convention as every other `.user` val
 a GitHub **variable** and CI can write it as a single file:
 
 ```
-.user/VpnHoodClient/repo-url.txt              release repo for this app  (per app)
-.user/VpnHoodClient/package-title.txt         artifact title override    (per app)
-.user/VpnHoodClient/google/package-id.txt     application id of the AAB  (per store)
-.user/VpnHoodClient/web/package-id.txt         application id of the APKs (per store)
-.user/VpnHoodClient/google/keystore.p12 …     (keystore, as before)
-.user/VpnHoodConnect/…                          (same shape)
+.user/VpnHoodClient/repo-url.txt               release repo for this app   (per app)
+.user/VpnHoodClient/package-title.txt          artifact title override     (per app)
+.user/VpnHoodClient/installation-page-url.txt  Windows install/download page (per app)
+.user/VpnHoodClient/google/package-id.txt      application id of the AAB   (per store)
+.user/VpnHoodClient/web/package-id.txt         application id of the APKs  (per store)
+.user/VpnHoodClient/google/keystore.p12 …      (keystore, as before)
+.user/VpnHoodConnect/…                           (same shape)
 ```
 
 - `repo-url.txt` — overrides the resolved release repo for that app (else the resolution above applies).
 - `<store>/package-id.txt` — the built application id (`/p:ApplicationId`); `google` = the Play AAB,
   `web` = the Web + arm64 APKs — keyed by store exactly like the keystore folders. Windows and Linux
   builds have no packageId.
+- `installation-page-url.txt` — the user-facing install/download page baked into the **Windows** publish
+  JSON. If absent, it defaults to the repo's `releases/latest` page.
 - `package-title.txt` — renames the **published artifacts** only (Android/Windows). The `.user` folder
   stays keyed by the default name, and Linux artifact names come from the csproj `AssemblyName`, so the
   title does not apply there. Most forks leave it at the default.

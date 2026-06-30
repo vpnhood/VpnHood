@@ -4,7 +4,9 @@ param(
 	[Parameter(Mandatory=$true)] [String]$appFolder,
 	[Parameter(Mandatory=$true)] [String]$aipFileR,
 	[Parameter(Mandatory=$true)] [String]$distribution,
-	[Parameter(Mandatory=$true)] [String]$installationPageUrl,
+	# User-facing install/download page baked into the publish JSON. Read from .user; an explicit value
+	# here still wins, and absent both it defaults to the repo's releases page.
+	[Parameter(Mandatory=$false)] [String]$installationPageUrl = "",
 	# Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client; the URL itself is resolved below.
 	[switch]$connect,
 	# Which phase to run. "all" (default) does the full local flow in one process.
@@ -22,6 +24,10 @@ param(
 $appConfig = Get-AppPublishConfig $appFolder;
 $packageFileTitle = if ($appConfig.packageFileTitle) { $appConfig.packageFileTitle } else { $appFolder }
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };
+$installationPageUrl =
+	if ($appConfig.installationPageUrl) { $appConfig.installationPageUrl }
+	elseif (-not [string]::IsNullOrWhiteSpace($installationPageUrl)) { $installationPageUrl }
+	else { "$repoUrl/releases/latest" };
 
 $doPublish = $stage -in @("all", "publish");
 $doPackage = $stage -in @("all", "package");

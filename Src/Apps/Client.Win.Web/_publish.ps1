@@ -9,5 +9,4 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-appFolder "VpnHoodClient" `
 	-aipFileR "Src/Apps/Client.Win.Web.Setup/VpnHood.App.Client.Win.Web.Setup.aip" `
 	-distribution "web" `
-	-installationPageUrl "https://www.vpnhood.com/vpnhood-client/download" `
 	-stage $stage

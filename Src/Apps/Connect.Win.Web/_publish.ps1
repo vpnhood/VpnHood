@@ -4,5 +4,4 @@ $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -P
 	-appFolder "VpnHoodConnect" `
 	-aipFileR "Src/Apps/Connect.Win.Web.Setup/VpnHood.App.Connect.Win.Web.Setup.aip" `
 	-distribution "web" `
-	-connect `
-	-installationPageUrl "https://www.vpnhood.com/free-vpn/download"
+	-connect

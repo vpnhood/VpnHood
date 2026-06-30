@@ -57,25 +57,25 @@
 	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.
 	     Conditional so a fork without them still builds; AppConfigs reads them at startup. -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\appsettings.json"
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\appsettings_google.json"
 			LogicalName="AppSettings.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\appsettings.json')" />
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\appsettings.$(Configuration).json"
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\appsettings_google.json')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\appsettings_google.$(Configuration).json"
 			LogicalName="AppSettings_Environment.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\appsettings.$(Configuration).json')" />
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\appsettings_google.$(Configuration).json')" />
 	</ItemGroup>
 
 	<!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret.
-	     The configuration-specific file wins (Debug embeds access-key-default.Debug.txt), otherwise the
-	     base access-key-default.txt is used. Both are optional: a fork without them falls back to the
+	     The configuration-specific file wins (Debug embeds access_key_default_google.Debug.txt), otherwise
+	     the base access_key_default_google.txt is used. Both are optional: a fork without them falls back to the
 	     in-code default in AppConfigs. -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.$(Configuration).txt"
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\access_key_default_google.$(Configuration).txt"
 			LogicalName="access_key_default.txt"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.$(Configuration).txt')" />
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.txt"
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\access_key_default_google.$(Configuration).txt')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\google\access_key_default_google.txt"
 			LogicalName="access_key_default.txt"
-			Condition="!Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.$(Configuration).txt') And Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\access-key-default.txt')" />
+			Condition="!Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\access_key_default_google.$(Configuration).txt') And Exists('$(SolutionDir)\..\.user\VpnHoodConnect\google\access_key_default_google.txt')" />
 	</ItemGroup>
 
 	<ItemGroup>

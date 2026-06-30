@@ -1,13 +1,12 @@
 # Materializes the per-key Android signing secrets into ../.user so PublishAndroidApp.ps1 runs
-# unchanged in CI. PublishAndroidApp derives the keystore folder from <packageFileTitle>/<store>
-# and reads, per build:
-#     .user/<dir>/keystore.p12   and   .user/<dir>/keystore_pass.txt   (+ keystore_alias.txt)
-# This script writes those two files for every key. Only the keystore bytes and password are
-# secret; the alias is auto-detected from the keystore by PublishAndroidApp.ps1 (ephemeral
-# keystores below are generated with a fixed alias that detection then picks up).
+# unchanged in CI. PublishAndroidApp reads per-store files under the app's .user folder:
+#     .user/<app>/<store>/android_keystore_<store>.p12   and   .../android_keystore_<store>_password.txt
+#     (+ optional .user/<app>/<store>/android_keystore_<store>_alias.txt)
+# This script writes those files for every key. Only the keystore bytes and password are secret; the
+# alias is auto-detected from the keystore by PublishAndroidApp.ps1 (or read from publish.json /
+# the optional _ALIAS secret). Ephemeral keystores below get a fixed alias that detection picks up.
 #
-# Which logical key writes into which .user folder(s) is read from android-signing.json (this dir).
-# That map holds NO alias — the alias is never sourced from it.
+# Which logical key writes into which .user app + store is read from android-signing.json (this dir).
 #
 # Each key is decided INDEPENDENTLY (mirrors the gated Windows signing):
 #
@@ -39,13 +38,13 @@ $userDir = Join-Path (Split-Path -Parent $solutionDir) ".user";
 # Fixed alias for generated ephemeral keystores; PublishAndroidApp.ps1 auto-detects it.
 $ephemeralAlias = "vpnhood";
 
-# logical key (GitHub-secret prefix) -> target .user dir(s), loaded from the signing map.
-# Each store folder is its own secret (Connect's google/web are separate keys here even though the
-# same physical key may back both). The alias is NOT in this map — it's auto-detected from the
-# keystore (or the optional _ALIAS secret).
+# logical key (GitHub-secret prefix) -> target .user app + store, loaded from the signing map.
+# Each store is its own secret (Connect's google/web are separate keys here even though the same
+# physical key may back both). The alias is NOT in this map — it's auto-detected from the keystore
+# (or the optional _ALIAS secret / publish.json).
 $mapFile = Join-Path $PSScriptRoot "android-signing.json";
 $keys = (Get-Content $mapFile -Raw | ConvertFrom-Json).keys |
-    ForEach-Object { @{ Name = $_.name; Dirs = @($_.dirs) } };
+    ForEach-Object { @{ Name = $_.name; App = $_.app; Store = $_.store } };
 
 function Get-Env([string]$name) { [Environment]::GetEnvironmentVariable($name) }
 
@@ -72,49 +71,39 @@ foreach ($k in $keys) {
     }
 
     $real = [bool]$b64 -and [bool]$pw;
+
+    $dir = Join-Path (Join-Path $userDir $k.App) $k.Store;
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null;
+    $ks = Join-Path $dir "android_keystore_$($k.Store).p12";
+    $passFile = Join-Path $dir "android_keystore_$($k.Store)_password.txt";
+    $aliasFile = Join-Path $dir "android_keystore_$($k.Store)_alias.txt";
+
     if ($real) {
-        $bytes = [Convert]::FromBase64String($b64);
+        [IO.File]::WriteAllBytes($ks, [Convert]::FromBase64String($b64));
         $pass = $pw;
         $realKeys += $k.Name;
     }
     else {
+        if (Test-Path $ks) { Remove-Item $ks -Force; }
         $pass = "ciephemeral";   # throwaway; regenerated every run
+        keytool -genkeypair -v -keystore "$ks" -storetype PKCS12 -alias $ephemeralAlias `
+            -keyalg RSA -keysize 2048 -validity 10000 `
+            -storepass $pass -keypass $pass `
+            -dname "CN=VpnHood CI Ephemeral, O=OmegaHood LLC, C=US";
+        if ($LASTEXITCODE -ne 0) { Throw "keytool failed to generate ephemeral keystore for $($k.Name) (exit $LASTEXITCODE)."; }
         $ephemeralKeys += $k.Name;
     }
 
-    $firstKs = $null;
-    foreach ($d in $k.Dirs) {
-        $dir = Join-Path $userDir $d;
-        New-Item -ItemType Directory -Path $dir -Force | Out-Null;
-        $ks = Join-Path $dir "keystore.p12";
+    [IO.File]::WriteAllText($passFile, $pass);
 
-        if ($real) {
-            [IO.File]::WriteAllBytes($ks, $bytes);
-        }
-        elseif ($null -eq $firstKs) {
-            if (Test-Path $ks) { Remove-Item $ks -Force; }
-            keytool -genkeypair -v -keystore "$ks" -storetype PKCS12 -alias $ephemeralAlias `
-                -keyalg RSA -keysize 2048 -validity 10000 `
-                -storepass $pass -keypass $pass `
-                -dname "CN=VpnHood CI Ephemeral, O=OmegaHood LLC, C=US";
-            if ($LASTEXITCODE -ne 0) { Throw "keytool failed to generate ephemeral keystore for $($k.Name) (exit $LASTEXITCODE)."; }
-            $firstKs = $ks;
-        }
-        else {
-            Copy-Item $firstKs $ks -Force;   # same throwaway key into the other store folder
-        }
-
-        [IO.File]::WriteAllText((Join-Path $dir "keystore_pass.txt"), $pass);
-
-        # alias sidecar (non-secret): ephemeral uses the fixed alias; real uses ANDROID_KEYSTORE_<NAME>_ALIAS
-        # when supplied (required for a multi-entry keystore), else auto-detects the single key entry.
-        # Left unwritten if a real keystore isn't single-key and no override — PublishAndroidApp then throws.
-        $alias =
-            if (-not $real) { $ephemeralAlias }
-            elseif (-not [string]::IsNullOrWhiteSpace($aliasOverride)) { $aliasOverride.Trim() }
-            else { Get-SingleKeyAlias $ks $pass };
-        if ($alias) { [IO.File]::WriteAllText((Join-Path $dir "keystore_alias.txt"), $alias); }
-    }
+    # alias sidecar (non-secret): ephemeral uses the fixed alias; real uses ANDROID_KEYSTORE_<NAME>_ALIAS
+    # when supplied (required for a multi-entry keystore), else auto-detects the single key entry.
+    # Left unwritten if a real keystore isn't single-key and no override — PublishAndroidApp then throws.
+    $alias =
+        if (-not $real) { $ephemeralAlias }
+        elseif (-not [string]::IsNullOrWhiteSpace($aliasOverride)) { $aliasOverride.Trim() }
+        else { Get-SingleKeyAlias $ks $pass };
+    if ($alias) { [IO.File]::WriteAllText($aliasFile, $alias); }
 }
 
 Write-Host "Android signing under ${userDir}: REAL=[$($realKeys -join ', ')] EPHEMERAL=[$($ephemeralKeys -join ', ')]" -ForegroundColor Cyan;

@@ -1,40 +1,49 @@
-# Loads optional publish config stored as one-value-per-file under .user/<packageFileTitle>/, matching
-# the rest of .user (keystores, tokens) so each value maps 1:1 to a GitHub variable and CI can
-# materialize it by writing a single file — no JSON to assemble. Anyone who forks the repo can build
-# their OWN apps without editing a committed file. Layout (all optional; blank/absent = project default):
+# Loads the optional per-app publish config from a single JSON file: .user/<appFolder>/publish.json.
+# These are NON-secret build settings, so one file (mirrored by one GitHub *variable*) is far easier to
+# manage than a folder of tiny files. Anyone who forks the repo can build their OWN app without editing a
+# committed file. Secrets/binaries stay as their own files in per-store subfolders (.user/<app>/<store>/:
+# keystores, passwords, appsettings, access keys) because each must be its own GitHub secret — see PublishAndroidApp.ps1 /
+# PrepareCiAndroidSigning.ps1.
 #
-#   .user/<packageFileTitle>/repo-url.txt              release repo for this app (per app)
-#   .user/<packageFileTitle>/package-title.txt         artifact title override (per app; renames output only)
-#   .user/<packageFileTitle>/installation-page-url.txt Windows install/download page shown to users (per app)
-#   .user/<packageFileTitle>/<store>/package-id.txt    built application id (per store: google | web)
+# publish.json shape (every field optional; absent file or field = project default):
+#   {
+#     "RepoUrl": "https://github.com/owner/repo",        release repo for this app (per app)
+#     "PackageTitle": "VpnHoodClient",                   artifact title override (renames output only)
+#     "InstallationPageUrl": "https://.../download",     Windows install/download page
+#     "Distributions": {
+#       "Google": { "PackageId": "...", "KeystoreAlias": "" },   per store (google = Play AAB)
+#       "Web":    { "PackageId": "...", "KeystoreAlias": "" }    per store (web = web + arm64 APKs)
+#     }
+#   }
 #
-# packageId is per store the same way keystores are: 'google' (the Play AAB) and 'web' (the web +
-# arm64-web APKs). Windows/Linux builds have no packageId. The title override renames published
-# artifacts only; .user folder lookups (keystores, these files) stay keyed by the default folder name,
-# and Linux artifact names come from the csproj AssemblyName so the title does not apply there. These
-# are non-secret build settings (GitHub *variables*, not secrets).
-
-function Get-UserConfigValue([string]$path) {
-    if (Test-Path $path) {
-        $v = (Get-Content $path -Raw).Trim();
-        if (-not [string]::IsNullOrWhiteSpace($v)) { return $v; }
-    }
-    return $null;
-}
+# PackageId is the built application id (/p:ApplicationId); Windows/Linux builds have no packageId. The
+# KeystoreAlias is the signing alias — non-secret, so it lives here; absent = auto-detect the single key
+# entry. The title override renames published artifacts only; .user lookups + the bin module dir stay
+# keyed by the default app folder, and Linux artifact names come from the csproj AssemblyName.
 
 function Get-AppPublishConfig {
-    param([Parameter(Mandatory = $true)][string]$packageFileTitle)
+    param([Parameter(Mandatory = $true)][string]$appFolder)
 
     $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot);
-    $appDir = Join-Path "$repoRoot/../.user" $packageFileTitle;
+    $jsonPath = Join-Path (Join-Path "$repoRoot/../.user" $appFolder) "publish.json";
 
-    $result = @{ repoUrl = $null; packageFileTitle = $null; installationPageUrl = $null; packageId = @{} };
-    $result.repoUrl             = Get-UserConfigValue (Join-Path $appDir "repo-url.txt");
-    $result.packageFileTitle    = Get-UserConfigValue (Join-Path $appDir "package-title.txt");
-    $result.installationPageUrl = Get-UserConfigValue (Join-Path $appDir "installation-page-url.txt");
+    # Same shape regardless of whether the file exists, so callers never null-check the container.
+    $result = @{ repoUrl = $null; packageFileTitle = $null; installationPageUrl = $null;
+                 packageId = @{}; keystoreAlias = @{} };
+    if (-not (Test-Path $jsonPath)) { return $result; }
+
+    $json = Get-Content $jsonPath -Raw | ConvertFrom-Json;
+
+    if (-not [string]::IsNullOrWhiteSpace($json.RepoUrl))             { $result.repoUrl = $json.RepoUrl.Trim(); }
+    if (-not [string]::IsNullOrWhiteSpace($json.PackageTitle))        { $result.packageFileTitle = $json.PackageTitle.Trim(); }
+    if (-not [string]::IsNullOrWhiteSpace($json.InstallationPageUrl)) { $result.installationPageUrl = $json.InstallationPageUrl.Trim(); }
+
+    # Distributions keyed by store (google | web); member access is case-insensitive.
     foreach ($store in @('google', 'web')) {
-        $val = Get-UserConfigValue (Join-Path $appDir "$store/package-id.txt");
-        if ($val) { $result.packageId[$store] = $val; }
+        $dist = $json.Distributions.$store;
+        if ($null -eq $dist) { continue; }
+        if (-not [string]::IsNullOrWhiteSpace($dist.PackageId))     { $result.packageId[$store] = $dist.PackageId.Trim(); }
+        if (-not [string]::IsNullOrWhiteSpace($dist.KeystoreAlias)) { $result.keystoreAlias[$store] = $dist.KeystoreAlias.Trim(); }
     }
     return $result;
 }

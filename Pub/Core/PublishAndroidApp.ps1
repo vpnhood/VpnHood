@@ -20,12 +20,13 @@ Get-ChildItem -Path $projectDir -File -Filter "*.tmp.csproj" | Remove-Item -Forc
 
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 
-# Per-app identity from .user/<appFolder>/ (item-per-file), so a fork builds its OWN app without editing
-# the repo. Each value falls back to the committed project default when its .user file is absent:
-#   packageId        <- .user/<appFolder>/<store>/package-id.txt  else the csproj <ApplicationId>
-#   packageFileTitle <- .user/<appFolder>/package-title.txt       else $appFolder (renames artifacts only)
-#   repoUrl          <- .user/<appFolder>/repo-url.txt            else the resolved publish repo
+# Per-app identity from .user/<appFolder>/publish.json, so a fork builds its OWN app without editing the
+# repo. Each value falls back to the committed project default when the file/field is absent:
+#   packageId        <- Distributions.<store>.PackageId  else the csproj <ApplicationId>
+#   packageFileTitle <- PackageTitle                     else $appFolder (renames artifacts only)
+#   repoUrl          <- RepoUrl                          else the resolved publish repo
 # See AppPublishConfig.ps1.
+$appUserDir = Join-Path "$solutionDir/../.user/" $appFolder;
 $appConfig = Get-AppPublishConfig $appFolder;
 $packageId = if ($appConfig.packageId[$store]) {
 		$appConfig.packageId[$store]
@@ -58,21 +59,22 @@ $module_packageFile = "$moduleDir/$module_baseFileName.$packageExt";
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-# android signing — keystore + sidecars live in .user/<appFolder>/<store>/ (same folder as the per-app
-# config files). The store folder was derived above ($store), so no signing manifest is needed. CI
-# materializes the same files from GitHub secrets.
-$keystoreDir = Join-Path "$solutionDir/../.user/" "$appFolder/$store"
-$keystore = Join-Path $keystoreDir "keystore.p12"
-$keystorePass = (Get-Content (Join-Path $keystoreDir "keystore_pass.txt") -Raw).Trim()
+# android signing — files live in .user/<appFolder>/<store>/, with the store in the filename too so they
+# map 1:1 to the GitHub secrets (android_keystore_<store>.p12 <-> ANDROID_KEYSTORE_<APP>_<STORE>_BASE64).
+# The store was derived above ($store). CI materializes the same files (PrepareCiAndroidSigning.ps1).
+$storeDir = Join-Path $appUserDir $store
+$keystore = Join-Path $storeDir "android_keystore_$store.p12"
+$keystorePass = (Get-Content (Join-Path $storeDir "android_keystore_${store}_password.txt") -Raw).Trim()
 # Key alias resolution, in priority order:
-#   1. keystore_alias.txt next to the keystore (written locally / by CI),
-#   2. auto-detect from the keystore — valid ONLY when it holds exactly one PrivateKeyEntry (only a
-#      key entry can sign); on 0 or >1 it fails and asks for an explicit keystore_alias.txt.
-# A fork can therefore drop in a bare keystore (auto-detect) or ship an alias file.
-$keystoreAlias = $null
-$aliasFile = Join-Path $keystoreDir "keystore_alias.txt"
-if (Test-Path $aliasFile) {
-	$keystoreAlias = (Get-Content $aliasFile -Raw).Trim()
+#   1. publish.json Distributions.<store>.KeystoreAlias (non-secret, so it lives in the config),
+#   2. android_keystore_<store>_alias.txt sidecar (CI writes it from the optional _ALIAS secret),
+#   3. auto-detect from the keystore — valid ONLY when it holds exactly one PrivateKeyEntry (only a
+#      key entry can sign); on 0 or >1 it fails and asks for an explicit alias.
+# A fork can therefore drop in a bare keystore (auto-detect) or set KeystoreAlias in publish.json.
+$keystoreAlias = $appConfig.keystoreAlias[$store]
+if ([string]::IsNullOrWhiteSpace($keystoreAlias)) {
+	$aliasFile = Join-Path $storeDir "android_keystore_${store}_alias.txt"
+	if (Test-Path $aliasFile) { $keystoreAlias = (Get-Content $aliasFile -Raw).Trim() }
 }
 if ([string]::IsNullOrWhiteSpace($keystoreAlias)) {
 	$keyAliases = @()
@@ -83,10 +85,10 @@ if ([string]::IsNullOrWhiteSpace($keystoreAlias)) {
 		elseif ($s -match '^Entry type:\s*PrivateKeyEntry' -and $current) { $keyAliases += $current; $current = $null }
 	}
 	if ($keyAliases.Count -eq 0) {
-		Throw "No PrivateKeyEntry found in '$keystore' (add a keystore_alias.txt next to it)."
+		Throw "No PrivateKeyEntry found in '$keystore' (set Distributions.$store.KeystoreAlias in publish.json)."
 	}
 	if ($keyAliases.Count -gt 1) {
-		Throw "Keystore '$keystore' has multiple key entries ($($keyAliases -join ', ')); add a keystore_alias.txt next to it naming the one to use."
+		Throw "Keystore '$keystore' has multiple key entries ($($keyAliases -join ', ')); set Distributions.$store.KeystoreAlias in publish.json to name the one to use."
 	}
 	$keystoreAlias = $keyAliases[0]
 }

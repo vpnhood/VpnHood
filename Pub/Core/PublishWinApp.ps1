@@ -18,9 +18,9 @@ param(
 
 . "$PSScriptRoot/Common.ps1"
 
-# Per-app config from .user/<appFolder>/ (item-per-file: repo-url.txt + package-title.txt; no packageId
-# on Windows). The optional title override only renames the published artifacts; .user/module lookups
-# stay keyed by $appFolder. See AppPublishConfig.ps1.
+# Per-app config from .user/<appFolder>/publish.json (RepoUrl + PackageTitle; no packageId on Windows).
+# The optional title override only renames the published artifacts; .user/module lookups stay keyed by
+# $appFolder. See AppPublishConfig.ps1.
 $appConfig = Get-AppPublishConfig $appFolder;
 $packageFileTitle = if ($appConfig.packageFileTitle) { $appConfig.packageFileTitle } else { $appFolder }
 $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-PublishRepoUrl -Connect:$connect };

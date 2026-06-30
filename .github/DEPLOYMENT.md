@@ -47,31 +47,46 @@ point to).** Resolved in this order:
 4. If nothing resolves, an obvious placeholder (`https://your-company-domain/your-product`) so the
    build still succeeds and the unconfigured URL is visible in the generated JSON.
 
-**2. Per-app identity (optional, never committed).** Stored one-value-per-file under the app's `.user`
-folder, next to its keystores — the same convention as every other `.user` value, so each maps 1:1 to
-a GitHub **variable** and CI can write it as a single file:
+**2. Per-app identity (optional, never committed).** All **non-secret** build settings live in one
+`publish.json` at the app root — easy to manage and mirrored by a single GitHub **variable**. Secrets and
+binaries live in a per-store subfolder (`google/`, `web/`), one file per GitHub **secret**, with the
+store in the filename too so it matches the secret name (`android_keystore_google.p12` ↔
+`ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64`):
 
 ```
-.user/VpnHoodClient/repo-url.txt               release repo for this app   (per app)
-.user/VpnHoodClient/package-title.txt          artifact title override     (per app)
-.user/VpnHoodClient/installation-page-url.txt  Windows install/download page (per app)
-.user/VpnHoodClient/google/package-id.txt      application id of the AAB   (per store)
-.user/VpnHoodClient/web/package-id.txt         application id of the APKs  (per store)
-.user/VpnHoodClient/google/keystore.p12 …      (keystore, as before)
-.user/VpnHoodConnect/…                           (same shape)
+.user/VpnHoodClient/publish.json                            all non-secret config (below)
+.user/VpnHoodClient/google/android_keystore_google.p12      signing key   — secret
+.user/VpnHoodClient/google/android_keystore_google_password.txt  store password — secret
+.user/VpnHoodClient/google/appsettings_google.json          private app settings, embedded
+.user/VpnHoodClient/google/appsettings_google.Debug.json    Debug-config override (optional)
+.user/VpnHoodConnect/google/access_key_default_google.txt   Connect default access key
+.user/VpnHoodConnect/google/access_key_default_google.Debug.txt  Debug-config override (optional)
+.user/VpnHoodClient/web/… , .user/VpnHoodConnect/web/…       (same shape per store)
 ```
 
-- `repo-url.txt` — overrides the resolved release repo for that app (else the resolution above applies).
-- `<store>/package-id.txt` — the built application id (`/p:ApplicationId`); `google` = the Play AAB,
-  `web` = the Web + arm64 APKs — keyed by store exactly like the keystore folders. Windows and Linux
-  builds have no packageId.
-- `installation-page-url.txt` — the user-facing install/download page baked into the **Windows** publish
-  JSON. If absent, it defaults to the repo's `releases/latest` page.
-- `package-title.txt` — renames the **published artifacts** only (Android/Windows). The `.user` folder
-  stays keyed by the default name, and Linux artifact names come from the csproj `AssemblyName`, so the
-  title does not apply there. Most forks leave it at the default.
+`publish.json` (every field optional; absent file/field = project default):
 
-Any absent/blank file keeps the project default, so an unmodified clone builds exactly as before.
+```jsonc
+{
+  "RepoUrl": "https://github.com/owner/repo",          // release repo for this app (else auto-resolved)
+  "PackageTitle": "VpnHoodClient",                     // renames published artifacts only (Android/Windows)
+  "InstallationPageUrl": "https://.../download",       // Windows install page; else repo releases/latest
+  "Distributions": {
+    "Google": { "PackageId": "com.x.android",     "KeystoreAlias": "" },  // google = Play AAB
+    "Web":    { "PackageId": "com.x.android.web", "KeystoreAlias": "" }   // web = web + arm64 APKs
+  }
+}
+```
+
+- `PackageId` — the built application id (`/p:ApplicationId`); per store. Absent = the csproj
+  `<ApplicationId>` (a `.debug` placeholder), so a fork must set its own to publish a real app.
+  Windows/Linux builds have no packageId.
+- `KeystoreAlias` — the signing alias (non-secret, hence in the config); absent = auto-detect the
+  single key entry, or the optional `ANDROID_KEYSTORE_<NAME>_ALIAS` secret for a multi-entry keystore.
+- `PackageTitle` — Linux artifact names come from the csproj `AssemblyName`, so the title does not apply
+  there. Most forks leave it at the default.
+
+Any absent file/field keeps the project default, so an unmodified clone builds exactly as before.
 (`.user` lives outside the repo and is never committed; create these files when you want to override.)
 
 ## Per-platform setup
@@ -106,7 +121,9 @@ the key to use — e.g. `ANDROID_KEYSTORE_CLIENT_GOOGLE_ALIAS`.
 Connect publishing, when wired into CI, uses `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` and
 `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` — each with an optional `_ALIAS` — the same way. They
 are separate secrets even though you may load the **same** keystore bytes into both (Connect signs its
-Google and Web builds with one key); providing them separately keeps each store folder self-contained.
+Google and Web builds with one key); providing them separately keeps each store's keystore self-contained.
+`PrepareCiAndroidSigning.ps1` materializes each into `.user/<app>/<store>/android_keystore_<store>.p12`
+(+ `_password.txt`, optional `_alias.txt`) — see `Pub/Core/android-signing.json` for the secret→app/store map.
 
 > The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
 > CI builds fast. Re-enable it before shipping a production release.

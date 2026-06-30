@@ -53,12 +53,25 @@
 	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.
 	     Conditional so a fork without them still builds; AppConfigs reads them at startup. -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.json"
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings_web.json"
 			LogicalName="AppSettings.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.json')" />
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.$(Configuration).json"
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings_web.json')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings_web.$(Configuration).json"
 			LogicalName="AppSettings_Environment.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings.$(Configuration).json')" />
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\appsettings_web.$(Configuration).json')" />
+	</ItemGroup>
+
+	<!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret.
+	     The configuration-specific file wins (Debug embeds access_key_default_web.Debug.txt), otherwise
+	     the base access_key_default_web.txt is used. Both are optional: a fork without them falls back to the
+	     in-code default in AppConfigs. -->
+	<ItemGroup>
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.$(Configuration).txt"
+			LogicalName="access_key_default.txt"
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.$(Configuration).txt')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.txt"
+			LogicalName="access_key_default.txt"
+			Condition="!Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.$(Configuration).txt') And Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.txt')" />
 	</ItemGroup>
 
 	<ItemGroup>

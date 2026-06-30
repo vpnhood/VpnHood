@@ -130,7 +130,7 @@ public class QuickLaunchTileService : TileService
             QsTile.State = TileState.Inactive;
         }
         else {
-            QsTile.Label = AndroidUtil.GetAppName(Application.Context);
+            QsTile.Label = AndroidUtils.GetAppName(Application.Context);
             QsTile.State = TileState.Unavailable;
         }
 

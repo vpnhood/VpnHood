@@ -22,7 +22,7 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
         var options = optionsFactory();
         options.DeviceUiProvider ??= new AndroidDeviceUiProvider();
         options.CultureProvider ??= AndroidAppCultureProvider.CreateIfSupported();
-        options.DeviceId ??= AndroidUtil.GetDeviceId(Application.Context); //this will be hashed using AppId
+        options.DeviceId ??= AndroidUtils.GetDeviceId(Application.Context); //this will be hashed using AppId
 
         var vpnHoodDevice = AndroidDevice.Create();
         VpnHoodApp.Init(vpnHoodDevice, options);

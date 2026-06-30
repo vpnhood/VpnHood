@@ -1,6 +1,7 @@
 using Foundation;
 using UIKit;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Ios.Common;
@@ -10,6 +11,27 @@ namespace VpnHood.AppLib.Ios.Common;
 // fall back to the Null implementation. We only wire up opening the iOS Settings app.
 public class IosDeviceUiProvider : NullDeviceUiProvider
 {
+    // The iOS WebView renders edge-to-edge (see VpnHoodAppWebViewController), so the SPA needs the
+    // status-bar / home-indicator inset sizes to pad itself. Mirrors AndroidDeviceUiProvider.GetBarsInfo.
+    // Heights are reported in PHYSICAL PIXELS (points * screen scale) because the SPA divides by
+    // window.devicePixelRatio (== UIScreen.Scale) to convert back to CSS points.
+    public override SystemBarsInfo GetBarsInfo(IUiContext uiContext)
+    {
+        // BuildAppState may call this off the main thread; SafeAreaInsets must be read on the UI thread.
+        return IosUtils.RunOnUiThread(() => {
+            var window = GetKeyWindow();
+            if (window == null)
+                return SystemBarsInfo.Default;
+
+            var insets = window.SafeAreaInsets;
+            var scale = window.Screen?.Scale ?? UIScreen.MainScreen.Scale;
+            return new SystemBarsInfo {
+                TopHeight = (int)Math.Ceiling(insets.Top * scale),
+                BottomHeight = (int)Math.Ceiling(insets.Bottom * scale)
+            };
+        }).GetAwaiter().GetResult();
+    }
+
     public override bool IsAppSettingsSupported => true;
 
     public override void OpenAppSettings(IUiContext context)
@@ -28,5 +50,16 @@ public class IosDeviceUiProvider : NullDeviceUiProvider
     {
         var url = new NSUrl(urlString);
         UIApplication.SharedApplication.OpenUrl(url, new NSDictionary(), null);
+    }
+
+    // The active foreground key window across the connected scenes (the SPA's window).
+    private static UIWindow? GetKeyWindow()
+    {
+        return UIApplication.SharedApplication.ConnectedScenes
+            .OfType<UIWindowScene>()
+            .Where(scene => scene.ActivationState == UISceneActivationState.ForegroundActive)
+            .SelectMany(scene => scene.Windows)
+            .FirstOrDefault(w => w.IsKeyWindow)
+            ?? UIApplication.SharedApplication.Windows.FirstOrDefault(w => w.IsKeyWindow);
     }
 }

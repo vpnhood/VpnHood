@@ -47,12 +47,12 @@ public class AndroidAppWebViewMainActivityHandler(
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to initialize web server.");
             WebViewCreateException = ex;
-            AndroidUtil.RunOnUiThread(ActivityEvent.Activity,
+            AndroidUtils.RunOnUiThread(ActivityEvent.Activity,
                 () => WebViewUpdaterPage.ShowWebViewExceptionPage(ActivityEvent.Activity, ex));
             return Task.CompletedTask;
         }
 
-        AndroidUtil.RunOnUiThread(ActivityEvent.Activity, InitWebUi);
+        AndroidUtils.RunOnUiThread(ActivityEvent.Activity, InitWebUi);
         return Task.CompletedTask;
     }
 

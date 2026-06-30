@@ -27,7 +27,7 @@ public class AndroidDevice : IDevice
     public bool IsQuicSupported => AndroidQuicClient.IsSupported;
     public string OsInfo { get; } = $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
     public string VpnServiceConfigFolder => AndroidVpnService.VpnServiceConfigFolder;
-    public bool IsTv => AndroidUtil.IsTv();
+    public bool IsTv => AndroidUtils.IsTv();
 
     public static AndroidDevice Create()
     {

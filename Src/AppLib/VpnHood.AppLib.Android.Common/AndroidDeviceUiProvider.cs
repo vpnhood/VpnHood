@@ -19,7 +19,7 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
 {
     private const int RequestPostNotificationId = 11;
     private TaskCompletionSource<Permission>? _requestPostNotificationsCompletionTask;
-    private static bool IsTv => AndroidUtil.IsTv();
+    private static bool IsTv => AndroidUtils.IsTv();
 
     public bool IsQuickLaunchSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(24) && !IsTv;

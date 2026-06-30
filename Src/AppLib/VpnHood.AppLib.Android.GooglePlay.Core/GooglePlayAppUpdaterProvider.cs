@@ -52,7 +52,7 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
 
             // Show Google Play update dialog
             VhLogger.Instance.LogDebug("Google Play update is available, starting update flow...");
-            await AndroidUtil.RunOnUiThread(appUiContext.Activity, async () => {
+            await AndroidUtils.RunOnUiThread(appUiContext.Activity, async () => {
                 // flexible update requires much more handling 
                 var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
                     AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());

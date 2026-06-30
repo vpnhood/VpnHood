@@ -41,7 +41,7 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
         var adRequest = new AdRequest.Builder().Build();
 
         // AdMob load ad must call from main thread
-        await AndroidUtil.RunOnUiThread(activity,
+        await AndroidUtils.RunOnUiThread(activity,
                 () => InterstitialAd.Load(activity, adUnitId, adRequest, adLoadCallback))
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -67,7 +67,7 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAppAdProvider
 
         try {
             var fullScreenContentCallback = new AdMobFullScreenContentCallback();
-            await AndroidUtil
+            await AndroidUtils
                 .RunOnUiThread(activity, () => {
                     _loadedAd.FullScreenContentCallback = fullScreenContentCallback;
                     _loadedAd.Show(activity);

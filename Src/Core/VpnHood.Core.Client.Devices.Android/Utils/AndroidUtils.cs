@@ -9,7 +9,7 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.Core.Client.Devices.Droid.Utils;
 
-public static class AndroidUtil
+public static class AndroidUtils
 {
     public static string GetAppName(Context? context)
     {

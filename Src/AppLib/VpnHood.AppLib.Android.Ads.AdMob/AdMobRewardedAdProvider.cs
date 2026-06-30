@@ -40,7 +40,7 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
 
         var adLoadCallback = new MyRewardedAdLoadCallback();
         var adRequest = new AdRequest.Builder().Build();
-        await AndroidUtil.RunOnUiThread(activity, () => RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback))
+        await AndroidUtils.RunOnUiThread(activity, () => RewardedAd.Load(activity, adUnitId, adRequest, adLoadCallback))
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -71,7 +71,7 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
             var fullScreenContentCallback = new AdMobFullScreenContentCallback();
             var userEarnedRewardListener = new MyOnUserEarnedRewardListener();
 
-            await AndroidUtil
+            await AndroidUtils
                 .RunOnUiThread(activity, () => {
                     _loadedAd.SetServerSideVerificationOptions(verificationOptions);
                     _loadedAd.FullScreenContentCallback = fullScreenContentCallback;

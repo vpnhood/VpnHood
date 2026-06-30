@@ -84,6 +84,13 @@ public class VpnHoodAppWebViewController : UIViewController
             // app background color (not white), so the system bars blend into the app like Android.
             _webView.ScrollView.BackgroundColor = BackgroundColor;
 
+            // True edge-to-edge: by default WKWebView auto-insets the web content for the safe area,
+            // which would double up with the SPA's own SystemBarsInfo padding (a big top gap plus an
+            // unpainted strip at the bottom). Disable the automatic inset so the page fills the whole
+            // window and ONLY the SPA pads itself — matching the Android edge-to-edge behavior.
+            _webView.ScrollView.ContentInsetAdjustmentBehavior =
+                UIScrollViewContentInsetAdjustmentBehavior.Never;
+
             // Allow Safari Web Inspector to attach when debugging (iOS 16.4+).
             if (VpnHoodApp.Instance.Features.IsDebugMode && OperatingSystem.IsIOSVersionAtLeast(16, 4))
                 _webView.Inspectable = true;

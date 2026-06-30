@@ -23,7 +23,7 @@ public class AndroidUiContext(IActivityEvent activityEvent) : IUiContext
     {
         try {
             return
-                await AndroidUtil.RunOnUiThread(activityEvent.Activity, () =>
+                await AndroidUtils.RunOnUiThread(activityEvent.Activity, () =>
                     !activityEvent.Activity.IsDestroyed &&
                     activityEvent.Activity.Window?.DecorView.RootView?.IsShown == true
                 );

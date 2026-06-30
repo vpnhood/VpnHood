@@ -55,7 +55,7 @@ public sealed class AndroidVpnNotification : IDisposable
 
         // for android 5.1 (no subtext will be shown if we don't call SetContentText)
         if (!OperatingSystem.IsAndroidVersionAtLeast(24))
-            notificationBuilder.SetContentText(AndroidUtil.GetAppName(context));
+            notificationBuilder.SetContentText(AndroidUtils.GetAppName(context));
 
         // default intent (manage)
         const PendingIntentFlags intentFlags = PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable;

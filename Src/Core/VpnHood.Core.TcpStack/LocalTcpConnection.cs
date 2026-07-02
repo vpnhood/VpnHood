@@ -936,50 +936,62 @@ internal sealed class LocalTcpConnection(
     /// tight per-stream window (the QUIC+TcpProxy download regression — see
     /// ZeroWindowProbe_ShouldMakeForwardProgress and the quic-proxy-download-regression record).
     /// INVARIANT (ring/sequence integrity — do NOT remove): a byte may only be consumed if it is stored
-    /// in the retx ring. When the ring is FULL the probe instead retransmits the oldest unacked byte at
-    /// _sndUna (a classic RFC 9293 persist probe) and returns consumed = 0. The old code sent an
-    /// UNSTORED new byte here; if that packet was then dropped the byte existed nowhere, desynchronizing
-    /// the ring from the sequence space — silent stream corruption or a permanent stall (2026-07 review).
+    /// in the retx ring. When the ring is FULL the probe consumes nothing and instead retransmits up to
+    /// a full MSS from _sndUna (via <see cref="FastRetransmit"/>) and returns consumed = 0.
+    /// INVARIANT (segment-granularity recovery — do NOT shrink to 1 byte): the ring-full stimulus must
+    /// be a FULL SEGMENT, not the single byte at _sndUna. Under burst loss (a whole in-flight window
+    /// dropped by the TUN at peak rate) the writer parks on a full ring with more data pending, and the
+    /// probe interval (200 ms) beats the RTO (500 ms). A 1-byte probe then fills the hole one byte at a
+    /// time; each +1 cumulative ACK RESTARTS the RTO and resets the dup-ACK count, so neither the RTO
+    /// nor fast retransmit ever fires and the flow crawls at ~2 bytes per probe interval while looking
+    /// "active" (never idle-reaped, pinning its connection slot and QUIC window credit) — the
+    /// speedtest "collapse to ~1 then slowly recover" incident (2026-07-01, see
+    /// BurstLoss_RingFullProbe_RecoversAtSegmentGranularity).
     /// </summary>
     private int SendZeroWindowProbe(LocalTcpStack stack, byte probeByte)
     {
         if (_disposed || _appToNetCompleted) return 0;
 
-        byte byteToSend;
-        uint probeSeq;
-        uint probeAck;
-        ushort probeWindow;
-        int consumed;
+        var ringFull = false;
+        uint probeSeq = 0;
+        uint probeAck = 0;
+        ushort probeWindow = 0;
         lock (_seqLock) {
             if (_disposed || _appToNetCompleted || _finSent) return 0;
 
             if (_retxBufferLen < _retxCapacity) {
                 // Room in the ring: consume (and store) a fresh byte so the stream makes forward progress.
-                byteToSend = probeByte;
                 probeSeq = _sndNxt;
                 if (_sndUna == _sndNxt)
                     RestartRtoLocked();
                 _sndNxt += 1;
                 ReadOnlySpan<byte> one = [probeByte];
                 AppendToRetxBufferLocked(one);
-                consumed = 1;
+                probeAck = _rcvNxt;
+                probeWindow = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
             }
             else {
-                // Ring full: never consume a byte we cannot back. Re-send the oldest unacked byte
-                // instead — still a valid stimulus (the peer answers with an ACK carrying its window).
-                byteToSend = _retxBuffer![_retxRingStart];
-                probeSeq = _sndUna;
-                consumed = 0;
+                // Ring full: never consume a byte we cannot back. Retransmit a full segment from
+                // _sndUna instead (below, outside this lock) — still a valid probe stimulus (the peer
+                // answers with an ACK carrying its window) AND real recovery at MSS granularity (see
+                // the segment-granularity invariant above).
+                ringFull = true;
             }
 
-            probeAck = _rcvNxt;
-            probeWindow = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
             UpdateMaintenanceInterestLocked();
+        }
+
+        if (ringFull) {
+            // FastRetransmit re-takes _seqLock itself and no-ops if a racing ACK just drained the ring.
+            var n = Interlocked.Increment(ref _retxCount);
+            diagnostics.TraceFastRetransmit(ipEndPointPair, n, _lastDupAck, _retxBufferLen);
+            try { FastRetransmit(); } catch { /* best-effort; the next probe interval retries */ }
+            return 0;
         }
 
         IpPacket? probe = null;
         try {
-            ReadOnlySpan<byte> probeData = [byteToSend];
+            ReadOnlySpan<byte> probeData = [probeByte];
             probe = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
                 options: ReadOnlySpan<byte>.Empty, payload: probeData);
             var tcp = probe.ExtractTcp();
@@ -993,13 +1005,13 @@ internal sealed class LocalTcpConnection(
             stack.SendPacket(toSend);
         }
         catch {
-            // Sequence state is already advanced and the consumed byte (if any) is stored in the retx
-            // ring, so a failed send equals a dropped packet: the RTO sweep retransmits it. Returning
-            // `consumed` (not 0) keeps the caller's offset in sync with _sndNxt — returning 0 after
-            // advancing _sndNxt used to duplicate the byte in the stream.
+            // Sequence state is already advanced and the consumed byte is stored in the retx ring, so
+            // a failed send equals a dropped packet: the RTO sweep retransmits it. Returning 1 (not 0)
+            // keeps the caller's offset in sync with _sndNxt — returning 0 after advancing _sndNxt
+            // used to duplicate the byte in the stream.
             probe?.Dispose();
         }
-        return consumed;
+        return 1;
     }
 
     private void DrainWindowSignal()

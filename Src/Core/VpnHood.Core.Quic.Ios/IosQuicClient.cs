@@ -29,6 +29,28 @@ public sealed class IosQuicClient : IQuicClient
     // (Console.app) through the injected IosDeviceLoggerProvider (os_log).
     public static int StreamSeq;
 
+    // DIAGNOSTIC: total bytes handed to nw_connection_send whose completion callback has NOT yet fired,
+    // summed across all live streams. Maintained by IosQuicStream; read by the memory probe (sendQ=).
+    // Discriminates the 2026-07-01 jetsam-during-upload native balloon: if this tracks the native climb,
+    // Network.framework is delaying completions (real backpressure, our aggregate cap is missing); if it
+    // stays ~0 while native climbs, completions fire on-enqueue and the balloon is nw-internal buffering.
+    // (2026-07-01 run 2 verdict: stays ~0 — completions are prompt; the balloon is elsewhere.)
+    public static long OutstandingSendBytes;
+
+    // DIAGNOSTIC: worst single IosQuicStream teardown (NWConnection.Cancel + Dispose) duration since the
+    // probe last reset it. The 2026-07-01 whole-tunnel freezes start right after connection-teardown
+    // BURSTS (conn 29->22, 14->7 one tick before each freeze); if Cancel/Dispose blocks on the shared
+    // nw dispatch queue, a teardown burst would stall every flow on the tunnel — this measures that.
+    public static long MaxStreamCancelMs;
+
+    // JETSAM GUARD input: the extension's live phys_footprint in MB, written ~4x/s by the host's memory
+    // probe (IosVpnService). At full download rate (~130 Mbps) the per-packet native transients
+    // (NSData copies retained briefly by NE/nw) float several MB and their peaks ratchet over the 52 MB
+    // limit with no leak, freeze, or backlog anywhere we can bound directly (2026-07-01 third crash
+    // flavor). IosQuicStream.ReadAsync brakes download intake while this is within a few MB of the
+    // limit, letting the transients drain. 0 = unknown/probe not running -> guard inactive.
+    public static double FootprintMb;
+
     public async ValueTask<IQuicConnection> ConnectAsync(
         QuicClientConnectOptions options, CancellationToken cancellationToken)
     {

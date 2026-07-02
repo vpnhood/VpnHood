@@ -83,10 +83,16 @@ public sealed class IosQuicClient : IQuicClient
             // window until we consume and send window updates, bounding native receive buffering.
             //   - bidi-local: per-stream window for streams WE open (the proxy's download streams).
             //   - InitialMaxData: connection-wide aggregate across all streams (the real ceiling).
-            // ~1 MB aggregate keeps ~80 Mbps @ 100 ms RTT while capping the burst far under the limit.
-            quic.InitialMaxStreamDataBidirectionalLocal = 64 * 1024;
-            quic.InitialMaxStreamDataBidirectionalRemote = 64 * 1024;
-            quic.InitialMaxData = 1024 * 1024;
+            // 2026-07-02: tightened 64 KB/1 MB → 32 KB/256 KB. Even with the 1 MB aggregate the
+            // downstream native transients (parsed packets + NSData copies retained by NE/nw past our
+            // dispose) spiked phys_footprint +6.6 MB in 250 ms at full rate and jetsam-killed the
+            // extension (dev baseline crashes too — pre-existing ceiling, exposed by restored
+            // throughput). 256 KB caps tunnel-wide in-flight download per RTT (~20 Mbps @100 ms,
+            // ~70 Mbps @30 ms): deliberately SLOWER but with a hard memory bound, per product call —
+            // stability over top speed on iOS.
+            quic.InitialMaxStreamDataBidirectionalLocal = 32 * 1024;
+            quic.InitialMaxStreamDataBidirectionalRemote = 32 * 1024;
+            quic.InitialMaxData = 256 * 1024;
 
             IosQuicTls.Configure(quic.SecProtocolOptions, options.TargetHost,
                 options.CertificateValidationCallback, queue);

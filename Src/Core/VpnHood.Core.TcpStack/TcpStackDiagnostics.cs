@@ -82,10 +82,10 @@ public sealed class TcpStackDiagnostics
     internal void IncrementEstablishedConnections(IPEndPointPairValue endPointPair)
     {
         var live = Interlocked.Increment(ref _establishedConnections);
-        // Low-frequency lifecycle event (one per connection): logged at Information (parity with VHQUIC
-        // +open/-close) and UNGATED so it's visible in catlog without raising the log level or enabling the
-        // per-packet hot-path traces. Volume is per-connection, not per-packet, so it never floods.
-        VhLogger.Instance.LogInformation(TcpStackEventIds.TcpStack,
+        // Low-frequency lifecycle event (one per connection): logged at Debug and UNGATED so it's visible
+        // when the log level is Debug without enabling the per-packet hot-path traces. Volume is
+        // per-connection, not per-packet, so it never floods.
+        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStack,
             "[TcpStack] +CONN established {EndPointPair} live={LiveEstablished}{Memory}",
             endPointPair, live, FootprintSuffix());
     }
@@ -98,8 +98,8 @@ public sealed class TcpStackDiagnostics
     {
         var live = Interlocked.Decrement(ref _establishedConnections);
         // Low-frequency lifecycle event (one per connection): see IncrementEstablishedConnections — logged
-        // at Information (VHQUIC parity), ungated, so it's visible in catlog without the hot-path traces.
-        VhLogger.Instance.LogInformation(TcpStackEventIds.TcpStack,
+        // at Debug, ungated, so it's visible at Debug level without the hot-path traces.
+        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStack,
             "[TcpStack] -CONN released({Reason}) {EndPointPair} live={LiveEstablished}{Memory}",
             reason, endPointPair, live, FootprintSuffix());
     }

@@ -15,6 +15,7 @@ public class LogService(
 {
     private ILogger? _logger;
     private ILoggerFactory? _loggerFactory;
+    private readonly List<ILoggerProvider> _loggerProviders = [];
     private bool _disposed;
     private readonly Lock _isStoppingLock = new();
     public string LogFilePath { get; } = logFilePath;
@@ -49,10 +50,19 @@ public class LogService(
 
             VhLogger.Instance = VhLogger.CreateConsoleLogger();
 
-            // The factory owns its providers; disposing it disposes them once, at the end of the
-            // Start/Stop cycle (not while the logger is still in use).
             _loggerFactory?.Dispose();
             _loggerFactory = null;
+
+            // LoggerFactory does NOT dispose providers that were added via builder.AddProvider(instance):
+            // they are registered as externally-owned singletons (LoggerFactory flags injected providers
+            // dispose:false, and the internal ServiceProvider never disposes an instance you registered
+            // yourself). We must dispose them here or the FileLoggerProvider's FileStream leaks and keeps
+            // the log file locked, making the next Start() -> File.Delete(LogFilePath) fail with a Windows
+            // sharing violation ("used by another process").
+            foreach (var provider in _loggerProviders)
+                provider.Dispose();
+            _loggerProviders.Clear();
+
             _logger = null;
         }
     }
@@ -75,27 +85,32 @@ public class LogService(
 
     private ILoggerFactory CreateLoggerFactory(LogServiceOptions logServiceOptions, bool deleteOldReport)
     {
-        // delete last lgo
+        // delete last log
         if (deleteOldReport && File.Exists(LogFilePath))
             File.Delete(LogFilePath);
 
-        // The returned LoggerFactory owns every provider added below and disposes them when it is
-        // disposed (in Stop()); no separate provider tracking is needed.
+        // Build the provider instances up-front and keep references to them (disposed in Stop()). They are
+        // added via builder.AddProvider(instance) below, which registers them as externally-owned singletons
+        // that neither the LoggerFactory nor its ServiceProvider will dispose — so LogService owns them.
+        const bool includeScopes = true;
+
+        // device sink: platform-supplied provider (e.g. os_log on iOS) or the default
+        // VhDeviceLoggerProvider (System.Diagnostics.Trace).
+        if (logServiceOptions.LogToDevice)
+            _loggerProviders.Add(deviceLoggerProviderFactory?.Invoke(includeScopes)
+                                 ?? new VhDeviceLoggerProvider(includeScopes));
+
+        // console
+        if (logServiceOptions.LogToConsole) // AddSimpleConsole does not support event id
+            _loggerProviders.Add(new VhConsoleLoggerProvider(includeScopes: true,
+                singleLine: logServiceOptions.SingleLineConsole));
+
+        if (logServiceOptions.LogToFile)
+            _loggerProviders.Add(new FileLoggerProvider(LogFilePath, autoFlush: logServiceOptions.AutoFlush));
+
         var loggerFactory = LoggerFactory.Create(builder => {
-            // device sink: platform-supplied provider (e.g. os_log on iOS) or the default
-            // VhDeviceLoggerProvider (System.Diagnostics.Trace).
-            const bool includeScopes = true;
-            if (logServiceOptions.LogToDevice)
-                builder.AddProvider(deviceLoggerProviderFactory?.Invoke(includeScopes)
-                                    ?? new VhDeviceLoggerProvider(includeScopes));
-
-            // console
-            if (logServiceOptions.LogToConsole) // AddSimpleConsole does not support event id
-                builder.AddProvider(new VhConsoleLoggerProvider(includeScopes: true,
-                    singleLine: logServiceOptions.SingleLineConsole));
-
-            if (logServiceOptions.LogToFile)
-                builder.AddProvider(new FileLoggerProvider(LogFilePath, autoFlush: logServiceOptions.AutoFlush));
+            foreach (var provider in _loggerProviders)
+                builder.AddProvider(provider);
 
             builder.SetMinimumLevel(logServiceOptions.MinLogLevel);
         });

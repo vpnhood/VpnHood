@@ -432,9 +432,12 @@ public sealed class LocalTcpStack : ITcpStack
             return;
 
         try {
-            foreach (var conn in _connections.Values)
-                if (conn.HasMaintenanceInterest)
-                    conn.PollMaintenance();
+            // PERF: enumerate the dictionary directly — the enumerator is lock-free and allocation-free,
+            // whereas .Values takes every stripe lock and copies all values into a snapshot List on each
+            // 100 ms tick. A connection added mid-sweep is simply serviced on the next tick.
+            foreach (var kvp in _connections)
+                if (kvp.Value.HasMaintenanceInterest)
+                    kvp.Value.PollMaintenance();
         }
         catch (Exception ex) {
             if (VerboseLogging)
@@ -471,8 +474,9 @@ public sealed class LocalTcpStack : ITcpStack
             return;
 
         try {
-            foreach (var conn in _connections.Values)
-                conn.PollWindowReopen();
+            // PERF: lock-free enumerator — see SweepMaintenance for why .Values is avoided in sweeps.
+            foreach (var kvp in _connections)
+                kvp.Value.PollWindowReopen();
         }
         catch (Exception ex) {
             if (VerboseLogging)
@@ -521,7 +525,9 @@ public sealed class LocalTcpStack : ITcpStack
     {
         LocalTcpConnection? best = null;
         var bestIdle = minIdle; // a candidate must beat the threshold first, then each other
-        foreach (var conn in _connections.Values) {
+        // PERF: lock-free enumerator — see SweepMaintenance for why .Values is avoided in scans.
+        foreach (var kvp in _connections) {
+            var conn = kvp.Value;
             if (conn.IsClosed) continue;
             var idle = conn.IdleDuration;
             if (idle < bestIdle) continue;

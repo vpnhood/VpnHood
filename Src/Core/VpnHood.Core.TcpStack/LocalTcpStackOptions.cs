@@ -47,6 +47,13 @@ public sealed class LocalTcpStackOptions
     /// total memory — the key to surviving 100+ concurrent connections on a memory-capped host.
     /// <para>Default: unbounded (<see cref="long.MaxValue"/>) so desktop/Android keep a pure
     /// per-connection window. Constrained hosts (iOS) set a few MB.</para>
+    /// <para>NOTE: against a compliant peer this budget holds, but against a WINDOW-IGNORING sender it
+    /// is advisory: the hard per-packet enforcement drops bytes beyond the per-connection
+    /// <see cref="ReceiveWindowSize"/> only. Clamping enforcement by the global headroom would drop
+    /// in-window data from compliant peers whenever OTHER flows fill the budget after a window was
+    /// advertised (cross-flow retransmit storms), so the adversarial worst case is intentionally
+    /// <see cref="ReceiveWindowSize"/> × active connections — size <see cref="MaxConnections"/>
+    /// accordingly (iOS preset: 64 KB × 50 ≈ 3.2 MB, within the jetsam margin).</para>
     /// </summary>
     public long GlobalReceiveBudget { get; init; } = long.MaxValue;
 

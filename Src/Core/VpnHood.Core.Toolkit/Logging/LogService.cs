@@ -83,7 +83,8 @@ public class LogService(
         return logger;
     }
 
-    private ILoggerFactory CreateLoggerFactory(LogServiceOptions logServiceOptions, bool deleteOldReport)
+    private ILoggerFactory CreateLoggerFactory(
+        LogServiceOptions logServiceOptions, bool deleteOldReport, bool includeScopes = true)
     {
         // delete last log
         if (deleteOldReport && File.Exists(LogFilePath))
@@ -92,10 +93,8 @@ public class LogService(
         // Build the provider instances up-front and keep references to them (disposed in Stop()). They are
         // added via builder.AddProvider(instance) below, which registers them as externally-owned singletons
         // that neither the LoggerFactory nor its ServiceProvider will dispose — so LogService owns them.
-        const bool includeScopes = true;
-
         // device sink: platform-supplied provider (e.g. os_log on iOS) or the default
-        // VhDeviceLoggerProvider (System.Diagnostics.Trace).
+
         if (logServiceOptions.LogToDevice)
             _loggerProviders.Add(deviceLoggerProviderFactory?.Invoke(includeScopes)
                                  ?? new VhDeviceLoggerProvider(includeScopes));

@@ -60,6 +60,13 @@ public sealed class LocalTcpStack : ITcpStack
         if (_options.GlobalReceiveBudget != long.MaxValue)
             _windowSweepTimer = new Timer(_ => SweepReopenedWindows(), null,
                 WindowSweepInterval, WindowSweepInterval);
+
+        // Maintenance sweep: SYN-ACK retransmission, coarse RTO for unacked data/FIN (the only recovery
+        // for tail loss — see LocalTcpConnection.PollMaintenance) and delayed-ACK flushing. Created
+        // parked; armed only while at least one connection has registered interest, so a fully idle
+        // stack causes NO periodic wake-ups (battery matters on mobile).
+        _maintenanceTimer = new Timer(_ => SweepMaintenance(), null,
+            Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
     /// <summary>
@@ -78,6 +85,10 @@ public sealed class LocalTcpStack : ITcpStack
     private LocalTcpListener? _anyListener;
     private bool _disposed;
 
+    // PERF: kept in lockstep with _connections membership so the SYN-path cap check and the
+    // diagnostics never call ConcurrentDictionary.Count (which locks every stripe).
+    private int _connectionCount;
+
     // Re-advertise reopened-but-quiet receive windows this often. 50 ms caps the added stall to well
     // under a peer's zero-window persist RTO (~hundreds of ms, then exponential), so the freeze is
     // bounded to one sweep instead. Per tick it only flag-checks each connection; lock/send work
@@ -85,6 +96,13 @@ public sealed class LocalTcpStack : ITcpStack
     private static readonly TimeSpan WindowSweepInterval = TimeSpan.FromMilliseconds(50);
     private readonly Timer? _windowSweepTimer;
     private int _sweeping; // reentrancy guard so a slow sweep never overlaps itself
+
+    // Maintenance sweep cadence. Retransmit timing granularity is this interval; RetransmitTimeout
+    // (default 500 ms) stays a comfortable multiple of it.
+    private static readonly TimeSpan MaintenanceInterval = TimeSpan.FromMilliseconds(100);
+    private readonly Timer _maintenanceTimer;
+    private int _maintenanceInterest; // # connections currently needing maintenance service
+    private int _maintenanceSweeping; // reentrancy guard so a slow sweep never overlaps itself
 
     /// <summary>
     /// Callback invoked when a TCP packet needs to be sent out. The callback takes ownership of the packet.
@@ -222,7 +240,7 @@ public sealed class LocalTcpStack : ITcpStack
         // overhead, so the Android/desktop SYN path is unchanged. When full, try to evict the most
         // idle ("most unused") connection to make room (EvictionMinIdle); if none qualifies, fall
         // back to rejecting the new SYN with an RST — the historical behavior.
-        if (_options.MaxConnections > 0 && _connections.Count >= _options.MaxConnections &&
+        if (_options.MaxConnections > 0 && Volatile.Read(ref _connectionCount) >= _options.MaxConnections &&
             !TryEvictForAdmission()) {
             SendRst(ipEndPointPair.Destination, ipEndPointPair.Source, tcpPacket);
             return;
@@ -240,17 +258,36 @@ public sealed class LocalTcpStack : ITcpStack
             return;
         }
 
+        // Guard the check-then-act race with Dispose(): if the stack was disposed while we were adding,
+        // its dispose loop may have already drained _connections — remove and tear down immediately so
+        // the connection (and its idle-monitor task) cannot outlive the stack for the full IdleTimeout.
+        if (_disposed) {
+            if (_connections.TryRemove(ipEndPointPair, out _))
+                connection.Dispose();
+            return;
+        }
+
         // DIAGNOSTIC: track concurrent-connection count + high-water mark.
-        Diagnostics.SetConnectionCount(_connections.Count);
+        Diagnostics.SetConnectionCount(Interlocked.Increment(ref _connectionCount));
 
-        SendSynAck(connection);
-
-        // Note: do NOT enqueue accept yet. The listener gets the stream only after the
-        // final ACK arrives and the connection transitions to Established.
-        connection.Start(this);
+        try {
+            // Start() before the SYN-ACK so the connection is fully wired (stack reference, maintenance
+            // interest for SYN-ACK retransmission) by the time the peer can answer. The listener still
+            // gets the stream only after the final ACK arrives (MarkEstablished).
+            connection.Start(this);
+            SendSynAck(connection);
+        }
+        catch {
+            // A failed SYN-ACK send must not leave a zombie in _connections with no client and no
+            // pending accept — it would linger until the idle timeout while holding a connection slot.
+            if (_connections.TryRemove(ipEndPointPair, out _))
+                Diagnostics.SetConnectionCount(Interlocked.Decrement(ref _connectionCount));
+            connection.Dispose();
+            throw;
+        }
     }
 
-    private void SendSynAck(LocalTcpConnection conn)
+    internal void SendSynAck(LocalTcpConnection conn)
     {
         // Advertise our MSS (default 1460) so the peer doesn't fall back to the default 536-byte MSS.
         // Without this option, the peer will send us 536-byte packets which dramatically
@@ -270,12 +307,12 @@ public sealed class LocalTcpStack : ITcpStack
         var tcp = packet.ExtractTcp();
         // Idempotent across SYN retransmits: SndNxt must be ISN+1 once SYN-ACK is sent.
         conn.SetSndNxtAfterSyn();
-        var (_, rcvNxt) = conn.SnapshotSequence();
+        var (_, rcvNxt, window) = conn.SnapshotForAck();
         tcp.SequenceNumber = conn.IsnLocal;
         tcp.AcknowledgmentNumber = rcvNxt;
         tcp.Synchronize = true;
         tcp.Acknowledgment = true;
-        tcp.WindowSize = conn.UpdateAdvertisedWindow();
+        tcp.WindowSize = window;
 
         SendPacket(packet);
     }
@@ -320,11 +357,12 @@ public sealed class LocalTcpStack : ITcpStack
             payload: ReadOnlySpan<byte>.Empty);
 
         var tcp = packet.ExtractTcp();
-        var (sndNxt, rcvNxt) = conn.SnapshotSequence();
+        // Single-lock snapshot: sequence numbers and the advertised window come from one atomic view.
+        var (sndNxt, rcvNxt, window) = conn.SnapshotForAck();
         tcp.SequenceNumber = sndNxt;
         tcp.AcknowledgmentNumber = rcvNxt;
         tcp.Acknowledgment = true;
-        tcp.WindowSize = conn.UpdateAdvertisedWindow();
+        tcp.WindowSize = window;
 
         SendPacket(packet);
     }
@@ -358,14 +396,70 @@ public sealed class LocalTcpStack : ITcpStack
 
     private void OnConnectionClosed(LocalTcpConnection conn)
     {
-        _connections.TryRemove(conn.IpEndPointPair, out _);
-        Diagnostics.SetConnectionCount(_connections.Count);
+        if (_connections.TryRemove(conn.IpEndPointPair, out _))
+            Diagnostics.SetConnectionCount(Interlocked.Decrement(ref _connectionCount));
+    }
+
+    /// <summary>Registers a connection with the maintenance sweep. Arms the parked timer on the
+    /// 0 → 1 transition; the sweep parks itself again once interest returns to zero.</summary>
+    internal void AddMaintenanceInterest()
+    {
+        if (Interlocked.Increment(ref _maintenanceInterest) == 1 && !_disposed)
+            try { _maintenanceTimer.Change(MaintenanceInterval, MaintenanceInterval); }
+            catch (ObjectDisposedException) { /* stack disposed concurrently */ }
+    }
+
+    /// <summary>Unregisters a connection from the maintenance sweep. The timer is parked by the sweep
+    /// itself once it observes zero interest — disarming here would race a concurrent
+    /// <see cref="AddMaintenanceInterest"/> and could leave a live connection unserviced.</summary>
+    internal void RemoveMaintenanceInterest()
+    {
+        Interlocked.Decrement(ref _maintenanceInterest);
+    }
+
+    /// <summary>
+    /// Timer callback: services every connection that needs retransmission (SYN-ACK / data / FIN on
+    /// ACK silence) or a delayed-ACK flush (see <see cref="LocalTcpConnection.PollMaintenance"/>).
+    /// Never throws — an unhandled exception in a Timer callback terminates the whole process.
+    /// </summary>
+    private void SweepMaintenance()
+    {
+        if (_disposed)
+            return;
+
+        // Skip if a previous sweep is still running (defensive; a sweep is normally microseconds).
+        if (Interlocked.Exchange(ref _maintenanceSweeping, 1) != 0)
+            return;
+
+        try {
+            foreach (var conn in _connections.Values)
+                if (conn.HasMaintenanceInterest)
+                    conn.PollMaintenance();
+        }
+        catch (Exception ex) {
+            if (VerboseLogging)
+                VhLogger.Instance.LogTrace(TcpStackEventIds.TcpStack, ex, "Maintenance sweep failed.");
+        }
+        finally {
+            Volatile.Write(ref _maintenanceSweeping, 0);
+        }
+
+        // Park the timer when nothing needs service. Re-check afterwards: an AddMaintenanceInterest
+        // racing the park may have had its Change() overwritten — re-arm so its connection is not
+        // left unserviced.
+        if (Volatile.Read(ref _maintenanceInterest) == 0)
+            try {
+                _maintenanceTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                if (Volatile.Read(ref _maintenanceInterest) > 0)
+                    _maintenanceTimer.Change(MaintenanceInterval, MaintenanceInterval);
+            }
+            catch (ObjectDisposedException) { /* stack disposed concurrently */ }
     }
 
     /// <summary>
     /// Timer callback: re-advertises any flow whose receive window closed under flow control and has
     /// since reopened (see <see cref="LocalTcpConnection.PollWindowReopen"/>). Never throws — an
-    /// unhandled exception here would tear down the timer's ThreadPool thread.
+    /// unhandled exception in a Timer callback terminates the whole process.
     /// </summary>
     private void SweepReopenedWindows()
     {
@@ -411,9 +505,10 @@ public sealed class LocalTcpStack : ITcpStack
             "memory restriction.",
             victim.IpEndPointPair, victim.IdleDuration.TotalSeconds, _options.MaxConnections);
 
-        // Close() is synchronous: it removes the victim from _connections (via OnConnectionClosed),
-        // completes its pipes (consumer reads EOF), and unblocks its sender — freeing the slot now.
-        victim.Close();
+        // Abort() is synchronous: it removes the victim from _connections (via OnConnectionClosed),
+        // completes its pipes (consumer reads EOF), unblocks its sender — freeing the slot now — and
+        // tells the victim's peer with a RST so it does not keep retransmitting into a black hole.
+        victim.Abort();
         return true;
     }
 
@@ -442,8 +537,10 @@ public sealed class LocalTcpStack : ITcpStack
     public void DropAllConnections()
     {
         foreach (var kvp in _connections) {
-            if (_connections.TryRemove(kvp.Key, out var connection))
+            if (_connections.TryRemove(kvp.Key, out var connection)) {
+                Diagnostics.SetConnectionCount(Interlocked.Decrement(ref _connectionCount));
                 connection.Dispose();
+            }
         }
     }
 
@@ -533,6 +630,7 @@ public sealed class LocalTcpStack : ITcpStack
         _disposed = true;
 
         _windowSweepTimer?.Dispose();
+        _maintenanceTimer.Dispose();
 
         if (ActiveDiagnostics == Diagnostics)
             ActiveDiagnostics = null;
@@ -550,8 +648,10 @@ public sealed class LocalTcpStack : ITcpStack
         anyListener?.Dispose();
 
         foreach (var kvp in _connections) {
-            if (_connections.TryRemove(kvp.Key, out var connection))
+            if (_connections.TryRemove(kvp.Key, out var connection)) {
+                Diagnostics.SetConnectionCount(Interlocked.Decrement(ref _connectionCount));
                 connection.Dispose();
+            }
         }
     }
 }

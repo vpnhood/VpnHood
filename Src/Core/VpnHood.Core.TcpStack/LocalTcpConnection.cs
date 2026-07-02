@@ -5,6 +5,7 @@ using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.TcpStack.Abstractions;
 using VpnHood.Core.TcpStack.Primitives;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable IdentifierTypo
@@ -28,10 +29,9 @@ internal sealed class LocalTcpConnection(
     // The values used on the data path below are cached into readonly fields once, here, so the
     // hot path (send/recv/ACK) costs exactly what the old consts did — a field read, no recompute.
 
-    // PERF: advertised TCP receive window. Defaults to 65535; must stay equal to the historical
-    // const on Android (default options) to preserve throughput. Fits the 16-bit window field
-    // because LocalTcpStackOptions validates ReceiveWindowSize <= 65535 (no window scaling).
-    private readonly long _globalReceiveBudget = options.GlobalReceiveBudget; // aggregate pipe cap across all connections
+    // Aggregate cap on the SUM of every connection's unread reassembly-pipe backlog. AdvertisedWindow
+    // clamps each connection's window by the remaining global headroom (see LocalTcpStackOptions).
+    private readonly long _globalReceiveBudget = options.GlobalReceiveBudget;
 
     private readonly TimeSpan _idleTimeout = options.IdleTimeout;
     private readonly TimeSpan _idleCheckInterval = options.IdleCheckInterval;
@@ -69,13 +69,28 @@ internal sealed class LocalTcpConnection(
     private uint _peerWindow = 0xFFFF; // Peer's last advertised receive window (scaled). Initial guess until the first ACK.
     private uint _rcvNxt = isnRemote + 1; // We have already "consumed" the peer's SYN.
     private int _unackedSegments; // Count of in-order full-size data segments not yet acknowledged.
+    private long _delayedAckSinceTicks; // When _unackedSegments went 0 -> 1 (drives the delayed-ACK flush).
     private int _ackCount;
+
+    // Loss recovery: a coarse RTO (RFC 6298-inspired) serviced by the stack's maintenance sweep.
+    // Fast retransmit needs 3 dup-ACKs, which require LATER segments arriving after the hole — the last
+    // segment of a burst (tail loss), a FIN, or a SYN-ACK have none, so without this timer a single
+    // dropped packet stalled the flow until the idle timeout (15 min default).
+    private readonly int _rtoInitialMs = (int)options.RetransmitTimeout.TotalMilliseconds;
+    private readonly int _rtoMaxMs = (int)options.RetransmitMaxTimeout.TotalMilliseconds;
+    private readonly int _delayedAckMs = (int)options.DelayedAckTimeout.TotalMilliseconds;
+    private long _rtoStartTicks = Stopwatch.GetTimestamp();
+    private int _rtoCurrentMs = (int)options.RetransmitTimeout.TotalMilliseconds;
+    private bool _maintenanceInterestHeld; // registered with the stack's maintenance sweep (guarded by _seqLock)
+    private long _retxCount;
 
     // Dynamic receive-window flow control (all platforms). Bytes written into the net->app reassembly
     // pipe but not yet read by the app (the proxy copy loop). The advertised TCP window is
     // ReceiveWindowSize - _pipeUnread, so it shrinks toward 0 as the pipe fills (throttling the peer)
-    // and reopens (with a window-update ACK from OnAppConsumed) as the app drains. This makes
-    // ReceiveWindowSize a HARD cap on per-connection pipe memory instead of a soft one.
+    // and reopens (with a window-update ACK from OnAppConsumed) as the app drains. TryHandleIncoming
+    // additionally ENFORCES the window (drops bytes beyond it), so ReceiveWindowSize is a HARD cap on
+    // per-connection pipe memory even against a peer that ignores our advertisements.
+    // Written with Interlocked so the lock-free readers (AdvertisedWindow) never see a torn value on 32-bit.
     private long _pipeUnread;
     private volatile bool _windowClosed; // set once we've advertised a (near-)zero window
     private ushort _lastAdvertisedWindow = (ushort)options.ReceiveWindowSize;
@@ -95,16 +110,16 @@ internal sealed class LocalTcpConnection(
     private int _retxBufferLen;     // number of valid unacked bytes
     private uint _lastDupAck;
     private int _dupAckCount;
-    private long _retxCount;
     public IPEndPointPairValue IpEndPointPair => ipEndPointPair;
     public uint IsnLocal { get; } = isnLocal;
     public ushort Mss { get; } = ClampMss(peerMss, options);
     public TcpConnectionState State { get; private set; } = TcpConnectionState.SynReceived;
 
     /// <summary>The 16-bit TCP receive window this connection advertises on every outgoing segment.
-    /// DYNAMIC: the configured maximum (<c>_advertisedWindow</c>) minus the unread backlog in the
-    /// reassembly pipe, so it shrinks to 0 as the pipe fills (real TCP flow control / backpressure)
-    /// and reopens as the app drains. Bounds per-connection receive memory on every platform.</summary>
+    /// DYNAMIC: the configured maximum (the property's backing field, initialized from
+    /// <c>ReceiveWindowSize</c>) minus the unread backlog in the reassembly pipe, so it shrinks to 0 as
+    /// the pipe fills (real TCP flow control / backpressure) and reopens as the app drains. Bounds
+    /// per-connection receive memory on every platform.</summary>
     public ushort AdvertisedWindow {
         get {
             // Per-connection headroom: the configured window minus this connection's unread backlog.
@@ -119,13 +134,24 @@ internal sealed class LocalTcpConnection(
         }
     } = (ushort)options.ReceiveWindowSize;
 
-    public ushort UpdateAdvertisedWindow()
+    // _seqLock must be held. Recomputes the advertised window, records it (for RST validation and
+    // window-update deltas) and remembers when it closed so OnAppConsumed / the window sweep know to
+    // re-advertise. A zero can happen on ANY send path (e.g. the global budget emptied between drains),
+    // not just when this connection's own pipe fills.
+    private ushort UpdateAdvertisedWindowLocked()
     {
-        lock (_seqLock) {
-            var win = AdvertisedWindow;
-            _lastAdvertisedWindow = win;
-            return win;
-        }
+        var win = AdvertisedWindow;
+        _lastAdvertisedWindow = win;
+        if (win == 0)
+            _windowClosed = true;
+        return win;
+    }
+
+    /// <summary>Single-lock snapshot of everything needed to emit a pure ACK or SYN-ACK.</summary>
+    internal (uint SndNxt, uint RcvNxt, ushort Window) SnapshotForAck()
+    {
+        lock (_seqLock)
+            return (_sndNxt, _rcvNxt, UpdateAdvertisedWindowLocked());
     }
 
     /// <summary>
@@ -148,7 +174,9 @@ internal sealed class LocalTcpConnection(
     }
 
     /// <summary>
-    /// Starts background tasks for this connection.
+    /// Wires the stack reference and starts background tasks for this connection.
+    /// Called BEFORE the first SYN-ACK is sent so maintenance (SYN-ACK retransmission) is armed
+    /// from the very first packet.
     /// </summary>
     public void Start(LocalTcpStack stack)
     {
@@ -160,6 +188,11 @@ internal sealed class LocalTcpConnection(
             stream,
             ipEndPointPair.Destination.ToIPEndPoint(),
             ipEndPointPair.Source.ToIPEndPoint());
+
+        // Register with the stack's maintenance sweep: a SynReceived connection needs SYN-ACK
+        // retransmission service until the handshake completes.
+        lock (_seqLock)
+            UpdateMaintenanceInterestLocked();
 
         // Start idle monitor
         _ = Task.Run(MonitorIdleAsync);
@@ -203,6 +236,7 @@ internal sealed class LocalTcpConnection(
             _establishedCounted = true;
             clientToEnqueue = _pendingClient;
             _pendingClient = null;
+            UpdateMaintenanceInterestLocked(); // handshake done -> SYN-ACK retransmission no longer needed
         }
 
         // Off the hot _seqLock: the State==SynReceived guard above guarantees exactly one thread reaches
@@ -210,16 +244,11 @@ internal sealed class LocalTcpConnection(
         diagnostics.IncrementEstablishedConnections(ipEndPointPair); // DIAGNOSTIC (counts + logs)
 
         if (clientToEnqueue != null && !listener.TryEnqueueAccept(clientToEnqueue)) {
-            // Listener has been stopped or its accept queue is full: dispose the unaccepted
-            // client (which tears down this connection via the stream's disposal).
+            // Listener stopped or its accept queue is full: abort so the peer gets a RST immediately
+            // instead of a fully-established connection that lingers half-closed buffering data it can
+            // never deliver, then dispose the unaccepted client (its FIN attempt becomes a no-op).
+            Abort();
             clientToEnqueue.Dispose();
-        }
-    }
-
-    public (uint sndNxt, uint rcvNxt) SnapshotSequence()
-    {
-        lock (_seqLock) {
-            return (_sndNxt, _rcvNxt);
         }
     }
 
@@ -246,12 +275,12 @@ internal sealed class LocalTcpConnection(
             if (_disposed) return;
             _disposed = true;
             _finSent = true; // suppress a stray FIN from a later graceful-close after a direct dispose
-            remainingUnread = _pipeUnread;
-            _pipeUnread = 0;
+            remainingUnread = Interlocked.Exchange(ref _pipeUnread, 0);
             abandoned = _pendingClient;
             _pendingClient = null;
             decrementEstablished = _establishedCounted;
             _establishedCounted = false;
+            UpdateMaintenanceInterestLocked();
         }
 
         if (remainingUnread > 0)
@@ -275,11 +304,13 @@ internal sealed class LocalTcpConnection(
 
     /// <summary>
     /// Writes data from app directly as TCP segments to the network (inline on caller's thread).
-    /// Respects the peer's advertised receive window.
+    /// Respects the peer's advertised receive window. Throws <see cref="IOException"/> when the
+    /// connection is (or becomes) closed for writing, and <see cref="OperationCanceledException"/>
+    /// on caller cancellation — a partial write is never silently reported as success.
     /// </summary>
     public async ValueTask SendAppDataAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default)
     {
-        if (_disposed || _appToNetCompleted) return;
+        ThrowIfWriteClosed();
         Touch();
 
         var stack = _stack;
@@ -290,7 +321,7 @@ internal sealed class LocalTcpConnection(
 
         while (offset < data.Length) {
             ct.ThrowIfCancellationRequested();
-            if (_disposed || _appToNetCompleted) return;
+            ThrowIfWriteClosed();
 
             // Determine how much we can send within the peer's window.
             int allowable;
@@ -312,25 +343,16 @@ internal sealed class LocalTcpConnection(
 
                 if (allowable <= 0) {
                     diagnostics.TraceZeroWindowWait(ipEndPointPair, offset, data.Length, pw, una, nxt);
-                    // Wait for peer window to open (signalled by TrySignalWindow when ACK arrives).
-                    // Use a timeout so we can send a Zero Window Probe (ZWP) if the peer does not
-                    // send a window update. This avoids a permanent stall when the peer (e.g. Android)
-                    // expects a stimulus before it sends the window update.
-                    // RFC 793: ZWP carries one byte of new data beyond the zero window.
-                    using var zwpCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    zwpCts.CancelAfter(options.ZeroWindowProbeInterval);
-                    try { await _windowSignal.WaitAsync(zwpCts.Token); }
-                    catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
-                        // Timeout: send a ZWP using the actual next data byte to elicit a window update.
-                        // Always send regardless of in-flight data: in loopback there is no reordering,
-                        // and relying on in-flight data as stimulus can stall permanently when the
-                        // semaphore signal is consumed without the window actually opening.
-                        if (offset < data.Length) {
-                            diagnostics.TraceZeroWindowProbe(ipEndPointPair, offset, pw);
-                            offset += SendZeroWindowProbe(stack, data.Span[offset]);
-                        }
+                    // Wait for peer window (or retx-ring space) to open — signalled by TrySignalWindow
+                    // when an ACK arrives. On timeout send a Zero Window Probe (ZWP) as a stimulus: this
+                    // avoids a permanent stall when the peer (e.g. Android) expects one before it sends
+                    // the window update. Caller cancellation propagates as OperationCanceledException —
+                    // a partial write must never be silently reported as success.
+                    var signaled = await _windowSignal.WaitAsync(options.ZeroWindowProbeInterval, ct).Vhc();
+                    if (!signaled && offset < data.Length) {
+                        diagnostics.TraceZeroWindowProbe(ipEndPointPair, offset, pw);
+                        offset += SendZeroWindowProbe(stack, data.Span[offset]);
                     }
-                    catch (OperationCanceledException) { return; }
                     continue;
                 }
             }
@@ -348,18 +370,32 @@ internal sealed class LocalTcpConnection(
 
                 uint seqForSegment;
                 uint ackForSegment;
+                ushort windowForSegment;
                 lock (_seqLock) {
+                    // Recheck under the lock: StartFin takes its FIN sequence number under this same
+                    // lock, so this guard guarantees no data segment is ever emitted at a sequence
+                    // number beyond an already-sent FIN (which the peer would discard = data loss).
+                    if (_disposed || _appToNetCompleted || _finSent) {
+                        packet.Dispose();
+                        throw new IOException("The TCP connection was closed while writing.");
+                    }
+
                     seqForSegment = _sndNxt;
                     ackForSegment = _rcvNxt;
+                    // RTO: (re)arm when this segment opens a new in-flight window.
+                    if (_sndUna == _sndNxt)
+                        RestartRtoLocked();
                     _sndNxt += (uint)segLen;
-                    // Append into retx ring buffer for fast retransmit support.
+                    // Append into retx ring buffer for fast retransmit / RTO support.
                     AppendToRetxBufferLocked(segmentData);
+                    windowForSegment = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
+                    UpdateMaintenanceInterestLocked();
                 }
 
                 tcp.SequenceNumber = seqForSegment;
                 tcp.AcknowledgmentNumber = ackForSegment;
                 tcp.Acknowledgment = true;
-                tcp.WindowSize = UpdateAdvertisedWindow(); // dynamic (flow-controlled) window
+                tcp.WindowSize = windowForSegment;
 
                 // Set PSH on the last segment of the current write.
                 if (offset + segLen >= data.Length)
@@ -372,6 +408,12 @@ internal sealed class LocalTcpConnection(
         }
     }
 
+    private void ThrowIfWriteClosed()
+    {
+        if (_disposed || _appToNetCompleted)
+            throw new IOException("The TCP connection has been closed.");
+    }
+
     /// <summary>
     /// Handles incoming TCP data from network.
     /// Returns: (handled, needsAck) - handled indicates if packet was processed, needsAck if ACK should be sent
@@ -382,8 +424,21 @@ internal sealed class LocalTcpConnection(
         Touch();
 
         if (flags.HasFlag(TcpFlags.Rst)) {
-            Close();
-            return (false, false);
+            // RFC 5961 §3.2: accept a RST only when its sequence number exactly matches RCV.NXT. An
+            // in-window (but inexact) RST gets a challenge ACK; anything else is dropped. Without this,
+            // any local app able to inject one packet into the TUN could blind-reset arbitrary flows.
+            bool exact, inWindow;
+            lock (_seqLock) {
+                var rstDiff = (int)(seq - _rcvNxt);
+                exact = rstDiff == 0;
+                inWindow = rstDiff > 0 && rstDiff < Math.Max(1, (int)_lastAdvertisedWindow);
+            }
+
+            if (exact) {
+                Close();
+                return (false, false);
+            }
+            return inWindow ? (true, true) : (false, false); // challenge ACK / drop
         }
 
         // Process ACK: advance _sndUna and update peer's window.
@@ -396,6 +451,8 @@ internal sealed class LocalTcpConnection(
             lock (_seqLock) {
                 prevUna = _sndUna;
                 sndNxtSnap = _sndNxt;
+                var prevPeerWindow = _peerWindow;
+                var scaledWindow = (uint)windowSize << _peerWsShift;
                 // Only advance if ack is within [_sndUna, _sndNxt].
                 diff = ack - _sndUna;
                 if (diff > 0 && diff <= _sndNxt - _sndUna) {
@@ -412,9 +469,13 @@ internal sealed class LocalTcpConnection(
                     }
                     _dupAckCount = 0;
                     _lastDupAck = ack;
+                    RestartRtoLocked(); // cumulative-ACK progress restarts the retransmission timer
                 }
-                else if (diff == 0 && payload.Length == 0 && _retxBufferLen > 0) {
-                    // Pure duplicate ACK: peer is missing data starting at _sndUna.
+                else if (diff == 0 && payload.Length == 0 && _retxBufferLen > 0 &&
+                         scaledWindow == prevPeerWindow && !flags.HasFlag(TcpFlags.Fin)) {
+                    // Pure duplicate ACK (RFC 5681: no data, no FIN, UNCHANGED window): the peer is
+                    // missing data starting at _sndUna. A pure window update (same ack, new window)
+                    // must NOT count, or three updates would trigger a spurious fast retransmit.
                     if (ack == _lastDupAck) _dupAckCount++;
                     else { _lastDupAck = ack; _dupAckCount = 1; }
                     if (_dupAckCount >= 3) {
@@ -422,8 +483,9 @@ internal sealed class LocalTcpConnection(
                         _dupAckCount = 0; // avoid retx flood; reset until next dup-ack triple
                     }
                 }
-                _peerWindow = (uint)windowSize << _peerWsShift;
+                _peerWindow = scaledWindow;
                 newPw = _peerWindow;
+                UpdateMaintenanceInterestLocked();
             }
             var ackCount = Interlocked.Increment(ref _ackCount);
             diagnostics.TraceAck(ipEndPointPair, ackCount, ack, prevUna, sndNxtSnap, diff, windowSize,
@@ -439,58 +501,72 @@ internal sealed class LocalTcpConnection(
 
         try {
             bool needsAck;
-            bool finCloses;
+            var processFin = false;
+            var finCloses = false;
 
             lock (_seqLock) {
                 var seqDiff = (int)(seq - _rcvNxt);
-
-                if (seqDiff < 0) {
-                    // Retransmission: ACK without duplicating data.
-                    var retransmitEnd = seq + (uint)payload.Length;
-                    if ((int)(retransmitEnd - _rcvNxt) > 0 && payload.Length > 0) {
-                        var overlap = (int)(_rcvNxt - seq);
-                        var newData = payload[overlap..];
-                        if (newData.Length > 0) {
-                            WriteToAppPipe(newData);
-                            _rcvNxt += (uint)newData.Length;
-                        }
-                    }
-                    return (true, true);
-                }
 
                 if (seqDiff > 0) {
                     // Out of order - send duplicate ACK to trigger fast retransmit
                     return (true, true);
                 }
 
-                // seq == _rcvNxt: in-order packet
-                if (payload.Length > 0) {
-                    WriteToAppPipe(payload);
-                    _rcvNxt += (uint)payload.Length;
+                // seqDiff <= 0: consume any bytes beyond _rcvNxt. This single path covers both the
+                // in-order case (seqDiff == 0) and a partially-overlapping retransmission (seqDiff < 0).
+                var isRetransmit = seqDiff < 0;
+                var overlap = -seqDiff; // already-received prefix of this segment
+                var truncated = false;
+                var acceptedNew = 0;
+                if (payload.Length > overlap) {
+                    var newData = payload[overlap..];
+                    // HARD receive-window enforcement: never buffer beyond the configured window, even if
+                    // the peer ignores our advertisements. Real TCP receivers drop out-of-window bytes the
+                    // same way; a compliant peer never hits this, a hostile one retransmits into a bounded
+                    // buffer instead of exhausting memory. (This is also what keeps the reassembly pipe
+                    // below its pause threshold — see LocalTcpStackOptions.CreatePipeOptions.)
+                    var headroom = (int)Math.Clamp(
+                        (long)options.ReceiveWindowSize - Interlocked.Read(ref _pipeUnread), 0, int.MaxValue);
+                    acceptedNew = Math.Min(newData.Length, headroom);
+                    if (acceptedNew > 0) {
+                        WriteToAppPipe(newData[..acceptedNew]);
+                        _rcvNxt += (uint)acceptedNew;
+                    }
+                    truncated = acceptedNew < newData.Length;
                 }
 
-                needsAck = payload.Length > 0;
-                finCloses = false;
+                needsAck = isRetransmit || acceptedNew > 0 || truncated;
 
                 // Allocation-free delayed ACK policy:
-                // - ACK PSH/FIN and short segments immediately so request tails don't stall.
-                // - For normal full-size data, ACK every 2nd segment to avoid flooding the iOS packet path.
-                if (needsAck && !flags.HasFlag(TcpFlags.Fin) && !flags.HasFlag(TcpFlags.Psh) &&
+                // - ACK PSH/FIN, short segments, retransmits and truncations immediately.
+                // - For clean in-order full-size data, ACK every 2nd segment to avoid flooding the iOS
+                //   packet path. A pending (thinned) ACK is flushed by the maintenance sweep within
+                //   DelayedAckTimeout so an odd trailing segment never waits for the peer's RTO.
+                if (needsAck && !isRetransmit && !truncated &&
+                    !flags.HasFlag(TcpFlags.Fin) && !flags.HasFlag(TcpFlags.Psh) &&
                     payload.Length >= Mss) {
                     _unackedSegments++;
-                    if (_unackedSegments < 2)
+                    if (_unackedSegments < 2) {
                         needsAck = false;
-                    else
+                        _delayedAckSinceTicks = Stopwatch.GetTimestamp();
+                    }
+                    else {
                         _unackedSegments = 0;
+                    }
                 }
                 else if (needsAck) {
                     _unackedSegments = 0;
                 }
 
-                if (flags.HasFlag(TcpFlags.Fin)) {
+                // FIN consumes _rcvNxt only once every payload byte before it has been consumed. Checking
+                // the FIN's own sequence position (seq + payload length) instead of "seqDiff == 0" also
+                // processes a FIN that arrives inside a partially-overlapping retransmitted segment —
+                // previously such a FIN was silently ignored and the close waited for a pure-FIN retransmit.
+                if (flags.HasFlag(TcpFlags.Fin) && !_finReceived && seq + (uint)payload.Length == _rcvNxt) {
                     _rcvNxt += 1;
                     _finReceived = true;
                     needsAck = true;
+                    processFin = true;
 
                     // Check if both sides have sent FIN
                     if (_finSent) {
@@ -501,9 +577,11 @@ internal sealed class LocalTcpConnection(
                         State = TcpConnectionState.Closing;
                     }
                 }
+
+                UpdateMaintenanceInterestLocked();
             }
 
-            if (flags.HasFlag(TcpFlags.Fin)) {
+            if (processFin) {
                 CompleteNetToApp();
                 if (finCloses)
                     Close();
@@ -512,8 +590,8 @@ internal sealed class LocalTcpConnection(
             return (true, needsAck);
         }
         catch (InvalidOperationException) {
-            // Pipe was completed/broken - close connection
-            Close();
+            // Pipe was completed/broken - abort (the peer gets a RST instead of a silent black hole)
+            Abort();
             return (false, false);
         }
     }
@@ -526,77 +604,75 @@ internal sealed class LocalTcpConnection(
         var span = _netToAppPipe.Writer.GetSpan(data.Length);
         data.CopyTo(span);
         _netToAppPipe.Writer.Advance(data.Length);
-        diagnostics.AddPipeBufferedBytes(data.Length); // DIAGNOSTIC: pipe fill
+        // FLOW CONTROL input, not just a metric: feeds the shared GlobalReceiveBudget headroom in
+        // AdvertisedWindow across ALL connections.
+        diagnostics.AddPipeBufferedBytes(data.Length);
 
         // FLOW CONTROL: track the unread backlog so AdvertisedWindow shrinks as the pipe fills. If the
         // effective window is now 0 (this pipe is full OR the shared global budget is exhausted), mark
         // it closed so OnAppConsumed sends a window-update ACK once headroom returns.
-        _pipeUnread += data.Length;
+        Interlocked.Add(ref _pipeUnread, data.Length);
         if (AdvertisedWindow == 0)
             _windowClosed = true;
 
-        // Flush is fire-and-forget on this packet-receive critical path. That's now safe: the dynamic
-        // AdvertisedWindow throttles the peer, so this pipe is bounded by ~ReceiveWindowSize regardless
-        // of how fast the app drains it (the old fixed-window code could grow it without bound).
+        // Flush is fire-and-forget on this packet-receive critical path. That is safe because the caller
+        // (TryHandleIncoming) hard-enforces the advertised window, so the unread backlog never exceeds
+        // ReceiveWindowSize — which sits BELOW the pipe's pause threshold (ReceiveWindowSize + MaxMss).
+        // FlushAsync therefore always completes synchronously; discarding a completed ValueTask is a
+        // plain struct drop, never a pending IValueTaskSource (which must not be abandoned).
         _ = _netToAppPipe.Writer.FlushAsync();
     }
 
-    /// Called by LocalTcpStream after the app drains bytes from the reassembly pipe. Lowers the unread
-    /// backlog (which reopens AdvertisedWindow) and, if the window had closed and is now back above
-    /// half, sends a window-update ACK so the throttled peer resumes immediately instead of waiting
-    /// for its zero-window-probe timer.
+    /// Called by LocalTcpStream after the app drains bytes from the reassembly pipe. This is a
+    /// FLOW-CONTROL step, not a diagnostic: lowering the unread backlog is what reopens
+    /// AdvertisedWindow, and this method is the primary sender of the window-update ACK that lets a
+    /// throttled peer resume immediately instead of waiting for its zero-window-probe timer.
     public void OnAppConsumed(long count)
     {
         if (count <= 0) return;
 
-        long actualConsumed = count;
-        ushort currentWin;
-        ushort lastWin;
-        long pipeUnreadSnap;
+        long actualConsumed;
+        var sendUpdate = false;
         lock (_seqLock) {
             if (_disposed) return;
-            if (_pipeUnread < count)
-                actualConsumed = _pipeUnread;
-            _pipeUnread -= actualConsumed;
-            currentWin = AdvertisedWindow;
-            lastWin = _lastAdvertisedWindow;
-            pipeUnreadSnap = _pipeUnread;
-        }
+            var unread = Interlocked.Read(ref _pipeUnread);
+            actualConsumed = Math.Min(unread, count);
+            Interlocked.Add(ref _pipeUnread, -actualConsumed);
+            var pipeUnreadSnap = unread - actualConsumed;
+            var currentWin = AdvertisedWindow;
+            var lastWin = _lastAdvertisedWindow;
 
-        if (actualConsumed > 0) {
-            diagnostics.AddPipeBufferedBytes(-actualConsumed);
-        }
+            // Send a window update ACK if:
+            // 1. The window was closed (or near-closed) and has reopened to at least effectiveReopenFloor.
+            // 2. Or the window has opened up by at least _windowUpdateThreshold (~1/4 window) to prevent
+            //    stalls and keep the peer's window sliding smoothly.
+            // Under a tight global receive budget, the maximum possible window we can currently advertise
+            // might be constrained below _windowReopenFloor. If the connection's buffer is fully drained,
+            // we should send a reopen update for whatever space is actually available rather than stay closed.
+            var maxConnFree = (long)options.ReceiveWindowSize;
+            var globalFree = _globalReceiveBudget - diagnostics.TotalPipeBufferedBytes;
+            var maxPossible = Math.Max(0, Math.Min(maxConnFree, globalFree));
+            var effectiveReopenFloor = Math.Min(_windowReopenFloor, maxPossible);
 
-        // Send a window update ACK if:
-        // 1. The window was closed (or near-closed) and has reopened to at least effectiveReopenFloor.
-        // 2. Or the window has opened up by at least _windowUpdateThreshold (~1/4 window) to prevent
-        //    stalls and keep the peer's window sliding smoothly.
-        // Under a tight global receive budget, the maximum possible window we can currently advertise
-        // might be constrained below _windowReopenFloor. If the connection's buffer is fully drained,
-        // we should send a reopen update for whatever space is actually available rather than stay closed.
-        var maxConnFree = options.ReceiveWindowSize;
-        var globalFree = _globalReceiveBudget - diagnostics.TotalPipeBufferedBytes;
-        var maxPossible = maxConnFree < globalFree ? maxConnFree : globalFree;
-        if (maxPossible < 0) maxPossible = 0;
-        var effectiveReopenFloor = Math.Min(_windowReopenFloor, maxPossible);
-
-        // FIX: Reopen floor budget starvation.
-        // Under a tight global receive budget, the window might never reach the real floor (_windowReopenFloor).
-        // If we clear _windowClosed prematurely when the window is still small, we will starve since subsequent
-        // small changes do not trigger the 1/4 window threshold (windowOpenedSignificantly).
-        // Therefore, we keep _windowClosed = true if currentWin is still below _windowReopenFloor, which causes
-        // subsequent drains to continue sending window updates immediately. We only transition _windowClosed
-        // to false once currentWin is genuinely back above the real floor.
-        var isReopened = (currentWin >= effectiveReopenFloor || pipeUnreadSnap == 0) && currentWin > 0;
-        var windowOpenedSignificantly = currentWin - lastWin >= _windowUpdateThreshold;
-        if ((_windowClosed && isReopened) || windowOpenedSignificantly) {
-            // Only clear the closed flag if the window has reopened to the real floor
-            // (meaning it's genuinely open, not just a tiny slot under budget throttling).
-            if (currentWin >= _windowReopenFloor) {
-                _windowClosed = false;
+            // Reopen-floor budget starvation: keep _windowClosed = true while currentWin is still below the
+            // real floor (a tiny slot under budget throttling), so subsequent drains keep sending updates
+            // immediately; only clear it once the window is genuinely back above _windowReopenFloor.
+            // The decision AND the flag-clear both run under _seqLock so a concurrent WriteToAppPipe that
+            // just re-closed the window can never be overwritten by a stale snapshot.
+            var isReopened = (currentWin >= effectiveReopenFloor || pipeUnreadSnap == 0) && currentWin > 0;
+            var windowOpenedSignificantly = currentWin - lastWin >= _windowUpdateThreshold;
+            if ((_windowClosed && isReopened) || windowOpenedSignificantly) {
+                if (currentWin >= _windowReopenFloor)
+                    _windowClosed = false;
+                sendUpdate = true;
             }
-            try { _stack?.SendAckOnly(this); } catch { /* best-effort window update */ }
         }
+
+        if (actualConsumed > 0)
+            diagnostics.AddPipeBufferedBytes(-actualConsumed);
+
+        if (sendUpdate)
+            try { _stack?.SendAckOnly(this); } catch { /* best-effort window update */ }
     }
 
     /// <summary>
@@ -614,12 +690,14 @@ internal sealed class LocalTcpConnection(
     internal bool PollWindowReopen()
     {
         // Lock-free pre-check: only a flow we've throttled to (near-)zero is a candidate.
-        if (!_windowClosed || _disposed || _appToNetCompleted)
+        // (_appToNetCompleted is deliberately NOT checked: it describes the SEND direction, while this
+        // services the RECEIVE window — a half-closed flow can still be uploading to us.)
+        if (!_windowClosed || _disposed)
             return false;
 
         bool reopened;
         lock (_seqLock) {
-            if (!_windowClosed || _disposed || _appToNetCompleted)
+            if (!_windowClosed || _disposed)
                 return false;
             // Only re-advertise once the window is genuinely back above the real floor — not a tiny
             // slot still pinned by per-connection backlog or a tight global budget (matches the
@@ -648,18 +726,123 @@ internal sealed class LocalTcpConnection(
     /// <summary>True once this connection has been closed/disposed (skip it when picking an eviction victim).</summary>
     internal bool IsClosed => Volatile.Read(ref _closedFlag) || _disposed;
 
+    /// <summary>True once the app→net direction can no longer accept writes (FIN sent, closed, or
+    /// disposed). Surfaces connection liveness to <see cref="LocalTcpStream.CanWrite"/> so consumers'
+    /// health checks (e.g. ProxyChannel.CheckAlive) see a dead write path.</summary>
+    internal bool IsWriteClosed => _appToNetCompleted || IsClosed;
+
+    /// <summary>Lock-free hint for the stack's maintenance sweep (dirty read is fine; the next sweep
+    /// tick observes the settled value).</summary>
+    internal bool HasMaintenanceInterest => _maintenanceInterestHeld;
+
+    // _seqLock must be held. Registers/unregisters this connection with the stack's maintenance sweep
+    // (SYN-ACK retransmission, RTO, delayed-ACK flush). Interest is held exactly while there is
+    // something the sweep could act on, so a fully idle stack keeps its maintenance timer parked
+    // (no periodic wake-ups — battery matters on mobile).
+    private void UpdateMaintenanceInterestLocked()
+    {
+        var stack = _stack;
+        if (stack == null) return; // Start() registers the initial interest once wired
+
+        var desired = !_disposed && !_closedFlag &&
+                      (State == TcpConnectionState.SynReceived || _sndNxt != _sndUna || _unackedSegments > 0);
+        if (desired == _maintenanceInterestHeld) return;
+        _maintenanceInterestHeld = desired;
+        if (desired) stack.AddMaintenanceInterest();
+        else stack.RemoveMaintenanceInterest();
+    }
+
+    // _seqLock must be held.
+    private void RestartRtoLocked()
+    {
+        _rtoStartTicks = Stopwatch.GetTimestamp();
+        _rtoCurrentMs = _rtoInitialMs;
+    }
+
+    /// <summary>
+    /// Called by the stack's maintenance sweep (only while this connection holds maintenance interest).
+    /// Provides the timer-driven behaviors a minimal TCP needs beyond fast retransmit:
+    /// (a) SYN-ACK retransmission while the handshake is incomplete — a lost final ACK otherwise
+    ///     strands server-speaks-first connections in SynReceived until the idle timeout;
+    /// (b) a coarse RTO for unacked data / FIN — the ONLY recovery for tail loss, where no later
+    ///     segment ever arrives to generate the 3 duplicate ACKs fast retransmit needs;
+    /// (c) flushing a thinned (delayed) ACK so an odd trailing full-size segment is acknowledged
+    ///     within DelayedAckTimeout instead of waiting for the peer's RTO (RFC 1122's 500 ms bound).
+    /// </summary>
+    internal void PollMaintenance()
+    {
+        if (_disposed || IsClosed) return;
+        var stack = _stack;
+        if (stack == null) return;
+
+        var resendSynAck = false;
+        var retxData = false;
+        var flushDelayedAck = false;
+        IpPacket? finRetx = null;
+
+        lock (_seqLock) {
+            if (_disposed || _closedFlag) return;
+
+            // (c) delayed-ACK flush
+            if (_unackedSegments > 0 &&
+                Stopwatch.GetElapsedTime(_delayedAckSinceTicks).TotalMilliseconds >= _delayedAckMs) {
+                _unackedSegments = 0;
+                flushDelayedAck = true;
+            }
+
+            // (a)/(b) retransmission on ACK silence
+            var rtoElapsedMs = Stopwatch.GetElapsedTime(_rtoStartTicks).TotalMilliseconds;
+            if (rtoElapsedMs >= _rtoCurrentMs) {
+                if (State == TcpConnectionState.SynReceived) {
+                    resendSynAck = true;
+                    BackoffRtoLocked();
+                }
+                else if (_sndNxt != _sndUna) {
+                    if (_retxBufferLen > 0)
+                        retxData = true;
+                    else if (_finSent)
+                        // All data is acked; the single outstanding sequence number is the FIN.
+                        finRetx = BuildFinPacket(_sndNxt - 1, _rcvNxt, UpdateAdvertisedWindowLocked());
+                    BackoffRtoLocked();
+                }
+            }
+
+            UpdateMaintenanceInterestLocked();
+        }
+
+        if (flushDelayedAck)
+            try { stack.SendAckOnly(this); } catch { /* next sweep retries */ }
+        if (resendSynAck)
+            try { stack.SendSynAck(this); } catch { /* next sweep retries */ }
+        if (retxData) {
+            var n = Interlocked.Increment(ref _retxCount);
+            diagnostics.TraceFastRetransmit(ipEndPointPair, n, _lastDupAck, _retxBufferLen);
+            try { FastRetransmit(); } catch { /* next sweep retries */ }
+        }
+        if (finRetx != null)
+            try { stack.SendPacket(finRetx); } catch { /* SendPacket disposes the packet on failure */ }
+    }
+
+    // _seqLock must be held.
+    private void BackoffRtoLocked()
+    {
+        _rtoStartTicks = Stopwatch.GetTimestamp();
+        _rtoCurrentMs = Math.Min(_rtoCurrentMs * 2, _rtoMaxMs);
+    }
+
     private async Task MonitorIdleAsync()
     {
         try {
             using var timer = new PeriodicTimer(_idleCheckInterval);
-            while (await timer.WaitForNextTickAsync(_cts.Token)) {
+            while (await timer.WaitForNextTickAsync(_cts.Token).Vhc()) {
                 if (_disposed || State == TcpConnectionState.Closed)
                     break;
 
                 var last = Interlocked.Read(ref _lastActivityTicks);
                 var elapsed = Stopwatch.GetElapsedTime(last);
                 if (elapsed >= _idleTimeout) {
-                    Close();
+                    // Abortive: tell the peer with a RST so it doesn't linger on a black-holed flow.
+                    Abort();
                     break;
                 }
             }
@@ -671,37 +854,50 @@ internal sealed class LocalTcpConnection(
 
     public void StartFin(LocalTcpStack stack)
     {
-        IpPacket? finPacket;
+        uint finSeq;
+        uint finAck;
+        ushort finWindow;
         bool closeAfter;
 
         lock (_seqLock) {
             if (_finSent) return;
             _finSent = true;
-
             _appToNetCompleted = true;
 
-            finPacket = PacketBuilder.BuildTcp(
-                IpEndPointPair.Destination, IpEndPointPair.Source,
-                options: ReadOnlySpan<byte>.Empty,
-                payload: ReadOnlySpan<byte>.Empty);
-
-            var tcp = finPacket.ExtractTcp();
-            tcp.SequenceNumber = _sndNxt;
-            tcp.AcknowledgmentNumber = _rcvNxt;
-            tcp.Finish = true;
-            tcp.Acknowledgment = true;
-            tcp.WindowSize = UpdateAdvertisedWindow(); // dynamic (flow-controlled) window
-
+            finSeq = _sndNxt;
+            finAck = _rcvNxt;
+            if (_sndUna == _sndNxt)
+                RestartRtoLocked(); // the FIN opens a new in-flight window; arm its retransmission
             _sndNxt += 1; // FIN consumes one sequence number
+            finWindow = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
 
             closeAfter = _finReceived;
             State = closeAfter ? TcpConnectionState.Closed : TcpConnectionState.FinWait1;
+            UpdateMaintenanceInterestLocked();
         }
 
+        // Built outside _seqLock: PacketBuilder rents pooled memory and needs no sequence state.
+        var finPacket = BuildFinPacket(finSeq, finAck, finWindow);
         stack.SendPacket(finPacket);
 
         if (closeAfter)
             Close();
+    }
+
+    private IpPacket BuildFinPacket(uint seq, uint ackNum, ushort window)
+    {
+        var packet = PacketBuilder.BuildTcp(
+            IpEndPointPair.Destination, IpEndPointPair.Source,
+            options: ReadOnlySpan<byte>.Empty,
+            payload: ReadOnlySpan<byte>.Empty);
+
+        var tcp = packet.ExtractTcp();
+        tcp.SequenceNumber = seq;
+        tcp.AcknowledgmentNumber = ackNum;
+        tcp.Finish = true;
+        tcp.Acknowledgment = true;
+        tcp.WindowSize = window;
+        return packet;
     }
 
     public void TryStartFin(LocalTcpStack stack)
@@ -733,43 +929,56 @@ internal sealed class LocalTcpConnection(
 
     /// <summary>
     /// Sends a Zero Window Probe to elicit a window-update ACK from a peer that advertised a zero
-    /// (or too-small) window.
-    /// INVARIANT (forward progress — do NOT remove): a ZWP must ALWAYS carry a NEW byte at _sndNxt,
-    /// advance _sndNxt, and return consumed = 1 — even when the retx ring is full. It must never merely
-    /// retransmit the oldest unacked byte at _sndUna. A duplicate (already-sent) byte does not advance the
-    /// sequence number, so the peer's stack treats it as a stale retransmit and never emits a window-update
-    /// ACK; the sender then deadlocks. Over a kernel TCP transport this stall is masked by large OS socket
-    /// buffers, but over QUIC's tight per-stream window it collapses throughput to a trickle (the
-    /// QUIC+TcpProxy download regression — see ZeroWindowProbe_ShouldMakeForwardProgress and the
-    /// quic-proxy-download-regression record). Regression-tested; breaking this re-opens the deadlock.
-    /// To keep the retx-ring invariants, we only append the probe byte to the retx buffer if there is room.
+    /// (or too-small) window, or when the retx ring is full and ACKs have gone silent.
+    /// INVARIANT (forward progress — do NOT remove): while the retx ring HAS ROOM, a probe carries a
+    /// NEW byte at _sndNxt, advances _sndNxt, stores the byte in the ring, and returns consumed = 1.
+    /// A probe that does not advance the sequence number never elicits a window-update ACK over QUIC's
+    /// tight per-stream window (the QUIC+TcpProxy download regression — see
+    /// ZeroWindowProbe_ShouldMakeForwardProgress and the quic-proxy-download-regression record).
+    /// INVARIANT (ring/sequence integrity — do NOT remove): a byte may only be consumed if it is stored
+    /// in the retx ring. When the ring is FULL the probe instead retransmits the oldest unacked byte at
+    /// _sndUna (a classic RFC 9293 persist probe) and returns consumed = 0. The old code sent an
+    /// UNSTORED new byte here; if that packet was then dropped the byte existed nowhere, desynchronizing
+    /// the ring from the sequence space — silent stream corruption or a permanent stall (2026-07 review).
     /// </summary>
     private int SendZeroWindowProbe(LocalTcpStack stack, byte probeByte)
     {
         if (_disposed || _appToNetCompleted) return 0;
 
-        IpPacket? probe = null;
-        try {
-            byte byteToSend;
-            uint probeSeq;
-            uint probeAck;
-            int consumed;
-            lock (_seqLock) {
-                if (_disposed || _appToNetCompleted) return 0;
-                // Always send the new byte to progress the stream and force the peer's TCP stack to ACK.
+        byte byteToSend;
+        uint probeSeq;
+        uint probeAck;
+        ushort probeWindow;
+        int consumed;
+        lock (_seqLock) {
+            if (_disposed || _appToNetCompleted || _finSent) return 0;
+
+            if (_retxBufferLen < _retxCapacity) {
+                // Room in the ring: consume (and store) a fresh byte so the stream makes forward progress.
                 byteToSend = probeByte;
                 probeSeq = _sndNxt;
+                if (_sndUna == _sndNxt)
+                    RestartRtoLocked();
                 _sndNxt += 1;
+                ReadOnlySpan<byte> one = [probeByte];
+                AppendToRetxBufferLocked(one);
                 consumed = 1;
-
-                // Append the byte to the retx ring to keep it retransmittable only if there is room.
-                if (_retxBufferLen < _retxCapacity) {
-                    ReadOnlySpan<byte> one = [probeByte];
-                    AppendToRetxBufferLocked(one);
-                }
-                probeAck = _rcvNxt;
+            }
+            else {
+                // Ring full: never consume a byte we cannot back. Re-send the oldest unacked byte
+                // instead — still a valid stimulus (the peer answers with an ACK carrying its window).
+                byteToSend = _retxBuffer![_retxRingStart];
+                probeSeq = _sndUna;
+                consumed = 0;
             }
 
+            probeAck = _rcvNxt;
+            probeWindow = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
+            UpdateMaintenanceInterestLocked();
+        }
+
+        IpPacket? probe = null;
+        try {
             ReadOnlySpan<byte> probeData = [byteToSend];
             probe = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
                 options: ReadOnlySpan<byte>.Empty, payload: probeData);
@@ -777,15 +986,20 @@ internal sealed class LocalTcpConnection(
             tcp.SequenceNumber = probeSeq;
             tcp.AcknowledgmentNumber = probeAck;
             tcp.Acknowledgment = true;
-            tcp.WindowSize = UpdateAdvertisedWindow(); // dynamic (flow-controlled) window
+            tcp.WindowSize = probeWindow;
 
-            stack.SendPacket(probe);
-            return consumed;
+            var toSend = probe;
+            probe = null; // SendPacket owns it from here (it disposes on its own failure)
+            stack.SendPacket(toSend);
         }
         catch {
+            // Sequence state is already advanced and the consumed byte (if any) is stored in the retx
+            // ring, so a failed send equals a dropped packet: the RTO sweep retransmits it. Returning
+            // `consumed` (not 0) keeps the caller's offset in sync with _sndNxt — returning 0 after
+            // advancing _sndNxt used to duplicate the byte in the stream.
             probe?.Dispose();
-            return 0;
         }
+        return consumed;
     }
 
     private void DrainWindowSignal()
@@ -797,10 +1011,14 @@ internal sealed class LocalTcpConnection(
     private void AppendToRetxBufferLocked(ReadOnlySpan<byte> segment)
     {
         if (segment.Length == 0) return;
-        // FIX: Lazy allocation of the ring buffer to avoid memory footprint spikes under high connection counts.
-        // We only allocate the buffer when data is actually sent.
+        // Ring/sequence INVARIANT: ring offset k always holds the byte at sequence _sndUna + k (the
+        // ACK-trim and FastRetransmit both rely on it). Every caller must room-check first; overflowing
+        // would wrap over unacked bytes and silently corrupt the retransmitted stream.
+        Debug.Assert(segment.Length <= _retxCapacity - _retxBufferLen,
+            "retx ring overflow: caller must enforce capacity before appending");
+        // Lazy allocation of the ring buffer to avoid memory footprint spikes under high connection
+        // counts: we only allocate the buffer when data is actually sent.
         _retxBuffer ??= new byte[_retxCapacity];
-        // Caller has already enforced (segment.Length <= _retxCapacity - _retxBufferLen) via allowable cap.
         var writeIdx = (_retxRingStart + _retxBufferLen) % _retxCapacity;
         var firstChunk = Math.Min(segment.Length, _retxCapacity - writeIdx);
         segment[..firstChunk].CopyTo(_retxBuffer.AsSpan(writeIdx));
@@ -818,6 +1036,7 @@ internal sealed class LocalTcpConnection(
         byte[] payloadCopy;
         uint seqForSegment;
         uint ackForSegment;
+        ushort windowForSegment;
         lock (_seqLock) {
             if (_retxBufferLen == 0) return;
             var segLen = Math.Min(_retxBufferLen, Mss);
@@ -828,6 +1047,7 @@ internal sealed class LocalTcpConnection(
                 Array.Copy(_retxBuffer!, 0, payloadCopy, firstChunk, segLen - firstChunk);
             seqForSegment = _sndUna;
             ackForSegment = _rcvNxt;
+            windowForSegment = UpdateAdvertisedWindowLocked(); // dynamic (flow-controlled) window
         }
 
         var packet = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
@@ -836,32 +1056,54 @@ internal sealed class LocalTcpConnection(
         tcp.SequenceNumber = seqForSegment;
         tcp.AcknowledgmentNumber = ackForSegment;
         tcp.Acknowledgment = true;
-        tcp.WindowSize = UpdateAdvertisedWindow(); // dynamic (flow-controlled) window
+        tcp.WindowSize = windowForSegment;
         tcp.Push = true;
 
         stack.SendPacket(packet);
     }
 
-    internal void Close()
+    /// <summary>Graceful close: used when the peer already knows the connection is over (its RST, or a
+    /// completed FIN exchange). Sends nothing.</summary>
+    internal void Close() => Close(sendRst: false);
+
+    /// <summary>Abortive close (idle timeout, admission eviction, broken pipe, accept-queue overflow):
+    /// tears the connection down AND tells the peer with a RST, so it does not linger retransmitting
+    /// into a black hole until its own timers give up.</summary>
+    internal void Abort() => Close(sendRst: true);
+
+    private void Close(bool sendRst)
     {
         if (Interlocked.Exchange(ref _closedFlag, true))
             return;
 
         LocalTcpClient? abandoned;
+        var decrementEstablished = false;
+        uint rstSeq;
+        uint rstAck;
         lock (_seqLock) {
             State = TcpConnectionState.Closed;
             _finSent = true;
             abandoned = _pendingClient;
             _pendingClient = null;
+            // Under _seqLock: Dispose() reads/clears this flag under the same lock, so a concurrent
+            // Close+Dispose can no longer both observe true and double-decrement the diagnostic.
+            if (_establishedCounted) {
+                _establishedCounted = false;
+                decrementEstablished = true;
+            }
+            rstSeq = _sndNxt;
+            rstAck = _rcvNxt;
+            UpdateMaintenanceInterestLocked();
         }
+
+        if (sendRst)
+            TrySendRst(rstSeq, rstAck);
 
         // Dispose unaccepted client if handshake never completed.
         abandoned?.Dispose();
 
-        if (_establishedCounted) {
-            _establishedCounted = false;
+        if (decrementEstablished)
             diagnostics.DecrementEstablishedConnections(ipEndPointPair, "close"); // DIAGNOSTIC (counts + logs)
-        }
 
         CompleteNetToApp();
         _appToNetCompleted = true;
@@ -869,5 +1111,22 @@ internal sealed class LocalTcpConnection(
 
         try { OnClosed?.Invoke(this); } catch { /* ignore subscriber errors */ }
         Dispose();
+    }
+
+    private void TrySendRst(uint seq, uint ackNum)
+    {
+        var stack = _stack;
+        if (stack == null) return;
+        try {
+            var packet = PacketBuilder.BuildTcp(IpEndPointPair.Destination, IpEndPointPair.Source,
+                options: ReadOnlySpan<byte>.Empty, payload: ReadOnlySpan<byte>.Empty);
+            var tcp = packet.ExtractTcp();
+            tcp.SequenceNumber = seq;
+            tcp.AcknowledgmentNumber = ackNum;
+            tcp.Reset = true;
+            tcp.Acknowledgment = true;
+            stack.SendPacket(packet);
+        }
+        catch { /* best-effort notification */ }
     }
 }

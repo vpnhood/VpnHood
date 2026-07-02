@@ -23,24 +23,35 @@ public sealed class LocalTcpStream : AsyncStream
     private bool IsDisposed => Volatile.Read(ref _disposed);
 
     /// <inheritdoc />
+    /// <remarks>Stays true while the stream itself is alive: buffered data (up to and including the
+    /// EOF after the peer's FIN) remains readable even after the connection closes.</remarks>
     public override bool CanRead => !IsDisposed;
 
     /// <inheritdoc />
-    public override bool CanWrite => !IsDisposed;
+    /// <remarks>Reflects CONNECTION liveness, not just stream disposal, so consumer health checks
+    /// (e.g. ProxyChannel.CheckAlive via <c>Stream is { CanRead: true, CanWrite: true }</c>) observe a
+    /// dead write path after a FIN/RST/idle-abort instead of pumping into a black hole.</remarks>
+    public override bool CanWrite => !IsDisposed && !_connection.IsWriteClosed;
 
     /// <inheritdoc />
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-        // Cancel the read when either the caller cancels or the stream is disposed (_cts).
-        // Dispose the linked CTS so it does not stay rooted on the parent tokens' registration lists.
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
-
+        // Link only when the caller's token is cancelable — saves a CTS allocation per read on the
+        // proxy copy loop's hot path. Dispose the linked CTS so it does not stay rooted on the parent
+        // tokens' registration lists.
+        CancellationTokenSource? linkedCts = null;
         try
         {
+            var token = _cts.Token;
+            if (cancellationToken.CanBeCanceled) {
+                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
+                token = linkedCts.Token;
+            }
+
             var reader = _connection.NetToAppReader;
-            var readResult = await reader.ReadAsync(linkedCts.Token);
+            var readResult = await reader.ReadAsync(token);
 
             if (readResult.IsCanceled || readResult is { IsCompleted: true, Buffer.IsEmpty: true })
                 return 0;
@@ -48,13 +59,25 @@ public sealed class LocalTcpStream : AsyncStream
             var bytesToCopy = (int)Math.Min(buffer.Length, readResult.Buffer.Length);
             readResult.Buffer.Slice(0, bytesToCopy).CopyTo(buffer.Span);
             reader.AdvanceTo(readResult.Buffer.GetPosition(bytesToCopy));
-            _connection.OnAppConsumed(bytesToCopy); // DIAGNOSTIC: pipe drained
+            // FLOW CONTROL (not a diagnostic): draining is what reopens the advertised receive window
+            // and triggers the window-update ACK that un-throttles the peer.
+            _connection.OnAppConsumed(bytesToCopy);
 
             return bytesToCopy;
         }
         catch (OperationCanceledException) when (_cts.IsCancellationRequested)
         {
             return 0;
+        }
+        catch (ObjectDisposedException) when (IsDisposed)
+        {
+            // Dispose raced this read (its _cts was disposed under us): same outcome as a
+            // post-dispose read — EOF.
+            return 0;
+        }
+        finally
+        {
+            linkedCts?.Dispose();
         }
     }
 
@@ -64,14 +87,24 @@ public sealed class LocalTcpStream : AsyncStream
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
         // Cancel the write when either the caller cancels or the stream is disposed (see ReadAsync).
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
+        CancellationTokenSource? linkedCts = null;
         try
         {
-            await _connection.SendAppDataAsync(buffer, linkedCts.Token);
+            var token = _cts.Token;
+            if (cancellationToken.CanBeCanceled) {
+                linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, cancellationToken);
+                token = linkedCts.Token;
+            }
+
+            await _connection.SendAppDataAsync(buffer, token);
         }
         catch (OperationCanceledException) when (_cts.IsCancellationRequested)
         {
             // Stream disposed
+        }
+        finally
+        {
+            linkedCts?.Dispose();
         }
     }
 

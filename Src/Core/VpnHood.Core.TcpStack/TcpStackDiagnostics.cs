@@ -31,7 +31,10 @@ public sealed class TcpStackDiagnostics
     /// <summary>Gets the number of tracked connections that have successfully established a handshake.</summary>
     public int EstablishedConnections => Volatile.Read(ref _establishedConnections);
 
-    /// <summary>Gets the aggregate number of bytes buffered across all connection reassembly pipes.</summary>
+    /// <summary>Gets the aggregate number of bytes buffered across all connection reassembly pipes.
+    /// NOTE: this is a FLOW-CONTROL input, not just a metric — every connection's AdvertisedWindow
+    /// subtracts it from <c>GlobalReceiveBudget</c> to compute the shared headroom. Removing or
+    /// breaking its accounting silently disables the global receive budget (iOS memory cap).</summary>
     public long TotalPipeBufferedBytes => Volatile.Read(ref _totalPipeBufferedBytes);
 
     /// <summary>Gets the window size of receive configured for this stack profile.</summary>

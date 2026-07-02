@@ -36,12 +36,13 @@ public sealed class LocalTcpListener : ITcpListener
     {
         _stack = stack;
         LocalEndPoint = localEndPoint;
+        // SingleReader is intentionally NOT set: Stop() drains the queue with TryRead concurrently with
+        // the consumer's accept loop, which would violate the single-reader contract's lock-free path.
         _acceptQueue = acceptQueueCapacity > 0
             ? Channel.CreateBounded<LocalTcpClient>(new BoundedChannelOptions(acceptQueueCapacity) {
-                SingleReader = true,
                 FullMode = BoundedChannelFullMode.Wait // TryWrite returns false when full -> caller disposes
             })
-            : Channel.CreateUnbounded<LocalTcpClient>(new UnboundedChannelOptions { SingleReader = true });
+            : Channel.CreateUnbounded<LocalTcpClient>();
     }
 
     /// <summary>

@@ -36,7 +36,13 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         using var logScope = VhLogger.Instance.BeginScope("ClientTcpHost");
         VhLogger.Instance.LogInformation("Starting ClientTcpHost (TcpStack)...");
         _tcpStack = new LocalTcpStack {
-            OnPacketSend = packet => PacketReceived?.Invoke(this, packet)
+            OnPacketSend = packet => {
+                // OnPacketSend transfers packet ownership: when no subscriber is attached
+                // (startup/dispose race), the pooled packet must be disposed here or it leaks.
+                var handler = PacketReceived;
+                if (handler != null) handler.Invoke(this, packet);
+                else packet.Dispose();
+            }
         };
         _listener = _tcpStack.ListenAny();
         Task.Run(() => AcceptLoop(_listener, _cancellationTokenSource.Token));

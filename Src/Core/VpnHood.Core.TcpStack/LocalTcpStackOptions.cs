@@ -13,6 +13,9 @@ namespace VpnHood.Core.TcpStack;
 /// a default-constructed instance is byte-for-byte identical to the pre-options behavior.
 /// IMPORTANT: keep the defaults equal to the historical constants — Android throughput was
 /// tuned against them and must not regress.
+/// (Exception: the loss-recovery options — <see cref="RetransmitTimeout"/>,
+/// <see cref="RetransmitMaxTimeout"/>, <see cref="DelayedAckTimeout"/> — are additive; the
+/// historical code had no retransmission timer at all, so tail loss stalled until the idle timeout.)
 /// </remarks>
 public sealed class LocalTcpStackOptions
 {
@@ -97,6 +100,29 @@ public sealed class LocalTcpStackOptions
     /// </summary>
     public TimeSpan ZeroWindowProbeInterval { get; init; } = TimeSpan.FromMilliseconds(200);
 
+    // ---- Loss recovery ----
+
+    /// <summary>
+    /// Initial retransmission timeout (RTO). If cumulative ACKs make no progress for this long while
+    /// something is outstanding (an unacknowledged SYN-ACK, data, or FIN), the stack's maintenance
+    /// sweep retransmits the oldest outstanding segment and doubles the timeout up to
+    /// <see cref="RetransmitMaxTimeout"/>. This is the ONLY recovery for tail loss: fast retransmit
+    /// needs later segments to arrive to generate duplicate ACKs, and the last segment of a burst has
+    /// none. Loopback/TUN RTT is microseconds, but the peer may legally delay its ACK up to ~200 ms
+    /// (delayed ACK), so this must stay comfortably above that. Default: 500 ms.
+    /// </summary>
+    public TimeSpan RetransmitTimeout { get; init; } = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>Upper bound for the exponentially backed-off RTO. Default: 4 seconds.</summary>
+    public TimeSpan RetransmitMaxTimeout { get; init; } = TimeSpan.FromSeconds(4);
+
+    /// <summary>
+    /// Maximum time a thinned (delayed) ACK may stay pending before the maintenance sweep flushes it.
+    /// Keeps an odd trailing full-size non-PSH segment acknowledged well within RFC 1122's 500 ms
+    /// delayed-ACK bound instead of stalling until the peer retransmits. Default: 200 ms.
+    /// </summary>
+    public TimeSpan DelayedAckTimeout { get; init; } = TimeSpan.FromMilliseconds(200);
+
     // ---- Aggregate bounds ----
 
     /// <summary>
@@ -139,8 +165,9 @@ public sealed class LocalTcpStackOptions
     /// <summary>
     /// Small footprint tuned for an iOS Network Extension's tight memory budget. The numbers are
     /// sensible starting points — tune against real traffic.
-    /// <para>Footprint math: ~(16 KB receive + 16 KB retx) = ~32 KB per connection × 256 max
-    /// ≈ 8 MB worst case for TCP buffers.</para>
+    /// <para>Footprint math: receive side is capped by the 6 MB global budget (not per-connection:
+    /// 64 KB window × 50 connections only matters while the budget has headroom); send side is
+    /// 16 KB retx × 50 connections = 0.8 MB. Worst case ≈ 7 MB for TCP buffers.</para>
     /// </summary>
     public static LocalTcpStackOptions Ios => new() {
         // Large PER-CONNECTION window (the 16-bit max, no scaling) so a few active flows get full
@@ -186,9 +213,14 @@ public sealed class LocalTcpStackOptions
     /// <summary>
     /// Builds the (immutable) <see cref="PipeOptions"/> for the network→app reassembly pipe.
     /// One instance is created per stack and shared by all of its connections.
+    /// The pause threshold sits one <see cref="MaxMss"/> ABOVE <see cref="ReceiveWindowSize"/>: the
+    /// stack hard-enforces the advertised window before writing (see TryHandleIncoming), so the
+    /// writer never legitimately reaches the pause threshold and its fire-and-forget FlushAsync
+    /// always completes synchronously (a discarded completed ValueTask is safe; a discarded PENDING
+    /// pipe ValueTask would violate the PipeWriter single-operation contract).
     /// </summary>
     internal PipeOptions CreatePipeOptions() => new(
-        pauseWriterThreshold: ReceiveWindowSize,
+        pauseWriterThreshold: ReceiveWindowSize + MaxMss,
         resumeWriterThreshold: ResolvedPipeResumeThreshold,
         useSynchronizationContext: false);
 
@@ -219,6 +251,15 @@ public sealed class LocalTcpStackOptions
 
         if (IdleCheckInterval <= TimeSpan.Zero || ZeroWindowProbeInterval <= TimeSpan.Zero)
             throw new ArgumentException("IdleCheckInterval and ZeroWindowProbeInterval must be positive.");
+
+        if (RetransmitTimeout <= TimeSpan.Zero || RetransmitMaxTimeout < RetransmitTimeout)
+            throw new ArgumentException(
+                $"{nameof(RetransmitTimeout)} must be positive and {nameof(RetransmitMaxTimeout)} must be ≥ {nameof(RetransmitTimeout)}; " +
+                $"was {RetransmitTimeout}/{RetransmitMaxTimeout}.");
+
+        if (DelayedAckTimeout <= TimeSpan.Zero || DelayedAckTimeout > TimeSpan.FromMilliseconds(500))
+            throw new ArgumentException(
+                $"{nameof(DelayedAckTimeout)} must be within (0, 500] ms (RFC 1122 delayed-ACK bound); was {DelayedAckTimeout}.");
 
         if (IdleTimeout <= IdleCheckInterval)
             throw new ArgumentException(

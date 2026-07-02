@@ -8,7 +8,8 @@ public interface ITcpListener : IDisposable
 {
     /// <summary>
     /// Asynchronously yields each accepted <see cref="ITcpClient"/> as it arrives.
-    /// Completes when the listener is disposed or <paramref name="cancellationToken"/> is cancelled.
+    /// Completes when the listener is stopped/disposed; throws
+    /// <see cref="OperationCanceledException"/> when <paramref name="cancellationToken"/> is cancelled.
     /// </summary>
     IAsyncEnumerable<ITcpClient> AcceptAllAsync(CancellationToken cancellationToken = default);
 

@@ -195,11 +195,13 @@ public sealed class LocalTcpStackTest
     [Timeout(5000)]
     public async Task FullSizeDataPacketsWithoutPsh_ShouldAckEverySecondSegment()
     {
-        // Arrange
+        // Arrange. DelayedAckTimeout is raised so the maintenance sweep's delayed-ACK flush cannot
+        // fire between the two segments — this test asserts pure thinning behavior.
         var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
             DefaultMss = 512,
             MaxMss = 512,
-            RetxBufferSize = 1024
+            RetxBufferSize = 1024,
+            DelayedAckTimeout = TimeSpan.FromMilliseconds(500)
         });
         var sentPackets = new List<IpPacket>();
         object lockObj = new();

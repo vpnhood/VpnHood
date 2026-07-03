@@ -1,10 +1,8 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Android.Net;
 using Android.OS;
-using Android.Systems;
-using Java.IO;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
@@ -12,17 +10,27 @@ using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using IOException = System.IO.IOException;
+using VpnHood.Core.VpnAdapters.AndroidTun.AndroidNative;
+using OsConstants = Android.Systems.OsConstants;
 
 namespace VpnHood.Core.VpnAdapters.AndroidTun;
 
 public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings vpnAdapterSettings)
     : TunVpnAdapter(vpnAdapterSettings)
 {
+    // Poll with a finite timeout so a thread parked in WaitForTun when AdapterClose runs wakes up
+    // and re-checks its state, instead of sleeping on a closed fd until stray traffic arrives.
+    private const int PollTimeoutMs = 1000;
+
     private ParcelFileDescriptor? _parcelFileDescriptor;
     private VpnService.Builder? _builder;
-    private FileInputStream? _inStream;
-    private FileOutputStream? _outStream;
+    private int _tunFd = -1; // -1 means closed; snapshot it under _readLock/_writeLock before syscalls
+
+    // Pair each I/O syscall with these locks against AdapterClose: once a tun fd is closed, the OS
+    // may reuse its number, so a syscall racing the close could hit an unrelated fd. Read and write
+    // are each single-threaded, so both locks are uncontended except at close time.
+    private readonly Lock _readLock = new();
+    private readonly Lock _writeLock = new();
     private StructPollfd[]? _pollFdReads;
     private StructPollfd[]? _pollFdWrites;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
@@ -54,26 +62,38 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         VhLogger.Instance.LogDebug("Establishing Android tun adapter...");
         ArgumentNullException.ThrowIfNull(_builder);
         _parcelFileDescriptor = _builder.Establish() ?? throw new Exception("Could not establish VpnService.");
+
+        // Packet I/O goes through libc on the raw fd (see AndroidAPI); ParcelFileDescriptor keeps
+        // owning the fd and AdapterClose invalidates _tunFd before closing it.
+        _tunFd = _parcelFileDescriptor.Fd;
+        SetNonBlocking(_tunFd);
         _pollFdReads = [
             new StructPollfd {
-                Fd = _parcelFileDescriptor.FileDescriptor, Events = (short)OsConstants.Pollin
+                Fd = _tunFd, Events = (short)OsConstants.Pollin
             }
         ];
         _pollFdWrites = [
             new StructPollfd {
-                Fd = _parcelFileDescriptor.FileDescriptor, Events = (short)OsConstants.Pollout
+                Fd = _tunFd, Events = (short)OsConstants.Pollout
             }
         ];
-
-        //Packets to be sent are queued in this input stream.
-        _inStream = new FileInputStream(_parcelFileDescriptor.FileDescriptor);
-
-        //Packets received need to be written to this output stream.
-        _outStream = new FileOutputStream(_parcelFileDescriptor.FileDescriptor);
 
         VhLogger.Instance.LogDebug("Android tun adapter has been established.");
         _ = cancellationToken;
         return Task.CompletedTask;
+    }
+
+    private static void SetNonBlocking(int fd)
+    {
+        var flags = AndroidAPI.fcntl(fd, AndroidAPI.FGetfl, 0);
+        if (flags < 0)
+            throw new PInvokeException("Failed to read TUN fd flags.", Marshal.GetLastWin32Error());
+
+        if ((flags & AndroidAPI.ONonblock) != 0)
+            return;
+
+        if (AndroidAPI.fcntl(fd, AndroidAPI.FSetfl, flags | AndroidAPI.ONonblock) < 0)
+            throw new PInvokeException("Failed to set TUN fd to non-blocking mode.", Marshal.GetLastWin32Error());
     }
 
     protected override void AdapterClose()
@@ -81,33 +101,25 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
         if (_parcelFileDescriptor == null)
             return;
 
-        // close in streams
-        try {
-            VhLogger.Instance.LogDebug("Closing tun in stream...");
-            _inStream?.Dispose();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error while closing the VpnService streams.");
-        }
-
-        // close out streams
-        try {
-            VhLogger.Instance.LogDebug("Closing tun out stream...");
-            _outStream?.Dispose();
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Error while closing the VpnService streams.");
+        // invalidate the fd under both I/O locks: no syscall is in flight when the fd closes, and
+        // later syscalls see -1. Poll needs no lock; it only observes and self-heals via its timeout.
+        lock (_readLock)
+        lock (_writeLock) {
+            _tunFd = -1;
+            _pollFdReads = null;
+            _pollFdWrites = null;
         }
 
-        // close the vpn
         try {
             VhLogger.Instance.LogDebug("Closing tun ParcelFileDescriptor...");
-            _parcelFileDescriptor?.Close(); //required to close the vpn. dispose is not enough
-            _parcelFileDescriptor?.Dispose();
-            _parcelFileDescriptor = null;
+            _parcelFileDescriptor.Close(); //required to close the vpn. dispose is not enough
+            _parcelFileDescriptor.Dispose();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Error while closing the VpnService.");
+        }
+        finally {
+            _parcelFileDescriptor = null;
         }
     }
 
@@ -209,20 +221,23 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     protected override void WaitForTunRead()
     {
-        if (_pollFdReads != null)
-            WaitForTun(_pollFdReads);
+        var pollFds = _pollFdReads;
+        if (pollFds != null)
+            WaitForTun(pollFds);
     }
 
     protected override void WaitForTunWrite()
     {
-        if (_pollFdWrites != null)
-            WaitForTun(_pollFdWrites);
+        var pollFds = _pollFdWrites;
+        if (pollFds != null)
+            WaitForTun(pollFds);
     }
 
     private static void WaitForTun(StructPollfd[] pollFds)
     {
         while (true) {
-            var result = Os.Poll(pollFds, -1);
+            // a result of 0 (timeout) is fine; the caller re-checks its state and retries
+            var result = AndroidAPI.poll(pollFds, pollFds.Length, PollTimeoutMs);
             if (result >= 0)
                 break; // Success, exit loop
 
@@ -236,80 +251,70 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
     protected override bool WritePacket(IpPacket ipPacket)
     {
-        if (_outStream == null)
-            throw new InvalidOperationException("Adapter is not open.");
-
         var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
-        try {
-            _outStream.Write(buffer, offset, length);
-            return true;
-        }
-        catch (Exception ex) when (IsRetryableTunWriteError(ex)) {
-            return false;
-        }
-    }
 
-    private static bool IsRetryableTunWriteError(Exception ex)
-    {
-        if (ex is not Java.IO.IOException &&
-            ex is not IOException &&
-            ex is not InterruptedIOException)
-            return false;
+        lock (_writeLock) {
+            var tunFd = _tunFd;
+            if (tunFd < 0)
+                throw new InvalidOperationException("Adapter is not open.");
 
-        for (var e = ex; e != null; e = e.InnerException) {
-            
-            if (e is ErrnoException errnoException) {
-                return 
-                    errnoException.Errno == OsConstants.Eagain || 
-                    errnoException.Errno == OsConstants.Eintr;
+            // TUN is packet-oriented: write() accepts the whole packet or fails, so no partial-write loop
+            while (true) {
+                var bytesWritten = AndroidAPI.write(tunFd, ref buffer[offset], length);
+                if (bytesWritten == length)
+                    return true;
+
+                if (bytesWritten >= 0)
+                    throw new IOException($"Partial write to TUN device. Expected: {length}, Written: {bytesWritten}");
+
+                var errorCode = Marshal.GetLastWin32Error();
+                if (errorCode == OsConstants.Eintr)
+                    continue; // interrupted before anything was written, retry immediately
+
+                if (errorCode == OsConstants.Eagain)
+                    return false; // buffer full; the caller backs off via WaitForTunWrite and retries
+
+                throw new PInvokeException("Could not write to TUN.", errorCode);
             }
-
-            if (e is InterruptedIOException)
-                return true;
-
-            var msg = e.Message;
-            if (string.IsNullOrEmpty(msg))
-                continue;
-
-            if (msg.Contains("EAGAIN", StringComparison.OrdinalIgnoreCase) ||
-                msg.Contains("EWOULDBLOCK", StringComparison.OrdinalIgnoreCase) ||
-                msg.Contains("EINTR", StringComparison.OrdinalIgnoreCase) ||
-                msg.Contains("Try again", StringComparison.OrdinalIgnoreCase) ||
-                msg.Contains("temporarily unavailable", StringComparison.OrdinalIgnoreCase) ||
-                msg.Contains("would block", StringComparison.OrdinalIgnoreCase))
-                return true;
         }
-
-        return false;
     }
 
     protected override bool ReadPacket(byte[] buffer)
     {
-        if (_inStream == null)
-            throw new InvalidOperationException("Adapter is not open.");
+        lock (_readLock) {
+            var tunFd = _tunFd;
+            if (tunFd < 0)
+                throw new InvalidOperationException("Adapter is not open.");
 
-        // Read the packet from the input stream into the array
-        var bytesRead = _inStream.Read(buffer);
+            while (true) {
+                var bytesRead = AndroidAPI.read(tunFd, buffer, buffer.Length);
+                if (bytesRead > 0)
+                    return true;
 
-        // Check the number of bytes read
-        return bytesRead switch {
-            0 => false, // no more packet
-            > 0 => true, // Successfully read a packet
-            < 0 => throw new IOException("Could not read from TUN.") // error
-        };
+                // 0 is EOF: the TUN fd has been closed
+                if (bytesRead == 0)
+                    throw new IOException("Could not read from TUN. The device has been closed.");
+
+                var errorCode = Marshal.GetLastWin32Error();
+                if (errorCode == OsConstants.Eintr)
+                    continue; // interrupted before any data arrived, retry immediately
+
+                if (errorCode == OsConstants.Eagain)
+                    return false; // no packet available; the caller waits via WaitForTunRead and retries
+
+                throw new PInvokeException("Could not read from TUN.", errorCode);
+            }
+        }
     }
 
     protected override void DisposeUnmanaged()
     {
-        // The adapter is an unmanaged resource; it must be closed if it is open
+        // The adapter is an unmanaged resource; it must be closed if it is open.
+        // No finalizer here: ParcelFileDescriptor has its own, and Java peers must not be touched
+        // from a .NET finalizer because they may already be collected.
         if (_parcelFileDescriptor != null)
             AdapterRemove();
 
         base.DisposeUnmanaged();
-    }
-
-    ~AndroidVpnAdapter()
-    {
-        Dispose(false);
     }
 }

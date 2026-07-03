@@ -1,0 +1,29 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
+
+namespace VpnHood.Core.VpnAdapters.AndroidTun.AndroidNative;
+
+// Direct libc (bionic) calls for the packet hot path. The Java stream/Os bindings marshal the
+// whole managed buffer to a fresh Java byte[] on every call (copying it in both directions), while
+// a P/Invoke only pins the buffer. SetLastError makes Marshal.GetLastWin32Error return errno,
+// unlike the Java bindings which report errors by throwing ErrnoException.
+[SuppressMessage("ReSharper", "IdentifierTypo")]
+[SuppressMessage("ReSharper", "InconsistentNaming")]
+internal static class AndroidAPI
+{
+    public const int FGetfl = 3; // F_GETFL
+    public const int FSetfl = 4; // F_SETFL
+    public const int ONonblock = 0x800; // O_NONBLOCK
+
+    [DllImport("libc", SetLastError = true)]
+    public static extern int fcntl(int fd, int cmd, int arg);
+
+    [DllImport("libc", SetLastError = true)]
+    public static extern int poll([In] [Out] StructPollfd[] fds, int nfds, int timeout);
+
+    [DllImport("libc", SetLastError = true)]
+    public static extern int read(int fd, byte[] buffer, int count);
+
+    [DllImport("libc", SetLastError = true)]
+    public static extern int write(int fd, ref byte buffer, int count);
+}

@@ -235,6 +235,89 @@ public sealed class LossRecoveryTest
     }
 
     /// <summary>
+    /// Burst loss with a parked writer: the peer loses an ENTIRE in-flight window (a batched TUN write
+    /// drop at peak rate) while the writer is parked on a FULL retx ring with more data pending, then —
+    /// like a real kernel — acks whatever arrives in order. This is the pathological regime for a
+    /// 1-byte ring-full probe: each 1-byte hole fill elicits a +1 cumulative ACK that RESTARTS the RTO
+    /// and resets the dup-ACK count, so neither the RTO nor fast retransmit ever fires and recovery
+    /// crawls at ~2 bytes per probe interval (the 2026-07-01 speedtest "collapse to ~1 then slowly
+    /// recover" incident). The ring-full probe must retransmit at SEGMENT granularity so the write
+    /// completes promptly.
+    /// </summary>
+    [TestMethod]
+    [Timeout(30000)]
+    public async Task BurstLoss_RingFullProbe_RecoversAtSegmentGranularity()
+    {
+        const int retxSize = 2048;
+        var tcpStack = new LocalTcpStack(new LocalTcpStackOptions {
+            MaxMss = 536,
+            DefaultMss = 536,
+            RetxBufferSize = retxSize,
+            // Same ordering as production (200 ms ZWP < 500 ms RTO): the probe path, not the RTO,
+            // must carry the recovery, because each probe-elicited ACK restarts the RTO.
+            ZeroWindowProbeInterval = TimeSpan.FromMilliseconds(50),
+            RetransmitTimeout = TimeSpan.FromMilliseconds(150),
+            RetransmitMaxTimeout = TimeSpan.FromSeconds(1)
+        });
+        var sent = new List<IpPacket>();
+        object sync = new();
+        tcpStack.OnPacketSend = p => { lock (sync) sent.Add(p); };
+
+        var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
+        lock (sync) sent.Clear();
+
+        // Write more than the ring holds; the initial ring-filling burst is "dropped by the TUN".
+        var payload = new byte[6000];
+        RandomNumberGenerator.Fill(payload);
+        var writeTask = stream.Stream.WriteAsync(payload, 0, payload.Length);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+        await WaitForCondition(() => {
+            lock (sync) return sent.Sum(p => p.ExtractTcp().Payload.Length) >= retxSize;
+        }, cts.Token, 3000);
+        await Task.Delay(100, cts.Token); // let the writer park on the full ring
+
+        int lostPackets;
+        lock (sync) lostPackets = sent.Count; // everything so far was lost
+
+        // Echo peer: acks each data arrival cumulatively (buffering out-of-order data like a real
+        // receiver), starting from a receive position that never saw the initial burst.
+        var received = new bool[payload.Length];
+        var contiguous = 0;
+        var processed = lostPackets;
+        var echo = Task.Run(async () => {
+            while (!cts.IsCancellationRequested && !writeTask.IsCompleted) {
+                var acks = new List<uint>();
+                lock (sync) {
+                    for (; processed < sent.Count; processed++) {
+                        var tcp = sent[processed].ExtractTcp();
+                        if (tcp.Payload.Length == 0) continue;
+                        var start = (int)(tcp.SequenceNumber - (serverSeq + 1));
+                        for (var i = 0; i < tcp.Payload.Length; i++)
+                            if (start + i >= 0 && start + i < received.Length)
+                                received[start + i] = true;
+                        while (contiguous < received.Length && received[contiguous]) contiguous++;
+                        // One ACK per data arrival: a cumulative ACK for in-order data, a duplicate
+                        // ACK for an out-of-order segment — exactly what a real kernel emits.
+                        acks.Add((uint)(serverSeq + 1 + contiguous));
+                    }
+                }
+                foreach (var ackNum in acks)
+                    tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
+                        ack: true, seq: 1001, ackNum: ackNum));
+                await Task.Delay(10);
+            }
+        }, cts.Token);
+
+        // With segment-granularity recovery this completes in well under a second; with a 1-byte
+        // ring-full probe it needs ~1 byte per probe interval (minutes) and times out.
+        await writeTask.WaitAsync(TimeSpan.FromSeconds(10), cts.Token);
+        await echo;
+
+        await stream.DisposeAsync();
+    }
+
+    /// <summary>
     /// RFC 5961: an out-of-window RST must be ignored, an in-window (but inexact) RST must only elicit
     /// a challenge ACK, and only an exact-match RST closes the connection. The pre-fix stack accepted
     /// any RST, allowing blind resets.

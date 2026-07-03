@@ -37,6 +37,9 @@ internal sealed class IosQuicStream : AsyncStream
     private readonly ReusableValueTaskSource _writeSource = new();
     private CancellationTokenRegistration _writeReg;
     private byte[]? _writeRentedArray;
+    // ToDo: remove diagnose — bytes of this stream's in-flight (un-completed) native send, mirrored into
+    // IosQuicClient.OutstandingSendBytes. Exchanged to 0 by whichever of completion/dispose runs first.
+    private int _pendingSendBytes;
 
     // Cap a single native receive so download bursts buffer in NATIVE memory in bounded chunks even if a
     // caller hands us a very large buffer. The QUIC flow-control window (IosQuicClient) is the real ceiling.
@@ -64,6 +67,18 @@ internal sealed class IosQuicStream : AsyncStream
         VhLogger.Instance.LogInformation("[VHQUIC] +open id={Id} live={Live}", _id, live);
     }
 
+    // JETSAM GUARD thresholds: at full download rate the per-packet native transients (NSData copies
+    // retained briefly by NE/nw beyond our dispose) float several MB above baseline and their peaks
+    // ratchet over the extension's 52 MB limit with no leak or backlog anywhere else (2026-07-01, third
+    // crash flavor: no freeze, sendQ=0, pipeBuf=0, footprint oscillating 32->48 MB at 130 Mbps).
+    // Braking the receive-arm — the single intake point of the whole download pipeline — while the
+    // footprint is near the limit lets those transients drain; throughput only pays while within
+    // ~7 MB of death. FootprintMb == 0 (probe absent) leaves the guard inactive.
+    // 2026-07-02: brake earlier — the guarded crash showed a +6.6 MB spike inside ONE probe tick
+    // (40.4 → 47.0), so by 45 the stale reading was already fatal. Start braking at 42.
+    private const double GuardBrakeMb = 42.0;
+    private const double GuardHardBrakeMb = 46.0;
+
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -72,6 +87,26 @@ internal sealed class IosQuicStream : AsyncStream
         if (_disposed || _readEof || buffer.IsEmpty)
             return ValueTask.FromResult(0);
 
+        // JETSAM GUARD: delay BEFORE arming the native receive so no new buffer is requested while
+        // the footprint is critical. The guarded path is async (allocates a state machine) but only
+        // runs while already near the limit; the normal path below stays allocation-free.
+        var footprint = IosQuicClient.FootprintMb;
+        if (footprint >= GuardBrakeMb)
+            return ThrottledReadAsync(buffer, footprint, cancellationToken);
+
+        return ArmReceive(buffer, cancellationToken);
+    }
+
+    private async ValueTask<int> ThrottledReadAsync(Memory<byte> buffer, double footprint, CancellationToken cancellationToken)
+    {
+        await Task.Delay(footprint >= GuardHardBrakeMb ? 100 : 25, cancellationToken).ConfigureAwait(false);
+        if (_disposed || _readEof)
+            return 0;
+        return await ArmReceive(buffer, cancellationToken).ConfigureAwait(false);
+    }
+
+    private ValueTask<int> ArmReceive(Memory<byte> buffer, CancellationToken cancellationToken)
+    {
         _readSource.Reset();
         _readBuffer = buffer;
 
@@ -137,6 +172,10 @@ internal sealed class IosQuicStream : AsyncStream
         if (cancellationToken.CanBeCanceled)
             _writeReg = cancellationToken.Register(CancelWriteCallback, _writeSource);
 
+        // ToDo: remove diagnose — count this send as in-flight until its completion callback fires.
+        Interlocked.Exchange(ref _pendingSendBytes, buffer.Length);
+        Interlocked.Add(ref IosQuicClient.OutstandingSendBytes, buffer.Length);
+
         using var pool = new NSAutoreleasePool();
         if (MemoryMarshal.TryGetArray(buffer, out var segment)) {
             // isComplete: false -> more data may follow on this stream (do not signal FIN).
@@ -156,6 +195,11 @@ internal sealed class IosQuicStream : AsyncStream
     {
         using var pool = new NSAutoreleasePool();
         _writeReg.Dispose();
+
+        // ToDo: remove diagnose — the native send finished (or failed); it is no longer in flight.
+        var pending = Interlocked.Exchange(ref _pendingSendBytes, 0);
+        if (pending > 0)
+            Interlocked.Add(ref IosQuicClient.OutstandingSendBytes, -pending);
 
         var rented = Interlocked.Exchange(ref _writeRentedArray, null);
         if (rented != null) {
@@ -181,8 +225,14 @@ internal sealed class IosQuicStream : AsyncStream
         VhLogger.Instance.LogInformation("[VHQUIC] -close id={Id} live={Live}", _id, live);
 
         if (disposing) {
+            // ToDo: remove diagnose — time the native teardown; see IosQuicClient.MaxStreamCancelMs.
+            var cancelStart = Environment.TickCount64;
             VhUtils.TryInvoke(() => _connection.Cancel());
             _connection.Dispose();
+            var cancelMs = Environment.TickCount64 - cancelStart;
+            long prevMax;
+            while (cancelMs > (prevMax = Volatile.Read(ref IosQuicClient.MaxStreamCancelMs)) &&
+                   Interlocked.CompareExchange(ref IosQuicClient.MaxStreamCancelMs, cancelMs, prevMax) != prevMax) { }
 
             // Dispose the pending cancellation registrations (the native callbacks that normally dispose them
             // may never fire after Cancel()). Safe no-ops if default/already disposed.
@@ -195,6 +245,11 @@ internal sealed class IosQuicStream : AsyncStream
             // makes the buffer return idempotent. Done after Cancel()/Dispose() so the native send is no
             // longer reading the array.
             _readSource.TrySetResult(0);
+
+            // ToDo: remove diagnose — the completion may never fire after Cancel(); settle the counter.
+            var pending = Interlocked.Exchange(ref _pendingSendBytes, 0);
+            if (pending > 0)
+                Interlocked.Add(ref IosQuicClient.OutstandingSendBytes, -pending);
 
             var rented = Interlocked.Exchange(ref _writeRentedArray, null);
             if (rented != null)

@@ -298,6 +298,32 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         if (Interlocked.Exchange(ref _memoryProbeStarted, true))
             return;
 
+        // ToDo: remove diagnose
+        // CRASH ATTRIBUTION: the extension died with SIGABRT via CoreCLR Task.ThrowAsync twice on
+        // 2026-06-29 (an unhandled exception escaping a fire-and-forget task / async void), but the
+        // .ips report carries no managed exception detail. Persist the exception synchronously to
+        // Documents/ext-crash.log BEFORE the runtime aborts so the next occurrence is attributable.
+        // File.AppendAllText (not VhLogger) on purpose: the logger's buffering/disposal cannot be
+        // trusted mid-crash.
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => {
+            try {
+                var path = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ext-crash.log");
+                File.AppendAllText(path,
+                    $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff} UNHANDLED (terminating={e.IsTerminating})\n{e.ExceptionObject}\n\n");
+            }
+            catch { /* nothing safe left to do */ }
+        };
+        TaskScheduler.UnobservedTaskException += (_, e) => {
+            try {
+                var path = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ext-crash.log");
+                File.AppendAllText(path,
+                    $"{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss.fff} UNOBSERVED TASK\n{e.Exception}\n\n");
+            }
+            catch { /* best-effort */ }
+        };
+
         // Let the TCP stack annotate its +CONN/-CONN lifecycle logs with the live jetsam footprint
         // (phys_footprint in MB) so memory can be tracked against the ~52 MB limit per connection event.
         const double probeMib = 1024.0 * 1024.0;
@@ -322,6 +348,10 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                         var mb = vm.Footprint / mib;
                         if (mb > peakMb) peakMb = mb;
 
+                        // JETSAM GUARD input: let the QUIC download intake brake when the footprint
+                        // nears the 52 MB limit (see IosQuicClient.FootprintMb).
+                        IosQuicClient.FootprintMb = mb;
+
                         // Log on any meaningful change, on a new peak, as a heartbeat, OR every sample
                         // once we're within ~7 MB of the limit — so the sub-second burst spike that
                         // actually crosses 52 MB is captured instead of slipping between samples.
@@ -329,7 +359,15 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                             lastLoggedMb = mb;
                             var gcLive = GC.GetTotalMemory(false) / mib;
                             double gcHeap = 0;
-                            try { gcHeap = GC.GetGCMemoryInfo().HeapSizeBytes / mib; }
+                            double gcCommit = 0;
+                            try {
+                                var gcInfo = GC.GetGCMemoryInfo();
+                                gcHeap = gcInfo.HeapSizeBytes / mib;
+                                // Committed GC segments (counts toward anon/footprint even when live is
+                                // flat): discriminates "allocation-storm grows GC segments" from a true
+                                // native climb during a freeze (2026-07-01 jetsam diagnosis).
+                                gcCommit = gcInfo.TotalCommittedBytes / mib;
+                            }
                             catch { /* not supported on this runtime */ }
                             // anon = anonymous dirty (malloc/heap/stacks/buffers); comp = compressed anon;
                             // both count toward footprint. code = file-backed (NOT in footprint), logged
@@ -350,11 +388,26 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                             var winKb = (diag?.ConfiguredReceiveWindow ?? 0) / 1024;
                             var maxC = diag?.ConfiguredMaxConnections ?? 0;
                             var qStreams = IosQuicClient.LiveStreamCount; // live native QUIC streams (NWConnections)
+                            // In-flight (un-completed) nw_connection_send bytes across all QUIC streams —
+                            // see IosQuicClient.OutstandingSendBytes for what its trend proves.
+                            var sendQ = Interlocked.Read(ref IosQuicClient.OutstandingSendBytes) / mib;
+                            // Freeze locator: ms since the last TUN read callback / completed TUN write,
+                            // worst single TUN write drain and worst QUIC stream teardown since the last
+                            // probe line (maxes reset each line). During a freeze, whichever age grows
+                            // names the stalled side; wrMax/cancMax name the blocking call.
+                            var nowTicks = Environment.TickCount64;
+                            var lastRd = Volatile.Read(ref IosVpnAdapter.LastReadTicks);
+                            var lastWr = Volatile.Read(ref IosVpnAdapter.LastWriteTicks);
+                            var rdAge = lastRd == 0 ? -1 : nowTicks - lastRd;
+                            var wrAge = lastWr == 0 ? -1 : nowTicks - lastWr;
+                            var wrMax = Interlocked.Exchange(ref IosVpnAdapter.MaxWriteMs, 0);
+                            var cancMax = Interlocked.Exchange(ref IosQuicClient.MaxStreamCancelMs, 0);
                             File.AppendAllText(logPath,
                                 $"{DateTime.UtcNow:HH:mm:ss.fff} footprint={mb:F1}MB peak={peakMb:F1}MB " +
-                                $"gcLive={gcLive:F1} gcHeap={gcHeap:F1} native={native:F1} " +
+                                $"gcLive={gcLive:F1} gcHeap={gcHeap:F1} gcCommit={gcCommit:F1} native={native:F1} " +
                                 $"anon={anon:F1} comp={comp:F1} code={code:F1} " +
-                                $"conn={conn} est={est} peakConn={peakConn} qStreams={qStreams} pipeBuf={pipeBuf:F1}MB win={winKb}KB maxC={maxC} " +
+                                $"conn={conn} est={est} peakConn={peakConn} qStreams={qStreams} sendQ={sendQ:F2}MB pipeBuf={pipeBuf:F1}MB win={winKb}KB maxC={maxC} " +
+                                $"rdAge={rdAge} wrAge={wrAge} wrMax={wrMax} cancMax={cancMax} " +
                                 $"dn={dnMb:F1}MB up={upMb:F1}MB" +
                                 (mb >= 50 ? " <<< NEAR 52MB JETSAM" : "") + "\n");
                         }
@@ -362,7 +415,9 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                 }
                 catch { /* best-effort */ }
                 tick++;
-                Thread.Sleep(250);
+                // 100 ms (was 250): the guarded crash spiked +6.6 MB inside one 250 ms tick, so the
+                // jetsam guard's FootprintMb input must refresh faster to brake in time.
+                Thread.Sleep(100);
             }
             // ReSharper disable once FunctionNeverReturns
         }) {

@@ -184,7 +184,13 @@ public sealed class LocalTcpStackOptions
         ReceiveWindowSize = 0xFFFF,
         GlobalReceiveBudget = 6 * 1024 * 1024,
         RetxBufferSize = 16 * 1024,
-        MaxConnections = 50, // Capped to prevent memory exhaustion under concurrent flow storms
+        // Capped to prevent memory exhaustion under concurrent flow storms. Tuned 2026-07-02: 50 → 40.
+        // Native transient spikes scale with concurrent full-rate streams, but capping too low (25)
+        // backfires — a speedtest/browser wanting more connections gets SYN-RSTs and retries, churning
+        // QUIC stream setup/teardown (native NWConnections; logs showed 63 live streams vs 42 conns).
+        // 40 keeps concurrency high per product direction; the memory bound comes from the QUIC
+        // flow-control windows (IosQuicClient), which cap in-flight download tunnel-wide.
+        MaxConnections = 40,
         // Under cap pressure, evict the most-idle flow (idle ≥ 15 s) to admit a new one instead of
         // rejecting it; live transfers (idle ≈ 0) are protected. Frees the victim's QUIC stream/native
         // NWConnection immediately rather than waiting for the 20 s idle reaper.

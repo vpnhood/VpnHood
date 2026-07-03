@@ -60,6 +60,15 @@ public class IosVpnAdapter(
     public static long InboundBytes;   // server -> device (download), written via WritePacket
     public static long OutboundBytes;  // device -> server (upload), read via OnPacketsReceived
 
+    // ToDo: remove diagnose — freeze locator (2026-07-01: whole-tunnel freezes of 6-10 s, both
+    // directions stopped, footprint climbing ~1.4 MB/s until recovery or jetsam). TickCount64 stamps
+    // of the last TUN read callback / completed TUN write, plus the worst single SendPacketsAsync
+    // duration, let the memory probe show which side of the adapter stopped first and whether the
+    // native WritePackets call itself is the thing that blocks.
+    public static long LastReadTicks;   // Environment.TickCount64 at the last OnPacketsReceived entry
+    public static long LastWriteTicks;  // Environment.TickCount64 after the last SendPacketsAsync drain
+    public static long MaxWriteMs;      // worst single SendPacketsAsync duration (reset by the probe)
+
 
     protected override bool RestartAfterNetworkAddressChanged => false;
     public override bool IsNatSupported => false;
@@ -305,6 +314,9 @@ public class IosVpnAdapter(
         if (ipPackets.Count == 0)
             return ValueTask.CompletedTask;
 
+        // ToDo: remove diagnose — freeze locator, see LastWriteTicks/MaxWriteMs.
+        var writeStart = Environment.TickCount64;
+
         lock (_writeLock) {
             // NEPacketTunnelFlow creates autoreleased native temporaries while marshaling arrays.
             // This runs on a packet worker, so keep an explicit pool around each send drain.
@@ -321,6 +333,14 @@ public class IosVpnAdapter(
                 }
             }
         }
+
+        // ToDo: remove diagnose
+        var now = Environment.TickCount64;
+        Volatile.Write(ref LastWriteTicks, now);
+        var elapsed = now - writeStart;
+        long prevMax;
+        while (elapsed > (prevMax = Volatile.Read(ref MaxWriteMs)) &&
+               Interlocked.CompareExchange(ref MaxWriteMs, elapsed, prevMax) != prevMax) { }
 
         return ValueTask.CompletedTask;
     }
@@ -395,6 +415,9 @@ public class IosVpnAdapter(
 
     private void OnPacketsReceived(NSData[] packets, NSNumber[] protocols)
     {
+        // ToDo: remove diagnose — freeze locator, see LastReadTicks.
+        Volatile.Write(ref LastReadTicks, Environment.TickCount64);
+
         // Capture the flow up-front; AdapterClose may null it out while we run.
         var flow = _packetFlow;
         if (flow == null)

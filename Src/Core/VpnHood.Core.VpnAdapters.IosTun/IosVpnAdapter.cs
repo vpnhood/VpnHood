@@ -57,21 +57,8 @@ public class IosVpnAdapter(
     private static readonly NSNumber AfInet = NSNumber.FromInt32(2);
     private static readonly NSNumber AfInet6 = NSNumber.FromInt32(30);
 
-    // ToDo: remove diagnose
-    // DIAGNOSTIC: cumulative bytes through the tunnel, read by IosVpnService's memory probe to
-    // correlate phys_footprint growth with traffic. Use Interlocked to read/write.
-    public static long InboundBytes;   // server -> device (download), written via WritePacket
-    public static long OutboundBytes;  // device -> server (upload), read via OnPacketsReceived
-
-    // ToDo: remove diagnose — freeze locator (2026-07-01: whole-tunnel freezes of 6-10 s, both
-    // directions stopped, footprint climbing ~1.4 MB/s until recovery or jetsam). TickCount64 stamps
-    // of the last TUN read callback / completed TUN write, plus the worst single SendPacketsAsync
-    // duration, let the memory probe show which side of the adapter stopped first and whether the
-    // native WritePackets call itself is the thing that blocks.
-    public static long LastReadTicks;   // Environment.TickCount64 at the last OnPacketsReceived entry
-    public static long LastWriteTicks;  // Environment.TickCount64 after the last SendPacketsAsync drain
-    public static long MaxWriteMs;      // worst single SendPacketsAsync duration (reset by the probe)
-
+    // Traffic byte counters + the freeze locator (last TUN read/write stamps, worst write drain) live in
+    // IosTunDiagnostics and are maintained only when IosTunDiagnostics.Enabled — see the call sites below.
 
     protected override bool RestartAfterNetworkAddressChanged => false;
     public override bool IsNatSupported => false;
@@ -173,31 +160,11 @@ public class IosVpnAdapter(
         if (_mtu.HasValue)
             networkSettings.Mtu = NSNumber.FromInt32(_mtu.Value);
 
-        // ToDo: remove diagnose
-        // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install so the host
-        // extension can verify what actually reaches iOS ("connected but no traffic" diagnosis).
-        try
-        {
-            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            var inc4 = networkSettings.IPv4Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
-            var exc4 = networkSettings.IPv4Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
-            var inc6 = networkSettings.IPv6Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
-            var exc6 = networkSettings.IPv6Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
-            await File.WriteAllTextAsync(Path.Combine(docs, "ext-route-dump.txt"),
-                $"AdapterOpen at {DateTime.UtcNow:O}\n" +
-                $"remoteAddress(ServerAddress)={remoteAddress}\n" +
-                $"mtu={_mtu}\n" +
-                $"v4 address({_ipv4Networks.Count}): {string.Join(", ", _ipv4Networks.Select(n => n.ToString()))}\n" +
-                $"v4 routes-from-core({_ipv4Routes.Count}): {string.Join(", ", _ipv4Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
-                $"v4 INCLUDED-applied: {string.Join(", ", inc4)}\n" +
-                $"v4 EXCLUDED-applied: {string.Join(", ", exc4)}\n" +
-                $"v6 address({_ipv6Networks.Count}): {string.Join(", ", _ipv6Networks.Select(n => n.ToString()))}\n" +
-                $"v6 routes-from-core({_ipv6Routes.Count}): {string.Join(", ", _ipv6Routes.Select(r => $"{r.Prefix}/{r.PrefixLength}"))}\n" +
-                $"v6 INCLUDED-applied: {string.Join(", ", inc6)}\n" +
-                $"v6 EXCLUDED-applied: {string.Join(", ", exc6)}\n" +
-                $"dns({_dnsServers.Count}): {string.Join(", ", _dnsServers.Select(d => d.ToString()))}\n", cancellationToken);
-        }
-        catch { /* best-effort */ }
+        // DIAGNOSTIC PROBE (no-op unless IosTunDiagnostics.Enabled): dump the routes/addresses/DNS we are
+        // about to install so the host extension can verify what actually reaches iOS ("connected but no
+        // traffic" diagnosis).
+        await IosTunDiagnostics.WriteRouteDumpAsync(remoteAddress, _mtu, networkSettings,
+            _ipv4Networks, _ipv4Routes, _ipv6Networks, _ipv6Routes, _dnsServers, cancellationToken);
 
         // CRITICAL: apply the network settings to iOS. Without this call the tunnel never
         // installs its routes, the OS-level tun is never brought up (no VPN status-bar
@@ -334,8 +301,8 @@ public class IosVpnAdapter(
         if (ipPackets.Count == 0)
             return ValueTask.CompletedTask;
 
-        // ToDo: remove diagnose — freeze locator, see LastWriteTicks/MaxWriteMs.
-        var writeStart = Environment.TickCount64;
+        // Freeze locator (diagnostics only): time the native write drain.
+        var writeStart = IosTunDiagnostics.BeginTiming();
 
         lock (_writeLock) {
             // NEPacketTunnelFlow creates autoreleased native temporaries while marshaling arrays.
@@ -354,13 +321,7 @@ public class IosVpnAdapter(
             }
         }
 
-        // ToDo: remove diagnose
-        var now = Environment.TickCount64;
-        Volatile.Write(ref LastWriteTicks, now);
-        var elapsed = now - writeStart;
-        long prevMax;
-        while (elapsed > (prevMax = Volatile.Read(ref MaxWriteMs)) &&
-               Interlocked.CompareExchange(ref MaxWriteMs, elapsed, prevMax) != prevMax) { }
+        IosTunDiagnostics.EndTunWrite(writeStart);
 
         return ValueTask.CompletedTask;
     }
@@ -374,7 +335,7 @@ public class IosVpnAdapter(
     private void FillWriteBatchSlot(IpPacket ipPacket, int slot)
     {
         var buffer = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var offset, out var length);
-        Interlocked.Add(ref InboundBytes, length);
+        IosTunDiagnostics.AddInboundBytes(length);
 
         // Inbound packets (server -> device) must use the IP version as the protocol family.
         _writeProtocolBatch[slot] = ipPacket.Version == IpVersion.IPv6 ? AfInet6 : AfInet;
@@ -461,8 +422,8 @@ public class IosVpnAdapter(
 
     private void OnPacketsReceived(NSData[] packets, NSNumber[] protocols)
     {
-        // ToDo: remove diagnose — freeze locator, see LastReadTicks.
-        Volatile.Write(ref LastReadTicks, Environment.TickCount64);
+        // Freeze locator (diagnostics only): stamp the outbound-read callback time.
+        IosTunDiagnostics.MarkTunReadCallback();
 
         // Bail out if the adapter is closed. AdapterClose may null the flow at any point;
         // the re-arm at the end re-checks it so a closing adapter ends the read chain.
@@ -486,7 +447,7 @@ public class IosVpnAdapter(
                 // the span into a pooled buffer, so the span over native memory only has to stay valid
                 // for the duration of the call (it does — packetBuffer is disposed below).
                 var len = (int)packetBuffer.Length;
-                Interlocked.Add(ref OutboundBytes, len);
+                IosTunDiagnostics.AddOutboundBytes(len);
                 IpPacket ipPacket;
                 unsafe {
                     ipPacket = PacketBuilder.Parse(new ReadOnlySpan<byte>((void*)packetBuffer.Bytes, len));

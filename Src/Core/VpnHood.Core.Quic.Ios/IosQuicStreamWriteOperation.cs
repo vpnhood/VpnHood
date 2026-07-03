@@ -12,7 +12,8 @@ internal sealed class IosQuicStreamWriteOperation
         CancellationToken = cancellationToken;
         Count = count;
         Callback = error => owner.OnWriteCompleted(this, error);
-        Interlocked.Add(ref IosQuicClient.OutstandingSendBytes, Count);
+        // Diagnostic in-flight-send counter (sendQ=), maintained only when IosQuicDiagnostics.Enabled.
+        IosQuicDiagnostics.AddOutstandingSend(Count);
     }
 
     public IosQuicStream Owner { get; }
@@ -27,6 +28,6 @@ internal sealed class IosQuicStreamWriteOperation
         if (Interlocked.Exchange(ref _outstandingDisposed, 1) != 0)
             return;
 
-        Interlocked.Add(ref IosQuicClient.OutstandingSendBytes, -Count);
+        IosQuicDiagnostics.SubtractOutstandingSend(Count);
     }
 }

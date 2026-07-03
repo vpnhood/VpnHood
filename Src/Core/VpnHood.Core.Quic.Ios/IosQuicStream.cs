@@ -52,10 +52,8 @@ internal sealed class IosQuicStream : AsyncStream
     public IosQuicStream(NWConnection connection)
     {
         _connection = connection;
-        // ToDo: remove diagnose
-        _id = Interlocked.Increment(ref IosQuicClient.StreamSeq);
-        var live = Interlocked.Increment(ref IosQuicClient.LiveStreamCount);
-        VhLogger.Instance.LogDebug("[VHQUIC] +open id={Id} live={Live}", _id, live);
+        // Stream lifecycle instrumentation (diagnostics only). Paired with OnStreamClosed in Dispose.
+        _id = IosQuicDiagnostics.OnStreamOpened();
     }
 
     // JETSAM GUARD thresholds: at full download rate the per-packet native transients (NSData copies
@@ -230,7 +228,8 @@ internal sealed class IosQuicStream : AsyncStream
         Interlocked.CompareExchange(ref _activeWrite, null, op);
         op.Registration.Dispose();
 
-        // ToDo: remove diagnose — the native send finished (or failed); it is no longer in flight.
+        // The native send finished (or failed); it is no longer in flight. Settles the diagnostic
+        // in-flight counter (no-op unless IosQuicDiagnostics.Enabled).
         op.DisposeOutstandingSend();
 
         if (error != null) {
@@ -273,20 +272,17 @@ internal sealed class IosQuicStream : AsyncStream
         if (Interlocked.Exchange(ref _disposed, true))
             return;
 
-        // ToDo: remove diagnose
-        var live = Interlocked.Decrement(ref IosQuicClient.LiveStreamCount);
-        VhLogger.Instance.LogDebug("[VHQUIC] -close id={Id} live={Live}", _id, live);
+        // Stream lifecycle instrumentation (diagnostics only). Paired with OnStreamOpened in the ctor.
+        IosQuicDiagnostics.OnStreamClosed(_id);
 
         if (disposing) {
-            // ToDo: remove diagnose — time the native teardown; see IosQuicClient.MaxStreamCancelMs.
-            var cancelStart = Environment.TickCount64;
+            // Time the native teardown (diagnostics only); the Cancel()/Dispose() themselves are
+            // load-bearing and run unconditionally.
+            var cancelStart = IosQuicDiagnostics.BeginTiming();
             // ReSharper disable once AccessToDisposedClosure
             VhUtils.TryInvoke(() => _connection.Cancel());
             _connection.Dispose();
-            var cancelMs = Environment.TickCount64 - cancelStart;
-            long prevMax;
-            while (cancelMs > (prevMax = Volatile.Read(ref IosQuicClient.MaxStreamCancelMs)) &&
-                   Interlocked.CompareExchange(ref IosQuicClient.MaxStreamCancelMs, cancelMs, prevMax) != prevMax) { }
+            IosQuicDiagnostics.EndStreamTeardown(cancelStart);
 
             // Dispose the pending cancellation registrations (the native callbacks that normally dispose them
             // may never fire after Cancel()). Safe no-ops if default/already disposed.
@@ -303,7 +299,8 @@ internal sealed class IosQuicStream : AsyncStream
             // longer reading the array.
             readOp?.Source.TrySetResult(0);
 
-            // ToDo: remove diagnose — the completion may never fire after Cancel(); settle the counter.
+            // The completion may never fire after Cancel(); settle the diagnostic in-flight counter
+            // (no-op unless IosQuicDiagnostics.Enabled).
             writeOp?.DisposeOutstandingSend();
             writeOp?.Source.TrySetException(new ObjectDisposedException(nameof(IosQuicStream)));
         }

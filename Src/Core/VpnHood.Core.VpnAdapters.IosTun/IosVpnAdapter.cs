@@ -38,6 +38,9 @@ public class IosVpnAdapter(
     // garbled/null NSData handed to WritePackets, not a data race.
     private readonly Lock _writeLock = new();
 
+    // WritePackets failure state, guarded by _writeLock; lets FlushWriteBatch log once per episode.
+    private bool _writePacketsFailing;
+
     // Reused, allocation-free batch arrays. NEPacketTunnelFlow.WritePackets walks the FULL array
     // length, so a partial (final) chunk must be handed an exactly-sized array — a trailing null
     // would SIGABRT natively. _partialWrite*Batches[n] is a pre-allocated array of length n used for
@@ -104,16 +107,16 @@ public class IosVpnAdapter(
         if (serverAddress != null && IPAddress.TryParse(serverAddress, out var parsedAddress))
             remoteAddress = parsedAddress;
 
-        var settings = new NEPacketTunnelNetworkSettings(remoteAddress.ToString());
+        var networkSettings = new NEPacketTunnelNetworkSettings(remoteAddress.ToString());
 
         // Set the default gateway for IPv4 and IPv6
         if (_ipv4Networks.Count > 0)
         {
-            settings.IPv4Settings = new NEIPv4Settings(  
+            networkSettings.IPv4Settings = new NEIPv4Settings(  
                 _ipv4Networks.Select(x => x.Prefix.ToString()).ToArray(),
                 _ipv4Networks.Select(x => x.SubnetMask.ToString()).ToArray());
 
-            settings.IPv4Settings.IncludedRoutes = _ipv4Routes
+            networkSettings.IPv4Settings.IncludedRoutes = _ipv4Routes
                 .Select(r => new NEIPv4Route(r.Prefix.ToString(), r.SubnetMask.ToString()))
                 .ToArray();
             
@@ -125,7 +128,7 @@ public class IosVpnAdapter(
         // Set the default gateway for IPv6
         if (_ipv6Networks.Count > 0)
         {
-            settings.IPv6Settings = new NEIPv6Settings(
+            networkSettings.IPv6Settings = new NEIPv6Settings(
                 _ipv6Networks.Select(x => x.Prefix.ToString()).ToArray(),
                 _ipv6Networks.Select(x => NSNumber.FromInt32(x.PrefixLength)).ToArray());
 
@@ -139,26 +142,36 @@ public class IosVpnAdapter(
             // actually asked for BROAD IPv6 coverage (a non-host include route). In route-level split
             // mode the include list is just host routes (e.g. DNS /128s) — injecting ::/0 there silently
             // dragged ALL IPv6 traffic (Safari prefers v6) into the tunnel, defeating the split.
+            // KNOWN CONSTRAINT: a /64-or-narrower include does not trigger injection, so on an
+            // IPv4-only link iOS may suppress AAAA and hostname-based connections into that subnet
+            // never try v6 (literal-IP connections still route). Do not "fix" this by loosening the
+            // threshold — that re-breaks the split; if it ever bites, core must signal broad-v6
+            // intent explicitly instead of the adapter inferring it from prefix lengths.
             var wantsBroadV6 = _ipv6Routes.Any(r => r.PrefixLength < 64);
-            var includes = IsIpVersionSupported(IpVersion.IPv6) || !wantsBroadV6
-                ? _ipv6Routes
-                : new List<IpNetwork> { IpNetwork.AllV6, IpNetwork.AllGlobalUnicastV6}.Concat(_ipv6Routes);
+            var injectGlobalV6 = !IsIpVersionSupported(IpVersion.IPv6) && wantsBroadV6;
+            IReadOnlyList<IpNetwork> includes = injectGlobalV6
+                ? new[] { IpNetwork.AllV6, IpNetwork.AllGlobalUnicastV6 }
+                    .Where(inj => !_ipv6Routes.Any(r =>
+                        r.PrefixLength == inj.PrefixLength && r.Prefix.Equals(inj.Prefix)))
+                    .Concat(_ipv6Routes)
+                    .ToArray()
+                : _ipv6Routes;
             
-            // ReSharper disable once PossibleMultipleEnumeration
-            settings.IPv6Settings.IncludedRoutes = includes
+            networkSettings.IPv6Settings.IncludedRoutes = includes
                 .Select(r => new NEIPv6Route(r.Prefix.ToString(), r.PrefixLength))
                 .ToArray();
            
-            // ReSharper disable once PossibleMultipleEnumeration
-            VhLogger.Instance.LogDebug("iOS: Configured IPv6 with {Count} routes (including injected default ::/0) and link-local exclusion.", includes.Count());
+            VhLogger.Instance.LogDebug(
+                "iOS: Configured IPv6 with {Count} routes. GlobalV6RoutesInjected: {GlobalV6RoutesInjected}",
+                includes.Count, injectGlobalV6);
         }
 
         // Set DNS servers if any are provided
         if (_dnsServers.Count > 0)
-            settings.DnsSettings = new NEDnsSettings(_dnsServers.Select(x=>x.ToString()) .ToArray());
+            networkSettings.DnsSettings = new NEDnsSettings(_dnsServers.Select(x=>x.ToString()) .ToArray());
 
         if (_mtu.HasValue)
-            settings.Mtu = NSNumber.FromInt32(_mtu.Value);
+            networkSettings.Mtu = NSNumber.FromInt32(_mtu.Value);
 
         // ToDo: remove diagnose
         // DIAGNOSTIC PROBE: dump the routes/addresses/DNS we are about to install so the host
@@ -166,10 +179,10 @@ public class IosVpnAdapter(
         try
         {
             var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            var inc4 = settings.IPv4Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
-            var exc4 = settings.IPv4Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
-            var inc6 = settings.IPv6Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
-            var exc6 = settings.IPv6Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
+            var inc4 = networkSettings.IPv4Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
+            var exc4 = networkSettings.IPv4Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationSubnetMask}") ?? [];
+            var inc6 = networkSettings.IPv6Settings?.IncludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
+            var exc6 = networkSettings.IPv6Settings?.ExcludedRoutes?.Select(r => $"{r.DestinationAddress}/{r.DestinationNetworkPrefixLength.Int32Value}") ?? [];
             await File.WriteAllTextAsync(Path.Combine(docs, "ext-route-dump.txt"),
                 $"AdapterOpen at {DateTime.UtcNow:O}\n" +
                 $"remoteAddress(ServerAddress)={remoteAddress}\n" +
@@ -196,7 +209,7 @@ public class IosVpnAdapter(
         // native cancellation for this call, so WaitAsync only abandons the await on cancel.
         try
         {
-            await tunnelProvider.SetTunnelNetworkSettingsAsync(settings).WaitAsync(cancellationToken);
+            await tunnelProvider.SetTunnelNetworkSettingsAsync(networkSettings).WaitAsync(cancellationToken);
         }
         catch (NSErrorException ex) {
             completeStartTunnel(ex.Error);
@@ -219,6 +232,10 @@ public class IosVpnAdapter(
 
     protected override void AdapterClose()
     {
+        // Clearing the config means a bare AdapterClose -> AdapterOpen (base RestartAdapter) would
+        // apply EMPTY settings. That path is unreachable on iOS: the batched SendPacketsAsync and
+        // the callback reader bypass the base I/O error counters that trigger it. A full Restart
+        // re-runs Start, which rebuilds these lists before AdapterOpen.
         _ipv4Networks.Clear();
         _ipv6Networks.Clear();
         _ipv4Routes.Clear();
@@ -278,6 +295,11 @@ public class IosVpnAdapter(
     protected override string AppPackageId =>
         NSBundle.MainBundle.BundleIdentifier ?? throw new Exception("Could not get the app BundleIdentifier!");
 
+    // Pretend success: sockets cannot be protected on iOS (see CanProtectSocket); core keeps the
+    // server reachable by excluding its IP from the tunnel routes instead. KNOWN LIMITATION: the
+    // base-class primary-IP rediscovery (network change / restart) trusts this return and probes
+    // through the tunnel, so PrimaryAdapterIpV4 can report the tunnel's own virtual IP while the
+    // tunnel is up. Fixing that needs a protect-independent discovery (e.g. NWPathMonitor).
     public override bool ProtectSocket(System.Net.Sockets.Socket socket) => true;
 
     public override bool ProtectSocket(System.Net.Sockets.Socket socket, IPAddress ipAddress) => true;
@@ -297,14 +319,12 @@ public class IosVpnAdapter(
             using var pool = new NSAutoreleasePool();
             try {
                 FillWriteBatchSlot(ipPacket, 0);
-                FlushWriteBatch(flow, 1);
+                return FlushWriteBatch(flow, 1);
             }
             finally {
                 ClearWriteBatch(1);
             }
         }
-
-        return true;
     }
 
     protected override ValueTask SendPacketsAsync(IReadOnlyList<IpPacket> ipPackets)
@@ -361,13 +381,18 @@ public class IosVpnAdapter(
 
         // Copy directly from the packet buffer into native NSData. Avoiding a managed slice here
         // matters because this path runs at full packet rate during downloads.
+        // LOAD-BEARING COPY: FromBytes (dataWithBytes:) duplicates the bytes inside this call, and
+        // the source is only valid right here — the fixed pin ends with the statement, a
+        // non-array-backed packet's bytes sit in the shared _writeBuffer that the next slot
+        // overwrites, and the packet's pooled buffer is disposed right after the drain while
+        // WritePackets may retain the NSData. Never switch this to FromBytesNoCopy.
         unsafe {
             fixed (byte* p = &buffer[offset])
                 _writeDataBatch[slot] = NSData.FromBytes((IntPtr)p, (nuint)length);
         }
     }
 
-    private void FlushWriteBatch(NEPacketTunnelFlow flow, int batchCount)
+    private bool FlushWriteBatch(NEPacketTunnelFlow flow, int batchCount)
     {
         var dataBatch = _writeDataBatch;
         var protocolBatch = _writeProtocolBatch;
@@ -379,13 +404,25 @@ public class IosVpnAdapter(
             Array.Copy(_writeProtocolBatch, protocolBatch, batchCount);
         }
 
-        flow.WritePackets(dataBatch, protocolBatch);
+        var ok = flow.WritePackets(dataBatch, protocolBatch);
+
+        // Log transitions only; a dead flow would otherwise log every batch.
+        if (ok == _writePacketsFailing)
+            VhLogger.Instance.LogDebug(ok
+                ? "iOS: NEPacketTunnelFlow.WritePackets recovered."
+                : "iOS: NEPacketTunnelFlow.WritePackets returned false; packets are being dropped.");
+        _writePacketsFailing = !ok;
+
+        return ok;
     }
 
     private void ClearWriteBatch(int batchCount)
     {
         for (var i = 0; i < batchCount; i++) {
-            _writeDataBatch[i].Dispose();
+            // null-conditional is required: this runs in a finally, and a mid-batch fill failure
+            // (garbled packet) leaves the remaining slots null — a plain Dispose would replace
+            // the real exception with a NullReferenceException.
+            _writeDataBatch[i]?.Dispose();
             _writeDataBatch[i] = null!;
             _writeProtocolBatch[i] = null!;
         }
@@ -407,10 +444,19 @@ public class IosVpnAdapter(
 
     protected override void StartReadingPackets()
     {
-        if (_packetFlow == null)
-            throw new InvalidOperationException("Packet flow is not initialized.");
+        // Base fires this from an unawaited Task.Run after AdapterOpen, so a throw here would
+        // fault an unobserved task and vanish. A null flow during a concurrent Stop is normal;
+        // a null flow on a started adapter means outbound traffic would silently never be read
+        // ("connected but no traffic"), so make that case loud.
+        var flow = _packetFlow;
+        if (flow == null) {
+            if (IsStarted)
+                VhLogger.Instance.LogWarning(
+                    "iOS: no packet flow at StartReadingPackets; outbound traffic will not be read.");
+            return;
+        }
 
-        _packetFlow.ReadPackets(OnPacketsReceived);
+        flow.ReadPackets(OnPacketsReceived);
     }
 
     private void OnPacketsReceived(NSData[] packets, NSNumber[] protocols)
@@ -418,9 +464,9 @@ public class IosVpnAdapter(
         // ToDo: remove diagnose — freeze locator, see LastReadTicks.
         Volatile.Write(ref LastReadTicks, Environment.TickCount64);
 
-        // Capture the flow up-front; AdapterClose may null it out while we run.
-        var flow = _packetFlow;
-        if (flow == null)
+        // Bail out if the adapter is closed. AdapterClose may null the flow at any point;
+        // the re-arm at the end re-checks it so a closing adapter ends the read chain.
+        if (_packetFlow == null)
             return;
 
         // Drain native autorelease temporaries created while parsing this batch so they do
@@ -468,7 +514,10 @@ public class IosVpnAdapter(
         // packets and then stops. We must re-arm it by calling it again here, otherwise the
         // device stops sending traffic into the tunnel after the first batch and routing
         // appears "connected but no traffic" (public IP never changes).
-        flow.ReadPackets(OnPacketsReceived);
+        // Re-arm via the field, not a captured flow: if AdapterClose ran while this batch was
+        // processing, the chain ends here instead of registering one more dead callback that
+        // could swallow a batch meant for a successor adapter.
+        _packetFlow?.ReadPackets(OnPacketsReceived);
     }
 
     protected override bool ReadPacket(byte[] buffer)

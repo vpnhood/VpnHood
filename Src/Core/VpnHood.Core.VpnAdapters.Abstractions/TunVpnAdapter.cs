@@ -531,7 +531,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
         // log if failed to send
         if (!sent)
-            VhLogger.Instance.LogWarning("Failed to send packet via WinTun adapter.");
+            VhLogger.Instance.LogWarning("Failed to send packet via TUN adapter. AdapterName: {AdapterName}",
+                AdapterName);
     }
 
     protected virtual void StartReadingPackets()

@@ -52,16 +52,17 @@ public sealed class TcpStackDiagnostics
     /// </summary>
     public static Func<double>? FootprintMbProvider { get; set; }
 
-    private static string FootprintSuffix()
+    // Fixed-width (5 chars, F1: "  8.3", " 43.2", "102.4") so the mem column stays aligned across
+    // +CONN/-CONN lines when eyeballing the live device console. "  n/a"/"  err" keep the width.
+    private static string FootprintFixed()
     {
-        // If the provider is null, we don't have a footprint to report (e.g. Windows/Android). If it throws, we
         var provider = FootprintMbProvider;
-        if (provider == null) 
-            return "n/a";
-        
-        // Best-effort: if the provider throws, just omit the field rather than crashing the stack.
-        try { return $" mem={provider():F1}MB"; }
-        catch { return ""; }
+        if (provider == null)
+            return "  n/a";
+
+        // Best-effort: if the provider throws, keep the column instead of crashing the stack.
+        try { return $"{provider(),5:F1}"; }
+        catch { return "  err"; }
     }
 
     internal void SetConnectionCount(int count)
@@ -85,9 +86,11 @@ public sealed class TcpStackDiagnostics
         // Low-frequency lifecycle event (one per connection): logged at Debug and UNGATED so it's visible
         // when the log level is Debug without enabling the per-packet hot-path traces. Volume is
         // per-connection, not per-packet, so it never floods.
+        // FORMAT: live/mem come FIRST (fixed-width: live 3 digits, mem 5 chars) so they stay in the
+        // same on-screen columns in the live device console; the long endpoint pair goes last.
         VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStack,
-            "[TcpStack] +CONN established {EndPointPair} live={LiveEstablished}{Memory}",
-            endPointPair, live, FootprintSuffix());
+            "[TcpStack] +CONN live={LiveEstablished} mem={Memory}MB {EndPointPair}",
+            live.ToString("D3"), FootprintFixed(), endPointPair);
     }
 
     /// <summary>
@@ -99,9 +102,10 @@ public sealed class TcpStackDiagnostics
         var live = Interlocked.Decrement(ref _establishedConnections);
         // Low-frequency lifecycle event (one per connection): see IncrementEstablishedConnections — logged
         // at Debug, ungated, so it's visible at Debug level without the hot-path traces.
+        // FORMAT: same fixed-width live/mem columns as +CONN; reason + endpoint trail at the end.
         VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStack,
-            "[TcpStack] -CONN released({Reason}) {EndPointPair} live={LiveEstablished}{Memory}",
-            reason, endPointPair, live, FootprintSuffix());
+            "[TcpStack] -CONN live={LiveEstablished} mem={Memory}MB {EndPointPair} ({Reason})",
+            live.ToString("D3"), FootprintFixed(), endPointPair, reason);
     }
 
     internal void AddPipeBufferedBytes(long bytes) => Interlocked.Add(ref _totalPipeBufferedBytes, bytes);

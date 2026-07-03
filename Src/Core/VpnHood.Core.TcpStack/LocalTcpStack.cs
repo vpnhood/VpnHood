@@ -91,7 +91,7 @@ public sealed class LocalTcpStack : ITcpStack
 
     // Re-advertise reopened-but-quiet receive windows this often. 50 ms caps the added stall to well
     // under a peer's zero-window persist RTO (~hundreds of ms, then exponential), so the freeze is
-    // bounded to one sweep instead. Per tick it only flag-checks each connection; lock/send work
+    // bounded to one sweep instead. Per tick, it only flag-checks each connection; lock/send work
     // happens solely for flows actually waiting on a reopened window.
     private static readonly TimeSpan WindowSweepInterval = TimeSpan.FromMilliseconds(50);
     private readonly Timer? _windowSweepTimer;
@@ -447,7 +447,7 @@ public sealed class LocalTcpStack : ITcpStack
             Volatile.Write(ref _maintenanceSweeping, 0);
         }
 
-        // Park the timer when nothing needs service. Re-check afterwards: an AddMaintenanceInterest
+        // Park the timer when nothing needs service. Re-check afterward: an AddMaintenanceInterest
         // racing the park may have had its Change() overwritten — re-arm so its connection is not
         // left unserviced.
         if (Volatile.Read(ref _maintenanceInterest) == 0)
@@ -511,7 +511,7 @@ public sealed class LocalTcpStack : ITcpStack
 
         // Abort() is synchronous: it removes the victim from _connections (via OnConnectionClosed),
         // completes its pipes (consumer reads EOF), unblocks its sender — freeing the slot now — and
-        // tells the victim's peer with a RST so it does not keep retransmitting into a black hole.
+        // tells the victim's peer with an RST so it does not keep retransmitting into a black hole.
         victim.Abort();
         return true;
     }

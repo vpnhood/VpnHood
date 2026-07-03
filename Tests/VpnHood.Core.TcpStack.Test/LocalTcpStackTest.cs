@@ -176,16 +176,16 @@ public sealed class LocalTcpStackTest
             lock (lockObj) {
                 return sentPackets.Any(p => {
                     var tcp = p.ExtractTcp();
-                    return tcp.Acknowledgment && tcp.Payload.Length == 0 && tcp.AcknowledgmentNumber == 1006;
+                    return tcp is { Acknowledgment: true, Payload.Length: 0, AcknowledgmentNumber: 1006 };
                 });
             }
-        }, cts.Token, 1000);
+        }, cts.Token);
 
         lock (lockObj) {
-            Assert.IsTrue(sentPackets.Any(p => {
+            Assert.Contains(p => {
                 var tcp = p.ExtractTcp();
-                return tcp.Acknowledgment && tcp.Payload.Length == 0 && tcp.AcknowledgmentNumber == 1006;
-            }), "A lone non-PSH data segment should be ACKed immediately.");
+                return tcp is { Acknowledgment: true, Payload.Length: 0, AcknowledgmentNumber: 1006 };
+            }, sentPackets, "A lone non-PSH data segment should be ACKed immediately.");
         }
 
         await stream.DisposeAsync();
@@ -247,15 +247,15 @@ public sealed class LocalTcpStackTest
             lock (lockObj) {
                 return sentPackets.Any(p => {
                     var tcp = p.ExtractTcp();
-                    return tcp.Acknowledgment && tcp.Payload.Length == 0 && tcp.AcknowledgmentNumber == 2025;
+                    return tcp is { Acknowledgment: true, Payload.Length: 0, AcknowledgmentNumber: 2025 };
                 });
             }
-        }, cts.Token, 1000);
+        }, cts.Token);
 
         lock (lockObj) {
             var pureAcks = sentPackets.Count(p => {
                 var tcp = p.ExtractTcp();
-                return tcp.Acknowledgment && tcp.Payload.Length == 0;
+                return tcp is { Acknowledgment: true, Payload.Length: 0 };
             });
             Assert.AreEqual(1, pureAcks, "Two full-size non-PSH segments should produce one cumulative ACK.");
         }
@@ -501,7 +501,7 @@ public sealed class LocalTcpStackTest
 
         lock (lockObj) sentPackets.Clear();
 
-        // Act — server writes a multi-byte payload that can ONLY drain one byte per probe.
+        // Act — server writes a multibyte payload that can ONLY drain one byte per probe.
         var payload = new byte[] { 0xA1, 0xB2, 0xC3, 0xD4 };
         var writeTask = stream.Stream.WriteAsync(payload, 0, payload.Length, cts.Token);
 

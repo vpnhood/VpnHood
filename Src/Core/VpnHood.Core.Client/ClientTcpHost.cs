@@ -38,7 +38,7 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
         _tcpStack = new LocalTcpStack {
             OnPacketSend = packet => {
                 // OnPacketSend transfers packet ownership: when no subscriber is attached
-                // (startup/dispose race), the pooled packet must be disposed here or it leaks.
+                // (startup/dispose race), the pooled packet must be disposed here, or it leaks.
                 var handler = PacketReceived;
                 if (handler != null) handler.Invoke(this, packet);
                 else packet.Dispose();

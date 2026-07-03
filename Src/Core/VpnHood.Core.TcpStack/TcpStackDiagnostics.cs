@@ -34,7 +34,7 @@ public sealed class TcpStackDiagnostics
     /// <summary>Gets the aggregate number of bytes buffered across all connection reassembly pipes.
     /// NOTE: this is a FLOW-CONTROL input, not just a metric — every connection's AdvertisedWindow
     /// subtracts it from <c>GlobalReceiveBudget</c> to compute the shared headroom. Removing or
-    /// breaking its accounting silently disables the global receive budget (iOS memory cap).</summary>
+    /// breaking its accounting silently disables the global budget of receive (iOS memory cap).</summary>
     public long TotalPipeBufferedBytes => Volatile.Read(ref _totalPipeBufferedBytes);
 
     /// <summary>Gets the window size of receive configured for this stack profile.</summary>

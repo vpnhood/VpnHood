@@ -1,6 +1,3 @@
-using Foundation;
-using UIKit;
-
 namespace VpnHood.Core.Client.Devices.Ios.Utils;
 
 // iOS counterpart of AndroidUtils. Helpers for marshaling work onto the UI (main) thread.
@@ -9,7 +6,7 @@ public static class IosUtils
     public static Task RunOnUiThread(Action action)
     {
         // Already on the UI thread: run inline so a synchronous caller (blocking on the returned
-        // task) can't dead-lock waiting for a main-queue dispatch that will never run.
+        // task) can't deadlock waiting for a main-queue dispatch that will never run.
         if (NSThread.IsMain) {
             try {
                 action();

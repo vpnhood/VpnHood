@@ -20,6 +20,7 @@ public sealed class LossRecoveryTest
     private static readonly IPAddress ClientIp = IPAddress.Parse("10.0.0.2");
     private const int ServerPort = 8080;
     private const int ClientPort = 54321;
+    public TestContext TestContext { get; set; } = null!;
 
     /// <summary>
     /// Tail loss: the LAST data segment of a burst produces no duplicate ACKs (nothing arrives after
@@ -178,12 +179,12 @@ public sealed class LossRecoveryTest
         }, cts.Token, 3000);
         await Task.Delay(200, cts.Token); // let several more probe intervals elapse
 
-        var frontierLimit = serverSeq + 1 + (uint)retxSize; // first unsendable seq while nothing is acked
+        var frontierLimit = serverSeq + 1 + retxSize; // first unsendable seq while nothing is acked
         lock (sync) {
             foreach (var p in sent.Where(p => p.ExtractTcp().Payload.Length > 0)) {
                 var tcp = p.ExtractTcp();
                 var end = tcp.SequenceNumber + (uint)tcp.Payload.Length;
-                Assert.IsTrue((int)(end - frontierLimit) <= 0,
+                Assert.IsLessThanOrEqualTo(0, (int)(end - frontierLimit),
                     $"Sequence frontier advanced past the retx ring capacity while nothing was acked " +
                     $"(seq end {end} > limit {frontierLimit}): a probe consumed a byte it cannot back.");
             }
@@ -206,7 +207,7 @@ public sealed class LossRecoveryTest
                     tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
                         ack: true, seq: 1001, ackNum: highest));
                 }
-                await Task.Delay(20);
+                await Task.Delay(20, TestContext.CancellationToken);
             }
         }, cts.Token);
 
@@ -305,7 +306,7 @@ public sealed class LossRecoveryTest
                 foreach (var ackNum in acks)
                     tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
                         ack: true, seq: 1001, ackNum: ackNum));
-                await Task.Delay(10);
+                await Task.Delay(10, TestContext.CancellationToken);
             }
         }, cts.Token);
 
@@ -344,9 +345,9 @@ public sealed class LossRecoveryTest
             rst: true, seq: 1001 + 10));
         await WaitForCondition(() => {
             lock (sync) return sent.Any(p => p.ExtractTcp() is { Acknowledgment: true, Reset: false });
-        }, cts.Token, 1000);
+        }, cts.Token);
         lock (sync) {
-            Assert.IsTrue(sent.Any(p => p.ExtractTcp() is { Acknowledgment: true, Reset: false }),
+            Assert.Contains(p => p.ExtractTcp() is { Acknowledgment: true, Reset: false }, sent,
                 "An in-window inexact RST must elicit a challenge ACK.");
         }
 
@@ -390,7 +391,7 @@ public sealed class LossRecoveryTest
         await stream.Stream.WriteAsync("dup-ack-probe"u8.ToArray());
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await WaitForCondition(() => { lock (sync) return sent.Any(p => p.ExtractTcp().Payload.Length > 0); },
-            cts.Token, 1000);
+            cts.Token);
         lock (sync) sent.Clear();
 
         // 3 pure WINDOW UPDATES: same ack number, growing window -> must NOT fast-retransmit.
@@ -453,16 +454,16 @@ public sealed class LossRecoveryTest
             lock (sync) {
                 return sent.Any(p => {
                     var tcp = p.ExtractTcp();
-                    return tcp.Acknowledgment && tcp.Payload.Length == 0 && tcp.AcknowledgmentNumber == 1001 + 512;
+                    return tcp is { Acknowledgment: true, Payload.Length: 0, AcknowledgmentNumber: 1001 + 512 };
                 });
             }
         }, cts.Token, 2000);
 
         lock (sync) {
-            Assert.IsTrue(sent.Any(p => {
+            Assert.Contains(p => {
                 var tcp = p.ExtractTcp();
-                return tcp.Acknowledgment && tcp.Payload.Length == 0 && tcp.AcknowledgmentNumber == 1001 + 512;
-            }), "A thinned trailing segment must get its ACK flushed by the delayed-ACK timer.");
+                return tcp is { Acknowledgment: true, Payload.Length: 0, AcknowledgmentNumber: 1001 + 512 };
+            }, sent, "A thinned trailing segment must get its ACK flushed by the delayed-ACK timer.");
         }
 
         await stream.DisposeAsync();

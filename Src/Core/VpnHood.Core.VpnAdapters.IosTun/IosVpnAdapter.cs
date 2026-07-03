@@ -385,7 +385,7 @@ public class IosVpnAdapter(
     private void ClearWriteBatch(int batchCount)
     {
         for (var i = 0; i < batchCount; i++) {
-            _writeDataBatch[i]?.Dispose();
+            _writeDataBatch[i].Dispose();
             _writeDataBatch[i] = null!;
             _writeProtocolBatch[i] = null!;
         }

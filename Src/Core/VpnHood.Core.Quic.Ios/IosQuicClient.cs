@@ -106,7 +106,13 @@ public sealed class IosQuicClient : IQuicClient
             new UnboundedChannelOptions { SingleReader = false, SingleWriter = true });
 
         try {
-            connectionGroup.SetNewConnectionHandler(stream => inboundStreams.Writer.TryWrite(stream));
+            connectionGroup.SetNewConnectionHandler(stream => {
+                if (inboundStreams.Writer.TryWrite(stream))
+                    return;
+
+                VhUtils.TryInvoke(() => stream.Cancel());
+                stream.Dispose();
+            });
 
             var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             await using var reg = cancellationToken.Register(() => tcs.TrySetCanceled());

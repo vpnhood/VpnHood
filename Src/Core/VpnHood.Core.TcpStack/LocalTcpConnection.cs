@@ -2,7 +2,6 @@
 using System.IO.Pipelines;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
-using VpnHood.Core.TcpStack.Abstractions;
 using VpnHood.Core.TcpStack.Primitives;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
@@ -244,7 +243,7 @@ internal sealed class LocalTcpConnection(
         diagnostics.IncrementEstablishedConnections(ipEndPointPair); // DIAGNOSTIC (counts + logs)
 
         if (clientToEnqueue != null && !listener.TryEnqueueAccept(clientToEnqueue)) {
-            // Listener stopped or its accept queue is full: abort so the peer gets a RST immediately
+            // Listener stopped or its accept queue is full: abort so the peer gets an RST immediately
             // instead of a fully-established connection that lingers half-closed buffering data it can
             // never deliver, then dispose the unaccepted client (its FIN attempt becomes a no-op).
             Abort();
@@ -424,7 +423,7 @@ internal sealed class LocalTcpConnection(
         Touch();
 
         if (flags.HasFlag(TcpFlags.Rst)) {
-            // RFC 5961 §3.2: accept a RST only when its sequence number exactly matches RCV.NXT. An
+            // RFC 5961 §3.2: accept an RST only when its sequence number exactly matches RCV.NXT. An
             // in-window (but inexact) RST gets a challenge ACK; anything else is dropped. Without this,
             // any local app able to inject one packet into the TUN could blind-reset arbitrary flows.
             bool exact, inWindow;
@@ -526,7 +525,7 @@ internal sealed class LocalTcpConnection(
                     // buffer instead of exhausting memory. (This is also what keeps the reassembly pipe
                     // below its pause threshold — see LocalTcpStackOptions.CreatePipeOptions.)
                     var headroom = (int)Math.Clamp(
-                        (long)options.ReceiveWindowSize - Interlocked.Read(ref _pipeUnread), 0, int.MaxValue);
+                        options.ReceiveWindowSize - Interlocked.Read(ref _pipeUnread), 0, int.MaxValue);
                     acceptedNew = Math.Min(newData.Length, headroom);
                     if (acceptedNew > 0) {
                         WriteToAppPipe(newData[..acceptedNew]);
@@ -590,7 +589,7 @@ internal sealed class LocalTcpConnection(
             return (true, needsAck);
         }
         catch (InvalidOperationException) {
-            // Pipe was completed/broken - abort (the peer gets a RST instead of a silent black hole)
+            // Pipe was completed/broken - abort (the peer gets an RST instead of a silent black hole)
             Abort();
             return (false, false);
         }
@@ -841,7 +840,7 @@ internal sealed class LocalTcpConnection(
                 var last = Interlocked.Read(ref _lastActivityTicks);
                 var elapsed = Stopwatch.GetElapsedTime(last);
                 if (elapsed >= _idleTimeout) {
-                    // Abortive: tell the peer with a RST so it doesn't linger on a black-holed flow.
+                    // Abortive: tell the peer with an RST so it doesn't linger on a black-holed flow.
                     Abort();
                     break;
                 }
@@ -1079,7 +1078,7 @@ internal sealed class LocalTcpConnection(
     internal void Close() => Close(sendRst: false);
 
     /// <summary>Abortive close (idle timeout, admission eviction, broken pipe, accept-queue overflow):
-    /// tears the connection down AND tells the peer with a RST, so it does not linger retransmitting
+    /// tears the connection down AND tells the peer with an RST, so it does not linger retransmitting
     /// into a black hole until its own timers give up.</summary>
     internal void Abort() => Close(sendRst: true);
 

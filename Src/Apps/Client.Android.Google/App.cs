@@ -29,7 +29,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
             AdjustForSystemBars = false,
-            UserReviewProvider = new GooglePlayInAppUserReviewProvider(AppConfigs.IsDebugMode),
+            UserReviewProvider = new GooglePlayInAppUserReviewProvider(),
             AllowEndPointStrategy = true,
             WebUiPort = appConfigs.WebUiPort,
             AllowRecommendUserReviewByServer = false,

@@ -170,6 +170,8 @@ public sealed class LocalTcpStackOptionsTest
             "zero window must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { ReceiveWindowSize = 16384, PipeResumeWriterThreshold = 16384 }),
             "resume threshold >= window must be rejected");
+        Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { GlobalReceiveBudget = 0 }),
+            "non-positive global receive budget must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { RetxBufferSize = 256, MaxMss = 1460 }),
             "retx buffer smaller than MaxMss must be rejected");
         Assert.Throws<ArgumentException>(() => new LocalTcpStack(new LocalTcpStackOptions { IdleTimeout = TimeSpan.FromSeconds(30), IdleCheckInterval = TimeSpan.FromMinutes(1) }),

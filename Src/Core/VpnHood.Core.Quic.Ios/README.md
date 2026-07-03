@@ -50,9 +50,9 @@ Set in `IosQuicClient.ConnectAsync` on the QUIC options block:
 
 | Parameter | Value | Why |
 |---|---|---|
-| `InitialMaxData` | **1 MB** | Connection-wide aggregate receive window across all streams — the real ceiling on native inbound buffering. ~1 MB keeps ≈80 Mbps @ 100 ms RTT while capping a download burst far under the jetsam limit. |
-| `InitialMaxStreamDataBidirectionalLocal` | **64 KB** | Per-stream window for streams we open (the proxy's download streams). |
-| `InitialMaxStreamDataBidirectionalRemote` | **64 KB** | Per-stream window for peer-opened streams. |
+| `InitialMaxData` | **256 KB** | Connection-wide aggregate receive window across all streams — the real ceiling on native inbound buffering. Tuned down from 1 MB after measured sub-second native transient spikes near the jetsam limit; prioritizes extension stability over peak iOS download speed. |
+| `InitialMaxStreamDataBidirectionalLocal` | **32 KB** | Per-stream window for streams we open (the proxy's download streams). |
+| `InitialMaxStreamDataBidirectionalRemote` | **32 KB** | Per-stream window for peer-opened streams. |
 | `IosQuicStream.MaxReceiveLength` | **16 KB** | Caps a single armed native receive so even a huge caller buffer pulls native data in bounded chunks. The QUIC window above is the real ceiling; this just bounds one receive. |
 
 Without an explicit window, Network.framework advertises a large default and a download burst floods

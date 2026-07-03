@@ -172,20 +172,35 @@ internal sealed class IosQuicStream : AsyncStream
         if (cancellationToken.CanBeCanceled)
             _writeReg = cancellationToken.Register(CancelWriteCallback, _writeSource);
 
-        // ToDo: remove diagnose — count this send as in-flight until its completion callback fires.
-        Interlocked.Exchange(ref _pendingSendBytes, buffer.Length);
-        Interlocked.Add(ref IosQuicClient.OutstandingSendBytes, buffer.Length);
+        try {
+            // ToDo: remove diagnose — count this send as in-flight until its completion callback fires.
+            Interlocked.Exchange(ref _pendingSendBytes, buffer.Length);
+            Interlocked.Add(ref IosQuicClient.OutstandingSendBytes, buffer.Length);
 
-        using var pool = new NSAutoreleasePool();
-        if (MemoryMarshal.TryGetArray(buffer, out var segment)) {
-            // isComplete: false -> more data may follow on this stream (do not signal FIN).
-            _connection.Send(segment.Array!, segment.Offset, segment.Count, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
+            using var pool = new NSAutoreleasePool();
+            if (MemoryMarshal.TryGetArray(buffer, out var segment)) {
+                // isComplete: false -> more data may follow on this stream (do not signal FIN).
+                _connection.Send(segment.Array!, segment.Offset, segment.Count, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
+            }
+            else {
+                var rented = ArrayPool<byte>.Shared.Rent(buffer.Length);
+                _writeRentedArray = rented;
+                buffer.CopyTo(rented);
+                _connection.Send(rented, 0, buffer.Length, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
+            }
         }
-        else {
-            var rented = ArrayPool<byte>.Shared.Rent(buffer.Length);
-            _writeRentedArray = rented;
-            buffer.CopyTo(rented);
-            _connection.Send(rented, 0, buffer.Length, NWContentContext.DefaultMessage, isComplete: false, _writeCallback);
+        catch (Exception ex) {
+            _writeReg.Dispose();
+
+            var pending = Interlocked.Exchange(ref _pendingSendBytes, 0);
+            if (pending > 0)
+                Interlocked.Add(ref IosQuicClient.OutstandingSendBytes, -pending);
+
+            var rented = Interlocked.Exchange(ref _writeRentedArray, null);
+            if (rented != null)
+                ArrayPool<byte>.Shared.Return(rented);
+
+            return ValueTask.FromException(ex);
         }
 
         return new ValueTask(_writeSource, _writeSource.Version);

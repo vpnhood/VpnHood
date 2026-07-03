@@ -254,6 +254,9 @@ public sealed class LocalTcpStackOptions
             throw new ArgumentException(
                 $"{nameof(PipeResumeWriterThreshold)} ({resume}) must be between 1 and {nameof(ReceiveWindowSize)}-1 ({ReceiveWindowSize - 1}).");
 
+        if (GlobalReceiveBudget <= 0)
+            throw new ArgumentException($"{nameof(GlobalReceiveBudget)} must be positive; was {GlobalReceiveBudget}.");
+
         if (RetxBufferSize < MaxMss)
             throw new ArgumentException(
                 $"{nameof(RetxBufferSize)} ({RetxBufferSize}) must be at least {nameof(MaxMss)} ({MaxMss}).");

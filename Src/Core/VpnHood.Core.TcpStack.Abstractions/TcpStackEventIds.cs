@@ -9,7 +9,8 @@ namespace VpnHood.Core.TcpStack.Abstractions;
 public static class TcpStackEventIds
 {
     /// <summary>
-    /// EventId for verbose TCP connection diagnostics (ACK, window, retransmission, etc.)
+    /// EventId for all TcpStack diagnostics (connection lifecycle + verbose ACK/window/retransmission traces).
+    /// Lets a logger distinguish TcpStack logs from other subsystems (e.g. QUIC) by EventId.
     /// </summary>
     public static readonly EventId TcpStack = new(10001, "TcpStack");
 }

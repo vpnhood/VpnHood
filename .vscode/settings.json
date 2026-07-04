@@ -1,0 +1,8 @@
+{
+  // Hide MSBuild SDK-resolver temp files from the explorer. They are regenerated
+  // on every restore/design-time build (*.SdkResolver.*.proj.Backup.tmp) and are
+  // already .gitignored — this just stops them cluttering the file tree.
+  "files.exclude": {
+    "**/*.tmp": true
+  }
+}

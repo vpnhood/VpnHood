@@ -71,6 +71,7 @@
     <Project Path="Src/AppLib/VpnHood.AppLib.Abstractions/VpnHood.AppLib.Abstractions.csproj" />
     <Project Path="Src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
     <Project Path="Src/AppLib/VpnHood.AppLib.Store/VpnHood.AppLib.Store.csproj" />
+    <Project Path="Src/AppLib/VpnHood.AppLib.SpaWebView/VpnHood.AppLib.SpaWebView.csproj" />
     <Project Path="Src/AppLib/VpnHood.AppLib.Swagger/VpnHood.AppLib.Swagger.csproj" />
     <Project Path="Src/AppLib/VpnHood.AppLib.WebServer/VpnHood.AppLib.WebServer.csproj" />
   </Folder>

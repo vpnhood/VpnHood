@@ -19,6 +19,7 @@ public class AndroidAppWebViewMainActivityHandler(
     : AndroidAppMainActivityHandler(activityEvent, options)
 {
     private bool _isWeViewVisible;
+    private bool _serverEventsHooked;
     private WebView? WebView { get; set; }
     public Exception? WebViewCreateException { get; private set; }
     private AndroidBackInvokedCallback? _backInvokedCallback;
@@ -43,6 +44,12 @@ public class AndroidAppWebViewMainActivityHandler(
         try {
             if (!VpnHoodAppWebServer.IsInit)
                 VpnHoodAppWebServer.Init();
+
+            // Reload the WebView whenever the server self-heals a torn-down listener (subscribe once).
+            if (!_serverEventsHooked) {
+                VpnHoodAppWebServer.Instance.Restarted += OnServerRestarted;
+                _serverEventsHooked = true;
+            }
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to initialize web server.");
@@ -190,8 +197,18 @@ public class AndroidAppWebViewMainActivityHandler(
         if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.KillSpaServer) && VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Instance.Start();
 
+        // Let the web server self-heal a listener that was torn down while backgrounded (no-op if
+        // it is still listening). If it had to restart, OnServerRestarted reloads the WebView.
+        AppUiContext.NotifyResumed();
+
         WebView?.OnResume();
         base.OnResume();
+    }
+
+    // The server self-healed — its old connections are gone, so reload the SPA.
+    private void OnServerRestarted(object? sender, EventArgs e)
+    {
+        AndroidUtils.RunOnUiThread(ActivityEvent.Activity, () => WebView?.Reload());
     }
 
     protected override void OnDestroy()
@@ -201,6 +218,11 @@ public class AndroidAppWebViewMainActivityHandler(
             ActivityEvent.Activity.OnBackInvokedDispatcher.UnregisterOnBackInvokedCallback(_backInvokedCallback);
             _backInvokedCallback.Dispose();
             _backInvokedCallback = null;
+        }
+
+        if (_serverEventsHooked && VpnHoodAppWebServer.IsInit) {
+            VpnHoodAppWebServer.Instance.Restarted -= OnServerRestarted;
+            _serverEventsHooked = false;
         }
 
         base.OnDestroy();

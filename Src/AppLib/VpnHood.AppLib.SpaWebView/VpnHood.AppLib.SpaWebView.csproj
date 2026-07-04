@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>VpnHood shared code for iOS client apps (WebView host + app bootstrap)</Description>
-		<TargetFramework>net11.0-ios</TargetFramework>
-		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
-		<RootNamespace>VpnHood.AppLib.Ios.Common</RootNamespace>
+		<Description>Platform-neutral controller that hosts the VpnHood single-page application (SPA) in a native web view. Each platform implements a thin ISpaWebView adapter; all the hosting business logic (web-server lifecycle, launch URL, loading/error state, self-heal reload and recovery) lives here.</Description>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.AppLib.SpaWebView</RootNamespace>
 	</PropertyGroup>
 
 	<PropertyGroup>
@@ -30,16 +29,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\..\..\VpnHood.png">
+		<None Include="..\..\..\VpnHood.png" Link="Resources\VpnHood.png">
 			<Pack>True</Pack>
-			<PackagePath>\</PackagePath>
+			<PackagePath></PackagePath>
 		</None>
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
-		<ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
-		<ProjectReference Include="..\VpnHood.AppLib.SpaWebView\VpnHood.AppLib.SpaWebView.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
 	</ItemGroup>
+
 </Project>

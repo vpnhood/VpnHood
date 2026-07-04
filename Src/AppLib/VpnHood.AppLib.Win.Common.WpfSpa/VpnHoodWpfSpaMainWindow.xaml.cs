@@ -52,6 +52,12 @@ public partial class VpnHoodWpfSpaMainWindow : Window
             VhUtils.TryInvoke("UpdatingSystemIcon", () => Dispatcher.Invoke(UpdateIcon));
 
         AppUiContext.Context = new WinUiContext(this);
+
+        // Parity with mobile: let the web server self-heal a listener that was torn down while the
+        // app was hidden (rare on desktop, but free insurance), and reload the WebView if it did.
+        Activated += (_, _) => AppUiContext.NotifyResumed();
+        VpnHoodAppWebServer.Instance.Restarted += (_, _) =>
+            Dispatcher.Invoke(() => MainWebView.Reload());
     }
 
     //private static System.Drawing.Color ConvertFromVhColor(VhColor color)

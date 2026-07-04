@@ -6,8 +6,8 @@ namespace VpnHood.Core.Quic.Ios;
 
 /// <summary>
 /// iOS QUIC <b>investigation instrumentation</b>, owned by this project (mirrors <c>TcpStackDiagnostics</c>):
-/// it holds the QUIC stream counters and the <c>[VHQUIC]</c> open/close logging, and every mutating method
-/// is a no-op when <see cref="Enabled"/> is false, so call sites stay clean and it costs nothing in
+/// it holds the QUIC stream counters and the <c>[VHQUIC]</c> open/close logging; every mutating method
+/// is a no-op when <see cref="Enabled"/> is false, so call sites stay clean, and it costs nothing in
 /// production.
 /// </summary>
 /// <remarks>
@@ -114,10 +114,16 @@ public static class IosQuicDiagnostics
         Interlocked.Increment(ref _brakeCount);
         if (hard) Interlocked.Increment(ref _hardBrakeCount);
 
-        // Track the worst footprint seen this window (best-effort CAS loop).
-        double prevPeak;
-        while (footprintMb > (prevPeak = Volatile.Read(ref _brakePeakFootprintMb)) &&
-               Interlocked.CompareExchange(ref _brakePeakFootprintMb, footprintMb, prevPeak) != prevPeak) { }
+        // Track the worst footprint seen this window (best-effort CAS loop). The success check
+        // compares bit patterns because CompareExchange itself compares doubles bitwise.
+        while (true) {
+            var prevPeak = Volatile.Read(ref _brakePeakFootprintMb);
+            if (footprintMb <= prevPeak)
+                break;
+            var witnessed = Interlocked.CompareExchange(ref _brakePeakFootprintMb, footprintMb, prevPeak);
+            if (BitConverter.DoubleToInt64Bits(witnessed) == BitConverter.DoubleToInt64Bits(prevPeak))
+                break;
+        }
 
         // Time-throttle: only one thread per ~1s window wins the right to flush + log.
         var now = Environment.TickCount64;

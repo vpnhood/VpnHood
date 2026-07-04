@@ -21,8 +21,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private string? _spaHash;
     private string? _spaPath;
     private readonly bool _isDebugMode;
-    private readonly object _serverLock = new();
-    private System.Threading.Timer? _healthTimer;
+    private readonly Lock _serverLock = new();
+    private Timer? _healthTimer;
     private int _healthCheckBusy;
     private static readonly TimeSpan HealthCheckInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMilliseconds(500);
@@ -50,7 +50,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         Url = options.Url ?? new Uri($"http://{endPoint}");
         VpnHoodApp.Instance.SettingsService.BeforeSave += SettingsServiceOnBeforeSave;
         // Self-heal when the app returns to the foreground: iOS (and, less often, other platforms)
-        // can tear the loopback listener down while backgrounded, with no notification.
+        // can tear the loopback listener down while the app is in the background, with no notification.
         AppUiContext.OnResumed += AppUiContextOnResumed;
     }
 
@@ -94,7 +94,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     // kicks an immediate check so recovery isn't delayed by a tick.
     private void StartHealthMonitor()
     {
-        _healthTimer ??= new System.Threading.Timer(_ => RunHealthCheck(), null,
+        _healthTimer ??= new Timer(_ => RunHealthCheck(), null,
             HealthCheckInterval, HealthCheckInterval);
     }
 
@@ -209,7 +209,7 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     }
 
     // Make sure the loopback listener is actually reachable, restarting it if it is not. iOS can
-    // tear the listener socket down while the host app is backgrounded (or the process is
+    // tear the listener socket down while the host app is in the background (or the process is
     // memory-pressured), leaving a dead server the WKWebView SPA can no longer reach ("cannot
     // connect to the internal web server"). This is normally driven automatically by the 1s health
     // monitor and by AppUiContext.OnResumed, but platforms can also call it directly after a page

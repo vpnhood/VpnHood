@@ -16,7 +16,7 @@ public sealed class IosDeviceLoggerProvider(string subsystem, bool includeScopes
     private readonly ConcurrentDictionary<string, IosDeviceLogger> _loggers = new();
 
     // One os_log handle per logger category: the MEL category name doubles as the os_log category, so
-    // unified-log lines are filterable by both subsystem (the extension) and category. GetOrAdd memoizes,
+    // unified-log lines are filterable by both subsystem (the extension) and category. GetOrAdd caches,
     // so the handle is created once per category; creating it is cheap (a handle bound to subsystem/category).
     public ILogger CreateLogger(string categoryName)
     {
@@ -39,7 +39,7 @@ public sealed class IosDeviceLoggerProvider(string subsystem, bool includeScopes
         {
             var text = FormatLog(logLevel, eventId, state, exception, formatter);
             try {
-                // os_log requires a constant format string; the macios binding passes `text` as a
+                // os_log requires a constant format string; the .NET iOS binding passes `text` as a
                 // %{public}s argument, so the content is not redacted and needs no %-escaping.
                 osLog.Log(ToOsLogLevel(logLevel), text);
             }

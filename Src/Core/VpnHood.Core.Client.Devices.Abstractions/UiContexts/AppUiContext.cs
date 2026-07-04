@@ -9,7 +9,7 @@ public static class AppUiContext
     // Raised when the host app returns to the foreground / becomes active. Each platform raises it
     // from its native resume hook (iOS WillEnterForeground, Android OnResume, Windows Activated).
     // The SPA web server subscribes to this to self-heal a loopback listener that iOS (or, more
-    // rarely, another OS) may have torn down while the app was backgrounded.
+    // rarely, another OS) may have torn down while the app was in the background.
     public static event EventHandler? OnResumed;
 
     public static IUiContext? Context {

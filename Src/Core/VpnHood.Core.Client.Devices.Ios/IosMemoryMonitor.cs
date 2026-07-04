@@ -162,13 +162,13 @@ internal static class IosMemoryMonitor
         var rdAge = lastRd == 0 ? -1 : nowTicks - lastRd;
         var wrAge = lastWr == 0 ? -1 : nowTicks - lastWr;
         var wrMax = IosTunDiagnostics.TakeMaxTunWriteMs();
-        var cancMax = IosQuicDiagnostics.TakeMaxStreamCancelMs();
+        var cancelMax = IosQuicDiagnostics.TakeMaxStreamCancelMs();
         File.AppendAllText(logPath,
             $"{DateTime.UtcNow:HH:mm:ss.fff} footprint={mb:F1}MB peak={peakMb:F1}MB " +
             $"gcLive={gcLive:F1} gcHeap={gcHeap:F1} gcCommit={gcCommit:F1} native={native:F1} " +
             $"anon={anon:F1} comp={comp:F1} code={code:F1} " +
             $"conn={conn} est={est} peakConn={peakConn} qStreams={qStreams} sendQ={sendQ:F2}MB pipeBuf={pipeBuf:F1}MB win={winKb}KB maxC={maxC} " +
-            $"rdAge={rdAge} wrAge={wrAge} wrMax={wrMax} cancMax={cancMax} " +
+            $"rdAge={rdAge} wrAge={wrAge} wrMax={wrMax} cancelMax={cancelMax} " +
             $"dn={dnMb:F1}MB up={upMb:F1}MB" +
             (mb >= 50 ? " <<< NEAR 52MB JETSAM" : "") + "\n");
     }

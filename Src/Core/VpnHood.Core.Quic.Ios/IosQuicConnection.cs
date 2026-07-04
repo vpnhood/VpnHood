@@ -42,9 +42,9 @@ internal sealed class IosQuicConnection(
         // Pass NULL endpoint AND NULL protocol options: this is exactly Swift's NWConnection(from: group),
         // which extracts a new bidirectional stream that inherits the group's tunnel + QUIC options. A
         // fresh NWProtocolQuicOptions instead makes the extracted connection try to stand up its own
-        // transport and Start() fails with ENETDOWN (Posix 50).
+        // transport and Start() fails with POSIX error 50 (network down).
         var streamHandle = nw_connection_group_extract_connection(
-            (IntPtr)connectionGroup.GetCheckedHandle(), IntPtr.Zero, IntPtr.Zero);
+            connectionGroup.GetCheckedHandle(), IntPtr.Zero, IntPtr.Zero);
         var stream = Runtime.GetINativeObject<NWConnection>(streamHandle, owns: true)
             ?? throw new IOException("Failed to open a new QUIC stream over the tunnel.");
 
@@ -89,7 +89,7 @@ internal sealed class IosQuicConnection(
         }
         catch {
             VhUtils.TryInvoke(() => stream.SetStateChangeHandler(null!));
-            VhUtils.TryInvoke(() => stream.Cancel());
+            VhUtils.TryInvoke(stream.Cancel);
             stream.Dispose();
             throw;
         }
@@ -107,13 +107,13 @@ internal sealed class IosQuicConnection(
         // Stop accepting, then drain and discard any inbound streams that were never accepted.
         inboundStreams.Writer.TryComplete();
         while (inboundStreams.Reader.TryRead(out var pending)) {
-            VhUtils.TryInvoke(() => pending.Cancel());
+            VhUtils.TryInvoke(pending.Cancel);
             pending.Dispose();
         }
 
         VhUtils.TryInvoke(() => connectionGroup.SetStateChangedHandler(null!));
         VhUtils.TryInvoke(() => connectionGroup.SetNewConnectionHandler(null!));
-        VhUtils.TryInvoke(() => connectionGroup.Cancel());
+        VhUtils.TryInvoke(connectionGroup.Cancel);
         connectionGroup.Dispose();
         multiplexGroup.Dispose();
         endpoint.Dispose();

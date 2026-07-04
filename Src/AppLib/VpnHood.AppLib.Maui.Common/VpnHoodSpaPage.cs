@@ -1,4 +1,3 @@
-using Microsoft.Maui.Controls;
 using VpnHood.AppLib.SpaWebView;
 
 namespace VpnHood.AppLib.Maui.Common;

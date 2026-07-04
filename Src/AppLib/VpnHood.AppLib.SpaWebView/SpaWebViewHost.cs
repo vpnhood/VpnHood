@@ -17,7 +17,7 @@ public sealed class SpaWebViewHost : IDisposable
     private readonly ISpaWebView _view;
     private readonly SpaWebViewHostOptions _options;
 
-    // All of the following are touched only on the UI thread (Start's background work hops back via
+    // All the following are touched only on the UI thread (Start's background work hops back via
     // _view.Post, and the ISpaWebView events are contracted to be raised on the UI thread).
     private int _recoveryAttempts;
     private bool _serverHooked;

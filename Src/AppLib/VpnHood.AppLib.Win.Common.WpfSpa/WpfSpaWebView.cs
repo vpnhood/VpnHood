@@ -1,4 +1,3 @@
-using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -10,11 +9,8 @@ namespace VpnHood.AppLib.Win.Common.WpfSpa;
 // Windows (WPF/WebView2) ISpaWebView adapter: the only WebView2-specific SPA-hosting code. It maps
 // the WebView2 events onto the platform-neutral SpaWebViewHost events and, when the Edge WebView2
 // runtime is unavailable, invokes the window-provided fallback (open the SPA in the system browser).
-public sealed class WpfSpaWebView : ISpaWebView
+public sealed class WpfSpaWebView(WebView2 webView, Action onWebView2Unavailable) : ISpaWebView
 {
-    private readonly WebView2 _webView;
-    private readonly Dispatcher _dispatcher;
-    private readonly Action _onWebView2Unavailable;
     private Uri? _pendingUrl;
 
     public event EventHandler? PageLoaded;
@@ -28,17 +24,10 @@ public sealed class WpfSpaWebView : ISpaWebView
 
     public event EventHandler? ContentProcessGone;
 
-    public WpfSpaWebView(WebView2 webView, Action onWebView2Unavailable)
-    {
-        _webView = webView;
-        _dispatcher = webView.Dispatcher;
-        _onWebView2Unavailable = onWebView2Unavailable;
-    }
-
     public void Initialize()
     {
-        _webView.CoreWebView2InitializationCompleted += OnCoreInitCompleted;
-        _ = _webView.EnsureCoreWebView2Async(null);
+        webView.CoreWebView2InitializationCompleted += OnCoreInitCompleted;
+        _ = webView.EnsureCoreWebView2Async(null);
     }
 
     private void OnCoreInitCompleted(object? sender, CoreWebView2InitializationCompletedEventArgs e)
@@ -46,16 +35,16 @@ public sealed class WpfSpaWebView : ISpaWebView
         if (!e.IsSuccess) {
             // Edge WebView2 runtime missing / failed to initialize — fall back to the external browser.
             VhLogger.Instance.LogError(e.InitializationException, "WebView2 initialization failed.");
-            _onWebView2Unavailable();
+            onWebView2Unavailable();
             return;
         }
 
-        _webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
-        _webView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
-        _webView.CoreWebView2.ProcessFailed += OnProcessFailed;
+        webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
+        webView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
+        webView.CoreWebView2.ProcessFailed += OnProcessFailed;
 
         if (_pendingUrl != null) {
-            _webView.CoreWebView2.Navigate(_pendingUrl.ToString());
+            webView.CoreWebView2.Navigate(_pendingUrl.ToString());
             _pendingUrl = null;
         }
     }
@@ -83,15 +72,15 @@ public sealed class WpfSpaWebView : ISpaWebView
 
     public void Load(Uri url)
     {
-        if (_webView.CoreWebView2 != null)
-            _webView.CoreWebView2.Navigate(url.ToString());
+        if (webView.CoreWebView2 != null)
+            webView.CoreWebView2.Navigate(url.ToString());
         else
             _pendingUrl = url; // navigate once CoreWebView2 finishes initializing
     }
 
     public void Reload()
     {
-        _webView.CoreWebView2?.Reload();
+        webView.CoreWebView2?.Reload();
     }
 
     public void SetLoading(bool isLoading)
@@ -102,11 +91,11 @@ public sealed class WpfSpaWebView : ISpaWebView
     public void ShowError(string message)
     {
         VhLogger.Instance.LogError("SPA host error: {Message}", message);
-        _onWebView2Unavailable();
+        onWebView2Unavailable();
     }
 
     public void Post(Action action)
     {
-        _dispatcher.Invoke(action);
+        webView.Dispatcher.Invoke(action);
     }
 }

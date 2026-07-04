@@ -143,7 +143,7 @@ public sealed class LossRecoveryTest
     /// Ring/sequence integrity: when the retx ring is FULL, a Zero Window Probe must NOT consume a new
     /// byte it cannot store (the pre-fix behavior — a dropped probe then left a sequence number with no
     /// backing byte: silent stream corruption or a permanent stall). It must probe with the byte at
-    /// SndUna instead, and the stream must survive intact once the peer resumes acking.
+    /// SndUna instead, and the stream must survive intact once the peer resumes acknowledging.
     /// </summary>
     [TestMethod]
     [Timeout(15000)]
@@ -190,8 +190,8 @@ public sealed class LossRecoveryTest
             }
         }
 
-        // Resume acking: cumulatively ack everything sent so far, then keep acking until the write
-        // completes; finally verify the stream content is intact (reconstructed by sequence number).
+        // Resume acknowledging: cumulatively ack everything sent so far, then keep acknowledging until
+        // the write completes; finally verify the stream content is intact (reconstructed by sequence number).
         _ = Task.Run(async () => {
             uint acked = 0;
             while (!writeTask.IsCompleted) {
@@ -286,8 +286,9 @@ public sealed class LossRecoveryTest
         var received = new bool[payload.Length];
         var contiguous = 0;
         var processed = lostPackets;
+        var echoToken = cts.Token; // capture the token (a struct): safe even after the cts is disposed
         var echo = Task.Run(async () => {
-            while (!cts.IsCancellationRequested && !writeTask.IsCompleted) {
+            while (!echoToken.IsCancellationRequested && !writeTask.IsCompleted) {
                 var acks = new List<uint>();
                 lock (sync) {
                     for (; processed < sent.Count; processed++) {
@@ -559,7 +560,7 @@ public sealed class LossRecoveryTest
     }
 
     /// <summary>
-    /// Abortive close (idle timeout) must notify the peer with a RST (pre-fix: the peer learned nothing
+    /// Abortive close (idle timeout) must notify the peer with an RST (pre-fix: the peer learned nothing
     /// and kept the flow half-open until its own timers gave up).
     /// </summary>
     [TestMethod]
@@ -612,7 +613,7 @@ public sealed class LossRecoveryTest
 
         var (stream, serverSeq) = await EstablishAsync(tcpStack, sent, sync);
 
-        // Slam the peer window shut, then start a write that parks on the window signal.
+        // Slam the peer window shut, then start a write operation that parks on the window signal.
         tcpStack.ProcessIncoming(CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1, window: 0));
         lock (sync) sent.Clear();

@@ -25,5 +25,5 @@ public readonly struct VhMemoryInfo
     public double? TotalMb => ToMb(TotalBytes);
     public double? UsedMb => ToMb(UsedBytes);
 
-    private static double? ToMb(long? bytes) => bytes.HasValue ? bytes.Value / Mib : null;
+    private static double? ToMb(long? bytes) => bytes / Mib;
 }

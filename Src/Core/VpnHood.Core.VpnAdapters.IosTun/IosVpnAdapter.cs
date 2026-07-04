@@ -305,7 +305,7 @@ public class IosVpnAdapter(
         var writeStart = IosTunDiagnostics.BeginTiming();
 
         lock (_writeLock) {
-            // NEPacketTunnelFlow creates autoreleased native temporaries while marshaling arrays.
+            // NEPacketTunnelFlow creates native autorelease temporaries while marshaling arrays.
             // This runs on a packet worker, so keep an explicit pool around each send drain.
             using var pool = new NSAutoreleasePool();
 
@@ -342,7 +342,7 @@ public class IosVpnAdapter(
 
         // Copy directly from the packet buffer into native NSData. Avoiding a managed slice here
         // matters because this path runs at full packet rate during downloads.
-        // LOAD-BEARING COPY: FromBytes (dataWithBytes:) duplicates the bytes inside this call, and
+        // LOAD-BEARING COPY: FromBytes binds dataWithBytes: and duplicates the bytes inside this call;
         // the source is only valid right here — the fixed pin ends with the statement, a
         // non-array-backed packet's bytes sit in the shared _writeBuffer that the next slot
         // overwrites, and the packet's pooled buffer is disposed right after the drain while
@@ -368,10 +368,13 @@ public class IosVpnAdapter(
         var ok = flow.WritePackets(dataBatch, protocolBatch);
 
         // Log transitions only; a dead flow would otherwise log every batch.
-        if (ok == _writePacketsFailing)
-            VhLogger.Instance.LogDebug(ok
-                ? "iOS: NEPacketTunnelFlow.WritePackets recovered."
-                : "iOS: NEPacketTunnelFlow.WritePackets returned false; packets are being dropped.");
+        if (ok == _writePacketsFailing) {
+            // ReSharper disable once ConvertIfStatementToConditionalTernaryExpression
+            if (ok)
+                VhLogger.Instance.LogDebug("iOS: NEPacketTunnelFlow.WritePackets recovered.");
+            else
+                VhLogger.Instance.LogDebug("iOS: NEPacketTunnelFlow.WritePackets returned false; packets are being dropped.");
+        }
         _writePacketsFailing = !ok;
 
         return ok;
@@ -380,10 +383,10 @@ public class IosVpnAdapter(
     private void ClearWriteBatch(int batchCount)
     {
         for (var i = 0; i < batchCount; i++) {
-            // null-conditional is required: this runs in a finally, and a mid-batch fill failure
-            // (garbled packet) leaves the remaining slots null — a plain Dispose would replace
-            // the real exception with a NullReferenceException.
-            _writeDataBatch[i]?.Dispose();
+            // null-conditional is required: this runs in a finally block, and a mid-batch fill
+            // failure (garbled packet) leaves the remaining slots null — a plain Dispose would
+            // replace the real exception with a NullReferenceException.
+            _writeDataBatch[i].Dispose();
             _writeDataBatch[i] = null!;
             _writeProtocolBatch[i] = null!;
         }
@@ -405,7 +408,7 @@ public class IosVpnAdapter(
 
     protected override void StartReadingPackets()
     {
-        // Base fires this from an unawaited Task.Run after AdapterOpen, so a throw here would
+        // Base fires this from a fire-and-forget Task.Run after AdapterOpen, so a throw here would
         // fault an unobserved task and vanish. A null flow during a concurrent Stop is normal;
         // a null flow on a started adapter means outbound traffic would silently never be read
         // ("connected but no traffic"), so make that case loud.

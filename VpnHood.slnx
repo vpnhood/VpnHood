@@ -81,6 +81,9 @@
     <Project Path="Src/AppLib/VpnHood.AppLib.Android.GooglePlay.Core/VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
     <Project Path="Src/AppLib/VpnHood.AppLib.Android.GooglePlay/VpnHood.AppLib.Android.GooglePlay.csproj" />
   </Folder>
+  <Folder Name="/Src/AppLib/Ios/">
+    <Project Path="Src/AppLib/VpnHood.AppLib.Ios.Common/VpnHood.AppLib.Ios.Common.csproj" />
+  </Folder>
   <Folder Name="/Src/AppLib/Linux/">
     <Project Path="Src/AppLib/VpnHood.AppLib.Linux.Common/VpnHood.AppLib.Linux.Common.csproj" />
   </Folder>

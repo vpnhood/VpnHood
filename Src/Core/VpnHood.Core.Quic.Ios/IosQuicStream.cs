@@ -1,9 +1,6 @@
-using Foundation;
-using Microsoft.Extensions.Logging;
 using Network;
 using System.Buffers;
 using System.Runtime.InteropServices;
-using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
@@ -21,10 +18,10 @@ namespace VpnHood.Core.Quic.Ios;
 /// callbacks carry per-operation state so late native completions cannot complete a later operation. Sync I/O
 /// is unsupported (inherited from <see cref="AsyncStream"/>).
 /// </remarks>
-internal sealed class IosQuicStream : AsyncStream
+internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
 {
-    private readonly NWConnection _connection;
-    private readonly int _id;
+    // Stream lifecycle instrumentation (diagnostics only). Paired with OnStreamClosed in Dispose.
+    private readonly int _id = IosQuicDiagnostics.OnStreamOpened();
     private bool _disposed;
     private bool _aborted;
 
@@ -49,13 +46,6 @@ internal sealed class IosQuicStream : AsyncStream
 
     public override bool CanRead => !_disposed && !_aborted;
     public override bool CanWrite => !_disposed && !_aborted;
-
-    public IosQuicStream(NWConnection connection)
-    {
-        _connection = connection;
-        // Stream lifecycle instrumentation (diagnostics only). Paired with OnStreamClosed in Dispose.
-        _id = IosQuicDiagnostics.OnStreamOpened();
-    }
 
     // JETSAM GUARD thresholds: at full download rate the per-packet native transients (NSData copies
     // retained briefly by NE/nw beyond our dispose) float several MB above baseline and their peaks
@@ -116,7 +106,7 @@ internal sealed class IosQuicStream : AsyncStream
 
             var maximumLength = (uint)Math.Min(buffer.Length, MaxReceiveLength);
             using var pool = new NSAutoreleasePool();
-            _connection.ReceiveReadOnlyData(minimumIncompleteLength: 1, maximumLength: maximumLength, op.Callback);
+            connection.ReceiveReadOnlyData(minimumIncompleteLength: 1, maximumLength: maximumLength, op.Callback);
         }
         catch (Exception ex) {
             Interlocked.CompareExchange(ref _activeRead, null, op);
@@ -200,14 +190,14 @@ internal sealed class IosQuicStream : AsyncStream
             using var pool = new NSAutoreleasePool();
             if (MemoryMarshal.TryGetArray(buffer, out var segment)) {
                 // isComplete: false -> more data may follow on this stream (do not signal FIN).
-                _connection.Send(segment.Array!, segment.Offset, segment.Count, NWContentContext.DefaultMessage,
+                connection.Send(segment.Array!, segment.Offset, segment.Count, NWContentContext.DefaultMessage,
                     isComplete: false, op.Callback);
             }
             else {
                 var rented = ArrayPool<byte>.Shared.Rent(buffer.Length);
                 try {
                     buffer.CopyTo(rented);
-                    _connection.Send(rented, 0, buffer.Length, NWContentContext.DefaultMessage,
+                    connection.Send(rented, 0, buffer.Length, NWContentContext.DefaultMessage,
                         isComplete: false, op.Callback);
                 }
                 finally {
@@ -269,7 +259,7 @@ internal sealed class IosQuicStream : AsyncStream
         if (Interlocked.Exchange(ref _aborted, true))
             return;
 
-        VhUtils.TryInvoke(() => _connection.Cancel());
+        VhUtils.TryInvoke(connection.Cancel);
     }
 
     protected override void Dispose(bool disposing)
@@ -285,8 +275,8 @@ internal sealed class IosQuicStream : AsyncStream
             // load-bearing and run unconditionally.
             var cancelStart = IosQuicDiagnostics.BeginTiming();
             // ReSharper disable once AccessToDisposedClosure
-            VhUtils.TryInvoke(() => _connection.Cancel());
-            _connection.Dispose();
+            VhUtils.TryInvoke(connection.Cancel);
+            connection.Dispose();
             IosQuicDiagnostics.EndStreamTeardown(cancelStart);
 
             // Dispose the pending cancellation registrations (the native callbacks that normally dispose them

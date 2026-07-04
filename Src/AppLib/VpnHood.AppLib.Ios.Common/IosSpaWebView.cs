@@ -45,6 +45,7 @@ public sealed class IosSpaWebView : ISpaWebView
     {
         var config = new WKWebViewConfiguration();
         config.AllowsInlineMediaPlayback = true;
+        config.DefaultWebpagePreferences ??= new WKWebpagePreferences();
         config.DefaultWebpagePreferences.AllowsContentJavaScript = true;
         // Autoplay/JS-opened windows without a user gesture (parity with the Android WebView).
         config.MediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypes.None;
@@ -142,7 +143,7 @@ public sealed class IosSpaWebView : ISpaWebView
         public override void DidFailProvisionalNavigation(WKWebView webView, WKNavigation navigation,
             NSError error)
         {
-            // NSURLErrorCancelled (-999) is the expected result of superseding an in-flight load
+            // NSUrlError.Cancelled (-999) is the expected result of superseding an in-flight load
             // (e.g. our own reload) — it is not a server failure, so don't report it or recovery
             // would perpetually cancel itself into the retry cap.
             const int nsUrlErrorCancelled = -999;

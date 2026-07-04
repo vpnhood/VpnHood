@@ -31,7 +31,7 @@ public static class TaskExtensions
     /// <remarks>
     /// <para>
     /// With the default switch (<c>false</c>) this is identical to <c>.ConfigureAwait(false)</c> — the correct
-    /// choice for code that has no affinity to a UI/synchronization context, which is essentially all of the
+    /// choice for code that has no affinity to a UI/synchronization context, which is essentially all the
     /// core, tunneling, QUIC, TCP-stack and VPN-service code.
     /// </para>
     /// <para>

@@ -15,8 +15,6 @@ namespace VpnHood.AppLib.Win.Common.WpfSpa;
 // ReSharper disable once RedundantExtendsListEntry
 public partial class VpnHoodWpfSpaMainWindow : Window
 {
-    private readonly SpaWebViewHost _host;
-
     public VpnHoodWpfSpaMainWindow()
     {
         InitializeComponent();
@@ -51,12 +49,13 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         AppUiContext.Context = new WinUiContext(this);
 
         // Host the SPA via the shared SpaWebViewHost (server lifecycle, launch URL, self-heal reload).
+        // The Activated handler keeps the host alive for the window's lifetime.
         var spaWebView = new WpfSpaWebView(MainWebView, OnWebView2Unavailable);
-        _host = new SpaWebViewHost(spaWebView);
-        _host.Start();
+        var host = new SpaWebViewHost(spaWebView);
+        host.Start();
 
         // Signal resume so the web server self-heals a torn-down listener and reloads if it restarted.
-        Activated += (_, _) => _host.OnResume();
+        Activated += (_, _) => host.OnResume();
     }
 
     private void OnWebView2Unavailable()

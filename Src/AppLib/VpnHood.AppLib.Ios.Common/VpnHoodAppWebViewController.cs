@@ -16,7 +16,7 @@ public class VpnHoodAppWebViewController : UIViewController
 
     // Edge-to-edge: paint the whole window (incl. the status-bar and home-indicator safe areas)
     // with the SPA's window background so the system bars blend into the app, matching Android.
-    private UIColor BackgroundColor => GetWindowBackgroundColor() ?? UIColor.SystemBackground;
+    private static UIColor BackgroundColor => GetWindowBackgroundColor() ?? UIColor.SystemBackground;
 
     // The SPA uses a dark window background, so the status bar should use light (white) content.
     public override UIStatusBarStyle PreferredStatusBarStyle() => UIStatusBarStyle.LightContent;

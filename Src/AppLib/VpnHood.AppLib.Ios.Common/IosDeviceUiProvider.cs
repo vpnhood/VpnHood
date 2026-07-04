@@ -24,7 +24,7 @@ public class IosDeviceUiProvider : NullDeviceUiProvider
                 return SystemBarsInfo.Default;
 
             var insets = window.SafeAreaInsets;
-            var scale = window.Screen?.Scale ?? UIScreen.MainScreen.Scale;
+            var scale = window.Screen.Scale;
             return new SystemBarsInfo {
                 TopHeight = (int)Math.Ceiling(insets.Top * scale),
                 BottomHeight = (int)Math.Ceiling(insets.Bottom * scale)

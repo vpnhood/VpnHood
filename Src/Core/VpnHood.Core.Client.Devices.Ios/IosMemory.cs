@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using Foundation;
 using VpnHood.Core.Toolkit.Memory;
 
 namespace VpnHood.Core.Client.Devices.Ios;

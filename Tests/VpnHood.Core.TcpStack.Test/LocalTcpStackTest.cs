@@ -520,19 +520,19 @@ public sealed class LocalTcpStackTest
         IpPacket[] snapshot;
         lock (lockObj) { snapshot = sentPackets.ToArray(); }
 
-        var probeSeqs = snapshot
+        var probeSequences = snapshot
             .Where(p => p.ExtractTcp().Payload.Length > 0)
             .Select(p => p.ExtractTcp().SequenceNumber)
             .Distinct()
             .ToList();
 
-        Assert.IsTrue(probeSeqs.Count >= 2,
+        Assert.IsTrue(probeSequences.Count >= 2,
             $"Zero Window Probes must advance the sequence number (forward progress), but only " +
-            $"{probeSeqs.Count} distinct probe sequence number(s) were sent — the sender is stuck " +
+            $"{probeSequences.Count} distinct probe sequence number(s) were sent — the sender is stuck " +
             "retransmitting the same byte (regression).");
 
         // The frontier should have advanced across the full payload (first byte at serverSeq+1).
-        Assert.AreEqual(serverSeq + (uint)payload.Length, probeSeqs.Max(),
+        Assert.AreEqual(serverSeq + (uint)payload.Length, probeSequences.Max(),
             "Probes should have advanced through the entire payload.");
 
         await stream.DisposeAsync();

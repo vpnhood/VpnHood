@@ -6,8 +6,8 @@ namespace VpnHood.Core.VpnAdapters.IosTun;
 
 /// <summary>
 /// iOS TUN adapter <b>investigation instrumentation</b>, owned by this project (mirrors
-/// <c>TcpStackDiagnostics</c>): it holds the cumulative traffic counters and the freeze locator, and every
-/// mutating method is a no-op when <see cref="Enabled"/> is false, so call sites stay clean and it costs
+/// <c>TcpStackDiagnostics</c>): it holds the cumulative traffic counters and the freeze locator; every
+/// mutating method is a no-op when <see cref="Enabled"/> is false, so call sites stay clean, and it costs
 /// nothing in production.
 /// </summary>
 /// <remarks>

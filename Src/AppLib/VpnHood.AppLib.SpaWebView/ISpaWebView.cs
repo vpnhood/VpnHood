@@ -1,6 +1,6 @@
 namespace VpnHood.AppLib.SpaWebView;
 
-// The per-platform surface of the SPA web view. Each OS implements ONLY this; all of the hosting
+// The per-platform surface of the SPA web view. Each OS implements ONLY this; all the hosting
 // business logic lives in <see cref="SpaWebViewHost"/>.
 //
 // Threading contract: SpaWebViewHost calls the methods below on the platform UI thread (it hops
@@ -31,7 +31,7 @@ public interface ISpaWebView
     event EventHandler? PageLoaded;
 
     // Raised when a load failed. The adapter must NOT raise this for cancelled / superseded loads
-    // (e.g. iOS NSURLErrorCancelled -999, the expected result of starting a new load over an
+    // (e.g. iOS NSUrlError.Cancelled -999, the expected result of starting a new load over an
     // in-flight one) — only for real failures, or recovery would loop against itself.
     event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
 

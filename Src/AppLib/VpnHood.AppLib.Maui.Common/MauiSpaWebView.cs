@@ -1,6 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Dispatching;
 using VpnHood.AppLib.SpaWebView;
 using VpnHood.Core.Toolkit.Logging;
 using Uri = System.Uri;
@@ -11,13 +9,9 @@ namespace VpnHood.AppLib.Maui.Common;
 // Microsoft.Maui.Controls.WebView and maps its Navigated event onto the platform-neutral
 // SpaWebViewHost events. MAUI has no content-process-terminated signal, so ContentProcessGone is
 // never raised; recovery still comes from the server health monitor + resume + Restarted reload.
-public sealed class MauiSpaWebView : ISpaWebView
+public sealed class MauiSpaWebView(WebView webView, IDispatcher dispatcher,
+    ActivityIndicator? spinner = null, Label? errorLabel = null) : ISpaWebView
 {
-    private readonly WebView _webView;
-    private readonly IDispatcher _dispatcher;
-    private readonly ActivityIndicator? _spinner;
-    private readonly Label? _errorLabel;
-
     public event EventHandler? PageLoaded;
     public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
 
@@ -27,18 +21,9 @@ public sealed class MauiSpaWebView : ISpaWebView
     public event EventHandler? ContentProcessGone;
 #pragma warning restore CS0067
 
-    public MauiSpaWebView(WebView webView, IDispatcher dispatcher,
-        ActivityIndicator? spinner = null, Label? errorLabel = null)
-    {
-        _webView = webView;
-        _dispatcher = dispatcher;
-        _spinner = spinner;
-        _errorLabel = errorLabel;
-    }
-
     public void Initialize()
     {
-        _webView.Navigated += OnNavigated;
+        webView.Navigated += OnNavigated;
     }
 
     private void OnNavigated(object? sender, WebNavigatedEventArgs e)
@@ -61,38 +46,38 @@ public sealed class MauiSpaWebView : ISpaWebView
 
     public void Load(Uri url)
     {
-        _webView.Source = new UrlWebViewSource { Url = url.ToString() };
+        webView.Source = new UrlWebViewSource { Url = url.ToString() };
     }
 
     public void Reload()
     {
-        _webView.Reload();
+        webView.Reload();
     }
 
     public void SetLoading(bool isLoading)
     {
-        if (_spinner == null)
+        if (spinner == null)
             return;
 
-        _spinner.IsVisible = isLoading;
-        _spinner.IsRunning = isLoading;
+        spinner.IsVisible = isLoading;
+        spinner.IsRunning = isLoading;
     }
 
     public void ShowError(string message)
     {
-        if (_spinner != null) {
-            _spinner.IsVisible = false;
-            _spinner.IsRunning = false;
+        if (spinner != null) {
+            spinner.IsVisible = false;
+            spinner.IsRunning = false;
         }
 
-        if (_errorLabel != null) {
-            _errorLabel.Text = "Failed to start the user interface.\n\n" + message;
-            _errorLabel.IsVisible = true;
+        if (errorLabel != null) {
+            errorLabel.Text = "Failed to start the user interface.\n\n" + message;
+            errorLabel.IsVisible = true;
         }
     }
 
     public void Post(Action action)
     {
-        _dispatcher.Dispatch(action);
+        dispatcher.Dispatch(action);
     }
 }

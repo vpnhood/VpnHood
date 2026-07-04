@@ -1,10 +1,8 @@
 using System.Threading.Channels;
 using CoreFoundation;
-using Microsoft.Extensions.Logging;
 using Network;
 using ObjCRuntime;
 using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Quic.Ios;
@@ -54,7 +52,8 @@ public sealed class IosQuicClient(
             // The .NET Network binding types this callback's argument as the base NWProtocolOptions even
             // though the underlying native object is a QUIC options block. A direct C# cast to
             // NWProtocolQuicOptions throws InvalidCastException (the managed wrapper is literally
-            // NWProtocolOptions) — which, thrown on this native trampoline thread, SIGABRTs the process.
+            // NWProtocolOptions) — which, thrown on this native trampoline thread, aborts the
+            // process with SIGABRT.
             // Re-wrap the SAME native handle as NWProtocolQuicOptions (owns:false — the parameters own
             // the native object); setters then mutate the real options block used by the connection.
             var quic = Runtime.GetINativeObject<NWProtocolQuicOptions>(quicOptions.Handle, owns: false)
@@ -89,7 +88,7 @@ public sealed class IosQuicClient(
                 if (inboundStreams.Writer.TryWrite(stream))
                     return;
 
-                VhUtils.TryInvoke(() => stream.Cancel());
+                VhUtils.TryInvoke(stream.Cancel);
                 stream.Dispose();
             });
 
@@ -120,7 +119,7 @@ public sealed class IosQuicClient(
             inboundStreams.Writer.TryComplete();
             VhUtils.TryInvoke(() => connectionGroup.SetStateChangedHandler(null!));
             VhUtils.TryInvoke(() => connectionGroup.SetNewConnectionHandler(null!));
-            VhUtils.TryInvoke(() => connectionGroup.Cancel());
+            VhUtils.TryInvoke(connectionGroup.Cancel);
             connectionGroup.Dispose();
             multiplexGroup.Dispose();
             endpoint.Dispose();

@@ -10,9 +10,9 @@ namespace VpnHood.Core.Client.Devices.Ios;
 /// </summary>
 /// <remarks>
 /// The active concerns are elsewhere and run regardless of this switch: the GC maintenance heartbeat is
-/// <see cref="IosMemoryGuard"/>, and the phys_footprint feed to the QUIC jetsam brake is
-/// <see cref="IosFootprintSampler"/> — this probe reads footprint via <see cref="IosFootprintSampler.TryRead"/>
-/// rather than sampling natively itself. For the aggregate line it also reads the <b>public</b> snapshots
+/// <see cref="IosMemoryGuard"/>, and the live phys_footprint for the QUIC jetsam brake is read on demand via
+/// <see cref="IosMemory"/> (published through <c>VhMemory.Instance</c>) — this probe reads the
+/// full breakdown via <see cref="IosMemory.TryRead"/> on its own thread. For the aggregate line it also reads the <b>public</b> snapshots
 /// owned by the other subsystems' diagnostics (<c>IosTunDiagnostics</c>, <c>IosQuicDiagnostics</c>,
 /// <c>TcpStack.LocalTcpStack.ActiveDiagnostics</c>) — it does not own their counters. See
 /// <c>docs/ios-extension-memory-and-throughput.md</c>.
@@ -48,11 +48,9 @@ internal static class IosMemoryMonitor
         if (Interlocked.Exchange(ref _started, true))
             return;
 
-        // Let the TCP stack annotate its Debug +CONN/-CONN lifecycle logs with the live jetsam footprint
-        // (phys_footprint in MB). Purely diagnostic, so it is wired only when this probe is enabled; it
-        // reads footprint via the active sampler rather than probing natively itself.
-        TcpStack.TcpStackDiagnostics.FootprintMbProvider =
-            () => IosFootprintSampler.TryRead(out var vm) && vm.Footprint > 0 ? vm.Footprint / Mib : 0.0;
+        // NOTE: the TCP stack's +CONN/-CONN footprint annotation is no longer wired here — IosMemory
+        // publishes an on-demand phys_footprint read through VhMemory.Instance (registered in the
+        // device/service), so the stack reads it regardless of this diagnostics switch.
 
         RegisterCrashLog();
 
@@ -69,7 +67,7 @@ internal static class IosMemoryMonitor
             var tick = 0;
             while (true) {
                 try {
-                    if (IosFootprintSampler.TryRead(out var vm) && vm.Footprint > 0) {
+                    if (IosMemory.TryRead(out var vm) && vm.Footprint > 0) {
                         var mb = vm.Footprint / Mib;
                         if (mb > peakMb) peakMb = mb;
 
@@ -124,7 +122,7 @@ internal static class IosMemoryMonitor
     // Formats and appends one ext-mem.log line. Reads the PUBLIC snapshots owned by each subsystem's
     // diagnostics (IosTunDiagnostics / IosQuicDiagnostics / TcpStack) — this aggregates, it does not own
     // their counters.
-    private static void AppendProbeLine(string logPath, IosFootprintSampler.FootprintInfo vm, double mb, double peakMb)
+    private static void AppendProbeLine(string logPath, IosMemory.FootprintInfo vm, double mb, double peakMb)
     {
         var gcLive = GC.GetTotalMemory(false) / Mib;
         double gcHeap = 0;

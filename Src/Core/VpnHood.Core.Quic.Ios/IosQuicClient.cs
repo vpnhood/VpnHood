@@ -30,14 +30,13 @@ public sealed class IosQuicClient(
 
     // DIAGNOSTIC counters (live QUIC stream count, in-flight send bytes, teardown timing, [VHQUIC] logs)
     // live in IosQuicDiagnostics — maintained only when that switch is on.
-
-    // JETSAM GUARD input: the extension's live phys_footprint in MB, written ~4x/s by the host's memory
-    // probe (IosVpnService). At full download rate (~130 Mbps) the per-packet native transients
-    // (NSData copies retained briefly by NE/nw) float several MB and their peaks ratchet over the 52 MB
-    // limit with no leak, freeze, or backlog anywhere we can bound directly (2026-07-01 third crash
-    // flavor). IosQuicStream.ReadAsync brakes download intake while this is within a few MB of the
-    // limit, letting the transients drain. 0 = unknown/probe not running -> guard inactive.
-    public static double FootprintMb;
+    //
+    // JETSAM GUARD input: the extension's live phys_footprint in MB, read on demand via
+    // VhMemory.Instance (IosMemory, registered by the device/service). At full download rate
+    // (~130 Mbps) the per-packet native transients (NSData copies retained briefly by NE/nw) float several MB
+    // and their peaks ratchet over the 52 MB limit with no leak, freeze, or backlog anywhere we can bound
+    // directly (2026-07-01 third crash flavor). IosQuicStream.ReadAsync brakes download intake while the
+    // footprint is within a few MB of the limit, letting the transients drain. No provider set -> guard inactive.
 
     public async ValueTask<IQuicConnection> ConnectAsync(
         QuicClientConnectOptions options, CancellationToken cancellationToken)

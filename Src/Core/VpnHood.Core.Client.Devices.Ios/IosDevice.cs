@@ -43,6 +43,11 @@ public class IosDevice : IDevice
         _providerBundleId = providerBundleId;
         _localizedDescription = localizedDescription;
 
+        // Install this process's memory reader as the ambient VhMemory.Instance (if nothing set it yet) so
+        // memory-aware consumers can read live figures. Installed here (app) and in IosVpnService (extension)
+        // so it works in both processes; each reads its OWN process's footprint.
+        IosMemory.Install();
+
         var containerPath = sharedContainerPath
             ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 

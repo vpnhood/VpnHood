@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.TcpStack.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.TcpStack;
@@ -43,26 +44,14 @@ public sealed class TcpStackDiagnostics
     /// <summary>Gets the maximum number of simultaneous connections configured for this stack.</summary>
     public int ConfiguredMaxConnections { get; internal set; }
 
-    /// <summary>
-    /// Optional hook that returns the process's current memory footprint in MB (the number the host's
-    /// memory limit is enforced against — e.g. iOS jetsam's <c>phys_footprint</c>). When set, the
-    /// connection lifecycle logs append <c>mem=NN.N/52MB</c> so footprint can be tracked against the
-    /// limit at every establish/release. Left <c>null</c> on platforms that don't supply it (Windows/
-    /// Android) → the logs simply omit the memory field. Set once by the host (e.g. the iOS service).
-    /// </summary>
-    public static Func<double>? FootprintMbProvider { get; set; }
-
     // Fixed-width (5 chars, F1: "  8.3", " 43.2", "102.4") so the mem column stays aligned across
-    // +CONN/-CONN lines when eyeballing the live device console. "  n/a"/"  err" keep the width.
+    // +CONN/-CONN lines when eyeballing the live device console. "  n/a" keeps the width. The footprint (the
+    // number the host memory limit is enforced against — e.g. iOS jetsam phys_footprint) comes from the
+    // device-set VhMemory.Instance; null on platforms that don't supply it → the column shows n/a.
     private static string FootprintFixed()
     {
-        var provider = FootprintMbProvider;
-        if (provider == null)
-            return "  n/a";
-
-        // Best-effort: if the provider throws, keep the column instead of crashing the stack.
-        try { return $"{provider(),5:F1}"; }
-        catch { return "  err"; }
+        var mb = VhMemory.Instance.GetInfo().ProcessFootprintMb;
+        return mb.HasValue ? $"{mb.Value,5:F1}" : "  n/a";
     }
 
     internal void SetConnectionCount(int count)

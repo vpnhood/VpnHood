@@ -10,9 +10,10 @@ namespace VpnHood.Core.Quic.Ios;
 /// production.
 /// </summary>
 /// <remarks>
-/// Only the diagnostic counters live here. The load-bearing <c>IosQuicClient.FootprintMb</c> jetsam brake
-/// input is deliberately NOT gated and stays on <c>IosQuicClient</c>. The host's memory probe reads the
-/// public snapshot properties below; it does not own these counters.
+/// Only the diagnostic counters live here. The load-bearing jetsam brake input is deliberately NOT gated: the
+/// live phys_footprint is published always-on through <c>VhMemory.Instance</c> by the iOS footprint
+/// sampler, not by this class. The host's memory probe reads the public snapshot properties below; it does not
+/// own these counters.
 /// <para>Off in production; seeded from the <c>VH_IOS_DIAGNOSTICS</c> environment variable (any of
 /// <c>1</c>/<c>true</c>/<c>yes</c>) so one switch enables all the iOS diagnostics together.</para>
 /// </remarks>

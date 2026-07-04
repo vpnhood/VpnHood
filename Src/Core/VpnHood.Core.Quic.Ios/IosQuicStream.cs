@@ -4,6 +4,7 @@ using Network;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -62,7 +63,7 @@ internal sealed class IosQuicStream : AsyncStream
     // crash flavor: no freeze, sendQ=0, pipeBuf=0, footprint oscillating 32->48 MB at 130 Mbps).
     // Braking the receive-arm — the single intake point of the whole download pipeline — while the
     // footprint is near the limit lets those transients drain; throughput only pays while within
-    // ~7 MB of death. FootprintMb == 0 (probe absent) leaves the guard inactive.
+    // ~7 MB of death. No memory reader installed (VhMemory.Instance) reports 0 -> guard inactive.
     // 2026-07-02: brake earlier — the guarded crash showed a +6.6 MB spike inside ONE probe tick
     // (40.4 → 47.0), so by 45 the stale reading was already fatal. Start braking at 42.
     private const double GuardBrakeMb = 42.0;
@@ -80,8 +81,9 @@ internal sealed class IosQuicStream : AsyncStream
             return ValueTask.FromException<int>(new ObjectDisposedException(nameof(IosQuicStream)));
 
         // JETSAM GUARD: delay BEFORE arming the native receive so no new buffer is requested while
-        // the footprint is critical. The guarded path only runs while already near the limit.
-        var footprint = IosQuicClient.FootprintMb;
+        // the footprint is critical. The guarded path only runs while already near the limit. The value is a
+        // live phys_footprint read via the ambient VhMemory.Instance; no reader installed -> 0 -> inactive.
+        var footprint = VhMemory.Instance.GetInfo().ProcessFootprintMb ?? 0;
         if (footprint >= GuardBrakeMb)
             return ThrottledReadAsync(buffer, footprint, cancellationToken);
 

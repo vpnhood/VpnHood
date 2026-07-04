@@ -91,10 +91,10 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     {
         // Active memory systems — REQUIRED, always on (device-measured 2026-06-14): the GC guard keeps the
         // extension under the ~52 MB jetsam limit (without it, it crashes IMMEDIATELY on tunnel start), and
-        // the footprint sampler feeds the QUIC download brake (IosQuicClient.FootprintMb). These are NOT
-        // diagnostics — they run regardless of VH_IOS_DIAGNOSTICS.
+        // installing the memory reader as VhMemory.Instance lets the QUIC download brake read this process's
+        // live phys_footprint. These are NOT diagnostics — they run regardless of VH_IOS_DIAGNOSTICS.
         IosMemoryGuard.Start();
-        IosFootprintSampler.Start();
+        IosMemory.Install();
         // Diagnostics probe (ext-mem.log / ext-crash.log) — a no-op unless VH_IOS_DIAGNOSTICS is set.
         IosMemoryMonitor.Start();
 

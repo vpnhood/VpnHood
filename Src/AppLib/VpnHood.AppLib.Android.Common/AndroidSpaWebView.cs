@@ -24,9 +24,12 @@ public sealed class AndroidSpaWebView : ISpaWebView
 
     public event EventHandler? PageLoaded;
     // Android relies on the server health monitor + resume signal + Restarted reload for recovery, so
-    // these two are declared for the interface but not raised here.
+    // these two are declared for the interface but not raised here. Suppress the "never used" warning —
+    // the omission is intended.
+#pragma warning disable CS0067
     public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
     public event EventHandler? ContentProcessGone;
+#pragma warning restore CS0067
 
     public AndroidSpaWebView(IActivityEvent activityEvent, AndroidMainActivityWebViewOptions options)
     {

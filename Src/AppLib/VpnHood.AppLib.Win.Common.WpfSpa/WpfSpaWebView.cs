@@ -18,7 +18,14 @@ public sealed class WpfSpaWebView : ISpaWebView
     private Uri? _pendingUrl;
 
     public event EventHandler? PageLoaded;
+
+    // LoadFailed is required by ISpaWebView but never raised on desktop: a WebView2 navigation
+    // failure here is not a dead loopback listener (see OnNavigationCompleted), so recovery is left
+    // to the 1s health monitor. Suppress the "event is never used" warning — the omission is intended.
+#pragma warning disable CS0067
     public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
+#pragma warning restore CS0067
+
     public event EventHandler? ContentProcessGone;
 
     public WpfSpaWebView(WebView2 webView, Action onWebView2Unavailable)

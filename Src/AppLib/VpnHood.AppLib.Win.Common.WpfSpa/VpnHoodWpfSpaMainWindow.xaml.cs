@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
 using VpnHood.AppLib.SpaWebView;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.UiContexts;

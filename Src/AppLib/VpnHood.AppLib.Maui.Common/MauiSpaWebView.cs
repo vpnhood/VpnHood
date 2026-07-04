@@ -20,7 +20,12 @@ public sealed class MauiSpaWebView : ISpaWebView
 
     public event EventHandler? PageLoaded;
     public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
+
+    // MAUI has no content-process-terminated signal, so ContentProcessGone is never raised (recovery
+    // comes from the health monitor + resume + Restarted). Suppress the "never used" warning.
+#pragma warning disable CS0067
     public event EventHandler? ContentProcessGone;
+#pragma warning restore CS0067
 
     public MauiSpaWebView(WebView webView, IDispatcher dispatcher,
         ActivityIndicator? spinner = null, Label? errorLabel = null)

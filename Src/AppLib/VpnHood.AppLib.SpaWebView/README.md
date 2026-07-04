@@ -68,9 +68,15 @@ instead of restarting spuriously right after launch.
 
 - **iOS** — built Release and device-verified (launches, server starts, background→foreground
   recovers).
-- **Android / Windows / MAUI** — written against the existing native code and the iOS reference,
-  but **not build-verified** (no Android SDK / no Windows / no MAUI workloads in the authoring
-  environment). Build and smoke-test each on its toolchain.
+- **Windows (WPF)** — build-verified (adapter + full `Client.Win.Web` app). Still smoke-test at
+  runtime (WebView2 present + runtime-missing fallback).
+- **Android** — build-verified (adapter + full `Client.Android.Web` app). Still smoke-test on a
+  device (content-view swap, hardware back, background→foreground recovery).
+- **MAUI** — build-verified (adapter, both android + windows target frameworks). Greenfield host —
+  smoke-test resume delivery and the loading/error visuals on a device.
+
+The three above were compile-checked against the toolchains but not yet runtime-smoke-tested; the
+1s server health monitor is the safety net regardless.
 
 ### Per-platform things to verify
 

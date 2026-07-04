@@ -5,7 +5,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.Wpf;
+using VpnHood.AppLib.SpaWebView;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
@@ -15,6 +15,8 @@ namespace VpnHood.AppLib.Win.Common.WpfSpa;
 // ReSharper disable once RedundantExtendsListEntry
 public partial class VpnHoodWpfSpaMainWindow : Window
 {
+    private readonly SpaWebViewHost _host;
+
     public VpnHoodWpfSpaMainWindow()
     {
         InitializeComponent();
@@ -37,14 +39,9 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         var hWnd = new WindowInteropHelper(this).EnsureHandle();
         if (backgroundColor != null) VpnHoodAppWin.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
-        // initialize MainWebView
+        // initialize MainWebView user-data folder (the WebView2 mechanics live in WpfSpaWebView)
         MainWebView.CreationProperties = new CoreWebView2CreationProperties
             { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
-        MainWebView.CoreWebView2InitializationCompleted += MainWebView_CoreWebView2InitializationCompleted;
-        MainWebView.Source = VpnHoodAppWebServer.Instance.Url;
-        // Don't use this. It makes System.Drawing dependency appear in the project and prevent self-contained publish.
-        //if (backgroundColor != null) MainWebView.DefaultBackgroundColor = ConvertFromVhColor(backgroundColor.Value);
-        _ = MainWebView.EnsureCoreWebView2Async(null);
 
         // initialize tray icon
         UpdateIcon();
@@ -53,42 +50,28 @@ public partial class VpnHoodWpfSpaMainWindow : Window
 
         AppUiContext.Context = new WinUiContext(this);
 
-        // Parity with mobile: let the web server self-heal a listener that was torn down while the
-        // app was hidden (rare on desktop, but free insurance), and reload the WebView if it did.
-        Activated += (_, _) => AppUiContext.NotifyResumed();
-        VpnHoodAppWebServer.Instance.Restarted += (_, _) =>
-            Dispatcher.Invoke(() => MainWebView.Reload());
+        // Host the SPA via the shared SpaWebViewHost (server lifecycle, launch URL, self-heal reload).
+        var spaWebView = new WpfSpaWebView(MainWebView, OnWebView2Unavailable);
+        _host = new SpaWebViewHost(spaWebView);
+        _host.Start();
+
+        // Signal resume so the web server self-heals a torn-down listener and reloads if it restarted.
+        Activated += (_, _) => _host.OnResume();
     }
 
-    //private static System.Drawing.Color ConvertFromVhColor(VhColor color)
-    //{
-    //    return System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
-    //}
-
-
-    private static void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
+    private void OnWebView2Unavailable()
     {
-        VpnHoodAppWin.OpenUrlInExternalBrowser(new Uri(e.Uri));
-        e.Handled = true;
-    }
-
-    private void MainWebView_CoreWebView2InitializationCompleted(object? sender,
-        CoreWebView2InitializationCompletedEventArgs e)
-    {
-        if (e.IsSuccess) {
-            MainWebView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
-            return;
-        }
-
-        // hide window if edge is not installed and open browser instead
+        // Edge WebView2 runtime missing (or the SPA host gave up): hide the window and open the SPA in
+        // the system browser instead. Invoked on the UI thread from WpfSpaWebView.
         lock (MainWebView) {
-            // MainWebView_CoreWebView2InitializationCompleted is called many times
-            if (VpnHoodAppWin.Instance.EnableOpenMainWindow) {
-                Visibility = Visibility.Hidden; // Hide() does not work properly in this state on sandbox
-                VpnHoodAppWin.Instance.EnableOpenMainWindow = false;
-                if (VpnHoodAppWin.Instance.ShowWindowAfterStart)
-                    VpnHoodAppWin.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
-            }
+            // This can be signalled more than once.
+            if (!VpnHoodAppWin.Instance.EnableOpenMainWindow)
+                return;
+
+            Visibility = Visibility.Hidden; // Hide() does not work properly in this state on sandbox
+            VpnHoodAppWin.Instance.EnableOpenMainWindow = false;
+            if (VpnHoodAppWin.Instance.ShowWindowAfterStart)
+                VpnHoodAppWin.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
         }
     }
 

@@ -152,7 +152,7 @@ public static class IPAddressUtil
             ConnectCallback = async (context, token) => {
                 var socket = new Socket(addressFamily, SocketType.Stream, ProtocolType.Tcp);
                 try {
-                    await socket.ConnectAsync(context.DnsEndPoint, token).ConfigureAwait(false);
+                    await socket.ConnectAsync(context.DnsEndPoint, token).Vhc();
                     return new NetworkStream(socket, ownsSocket: true);
                 }
                 catch {

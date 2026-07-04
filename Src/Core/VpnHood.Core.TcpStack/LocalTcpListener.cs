@@ -1,6 +1,7 @@
 using System.Threading.Channels;
 using VpnHood.Core.TcpStack.Abstractions;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.TcpStack;
 
@@ -65,7 +66,7 @@ public sealed class LocalTcpListener : ITcpListener
 
     async IAsyncEnumerable<ITcpClient> ITcpListener.AcceptAllAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var client in AcceptAllAsync(cancellationToken).ConfigureAwait(false))
+        await foreach (var client in AcceptAllAsync(cancellationToken).Vhc())
             yield return client;
     }
 
@@ -79,7 +80,7 @@ public sealed class LocalTcpListener : ITcpListener
 
     async ValueTask<ITcpClient> ITcpListener.AcceptAsync(CancellationToken cancellationToken)
     {
-        return await AcceptAsync(cancellationToken).ConfigureAwait(false);
+        return await AcceptAsync(cancellationToken).Vhc();
     }
 
     /// <summary>

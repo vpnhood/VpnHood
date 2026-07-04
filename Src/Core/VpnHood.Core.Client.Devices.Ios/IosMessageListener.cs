@@ -1,4 +1,5 @@
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Devices.Ios;
 
@@ -23,7 +24,7 @@ public sealed class IosMessageListener : IMessageListener
         var handler = _messageHandler ??
                       throw new InvalidOperationException("VpnService message listener is not started.");
 
-        var response = await handler(request, cancellationToken).ConfigureAwait(false);
+        var response = await handler(request, cancellationToken).Vhc();
         return response.ToArray();
     }
 

@@ -8,6 +8,7 @@ using Microsoft.Quic;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Quic.Droid.Interop;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 using static Microsoft.Quic.MsQuic;
 
 namespace VpnHood.Core.Quic.Droid;
@@ -53,7 +54,7 @@ internal sealed class AndroidQuicConnection : IQuicConnection
     {
         // Peer-initiated streams are queued by the connection callback. Throws ChannelClosedException
         // once the connection is disposed (ending any accept loop), matching the desktop client.
-        return await _state.InboundStreams.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+        return await _state.InboundStreams.Reader.ReadAsync(cancellationToken).Vhc();
     }
 
     // Routes a connection event to managed state. Static (UnmanagedCallersOnly) -> resolves state via ctx.

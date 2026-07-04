@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers;
@@ -73,10 +74,10 @@ public abstract class TrackerBase : ITracker
                 Logger?.LogInformation(LoggerEventId, "Ga4Track Data: {Data}", data);
             }
 
-            var res = await HttpClient.SendAsync(requestMessage, linkedCts.Token).ConfigureAwait(false);
+            var res = await HttpClient.SendAsync(requestMessage, linkedCts.Token).Vhc();
 
             // log
-            var result = await res.Content.ReadAsStringAsync(linkedCts.Token).ConfigureAwait(false);
+            var result = await res.Content.ReadAsStringAsync(linkedCts.Token).Vhc();
             Logger?.LogInformation(LoggerEventId, "Ga4Track Result: {Result}", result);
         }
         catch (Exception ex) {

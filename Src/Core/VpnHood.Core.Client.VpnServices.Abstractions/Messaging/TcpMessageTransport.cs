@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 
@@ -25,9 +26,9 @@ public static class TcpMessageTransport
     {
         var lengthBuffer = new byte[4];
         BinaryPrimitives.WriteInt32LittleEndian(lengthBuffer, payload.Length);
-        await stream.WriteAsync(lengthBuffer, cancellationToken).ConfigureAwait(false);
-        await stream.WriteAsync(payload, cancellationToken).ConfigureAwait(false);
-        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+        await stream.WriteAsync(lengthBuffer, cancellationToken).Vhc();
+        await stream.WriteAsync(payload, cancellationToken).Vhc();
+        await stream.FlushAsync(cancellationToken).Vhc();
     }
 
     public static async Task<Memory<byte>> ReadFrameAsync(Stream stream, int maxLength,
@@ -35,7 +36,7 @@ public static class TcpMessageTransport
     {
         // read length
         var lengthBuffer = new byte[4];
-        await stream.ReadExactlyAsync(lengthBuffer, cancellationToken).ConfigureAwait(false);
+        await stream.ReadExactlyAsync(lengthBuffer, cancellationToken).Vhc();
         var length = BinaryPrimitives.ReadInt32LittleEndian(lengthBuffer);
 
         if (length <= 0)
@@ -46,7 +47,7 @@ public static class TcpMessageTransport
 
         // read body
         var buffer = new byte[length].AsMemory();
-        await stream.ReadExactlyAsync(buffer, cancellationToken).ConfigureAwait(false);
+        await stream.ReadExactlyAsync(buffer, cancellationToken).Vhc();
         return buffer;
     }
 }

@@ -92,12 +92,15 @@ internal sealed class IosQuicStream : AsyncStream
 
     private async ValueTask<int> ThrottledReadAsync(Memory<byte> buffer, double footprint, CancellationToken cancellationToken)
     {
-        await Task.Delay(footprint >= GuardHardBrakeMb ? 100 : 25, cancellationToken).ConfigureAwait(false);
+        var hard = footprint >= GuardHardBrakeMb;
+        // Diagnostics only: counted always, but self-throttled to ~1 summary line/sec (no-op in production).
+        IosQuicDiagnostics.TraceBrake(footprint, hard);
+        await Task.Delay(hard ? 100 : 25, cancellationToken).Vhc();
         if (_disposed || _readEof)
             return 0;
         if (_aborted)
             throw new ObjectDisposedException(nameof(IosQuicStream));
-        return await ArmReceive(buffer, cancellationToken).ConfigureAwait(false);
+        return await ArmReceive(buffer, cancellationToken).Vhc();
     }
 
     private ValueTask<int> ArmReceive(Memory<byte> buffer, CancellationToken cancellationToken)

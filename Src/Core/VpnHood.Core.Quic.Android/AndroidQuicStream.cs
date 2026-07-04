@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Quic;
 using VpnHood.Core.Quic.Droid.Interop;
+using VpnHood.Core.Toolkit.Utils;
 using static Microsoft.Quic.MsQuic;
 
 namespace VpnHood.Core.Quic.Droid;
@@ -67,7 +68,7 @@ internal sealed class AndroidQuicStream : Stream
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        var result = await _recvPipe.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+        var result = await _recvPipe.Reader.ReadAsync(cancellationToken).Vhc();
         var seq = result.Buffer;
         if (seq.IsEmpty && result.IsCompleted) {
             _recvPipe.Reader.AdvanceTo(seq.End);
@@ -94,7 +95,7 @@ internal sealed class AndroidQuicStream : Stream
         var tcs = PostSend(buffer.Span);
         await using var reg = cancellationToken.Register(
             static s => ((TaskCompletionSource)s!).TrySetCanceled(), tcs);
-        await tcs.Task.ConfigureAwait(false); // completed on SEND_COMPLETE
+        await tcs.Task.Vhc(); // completed on SEND_COMPLETE
     }
 
     public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>

@@ -133,7 +133,7 @@ public sealed class LocalTcpStream : AsyncStream
 
         // Graceful close: drain buffered app->net bytes into TCP segments before FIN.
         await VhUtils.TryInvokeAsync("GracefulCloseAsync",
-            () => _connection.GracefulCloseAsync(_stack)).ConfigureAwait(false);
+            () => _connection.GracefulCloseAsync(_stack)).Vhc();
 
         await _cts.TryCancelAsync();
         _cts.Dispose();

@@ -116,7 +116,7 @@ public class Job : IDisposable
             CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
         // await required for linkedCts to be disposed properly
-        await RunInternal(linkedCts.Token).ConfigureAwait(false);
+        await RunInternal(linkedCts.Token).Vhc();
     }
 
     private async Task RunInternal(CancellationToken cancellationToken)
@@ -125,10 +125,10 @@ public class Job : IDisposable
             throw new ObjectDisposedException(nameof(Job));
 
         // wait until we can run the job
-        await _jobSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _jobSemaphore.WaitAsync(cancellationToken).Vhc();
 
         try {
-            await _jobFunc(cancellationToken).ConfigureAwait(false);
+            await _jobFunc(cancellationToken).Vhc();
             _currentFailedCount = 0;
             SucceededCount++;
         }

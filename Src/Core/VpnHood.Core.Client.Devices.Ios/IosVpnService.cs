@@ -7,6 +7,7 @@ using VpnHood.Core.Quic.Ios;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.IosTun;
 
@@ -95,6 +96,14 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // live phys_footprint. These are NOT diagnostics — they run regardless of VH_IOS_DIAGNOSTICS.
         IosMemoryGuard.Start();
         IosMemory.Install();
+
+        // TEMP DIAGNOSTIC (do NOT commit): force the iOS diagnostics on. On device an extension process is
+        // spawned by iOS and does NOT inherit VH_IOS_DIAGNOSTICS from the devicectl launch, so the env-var
+        // seed can't reach here — flip the switches explicitly to see the [VHQUIC] brake trace / ext-mem.log.
+        // Revert (delete these two lines) before a production build.
+        VpnHood.Core.Quic.Ios.IosQuicDiagnostics.Enabled = true;
+        IosMemoryMonitor.Enabled = true;
+
         // Diagnostics probe (ext-mem.log / ext-crash.log) — a no-op unless VH_IOS_DIAGNOSTICS is set.
         IosMemoryMonitor.Start();
 
@@ -152,7 +161,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
             else {
                 var responseBytes = await _messageListener
                     .ProcessMessageAsync(messageData.ToArray(), CancellationToken.None)
-                    .ConfigureAwait(false);
+                    .Vhc();
                 responseData = NSData.FromArray(responseBytes);
             }
         }

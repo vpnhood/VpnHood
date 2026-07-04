@@ -1,6 +1,7 @@
 using NetworkExtension;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.Devices.Ios;
 
@@ -34,7 +35,7 @@ internal sealed class IosMessageClient(NETunnelProviderManager vpnManager) : IMe
                 sendError == null ? null : new Exception(sendError.LocalizedDescription));
         }
 
-        var responseData = await responseDataTask.Task.ConfigureAwait(false);
+        var responseData = await responseDataTask.Task.Vhc();
         if (responseData == null) {
             _session = null;
             throw new VpnServiceUnreachableException("VpnService is unreachable.",

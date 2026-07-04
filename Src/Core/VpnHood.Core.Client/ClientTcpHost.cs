@@ -51,7 +51,7 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
     private async Task AcceptLoop(ITcpListener listener, CancellationToken cancellationToken)
     {
         try {
-            await foreach (var tcpClient in listener.AcceptAllAsync(cancellationToken).ConfigureAwait(false)) {
+            await foreach (var tcpClient in listener.AcceptAllAsync(cancellationToken).Vhc()) {
                 _ = ProcessAcceptedStream(tcpClient, cancellationToken);
             }
         }

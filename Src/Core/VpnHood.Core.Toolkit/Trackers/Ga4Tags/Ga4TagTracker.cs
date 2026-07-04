@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers.Ga4Tags;
@@ -14,7 +15,7 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
     public async Task TryTrack(Ga4TagEvent ga4Event, ILogger logger)
     {
         try {
-            await Track(ga4Event, CancellationToken.None).ConfigureAwait(false);
+            await Track(ga4Event, CancellationToken.None).Vhc();
         }
         catch (Exception ex) {
             logger.LogDebug(ex, "Failed to track GA4 Tag Event: {EventName}", ga4Event.EventName);
@@ -118,7 +119,7 @@ public class Ga4TagTracker : TrackerBase, IGa4TagTracker
     public async Task Track(IEnumerable<Ga4TagEvent> ga4Events, CancellationToken cancellationToken)
     {
         foreach (var ga4TagEvent in ga4Events)
-            await Track(ga4TagEvent, cancellationToken).ConfigureAwait(false);
+            await Track(ga4TagEvent, cancellationToken).Vhc();
     }
 
     public override Task Track(IEnumerable<TrackEvent> trackEvents, CancellationToken cancellationToken)

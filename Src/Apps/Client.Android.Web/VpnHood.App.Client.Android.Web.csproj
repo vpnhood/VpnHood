@@ -1,12 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
 		<Description>VpnHood Android Client App</Description>
 		<TargetFramework>net10.0-android36.1</TargetFramework>
 		<RootNamespace>VpnHood.App.Client.Droid.Web</RootNamespace>
 		<OutputType>Exe</OutputType>
 		<ApplicationId>com.vpnhood.client.android.web.debug</ApplicationId>
-		<ApplicationVersion>812</ApplicationVersion>
-		<ApplicationDisplayVersion>7.9.812</ApplicationDisplayVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
@@ -26,43 +25,25 @@
 		     shipping a production release. -->
 		<RunAOTCompilation>False</RunAOTCompilation>
 		<!--<AndroidLinkTool>r8</AndroidLinkTool>-->
-		<PathMap>$(SolutionDir)=.</PathMap>
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<LangVersion>latest</LangVersion>
-		<Nullable>enable</Nullable>
-		<IncludeSymbols>True</IncludeSymbols>
 		<DebugSymbols>True</DebugSymbols>
-		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<PathMap>$(SolutionDir)=.</PathMap>
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-		<Company>OmegaHood LLC</Company>
-		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
-		<PackageIcon>VpnHood.png</PackageIcon>
-		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>7.9.812</Version>
-		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
 		<BaseIntermediateOutputPath />
 	</PropertyGroup>
 
 	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.
 	     Conditional so a fork without them still builds; AppConfigs reads them at startup. -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodClient\web\appsettings_web.json"
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json"
 			LogicalName="AppSettings.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\web\appsettings_web.json')" />
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodClient\web\appsettings_web.$(Configuration).json"
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json"
 			LogicalName="AppSettings_Environment.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\web\appsettings_web.$(Configuration).json')" />
+			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json')" />
 	</ItemGroup>
 
 	<ItemGroup>

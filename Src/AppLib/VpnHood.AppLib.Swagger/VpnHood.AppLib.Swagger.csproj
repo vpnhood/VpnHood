@@ -6,29 +6,6 @@
 		<RootNamespace>VpnHood.AppLib.Swagger</RootNamespace>
 	</PropertyGroup>
 
-	<PropertyGroup>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<IncludeSymbols>True</IncludeSymbols>
-		<SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
-		<LangVersion>latest</LangVersion>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)'=='Release'">
-		<PathMap>$(SolutionDir)=.</PathMap>
-	</PropertyGroup>
-
-	<PropertyGroup>
-		<PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-		<Company>OmegaHood LLC</Company>
-		<Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
-		<PackageIcon>VpnHood.png</PackageIcon>
-		<PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-		<Version>3.2.437</Version>
-		<FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
-	</PropertyGroup>
-
 	<ItemGroup>
 		<!--Waiting for this issue: https://github.com/RicoSuter/NSwag/issues/5359-->
 		<PackageReference Include="NSwag.AspNetCore" Version="[14.6.3]" />

@@ -1,0 +1,57 @@
+<Project>
+
+  <!--
+    Shared build/pack settings for every project under Src/ (apps + libraries). MSBuild imports the
+    nearest Directory.Build.props walking up from each csproj, so this covers all of Src/ but NOT the
+    Tests/ projects (outside Src/) and NOT any future self-contained module under a sibling modules/
+    folder (each such module brings its own Directory.Build.props, which stops the upward search).
+
+    The single product version lives in Pub/PubVersion.json (the source of truth the bump edits) and
+    is mirrored into <Version> below by Pub/Lib/VersionBump.ps1 on every bump — so apps and libraries
+    always share one version. CI can still override per pack with -p:Version (e.g. the smoke test's
+    X.Y.Z.<revision>-prerelease). This replaced the old per-csproj <Version> + UpdateProjectVersion
+    stamping.
+  -->
+
+  <PropertyGroup>
+    <!-- One version for the whole solution. Kept in sync with Pub/PubVersion.json by the bump. -->
+    <Version>8.0.825</Version>
+    <FileVersion>$([System.DateTime]::Now.ToString("yyyy.M.d.HHmm"))</FileVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Shared language defaults. -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Shared package metadata (identical across every project; only Description stays per-project). -->
+    <Company>OmegaHood LLC</Company>
+    <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>
+    <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+    <PackageIcon>VpnHood.png</PackageIcon>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>symbols.nupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <!-- Deterministic source paths in Release builds. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PathMap>$(SolutionDir)=.</PathMap>
+  </PropertyGroup>
+
+  <!-- Android store version code + display version are derived from $(Version) in
+       Directory.Build.targets, NOT here: OutputType and the (inner-build) TargetFramework are only
+       defined AFTER the csproj body, whereas this .props file is imported BEFORE it. A condition on
+       them here never matches, so ApplicationVersion is never set and the AAB silently ships with the
+       AndroidManifest default versionCode 1 (which Google Play rejects as "already used"). -->
+
+  <!-- Pack the shared package icon (path is relative to this file, so it is depth-independent). -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)..\VpnHood.png" Link="Resources\VpnHood.png" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+</Project>

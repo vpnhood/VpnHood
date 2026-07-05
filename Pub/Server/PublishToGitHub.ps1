@@ -1,7 +1,7 @@
 Write-Host "*** Publish VpnHood! SERVER to GitHub" -BackgroundColor Blue
 
-. "$PSScriptRoot/../Core/Common.ps1"
-. "$PSScriptRoot/../Core/utils/changelog_utils.ps1"
+. "$PSScriptRoot/../Lib/Common.ps1"
+. "$PSScriptRoot/../Lib/utils/changelog_utils.ps1"
 
 # set Variables
 $env:GITHUB_TOKEN = Get-Content "$userDir/github_publish_apikey.txt";
@@ -11,12 +11,9 @@ $packageLatestDir = "$releaseRootDir/$packageFileTitle";
 $repoName = "vpnhood/VpnHood.App.Server";
 $changeLogFileName = "CHANGELOG.Server.md";
 
-# update CHANGELOG
+# create release note. The CHANGELOG is maintained by hand (leading "# Latest" section); this only
+# READS it — extract the first H1 section, dropping the other product's lines.
 $changeLog = Get-Content "$solutionDir/$changeLogFileName" -Raw;
-$changeLog = (Changelog_UpdateHeader $changeLog "v$versionParam");
-$changeLog | Out-File -FilePath "$solutionDir/$changeLogFileName" -Encoding utf8 -Force -NoNewline;
-
-# create release note
 $releaseNote = Changelog_GetRecentSecion $changeLog @("#client");
 $releaseNote | Out-File -FilePath "$packageDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 if ($isLatest) {

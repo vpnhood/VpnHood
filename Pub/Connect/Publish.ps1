@@ -1,20 +1,18 @@
-param( 
-	[Parameter(Mandatory=$true)][object]$bump,
+param(
 	[Parameter(Mandatory=$true)][object]$windows,
 	[Parameter(Mandatory=$true)][object]$linux,
 	[Parameter(Mandatory=$true)][object]$android,
-	[Parameter(Mandatory=$true)][object]$distribute,
-	[int]$rollout,
 	[switch]$cleanall
 	);
 
-. "$PSScriptRoot/../Core/Common.ps1" -bump $bump
+# Build-only orchestrator: builds the Connect platforms locally for testing. It does NOT bump the
+# version, distribute, or push. The version bump lives in CI (Pub/Bump.ps1 via bump.yml) and the
+# GitHub release is created by connect_publish.yml in the Connect release repo. See Pub/RELEASE-STRATEGY.md.
+. "$PSScriptRoot/../Lib/Common.ps1"
 
 $windows = $windows -eq "1";
 $linux = $linux -eq "1";
 $android = $android -eq "1";
-$distribute = $distribute -eq "1";
-$rollout = Get-RolloutPercentage -distribute $distribute -rollout $rollout
 
 # clean all
 if ($cleanall) {
@@ -36,9 +34,4 @@ if ($android) {
 	& "$solutionDir/Src/Apps/Connect.Android.Google/_publish.ps1";
 	& "$solutionDir/Src/Apps/Connect.Android.Web/_publish.ps1";
 	& "$solutionDir/Src/Apps/Connect.Android.Web/_publish-arm64.ps1";
-}
-
-# distribute
-if ($distribute) {
-    & "$PSScriptRoot/PublishToGitHub.ps1";
 }

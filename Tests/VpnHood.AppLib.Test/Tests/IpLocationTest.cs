@@ -65,7 +65,7 @@ public class IpLocationTest : TestAppBase
         if (!Directory.Exists(projectFolder))
             throw new DirectoryNotFoundException("Ip2Location Project was not found.");
 
-        // find token (stored as its own secret file under .user, see Pub/Core secret layout)
+        // find token (stored as its own secret file under .user, see Pub/Lib secret layout)
         var userSecretFile = Path.Combine(vhFolder, ".user", "ip2location_token.txt");
         var ip2LocationToken = (await File.ReadAllTextAsync(userSecretFile)).Trim();
         ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);

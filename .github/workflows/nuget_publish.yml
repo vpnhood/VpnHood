@@ -1,0 +1,73 @@
+name: Publish NuGet Packages
+
+# Packs and pushes all VpnHood NuGet libraries at the version currently in Pub/PubVersion.json.
+# Standalone: dispatch it on its own whenever you want to (re)publish the libraries. It does NOT bump
+# the version — bump first with the "Bump Version" workflow (which can also chain into this one). The
+# whole src/ suite shares one version and is published together (see Pub/RELEASE-STRATEGY.md);
+# packages are normally published as a stable Release version.
+#
+# Smoke mode: tick "smoke" to validate the whole pack+push pipeline WITHOUT burning a real version —
+# it publishes THROWAWAY prerelease packages (e.g. 8.0.825.<run_number>-prerelease). The base
+# Major.Minor.Build in PubVersion.json is untouched and nothing is committed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit to build the packages from (blank = the branch this is dispatched from)"
+        required: false
+        default: ""
+      smoke:
+        description: "Smoke test: publish throwaway prerelease packages (4th revision = run number; base version untouched)"
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  publish-nugets:
+    # Only the vpnhood org publishes to nuget.org. Forks skip the whole job (no push attempt, no need
+    # for a NuGet key) — packages here share the vpnhood package IDs, so a fork must never push them.
+    if: github.repository_owner == 'vpnhood'
+    # Windows host is the superset build environment for the packable suite: net*-windows and the WPF
+    # library (VpnHood.AppLib.Win.Common.WpfSpa) need Windows, while the net*-android / net*-ios
+    # libraries build via workloads (below). Linux cannot build the Windows/WPF projects.
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # Org secret is named NUGET_API_KEY; keep the local env var NUGET_APIKEY for the steps below.
+      NUGET_APIKEY: ${{ secrets.NUGET_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
+      # Base SDK pinned by global.json (10.0.x)...
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: global.json }
+      # ...plus the .NET 11 preview SDK: the net11.0-ios libraries (Quic.Ios, VpnAdapters.IosTun,
+      # Client.Devices.Ios, AppLib.Ios.Common) require it. global.json's rollForward=latestMajor then
+      # selects 11 for the build, so net10 and net11 projects both compile.
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "11.0"
+          dotnet-quality: preview
+      # The packable set spans net*-android and net*-ios TFMs; install those workloads (for the SDK
+      # resolved here, i.e. 11 preview) so `dotnet pack` can build them. net*-windows / WPF build
+      # natively on Windows.
+      - name: Install .NET workloads (android, ios)
+        shell: pwsh
+        run: dotnet workload install android ios
+      # PublishNugets.ps1 reads the key from .user/nuget_apikey.txt (via Common.ps1). Write it from the
+      # secret. If the secret is somehow empty the publish step throws (it is required in the org).
+      - name: Write NuGet credentials
+        shell: pwsh
+        run: |
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          "$env:NUGET_APIKEY" | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force -NoNewline
+      # In smoke mode PublishNugets appends github.run_number (ambient $env:GITHUB_RUN_NUMBER on the
+      # runner) as the 4th revision segment, so every run gets a unique prerelease version.
+      - name: Publish NuGets
+        shell: pwsh
+        run: |
+          $smoke = "${{ github.event.inputs.smoke }}" -eq "true"
+          & "$env:GITHUB_WORKSPACE/Pub/Lib/PublishNugets.ps1" -smoke:$smoke

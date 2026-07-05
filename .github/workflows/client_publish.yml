@@ -1,43 +1,78 @@
 name: Publish Client (All Platforms)
 
-# Builds the client for each platform in parallel, then (optionally) creates ONE
-# GitHub release with all assets using the real Pub/Client/PublishToGithub.ps1
-# (changelog header bump + release notes + asset upload), exactly like a normal
-# release. Version/prerelease come from Pub/PubVersion.json in the checked-out commit.
+# Builds the client for each platform in parallel, publishes the Android AAB to Google Play
+# (Fastlane, straight from the CI artifact), and finally creates ONE GitHub release with all
+# assets — including the Play-signed universal APK — using the real Pub/Client/PublishToGithub.ps1
+# (changelog header bump + release notes + asset upload). Version/prerelease come from
+# Pub/PubVersion.json in the checked-out commit.
 #
-# Wired: Linux + Windows + Android (Google AAB, Web APK, Web arm64 APK).
+# Order: build-* -> publish-play-android (store) -> release (GitHub, LAST). The store job never
+# writes to GitHub; the release job is the only GitHub writer and runs last so it can attach the
+# Play-signed APK, then deletes this run's artifacts as its final step. A store publish that FAILS
+# (with the key present) blocks the release; a store SKIP (no key) does not.
 #
-# NOTE: the Android client projects currently have AOT disabled (grep "TEMP-CI-AOT-OFF")
-# to keep CI release builds fast while the pipeline is being wired. Re-enable before a
-# production release.
+# Wired: Linux + Windows + Android (Google AAB, Web APK, Web arm64 APK) + Google Play. iOS/App Store
+# is a future slot (no iOS project yet) — add a publish-appstore-ios job the same way.
+#
+# The Play audience ratio is set by the `rollout` dispatch input (percent; 100 = full).
 #
 # Secrets:
-#   ADVANCED_INSTALLER_LICENSE                   Advanced Installer license (Windows)
-#   AZURE_* + VH_SIGN_*                          OPTIONAL code signing (Windows). If
-#       absent, the MSI builds unsigned. If present, signing runs and a failure is fatal.
+#   ADVANCED_INSTALLER_LICENSE                   Advanced Installer license (Windows). If
+#       absent, the Windows MSI build is SKIPPED with a warning (the job stays green); the
+#       release just omits the MSI.
+#   AZURE_SIGNING_CREDENTIAL + AZURE_SIGNING_TARGET  OPTIONAL code signing (Windows). The first is the
+#       single Azure service-principal JSON you download from Azure; the second is a single JSON with
+#       the Trusted Signing target (account/profile/endpoint). With both present, the executable and
+#       the MSI are signed. If either is absent, the build is UNSIGNED (a warning is emitted). When
+#       signing is configured, a signing failure is fatal.
 #   ANDROID_KEYSTORE_CLIENT_GOOGLE_*  / ANDROID_KEYSTORE_CLIENT_WEB_*   OPTIONAL Android signing
 #       (BASE64 + PASS each). If a key's secrets are absent, an ephemeral throwaway
 #       keystore is generated so the build completes (NOT release/Play-Store grade).
+#   GOOGLE_PLAY_APIKEY                           OPTIONAL Google Play service-account JSON. Present ->
+#       the Android AAB is published to Play (prerelease -> alpha, stable -> production) and the
+#       Play-signed APK is attached to the release. Absent -> the Play publish is skipped with a
+#       warning (not a failure); the release proceeds without the signed APK.
 
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Branch or commit to build"
+        description: "Branch or commit to build (blank = the branch this workflow is dispatched from)"
         required: false
-        default: "development"
+        default: ""
       publish_release:
         description: "Create the GitHub release"
         type: boolean
         required: false
         default: false
+      build_android:
+        description: "Build the Android apps (Google AAB + Web APKs)."
+        type: boolean
+        required: false
+        default: true
+      publish_play:
+        description: "Publish the built AAB to Google Play (only applies when build_android is on)"
+        type: boolean
+        required: false
+        default: true
+      only_aab:
+        description: "Only build the Android AAB (+ Play publish); skip Linux/Windows. Fast Play iteration."
+        type: boolean
+        required: false
+        default: false
+      rollout:
+        description: "Google Play audience ratio (%) for a PRODUCTION release (1-100; 100 = full). Ignored on prerelease/alpha, which always ship complete to testers."
+        required: false
+        default: "100"
 
 jobs:
   build-linux:
+    # TEMP/opt: skipped when only_aab is set so the Android/Play path can be iterated quickly.
+    if: ${{ github.event.inputs.only_aab != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with: { ref: "${{ github.event.inputs.ref }}" }
+        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
       - uses: actions/setup-dotnet@v5
         with: { global-json-file: global.json }
       - name: Resolve module dir
@@ -52,6 +87,19 @@ jobs:
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
+      - name: Write client appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: ${{ vars.APPSETTINGS }}
+        run: |
+          # Shared app config embedded across all distributions (a strict Android publish requires it).
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            Write-Host "::warning::APPSETTINGS not set; building with default appsettings (a strict Android publish will fail)."
+          } else {
+            $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
+            New-Item -ItemType Directory -Path $u -Force | Out-Null
+            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+          }
       - name: Build Linux client
         shell: pwsh
         run: |
@@ -68,20 +116,28 @@ jobs:
             ${{ env.MODULE_DIR }}/linux-any/**
 
   build-windows:
+    # TEMP/opt: skipped when only_aab is set so the Android/Play path can be iterated quickly.
+    if: ${{ github.event.inputs.only_aab != 'true' }}
     runs-on: windows-latest
     env:
       DOTNET_NOLOGO: "1"
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      # Missing license -> the Advanced Installer steps below are skipped (a warning is emitted) so the
+      # job still succeeds (green); it just doesn't produce/upload the MSI.
+      ADVANCED_INSTALLER_LICENSE: ${{ secrets.ADVANCED_INSTALLER_LICENSE }}
       # Optional code signing — empty unless configured; PublishWinApp skips when absent.
-      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      VH_SIGN_ACCOUNT: ${{ secrets.VH_SIGN_ACCOUNT }}
-      VH_SIGN_PROFILE: ${{ secrets.VH_SIGN_PROFILE }}
-      VH_SIGN_ENDPOINT: ${{ secrets.VH_SIGN_ENDPOINT }}
+      # Single consolidated Azure credential: the JSON file you download from Azure (carries
+      # AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET). Present -> the MSI is signed; absent -> a warning
+      # is emitted and the MSI is built UNSIGNED. PublishWinApp.ps1 parses it.
+      AZURE_SIGNING_CREDENTIAL: ${{ secrets.AZURE_SIGNING_CREDENTIAL }}
+      # Trusted Signing target (NOT part of the Azure credential, and not secret) — a single JSON in
+      # Azure's metadata.json schema: { Endpoint, CodeSigningAccountName, CertificateProfileName }.
+      # Store it as a repository VARIABLE. Read from vars first, with a secrets fallback.
+      AZURE_SIGNING_TARGET: ${{ vars.AZURE_SIGNING_TARGET || secrets.AZURE_SIGNING_TARGET }}
     steps:
       - uses: actions/checkout@v5
-        with: { ref: "${{ github.event.inputs.ref }}" }
+        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
       - uses: actions/setup-dotnet@v5
         with: { global-json-file: global.json }
       - name: Resolve module dir
@@ -90,38 +146,54 @@ jobs:
           $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
           "MODULE_DIR=Pub/bin/$tag/VpnHoodClient/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
+      # No license -> warn and skip the MSI build (the steps below are gated on the same condition).
+      - name: Warn if Advanced Installer license is missing
+        if: env.ADVANCED_INSTALLER_LICENSE == ''
+        shell: pwsh
+        run: |
+          Write-Host "::warning title=Advanced Installer license missing::ADVANCED_INSTALLER_LICENSE secret is not set; skipping the Windows MSI build. Add the secret (see .github/DEPLOYMENT.md) to include the installer in the release."
+      # Signing is optional. The post-build check in PublishWinApp.ps1 verifies the MSI's actual
+      # Authenticode signature and emits a single warning (console + GitHub ::warning:: annotation)
+      # when it is unsigned — including a clear "Azure signing not configured" message — so there is
+      # no separate pre-build guess here (it would double the annotation).
       - name: Set up Advanced Installer
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         uses: caphyon/advinst-github-action@7edde34c6ff935e53e3de72a5699efcfceb5f6c6 # v2.0.3
-        with: { advinst-license: "${{ secrets.ADVANCED_INSTALLER_LICENSE }}" }
+        with: { advinst-license: "${{ env.ADVANCED_INSTALLER_LICENSE }}" }
       - name: Credentials stub
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
+      - name: Write client appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: ${{ vars.APPSETTINGS }}
+        run: |
+          # Shared app config embedded across all distributions (a strict Android publish requires it).
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            Write-Host "::warning::APPSETTINGS not set; building with default appsettings (a strict Android publish will fail)."
+          } else {
+            $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
+            New-Item -ItemType Directory -Path $u -Force | Out-Null
+            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+          }
       - name: Build Windows client binary (dotnet publish)
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
           & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1" -stage publish
       - name: Package Windows client MSI (Advanced Installer)
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
           & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1" -stage package
-      - name: Report MSI signature
-        shell: pwsh
-        run: |
-          $msi = Get-ChildItem "$env:GITHUB_WORKSPACE/Pub/bin" -Recurse -Filter "VpnHoodClient-win-x64.msi" | Select-Object -First 1 -ExpandProperty FullName
-          if (-not $msi) { Write-Host "::warning::MSI not found for signature report"; return }
-          $sig = Get-AuthenticodeSignature $msi
-          Write-Host "MSI: $msi"
-          Write-Host "Signature status: $($sig.Status)"
-          if ($sig.SignerCertificate) {
-            Write-Host "Signer subject : $($sig.SignerCertificate.Subject)"
-            Write-Host "Signer issuer  : $($sig.SignerCertificate.Issuer)"
-          } else {
-            Write-Host "UNSIGNED (no signer certificate)."
-          }
+      # Signature verification + the unsigned/Azure-not-configured warning now live in
+      # PublishWinApp.ps1 (package stage), so they run identically for local and CI builds.
       - uses: actions/upload-artifact@v7
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         with:
           name: client-windows
           if-no-files-found: error
@@ -134,6 +206,10 @@ jobs:
   # public repo the runner minutes are free and wall-clock drops. Each leg uploads its
   # own artifact (client-android-<id>); the release job stitches the three back together.
   build-android:
+    # Android builds by default (build_android input defaults true); dispatch with build_android=false
+    # to skip it. The Write publish.json step below materializes the real application id when this runs.
+    # Google Play upload is separately gated by publish_play.
+    if: ${{ github.event.inputs.build_android != 'false' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -150,7 +226,7 @@ jobs:
           - id: web-arm64
             label: Web arm64 APK
             script: Src/Apps/Client.Android.Web/_publish-arm64.ps1
-            outdir: android-arm64-web
+            outdir: android-web-arm64
     env:
       DOTNET_NOLOGO: "1"
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -162,7 +238,7 @@ jobs:
       ANDROID_KEYSTORE_CLIENT_WEB_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
-        with: { ref: "${{ github.event.inputs.ref }}" }
+        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
       - uses: actions/setup-dotnet@v5
         with: { global-json-file: global.json }
       # .NET Android needs a JDK 17 on PATH (keytool + the build tooling).
@@ -186,7 +262,33 @@ jobs:
       - name: Credentials + Android signing config
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/Pub/Core/PrepareCiAndroidSigning.ps1"
+          & "$env:GITHUB_WORKSPACE/Pub/Lib/PrepareCiAndroidSigning.ps1"
+      # Materialize the per-app publish.json from the PUBLISH variable BEFORE the build so
+      # PublishAndroidApp uses the real application id (com.vpnhood.client.android) instead of the
+      # csproj default (com.vpnhood.client.android.debug) — otherwise Google Play rejects the AAB.
+      # Passed via env (not inline ${{ }}) so the JSON braces/quotes don't break the run body.
+      - name: Write publish.json
+        if: vars.PUBLISH != ''
+        shell: pwsh
+        env:
+          PUBLISH: ${{ vars.PUBLISH }}
+        run: |
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
+      - name: Write client appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: ${{ vars.APPSETTINGS }}
+        run: |
+          # Shared app config embedded across all distributions. publish.json above turns on strict
+          # mode, which REQUIRES this file — so a missing secret must fail the Android build loudly.
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            throw "APPSETTINGS variable is not set, but a strict Android publish requires .user/VpnHoodClient/appsettings.json."
+          }
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
       # One store variant per leg (see matrix). Mirrors the android block of Pub/Client/Publish.ps1.
       - name: Build Android client (${{ matrix.label }})
         shell: pwsh
@@ -199,15 +301,153 @@ jobs:
           retention-days: 1
           path: ${{ env.MODULE_DIR }}/${{ matrix.outdir }}/**
 
+  # Publish the Android AAB to Google Play straight from the CI artifact (no GitHub round-trip).
+  # Independent of the release: it consumes build-android's google-aab artifact, uploads to Play
+  # with Fastlane (incl. store metadata/images/changelogs), then hands the Play-signed universal
+  # APK to the release job as an artifact. This job is the ONLY Android store-publish path and it
+  # never writes to GitHub. Behaviour by GOOGLE_PLAY_APIKEY:
+  #   - absent  -> warn and skip (job green); nothing is published, no signed APK; release proceeds
+  #                without it.
+  #   - present -> publish; a genuine Fastlane failure fails this job (red), which BLOCKS the release.
+  # Only runs when the AAB was actually built (build-android succeeded).
+  publish-play-android:
+    needs: [build-android]
+    # Skipped unless build-android ran AND publish_play wasn't turned off for this dispatch.
+    if: needs.build-android.result == 'success' && github.event.inputs.publish_play != 'false'
+    runs-on: ubuntu-latest
+    env:
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      GOOGLE_PLAY_APIKEY: ${{ secrets.GOOGLE_PLAY_APIKEY }}
+    steps:
+      - uses: actions/checkout@v5
+        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
+      # No key -> warn and skip (the steps below are gated on the same condition). This is NOT a
+      # failure: the release still proceeds, just without a Play-signed APK.
+      - name: Warn if Google Play API key is missing
+        if: env.GOOGLE_PLAY_APIKEY == ''
+        run: |
+          echo "::warning title=Google Play publish skipped::GOOGLE_PLAY_APIKEY secret is not set; the AAB will NOT be uploaded to Google Play and no Play-signed APK will be attached to the release. Add the secret (see .github/DEPLOYMENT.md) to enable Play publishing."
+      - name: Download Android AAB artifact
+        if: env.GOOGLE_PLAY_APIKEY != ''
+        uses: actions/download-artifact@v8
+        with: { name: client-android-google-aab, path: aab }
+      - name: Resolve version, track, and paths
+        if: env.GOOGLE_PLAY_APIKEY != ''
+        shell: bash
+        run: |
+          set -e
+          AAB_FILE=$(ls aab/*.aab 2>/dev/null | head -n1 || true)
+          # The Google build's update-info sidecar is "<title>-android.json" (matches the URL the app
+          # polls); *.aab is excluded so this never re-matches the binary.
+          META_FILE=$(ls aab/*-android.json 2>/dev/null | head -n1 || true)
+          if [ -z "$AAB_FILE" ] || [ -z "$META_FILE" ]; then
+            echo "❌ AAB or its -android.json metadata not found in the build-android artifact"; exit 1
+          fi
+          VERSION_NAME=$(jq -r '.Version' "$META_FILE")
+          VERSION_CODE=$(jq -r '(.VersionCode // .Build // .BuildNumber // "")' "$META_FILE")
+          if [ -z "$VERSION_CODE" ] || [ "$VERSION_CODE" = "null" ]; then
+            if echo "$VERSION_NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              VERSION_CODE=$(echo "$VERSION_NAME" | awk -F'.' '{print $3}')
+            else
+              VERSION_CODE=$(echo "$VERSION_NAME" | tr -cd '0-9' | tail -c 9)
+            fi
+          fi
+          # Audience ratio (Play staged rollout) from the dispatch input, as a PERCENT (1-100, default
+          # 100). Convert to the 0-1 fraction the Play API wants. 100 -> "" (a full release completes
+          # rather than staging a fraction). Non-numeric/empty is coerced to 100.
+          ROLLOUT_PCT="${{ github.event.inputs.rollout }}"
+          case "$ROLLOUT_PCT" in ''|*[!0-9]*) ROLLOUT_PCT=100 ;; esac
+          if [ "$ROLLOUT_PCT" -ge 100 ]; then ROLLOUT=""; else ROLLOUT=$(awk "BEGIN{printf \"%.2f\", $ROLLOUT_PCT/100}"); fi
+          # Track from PubVersion.json: prerelease -> alpha (closed testing), stable -> production.
+          PRERELEASE=$(jq -r '.Prerelease' Pub/PubVersion.json)
+          if [ "$PRERELEASE" = "true" ] || [ "$PRERELEASE" = "True" ]; then TRACK=alpha; else TRACK=production; fi
+          # A staged rollout (userFraction < 1) is a PRODUCTION concept — it ships to a fraction of the
+          # whole user base. Closed testing (alpha) has no percentage staging: a release goes fully to
+          # the assigned testers, and forcing an inProgress fraction there leaves a STUCK release that
+          # never goes live and exposes no downloadable universal APK (grep the 826 incident). So stage
+          # only on production; on any testing track clear the rollout so the release is 'completed'.
+          if [ "$TRACK" != "production" ]; then ROLLOUT=""; fi
+          {
+            echo "AAB_PATH=$AAB_FILE"
+            echo "VERSION_NAME=$VERSION_NAME"
+            echo "VERSION_CODE=$VERSION_CODE"
+            echo "ROLLOUT=$ROLLOUT"
+            echo "TRACK=$TRACK"
+          } >> $GITHUB_ENV
+          echo "✅ VersionName=$VERSION_NAME VersionCode=$VERSION_CODE Track=$TRACK Rollout='$ROLLOUT'"
+      - name: Set up Java
+        if: env.GOOGLE_PLAY_APIKEY != ''
+        uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: "17" }
+      - name: Set up Ruby
+        if: env.GOOGLE_PLAY_APIKEY != ''
+        uses: ruby/setup-ruby@v1
+        with: { ruby-version: "3.3", bundler-cache: false }
+      - name: Install Fastlane
+        if: env.GOOGLE_PLAY_APIKEY != ''
+        run: gem install fastlane --no-document
+      # Upload the AAB + store metadata/images/screenshots/changelogs. A genuine failure here
+      # (bad key, rejected upload, etc.) fails the job and blocks the release, as intended.
+      - name: Upload AAB to Google Play (Fastlane)
+        if: env.GOOGLE_PLAY_APIKEY != ''
+        run: |
+          echo "Uploading $AAB_PATH (versionCode=$VERSION_CODE rollout='$ROLLOUT') to track $TRACK"
+          # Uploads the AAB AND the store listing (metadata/images/changelogs). To iterate on the
+          # binary without touching the live listing, add `skip_metadata:"true"` (the Fastfile supports it).
+          if ! fastlane android playstore \
+            version_name:"$VERSION_NAME" \
+            version_code:"$VERSION_CODE" \
+            aab:"$AAB_PATH" \
+            track:"$TRACK" \
+            rollout:"$ROLLOUT"; then
+            # Surface a real GitHub error annotation (not just a buried log line). The most common
+            # cause is the AAB's EMBEDDED versionCode being wrong (e.g. 1) or not higher than the
+            # live release — see ApplicationVersion in Directory.Build.targets.
+            echo "::error title=Google Play upload failed::Fastlane could not upload the AAB to track '$TRACK' (declared versionCode=$VERSION_CODE). 'Version code N has already been used' means the AAB's embedded versionCode is N — verify the Android build stamped ApplicationVersion=$VERSION_CODE. See the Fastlane error above."
+            exit 1
+          fi
+      # Fetch the Google Play–signed universal APK and stage it for the release job. Named to match
+      # the AAB base (<title>-android.apk) so PublishToGithub.ps1 picks it up as a release asset.
+      - name: Download Play-signed universal APK (Fastlane)
+        if: env.GOOGLE_PLAY_APIKEY != ''
+        run: |
+          fastlane android download_signed version_code:"$VERSION_CODE"
+          SIGNED=$(find fastlane -type f -name "*.apk" | head -n1 || true)
+          if [ -z "$SIGNED" ]; then echo "❌ No Play-signed APK found after download"; exit 1; fi
+          BASE=$(basename "$AAB_PATH" .aab)   # e.g. VpnHoodClient-android
+          mkdir -p play-signed
+          cp "$SIGNED" "play-signed/${BASE}.apk"
+          echo "✅ Play-signed APK staged: play-signed/${BASE}.apk"
+      - name: Upload Play-signed APK artifact
+        if: env.GOOGLE_PLAY_APIKEY != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: client-android-play-signed
+          if-no-files-found: error
+          retention-days: 1
+          path: play-signed/**
+
   release:
-    needs: [build-linux, build-windows, build-android]
-    if: ${{ github.event.inputs.publish_release == 'true' }}
+    needs: [build-linux, build-windows, build-android, publish-play-android]
+    # Runs LAST, after the store publish, so it can attach the Play-signed APK. Runs when asked to
+    # publish AND Linux built. Windows may have skipped the MSI (no AI license) and Android may be
+    # disabled (build_android=false) — both tolerated (skipped, not failed). A genuine build FAILURE,
+    # or a store-publish FAILURE (publish-play-android red = key present but Play upload failed),
+    # blocks the release. A store SKIP (no key) does not block — the release just omits the signed APK.
+    if: >-
+      ${{ always()
+        && github.event.inputs.publish_release == 'true'
+        && needs.build-linux.result == 'success'
+        && needs.build-windows.result != 'failure'
+        && needs.build-android.result != 'failure'
+        && needs.publish-play-android.result != 'failure' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write   # to delete this run's artifacts in the final step
     steps:
       - uses: actions/checkout@v5
-        with: { ref: "${{ github.event.inputs.ref }}" }
+        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
       - uses: actions/setup-dotnet@v5
         with: { global-json-file: global.json }
       - name: Resolve module dir
@@ -222,23 +462,58 @@ jobs:
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
           '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
-      # Reassemble the Pub/bin/<tag>/VpnHoodClient layout PublishToGithub.ps1 expects.
+      # Reassemble the Pub/bin/<tag>/VpnHoodClient layout PublishToGithub.ps1 expects. The Windows
+      # and Android artifacts are optional (skipped builds upload nothing), so those downloads are
+      # best-effort; PublishToGithub.ps1 attaches only the assets that actually exist.
       - uses: actions/download-artifact@v8
         with: { name: client-linux, path: "${{ env.MODULE_DIR }}" }
       - uses: actions/download-artifact@v8
+        continue-on-error: true
         with: { name: client-windows, path: "${{ env.MODULE_DIR }}/windows-web" }
-      # Android comes back as three per-variant artifacts (matrix build); each restores
-      # into its own subdir so the layout matches what PublishToGithub.ps1 expects.
       - uses: actions/download-artifact@v8
+        continue-on-error: true
         with: { name: client-android-google-aab, path: "${{ env.MODULE_DIR }}/android-google" }
       - uses: actions/download-artifact@v8
+        continue-on-error: true
         with: { name: client-android-web-apk, path: "${{ env.MODULE_DIR }}/android-web" }
       - uses: actions/download-artifact@v8
-        with: { name: client-android-web-arm64, path: "${{ env.MODULE_DIR }}/android-arm64-web" }
+        continue-on-error: true
+        with: { name: client-android-web-arm64, path: "${{ env.MODULE_DIR }}/android-web-arm64" }
+      # Play-signed universal APK from publish-play-android. Best-effort: absent when Play was
+      # skipped (no key) or Android disabled; PublishToGithub.ps1 attaches it only if present.
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with: { name: client-android-play-signed, path: "${{ env.MODULE_DIR }}/android-google" }
       - name: Create GitHub release (real publish flow)
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
           VH_PUBLISH_REPO: ${{ github.repository }}
         run: |
-          & "$env:GITHUB_WORKSPACE/Pub/Client/PublishToGithub.ps1"
+          . "$env:GITHUB_WORKSPACE/Pub/Lib/ResolvePublishRepo.ps1"
+          & "$env:GITHUB_WORKSPACE/Pub/Lib/PublishToGithub.ps1" `
+            -packageDirName "VpnHoodClient" `
+            -repoName (Resolve-PublishRepoSlug) `
+            -dropChangelogTag "#connect"
+
+      # Free this run's Actions storage immediately, as the release's final step (kept out of the
+      # job graph — a separate cleanup node added no value). The build artifacts are only an
+      # inter-job transport (the real assets live on the GitHub release), so once the release is
+      # created they can go. `if: always()` runs it even if the release step above failed. Runs
+      # bounded to publish runs; build-only/failed-build runs fall back to the artifacts'
+      # `retention-days: 1`.
+      - name: Delete this run's artifacts
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ids=$(gh api --paginate \
+            "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+            --jq '.artifacts[].id')
+          if [ -z "$ids" ]; then echo "No artifacts to delete."; exit 0; fi
+          for id in $ids; do
+            echo "Deleting artifact id=$id"
+            gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" || true
+          done
+
+# Workflow not appearing after a fresh fork/import? See .github/DEPLOYMENT.md "Activating the workflows".

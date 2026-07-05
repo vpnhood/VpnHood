@@ -1,22 +1,21 @@
-param( 
-	[Parameter(Mandatory=$true)][object]$bump,
-	[Parameter(Mandatory=$true)][object]$nugets,
+param(
 	[Parameter(Mandatory=$true)][object]$windows,
 	[Parameter(Mandatory=$true)][object]$linux,
 	[Parameter(Mandatory=$true)][object]$android,
-	[Parameter(Mandatory=$true)][object]$distribute,
 	[Parameter(Mandatory=$true)][object]$samples,
-	[int]$rollout,
 	[switch]$cleanall
 );
 
-. "$PSScriptRoot/../Core/Common.ps1" -bump $bump
+# Build-only orchestrator: builds the client platforms locally for testing. It does NOT bump the
+# version, distribute, or push. The version bump lives in CI (Pub/Bump.ps1 via bump.yml), NuGet
+# publishing is CI-only (nuget_publish.yml — never published locally), and the GitHub release is
+# created by client_publish.yml. See Pub/RELEASE-STRATEGY.md.
+. "$PSScriptRoot/../Lib/Common.ps1"
 
 $windows = $windows -eq "1";
 $linux = $linux -eq "1";
 $android = $android -eq "1";
-$distribute = $distribute -eq "1";
-$rollout = Get-RolloutPercentage -distribute $distribute -rollout $rollout
+$samples = $samples -eq "1";
 
 # clean all
 if ($cleanall) {
@@ -25,11 +24,6 @@ if ($cleanall) {
 
 # clean old release notes
 Remove-Item "$packagesRootDir/$packageClientDirName/ReleaseNote.txt" -ErrorAction Ignore;
-
-# rebuild libraries
-if ($nugets) {
-	& "$PSScriptRoot/PublishNugets.ps1";
-}
 
 if ($windows) {
 	& "$solutionDir/Src/Apps/Client.Win.Web/_publish.ps1";
@@ -45,19 +39,7 @@ if ($android) {
 	& "$solutionDir/Src/Apps/Client.Android.Web/_publish-arm64.ps1";
 }
 
-# distribute
-if ($distribute) {
-    & "$PSScriptRoot/PublishToGitHub.ps1";
-}
-
 # update and push samples nugets
 if ($samples) {
 	& "$solutionDir/../VpnHood.App.Samples/UpdateAndPush.ps1";
-}
-
-# commit and push git
-if (!$prerelease) {
-	Write-Host "Pushing to main branch..." -ForegroundColor Magenta;
-	git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Release version $versionParam";
-	git --git-dir=$gitDir --work-tree=$solutionDir push origin development:main;
 }

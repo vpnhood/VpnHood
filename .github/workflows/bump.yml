@@ -1,0 +1,64 @@
+name: Bump Version
+
+# The ONLY place the version is bumped. Increments Pub/PubVersion.json (+ Directory.Build.props),
+# commits, and fast-forwards development + main (no force). The CHANGELOG is hand-maintained and is
+# never rewritten here. Bumping in CI (not on a developer's machine) avoids version-file conflicts
+# between developers. See Pub/RELEASE-STRATEGY.md.
+#
+# Optional chaining ("do both"): after bumping it can dispatch the client publish and/or the NuGet
+# publish against the freshly bumped commit — while each of those workflows also stays independently
+# dispatchable on its own.
+
+on:
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Prerelease bump (alpha) instead of a stable release bump"
+        type: boolean
+        default: true
+      then_publish:
+        description: "After bumping, dispatch the client publish workflow (creates the GitHub release)"
+        type: boolean
+        default: false
+      then_publish_nugets:
+        description: "After bumping, dispatch the NuGet publish workflow"
+        type: boolean
+        default: false
+      rollout:
+        description: "Google Play audience ratio (%) forwarded to the client publish (1-100; 100 = full). Ignored on prerelease."
+        required: false
+        default: "100"
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # push the bump commit to development + main
+      actions: write    # dispatch the downstream publish workflow(s)
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: development
+          fetch-depth: 0            # need history to fast-forward main
+          persist-credentials: true # so the push uses github.token
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Bump version + push
+        shell: pwsh
+        run: |
+          $bump = if ("${{ github.event.inputs.prerelease }}" -eq "true") { 2 } else { 1 }
+          & "$env:GITHUB_WORKSPACE/Pub/Bump.ps1" -bump $bump
+      - name: Dispatch client publish
+        if: ${{ github.event.inputs.then_publish == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run client_publish.yml --repo "${{ github.repository }}" --ref development -f publish_release=true -f build_android=true -f rollout="${{ github.event.inputs.rollout }}"
+      - name: Dispatch NuGet publish
+        if: ${{ github.event.inputs.then_publish_nugets == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run nuget_publish.yml --repo "${{ github.repository }}" --ref development

@@ -8,6 +8,31 @@ outside the repo, in a sibling `../.user/` folder, on the maintainer's machine).
 > This document is the source of truth for *what* secrets each workflow needs.
 > Keep it in sync whenever a workflow gains or drops a `secrets.*` reference.
 
+## Activating the workflows (fresh fork / import)
+
+If you fork with the **GitHub "Fork" button**, the workflows are copied for you — just enable
+Actions on your fork (the **Actions** tab → "I understand my workflows, go ahead and enable them")
+and they appear.
+
+If instead you populate a repo by **pushing existing history into a new, empty repo** (a mirror or
+`git push` of the whole history), GitHub may show the workflow files in the code tree but **not list
+them under Actions**, so they can't be run. This is because GitHub indexes a workflow on the push
+whose **diff changes that file** — and an initial bulk-history push whose tip commit doesn't touch
+the workflow files leaves them unindexed.
+
+To activate them, make **one push whose diff touches each workflow file** (a comment line is enough),
+then they register and become dispatchable:
+
+```bash
+# minimal: bump a comment in each workflow you want to activate, then push to the default branch
+git commit -am "ci: activate workflows" && git push
+# verify GitHub now lists them (expect the full count):
+gh api repos/<owner>/<repo>/actions/workflows -q .total_count
+```
+
+`Pub/Client/PublishByGithub.ps1` also pre-checks this and fails with the same instruction if a
+workflow it needs is not yet indexed.
+
 ## How to set a secret
 
 ```bash
@@ -22,11 +47,11 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | Secret | Used by | Required? | What it is |
 |---|---|---|---|
 | `GITHUB_TOKEN` | all release/publish workflows | Automatic | Provided by GitHub; no action needed. |
-| `GH_TOKEN` | `publish_store_package.yml` | Optional | A PAT used only if you need broader scope than `GITHUB_TOKEN`; otherwise it falls back to `GITHUB_TOKEN`. |
-| `PLAY_JSON_KEY` | `publish_store_package.yml`, `publish_store_contents.yml` | Required for Play | Google Play service-account JSON (whole file contents). |
+| `GH_TOKEN` | `publish_store_package.yml` | Optional | A PAT used only if you need broader scope than `GITHUB_TOKEN` for `gh release upload`; otherwise it falls back to `GITHUB_TOKEN`. |
+| `GOOGLE_PLAY_APIKEY` | `client_publish.yml`, `publish_store_package.yml`, `publish_store_contents.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → `client_publish.yml` publishes the AAB to Play and attaches the Play-signed APK to the release. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
 | `ADVANCED_INSTALLER_LICENSE` | `client_windows_build.yml`, `client_publish.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
-| `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET` | `client_publish.yml` | Optional (Windows signing) | Service principal for Azure Trusted Signing. All three (plus the `VH_SIGN_*` set) must be present for signing to run. |
-| `VH_SIGN_ACCOUNT` / `VH_SIGN_PROFILE` / `VH_SIGN_ENDPOINT` | `client_publish.yml` | Optional (Windows signing) | Trusted Signing target: account name, certificate profile, and regional endpoint. |
+| `AZURE_SIGNING_CREDENTIAL` | `client_publish.yml` | Optional (Windows signing) | The single Azure service-principal JSON you download from Azure (contains `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`; other fields ignored). Paste the whole file. Absent → MSI builds unsigned with a warning. |
+| `AZURE_SIGNING_TARGET` | `client_publish.yml` | Optional (Windows signing) | Single JSON in Azure Trusted Signing's `metadata.json` schema: `Endpoint`, `CodeSigningAccountName`, `CertificateProfileName`. Not secret and not part of the Azure credential file; required alongside it for signing to run. Store it as a repository **Variable**. |
 | `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Google AAB, plus its store password. The key alias is auto-detected; set `_ALIAS` only for a multi-entry keystore. |
 | `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
 | `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Google AAB, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Web. |
@@ -48,20 +73,22 @@ point to).** Resolved in this order:
    build still succeeds and the unconfigured URL is visible in the generated JSON.
 
 **2. Per-app identity (optional, never committed).** All **non-secret** build settings live in one
-`publish.json` at the app root — easy to manage and mirrored by a single GitHub **variable**. Secrets and
-binaries live in a per-store subfolder (`google/`, `web/`), one file per GitHub **secret**, with the
-store in the filename too so it matches the secret name (`android_keystore_google.p12` ↔
-`ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64`):
+`publish.json` at the app root — easy to manage and mirrored by a single GitHub **variable**. The app's
+runtime `appsettings.json` is a single **shared** file at the app root, embedded (as `AppSettings.json`)
+by every distribution (google, web, windows, linux, and future iOS) — a superset where each distribution
+reads the keys it needs and ignores the rest. Signing keys/passwords live in a per-store subfolder
+(`google/`, `web/`), one file per GitHub **secret**, with the store in the filename so it matches the
+secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64`):
 
 ```
 .user/VpnHoodClient/publish.json                            all non-secret config (below)
+.user/VpnHoodClient/appsettings.json                        shared app settings (all distributions), embedded
+.user/VpnHoodClient/appsettings.Debug.json                  Debug-config override (optional)
 .user/VpnHoodClient/google/android_keystore_google.p12      signing key   — secret
 .user/VpnHoodClient/google/android_keystore_google_password.txt  store password — secret
-.user/VpnHoodClient/google/appsettings_google.json          private app settings, embedded
-.user/VpnHoodClient/google/appsettings_google.Debug.json    Debug-config override (optional)
 .user/VpnHoodConnect/google/access_key_default_google.txt   Connect default access key
 .user/VpnHoodConnect/google/access_key_default_google.Debug.txt  Debug-config override (optional)
-.user/VpnHoodClient/web/… , .user/VpnHoodConnect/web/…       (same shape per store)
+.user/VpnHoodClient/web/… , .user/VpnHoodConnect/web/…       (per-store signing keys only)
 ```
 
 `publish.json` (every field optional; absent file/field = project default):
@@ -99,7 +126,7 @@ Builds the Google AAB, the Web APK, and the Web arm64 APK on an `ubuntu-latest` 
 reusing the existing publish scripts. A JDK 17 and the `.NET` Android workload are set up
 on the runner, and the Android SDK is auto-provisioned.
 
-**Signing (optional):** signing config is built by `Pub/Core/PrepareCiAndroidSigning.ps1`.
+**Signing (optional):** signing config is built by `Pub/Lib/PrepareCiAndroidSigning.ps1`.
 
 - Each keystore below is independent: set a key's group and its real keystore is used.
 - If a key's secrets are absent, an **ephemeral throwaway keystore** is generated so the build still
@@ -123,13 +150,13 @@ Connect publishing, when wired into CI, uses `ANDROID_KEYSTORE_CONNECT_GOOGLE_BA
 are separate secrets even though you may load the **same** keystore bytes into both (Connect signs its
 Google and Web builds with one key); providing them separately keeps each store's keystore self-contained.
 `PrepareCiAndroidSigning.ps1` materializes each into `.user/<app>/<store>/android_keystore_<store>.p12`
-(+ `_password.txt`, optional `_alias.txt`) — see `Pub/Core/android-signing.json` for the secret→app/store map.
+(+ `_password.txt`, optional `_alias.txt`) — see `Pub/Lib/android-signing.json` for the secret→app/store map.
 
 > The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
 > CI builds fast. Re-enable it before shipping a production release.
 
 ### Android client — Google Play (`publish_store_*.yml`)
-- `PLAY_JSON_KEY`: create a service account in the Google Play Console with the
+- `GOOGLE_PLAY_APIKEY`: create a service account in the Google Play Console with the
   *Release* permission, generate a JSON key, and store the file contents.
 - Update `fastlane/Appfile` (`package_name`) to **your** application ID — the current
   value `com.vpnhood.client.android` belongs to the upstream project and you cannot
@@ -142,16 +169,28 @@ The MSI is built with **Advanced Installer** on a `windows-latest` runner.
 - **`ADVANCED_INSTALLER_LICENSE`** — your Advanced Installer license ID. The Caphyon
   action installs and registers Advanced Installer with it.
 
-**Code signing (optional, `client_publish.yml`):** signing is **off unless all six
-signing secrets are present**, in which case the build signs the executable and the MSI
-via Microsoft Trusted Signing (`sign` CLI) and a signing failure is fatal. The `.aip`
-files themselves carry no signer. To enable it under **your own organization's identity**:
+**Code signing (optional, `client_publish.yml`):** signing is **off unless the Azure
+credential and the Trusted Signing target are both present**, in which case the build signs
+the executable and the MSI via Microsoft Trusted Signing (`sign` CLI) and a signing failure is
+fatal. When `AZURE_SIGNING_CREDENTIAL` is absent the MSI is built **unsigned** with a warning. The
+`.aip` files themselves carry no signer. To enable it under **your own organization's identity**:
 
-- `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` — a service principal with
-  the *Trusted Signing Certificate Profile Signer* role, scoped to your signing account.
-- `VH_SIGN_ACCOUNT` — your Trusted Signing account name.
-- `VH_SIGN_PROFILE` — the certificate profile to sign with.
-- `VH_SIGN_ENDPOINT` — the regional endpoint, e.g. `https://wus2.codesigning.azure.net/`.
+- `AZURE_SIGNING_CREDENTIAL` — the single JSON credential you download from Azure for a service
+  principal with the *Trusted Signing Certificate Profile Signer* role, scoped to your signing
+  account. Paste the whole file as the secret value (it carries `AZURE_TENANT_ID`,
+  `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET`; any extra fields like `subscriptionId` are ignored).
+  Locally, the same file is read from `.user/azure_signing_credential.json`.
+- `AZURE_SIGNING_TARGET` — a single JSON in Azure Trusted Signing's own `metadata.json` schema
+  (the file `signtool`'s dlib consumes), not secret:
+  - `CodeSigningAccountName` — your Trusted Signing account name.
+  - `CertificateProfileName` — the certificate profile to sign with.
+  - `Endpoint` — the regional endpoint, e.g. `https://wus2.codesigning.azure.net/`.
+
+  ```json
+  { "Endpoint": "https://wus2.codesigning.azure.net/", "CodeSigningAccountName": "…", "CertificateProfileName": "…" }
+  ```
+
+  Locally, the same file is read from `.user/azure_signing_target.json`.
 
 Do not reuse a third-party/previous signer — the published identity comes from the
 certificate profile, so verify it resolves to **your** organization before shipping.

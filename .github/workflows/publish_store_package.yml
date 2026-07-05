@@ -1,8 +1,17 @@
 name: Publish AAB to Google Play & Replace Release Asset with Play-Signed APK
 
+# MANUAL re-publish tool. The automated path is the publish-play-android job in client_publish.yml,
+# which publishes to Play from the CI artifact BEFORE the release is created; do not also run this
+# on `release: published` or you would double-publish. Use this workflow to (re)publish an EXISTING
+# release's AAB to Google Play by hand — it downloads the AAB from the release, uploads it with
+# Fastlane (metadata, images, screenshots, changelogs), then attaches the Play-signed APK back.
+#
+# Secrets:
+#   GOOGLE_PLAY_APIKEY   Google Play service-account JSON. If absent, the whole Play publish is
+#       SKIPPED with a warning (the job still succeeds, green) — nothing is uploaded to Play.
+#   GH_TOKEN             Optional PAT for gh release upload; falls back to GITHUB_TOKEN.
+
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -13,21 +22,34 @@ jobs:
 
     env:
       AAB_PATTERN: "*.aab"
-      AAB_META_PATTERN: "*.aab.json"
+      # The Google build's update-info sidecar is "<title>-android.json" (matches the URL the app polls);
+      # "-android-web*.json" ends with "-web.json" so it never matches this pattern.
+      AAB_META_PATTERN: "*-android.json"
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      # Missing key -> the Play-publish steps below are skipped (a warning is emitted) so the job
+      # still succeeds (green); nothing is pushed to Google Play.
+      GOOGLE_PLAY_APIKEY: ${{ secrets.GOOGLE_PLAY_APIKEY }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Prepare GH token
         run: echo "GH_TOKEN=${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
 
+      # No key -> warn and skip the Play publish (the steps below are gated on the same condition).
+      - name: Warn if Google Play API key is missing
+        if: env.GOOGLE_PLAY_APIKEY == ''
+        run: |
+          echo "::warning title=Google Play publish skipped::GOOGLE_PLAY_APIKEY secret is not set; the AAB will NOT be uploaded to Google Play and no metadata/images/changelogs will be published. Add the secret (see .github/DEPLOYMENT.md) to enable Play publishing."
+
       - name: Resolve release tag and track
+        if: env.GOOGLE_PLAY_APIKEY != ''
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
         run: |
           set -e
-          
+
           # Use event context if triggered by release event, otherwise find latest
           if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
@@ -59,6 +81,7 @@ jobs:
 
       # --- Download AAB and its metadata JSON ---
       - name: Download AAB + JSON from GitHub Release
+        if: env.GOOGLE_PLAY_APIKEY != ''
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
         run: |
@@ -67,13 +90,15 @@ jobs:
           gh release download "$TAG" --pattern "$AAB_META_PATTERN" --dir artifacts || true
 
           AAB_FILE=$(ls artifacts/*.aab 2>/dev/null | head -n1 || true)
-          META_FILE=$(ls artifacts/*.aab.json 2>/dev/null | head -n1 || true)
+          META_FILE=$(ls artifacts/*-android.json 2>/dev/null | head -n1 || true)
 
           if [ -z "$AAB_FILE" ]; then
-            echo "❌ No .aab found matching pattern '$AAB_PATTERN' in release '$TAG'"; exit 1
+            echo "::warning title=No AAB in release::No .aab found matching '$AAB_PATTERN' in release '$TAG' (was the Android build produced?). Skipping Play publish."
+            echo "SKIP_PUBLISH=true" >> $GITHUB_ENV
+            exit 0
           fi
           if [ -z "$META_FILE" ]; then
-            echo "❌ No .aab.json metadata file found for $AAB_FILE"; exit 1
+            echo "❌ No -android.json metadata file found for $AAB_FILE"; exit 1
           fi
 
           echo "AAB_PATH=$AAB_FILE" >> $GITHUB_ENV
@@ -82,13 +107,14 @@ jobs:
 
       # --- Extract version info from JSON ---
       - name: Read version info from JSON metadata
+        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
         run: |
           VERSION_NAME=$(jq -r '.Version' "$META_PATH")
           if [ -z "$VERSION_NAME" ] || [ "$VERSION_NAME" = "null" ]; then
             echo "❌ Could not read Version field from $META_PATH"; exit 1
           fi
           echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
-          
+
           # Derive VersionCode: for pattern X.Y.Z use Z (third component)
           RAW_VERSION_CODE=$(jq -r '(.VersionCode // .Build // .BuildNumber // "")' "$META_PATH")
           if [ -n "$RAW_VERSION_CODE" ] && [ "$RAW_VERSION_CODE" != "null" ]; then
@@ -116,25 +142,27 @@ jobs:
 
       # --- Setup dependencies ---
       - name: Set up Java
-        uses: actions/setup-java@v4
+        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Ruby
+        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: false
 
       - name: Install Fastlane
+        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
         run: |
           gem install fastlane --no-document
 
       # --- Upload AAB to Google Play (or update metadata if version exists) ---
       - name: Upload to Google Play via Fastlane
-        env:
-          PLAY_JSON_KEY: ${{ secrets.PLAY_JSON_KEY }}
+        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
         run: |
           echo "Uploading $AAB_PATH (versionCode=$VERSION_CODE rollout='$ROLLOUT') to track $TRACK"
           fastlane android playstore \
@@ -146,9 +174,7 @@ jobs:
 
       # --- Download Google Play–signed APK ---
       - name: Download Google Play–signed APK via Fastlane
-        env:
-          PLAY_JSON_KEY: ${{ secrets.PLAY_JSON_KEY }}
-          VERSION_CODE: ${{ env.VERSION_CODE }}
+        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
         run: |
           echo "Attempting to download universal APK for version code $VERSION_CODE (track=$TRACK)"
           fastlane android download_signed version_code:"$VERSION_CODE"
@@ -165,26 +191,29 @@ jobs:
           echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
           echo "✅ Found Play-signed APK: $APK_PATH"
 
-      # --- Add Play-signed APK and product.json (keep AAB and .aab.json) ---
+      # --- Add Play-signed APK (keep AAB and its -android.json update-info file) ---
       - name: Upload Play-signed APK and product.json
+        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
         run: |
           BASE_NAME=$(basename "$AAB_PATH" .aab)
-          
+
           # Upload APK: product.aab -> product.apk
           APK_NAME="${BASE_NAME}.apk"
           cp "$APK_PATH" "$APK_NAME"
           gh release upload "$TAG" "$APK_NAME" --clobber
           echo "✅ Uploaded Play-signed APK as $APK_NAME (track=$TRACK)"
-          
-          # Upload product.json: product.aab.json -> product.json
+
+          # Re-attach the update-info file. It is already named "<title>-android.json" (== BASE_NAME.json),
+          # so this just refreshes it on the release alongside the newly attached Play-signed APK.
           APK_JSON_NAME="${BASE_NAME}.json"
           cp "$META_PATH" "$APK_JSON_NAME"
           gh release upload "$TAG" "$APK_JSON_NAME" --clobber
           echo "✅ Uploaded metadata as $APK_JSON_NAME"
 
       - name: List final assets
+        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
         run: |

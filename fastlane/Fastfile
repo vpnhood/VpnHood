@@ -18,60 +18,41 @@ default_platform(:android)
 platform :android do
   desc "Upload AAB to Google Play"
   lane :playstore do |options|
+    # skip_metadata:"true" uploads the binary ONLY and leaves the live store listing (metadata,
+    # images, screenshots, changelogs) untouched. Default (false) uploads the full listing too.
+    skip_meta = options[:skip_metadata].to_s == 'true'
     upload_params = {
         aab: options[:aab],
-        json_key_data: ENV['PLAY_JSON_KEY'],
+        json_key_data: ENV['GOOGLE_PLAY_APIKEY'],
         track: options[:track] || 'alpha',
         version_name: options[:version_name],
         version_code: options[:version_code],
         skip_upload_apk: true,
-        skip_upload_screenshots: false,
-        skip_upload_images: false,
-        skip_upload_metadata: false,
-        skip_upload_changelogs: false,
-        sync_image_upload: true,
-        release_status: 'completed'
+        skip_upload_screenshots: skip_meta,
+        skip_upload_images: skip_meta,
+        skip_upload_metadata: skip_meta,
+        skip_upload_changelogs: skip_meta,
+        sync_image_upload: !skip_meta,
+        # A staged rollout (fraction < 1, e.g. 0.01 = 1%) must be 'inProgress'; a full release is
+        # 'completed'. Passing rollout with 'completed' is rejected by the Play API.
+        release_status: (options[:rollout].to_s.empty? || options[:rollout].to_f >= 1.0) ? 'completed' : 'inProgress'
     }
-    
-    # Only add rollout if it has a valid value
+
+    # Only add rollout if it has a valid value (a fraction between 0 and 1, e.g. 0.01 = 1%)
     if options[:rollout] && !options[:rollout].to_s.empty?
       upload_params[:rollout] = options[:rollout]
     end
-    
-    begin
-      UI.message("🚀 Uploading AAB with changelog...")
-      UI.message("   versionCode=#{options[:version_code]} track=#{upload_params[:track]} rollout=#{upload_params[:rollout] || 'none'}")
-      upload_to_play_store(upload_params)
-      UI.success("✅ Upload of AAB and changelog succeeded")
-    rescue => e
-      # ONLY handle version conflict errors - let ALL other errors fail naturally
-      if /Version code .* has already been used/i.match?(e.message) || 
-         /already been uploaded/i.match?(e.message) || 
-         /apkUpgradeVersionConflict/i.match?(e.message) ||
-         /apkNoUpgradePath/i.match?(e.message)
-        
-        UI.important("⚠️  Version code #{options[:version_code]} already exists on Google Play")
-        UI.important("🔄 Updating changelog only...")
-        
-        # Update only changelog for existing version
-        supply(
-          json_key_data: ENV['PLAY_JSON_KEY'],
-          track: upload_params[:track],
-          version_code: options[:version_code],
-          skip_upload_aab: true,
-          skip_upload_apk: true,
-          skip_upload_screenshots: false,
-          skip_upload_images: false,
-          skip_upload_metadata: false,
-          skip_upload_changelogs: false,
-          sync_image_upload: true
-        )
-        UI.success("✅ Changelog updated for existing versionCode #{options[:version_code]}")
-      else
-        # For ALL other errors, re-raise to fail the lane immediately
-        raise e
-      end
-    end
+
+    # No rescue on purpose: ANY error from upload_to_play_store must fail the lane (and the CI job)
+    # loudly. A previous version swallowed "version code already used" / apkNoUpgradePath as a benign
+    # "already exists, just updating the changelog" — but apkNoUpgradePath is a REJECTION (the AAB is
+    # not a valid upgrade of what's already live), so the binary never landed while CI reported
+    # success. If you genuinely need to refresh only the store listing for an already-published
+    # version, use the publish_contents lane, not playstore.
+    UI.message("🚀 Uploading AAB with changelog...")
+    UI.message("   versionCode=#{options[:version_code]} track=#{upload_params[:track]} rollout=#{upload_params[:rollout] || 'none'}")
+    upload_to_play_store(upload_params)
+    UI.success("✅ Upload of AAB and changelog succeeded")
   end
 
   desc "Publish store contents (metadata, images, screenshots) to Google Play - shared across all tracks"
@@ -80,7 +61,7 @@ platform :android do
 
     # Step 1: Fetch all active version codes from the production track
     production_versions = google_play_track_version_codes(
-      json_key_data: ENV['PLAY_JSON_KEY'],
+      json_key_data: ENV['GOOGLE_PLAY_APIKEY'],
       track: 'production'
     )
 
@@ -96,7 +77,7 @@ platform :android do
     UI.message("   Note: Store contents are shared across all tracks")
     
     supply(
-      json_key_data: ENV['PLAY_JSON_KEY'],
+      json_key_data: ENV['GOOGLE_PLAY_APIKEY'],
       version_code: latest_version_code,
       skip_upload_aab: true,
       skip_upload_apk: true,
@@ -117,7 +98,7 @@ platform :android do
       UI.user_error!("version_code is required. Pass via 'fastlane android download_signed version_code:123'.")
     end
     download_universal_apk_from_google_play(
-        json_key_data: ENV['PLAY_JSON_KEY'],
+        json_key_data: ENV['GOOGLE_PLAY_APIKEY'],
         version_code: options[:version_code],
         destination: './fastlane/downloaded.apk'
     )

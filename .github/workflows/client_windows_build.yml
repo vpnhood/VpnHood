@@ -3,7 +3,7 @@ name: Build Windows Client
 # Builds the VpnHood Windows client MSI on a GitHub-hosted Windows runner,
 # reusing the EXISTING publish scripts unchanged:
 #   Src/Apps/Client.Win.Web/_publish.ps1
-#     -> Pub/Core/PublishWinApp.ps1  (dotnet publish + AdvancedInstaller.com /build)
+#     -> Pub/Lib/PublishWinApp.ps1  (dotnet publish + AdvancedInstaller.com /build)
 #
 # Advanced Installer is installed + licensed by the official Caphyon action,
 # which also sets the registry key PublishWinApp.ps1 reads to find the tool.
@@ -13,25 +13,31 @@ name: Build Windows Client
 # add a code-signing certificate under your own identity to the .aip + its secrets.
 #
 # Secrets:
-#   ADVANCED_INSTALLER_LICENSE   (required) Advanced Installer license id
+#   ADVANCED_INSTALLER_LICENSE   Advanced Installer license id. If absent, the MSI build is
+#       SKIPPED with a warning and the job still succeeds (green) — it just produces no artifact.
 
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Branch or commit to build"
+        description: "Branch or commit to build (blank = the branch this workflow is dispatched from)"
         required: false
-        default: "development"
+        default: ""
 
 jobs:
   build-windows:
     runs-on: windows-latest
+    env:
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      # Missing license -> the Advanced Installer steps below are skipped (a warning is emitted) so the
+      # job still succeeds (green); it just doesn't produce/upload the MSI.
+      ADVANCED_INSTALLER_LICENSE: ${{ secrets.ADVANCED_INSTALLER_LICENSE }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.inputs.ref }}
+          ref: ${{ github.event.inputs.ref || github.ref_name }}
 
       - name: Set up .NET (pinned by global.json)
         uses: actions/setup-dotnet@v5
@@ -49,14 +55,23 @@ jobs:
           "MODULE_DIR=Pub/bin/$tag/VpnHoodClient/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
           Write-Host "Building VpnHoodClient $tag"
 
-      # Installs + registers Advanced Installer; latest version is fine.
+      # No license -> warn and skip the MSI build (the steps below are gated on the same condition).
+      - name: Warn if Advanced Installer license is missing
+        if: env.ADVANCED_INSTALLER_LICENSE == ''
+        shell: pwsh
+        run: |
+          Write-Host "::warning title=Advanced Installer license missing::ADVANCED_INSTALLER_LICENSE secret is not set; skipping the Windows MSI build. Add the secret (see .github/DEPLOYMENT.md) to produce the installer."
+
+      # Installs + registers Advanced Installer; latest version is fine. Skipped when unlicensed.
       - name: Set up Advanced Installer
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         uses: caphyon/advinst-github-action@7edde34c6ff935e53e3de72a5699efcfceb5f6c6 # v2.0.3
         with:
-          advinst-license: ${{ secrets.ADVANCED_INSTALLER_LICENSE }}
+          advinst-license: ${{ env.ADVANCED_INSTALLER_LICENSE }}
 
       # Common.ps1 reads ../.user/nuget_apikey.txt at load; stub it (NuGet key unused here).
       - name: Create nuget key stub
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
           $userDir = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
@@ -64,6 +79,7 @@ jobs:
           '' | Out-File -FilePath (Join-Path $userDir "nuget_apikey.txt") -Encoding ascii -Force
 
       - name: Build Windows client MSI
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
           & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1"
@@ -72,11 +88,13 @@ jobs:
           DOTNET_CLI_TELEMETRY_OPTOUT: "1"
 
       - name: List produced artifacts
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: Get-ChildItem -Recurse "$env:GITHUB_WORKSPACE/$env:MODULE_DIR" | Select-Object FullName, Length
 
       # Short-lived inspection artifact (Actions storage is quota-limited).
       - name: Upload Windows client artifacts
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
         uses: actions/upload-artifact@v7
         continue-on-error: true
         with:
@@ -85,3 +103,5 @@ jobs:
           retention-days: 1
           path: |
             ${{ env.MODULE_DIR }}/**
+
+# Workflow not appearing after a fresh fork/import? See .github/DEPLOYMENT.md "Activating the workflows".

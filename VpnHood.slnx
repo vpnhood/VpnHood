@@ -8,7 +8,9 @@
   </Configurations>
   <Folder Name="/Pub/">
     <File Path="CHANGELOG.md" />
+    <File Path="Pub/Bump.ps1" />
     <File Path="Pub/PubVersion.json" />
+    <File Path="Pub/RELEASE-STRATEGY.md" />
     <File Path="README.md" />
     <Properties Name="FolderGlobals">
       <Property Name="C_5_4Users_4Developer_4source_4repos_4Vh_4VpnHood_4Pub_4Version_1json__JsonSchema" />
@@ -16,37 +18,40 @@
   </Folder>
   <Folder Name="/Pub/Client/">
     <File Path="Pub/Client/Publish.ps1" />
-    <File Path="Pub/Client/PublishNugets.ps1" />
-    <File Path="Pub/Client/PublishToGithub.ps1" />
+    <File Path="Pub/Client/PublishByGithub.ps1" />
   </Folder>
   <Folder Name="/Pub/Connect/">
     <File Path="Pub/Connect/Publish.ps1" />
-    <File Path="Pub/Connect/PublishToGithub.ps1" />
+    <File Path="Pub/Connect/PublishByGithub.ps1" />
   </Folder>
-  <Folder Name="/Pub/Core/">
-    <File Path="Pub/Core/Common.ps1" />
-    <File Path="Pub/Core/PublishAndroidApp.ps1" />
-    <File Path="Pub/Core/PublishNuget.ps1" />
-    <File Path="Pub/Core/PublishWinApp.ps1" />
-    <File Path="Pub/Core/VersionBump.ps1" />
+  <Folder Name="/Pub/Lib/">
+    <File Path="Pub/Lib/AppPublishConfig.ps1" />
+    <File Path="Pub/Lib/Common.ps1" />
+    <File Path="Pub/Lib/PrepareCiAndroidSigning.ps1" />
+    <File Path="Pub/Lib/PublishAndroidApp.ps1" />
+    <File Path="Pub/Lib/PublishNugets.ps1" />
+    <File Path="Pub/Lib/PublishToGithub.ps1" />
+    <File Path="Pub/Lib/PublishWinApp.ps1" />
+    <File Path="Pub/Lib/ResolvePublishRepo.ps1" />
+    <File Path="Pub/Lib/VersionBump.ps1" />
   </Folder>
-  <Folder Name="/Pub/Core/utils/">
-    <File Path="Pub/Core/utils/changelog_utils.ps1" />
+  <Folder Name="/Pub/Lib/utils/">
+    <File Path="Pub/Lib/utils/changelog_utils.ps1" />
   </Folder>
-  <Folder Name="/Pub/Core/vh_installer/">
-    <File Path="Pub/Core/vh_installer/publish.ps1" />
-    <File Path="Pub/Core/vh_installer/publish_impl.ps1" />
+  <Folder Name="/Pub/Lib/vh_installer/">
+    <File Path="Pub/Lib/vh_installer/publish.ps1" />
+    <File Path="Pub/Lib/vh_installer/publish_impl.ps1" />
   </Folder>
-  <Folder Name="/Pub/Core/vh_installer/linux/">
-    <File Path="Pub/Core/vh_installer/linux/install-any.sh" />
-    <File Path="Pub/Core/vh_installer/linux/install.sh" />
-    <File Path="Pub/Core/vh_installer/linux/updater.sh" />
-    <File Path="Pub/Core/vh_installer/linux/vhlauncher.sh" />
+  <Folder Name="/Pub/Lib/vh_installer/linux/">
+    <File Path="Pub/Lib/vh_installer/linux/install-any.sh" />
+    <File Path="Pub/Lib/vh_installer/linux/install.sh" />
+    <File Path="Pub/Lib/vh_installer/linux/updater.sh" />
+    <File Path="Pub/Lib/vh_installer/linux/vhlauncher.sh" />
   </Folder>
-  <Folder Name="/Pub/Core/vh_installer/win/">
-    <File Path="Pub/Core/vh_installer/win/install.ps1" />
-    <File Path="Pub/Core/vh_installer/win/updater.ps1" />
-    <File Path="Pub/Core/vh_installer/win/vhlauncher.ps1" />
+  <Folder Name="/Pub/Lib/vh_installer/win/">
+    <File Path="Pub/Lib/vh_installer/win/install.ps1" />
+    <File Path="Pub/Lib/vh_installer/win/updater.ps1" />
+    <File Path="Pub/Lib/vh_installer/win/vhlauncher.ps1" />
   </Folder>
   <Folder Name="/Pub/FastLane/">
     <File Path="fastlane/Appfile" />
@@ -86,6 +91,9 @@
   </Folder>
   <Folder Name="/Src/AppLib/Linux/">
     <Project Path="Src/AppLib/VpnHood.AppLib.Linux.Common/VpnHood.AppLib.Linux.Common.csproj" />
+  </Folder>
+  <Folder Name="/Src/AppLib/Ios/">
+    <Project Path="Src/AppLib/VpnHood.AppLib.Ios.Common/VpnHood.AppLib.Ios.Common.csproj" />
   </Folder>
   <Folder Name="/Src/AppLib/Maui/">
     <Project Path="Src/AppLib/VpnHood.AppLib.Maui.Common/VpnHood.AppLib.Maui.Common.csproj" />

@@ -7,8 +7,8 @@ name: Publish Linux Client
 #
 # Reuses, unchanged:
 #   Src/Apps/Client.Linux.Web/_publish.ps1
-#     -> Pub/Core/vh_installer/publish.ps1 -> publish_impl.ps1
-#     -> Pub/Core/Common.ps1 (+ VersionBump.ps1)
+#     -> Pub/Lib/vh_installer/publish.ps1 -> publish_impl.ps1
+#     -> Pub/Lib/Common.ps1 (+ VersionBump.ps1)
 
 on:
   workflow_dispatch:
@@ -117,3 +117,5 @@ jobs:
             gh release delete "$env:TAG" --repo "$env:GITHUB_REPOSITORY" --cleanup-tag --yes
           gh release create "$env:TAG" --repo "$env:GITHUB_REPOSITORY" --title "$env:TAG" `
             --notes "Linux client $env:TAG (CI build)" $flag $assets
+
+# Workflow not appearing after a fresh fork/import? See .github/DEPLOYMENT.md "Activating the workflows".

@@ -1,13 +1,13 @@
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
 
-& "$SolutionDir/Pub/Core/vh_installer/publish.ps1" `
+& "$SolutionDir/Pub/Lib/vh_installer/publish.ps1" `
 	-projectDir $PSScriptRoot `
 	-repoBaseUrl "https://github.com/vpnhood/VpnHood.App.Server" `
 	-publishDirName "VpnHoodServer" `
 	-os "linux" `
 	-launcherName "vhserver";
 
-& "$SolutionDir/Pub/Core/vh_installer/publish_impl.ps1" `
+& "$SolutionDir/Pub/Lib/vh_installer/publish_impl.ps1" `
 	-projectDir $PSScriptRoot `
 	-repoBaseUrl "https://github.com/vpnhood/VpnHood.App.Server" `
 	-publishDirName "VpnHoodServer" `

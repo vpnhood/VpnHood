@@ -1,4 +1,12 @@
-﻿name: Publish Store Contents to Google Play
+name: Publish Store Contents to Google Play
+
+# Manual-only: pushes the store listing (metadata, images, screenshots) from
+# fastlane/metadata/** to Google Play, attached to the latest production version code.
+# Use this to refresh the listing WITHOUT shipping a new binary.
+#
+# Secrets:
+#   GOOGLE_PLAY_APIKEY   Google Play service-account JSON. If absent, publishing is SKIPPED with a
+#       warning (the job still succeeds, green) — nothing is pushed to Google Play.
 
 on:
   workflow_dispatch:
@@ -9,29 +17,41 @@ jobs:
     permissions:
       contents: read
 
+    env:
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      GOOGLE_PLAY_APIKEY: ${{ secrets.GOOGLE_PLAY_APIKEY }}
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      # No key -> warn and skip (the steps below are gated on the same condition).
+      - name: Warn if Google Play API key is missing
+        if: env.GOOGLE_PLAY_APIKEY == ''
+        run: |
+          echo "::warning title=Store contents publish skipped::GOOGLE_PLAY_APIKEY secret is not set; store metadata/images/screenshots will NOT be published to Google Play. Add the secret (see .github/DEPLOYMENT.md) to enable it."
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        if: env.GOOGLE_PLAY_APIKEY != ''
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Ruby
+        if: env.GOOGLE_PLAY_APIKEY != ''
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: false
 
       - name: Install Fastlane
+        if: env.GOOGLE_PLAY_APIKEY != ''
         run: |
           gem install fastlane --no-document
 
       - name: Publish store metadata, images, and screenshots
-        env:
-          PLAY_JSON_KEY: ${{ secrets.PLAY_JSON_KEY }}
+        if: env.GOOGLE_PLAY_APIKEY != ''
         run: |
           echo "🚀 Publishing store contents (metadata, images, screenshots)"
           fastlane android publish_contents

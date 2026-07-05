@@ -193,9 +193,10 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     public override bool ProtectSocket(Socket socket, IPAddress ipAddress)
     {
-        base.ProtectSocket(socket, ipAddress);
-        socket.Ttl = ProtectedTtl;
-        return true;
+        // WinDivert protection is done purely by the TTL marker (the capture filter excludes
+        // ProtectedTtl), not by binding to a specific adapter IP. Route the same way as the
+        // single-argument overload so both paths are consistent and the return value is truthful.
+        return ProtectSocket(socket);
     }
 
     protected virtual void ProcessReadPacket(IpPacket ipPacket)
@@ -228,15 +229,19 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected void WritePacketToAdapter(IpPacket ipPacket, bool outbound)
     {
-        if (_lastCaptureHeader == null)
-            throw new InvalidOperationException("Could not send any data without receiving a packet.");
+        // Snapshot the last capture header into a local. The reader thread can reassign
+        // _lastCaptureHeader between our flag-set and the send below; without the snapshot we could set
+        // the flag on one header object but hand a different (freshly captured, Outbound) header to
+        // SendPacket, reinjecting with the wrong direction/interface.
+        var captureHeader = _lastCaptureHeader
+            ?? throw new InvalidOperationException("Could not send any data without receiving a packet.");
 
         if (_device == null)
             throw new InvalidOperationException("Device is not initialized.");
 
         // send by a device
-        _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
-        _device.SendPacket(ipPacket.Buffer.Span, _lastCaptureHeader);
+        captureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
+        _device.SendPacket(ipPacket.Buffer.Span, captureHeader);
     }
 
     protected override void WaitForTunRead()
@@ -277,7 +282,9 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
         if (!_simulateDns)
             return;
 
-        if (ipPacket.Protocol != IpProtocol.Udp || _dnsServers.Any())
+        // Only rewrite when we actually have DNS servers to redirect to; otherwise there is nothing to
+        // simulate (the read branch below needs a non-empty pool to pick a target from).
+        if (ipPacket.Protocol != IpProtocol.Udp || !_dnsServers.Any())
             return;
 
         var udpPacket = ipPacket.ExtractUdp();
@@ -298,7 +305,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
             // select a random dns server
             var dnsServer = filteredDnsServers.Length > 0
-                ? filteredDnsServers[new Random().Next(filteredDnsServers.Length)]
+                ? filteredDnsServers[Random.Shared.Next(filteredDnsServers.Length)]
                 : null;
 
             // update the dns server

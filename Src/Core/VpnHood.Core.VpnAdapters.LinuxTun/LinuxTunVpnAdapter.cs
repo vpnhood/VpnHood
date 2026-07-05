@@ -19,7 +19,10 @@ namespace VpnHood.Core.VpnAdapters.LinuxTun;
 public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     : TunVpnAdapter(adapterSettings)
 {
-    private int _tunAdapterFd;
+    // -1 (not 0) is the "closed" sentinel: fd 0 is a valid descriptor (stdin), so using it would let a
+    // post-close read/write hit an unrelated descriptor instead of failing.
+    private const int InvalidFd = -1;
+    private int _tunAdapterFd = InvalidFd;
     private int? _metric;
     private string? _primaryAdapterName;
     private StructPollfd[]? _pollFdReads;
@@ -141,10 +144,9 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     protected override void AdapterClose()
     {
         // Close the TUN adapter if it is open
-        if (_tunAdapterFd != 0) {
-            LinuxAPI.close(_tunAdapterFd);
-            _tunAdapterFd = 0;
-        }
+        var fd = Interlocked.Exchange(ref _tunAdapterFd, InvalidFd);
+        if (fd != InvalidFd)
+            LinuxAPI.close(fd);
     }
 
     protected override async Task AddNat(IpNetwork ipNetwork, CancellationToken cancellationToken)
@@ -292,51 +294,54 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     protected override bool WritePacket(IpPacket ipPacket)
     {
+        var fd = _tunAdapterFd;
+        if (fd == InvalidFd)
+            return false;
+
         var packetBytes = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var bufferLength);
 
-        // Write the packet to the TUN device
-        var offset = 0;
-        while (offset < bufferLength) {
-            var bytesWritten = LinuxAPI.write(_tunAdapterFd, packetBytes, bufferLength - offset);
-            if (bytesWritten > 0) {
-                offset += bytesWritten; // Advance offset
-                packetBytes = packetBytes[bytesWritten..]; // Advance buffer (rare case)
-                continue;
-            }
+        // A TUN device writes a whole datagram or nothing, so there is no partial write to continue.
+        var bytesWritten = LinuxAPI.write(fd, packetBytes, bufferLength);
+        if (bytesWritten == bufferLength)
+            return true;
 
-            var errorCode = Marshal.GetLastWin32Error();
-            switch (errorCode) {
-                // Buffer full, wait
-                case OsConstants.Eagain:
-                    if (offset > 0)
-                        throw new SystemException("Partial write to TUN device. System in unstable");
-                    return false;
-
-                // Interrupted, retry
-                case OsConstants.Eintr:
-                    continue;
-
-                default:
-                    throw new PInvokeException("Could not write to TUN.", errorCode);
-            }
+        // A short (but positive) write means a truncated packet was injected. This should not happen for a
+        // TUN char device; drop it rather than tearing down the adapter.
+        if (bytesWritten >= 0) {
+            VhLogger.Instance.LogWarning(
+                "Partial write to TUN device; dropping packet. Written: {Written}, Length: {Length}",
+                bytesWritten, bufferLength);
+            return true;
         }
 
-        return true;
+        var errorCode = Marshal.GetLastWin32Error();
+        return errorCode switch {
+            // Buffer full (EAGAIN) or interrupted before any byte was written (EINTR): report not-sent and
+            // let the parent send loop (SendPacketInternal) back off (WaitForTunWrite) and retry.
+            OsConstants.Eagain or OsConstants.Eintr => false,
+            _ => throw new PInvokeException("Could not write to TUN.", errorCode)
+        };
     }
 
     protected override bool ReadPacket(byte[] buffer)
     {
-        var bytesRead = LinuxAPI.read(_tunAdapterFd, buffer, buffer.Length);
+        var fd = _tunAdapterFd;
+        if (fd == InvalidFd)
+            throw new IOException("TUN adapter is closed.");
+
+        var bytesRead = LinuxAPI.read(fd, buffer, buffer.Length);
         if (bytesRead > 0)
             return true;
 
         // check for errors
         var errorCode = Marshal.GetLastWin32Error();
         return errorCode switch {
-            // No data available, wait
+            // No data available; the parent read loop polls (WaitForTunRead) and retries.
             OsConstants.Eagain => false,
-            // Interrupted, retry
-            OsConstants.Eintr => throw new IOException("Read from TUN was interrupted. Retrying..."),
+            // Interrupted before any byte was read. Report it as "no data" and let the parent drive the
+            // retry (it re-checks liveness and polls) rather than spinning here — EINTR is normal, not an
+            // error, so it must not throw or count toward the I/O error threshold.
+            OsConstants.Eintr => false,
             _ => throw new PInvokeException("Could not read from TUN.", errorCode)
         };
     }
@@ -396,7 +401,11 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
 
     protected override void DisposeUnmanaged()
     {
-        if (_tunAdapterFd != 0)
+        // AdapterRemove closes the fd AND removes the NAT/forwarding iptables rules. On a normal Dispose
+        // that already happened via Stop(), but the finalizer path never runs Stop(), so we must clean
+        // NAT here too. A leftover MASQUERADE rule referencing a deleted interface can break the host
+        // network, so cleaning it (even on the finalizer thread) is the lesser evil versus leaking it.
+        if (_tunAdapterFd != InvalidFd)
             AdapterRemove();
 
         base.DisposeUnmanaged();

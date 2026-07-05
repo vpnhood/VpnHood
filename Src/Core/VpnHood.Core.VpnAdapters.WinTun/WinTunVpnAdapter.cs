@@ -86,8 +86,10 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
             if (prevAdapter != IntPtr.Zero)
                 WinTunApi.WintunCloseAdapter(prevAdapter);
 
-            // try to create the adapter again
+            // try to create the adapter again, then refresh the error so a failure here is not
+            // reported with the stale ERROR_ALREADY_EXISTS from the first attempt.
             _tunAdapter = WinTunApi.WintunCreateAdapter(AdapterName, "VPN", BuildGuidFromName(AdapterName));
+            lastErrorCode = Marshal.GetLastWin32Error();
         }
 
         if (_tunAdapter == IntPtr.Zero)
@@ -188,7 +190,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
         if (_adapterIndex == 0)
             throw new InvalidOperationException("Adapter index is not set. Call AdapterOpen() first.");
 
-        Console.WriteLine($"Adding {ipNetwork}");
+        VhLogger.Instance.LogTrace("Adding route {IpNetwork} to {AdapterName}.", ipNetwork, AdapterName);
         Win32IpHelper.AddRoute(_adapterIndex, ipNetwork, cancellationToken);
         return Task.CompletedTask;
     }
@@ -447,7 +449,11 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override void DisposeUnmanaged()
     {
-        // The adapter is an unmanaged resource; it must be closed if it is open
+        // The adapter is an unmanaged resource; it must be closed if it is open. AdapterRemove also
+        // removes the NAT rules — on a normal Dispose that already happened via Stop(), but the finalizer
+        // path never runs Stop(), so we must clean NAT here too. A leftover NAT rule pointing at a dead
+        // interface can break the host network, so cleaning it (even on the finalizer thread) is the
+        // lesser evil versus leaking it.
         if (_tunAdapter != IntPtr.Zero)
             AdapterRemove();
 

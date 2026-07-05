@@ -1,5 +1,3 @@
-using Foundation;
-using UIKit;
 using VpnHood.AppLib.SpaWebView;
 using VpnHood.Core.Client.Devices.UiContexts;
 

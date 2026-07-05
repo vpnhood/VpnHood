@@ -88,7 +88,7 @@ public sealed class IosQuicClient(
                 if (inboundStreams.Writer.TryWrite(stream))
                     return;
 
-                VhUtils.TryInvoke(stream.Cancel);
+                stream.TryCancel();
                 stream.Dispose();
             });
 
@@ -117,9 +117,9 @@ public sealed class IosQuicClient(
         }
         catch {
             inboundStreams.Writer.TryComplete();
-            VhUtils.TryInvoke(() => connectionGroup.SetStateChangedHandler(null!));
-            VhUtils.TryInvoke(() => connectionGroup.SetNewConnectionHandler(null!));
-            VhUtils.TryInvoke(connectionGroup.Cancel);
+            connectionGroup.TrySetStateChangedHandler(null);
+            connectionGroup.TrySetNewConnectionHandler(null);
+            connectionGroup.TryCancel();
             connectionGroup.Dispose();
             multiplexGroup.Dispose();
             endpoint.Dispose();

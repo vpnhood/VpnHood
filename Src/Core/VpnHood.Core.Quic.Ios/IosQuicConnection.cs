@@ -88,8 +88,8 @@ internal sealed class IosQuicConnection(
             return new IosQuicStream(stream);
         }
         catch {
-            VhUtils.TryInvoke(() => stream.SetStateChangeHandler(null!));
-            VhUtils.TryInvoke(stream.Cancel);
+            stream.TrySetStateChangeHandler(null);
+            stream.TryCancel();
             stream.Dispose();
             throw;
         }
@@ -107,13 +107,13 @@ internal sealed class IosQuicConnection(
         // Stop accepting, then drain and discard any inbound streams that were never accepted.
         inboundStreams.Writer.TryComplete();
         while (inboundStreams.Reader.TryRead(out var pending)) {
-            VhUtils.TryInvoke(pending.Cancel);
+            pending.TryCancel();
             pending.Dispose();
         }
 
-        VhUtils.TryInvoke(() => connectionGroup.SetStateChangedHandler(null!));
-        VhUtils.TryInvoke(() => connectionGroup.SetNewConnectionHandler(null!));
-        VhUtils.TryInvoke(connectionGroup.Cancel);
+        connectionGroup.TrySetStateChangedHandler(null);
+        connectionGroup.TrySetNewConnectionHandler(null);
+        connectionGroup.TryCancel();
         connectionGroup.Dispose();
         multiplexGroup.Dispose();
         endpoint.Dispose();

@@ -1,6 +1,4 @@
-using Foundation;
 using Microsoft.Extensions.Logging;
-using UIKit;
 using VpnHood.AppLib.SpaWebView;
 using VpnHood.Core.Toolkit.Logging;
 using WebKit;
@@ -15,7 +13,7 @@ public sealed class IosSpaWebView : ISpaWebView
     private readonly UIViewController _controller;
     private readonly UIColor _backgroundColor;
     private WKWebView? _webView;
-    private UIActivityIndicatorView? _spinner;
+    private readonly UIActivityIndicatorView? _spinner;
 
     public event EventHandler? PageLoaded;
     public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;

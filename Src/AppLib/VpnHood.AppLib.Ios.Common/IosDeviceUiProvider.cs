@@ -1,5 +1,3 @@
-using Foundation;
-using UIKit;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.Ios.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;

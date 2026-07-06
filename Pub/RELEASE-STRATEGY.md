@@ -15,7 +15,7 @@ The repo is one large solution (~70 projects, ~60 of them NuGet libraries) plus 
    all ~60 NuGets even when they did not change — pure churn.
 2. **The bump ran on a developer's machine** (inside `Publish.ps1 -bump`), so two people releasing
    could collide on the version file.
-3. **`main` was updated with `push origin development:main --force`**, which rewrites `main`'s
+3. **`main` was updated with `push origin develop:main --force`**, which rewrites `main`'s
    history and breaks every fork/clone that tracks it.
 4. **NuGet-in-development confusion**: "if I change a project, do I have to wait for a NuGet build?"
 
@@ -39,14 +39,15 @@ Rule of thumb: **same repo = ProjectReference, third-party = PackageReference, r
 
 1. **CI owns the bump.** A dedicated `bump` action ([.github/workflows/bump.yml](../.github/workflows/bump.yml)
    → [Pub/Bump.ps1](Bump.ps1)) increments `PubVersion.json` (+ `Directory.Build.props`), commits,
-   and fast-forwards `development` + `main`. The CHANGELOG is hand-maintained (leading `# Latest`
-   section) and never rewritten by CI. Local machines never bump → no cross-developer
-   conflicts. It can optionally chain straight into the client publish and/or NuGet publish. **(Done.)**
-2. **No force-push to `main`; fast-forward only.** [Pub/Bump.ps1](Bump.ps1) pushes `HEAD:development`
-   then `HEAD:main` **without `--force`** (the old `CommitAndPushToMainRepo`/`CommitAndSyncMainRepo`
-   helpers in Common.ps1 were removed).
-   `main` only tracks `development`, so this is a clean fast-forward; a rejection signals a real
-   divergence to reconcile by hand rather than overwrite. Protects forkers. **(Done.)**
+   and pushes to `develop` (a stable bump additionally fast-forwards `main`). The CHANGELOG is
+   hand-maintained (leading `# Latest` section) and never rewritten by CI. Local machines never bump →
+   no cross-developer conflicts. It can optionally chain straight into the client publish and/or NuGet publish. **(Done.)**
+2. **`develop` is the prerelease line; `main` is the stable/release line.** [Pub/Bump.ps1](Bump.ps1)
+   always pushes `HEAD:develop`; on a **stable** bump it ALSO fast-forwards `HEAD:main` **without
+   `--force`** (a **prerelease** bump leaves `main` untouched — prereleases ship to TestFlight / Play
+   alpha, not the App Store / Play production). `main` only ever fast-forwards from `develop`, so it is
+   a clean fast-forward; a rejection signals a real divergence to reconcile by hand rather than
+   overwrite. Protects forkers. **(Done.)**
 3. **NuGet is always a stable Release version.** Packing is `-c Release`; the version does not get a
    `-prerelease` suffix from the app flag ([Pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1)).
    One clean library version line, decoupled from app prereleases. (The `smoke` input is the only
@@ -98,10 +99,10 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    Commit + push as normal work.
 2. Run the **Bump Version** workflow (`bump.yml`). Choose `prerelease` on/off. Optionally tick
    `then_publish` (create the GitHub release) and/or `then_publish_nugets`. It bumps the version once
-   (`PubVersion.json` + `Directory.Build.props`) and fast-forwards `development` + `main`. It does
-   **not** touch the changelog.
+   (`PubVersion.json` + `Directory.Build.props`) and pushes `develop` (a stable bump also fast-forwards
+   `main`; a prerelease bump does not). It does **not** touch the changelog.
 3. If you didn't chain them, dispatch **Publish Client** (`client_publish.yml`) and/or **Publish
-   NuGet Packages** (`nuget_publish.yml`) against `development` yourself — both are standalone.
+   NuGet Packages** (`nuget_publish.yml`) against `develop` yourself — both are standalone.
 
 `Pub/Client/Publish.ps1` is now **build-only** for local smoke testing (no bump, no distribute, no
 push).
@@ -171,7 +172,7 @@ unrelated and remain — they are real build logic invoked directly by the app C
 - **CI-owned bump**: new [Pub/Bump.ps1](Bump.ps1) + [.github/workflows/bump.yml](../.github/workflows/bump.yml).
 - **Standalone NuGet publishing**: new [.github/workflows/nuget_publish.yml](../.github/workflows/nuget_publish.yml).
 - [Pub/Lib/Common.ps1](Lib/Common.ps1) — the local commit-to-main helpers were removed; `Pub/Bump.ps1`
-  owns the fast-forward push to `development` + `main` (no `--force`).
+  owns the push to `develop` (and the fast-forward to `main` on a stable bump, no `--force`).
 - **NuGet publish is one parallel pack pass** ([Pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1))
   driven by `IsPackable` discovery; the old per-project `Pub/Lib/PublishNuget.ps1` was removed. Version
   is stable `X.Y.Z` except under the `smoke` input.

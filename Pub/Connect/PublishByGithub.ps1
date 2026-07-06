@@ -3,8 +3,8 @@
 #
 # Two steps, one command:
 #   1. Bump the MONOREPO in CI (bump.yml) with client-publish AND nuget OFF — so PubVersion.json +
-#      CHANGELOG advance and are pushed to development + main. Waits for it to finish.
-#   2. Dispatch connect_publish.yml in the CONNECT repo (ref = development) to build Connect from the
+#      CHANGELOG advance and are pushed to develop + main. Waits for it to finish.
+#   2. Dispatch connect_publish.yml in the CONNECT repo (ref = develop) to build Connect from the
 #      freshly bumped code and release it there. No bump and no NuGet happen in the Connect repo.
 #
 # Usage:
@@ -75,8 +75,8 @@ $rolloutText = if ($prerelease) { "n/a (alpha ships complete)" } else { "$rollou
 
 Write-Host "";
 Write-Host "*** Release Connect via GitHub Actions" -BackgroundColor Blue;
-Write-Host "  1) bump monorepo : $monoRepo   (publish OFF, nuget OFF -> push development + main)";
-Write-Host "  2) publish Connect: $connectRepo   (build from monorepo development, release there)";
+Write-Host "  1) bump monorepo : $monoRepo   (publish OFF, nuget OFF -> push develop + main)";
+Write-Host "  2) publish Connect: $connectRepo   (build from monorepo develop, release there)";
 Write-Host "  type             : $releaseKind";
 Write-Host "  Play audience    : $rolloutText";
 Write-Host "";
@@ -93,7 +93,7 @@ if (-not $yes) {
 Write-Host "Dispatching bump on $monoRepo ..." -ForegroundColor Cyan;
 gh workflow run bump.yml `
 	--repo $monoRepo `
-	--ref development `
+	--ref develop `
 	-f "prerelease=$($prerelease.ToString().ToLower())" `
 	-f "then_publish=false" `
 	-f "then_publish_nugets=false";
@@ -106,12 +106,12 @@ Write-Host "Waiting for the bump run ($bumpRun) to finish ..." -ForegroundColor 
 gh run watch $bumpRun --repo $monoRepo --exit-status;
 if ($LASTEXITCODE -ne 0) { throw "The bump run failed; Connect was NOT dispatched. Fix the bump, then retry."; }
 
-# --- Step 2: dispatch the Connect release (build from the freshly bumped development) -----------
+# --- Step 2: dispatch the Connect release (build from the freshly bumped develop) -----------
 Write-Host "Dispatching Connect release on $connectRepo ..." -ForegroundColor Cyan;
 gh workflow run connect_publish.yml `
 	--repo $connectRepo `
 	--ref main `
-	-f "ref=development" `
+	-f "ref=develop" `
 	-f "build_android=true" `
 	-f "publish_play=true" `
 	-f "publish_release=true" `

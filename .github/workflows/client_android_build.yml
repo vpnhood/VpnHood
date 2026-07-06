@@ -22,7 +22,7 @@ on:
       ref:
         description: "Branch or commit to build"
         required: false
-        default: "development"
+        default: "develop"
 
 jobs:
   build-android:

@@ -1,6 +1,6 @@
 # Triggers a FULL release on GitHub Actions by dispatching the "Bump Version" workflow (bump.yml),
 # which is the single writer of the version: it bumps Pub/PubVersion.json (the CHANGELOG is
-# hand-maintained, never rewritten), commits, fast-forwards development + main, and then chains the
+# hand-maintained, never rewritten), commits, fast-forwards develop + main, and then chains the
 # client publish (Linux + Windows +
 # Android + Google Play + GitHub release) AND the NuGet publish against the freshly bumped commit.
 #
@@ -114,7 +114,7 @@ if (-not $yes) {
 
 gh workflow run $workflowFile `
 	--repo $repo `
-	--ref development `
+	--ref develop `
 	-f "prerelease=$($prerelease.ToString().ToLower())" `
 	-f "rollout=$rollout" `
 	-f "then_publish=true" `

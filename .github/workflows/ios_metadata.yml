@@ -1,0 +1,60 @@
+name: Publish iOS App Store Metadata
+
+# Manual-only: pushes the App Store listing (metadata + screenshots) from fastlane/metadata/ios/**
+# to App Store Connect via fastlane deliver, WITHOUT uploading a build. The iOS twin of
+# publish_store_contents.yml (Google Play). Use it to create/refresh the listing text + screenshots
+# independently of client_publish.yml (which ships the binary).
+#
+# Secrets (App Store Connect API key — same trio used by client_publish.yml):
+#   APPSTORE_CONNECT_API_KEY / _API_KEY_ID / _ISSUER_ID   If the key is absent, the push is SKIPPED
+#       with a warning (job stays green). A present key that fails to push FAILS the job (red).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-ios-metadata:
+    runs-on: macos-26
+    permissions:
+      contents: read
+    env:
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
+      APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
+      APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # No key -> warn and skip (steps below gated on the same condition). Not a failure.
+      - name: Warn if App Store Connect API key is missing
+        if: env.APPSTORE_CONNECT_API_KEY == ''
+        run: |
+          echo "::warning title=iOS metadata publish skipped::APPSTORE_CONNECT_API_KEY secret is not set; the App Store listing will NOT be updated. Add APPSTORE_CONNECT_API_KEY/_API_KEY_ID/ISSUER_ID (see .github/DEPLOYMENT.md) to enable it."
+
+      - name: Set up Ruby
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+
+      - name: Install Fastlane
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        run: gem install fastlane --no-document
+
+      # Build the fastlane App Store Connect API-key JSON from the three secrets (never echoed).
+      - name: Write ASC API key
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        shell: bash
+        run: |
+          mkdir -p asc
+          jq -n --arg kid "$APPSTORE_CONNECT_API_KEY_ID" --arg iss "$APPSTORE_CONNECT_ISSUER_ID" --arg key "$APPSTORE_CONNECT_API_KEY" \
+            '{key_id:$kid, issuer_id:$iss, key:$key, in_house:false}' > asc/api_key.json
+
+      - name: Push iOS App Store metadata + screenshots
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        run: |
+          echo "🚀 Publishing iOS App Store listing (metadata + screenshots) for com.vpnhood.client.ios"
+          fastlane ios upload_metadata
+          echo "✅ iOS App Store listing published"

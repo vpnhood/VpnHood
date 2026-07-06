@@ -105,3 +105,26 @@ platform :android do
     UI.success("Downloaded universal APK for version code #{options[:version_code]}")
   end
 end
+
+platform :ios do
+  desc "Push the iOS App Store listing (metadata + screenshots) via deliver — NO binary"
+  lane :upload_metadata do |options|
+    # iOS twin of android:publish_contents. Refreshes the App Store listing text + screenshots for
+    # the current editable version WITHOUT uploading a build. Metadata/screenshots live under
+    # fastlane/metadata/ios/** (kept separate from Android's fastlane/metadata/android/**).
+    upload_to_app_store(
+      app_identifier: options[:app_identifier] || "com.vpnhood.client.ios",
+      api_key_path: options[:api_key_path] || "asc/api_key.json",
+      metadata_path: options[:metadata_path] || "./fastlane/metadata/ios",
+      screenshots_path: options[:screenshots_path] || "./fastlane/metadata/ios/screenshots",
+      skip_binary_upload: true,          # metadata-only; the build ships via client_publish.yml
+      skip_metadata: false,
+      skip_screenshots: false,
+      overwrite_screenshots: true,       # replace whatever screenshots are on the listing
+      submit_for_review: false,          # never auto-submit; promote from App Store Connect
+      force: true,                       # no interactive HTML preview (CI is non-interactive)
+      run_precheck_before_submit: false, # precheck only matters for a submission
+      precheck_include_in_app_purchases: false
+    )
+  end
+end

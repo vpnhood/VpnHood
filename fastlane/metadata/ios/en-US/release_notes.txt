@@ -1,0 +1,8 @@
+Feature: Allow setting custom DNS servers
+Feature: Add French & Italian languages
+Feature: Detect when another VPN app disconnects the VPN
+Feature: Show more progress details while connecting
+Feature: Add Badge Information Page on home screen
+Fix: Unable to close the Quick Launch pop-up on Android
+Fix: Negative speed issue
+Fix: Access to the local network when IncludeLocalNetwork is enabled

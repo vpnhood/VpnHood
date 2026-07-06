@@ -1,0 +1,1 @@
+Self-hosted, secure, and open-source VPN client. Requires a server key. Powered by the open-source VpnHood! engine.

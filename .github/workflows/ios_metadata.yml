@@ -11,6 +11,17 @@ name: Publish iOS App Store Metadata
 
 on:
   workflow_dispatch:
+    inputs:
+      skip_metadata:
+        description: "Skip the text metadata push (use to upload ONLY screenshots — needed to work around deliver's 'No data' bug on a brand-new app's first version)"
+        type: boolean
+        required: false
+        default: false
+      skip_screenshots:
+        description: "Skip the screenshots push (upload ONLY text metadata)"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   publish-ios-metadata:
@@ -54,7 +65,20 @@ jobs:
 
       - name: Push iOS App Store metadata + screenshots
         if: env.APPSTORE_CONNECT_API_KEY != ''
+        shell: bash
         run: |
+          set -o pipefail
           echo "🚀 Publishing iOS App Store listing (metadata + screenshots) for com.vpnhood.client.ios"
-          fastlane ios upload_metadata
-          echo "✅ iOS App Store listing published"
+          if fastlane ios upload_metadata skip_metadata:${{ github.event.inputs.skip_metadata || 'false' }} skip_screenshots:${{ github.event.inputs.skip_screenshots || 'false' }} 2>&1 | tee fastlane.log; then
+            echo "✅ iOS App Store listing published"
+          else
+            # Surface fastlane's REAL error as a GitHub ::error:: annotation at the top of the run,
+            # instead of the bare "Process completed with exit code 1". fastlane prints failures as
+            # "[!] <message>" (and deliver adds "Error: <detail>"); grab those lines.
+            ERR=$(sed -E $'s/\x1b\\[[0-9;]*m//g' fastlane.log \
+                  | grep -E '^\[!\]|Error:' | tail -6 | sed 's/^\[!\] *//' \
+                  | tr '\n' ' ' | sed 's/  */ /g')
+            [ -z "$ERR" ] && ERR="fastlane deliver failed with no captured message — see the step log."
+            echo "::error title=iOS metadata push failed::${ERR}"
+            exit 1
+          fi

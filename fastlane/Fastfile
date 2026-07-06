@@ -119,8 +119,12 @@ platform :ios do
       # NOTE: must live OUTSIDE metadata_path — deliver treats every metadata_path subdir as a locale.
       screenshots_path: options[:screenshots_path] || "./fastlane/screenshots/ios",
       skip_binary_upload: true,          # metadata-only; the build ships via client_publish.yml
-      skip_metadata: false,
-      skip_screenshots: false,
+      # Toggleable so a brand-new app's FIRST version can push screenshots on their own pass:
+      # deliver has a spaceship bug (#20538) where the very first version's text update returns
+      # `No data` and aborts before screenshots. Run once with skip_metadata:true to land the
+      # screenshots; later updates can do both in one pass. Options arrive as strings from the CLI.
+      skip_metadata: options[:skip_metadata].to_s == "true",
+      skip_screenshots: options[:skip_screenshots].to_s == "true",
       overwrite_screenshots: true,       # replace whatever screenshots are on the listing
       submit_for_review: false,          # never auto-submit; promote from App Store Connect
       force: true,                       # no interactive HTML preview (CI is non-interactive)

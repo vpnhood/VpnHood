@@ -1,6 +1,6 @@
 NOTE: This app REQUIRES A SERVER KEY.
 
-VpnHood! CLIENT is a fast, secure, and reliable VPN solution powered by the ★★VpnHood! ENGINE★★, which is open-source and the first VPN developed fully with the .NET platform.
+VpnHood! CLIENT is a fast, secure, and reliable VPN solution powered by the VpnHood! ENGINE, which is open-source and the first VPN developed fully with the .NET platform.
 
 It is a client application that establishes encrypted, secure tunnels to a VPN server using the VpnHood protocol to VpnHood servers. The VpnHood protocol has no fingerprint and cannot be detected by censorship filtering.
 
@@ -15,30 +15,30 @@ To use this app, a ServerKey is required. You can acquire one through the follow
 
 Key Features:
 
-★ Free with No Ads: VpnHood! is open-source, completely free, and contains no ads.
+• Free with No Ads: VpnHood! is open-source, completely free, and contains no ads.
 
-★ Easy to Use: You can connect to VpnHood! with a simple click of the connect button.
+• Easy to Use: You can connect to VpnHood! with a simple click of the connect button.
 
-★ Fast and Secure (The speed may vary depending on the server provider and your Internet connection.)
+• Fast and Secure (The speed may vary depending on the server provider and your Internet connection.)
 
-★ Open Source: Built on the open-source VpnHood engine (on GitHub), VpnHood! is transparent and trustworthy.
+• Open Source: Built on the open-source VpnHood engine (on GitHub), VpnHood! is transparent and trustworthy.
 
-★ First VPN in .NET: VpnHood! is the first VPN app in the world to be developed with the .NET platform—showcasing innovation and technical excellence.
+• First VPN in .NET: VpnHood! is the first VPN app in the world to be developed with the .NET platform—showcasing innovation and technical excellence.
 
-★ Broad Compatibility: Supports Android 6 and above, including Android TV and Windows.
+• Broad Compatibility: Supports Android 6 and above, including Android TV and Windows.
 
-★ IPv4 & IPv6 Support: Ensures maximum compatibility and performance.
+• IPv4 & IPv6 Support: Ensures maximum compatibility and performance.
 
 
 Customizable Options:
 
-✔ Split Tunneling for App: Choose which apps use VpnHood! with flexible filter options. You can exclude, include, or select all apps.
+• Split Tunneling for App: Choose which apps use VpnHood! with flexible filter options. You can exclude, include, or select all apps.
 
-✔ Split Tunneling for Country: This allows you to exclude your own country, ensuring that traffic to servers within your country does not pass through the VPN tunnel. This eliminates the need to disconnect VpnHood! when accessing services in your country that do not accept foreign IPs and improves connection speeds to local servers.
+• Split Tunneling for Country: This allows you to exclude your own country, ensuring that traffic to servers within your country does not pass through the VPN tunnel. This eliminates the need to disconnect VpnHood! when accessing services in your country that do not accept foreign IPs and improves connection speeds to local servers.
 
-✔ Split Tunneling for Local Network: Exclude your local network to maintain access to local resources while using VpnHood!.
+• Split Tunneling for Local Network: Exclude your local network to maintain access to local resources while using VpnHood!.
 
-✔ UDP / TCP Protocol: Choose whether to enable or disable the UDP protocol based on your needs.
+• UDP / TCP Protocol: Choose whether to enable or disable the UDP protocol based on your needs.
 
 
 Why Choose VpnHood!?

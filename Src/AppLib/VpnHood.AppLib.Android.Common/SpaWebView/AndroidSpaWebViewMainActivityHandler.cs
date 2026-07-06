@@ -1,18 +1,19 @@
 using Android.Runtime;
 using Android.Views;
+using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.AppLib.SpaWebView;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 using VpnHood.Core.Client.Devices.UiContexts;
 
-namespace VpnHood.AppLib.Droid.Common.Activities;
+namespace VpnHood.AppLib.Droid.Common.SpaWebView;
 
 // Android host for the VpnHood SPA. All hosting business logic lives in the shared SpaWebViewHost;
 // this handler only supplies the Android chrome (content-view timing, hardware back) and forwards the
 // activity lifecycle to the host. The WebView mechanics live in AndroidSpaWebView.
-public class AndroidAppWebViewMainActivityHandler(
+public class AndroidSpaWebViewMainActivityHandler(
     IActivityEvent activityEvent,
-    AndroidMainActivityWebViewOptions options)
+    AndroidSpaWebViewMainActivityOptions options)
     : AndroidAppMainActivityHandler(activityEvent, options)
 {
     private AndroidSpaWebView? _spaWebView;

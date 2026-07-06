@@ -7,7 +7,7 @@ using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using Uri = System.Uri;
 
-namespace VpnHood.AppLib.Droid.Common;
+namespace VpnHood.AppLib.Droid.Common.SpaWebView;
 
 // Android ISpaWebView adapter: the only Android-specific SPA-hosting code. It owns the Android
 // WebView, swapping the activity's content between the loading screen and the WebView, and maps the
@@ -16,7 +16,7 @@ namespace VpnHood.AppLib.Droid.Common;
 public sealed class AndroidSpaWebView : ISpaWebView
 {
     private readonly IActivityEvent _activityEvent;
-    private readonly AndroidMainActivityWebViewOptions _options;
+    private readonly AndroidSpaWebViewMainActivityOptions _options;
     private WebView? _webView;
     private bool _webViewShown;
 
@@ -31,7 +31,7 @@ public sealed class AndroidSpaWebView : ISpaWebView
     public event EventHandler? ContentProcessGone;
 #pragma warning restore CS0067
 
-    public AndroidSpaWebView(IActivityEvent activityEvent, AndroidMainActivityWebViewOptions options)
+    public AndroidSpaWebView(IActivityEvent activityEvent, AndroidSpaWebViewMainActivityOptions options)
     {
         _activityEvent = activityEvent;
         _options = options;
@@ -52,10 +52,10 @@ public sealed class AndroidSpaWebView : ISpaWebView
             _webView.SetBackgroundColor(VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor.Value
                 .ToAndroidColor());
 
-        var webViewClient = new AndroidAppWebViewClient();
+        var webViewClient = new AndroidSpaWebViewClient();
         webViewClient.PageLoaded += (_, _) => PageLoaded?.Invoke(this, EventArgs.Empty);
         _webView.SetWebViewClient(webViewClient);
-        _webView.SetWebChromeClient(new AndroidAppWebChromeClient());
+        _webView.SetWebChromeClient(new AndroidSpaWebChromeClient());
         if (VpnHoodApp.Instance.Features.IsDebugMode)
             WebView.SetWebContentsDebuggingEnabled(true);
     }
@@ -83,9 +83,9 @@ public sealed class AndroidSpaWebView : ISpaWebView
         // If the WebView itself never came up, guide the user to update Android System WebView;
         // otherwise it's a server-side failure.
         if (_webView == null)
-            WebViewUpdaterPage.ShowWebViewExceptionPage(Activity, new Exception(message));
+            AndroidSpaWebViewUpdaterPage.ShowWebViewExceptionPage(Activity, new Exception(message));
         else
-            WebViewUpdaterPage.ShowServerExceptionPage(Activity, new Exception(message));
+            AndroidSpaWebViewUpdaterPage.ShowServerExceptionPage(Activity, new Exception(message));
     }
 
     public void Post(Action action)

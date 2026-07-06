@@ -1,9 +1,9 @@
 ﻿using Android.OS;
 using Android.Webkit;
 
-namespace VpnHood.AppLib.Droid.Common;
+namespace VpnHood.AppLib.Droid.Common.SpaWebView;
 
-internal class AndroidAppWebChromeClient : WebChromeClient
+internal class AndroidSpaWebChromeClient : WebChromeClient
 {
     public override bool OnCreateWindow(WebView? view, bool isDialog, bool isUserGesture, Message? resultMsg)
     {
@@ -11,7 +11,7 @@ internal class AndroidAppWebChromeClient : WebChromeClient
             return false;
 
         var newWebView = new WebView(view.Context);
-        newWebView.SetWebViewClient(new AndroidAppWebViewClient());
+        newWebView.SetWebViewClient(new AndroidSpaWebViewClient());
         if (resultMsg?.Obj is not WebView.WebViewTransport transport)
             return false;
 

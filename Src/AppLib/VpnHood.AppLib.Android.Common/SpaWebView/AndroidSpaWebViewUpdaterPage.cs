@@ -4,9 +4,9 @@ using Android.Graphics.Drawables;
 using Android.OS;
 using Android.Views;
 
-namespace VpnHood.AppLib.Droid.Common.Activities;
+namespace VpnHood.AppLib.Droid.Common.SpaWebView;
 
-internal static class WebViewUpdaterPage
+internal static class AndroidSpaWebViewUpdaterPage
 {
     public static void ShowServerExceptionPage(Activity activity, Exception ex)
     {

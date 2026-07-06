@@ -7,7 +7,7 @@ namespace VpnHood.AppLib.Ios.Common.SpaWebView;
 // this controller only supplies the iOS chrome (root-view background, status bar, safe area) and
 // forwards the native lifecycle (create / foreground / dispose) to the host. The WKWebView mechanics
 // live in IosSpaWebView.
-public class VpnHoodAppWebViewController : UIViewController
+public class IosSpaWebViewController : UIViewController
 {
     private SpaWebViewHost? _host;
     private NSObject? _foregroundObserver;

@@ -1,7 +1,7 @@
 using VpnHood.AppLib.SpaWebView;
 using VpnHood.Core.Client.Devices.UiContexts;
 
-namespace VpnHood.AppLib.Ios.Common;
+namespace VpnHood.AppLib.Ios.Common.SpaWebView;
 
 // iOS host for the VpnHood SPA. All the hosting business logic lives in the shared SpaWebViewHost;
 // this controller only supplies the iOS chrome (root-view background, status bar, safe area) and

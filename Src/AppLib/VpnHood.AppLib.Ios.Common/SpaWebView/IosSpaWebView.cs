@@ -3,7 +3,7 @@ using VpnHood.AppLib.SpaWebView;
 using VpnHood.Core.Toolkit.Logging;
 using WebKit;
 
-namespace VpnHood.AppLib.Ios.Common;
+namespace VpnHood.AppLib.Ios.Common.SpaWebView;
 
 // iOS ISpaWebView adapter: the only iOS-specific SPA-hosting code. It owns a WKWebView (plus a
 // loading spinner and an error label) inside the given UIViewController, and maps the
@@ -12,6 +12,7 @@ public sealed class IosSpaWebView : ISpaWebView
 {
     private readonly UIViewController _controller;
     private readonly UIColor _backgroundColor;
+    private readonly IosReportViewer _reportViewer;
     private WKWebView? _webView;
     private readonly UIActivityIndicatorView? _spinner;
 
@@ -23,6 +24,7 @@ public sealed class IosSpaWebView : ISpaWebView
     {
         _controller = controller;
         _backgroundColor = backgroundColor;
+        _reportViewer = new IosReportViewer(controller, backgroundColor);
 
         // Loading indicator, centered and shown immediately (SPA zip extraction + socket bind happen
         // before the first navigation). Hidden automatically once stopped.
@@ -55,7 +57,7 @@ public sealed class IosSpaWebView : ISpaWebView
             Opaque = false,
             NavigationDelegate = new NavDelegate(this),
             // Handles target="_blank"/window.open links (e.g. the error dialog's "Open Report"), which
-            // WKWebView drops silently without a UI delegate. See HandleNewWindow.
+            // WKWebView drops silently without a UI delegate. Routed to IosReportViewer.
             UIDelegate = new UiDelegate(this)
         };
 
@@ -121,60 +123,6 @@ public sealed class IosSpaWebView : ISpaWebView
         _controller.BeginInvokeOnMainThread(action);
     }
 
-    // A target="_blank"/window.open link routes here (the error dialog's "Open Report" is one). Loopback
-    // URLs point at our own on-device report server, so download the file and hand it to the native iOS
-    // share sheet — the user gets Save-to-Files/AirDrop/Mail over the untouched SPA. External Safari can't
-    // reach the loopback server (and backgrounding the app tears it down), so it must be served in-app.
-    // Anything non-loopback is a real external link → open it in the system browser.
-    private void HandleNewWindow(NSUrl? url)
-    {
-        if (url?.AbsoluteString is not { } urlString || !Uri.TryCreate(urlString, UriKind.Absolute, out var uri))
-            return;
-
-        if (!uri.IsLoopback) {
-            UIApplication.SharedApplication.OpenUrl(url, new NSDictionary(), null);
-            return;
-        }
-
-        _ = DownloadAndShareAsync(uri);
-    }
-
-    private async Task DownloadAndShareAsync(Uri uri)
-    {
-        try {
-            using var httpClient = new HttpClient();
-            var content = await httpClient.GetByteArrayAsync(uri);
-
-            // Keep the served resource's extension (e.g. log.txt) so Files/Mail treat it as a text file.
-            var fileName = Path.GetFileName(uri.LocalPath);
-            if (string.IsNullOrEmpty(fileName))
-                fileName = "report.txt";
-            var filePath = Path.Combine(Path.GetTempPath(), "VpnHood-" + fileName);
-            await File.WriteAllBytesAsync(filePath, content);
-
-            Post(() => PresentShareSheet(filePath));
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Failed to download the report for sharing.");
-        }
-    }
-
-    private void PresentShareSheet(string filePath)
-    {
-        var fileUrl = NSUrl.FromFilename(filePath);
-        var activityController = new UIActivityViewController([fileUrl], applicationActivities: null);
-
-        // iPad requires the share sheet's popover to be anchored; center it on the web view.
-        if (activityController.PopoverPresentationController is { } popover) {
-            var bounds = _controller.View!.Bounds;
-            popover.SourceView = _controller.View;
-            popover.SourceRect = new CGRect(bounds.GetMidX(), bounds.GetMidY(), 0, 0);
-            popover.PermittedArrowDirections = 0;
-        }
-
-        _controller.PresentViewController(activityController, animated: true, completionHandler: null);
-    }
-
     private void RaisePageLoaded() => PageLoaded?.Invoke(this, EventArgs.Empty);
     private void RaiseLoadFailed(bool duringInitialConnect) =>
         LoadFailed?.Invoke(this, new SpaLoadFailedEventArgs(duringInitialConnect));
@@ -221,12 +169,12 @@ public sealed class IosSpaWebView : ISpaWebView
     private sealed class UiDelegate(IosSpaWebView owner) : WKUIDelegate
     {
         // WKWebView asks the UI delegate to open target="_blank"/window.open navigations in a "new window".
-        // We never create a second web view; instead we route the URL through the owner (share sheet for the
-        // report, system browser for external links) and return null so no extra web view is created.
+        // We never create a second web view; instead we route the URL through IosReportViewer (in-app viewer
+        // for the report, system browser for external links) and return null so no extra web view is created.
         public override WKWebView? CreateWebView(WKWebView webView, WKWebViewConfiguration configuration,
             WKNavigationAction navigationAction, WKWindowFeatures windowFeatures)
         {
-            owner.HandleNewWindow(navigationAction.Request.Url);
+            owner._reportViewer.HandleNewWindow(navigationAction.Request.Url);
             return null;
         }
     }

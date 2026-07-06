@@ -20,6 +20,31 @@
     <ValidateXcodeVersion>false</ValidateXcodeVersion>
   </PropertyGroup>
 
+  <!-- Optional private app settings (from the external ".user" folder, sibling to the solution) embedded as
+       resources. Mirrors Connect.Android.Web. Conditional so a fork without them still builds; AppConfigs
+       reads them at startup via AppConfigsBase.LoadConfig(). Forward slashes: this builds on macOS. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(SolutionDir)/../.user/VpnHoodConnect/appsettings.json"
+        LogicalName="AppSettings.json"
+        Condition="Exists('$(SolutionDir)/../.user/VpnHoodConnect/appsettings.json')" />
+    <EmbeddedResource Include="$(SolutionDir)/../.user/VpnHoodConnect/appsettings.$(Configuration).json"
+        LogicalName="AppSettings_Environment.json"
+        Condition="Exists('$(SolutionDir)/../.user/VpnHoodConnect/appsettings.$(Configuration).json')" />
+  </ItemGroup>
+
+  <!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret. The
+       configuration-specific file wins (Debug embeds access_key_default_web.Debug.txt), otherwise the base
+       access_key_default_web.txt is used. Both optional: a fork without them falls back to the in-code
+       default in AppConfigs (null -> the UI prompts for a key). -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(SolutionDir)/../.user/VpnHoodConnect/web/access_key_default_web.$(Configuration).txt"
+        LogicalName="access_key_default.txt"
+        Condition="Exists('$(SolutionDir)/../.user/VpnHoodConnect/web/access_key_default_web.$(Configuration).txt')" />
+    <EmbeddedResource Include="$(SolutionDir)/../.user/VpnHoodConnect/web/access_key_default_web.txt"
+        LogicalName="access_key_default.txt"
+        Condition="!Exists('$(SolutionDir)/../.user/VpnHoodConnect/web/access_key_default_web.$(Configuration).txt') And Exists('$(SolutionDir)/../.user/VpnHoodConnect/web/access_key_default_web.txt')" />
+  </ItemGroup>
+
   <ItemGroup>
     <!-- App framework + iOS device abstraction. -->
     <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />

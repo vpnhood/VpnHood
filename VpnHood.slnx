@@ -108,6 +108,10 @@
     </Project>
     <Project Path="Src/Apps/Client.Linux.Web/VpnHood.App.Client.Linux.Web.csproj" />
     <Project Path="Src/Apps/Client.Win.Web/VpnHood.App.Client.Win.Web.csproj" />
+    <Project Path="Src/Apps/Client.Ios/VpnHood.App.Client.Ios.csproj">
+      <Deploy />
+    </Project>
+    <Project Path="Src/Apps/Client.Ios.Extension/VpnHood.App.Client.Ios.Extension.csproj" />
     <Project Path="Src/Apps/Client/VpnHood.App.Client.csproj" />
     <Project Path="Src/Apps/Connect.Android.Google/VpnHood.App.Connect.Android.Google.csproj">
       <Deploy />
@@ -117,6 +121,10 @@
     </Project>
     <Project Path="Src/Apps/Connect.Linux.Web/VpnHood.App.Connect.Linux.Web.csproj" />
     <Project Path="Src/Apps/Connect.Win.Web/VpnHood.App.Connect.Win.Web.csproj" />
+    <Project Path="Src/Apps/Connect.Ios/VpnHood.App.Connect.Ios.csproj">
+      <Deploy />
+    </Project>
+    <Project Path="Src/Apps/Connect.Ios.Extension/VpnHood.App.Connect.Ios.Extension.csproj" />
     <Project Path="Src/Apps/Server.Net/VpnHood.App.Server.Net.csproj" />
   </Folder>
   <Folder Name="/Src/Core/">

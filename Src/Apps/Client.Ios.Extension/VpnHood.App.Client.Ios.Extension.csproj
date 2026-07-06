@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0-ios</TargetFramework>
+    <RuntimeIdentifier>ios-arm64</RuntimeIdentifier>
+    <SupportedOSPlatformVersion>18.0</SupportedOSPlatformVersion>
+    <UseMaui>false</UseMaui>
+    <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
+    <!-- Match the namespace used by PacketTunnelProvider.cs (the only source file here). -->
+    <RootNamespace>VpnHood.App.Client.Ios</RootNamespace>
+    <BundleIdentifier>com.vpnhood.client.ios.networkextension</BundleIdentifier>
+    <CodesignEntitlements>Entitlements.plist</CodesignEntitlements>
+
+    <!-- Automatic signing: Xcode picks the cert/profile for the team (6KKW3MKLR7, OmegaHood LLC). -->
+    <AutomaticProvisioning>true</AutomaticProvisioning>
+    <CodesignKey>Apple Development</CodesignKey>
+
+    <!-- Build against a newer Xcode than the pinned net11 preview.5 workload (Xcode 26.5). See the
+         VPNHOOD0001 target below for when this override can be removed. -->
+    <ValidateXcodeVersion>false</ValidateXcodeVersion>
+
+    <!-- Critical: tells the iOS workload to package this project as an .appex (PlugIn). -->
+    <IsAppExtension>true</IsAppExtension>
+    <!-- SdkOnly: trim system assemblies, but keep user assemblies. -->
+    <MtouchLink>SdkOnly</MtouchLink>
+    <!-- iOS jetsam: cap the Mono SGen managed heap HARD. Device-measured, a 40-connection burst ballooned
+         the managed heap 6.7 -> 15 MB of transient garbage in ~1.7 s, tipping a ~41 MB load over the ~50 MB
+         jetsam line. soft-heap-limit=8m forces SGen to collect far sooner; a small nursery keeps gen0 cheap
+         under the packet-allocation storm. See docs/ios-extension-memory-and-throughput.md. -->
+    <MtouchExtraArgs>$(MtouchExtraArgs) --setenv=MONO_GC_PARAMS=soft-heap-limit=8m,nursery-size=2m</MtouchExtraArgs>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The iOS Network Extension implementation (abstract IosVpnService) lives in the core Device.iOS
+         project and transitively references the VpnServiceHost + iOSTun adapter. This project only adds
+         the thin [Register("PacketTunnelProvider")] subclass that roots the core assembly. -->
+    <ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
+  </ItemGroup>
+
+  <!-- Self-clearing reminder for the ValidateXcodeVersion override (mirrors the SDK's _ValidateXcodeVersion). -->
+  <Target Name="_VpnHoodWarnXcodeOverrideStale"
+          AfterTargets="_DetectSdkLocations"
+          Condition="'$(ValidateXcodeVersion)' == 'false' And '$(_CanOutputAppBundle)' == 'true' And '$(IsMacEnabled)' == 'true' And '$(_XcodeVersion)' != '' And '$(_RecommendedXcodeVersion)' != ''">
+    <PropertyGroup>
+      <_VpnHoodXcodeMM>$([System.Version]::Parse('$(_XcodeVersion)').Major).$([System.Version]::Parse('$(_XcodeVersion)').Minor)</_VpnHoodXcodeMM>
+      <_VpnHoodRecXcodeMM>$([System.Version]::Parse('$(_RecommendedXcodeVersion)').Major).$([System.Version]::Parse('$(_RecommendedXcodeVersion)').Minor)</_VpnHoodRecXcodeMM>
+    </PropertyGroup>
+    <Message Condition="'$(VpnHoodXcodeCheckVerbose)' == 'true'" Importance="high"
+             Text="[VpnHood] Xcode override check: installed=$(_XcodeVersion) ($(_VpnHoodXcodeMM)), workload-recommended=$(_RecommendedXcodeVersion) ($(_VpnHoodRecXcodeMM))" />
+    <Warning Code="VPNHOOD0001"
+             Condition="'$(_VpnHoodXcodeMM)' == '$(_VpnHoodRecXcodeMM)'"
+             Text="The .NET for iOS workload now recommends Xcode $(_RecommendedXcodeVersion), which matches the installed Xcode $(_XcodeVersion). The ValidateXcodeVersion=false override in this project is no longer needed — remove it." />
+  </Target>
+</Project>

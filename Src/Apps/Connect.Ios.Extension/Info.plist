@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>VpnHood! Connect Extension</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.vpnhood.connect.ios.networkextension</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.networkextension.packet-tunnel</string>
+		<key>NSExtensionPrincipalClass</key>
+		<string>PacketTunnelProvider</string>
+	</dict>		
+</dict>
+</plist>

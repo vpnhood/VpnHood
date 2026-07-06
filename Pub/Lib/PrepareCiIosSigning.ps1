@@ -59,6 +59,27 @@ $keychainPass = "ci-$([guid]::NewGuid().ToString('N'))";
 $certFile = Join-Path $iosDir "distribution.p12";
 [IO.File]::WriteAllBytes($certFile, [Convert]::FromBase64String($certB64));
 
+# --- normalize the .p12 to a macOS-importable (legacy) PKCS#12 encoding ---
+# A .p12 exported by OpenSSL 3 protects its MAC with PBKDF2/AES-256+SHA-256, which macOS `security`
+# (SecPKCS12Import) cannot read -> "SecKeychainItemImport: MAC verification failed" even when
+# APPLE_DISTRIBUTION_CERT_PASSWORD is CORRECT (this is what silently shipped unsigned builds with no
+# .ipa). Re-encode with the legacy SHA1-MAC / 3DES scheme `security` accepts: decrypt to PEM, then
+# re-export. Try `-legacy` first (OpenSSL 3 needs it to emit legacy algorithms); fall back to no flag
+# (LibreSSL, the macOS system openssl, rejects `-legacy` and already defaults to the legacy scheme).
+# Best-effort: on any openssl failure leave $certFile untouched and let the import + its loud throw run.
+$pem = Join-Path $iosDir "distribution.pem";
+$legacyP12 = Join-Path $iosDir "distribution.legacy.p12";
+& openssl pkcs12 -in "$certFile" -passin "pass:$certPass" -nodes -out "$pem" 2>$null;
+if ($LASTEXITCODE -eq 0) {
+	& openssl pkcs12 -export -legacy -in "$pem" -passout "pass:$certPass" -out "$legacyP12" 2>$null;
+	if ($LASTEXITCODE -ne 0) { & openssl pkcs12 -export -in "$pem" -passout "pass:$certPass" -out "$legacyP12" 2>$null; }
+	if ($LASTEXITCODE -eq 0 -and (Test-Path $legacyP12)) {
+		Move-Item -Force $legacyP12 $certFile;
+		Write-Host "Re-encoded the distribution .p12 to the legacy PKCS#12 scheme for macOS `security` import." -ForegroundColor Cyan;
+	}
+}
+Remove-Item $pem, $legacyP12 -Force -ErrorAction SilentlyContinue;
+
 # Recreate the keychain fresh each run and add it to the search list (so codesign can find the identity).
 & security delete-keychain "$keychain" 2>$null | Out-Null;
 & security create-keychain -p "$keychainPass" "$keychain";

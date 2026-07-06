@@ -16,7 +16,7 @@ on:
       ref:
         description: "Branch or commit to build"
         required: false
-        default: "development"
+        default: "develop"
       publish_release:
         description: "Create a GitHub release with the built assets"
         type: boolean

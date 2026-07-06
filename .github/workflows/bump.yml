@@ -1,7 +1,7 @@
 name: Bump Version
 
 # The ONLY place the version is bumped. Increments Pub/PubVersion.json (+ Directory.Build.props),
-# commits, and fast-forwards development + main (no force). The CHANGELOG is hand-maintained and is
+# commits, and fast-forwards develop + main (no force). The CHANGELOG is hand-maintained and is
 # never rewritten here. Bumping in CI (not on a developer's machine) avoids version-file conflicts
 # between developers. See Pub/RELEASE-STRATEGY.md.
 #
@@ -33,12 +33,12 @@ jobs:
   bump:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # push the bump commit to development + main
+      contents: write   # push the bump commit to develop + main
       actions: write    # dispatch the downstream publish workflow(s)
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: development
+          ref: develop
           fetch-depth: 0            # need history to fast-forward main
           persist-credentials: true # so the push uses github.token
       - name: Configure git identity
@@ -55,10 +55,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run client_publish.yml --repo "${{ github.repository }}" --ref development -f publish_release=true -f build_android=true -f rollout="${{ github.event.inputs.rollout }}"
+          gh workflow run client_publish.yml --repo "${{ github.repository }}" --ref develop -f publish_release=true -f build_android=true -f rollout="${{ github.event.inputs.rollout }}"
       - name: Dispatch NuGet publish
         if: ${{ github.event.inputs.then_publish_nugets == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run nuget_publish.yml --repo "${{ github.repository }}" --ref development
+          gh workflow run nuget_publish.yml --repo "${{ github.repository }}" --ref develop

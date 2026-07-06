@@ -5,7 +5,7 @@ mode. The core-repo changes from this session may be reverted — **this documen
 record of the real bugs found**, so they can be re-applied independently of all the experimental
 tuning that accompanied them.
 
-All file paths are in the sibling core repo `../VpnHood`.
+All file paths below are core projects under `Src/Core` in this repo.
 
 ---
 

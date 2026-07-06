@@ -25,7 +25,7 @@ add more timers or button-press automation** — the existing timer is sufficien
   access. iOS extension stdout has no reader; once the kernel pipe buffer fills, `Console.WriteLine` blocks
   forever and hangs the constructor (extension never reaches `StartTunnel`, Documents folder stays empty). Use
   `System.Diagnostics.Trace.WriteLine` for extension logging.
-- **`MtouchLink=SdkOnly`** in `Extension.csproj` is required. `None` → ~338 MB binary → type-load hangs; `Full`
+- **`MtouchLink=SdkOnly`** in each extension csproj (`*.Ios.Extension`) is required. `None` → ~338 MB binary → type-load hangs; `Full`
   risks trimming needed types (`EXC_BAD_ACCESS` at startup). Do not change it. `TrimmerRoots.xml` isn't needed at
   `SdkOnly` (user/VpnHood assemblies aren't trimmed) — remove it if re-added.
 - **Do not enable `IncludeAllNetworks`** — it cuts off the USB debug connection.

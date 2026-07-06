@@ -31,3 +31,13 @@ truth — follow them, and when a new durable convention is agreed, update this 
 ## QUIC
 - Our QUIC is a custom protocol, not HTTP3. We use it as a transport protocol and the protocol is exactly
   the same as HTTP2, so we treat it the same as TCP.
+
+## iOS (Client & Connect apps)
+- The iOS apps live in `Src/Apps/{Client,Connect}.Ios` (host) + `…{Client,Connect}.Ios.Extension` (Network
+  Extension `.appex`); the real device/extension/TUN/TCP-stack code is in `Src/Core/*` (`Devices.Ios`,
+  `VpnAdapters.IosTun`, `TcpStack`, `Quic.Ios`). The extension projects are one-file `[Register]` shims.
+- **Read [`docs/ios/`](docs/ios/) before working on anything iOS** — especially
+  `ios-extension-memory-and-throughput.md` before touching memory/throughput/TCP-stack code (the extension
+  runs under a ~52 MB jetsam limit).
+- Build **Release** for device with `~/.dotnet11/dotnet` (TFM `net11.0-ios` / CoreCLR — the system `dotnet`
+  can't target it). Don't commit a test `AccessKey` in `AppConfigs.cs` (production defaults to `null`).

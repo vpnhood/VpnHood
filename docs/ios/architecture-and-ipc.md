@@ -1,15 +1,17 @@
 # Architecture & App↔Extension IPC — VpnHood iOS Client
 
-## Two targets + the sibling core repo
+## Two app targets + core
 | Target | Bundle ID | Purpose |
 |--|--|--|
-| `App/` | `com.vpnhood.client.ios` | Host UI app |
-| `Extension/` | `com.vpnhood.client.ios.networkextension` | Network Extension (Packet Tunnel Provider) |
+| `Src/Apps/Client.Ios/` | `com.vpnhood.client.ios` | Host UI app |
+| `Src/Apps/Client.Ios.Extension/` | `com.vpnhood.client.ios.networkextension` | Network Extension (Packet Tunnel Provider) |
 
-The device/extension/adapter implementations live in the **sibling core repo** `../VpnHood` (referenced via
-`ProjectReference`, never copied):
+(The **Connect** app mirrors this exactly: `Src/Apps/Connect.Ios/` + `Connect.Ios.Extension/`, bundle ids
+`com.vpnhood.connect.ios` / `.networkextension`. Everything below applies to both — they share the same core.)
 
-| Type | Location (`../VpnHood`) | Role |
+The device/extension/adapter implementations live in **`Src/Core`** (referenced via `ProjectReference`):
+
+| Type | Location | Role |
 |--|--|--|
 | `IosDevice` | `Src/Core/VpnHood.Core.Client.Devices.Ios/IosDevice.cs` | `IDevice`; NEVPNManager save/load/start, creates the IPC transport |
 | `IosVpnService` (abstract) | same project | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, `StartMemoryGuard`/`StartMemoryProbe` |
@@ -17,17 +19,17 @@ The device/extension/adapter implementations live in the **sibling core repo** `
 | `IosVpnAdapter` | `Src/Core/VpnHood.Core.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
 | `LocalTcpStack` (proxy mode) | `Src/Core/VpnHood.Core.TcpStack/` | user-space TCP stack used when `UseTcpProxy=true` |
 
-**This host repo only contains thin glue:**
-- `Extension/PacketTunnelProvider.cs` — `[Register("PacketTunnelProvider")]` subclass of core `IosVpnService`,
+**The app projects contain only thin glue:**
+- `Src/Apps/Client.Ios.Extension/PacketTunnelProvider.cs` — `[Register("PacketTunnelProvider")]` subclass of core `IosVpnService`,
   with the `(NativeHandle)` ctor. The `[Register]` name **must** match `NSExtensionPrincipalClass` in
-  `Extension/Info.plist`. **This subclass is required** — pointing the principal class straight at core
+  `Src/Apps/Client.Ios.Extension/Info.plist` (the Connect extension is identical). **This subclass is required** — pointing the principal class straight at core
   `IosVpnService` crashes on launch under .NET 11/CoreCLR's registrar (see the memory/throughput doc).
-- `App/AppDelegate.cs` / `App/SceneDelegate.cs` — host UI + `VpnHoodApp.Init(new IosDevice(...))`.
+- `Src/Apps/Client.Ios/AppDelegate.cs` / `Src/Apps/Client.Ios/SceneDelegate.cs` — host UI + `VpnHoodApp.Init(new IosDevice(...))`.
 
-Both `App.csproj` and `Extension.csproj` `ProjectReference` the core `VpnHood.Core.Client.Devices.Ios` project
+Both the host and extension csprojs (`VpnHood.App.Client.Ios` / `VpnHood.App.Client.Ios.Extension`) `ProjectReference` the core `VpnHood.Core.Client.Devices.Ios` project
 (which transitively brings in Host + iOSTun + TcpStack + Device).
 
-> **Do NOT re-add local `IosDevice.cs` / `IosVpnService.cs` / `IosVpnAdapter.cs` to this repo.** They were moved
+> **Do NOT re-add local `IosDevice.cs` / `IosVpnService.cs` / `IosVpnAdapter.cs` to the app projects.** They live in core
 > to core; a stale local copy diverges from the core API and silently breaks IPC or re-introduces the jetsam kill.
 
 ## App Group — the IPC channel

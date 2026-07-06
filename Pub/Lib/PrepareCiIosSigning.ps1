@@ -65,6 +65,15 @@ $certFile = Join-Path $iosDir "distribution.p12";
 & security set-keychain-settings -lut 21600 "$keychain";
 & security unlock-keychain -p "$keychainPass" "$keychain";
 & security import "$certFile" -k "$keychain" -P "$certPass" -T /usr/bin/codesign -T /usr/bin/security;
+# The signing secrets ARE present (we passed the gate above), so a failed import is a HARD ERROR — NOT
+# an unsigned-fork fallback. Silently going unsigned here is what let a broken cert/password ship a
+# green build with no .ipa. 'MAC verification failed' == APPLE_DISTRIBUTION_CERT_PASSWORD does not
+# match the .p12 in APPLE_DISTRIBUTION_CERT_BASE64.
+if ($LASTEXITCODE -ne 0) {
+	Remove-Item $certFile -Force -ErrorAction SilentlyContinue;
+	& security delete-keychain "$keychain" 2>$null | Out-Null;
+	throw "iOS signing FAILED: could not import the Distribution certificate. The signing secrets are set, so this is a real error (not a fork's unsigned fallback). Most likely APPLE_DISTRIBUTION_CERT_PASSWORD does not match APPLE_DISTRIBUTION_CERT_BASE64 (security reported 'MAC verification failed'), or the .p12 is corrupt. Fix the cert/password pair and re-run.";
+}
 # Allow codesign to use the key without an interactive prompt.
 & security set-key-partition-list -S apple-tool:,apple: -s -k "$keychainPass" "$keychain" 2>$null | Out-Null;
 $loginKeychain = (& security default-keychain | ForEach-Object { $_.Trim().Trim('"') });
@@ -76,7 +85,12 @@ $identity = $null;
 foreach ($line in (& security find-identity -v -p codesigning "$keychain")) {
 	if ($line -match '"(Apple Distribution:[^"]+)"' -or $line -match '"(iPhone Distribution:[^"]+)"') { $identity = $Matches[1]; break; }
 }
-if (-not $identity) { Write-Unsigned "The provided certificate is not an Apple/iPhone Distribution identity (find-identity found none)."; return; }
+if (-not $identity) {
+	& security delete-keychain "$keychain" 2>$null | Out-Null;
+	# Secrets present + import succeeded but no codesigning identity => wrong cert TYPE (e.g. a
+	# Development cert, or the private key is missing from the .p12). Hard error, not a silent skip.
+	throw "iOS signing FAILED: the imported certificate is not an Apple/iPhone Distribution codesigning identity (find-identity found none). Ensure APPLE_DISTRIBUTION_CERT_BASE64 is an *Apple Distribution* .p12 that INCLUDES its private key.";
+}
 
 # --- install both provisioning profiles into ~/Library/MobileDevice/Provisioning Profiles/ ---
 $profilesDir = Join-Path $HOME "Library/MobileDevice/Provisioning Profiles";

@@ -10,11 +10,11 @@
 #                                     Extension (com.vpnhood.client.ios.networkextension)
 #
 # UNLIKE Android there is NO ephemeral fallback: an App Store .ipa cannot be self-signed. When any
-# required secret is absent we DON'T fail — we write ios-signing.json { Signed: false } and warn. The
+# required secret is absent we DON'T fail — we write ios_signing.json { Signed: false } and warn. The
 # publish step then does a codesign-disabled compile check (no .ipa) and the App Store upload job skips.
 # Add the secrets to switch real signing on. Mirrors the gated design of PrepareCiAndroidSigning.ps1.
 #
-# Output: .user/VpnHoodClient/ios/ios-signing.json — { Signed, CodesignKey, AppProvision, ExtProvision }.
+# Output: .user/VpnHoodClient/ios/ios_signing.json — { Signed, CodesignKey, AppProvision, ExtProvision }.
 
 $ErrorActionPreference = "Stop";
 
@@ -24,7 +24,7 @@ $appFolder = "VpnHoodClient";
 
 $iosDir = Join-Path (Join-Path $userDir $appFolder) "ios";
 New-Item -ItemType Directory -Path $iosDir -Force | Out-Null;
-$markerFile = Join-Path $iosDir "ios-signing.json";
+$markerFile = Join-Path $iosDir "ios_signing.json";
 
 function Get-Env([string]$name) { [Environment]::GetEnvironmentVariable($name) }
 

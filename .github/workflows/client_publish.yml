@@ -13,9 +13,8 @@ name: Publish Client (All Platforms)
 #
 # Wired: Linux + Windows + Android (Google AAB, Web APK, Web arm64 APK) + Google Play + iOS (App Store /
 # TestFlight). The iOS pair (build-ios -> publish-appstore-ios) mirrors the Android pair and, like every
-# store leg, is SKIP-with-warning when its secrets are absent. iOS needs a macOS runner with the .NET 11
-# SDK + `ios` workload and Xcode 26.5+; GitHub-hosted images don't ship those yet, so build-ios/​
-# publish-appstore-ios default to a SELF-HOSTED mac (see runs-on) until hosted images catch up.
+# store leg, is SKIP-with-warning when its secrets are absent. iOS runs on the GitHub-HOSTED `macos-26`
+# image (ships Xcode 26.5 + 26.6; .NET 11 is installed in-job), so no self-hosted runner is needed.
 #
 # The Play audience ratio is set by the `rollout` dispatch input (percent; 100 = full).
 #
@@ -459,12 +458,14 @@ jobs:
   build-ios:
     # iOS builds by default (build_ios defaults true); skipped by build_ios=false or the only_aab fast path.
     if: ${{ github.event.inputs.build_ios != 'false' && github.event.inputs.only_aab != 'true' }}
-    runs-on: [self-hosted, macOS]
+    # macos-26 ships Xcode 26.5 (default) + 26.6 — the toolchain this net11.0-ios project needs — so the
+    # whole iOS build runs on a GitHub-HOSTED runner; .NET 11 is installed below. No self-hosted mac needed.
+    runs-on: macos-26
     env:
       DOTNET_NOLOGO: "1"
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       # Optional iOS App Store signing — empty unless configured; PrepareCiIosSigning.ps1 writes
-      # ios-signing.json { Signed: false } and the build goes UNSIGNED (no .ipa) when any is absent.
+      # ios_signing.json { Signed: false } and the build goes UNSIGNED (no .ipa) when any is absent.
       IOS_DISTRIBUTION_CERT_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
       IOS_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
       IOS_PROVISION_APP_BASE64: ${{ secrets.IOS_PROVISION_APP_BASE64 }}
@@ -479,11 +480,12 @@ jobs:
       - name: Install .NET iOS workload
         shell: pwsh
         run: dotnet workload install ios
-      # Select the newest installed Xcode (must be 26.5+; the csproj sets ValidateXcodeVersion=false so
-      # 26.6 is accepted). A self-hosted mac is expected to already have it installed.
-      - name: Select Xcode
-        shell: bash
-        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+      # Pin Xcode 26.5 — the version the net11 iOS workload expects (macos-26 ships it as the default,
+      # alongside 26.6). Exact-match avoids relying on the csproj's ValidateXcodeVersion=false override.
+      - name: Select Xcode 26.5
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.5"
       - name: Resolve module dir
         shell: pwsh
         run: |
@@ -545,7 +547,7 @@ jobs:
   publish-appstore-ios:
     needs: [build-ios]
     if: needs.build-ios.result == 'success' && github.event.inputs.publish_appstore != 'false'
-    runs-on: [self-hosted, macOS]
+    runs-on: macos-26
     env:
       # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
       # The .p8 private-key CONTENTS, plus its key id and the ASC issuer id.

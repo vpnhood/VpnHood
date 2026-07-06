@@ -12,7 +12,7 @@ param(
 # release job treat it the same way: build -> $packagesRootDir/$appFolder/ios/<title>-ios.{ipa,json}.
 #
 # SIGNING is read from a marker the CI signing step writes (PrepareCiIosSigning.ps1) at
-#   .user/<appFolder>/ios/ios-signing.json  ->  { "Signed": bool, "CodesignKey": "...", "AppProvision": "...", "ExtProvision": "..." }
+#   .user/<appFolder>/ios/ios_signing.json  ->  { "Signed": bool, "CodesignKey": "...", "AppProvision": "...", "ExtProvision": "..." }
 # Unlike Android there is NO ephemeral fallback: an App Store .ipa cannot be self-signed. When the
 # marker says Signed=false (distribution cert / profiles absent) we do a codesign-DISABLED build as a
 # compile check and emit the sidecar json only (no .ipa) with a warning — the pipeline stays green and
@@ -59,7 +59,7 @@ $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 # ----- signing marker (written by PrepareCiIosSigning.ps1 in CI, or by hand locally) -----
 $iosDir = Join-Path $appUserDir "ios";
-$signingFile = Join-Path $iosDir "ios-signing.json";
+$signingFile = Join-Path $iosDir "ios_signing.json";
 $signed = $false; $codesignKey = ""; $appProvision = ""; $extProvision = "";
 if (Test-Path $signingFile) {
 	$s = Get-Content $signingFile -Raw | ConvertFrom-Json;
@@ -116,7 +116,7 @@ try {
 		# build here: an ios-arm64 build requires code signing, so attempting one without a cert would
 		# FAIL the job. Skipping it keeps the pipeline green (the whole point of skip-if-absent); the App
 		# Store upload job then finds no .ipa and skips too. Add the signing secrets to switch it on.
-		Write-Host "::warning title=iOS unsigned build::No iOS distribution signing configured (ios-signing.json Signed=false); NOT producing an .ipa. Add IOS_DISTRIBUTION_CERT_* + IOS_PROVISION_* secrets (see .github/DEPLOYMENT.md) to build a store-uploadable .ipa.";
+		Write-Host "::warning title=iOS unsigned build::No iOS distribution signing configured (ios_signing.json Signed=false); NOT producing an .ipa. Add IOS_DISTRIBUTION_CERT_* + IOS_PROVISION_* secrets (see .github/DEPLOYMENT.md) to build a store-uploadable .ipa.";
 	}
 
 	# publish info sidecar — MUST be "<title>-ios.json" (the app's update/deprecation check and the

@@ -204,9 +204,8 @@ certificate profile, so verify it resolves to **your** organization before shipp
 every store leg it is **skip-with-warning** when its secrets are absent, but note two hard prerequisites:
 
 - **Runner.** The project targets `net11.0-ios` and needs the .NET 11 SDK + `ios` workload and **Xcode
-  26.5+** — which GitHub-hosted macOS images don't ship yet. Both iOS jobs therefore default to
-  `runs-on: [self-hosted, macOS]`; register your own mac runner (or swap `runs-on` to a hosted image
-  once one qualifies).
+  26.5+**. GitHub's hosted **`macos-26`** image ships Xcode 26.5 + 26.6, and the job installs .NET 11
+  itself — so both iOS jobs run on that hosted image (`runs-on: macos-26`); no self-hosted mac required.
 - **Signing can't self-sign.** An App Store `.ipa` requires an **Apple Distribution** certificate and
   **App Store** provisioning profiles issued by Apple — there is no ephemeral fallback. Without them the
   build is unsigned (no `.ipa`) and the upload is skipped.

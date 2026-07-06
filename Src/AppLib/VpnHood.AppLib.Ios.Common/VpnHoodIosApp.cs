@@ -15,6 +15,7 @@ public class VpnHoodIosApp : Singleton<VpnHoodIosApp>
             return new VpnHoodIosApp();
 
         options.DeviceUiProvider ??= new IosDeviceUiProvider();
+        options.CultureProvider ??= IosAppCultureProvider.CreateIfSupported();
 
         VpnHoodApp.Init(device, options);
         return new VpnHoodIosApp();

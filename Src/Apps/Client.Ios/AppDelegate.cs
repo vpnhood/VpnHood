@@ -36,6 +36,10 @@ public class AppDelegate : UIApplicationDelegate
             // The App process has a readable stdout, so a console logger is fine here.
             VhLogger.Instance = VhLogger.CreateConsoleLogger();
 
+            // Load per-product settings the same way the Android Client app does: merge the embedded
+            // ".user" appsettings over the in-code defaults (Client is bring-your-own-key, so no default key).
+            var appConfigs = AppConfigs.Load();
+
             // Evaluate GetContainerUrl here — on the main thread, after iOS has fully initialized the
             // sandbox — so the App-Group container path (the App<->Extension IPC folder) is stable for
             // the whole session. If this is null the App Group entitlement is missing from the profile.
@@ -53,7 +57,7 @@ public class AppDelegate : UIApplicationDelegate
                 sharedContainerPath: sharedContainerPath,
                 localizedDescription: AppConfigs.AppName);
 
-            VpnHoodIosApp.Init(device, BuildAppOptions());
+            VpnHoodIosApp.Init(device, BuildAppOptions(appConfigs));
 
             // Keep the iOS Network Extension under the ~52 MB jetsam limit: fewer packet channels
             // (default is 4). Each packet channel is a full TLS connection — native socket + TLS state +
@@ -68,7 +72,7 @@ public class AppDelegate : UIApplicationDelegate
         return true;
     }
 
-    private static AppOptions BuildAppOptions()
+    private static AppOptions BuildAppOptions(AppConfigs appConfigs)
     {
         var storageFolderPath = AppOptions.BuildStorageFolderPath(AppConfigs.AppName);
 
@@ -77,14 +81,19 @@ public class AppDelegate : UIApplicationDelegate
         var resources = AppConfigs.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
 
-        return new AppOptions(appId: AppConfigs.AppId, AppConfigs.AppName, isDebugMode: false) {
+        return new AppOptions(appId: appConfigs.AppId, AppConfigs.AppName, isDebugMode: AppConfigs.IsDebugMode) {
             StorageFolderPath = storageFolderPath,
-            // Empty until a DefaultAccessKey is supplied (see AppConfigs). An invalid string here would
-            // throw inside VpnHoodApp.Init, so we pass an empty array instead of a placeholder.
-            AccessKeys = string.IsNullOrEmpty(AppConfigs.DefaultAccessKey) ? [] : [AppConfigs.DefaultAccessKey],
+            // Product settings sourced from the embedded ".user" appsettings (parity with Client.Android.Web).
+            CustomData = appConfigs.CustomData,
+            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
+            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
+            RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
+            // Empty until a DefaultAccessKey is supplied (see AppConfigs; Client is bring-your-own-key). An
+            // invalid string here would throw inside VpnHoodApp.Init, so we pass an empty array otherwise.
+            AccessKeys = string.IsNullOrEmpty(appConfigs.DefaultAccessKey) ? [] : [appConfigs.DefaultAccessKey],
             Resources = resources,
             // Loopback port for the in-process SPA web server (the WKWebView loads from here).
-            WebUiPort = AppConfigs.WebUiPort,
+            WebUiPort = appConfigs.WebUiPort,
             IsAddAccessKeySupported = true,
             // The WKWebView renders edge-to-edge (fills the whole window incl. the status-bar and
             // home-indicator safe areas). false = "don't let the native side pad to the safe area;

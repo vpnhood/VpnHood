@@ -20,6 +20,19 @@
     <ValidateXcodeVersion>false</ValidateXcodeVersion>
   </PropertyGroup>
 
+  <!-- Optional private app settings (from the external ".user" folder, sibling to the solution) embedded as
+       resources. Mirrors Client.Android.Web. Conditional so a fork without them still builds; AppConfigs
+       reads them at startup via AppConfigsBase.LoadConfig(). Client is bring-your-own-key, so unlike Connect
+       there is no embedded default access key. Forward slashes: this builds on macOS. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(SolutionDir)/../.user/VpnHoodClient/appsettings.json"
+        LogicalName="AppSettings.json"
+        Condition="Exists('$(SolutionDir)/../.user/VpnHoodClient/appsettings.json')" />
+    <EmbeddedResource Include="$(SolutionDir)/../.user/VpnHoodClient/appsettings.$(Configuration).json"
+        LogicalName="AppSettings_Environment.json"
+        Condition="Exists('$(SolutionDir)/../.user/VpnHoodClient/appsettings.$(Configuration).json')" />
+  </ItemGroup>
+
   <ItemGroup>
     <!-- App framework + iOS device abstraction. -->
     <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />

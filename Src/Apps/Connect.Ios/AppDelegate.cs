@@ -1,5 +1,6 @@
 using Foundation;
 using Microsoft.Extensions.Logging;
+using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Ios.Common;
 using VpnHood.AppLib.Services.Ads;
@@ -92,9 +93,11 @@ public class AppDelegate : UIApplicationDelegate
             // string here would throw inside VpnHoodApp.Init, so we pass an empty array instead of a placeholder.
             AccessKeys = string.IsNullOrEmpty(appConfigs.DefaultAccessKey) ? [] : [appConfigs.DefaultAccessKey],
             Resources = resources,
+            UiName = "VpnHoodConnect",
             // Loopback port for the in-process SPA web server (the WKWebView loads from here).
             WebUiPort = appConfigs.WebUiPort,
-            IsAddAccessKeySupported = true,
+            IsAddAccessKeySupported = false,
+            PremiumFeatures = ConnectAppResources.PremiumFeatures,
             // The WKWebView renders edge-to-edge (fills the whole window incl. the status-bar and
             // home-indicator safe areas). false = "don't let the native side pad to the safe area;
             // instead publish the inset sizes (SystemBarsInfo) so the SPA pads itself" — matching the
@@ -121,9 +124,6 @@ public class AppDelegate : UIApplicationDelegate
             // (EventIds "TcpStack"/"Quic"). Flows to the extension via ClientOptions.LogServiceOptions.
             LogServiceOptions = new LogServiceOptions {
                 MinLogLevel = DiagnosticsEnabled ? LogLevel.Debug : LogLevel.Information
-            },
-            AdOptions = new AppAdOptions {
-                PreloadAd = false
             }
         };
     }

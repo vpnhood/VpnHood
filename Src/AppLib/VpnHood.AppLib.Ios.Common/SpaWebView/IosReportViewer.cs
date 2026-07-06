@@ -39,7 +39,7 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
             var filePath = Path.Combine(Path.GetTempPath(), "VpnHood-" + fileName);
             await File.WriteAllBytesAsync(filePath, content);
 
-            hostController.BeginInvokeOnMainThread(() => PresentReportViewer(filePath));
+            hostController.BeginInvokeOnMainThread(() => PresentReportViewer(filePath, uri));
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Failed to download the report for viewing.");
@@ -49,7 +49,7 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
     // Show the downloaded report in a modal WKWebView (text/plain renders inline) inside a navigation
     // controller, with a Search button (in-app find), a Share button (native iOS share sheet) and a Done button
     // to dismiss. This runs in the app process (no extension jetsam budget), so a second web view is fine.
-    private void PresentReportViewer(string filePath)
+    private void PresentReportViewer(string filePath, Uri sourceUri)
     {
         var viewer = new UIViewController { Title = Path.GetFileName(filePath) };
         var view = viewer.View!;
@@ -77,7 +77,7 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
         var nav = new UINavigationController(viewer);
 
         var shareButton = new UIBarButtonItem(UIBarButtonSystemItem.Action);
-        shareButton.Clicked += (_, _) => PresentShareSheet(filePath, nav, shareButton);
+        shareButton.Clicked += (_, _) => PresentShareSheet(filePath, sourceUri, nav, shareButton);
 
         // Show a Search button that opens the find bar, alongside Share. (First item sits at the far right.)
         if (OperatingSystem.IsIOSVersionAtLeast(16)) {
@@ -97,15 +97,45 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
         hostController.PresentViewController(nav, animated: true, completionHandler: null);
     }
 
-    private static void PresentShareSheet(string filePath, UIViewController presenter, UIBarButtonItem anchor)
+    private static void PresentShareSheet(string filePath, Uri sourceUri, UIViewController presenter,
+        UIBarButtonItem anchor)
     {
-        var fileUrl = NSUrl.FromFilename(filePath);
-        var activityController = new UIActivityViewController([fileUrl], applicationActivities: null);
+        // Per-target payload: browsers get the on-device loopback URL (they can't render a file:// link but can
+        // load the report page while the app's web server is briefly still alive after backgrounding); every
+        // other target gets the local text file.
+        var itemSource = new ReportActivityItemSource(NSUrl.FromFilename(filePath), new NSUrl(sourceUri.AbsoluteUri));
+        var activityController = new UIActivityViewController([itemSource], applicationActivities: null);
 
         // iPad requires the share sheet's popover to be anchored — pin it to the Share bar button item.
         if (activityController.PopoverPresentationController is { } popover)
             popover.BarButtonItem = anchor;
 
         presenter.PresentViewController(activityController, animated: true, completionHandler: null);
+    }
+
+    // Supplies the report to the share sheet with a different representation per target (see PresentShareSheet).
+    private sealed class ReportActivityItemSource(NSUrl fileUrl, NSUrl loopbackUrl) : UIActivityItemSource
+    {
+        // The share sheet picks eligible targets from the placeholder's type; the local file keeps both
+        // file-consuming apps (Files/Mail/AirDrop) and browsers in the list.
+        public override NSObject GetPlaceholderData(UIActivityViewController activityViewController) => fileUrl;
+
+        public override NSObject GetItemForActivity(UIActivityViewController activityViewController,
+            NSString? activityType)
+            => IsBrowser(activityType) ? loopbackUrl : fileUrl;
+
+        private static bool IsBrowser(NSString? activityType)
+        {
+            if (activityType is null)
+                return false;
+
+            var id = activityType.ToString();
+            return id.Contains("chrome", StringComparison.OrdinalIgnoreCase)
+                || id.Contains("firefox", StringComparison.OrdinalIgnoreCase)
+                || id.Contains("edge", StringComparison.OrdinalIgnoreCase)
+                || id.Contains("opera", StringComparison.OrdinalIgnoreCase)
+                || id.Contains("brave", StringComparison.OrdinalIgnoreCase)
+                || id.Contains("duckduckgo", StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

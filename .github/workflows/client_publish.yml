@@ -554,6 +554,9 @@ jobs:
       APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
       APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
       APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+      # Presence lets a missing .ipa become a HARD error (a signed build was INTENDED) instead of a
+      # fork's benign unsigned skip — mirroring publish-play-android, which exit-1s on a missing AAB.
+      APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERT_BASE64 }}
     steps:
       - uses: actions/checkout@v5
         with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
@@ -574,7 +577,15 @@ jobs:
           set -e
           IPA=$(ls ios/*.ipa 2>/dev/null | head -n1 || true)
           if [ -z "$IPA" ]; then
-            echo "::warning title=No .ipa to upload::build-ios produced no .ipa (unsigned build) — nothing to send to App Store Connect."
+            # A signed App Store build was intended (upload key + distribution cert both configured) but
+            # build-ios produced no .ipa -> a real signing/build failure. FAIL, don't skip green. This is
+            # exactly the class of bug that let a broken cert silently ship "nothing" to TestFlight.
+            if [ -n "$APPLE_DISTRIBUTION_CERT_BASE64" ]; then
+              echo "::error title=iOS upload has no .ipa::APPSTORE_CONNECT_API_KEY and APPLE_DISTRIBUTION_CERT_BASE64 are both set (a signed App Store build was intended), but build-ios produced no .ipa. This is a real signing/build failure — check the build-ios 'Prepare iOS signing' + 'Build iOS client' logs."
+              exit 1
+            fi
+            # No distribution cert configured -> the build was legitimately unsigned (a fork). Benign skip.
+            echo "::warning title=No .ipa to upload::build-ios produced no .ipa (unsigned build — no distribution cert configured); nothing to send to App Store Connect."
             echo "IPA_PATH=" >> $GITHUB_ENV
           else
             echo "IPA_PATH=$IPA" >> $GITHUB_ENV

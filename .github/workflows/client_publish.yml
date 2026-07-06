@@ -11,8 +11,11 @@ name: Publish Client (All Platforms)
 # Play-signed APK, then deletes this run's artifacts as its final step. A store publish that FAILS
 # (with the key present) blocks the release; a store SKIP (no key) does not.
 #
-# Wired: Linux + Windows + Android (Google AAB, Web APK, Web arm64 APK) + Google Play. iOS/App Store
-# is a future slot (no iOS project yet) — add a publish-appstore-ios job the same way.
+# Wired: Linux + Windows + Android (Google AAB, Web APK, Web arm64 APK) + Google Play + iOS (App Store /
+# TestFlight). The iOS pair (build-ios -> publish-appstore-ios) mirrors the Android pair and, like every
+# store leg, is SKIP-with-warning when its secrets are absent. iOS needs a macOS runner with the .NET 11
+# SDK + `ios` workload and Xcode 26.5+; GitHub-hosted images don't ship those yet, so build-ios/​
+# publish-appstore-ios default to a SELF-HOSTED mac (see runs-on) until hosted images catch up.
 #
 # The Play audience ratio is set by the `rollout` dispatch input (percent; 100 = full).
 #
@@ -32,6 +35,14 @@ name: Publish Client (All Platforms)
 #       the Android AAB is published to Play (prerelease -> alpha, stable -> production) and the
 #       Play-signed APK is attached to the release. Absent -> the Play publish is skipped with a
 #       warning (not a failure); the release proceeds without the signed APK.
+#   IOS_DISTRIBUTION_CERT_BASE64 + _PASSWORD, IOS_PROVISION_APP_BASE64, IOS_PROVISION_EXT_BASE64
+#       OPTIONAL iOS App Store signing (Apple Distribution .p12 + its password + the App Store
+#       provisioning profiles for the app and its Network Extension, each base64). All four present ->
+#       build-ios produces a signed .ipa; any absent -> the build is UNSIGNED (no .ipa, a warning) and
+#       the App Store upload is skipped. There is no ephemeral fallback (App Store builds can't self-sign).
+#   APPSTORE_CONNECT_API_KEY (+ _API_KEY_ID + APPSTORE_CONNECT_ISSUER_ID)  OPTIONAL App Store Connect API
+#       key (the .p8 CONTENTS + its key id + the issuer id). Present -> the .ipa is uploaded to TestFlight
+#       (prerelease) or App Store (stable). Absent -> the upload is skipped with a warning (not a failure).
 
 on:
   workflow_dispatch:
@@ -60,6 +71,16 @@ on:
         type: boolean
         required: false
         default: false
+      build_ios:
+        description: "Build the iOS app (.ipa). Needs a macOS runner with .NET 11 + Xcode 26.5+."
+        type: boolean
+        required: false
+        default: true
+      publish_appstore:
+        description: "Upload the built .ipa to TestFlight (prerelease) / App Store (stable) (only applies when build_ios is on)"
+        type: boolean
+        required: false
+        default: true
       rollout:
         description: "Google Play audience ratio (%) for a PRODUCTION release (1-100; 100 = full). Ignored on prerelease/alpha, which always ship complete to testers."
         required: false
@@ -427,20 +448,190 @@ jobs:
           retention-days: 1
           path: play-signed/**
 
+  # iOS build. Mirrors build-android: run Client.Ios/_publish.ps1 -> Pub/bin/<tag>/VpnHoodClient/ios/
+  # (<title>-ios.ipa + <title>-ios.json), upload as the client-ios artifact. Signing is materialized by
+  # PrepareCiIosSigning.ps1 from the IOS_* secrets; when they're absent the build is UNSIGNED (compile
+  # check + sidecar json only, no .ipa) and the job stays green — the App Store upload then finds no .ipa.
+  #
+  # RUNNER: the repo targets net11.0-ios and needs Xcode 26.5+, which GitHub-hosted macOS images don't
+  # provide yet — so this defaults to a SELF-HOSTED mac (labels [self-hosted, macOS]). Swap runs-on to
+  # 'macos-14' (or newer) once a hosted image ships .NET 11 + Xcode 26.5+.
+  build-ios:
+    # iOS builds by default (build_ios defaults true); skipped by build_ios=false or the only_aab fast path.
+    if: ${{ github.event.inputs.build_ios != 'false' && github.event.inputs.only_aab != 'true' }}
+    runs-on: [self-hosted, macOS]
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # Optional iOS App Store signing — empty unless configured; PrepareCiIosSigning.ps1 writes
+      # ios-signing.json { Signed: false } and the build goes UNSIGNED (no .ipa) when any is absent.
+      IOS_DISTRIBUTION_CERT_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
+      IOS_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+      IOS_PROVISION_APP_BASE64: ${{ secrets.IOS_PROVISION_APP_BASE64 }}
+      IOS_PROVISION_EXT_BASE64: ${{ secrets.IOS_PROVISION_EXT_BASE64 }}
+    steps:
+      - uses: actions/checkout@v5
+        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
+      # This repo targets net11.0-ios (a preview SDK); global.json pins 10.x, so install 11 explicitly.
+      # Pin matches the SDK the project is developed against; bump when the workload moves.
+      - uses: actions/setup-dotnet@v5
+        with: { dotnet-version: "11.0.100-preview.5.26302.115" }
+      - name: Install .NET iOS workload
+        shell: pwsh
+        run: dotnet workload install ios
+      # Select the newest installed Xcode (must be 26.5+; the csproj sets ValidateXcodeVersion=false so
+      # 26.6 is accepted). A self-hosted mac is expected to already have it installed.
+      - name: Select Xcode
+        shell: bash
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)/Contents/Developer"
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Credentials stub
+        shell: pwsh
+        run: |
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
+      # publish.json turns on strict mode (real bundle id + required appsettings); materialize it first.
+      - name: Write publish.json
+        if: vars.PUBLISH != ''
+        shell: pwsh
+        env:
+          PUBLISH: ${{ vars.PUBLISH }}
+        run: |
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
+      - name: Write client appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: ${{ vars.APPSETTINGS }}
+        run: |
+          # Embedded across all distributions; publish.json above turns on strict mode which REQUIRES it.
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            throw "APPSETTINGS variable is not set, but a strict iOS publish requires .user/VpnHoodClient/appsettings.json."
+          }
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+      # Import the Distribution cert into a keychain + install the App Store profiles (skip -> unsigned).
+      - name: Prepare iOS signing
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Pub/Lib/PrepareCiIosSigning.ps1"
+      - name: Build iOS client (.ipa)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Ios/_publish.ps1"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: client-ios
+          # An unsigned build produces only the sidecar json (no .ipa), so a missing file is a warning,
+          # not an error — the pipeline stays green and the App Store upload job simply skips.
+          if-no-files-found: warn
+          retention-days: 1
+          path: ${{ env.MODULE_DIR }}/ios/**
+
+  # Upload the built .ipa to App Store Connect straight from the CI artifact (no GitHub round-trip),
+  # mirroring publish-play-android. Track from Pub/PubVersion.json: prerelease -> TestFlight (beta),
+  # stable -> App Store. Behaviour by APPSTORE_CONNECT_API_KEY:
+  #   - absent  -> warn and skip (job green); nothing is uploaded; release proceeds without an App Store push.
+  #   - present -> upload; a genuine Fastlane failure fails this job (red), which BLOCKS the release.
+  # Also a no-op (with a warning) when build-ios produced no .ipa (unsigned build).
+  publish-appstore-ios:
+    needs: [build-ios]
+    if: needs.build-ios.result == 'success' && github.event.inputs.publish_appstore != 'false'
+    runs-on: [self-hosted, macOS]
+    env:
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      # The .p8 private-key CONTENTS, plus its key id and the ASC issuer id.
+      APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
+      APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
+      APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v5
+        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
+      # No key -> warn and skip (steps below gated on the same condition). Not a failure: the release
+      # still proceeds, just without an App Store/TestFlight upload.
+      - name: Warn if App Store Connect API key is missing
+        if: env.APPSTORE_CONNECT_API_KEY == ''
+        run: |
+          echo "::warning title=App Store publish skipped::APPSTORE_CONNECT_API_KEY secret is not set; the .ipa will NOT be uploaded to TestFlight/App Store. Add APPSTORE_CONNECT_API_KEY/_API_KEY_ID/ISSUER_ID (see .github/DEPLOYMENT.md) to enable it."
+      - name: Download iOS artifact
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        uses: actions/download-artifact@v8
+        with: { name: client-ios, path: ios }
+      - name: Resolve ipa + track
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        shell: bash
+        run: |
+          set -e
+          IPA=$(ls ios/*.ipa 2>/dev/null | head -n1 || true)
+          if [ -z "$IPA" ]; then
+            echo "::warning title=No .ipa to upload::build-ios produced no .ipa (unsigned build) — nothing to send to App Store Connect."
+            echo "IPA_PATH=" >> $GITHUB_ENV
+          else
+            echo "IPA_PATH=$IPA" >> $GITHUB_ENV
+          fi
+          # prerelease -> TestFlight; stable -> App Store (mirrors the Android alpha/production split).
+          PRERELEASE=$(jq -r '.Prerelease' Pub/PubVersion.json)
+          if [ "$PRERELEASE" = "true" ] || [ "$PRERELEASE" = "True" ]; then echo "LANE=testflight" >> $GITHUB_ENV; else echo "LANE=appstore" >> $GITHUB_ENV; fi
+      - name: Set up Ruby
+        if: env.APPSTORE_CONNECT_API_KEY != '' && env.IPA_PATH != ''
+        uses: ruby/setup-ruby@v1
+        with: { ruby-version: "3.3", bundler-cache: false }
+      - name: Install Fastlane
+        if: env.APPSTORE_CONNECT_API_KEY != '' && env.IPA_PATH != ''
+        run: gem install fastlane --no-document
+      # Build the fastlane App Store Connect API-key JSON from the three secrets (never echoed).
+      - name: Write ASC API key
+        if: env.APPSTORE_CONNECT_API_KEY != '' && env.IPA_PATH != ''
+        shell: bash
+        run: |
+          mkdir -p asc
+          jq -n --arg kid "$APPSTORE_CONNECT_API_KEY_ID" --arg iss "$APPSTORE_CONNECT_ISSUER_ID" --arg key "$APPSTORE_CONNECT_API_KEY" \
+            '{key_id:$kid, issuer_id:$iss, key:$key, in_house:false}' > asc/api_key.json
+      - name: Upload to TestFlight / App Store (Fastlane)
+        if: env.APPSTORE_CONNECT_API_KEY != '' && env.IPA_PATH != ''
+        run: |
+          if [ "$LANE" = "testflight" ]; then
+            echo "Uploading $IPA_PATH to TestFlight"
+            if ! fastlane run upload_to_testflight ipa:"$IPA_PATH" api_key_path:asc/api_key.json skip_waiting_for_build_processing:true; then
+              echo "::error title=TestFlight upload failed::Fastlane pilot could not upload the .ipa. A common cause is a CFBundleVersion that is not higher than the last build (see ApplicationVersion in PublishIosApp.ps1)."
+              exit 1
+            fi
+          else
+            echo "Uploading $IPA_PATH to App Store Connect (App Store track)"
+            # Uploads the binary to App Store Connect without touching the store listing or submitting for
+            # review (submit_for_review:false). Promote to review from App Store Connect (or extend this to
+            # submit_for_review:true once metadata/screenshots are managed here).
+            if ! fastlane run upload_to_app_store ipa:"$IPA_PATH" api_key_path:asc/api_key.json skip_metadata:true skip_screenshots:true submit_for_review:false force:true precheck_include_in_app_purchases:false; then
+              echo "::error title=App Store upload failed::Fastlane deliver could not upload the .ipa. Verify the App Store provisioning/signing and that CFBundleVersion is higher than the last build."
+              exit 1
+            fi
+          fi
+
   release:
-    needs: [build-linux, build-windows, build-android, publish-play-android]
-    # Runs LAST, after the store publish, so it can attach the Play-signed APK. Runs when asked to
-    # publish AND Linux built. Windows may have skipped the MSI (no AI license) and Android may be
-    # disabled (build_android=false) — both tolerated (skipped, not failed). A genuine build FAILURE,
-    # or a store-publish FAILURE (publish-play-android red = key present but Play upload failed),
-    # blocks the release. A store SKIP (no key) does not block — the release just omits the signed APK.
+    needs: [build-linux, build-windows, build-android, publish-play-android, build-ios, publish-appstore-ios]
+    # Runs LAST, after the store publishes, so it can attach the Play-signed APK (and the iOS .ipa). Runs
+    # when asked to publish AND Linux built. Windows may have skipped the MSI (no AI license), Android may
+    # be disabled (build_android=false), and iOS may be unsigned/disabled — all tolerated (skipped, not
+    # failed). A genuine build FAILURE, or a store-publish FAILURE (publish-play-android / publish-appstore-ios
+    # red = key present but upload failed), blocks the release. A store SKIP (no key) does not block — the
+    # release just omits that store's asset.
     if: >-
       ${{ always()
         && github.event.inputs.publish_release == 'true'
         && needs.build-linux.result == 'success'
         && needs.build-windows.result != 'failure'
         && needs.build-android.result != 'failure'
-        && needs.publish-play-android.result != 'failure' }}
+        && needs.publish-play-android.result != 'failure'
+        && needs.build-ios.result != 'failure'
+        && needs.publish-appstore-ios.result != 'failure' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -484,6 +675,11 @@ jobs:
       - uses: actions/download-artifact@v8
         continue-on-error: true
         with: { name: client-android-play-signed, path: "${{ env.MODULE_DIR }}/android-google" }
+      # iOS .ipa + sidecar from build-ios. Best-effort: absent when iOS was disabled or built unsigned
+      # (no .ipa); PublishToGithub.ps1 attaches whatever assets actually exist.
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with: { name: client-ios, path: "${{ env.MODULE_DIR }}/ios" }
       - name: Create GitHub release (real publish flow)
         shell: pwsh
         env:

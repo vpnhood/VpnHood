@@ -56,6 +56,10 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
 | `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Google AAB, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Web. |
 | `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Web APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Google. |
+| `IOS_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `client_publish.yml` | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
+| `IOS_PROVISION_APP_BASE64` | `client_publish.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app (`com.vpnhood.client.ios`). |
+| `IOS_PROVISION_EXT_BASE64` | `client_publish.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the Network Extension (`com.vpnhood.client.ios.networkextension`). The extension needs its own profile. |
+| `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `client_publish.yml` | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents**, its Key ID, and the Issuer ID. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
 
 ## Building your own app (fork-friendly)
 
@@ -196,7 +200,22 @@ Do not reuse a third-party/previous signer — the published identity comes from
 certificate profile, so verify it resolves to **your** organization before shipping.
 
 ### iOS client
-Not applicable yet — there is no iOS app project in the repo.
+`client_publish.yml` has a `build-ios` → `publish-appstore-ios` pair (mirroring Android → Play). Like
+every store leg it is **skip-with-warning** when its secrets are absent, but note two hard prerequisites:
+
+- **Runner.** The project targets `net11.0-ios` and needs the .NET 11 SDK + `ios` workload and **Xcode
+  26.5+** — which GitHub-hosted macOS images don't ship yet. Both iOS jobs therefore default to
+  `runs-on: [self-hosted, macOS]`; register your own mac runner (or swap `runs-on` to a hosted image
+  once one qualifies).
+- **Signing can't self-sign.** An App Store `.ipa` requires an **Apple Distribution** certificate and
+  **App Store** provisioning profiles issued by Apple — there is no ephemeral fallback. Without them the
+  build is unsigned (no `.ipa`) and the upload is skipped.
+
+Secrets: `IOS_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE64`,
+`IOS_PROVISION_EXT_BASE64` (build/signing) and `APPSTORE_CONNECT_API_KEY` + `_API_KEY_ID` +
+`APPSTORE_CONNECT_ISSUER_ID` (upload). How to obtain and base64 each is documented step-by-step in
+`.user/VpnHoodClient/ios/README.md`. `Pub/Lib/PrepareCiIosSigning.ps1` materializes the cert/profiles
+into a keychain at build time; `Pub/Lib/PublishIosApp.ps1` produces the `.ipa` + `VpnHoodClient-ios.json`.
 
 ## Maintainers: keep this in sync
 When you add or remove a `secrets.*` reference in any workflow under

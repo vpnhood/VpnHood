@@ -89,9 +89,12 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
             viewer.NavigationItem.RightBarButtonItem = shareButton;
         }
 
-        var doneButton = new UIBarButtonItem(UIBarButtonSystemItem.Done);
-        doneButton.Clicked += (_, _) => nav.DismissViewController(true, null);
-        viewer.NavigationItem.LeftBarButtonItem = doneButton;
+        // This is a modal sheet, so the dismissal is a Close (✕) button — the iOS-idiomatic control for
+        // closing a modal. A back chevron would be wrong here: it means "pop the navigation stack", but the
+        // report is presented over the SPA, not pushed onto it.
+        var closeButton = new UIBarButtonItem(UIBarButtonSystemItem.Close);
+        closeButton.Clicked += (_, _) => nav.DismissViewController(true, null);
+        viewer.NavigationItem.LeftBarButtonItem = closeButton;
 
         // Present from the host controller; the share sheet is later presented from this nav (the top-most VC).
         hostController.PresentViewController(nav, animated: true, completionHandler: null);

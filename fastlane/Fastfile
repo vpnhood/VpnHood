@@ -116,7 +116,8 @@ platform :ios do
       app_identifier: options[:app_identifier] || "com.vpnhood.client.ios",
       api_key_path: options[:api_key_path] || "asc/api_key.json",
       metadata_path: options[:metadata_path] || "./fastlane/metadata/ios",
-      screenshots_path: options[:screenshots_path] || "./fastlane/metadata/ios/screenshots",
+      # NOTE: must live OUTSIDE metadata_path — deliver treats every metadata_path subdir as a locale.
+      screenshots_path: options[:screenshots_path] || "./fastlane/screenshots/ios",
       skip_binary_upload: true,          # metadata-only; the build ships via client_publish.yml
       skip_metadata: false,
       skip_screenshots: false,

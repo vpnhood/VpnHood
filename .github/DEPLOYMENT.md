@@ -48,7 +48,7 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 |---|---|---|---|
 | `GITHUB_TOKEN` | all release/publish workflows | Automatic | Provided by GitHub; no action needed. |
 | `GH_TOKEN` | `publish_store_package.yml` | Optional | A PAT used only if you need broader scope than `GITHUB_TOKEN` for `gh release upload`; otherwise it falls back to `GITHUB_TOKEN`. |
-| `GOOGLE_PLAY_APIKEY` | `client_publish.yml`, `publish_store_package.yml`, `publish_store_contents.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → `client_publish.yml` publishes the AAB to Play and attaches the Play-signed APK to the release. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
+| `GOOGLE_PLAY_API_KEY` | `client_publish.yml`, `publish_store_package.yml`, `publish_store_contents.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → `client_publish.yml` publishes the AAB to Play and attaches the Play-signed APK to the release. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
 | `ADVANCED_INSTALLER_LICENSE` | `client_windows_build.yml`, `client_publish.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
 | `AZURE_SIGNING_CREDENTIAL` | `client_publish.yml` | Optional (Windows signing) | The single Azure service-principal JSON you download from Azure (contains `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`; other fields ignored). Paste the whole file. Absent → MSI builds unsigned with a warning. |
 | `AZURE_SIGNING_TARGET` | `client_publish.yml` | Optional (Windows signing) | Single JSON in Azure Trusted Signing's `metadata.json` schema: `Endpoint`, `CodeSigningAccountName`, `CertificateProfileName`. Not secret and not part of the Azure credential file; required alongside it for signing to run. Store it as a repository **Variable**. |
@@ -56,7 +56,7 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
 | `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Google AAB, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Web. |
 | `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_android_build.yml`, `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Web APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Google. |
-| `IOS_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `client_publish.yml` | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
+| `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `client_publish.yml` | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
 | `IOS_PROVISION_APP_BASE64` | `client_publish.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app (`com.vpnhood.client.ios`). |
 | `IOS_PROVISION_EXT_BASE64` | `client_publish.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the Network Extension (`com.vpnhood.client.ios.networkextension`). The extension needs its own profile. |
 | `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `client_publish.yml` | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents**, its Key ID, and the Issuer ID. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
@@ -160,7 +160,7 @@ Google and Web builds with one key); providing them separately keeps each store'
 > CI builds fast. Re-enable it before shipping a production release.
 
 ### Android client — Google Play (`publish_store_*.yml`)
-- `GOOGLE_PLAY_APIKEY`: create a service account in the Google Play Console with the
+- `GOOGLE_PLAY_API_KEY`: create a service account in the Google Play Console with the
   *Release* permission, generate a JSON key, and store the file contents.
 - Update `fastlane/Appfile` (`package_name`) to **your** application ID — the current
   value `com.vpnhood.client.android` belongs to the upstream project and you cannot
@@ -210,7 +210,7 @@ every store leg it is **skip-with-warning** when its secrets are absent, but not
   **App Store** provisioning profiles issued by Apple — there is no ephemeral fallback. Without them the
   build is unsigned (no `.ipa`) and the upload is skipped.
 
-Secrets: `IOS_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE64`,
+Secrets: `APPLE_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE64`,
 `IOS_PROVISION_EXT_BASE64` (build/signing) and `APPSTORE_CONNECT_API_KEY` + `_API_KEY_ID` +
 `APPSTORE_CONNECT_ISSUER_ID` (upload). How to obtain and base64 each is documented step-by-step in
 `.user/VpnHoodClient/ios/README.md`. `Pub/Lib/PrepareCiIosSigning.ps1` materializes the cert/profiles

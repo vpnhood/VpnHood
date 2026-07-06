@@ -4,7 +4,7 @@ Write-Host "*** Publish VpnHood! SERVER to GitHub" -BackgroundColor Blue
 . "$PSScriptRoot/../Lib/utils/changelog_utils.ps1"
 
 # set Variables
-$env:GITHUB_TOKEN = Get-Content "$userDir/github_publish_apikey.txt";
+$env:GITHUB_TOKEN = Get-Content "$userDir/github_publish_api_key.txt";
 $packageFileTitle = $packageServerDirName;
 $packageDir = "$releaseRootDir/$packageFileTitle";
 $packageLatestDir = "$releaseRootDir/$packageFileTitle";

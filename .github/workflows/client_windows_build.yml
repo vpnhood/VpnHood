@@ -69,14 +69,14 @@ jobs:
         with:
           advinst-license: ${{ env.ADVANCED_INSTALLER_LICENSE }}
 
-      # Common.ps1 reads ../.user/nuget_apikey.txt at load; stub it (NuGet key unused here).
+      # Common.ps1 reads ../.user/nuget_api_key.txt at load; stub it (NuGet key unused here).
       - name: Create nuget key stub
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
           $userDir = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $userDir -Force | Out-Null
-          '' | Out-File -FilePath (Join-Path $userDir "nuget_apikey.txt") -Encoding ascii -Force
+          '' | Out-File -FilePath (Join-Path $userDir "nuget_api_key.txt") -Encoding ascii -Force
 
       - name: Build Windows client MSI
         if: env.ADVANCED_INSTALLER_LICENSE != ''

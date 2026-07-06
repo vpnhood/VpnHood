@@ -12,7 +12,7 @@ $userDir = "$solutionDir/../.user";
 # need the global NuGet token. Missing file -> empty (a fork without secrets still builds).
 # Wrap in "$(...)" so an empty file (Get-Content -Raw returns $null) coerces to "" instead of
 # throwing "cannot call a method on a null-valued expression" — keeps a keyless fork green.
-$nugetApiKey = if (Test-Path "$userDir/nuget_apikey.txt") { "$(Get-Content "$userDir/nuget_apikey.txt" -Raw)".Trim() } else { "" };
+$nugetApiKey = if (Test-Path "$userDir/nuget_api_key.txt") { "$(Get-Content "$userDir/nuget_api_key.txt" -Raw)".Trim() } else { "" };
 $msverbosity = "minimal";
 
 # Version (READ-ONLY). Common never mutates the version — it only reads PubVersion.json and derives

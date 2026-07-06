@@ -32,7 +32,7 @@ $ErrorActionPreference = "Stop";
 
 # Only set the token from .user if one isn't already provided (e.g. ambient GITHUB_TOKEN / gh auth).
 $solutionDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot);
-$tokenFile = "$solutionDir/../.user/github_publish_apikey.txt";
+$tokenFile = "$solutionDir/../.user/github_publish_api_key.txt";
 if (-not $env:GITHUB_TOKEN -and (Test-Path $tokenFile)) {
 	$env:GITHUB_TOKEN = (Get-Content $tokenFile -Raw).Trim();
 }

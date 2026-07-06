@@ -2,8 +2,8 @@
 # macOS ONLY (uses `security` + PlistBuddy). Run on the iOS build runner BEFORE Client.Ios/_publish.ps1.
 #
 # Secrets (each independent; ALL three of the first group are needed for real signing):
-#   IOS_DISTRIBUTION_CERT_BASE64      base64 of the Apple Distribution certificate .p12
-#   IOS_DISTRIBUTION_CERT_PASSWORD    its export password
+#   APPLE_DISTRIBUTION_CERT_BASE64      base64 of the Apple Distribution certificate .p12
+#   APPLE_DISTRIBUTION_CERT_PASSWORD    its export password
 #   IOS_PROVISION_APP_BASE64          base64 of the App Store provisioning profile for the app
 #                                     (com.vpnhood.client.ios)
 #   IOS_PROVISION_EXT_BASE64          base64 of the App Store provisioning profile for the Network
@@ -28,13 +28,13 @@ $markerFile = Join-Path $iosDir "ios_signing.json";
 
 function Get-Env([string]$name) { [Environment]::GetEnvironmentVariable($name) }
 
-$certB64 = Get-Env "IOS_DISTRIBUTION_CERT_BASE64";
-$certPass = Get-Env "IOS_DISTRIBUTION_CERT_PASSWORD";
+$certB64 = Get-Env "APPLE_DISTRIBUTION_CERT_BASE64";
+$certPass = Get-Env "APPLE_DISTRIBUTION_CERT_PASSWORD";
 $appProfB64 = Get-Env "IOS_PROVISION_APP_BASE64";
 $extProfB64 = Get-Env "IOS_PROVISION_EXT_BASE64";
 
 function Write-Unsigned([string]$reason) {
-	Write-Host "::warning title=iOS signing not configured::$reason The iOS build will be UNSIGNED (no .ipa) and the App Store upload will be skipped. Add the IOS_DISTRIBUTION_CERT_* + IOS_PROVISION_* secrets (see .github/DEPLOYMENT.md) to enable it.";
+	Write-Host "::warning title=iOS signing not configured::$reason The iOS build will be UNSIGNED (no .ipa) and the App Store upload will be skipped. Add the APPLE_DISTRIBUTION_CERT_* + IOS_PROVISION_* secrets (see .github/DEPLOYMENT.md) to enable it.";
 	@{ Signed = $false } | ConvertTo-Json | Out-File $markerFile -Encoding ASCII;
 }
 

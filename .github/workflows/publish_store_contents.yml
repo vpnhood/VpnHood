@@ -5,7 +5,7 @@ name: Publish Store Contents to Google Play
 # Use this to refresh the listing WITHOUT shipping a new binary.
 #
 # Secrets:
-#   GOOGLE_PLAY_APIKEY   Google Play service-account JSON. If absent, publishing is SKIPPED with a
+#   GOOGLE_PLAY_API_KEY   Google Play service-account JSON. If absent, publishing is SKIPPED with a
 #       warning (the job still succeeds, green) — nothing is pushed to Google Play.
 
 on:
@@ -19,7 +19,7 @@ jobs:
 
     env:
       # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
-      GOOGLE_PLAY_APIKEY: ${{ secrets.GOOGLE_PLAY_APIKEY }}
+      GOOGLE_PLAY_API_KEY: ${{ secrets.GOOGLE_PLAY_API_KEY }}
 
     steps:
       - name: Checkout
@@ -27,31 +27,31 @@ jobs:
 
       # No key -> warn and skip (the steps below are gated on the same condition).
       - name: Warn if Google Play API key is missing
-        if: env.GOOGLE_PLAY_APIKEY == ''
+        if: env.GOOGLE_PLAY_API_KEY == ''
         run: |
-          echo "::warning title=Store contents publish skipped::GOOGLE_PLAY_APIKEY secret is not set; store metadata/images/screenshots will NOT be published to Google Play. Add the secret (see .github/DEPLOYMENT.md) to enable it."
+          echo "::warning title=Store contents publish skipped::GOOGLE_PLAY_API_KEY secret is not set; store metadata/images/screenshots will NOT be published to Google Play. Add the secret (see .github/DEPLOYMENT.md) to enable it."
 
       - name: Set up Java
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Ruby
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: false
 
       - name: Install Fastlane
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         run: |
           gem install fastlane --no-document
 
       - name: Publish store metadata, images, and screenshots
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         run: |
           echo "🚀 Publishing store contents (metadata, images, screenshots)"
           fastlane android publish_contents

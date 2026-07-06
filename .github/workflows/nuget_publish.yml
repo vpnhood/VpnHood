@@ -35,8 +35,8 @@ jobs:
     env:
       DOTNET_NOLOGO: "1"
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-      # Org secret is named NUGET_API_KEY; keep the local env var NUGET_APIKEY for the steps below.
-      NUGET_APIKEY: ${{ secrets.NUGET_API_KEY }}
+      # Org secret is named NUGET_API_KEY; keep the local env var NUGET_API_KEY for the steps below.
+      NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
     steps:
       - uses: actions/checkout@v5
         with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
@@ -56,14 +56,14 @@ jobs:
       - name: Install .NET workloads (android, ios)
         shell: pwsh
         run: dotnet workload install android ios
-      # PublishNugets.ps1 reads the key from .user/nuget_apikey.txt (via Common.ps1). Write it from the
+      # PublishNugets.ps1 reads the key from .user/nuget_api_key.txt (via Common.ps1). Write it from the
       # secret. If the secret is somehow empty the publish step throws (it is required in the org).
       - name: Write NuGet credentials
         shell: pwsh
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
-          "$env:NUGET_APIKEY" | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force -NoNewline
+          "$env:NUGET_API_KEY" | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force -NoNewline
       # In smoke mode PublishNugets appends github.run_number (ambient $env:GITHUB_RUN_NUMBER on the
       # runner) as the 4th revision segment, so every run gets a unique prerelease version.
       - name: Publish NuGets

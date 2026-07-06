@@ -7,7 +7,7 @@ name: Publish AAB to Google Play & Replace Release Asset with Play-Signed APK
 # Fastlane (metadata, images, screenshots, changelogs), then attaches the Play-signed APK back.
 #
 # Secrets:
-#   GOOGLE_PLAY_APIKEY   Google Play service-account JSON. If absent, the whole Play publish is
+#   GOOGLE_PLAY_API_KEY   Google Play service-account JSON. If absent, the whole Play publish is
 #       SKIPPED with a warning (the job still succeeds, green) — nothing is uploaded to Play.
 #   GH_TOKEN             Optional PAT for gh release upload; falls back to GITHUB_TOKEN.
 
@@ -28,7 +28,7 @@ jobs:
       # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
       # Missing key -> the Play-publish steps below are skipped (a warning is emitted) so the job
       # still succeeds (green); nothing is pushed to Google Play.
-      GOOGLE_PLAY_APIKEY: ${{ secrets.GOOGLE_PLAY_APIKEY }}
+      GOOGLE_PLAY_API_KEY: ${{ secrets.GOOGLE_PLAY_API_KEY }}
 
     steps:
       - name: Checkout
@@ -39,12 +39,12 @@ jobs:
 
       # No key -> warn and skip the Play publish (the steps below are gated on the same condition).
       - name: Warn if Google Play API key is missing
-        if: env.GOOGLE_PLAY_APIKEY == ''
+        if: env.GOOGLE_PLAY_API_KEY == ''
         run: |
-          echo "::warning title=Google Play publish skipped::GOOGLE_PLAY_APIKEY secret is not set; the AAB will NOT be uploaded to Google Play and no metadata/images/changelogs will be published. Add the secret (see .github/DEPLOYMENT.md) to enable Play publishing."
+          echo "::warning title=Google Play publish skipped::GOOGLE_PLAY_API_KEY secret is not set; the AAB will NOT be uploaded to Google Play and no metadata/images/changelogs will be published. Add the secret (see .github/DEPLOYMENT.md) to enable Play publishing."
 
       - name: Resolve release tag and track
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
         run: |
@@ -81,7 +81,7 @@ jobs:
 
       # --- Download AAB and its metadata JSON ---
       - name: Download AAB + JSON from GitHub Release
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
         run: |
@@ -107,7 +107,7 @@ jobs:
 
       # --- Extract version info from JSON ---
       - name: Read version info from JSON metadata
-        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
+        if: env.GOOGLE_PLAY_API_KEY != '' && env.SKIP_PUBLISH != 'true'
         run: |
           VERSION_NAME=$(jq -r '.Version' "$META_PATH")
           if [ -z "$VERSION_NAME" ] || [ "$VERSION_NAME" = "null" ]; then
@@ -142,27 +142,27 @@ jobs:
 
       # --- Setup dependencies ---
       - name: Set up Java
-        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
+        if: env.GOOGLE_PLAY_API_KEY != '' && env.SKIP_PUBLISH != 'true'
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Ruby
-        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
+        if: env.GOOGLE_PLAY_API_KEY != '' && env.SKIP_PUBLISH != 'true'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: false
 
       - name: Install Fastlane
-        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
+        if: env.GOOGLE_PLAY_API_KEY != '' && env.SKIP_PUBLISH != 'true'
         run: |
           gem install fastlane --no-document
 
       # --- Upload AAB to Google Play (or update metadata if version exists) ---
       - name: Upload to Google Play via Fastlane
-        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
+        if: env.GOOGLE_PLAY_API_KEY != '' && env.SKIP_PUBLISH != 'true'
         run: |
           echo "Uploading $AAB_PATH (versionCode=$VERSION_CODE rollout='$ROLLOUT') to track $TRACK"
           fastlane android playstore \
@@ -174,7 +174,7 @@ jobs:
 
       # --- Download Google Play–signed APK ---
       - name: Download Google Play–signed APK via Fastlane
-        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
+        if: env.GOOGLE_PLAY_API_KEY != '' && env.SKIP_PUBLISH != 'true'
         run: |
           echo "Attempting to download universal APK for version code $VERSION_CODE (track=$TRACK)"
           fastlane android download_signed version_code:"$VERSION_CODE"
@@ -193,7 +193,7 @@ jobs:
 
       # --- Add Play-signed APK (keep AAB and its -android.json update-info file) ---
       - name: Upload Play-signed APK and product.json
-        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
+        if: env.GOOGLE_PLAY_API_KEY != '' && env.SKIP_PUBLISH != 'true'
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
         run: |
@@ -213,7 +213,7 @@ jobs:
           echo "✅ Uploaded metadata as $APK_JSON_NAME"
 
       - name: List final assets
-        if: env.GOOGLE_PLAY_APIKEY != '' && env.SKIP_PUBLISH != 'true'
+        if: env.GOOGLE_PLAY_API_KEY != '' && env.SKIP_PUBLISH != 'true'
         env:
           GH_TOKEN: ${{ env.GH_TOKEN }}
         run: |

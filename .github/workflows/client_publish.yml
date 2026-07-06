@@ -30,11 +30,11 @@ name: Publish Client (All Platforms)
 #   ANDROID_KEYSTORE_CLIENT_GOOGLE_*  / ANDROID_KEYSTORE_CLIENT_WEB_*   OPTIONAL Android signing
 #       (BASE64 + PASS each). If a key's secrets are absent, an ephemeral throwaway
 #       keystore is generated so the build completes (NOT release/Play-Store grade).
-#   GOOGLE_PLAY_APIKEY                           OPTIONAL Google Play service-account JSON. Present ->
+#   GOOGLE_PLAY_API_KEY                           OPTIONAL Google Play service-account JSON. Present ->
 #       the Android AAB is published to Play (prerelease -> alpha, stable -> production) and the
 #       Play-signed APK is attached to the release. Absent -> the Play publish is skipped with a
 #       warning (not a failure); the release proceeds without the signed APK.
-#   IOS_DISTRIBUTION_CERT_BASE64 + _PASSWORD, IOS_PROVISION_APP_BASE64, IOS_PROVISION_EXT_BASE64
+#   APPLE_DISTRIBUTION_CERT_BASE64 + _PASSWORD, IOS_PROVISION_APP_BASE64, IOS_PROVISION_EXT_BASE64
 #       OPTIONAL iOS App Store signing (Apple Distribution .p12 + its password + the App Store
 #       provisioning profiles for the app and its Network Extension, each base64). All four present ->
 #       build-ios produces a signed .ipa; any absent -> the build is UNSIGNED (no .ipa, a warning) and
@@ -106,7 +106,7 @@ jobs:
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
+          '' | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force
       - name: Write client appsettings
         shell: pwsh
         env:
@@ -186,7 +186,7 @@ jobs:
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
+          '' | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force
       - name: Write client appsettings
         shell: pwsh
         env:
@@ -325,7 +325,7 @@ jobs:
   # Independent of the release: it consumes build-android's google-aab artifact, uploads to Play
   # with Fastlane (incl. store metadata/images/changelogs), then hands the Play-signed universal
   # APK to the release job as an artifact. This job is the ONLY Android store-publish path and it
-  # never writes to GitHub. Behaviour by GOOGLE_PLAY_APIKEY:
+  # never writes to GitHub. Behaviour by GOOGLE_PLAY_API_KEY:
   #   - absent  -> warn and skip (job green); nothing is published, no signed APK; release proceeds
   #                without it.
   #   - present -> publish; a genuine Fastlane failure fails this job (red), which BLOCKS the release.
@@ -337,22 +337,22 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
-      GOOGLE_PLAY_APIKEY: ${{ secrets.GOOGLE_PLAY_APIKEY }}
+      GOOGLE_PLAY_API_KEY: ${{ secrets.GOOGLE_PLAY_API_KEY }}
     steps:
       - uses: actions/checkout@v5
         with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
       # No key -> warn and skip (the steps below are gated on the same condition). This is NOT a
       # failure: the release still proceeds, just without a Play-signed APK.
       - name: Warn if Google Play API key is missing
-        if: env.GOOGLE_PLAY_APIKEY == ''
+        if: env.GOOGLE_PLAY_API_KEY == ''
         run: |
-          echo "::warning title=Google Play publish skipped::GOOGLE_PLAY_APIKEY secret is not set; the AAB will NOT be uploaded to Google Play and no Play-signed APK will be attached to the release. Add the secret (see .github/DEPLOYMENT.md) to enable Play publishing."
+          echo "::warning title=Google Play publish skipped::GOOGLE_PLAY_API_KEY secret is not set; the AAB will NOT be uploaded to Google Play and no Play-signed APK will be attached to the release. Add the secret (see .github/DEPLOYMENT.md) to enable Play publishing."
       - name: Download Android AAB artifact
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         uses: actions/download-artifact@v8
         with: { name: client-android-google-aab, path: aab }
       - name: Resolve version, track, and paths
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         shell: bash
         run: |
           set -e
@@ -396,20 +396,20 @@ jobs:
           } >> $GITHUB_ENV
           echo "✅ VersionName=$VERSION_NAME VersionCode=$VERSION_CODE Track=$TRACK Rollout='$ROLLOUT'"
       - name: Set up Java
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: "17" }
       - name: Set up Ruby
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         uses: ruby/setup-ruby@v1
         with: { ruby-version: "3.3", bundler-cache: false }
       - name: Install Fastlane
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         run: gem install fastlane --no-document
       # Upload the AAB + store metadata/images/screenshots/changelogs. A genuine failure here
       # (bad key, rejected upload, etc.) fails the job and blocks the release, as intended.
       - name: Upload AAB to Google Play (Fastlane)
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         run: |
           echo "Uploading $AAB_PATH (versionCode=$VERSION_CODE rollout='$ROLLOUT') to track $TRACK"
           # Uploads the AAB AND the store listing (metadata/images/changelogs). To iterate on the
@@ -429,7 +429,7 @@ jobs:
       # Fetch the Google Play–signed universal APK and stage it for the release job. Named to match
       # the AAB base (<title>-android.apk) so PublishToGithub.ps1 picks it up as a release asset.
       - name: Download Play-signed universal APK (Fastlane)
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         run: |
           fastlane android download_signed version_code:"$VERSION_CODE"
           SIGNED=$(find fastlane -type f -name "*.apk" | head -n1 || true)
@@ -439,7 +439,7 @@ jobs:
           cp "$SIGNED" "play-signed/${BASE}.apk"
           echo "✅ Play-signed APK staged: play-signed/${BASE}.apk"
       - name: Upload Play-signed APK artifact
-        if: env.GOOGLE_PLAY_APIKEY != ''
+        if: env.GOOGLE_PLAY_API_KEY != ''
         uses: actions/upload-artifact@v7
         with:
           name: client-android-play-signed
@@ -466,8 +466,8 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       # Optional iOS App Store signing — empty unless configured; PrepareCiIosSigning.ps1 writes
       # ios_signing.json { Signed: false } and the build goes UNSIGNED (no .ipa) when any is absent.
-      IOS_DISTRIBUTION_CERT_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERT_BASE64 }}
-      IOS_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERT_PASSWORD }}
+      APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERT_BASE64 }}
+      APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}
       IOS_PROVISION_APP_BASE64: ${{ secrets.IOS_PROVISION_APP_BASE64 }}
       IOS_PROVISION_EXT_BASE64: ${{ secrets.IOS_PROVISION_EXT_BASE64 }}
     steps:
@@ -497,7 +497,7 @@ jobs:
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
+          '' | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force
       # publish.json turns on strict mode (real bundle id + required appsettings); materialize it first.
       - name: Write publish.json
         if: vars.PUBLISH != ''
@@ -654,7 +654,7 @@ jobs:
         run: |
           $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '' | Out-File (Join-Path $u "nuget_apikey.txt") -Encoding ascii -Force
+          '' | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force
       # Reassemble the Pub/bin/<tag>/VpnHoodClient layout PublishToGithub.ps1 expects. The Windows
       # and Android artifacts are optional (skipped builds upload nothing), so those downloads are
       # best-effort; PublishToGithub.ps1 attaches only the assets that actually exist.

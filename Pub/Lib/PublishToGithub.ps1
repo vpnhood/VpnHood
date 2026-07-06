@@ -18,7 +18,7 @@ Write-Host "*** Publish $packageDirName release to GitHub" -BackgroundColor Blue
 
 # Only set the publish token from .user if one isn't already provided (e.g. an ambient GITHUB_TOKEN
 # / gh auth when running in CI). CI passes github.token via the environment.
-$tokenFile = "$userDir/github_publish_apikey.txt";
+$tokenFile = "$userDir/github_publish_api_key.txt";
 if (-not $env:GITHUB_TOKEN -and (Test-Path $tokenFile)) {
 	$env:GITHUB_TOKEN = Get-Content $tokenFile;
 }

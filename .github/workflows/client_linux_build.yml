@@ -55,14 +55,14 @@ jobs:
           "MODULE_DIR=$moduleDir"  | Out-File -FilePath $env:GITHUB_ENV -Append
           Write-Host "Building VpnHoodClient $tag -> $moduleDir"
 
-      # Common.ps1 reads ../.user/nuget_apikey.txt at load time for the NuGet key.
+      # Common.ps1 reads ../.user/nuget_api_key.txt at load time for the NuGet key.
       # The Linux client build never uses that key, so a stub lets the scripts run.
       - name: Create nuget key stub
         shell: pwsh
         run: |
           $userDir = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
           New-Item -ItemType Directory -Path $userDir -Force | Out-Null
-          '' | Out-File -FilePath (Join-Path $userDir "nuget_apikey.txt") -Encoding ascii -Force
+          '' | Out-File -FilePath (Join-Path $userDir "nuget_api_key.txt") -Encoding ascii -Force
 
       - name: Build Linux client (x64 + arm64 + any)
         shell: pwsh

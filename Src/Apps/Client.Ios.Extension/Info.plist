@@ -5,10 +5,10 @@
 	<string>VpnHood! Client Extension</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.vpnhood.client.ios.networkextension</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
-	<key>CFBundleVersion</key>
-	<string>1</string>
+	<!-- Version injected from ApplicationDisplayVersion / ApplicationVersion — the app's publish passes
+	     these as GLOBAL MSBuild props, which flow into this .appex build too, so its CFBundleVersion
+	     always matches the app's. Fixes ITMS-90473 (the hardcoded '1' here vs the app's version). Do
+	     NOT hardcode a version. -->
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionPointIdentifier</key>

@@ -68,6 +68,12 @@ internal sealed class AndroidReportViewer
         var searchBtn = IconButton(Android.Resource.Drawable.IcMenuSearch);
         searchBtn.Click += (_, _) => ToggleFindBar();
 
+        // Re-fetch the report from its (loopback) source and reload, so the user can pull the latest log
+        // without closing and reopening the viewer. The WebView loads straight from the URL, so a fresh
+        // LoadUrl re-requests it — no separate download step is needed (unlike the iOS viewer).
+        var refreshBtn = IconButton(Android.Resource.Drawable.IcPopupSync);
+        refreshBtn.Click += (_, _) => _webView.LoadUrl(_reportUri.ToString());
+
         var shareBtn = IconButton(Android.Resource.Drawable.IcMenuShare);
         shareBtn.Click += (_, _) => _ = ShareAsync();
 
@@ -76,6 +82,7 @@ internal sealed class AndroidReportViewer
         bar.AddView(new Space(_activity),
             new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent) { Weight = 1 });
         bar.AddView(searchBtn);
+        bar.AddView(refreshBtn);
         bar.AddView(shareBtn);
         return bar;
     }

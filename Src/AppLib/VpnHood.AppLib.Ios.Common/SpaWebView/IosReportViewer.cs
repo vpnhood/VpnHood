@@ -79,14 +79,36 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
         var shareButton = new UIBarButtonItem(UIBarButtonSystemItem.Action);
         shareButton.Clicked += (_, _) => PresentShareSheet(filePath, sourceUri, nav, shareButton);
 
-        // Show a Search button that opens the find bar, alongside Share. (First item sits at the far right.)
+        // Refresh: re-fetch the report from its (loopback) source and reload, so the user can pull the
+        // latest log without closing and reopening the viewer. Disabled while a fetch is in flight. The
+        // Clicked handler runs on the main thread and the awaits resume there, so the UI calls are safe.
+        var refreshButton = new UIBarButtonItem(UIBarButtonSystemItem.Refresh);
+        refreshButton.Clicked += async (_, _) => {
+            refreshButton.Enabled = false;
+            try {
+                using var httpClient = new HttpClient();
+                var content = await httpClient.GetByteArrayAsync(sourceUri);
+                await File.WriteAllBytesAsync(filePath, content);
+                webView.LoadFileUrl(NSUrl.FromFilename(filePath),
+                    NSUrl.FromFilename(Path.GetDirectoryName(filePath)!));
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "Failed to refresh the report.");
+            }
+            finally {
+                refreshButton.Enabled = true;
+            }
+        };
+
+        // Show a Search button that opens the find bar, alongside Share + Refresh. (First item sits at
+        // the far right.)
         if (OperatingSystem.IsIOSVersionAtLeast(16)) {
             var searchButton = new UIBarButtonItem(UIBarButtonSystemItem.Search);
             searchButton.Clicked += (_, _) => webView.FindInteraction?.PresentFindNavigatorShowingReplace(false);
-            viewer.NavigationItem.RightBarButtonItems = [shareButton, searchButton];
+            viewer.NavigationItem.RightBarButtonItems = [shareButton, searchButton, refreshButton];
         }
         else {
-            viewer.NavigationItem.RightBarButtonItem = shareButton;
+            viewer.NavigationItem.RightBarButtonItems = [shareButton, refreshButton];
         }
 
         // This is a modal sheet, so the dismissal is a Close (✕) button — the iOS-idiomatic control for

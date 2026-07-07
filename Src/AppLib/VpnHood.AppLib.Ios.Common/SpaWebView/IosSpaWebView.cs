@@ -50,6 +50,19 @@ public sealed class IosSpaWebView : ISpaWebView
         // Autoplay/JS-opened windows without a user gesture (parity with the Android WebView).
         config.MediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypes.None;
 
+        // Disable user zoom: the SPA is app UI, not a web document, so pinch/double-tap zoom is a bug
+        // (users zoom by accident and can't reset). Pin the viewport scale and swallow the pinch
+        // gesture. Unlike mobile Safari, an app WKWebView honors user-scalable=no. Injected at
+        // document-end so it overrides whatever viewport the SPA's HTML declared.
+        config.UserContentController ??= new WKUserContentController();
+        config.UserContentController.AddUserScript(new WKUserScript(
+            new NSString(
+                "var vp = document.querySelector('meta[name=viewport]');" +
+                "if (!vp) { vp = document.createElement('meta'); vp.setAttribute('name','viewport'); document.head.appendChild(vp); }" +
+                "vp.setAttribute('content','width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');" +
+                "document.addEventListener('gesturestart', function(e){ e.preventDefault(); }, { passive: false });"),
+            WKUserScriptInjectionTime.AtDocumentEnd, isForMainFrameOnly: true));
+
         var view = _controller.View!;
         _webView = new WKWebView(view.Bounds, config) {
             AutoresizingMask = UIViewAutoresizing.FlexibleWidth | UIViewAutoresizing.FlexibleHeight,

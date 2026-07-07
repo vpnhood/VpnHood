@@ -58,9 +58,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Bundle the Network Extension as a PlugIn (.appex) inside the host app. -->
+    <!-- Bundle the Network Extension as a PlugIn (.appex) inside the host app. UndefineProperties drops
+         the app's global /p:CodesignProvision (the App Store publish passes the *app* profile) when
+         building this reference, so the .appex resolves its OWN App Store profile from its csproj
+         instead of being signed with the app profile (App-ID mismatch -> codesign failure). -->
     <ProjectReference Include="..\Connect.Ios.Extension\VpnHood.App.Connect.Ios.Extension.csproj">
       <IsAppExtension>true</IsAppExtension>
+      <UndefineProperties>CodesignProvision</UndefineProperties>
     </ProjectReference>
   </ItemGroup>
 

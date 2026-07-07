@@ -41,3 +41,15 @@ truth — follow them, and when a new durable convention is agreed, update this 
   runs under a ~52 MB jetsam limit).
 - Build **Release** for device with `~/.dotnet11/dotnet` (TFM `net11.0-ios` / CoreCLR — the system `dotnet`
   can't target it). Don't commit a test `AccessKey` in `AppConfigs.cs` (production defaults to `null`).
+
+## CI/CD & publishing
+- All app **builds** (`.ipa`/AAB/MSI/Linux) and **Fastlane publishing** (Google Play, TestFlight/App Store,
+  store listings) run on **GitHub Actions — never from a developer machine**. Don't build release packages
+  or run Fastlane locally; the runners hold the signing keys, toolchains, and store credentials. A local
+  build is only ever for a quick smoke test, not for distribution.
+- **Client** releases from this repo (`client_publish.yml` + `bump.yml` via `Pub/Client/PublishByGithub.ps1`).
+  **Connect** releases from the sibling repo `vpnhood/Vpnhood.App.Connect` (`connect_publish.yml`, dispatched by
+  `Pub/Connect/PublishByGithub.ps1`); that repo also holds the Connect Fastlane config + store metadata.
+- The iOS **App Store listing** (metadata + screenshots, no binary) is pushed by a Fastlane `deliver` lane
+  (`ios upload_metadata`) via its own workflow — Connect: `publish_appstore_metadata.yml`. The TestFlight
+  **build** ships separately through the `*_publish.yml` iOS leg. Connect iOS is TestFlight-only for now.

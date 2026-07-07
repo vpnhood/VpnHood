@@ -108,12 +108,14 @@ if ($LASTEXITCODE -ne 0) { throw "The bump run failed; Connect was NOT dispatche
 
 # --- Step 2: dispatch the Connect release (build from the freshly bumped develop) -----------
 Write-Host "Dispatching Connect release on $connectRepo ..." -ForegroundColor Cyan;
-gh workflow run connect_publish.yml `
+gh workflow run connect_publish.yml `dont 
 	--repo $connectRepo `
 	--ref main `
 	-f "ref=develop" `
 	-f "build_android=true" `
 	-f "publish_play=true" `
+	-f "build_ios=true" `
+	-f "publish_appstore=true" `
 	-f "publish_release=true" `
 	-f "rollout=$rollout";
 if ($LASTEXITCODE -ne 0) { throw "Failed to dispatch connect_publish.yml on $connectRepo."; }

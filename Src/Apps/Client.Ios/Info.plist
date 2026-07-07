@@ -5,6 +5,8 @@
 	<string>VpnHood! Client</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.vpnhood.client.ios</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<true/>
 	<!-- CFBundleShortVersionString / CFBundleVersion are injected by the .NET iOS SDK from
 	     ApplicationDisplayVersion / ApplicationVersion (set by Pub/Lib/PublishIosApp.ps1 from
 	     PubVersion.json). Do NOT hardcode them here: a literal value OVERRIDES the MSBuild props and

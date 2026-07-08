@@ -1,7 +1,7 @@
 name: _build_app_windows (reusable)
 
 # Builds the Windows MSI (client/connect) from the vpnhood/VpnHood monorepo (checked out into code/).
-# Called by _publish_app.yml. Two-stage publish/package for clearer CI logs. Uploads `<app>-windows`.
+# Called by publish_app.yml. Two-stage publish/package for clearer CI logs. Uploads `<app>-windows`.
 # ADVANCED_INSTALLER_LICENSE missing -> skipped-with-warning (green, no artifact). AZURE_SIGNING_*
 # optional (present -> signed; absent -> unsigned + warning). Secrets arrive via `secrets: inherit`.
 

@@ -1,7 +1,7 @@
 name: _build_app_android (reusable)
 
 # Builds the Android packages (Google AAB / Web APK / Web arm64 APK, one matrix leg each) for
-# client/connect from the vpnhood/VpnHood monorepo (checked out into code/). Called by _publish_app.yml.
+# client/connect from the vpnhood/VpnHood monorepo (checked out into code/). Called by publish_app.yml.
 # Uploads one `<app>-android-<id>` artifact per leg. Signing keystores + Connect access keys arrive via
 # `secrets: inherit`; a missing keystore falls back to an ephemeral (non-Play-grade) key.
 

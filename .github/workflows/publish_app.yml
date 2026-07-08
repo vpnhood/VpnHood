@@ -1,7 +1,9 @@
-name: _publish_app (reusable)
+name: publish_app (reusable)
 
 # SINGLE SOURCE OF TRUTH for publishing a VpnHood app — client OR connect. Called via `uses:` by
-# publish_client.yml (this repo) and publish_connect.yml (the vpnhood/Vpnhood.App.Connect repo).
+# publish_client.yml (this repo) and connect_publish.yml (the vpnhood/Vpnhood.App.Connect repo).
+# This is the public entry point: forkers pin it (e.g. @v1) — no leading underscore (that marks the
+# internal _build_app_* sub-modules this orchestrates).
 #
 # Orchestrates the small per-platform build modules (_build_app_{linux,windows,android,ios}.yml) and
 # adds the store-publish + GitHub-release jobs. A reusable workflow runs in the CALLER's context, so

@@ -1,6 +1,6 @@
 name: Publish Client (All Platforms)
 
-# Thin entry point: publishes the VpnHood CLIENT via the shared reusable workflow _publish_app.yml
+# Thin entry point: publishes the VpnHood CLIENT via the shared reusable workflow publish_app.yml
 # (the single source of truth for build + Google Play/App Store + GitHub release, used by both client
 # and connect). Version/prerelease come from Pub/PubVersion.json in the built ref. Required secrets are
 # documented in .github/DEPLOYMENT.md and flow through via `secrets: inherit`.
@@ -49,7 +49,7 @@ on:
 
 jobs:
   publish:
-    uses: ./.github/workflows/_publish_app.yml
+    uses: ./.github/workflows/publish_app.yml
     with:
       app: client
       code_ref: ${{ inputs.ref || github.ref_name }}

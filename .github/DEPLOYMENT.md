@@ -121,10 +121,10 @@ Any absent file/field keeps the project default, so an unmodified clone builds e
 
 ## Per-platform setup
 
-### Linux client — `_publish_app.yml` (via `publish_client.yml`)
+### Linux client — `publish_app.yml` (via `publish_client.yml`)
 No secrets required. Builds self-contained `linux-x64` / `linux-arm64` packages.
 
-### Android client — build (`_publish_app.yml`, via `publish_client.yml`)
+### Android client — build (`publish_app.yml`, via `publish_client.yml`)
 Builds the Google AAB, the Web APK, and the Web arm64 APK on an `ubuntu-latest` runner,
 reusing the existing publish scripts. A JDK 17 and the `.NET` Android workload are set up
 on the runner, and the Android SDK is auto-provisioned.
@@ -166,7 +166,7 @@ Google and Web builds with one key); providing them separately keeps each store'
   publish to it.
 - Track mapping is automatic: prereleases → `alpha`, stable → `production`.
 
-### Windows client — `_publish_app.yml` (via `publish_client.yml`)
+### Windows client — `publish_app.yml` (via `publish_client.yml`)
 The MSI is built with **Advanced Installer** on a `windows-latest` runner.
 
 - **`ADVANCED_INSTALLER_LICENSE`** — your Advanced Installer license ID. The Caphyon

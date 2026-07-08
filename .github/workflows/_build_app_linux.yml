@@ -1,7 +1,7 @@
 name: _build_app_linux (reusable)
 
 # Builds the Linux client/connect package from the vpnhood/VpnHood monorepo (checked out into code/).
-# Called by _publish_app.yml. Self-contained: derives the package dir + Src/Apps prefix from `app`.
+# Called by publish_app.yml. Self-contained: derives the package dir + Src/Apps prefix from `app`.
 # Uploads the `<app>-linux` artifact.
 
 on:

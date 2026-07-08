@@ -1,7 +1,7 @@
 name: _build_app_ios (reusable)
 
 # Builds the iOS .ipa from the vpnhood/VpnHood monorepo (checked out into code/). Called by
-# _publish_app.yml (client only today — connect has no iOS project). Runs on the GitHub-hosted
+# publish_app.yml (client only today — connect has no iOS project). Runs on the GitHub-hosted
 # macos-26 image (Xcode 26.5 + .NET 11). Signing secrets arrive via `secrets: inherit`; when absent
 # the build is UNSIGNED (no .ipa, a warning) and the job stays green. Uploads `<app>-ios`.
 

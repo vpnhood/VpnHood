@@ -240,96 +240,16 @@ jobs:
           retention-days: 1
           path: play-signed/**
 
-  # iOS build. Mirrors build-android: run Client.Ios/_publish.ps1 -> Pub/bin/<tag>/VpnHoodClient/ios/
-  # (<title>-ios.ipa + <title>-ios.json), upload as the client-ios artifact. Signing is materialized by
-  # PrepareCiIosSigning.ps1 from the IOS_* secrets; when they're absent the build is UNSIGNED (compile
-  # check + sidecar json only, no .ipa) and the job stays green — the App Store upload then finds no .ipa.
-  #
-  # RUNNER: the repo targets net11.0-ios and needs Xcode 26.5+, which GitHub-hosted macOS images don't
-  # provide yet — so this defaults to a SELF-HOSTED mac (labels [self-hosted, macOS]). Swap runs-on to
-  # 'macos-14' (or newer) once a hosted image ships .NET 11 + Xcode 26.5+.
+  # iOS build — reusable workflow (single source of truth), mirroring the Linux/Windows/Android builds.
+  # Builds by default (build_ios defaults true); skipped by build_ios=false or the only_aab fast path.
+  # Uploads the client-ios artifact for publish-appstore-ios + release. Signing secrets flow via
+  # `secrets: inherit`; absent -> an UNSIGNED build (no .ipa) and the App Store upload simply skips.
   build-ios:
-    # iOS builds by default (build_ios defaults true); skipped by build_ios=false or the only_aab fast path.
     if: ${{ github.event.inputs.build_ios != 'false' && github.event.inputs.only_aab != 'true' }}
-    # macos-26 ships Xcode 26.5 (default) + 26.6 — the toolchain this net11.0-ios project needs — so the
-    # whole iOS build runs on a GitHub-HOSTED runner; .NET 11 is installed below. No self-hosted mac needed.
-    runs-on: macos-26
-    env:
-      DOTNET_NOLOGO: "1"
-      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-      # Optional iOS App Store signing — empty unless configured; PrepareCiIosSigning.ps1 writes
-      # ios_signing.json { Signed: false } and the build goes UNSIGNED (no .ipa) when any is absent.
-      APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERT_BASE64 }}
-      APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}
-      IOS_PROVISION_APP_BASE64: ${{ secrets.IOS_PROVISION_APP_BASE64 }}
-      IOS_PROVISION_EXT_BASE64: ${{ secrets.IOS_PROVISION_EXT_BASE64 }}
-    steps:
-      - uses: actions/checkout@v5
-        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
-      # This repo targets net11.0-ios (a preview SDK); global.json pins 10.x, so install 11 explicitly.
-      # Pin matches the SDK the project is developed against; bump when the workload moves.
-      - uses: actions/setup-dotnet@v5
-        with: { dotnet-version: "11.0.100-preview.5.26302.115" }
-      - name: Install .NET iOS workload
-        shell: pwsh
-        run: dotnet workload install ios
-      # Pin Xcode 26.5 — the version the net11 iOS workload expects (macos-26 ships it as the default,
-      # alongside 26.6). Exact-match avoids relying on the csproj's ValidateXcodeVersion=false override.
-      - name: Select Xcode 26.5
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: "26.5"
-      - name: Resolve module dir
-        shell: pwsh
-        run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
-          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Credentials stub
-        shell: pwsh
-        run: |
-          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
-          New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '' | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force
-      # publish.json turns on strict mode (real bundle id + required appsettings); materialize it first.
-      - name: Write publish.json
-        if: vars.PUBLISH != ''
-        shell: pwsh
-        env:
-          PUBLISH: ${{ vars.PUBLISH }}
-        run: |
-          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
-          New-Item -ItemType Directory -Path $u -Force | Out-Null
-          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
-      - name: Write client appsettings
-        shell: pwsh
-        env:
-          APPSETTINGS: ${{ vars.APPSETTINGS }}
-        run: |
-          # Embedded across all distributions; publish.json above turns on strict mode which REQUIRES it.
-          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
-            throw "APPSETTINGS variable is not set, but a strict iOS publish requires .user/VpnHoodClient/appsettings.json."
-          }
-          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
-          New-Item -ItemType Directory -Path $u -Force | Out-Null
-          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
-      # Import the Distribution cert into a keychain + install the App Store profiles (skip -> unsigned).
-      - name: Prepare iOS signing
-        shell: pwsh
-        run: |
-          & "$env:GITHUB_WORKSPACE/Pub/Lib/PrepareCiIosSigning.ps1"
-      - name: Build iOS client (.ipa)
-        shell: pwsh
-        run: |
-          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Ios/_publish.ps1"
-      - uses: actions/upload-artifact@v7
-        with:
-          name: client-ios
-          # An unsigned build produces only the sidecar json (no .ipa), so a missing file is a warning,
-          # not an error — the pipeline stays green and the App Store upload job simply skips.
-          if-no-files-found: warn
-          retention-days: 1
-          path: ${{ env.MODULE_DIR }}/ios/**
+    uses: ./.github/workflows/_build_client_ios.yml
+    with:
+      ref: ${{ github.event.inputs.ref || github.ref_name }}
+    secrets: inherit
 
   # Upload the built .ipa to App Store Connect straight from the CI artifact (no GitHub round-trip),
   # mirroring publish-play-android. Track from Pub/PubVersion.json: prerelease -> TestFlight (beta),

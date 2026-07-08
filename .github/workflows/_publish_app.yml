@@ -76,9 +76,9 @@ jobs:
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
     secrets: inherit
 
-  # iOS is client-only today (connect has no iOS project).
+  # iOS build (client and connect). Off for connect unless the caller passes build_ios=true.
   build-ios:
-    if: ${{ inputs.build_ios != false && inputs.only_aab != true && inputs.app == 'client' }}
+    if: ${{ inputs.build_ios != false && inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_ios.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
     secrets: inherit
@@ -222,7 +222,15 @@ jobs:
             echo "IPA_PATH=$IPA" >> $GITHUB_ENV
           fi
           PRERELEASE=$(jq -r '.Prerelease' code/Pub/PubVersion.json)
-          if [ "$PRERELEASE" = "true" ] || [ "$PRERELEASE" = "True" ]; then echo "LANE=testflight" >> $GITHUB_ENV; else echo "LANE=appstore" >> $GITHUB_ENV; fi
+          # Connect is TestFlight-ONLY (not yet App Store review compliant) — never upload_to_app_store.
+          # Client: prerelease -> TestFlight, stable -> App Store.
+          if [ "${{ inputs.app }}" = "connect" ]; then
+            echo "LANE=testflight" >> $GITHUB_ENV
+          elif [ "$PRERELEASE" = "true" ] || [ "$PRERELEASE" = "True" ]; then
+            echo "LANE=testflight" >> $GITHUB_ENV
+          else
+            echo "LANE=appstore" >> $GITHUB_ENV
+          fi
       - name: Set up Ruby
         if: env.APPSTORE_CONNECT_API_KEY != '' && env.IPA_PATH != ''
         uses: ruby/setup-ruby@v1

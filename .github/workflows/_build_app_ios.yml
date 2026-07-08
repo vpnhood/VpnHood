@@ -32,6 +32,8 @@ jobs:
       APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}
       IOS_PROVISION_APP_BASE64: ${{ secrets.IOS_PROVISION_APP_BASE64 }}
       IOS_PROVISION_EXT_BASE64: ${{ secrets.IOS_PROVISION_EXT_BASE64 }}
+      # Connect embeds a default server access key (from the web store) into the iOS build; unused for client.
+      ACCESS_KEY_DEFAULT_WEB: ${{ secrets.ACCESS_KEY_DEFAULT_WEB }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v5
@@ -50,6 +52,15 @@ jobs:
           $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
           "MODULE_DIR=code/Pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Write default access key (connect)
+        if: inputs.app == 'connect'
+        shell: pwsh
+        run: |
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_WEB)) {
+            $d = Join-Path $u "web"; New-Item -ItemType Directory -Path $d -Force | Out-Null
+            $env:ACCESS_KEY_DEFAULT_WEB | Out-File (Join-Path $d "access_key_default_web.txt") -Encoding ascii -Force -NoNewline
+          } else { Write-Host "::warning::ACCESS_KEY_DEFAULT_WEB not set; the iOS build has no default access key." }
       - name: Write publish.json
         if: vars.PUBLISH != ''
         shell: pwsh
@@ -77,7 +88,7 @@ jobs:
       - name: Prepare iOS signing
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/Pub/Lib/PrepareCiIosSigning.ps1"
+          & "$env:GITHUB_WORKSPACE/code/Pub/Lib/PrepareCiIosSigning.ps1" -appFolder $env:PKG
       - name: Build iOS (.ipa)
         shell: pwsh
         run: |

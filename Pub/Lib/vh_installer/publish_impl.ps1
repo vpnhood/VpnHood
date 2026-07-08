@@ -13,8 +13,12 @@ $releaseUrl = "$repoBaseUrl/releases/download/$versionTag";
 
 # Get project infomration
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
-$assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName[0];
-$productName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Product[0];
+$projectXml = [Xml] (Get-Content $projectFile);
+# Read via the pipeline, NOT [0]: when the csproj has a SINGLE <PropertyGroup>, .PropertyGroup.AssemblyName
+# is a plain string and [0] would index its first CHARACTER (e.g. "V" from "VpnHoodServer"). Select-Object
+# -First 1 returns the whole string in that case and the first element when there are multiple groups.
+$assemblyName = ($projectXml.Project.PropertyGroup.AssemblyName | Where-Object { $_ } | Select-Object -First 1);
+$productName = ($projectXml.Project.PropertyGroup.Product | Where-Object { $_ } | Select-Object -First 1);
 if (-not $assemblyName) { throw "AssemblyName not found in project file '$projectFile'. Please define an <AssemblyName> property in the .csproj." };
 
 Write-Host;

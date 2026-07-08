@@ -9,6 +9,7 @@ namespace VpnHood.Core.Quic.Ios;
 /// failed/cancelled). During cleanup, we only want the call attempted, never to mask the original failure,
 /// so each helper swallows and logs via <see cref="VhUtils.TryInvoke(System.Action)"/>.
 /// </summary>
+// ReSharper disable once InconsistentNaming
 internal static class NWConnectionGroupExtensions
 {
     extension(NWConnectionGroup connectionGroup)

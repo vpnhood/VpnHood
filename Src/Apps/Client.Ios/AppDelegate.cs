@@ -1,4 +1,3 @@
-using Foundation;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Ios.Common;

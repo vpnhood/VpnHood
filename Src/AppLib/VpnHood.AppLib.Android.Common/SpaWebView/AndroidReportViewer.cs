@@ -1,8 +1,6 @@
-using Android.App;
 using Android.Content;
 using Android.Views;
 using Android.Webkit;
-using Android.Widget;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
 using Uri = System.Uri;
@@ -135,19 +133,51 @@ internal sealed class AndroidReportViewer
         _matchCountView.Text = numberOfMatches > 0 ? $"{activeMatchOrdinal + 1}/{numberOfMatches}" : "0/0";
     }
 
-    // Export the report as text. Uses a plain ACTION_SEND (no FileProvider) to stay dependency-free; very large
-    // logs can exceed the intent transaction limit, in which case the share is skipped (and logged).
+    // Browsers that can open the live log page. Mirrors the iOS viewer's browser list; used to give only these
+    // targets the loopback URL (see ShareAsync).
+    // ReSharper disable StringLiteralTypo
+    private static readonly string[] BrowserPackages = [
+        "com.android.chrome",
+        "org.mozilla.firefox",
+        "com.microsoft.emmx",           // Edge
+        "com.opera.browser",
+        "com.opera.mini.native",
+        "com.brave.browser",
+        "com.duckduckgo.mobile.android",
+        "com.sec.android.app.sbrowser"  // Samsung Internet
+    ];
+    // ReSharper restore StringLiteralTypo
+
+    // Export the report as an actual file (content:// via ReportFileProvider), never as raw text: handing over
+    // the whole log as Intent.ExtraText makes text-first apps (e.g. Telegram) paste the entire huge log and can
+    // exceed the intent transaction limit. File-consuming apps (Telegram/Mail/Files/Drive) therefore get only
+    // the attached file — the loopback URL is useless off-device. Browsers can't render the file but can open
+    // the live log page, so via ExtraReplacementExtras those targets alone receive the loopback URL.
     private async Task ShareAsync()
     {
         try {
+            // ReSharper disable once ShortLivedHttpClient
+            // we rarely use it and don't want to keep a static instance around; 
             using var httpClient = new HttpClient();
-            var text = await httpClient.GetStringAsync(_reportUri);
+            var content = await httpClient.GetByteArrayAsync(_reportUri);
+            var contentUri = ReportFileProvider.SaveAndGetUri(_activity, ReportFileName(), content);
 
             var intent = new Intent(Intent.ActionSend);
             intent.SetType("text/plain");
             intent.PutExtra(Intent.ExtraSubject, ReportFileName());
-            intent.PutExtra(Intent.ExtraText, text);
-            _activity.StartActivity(Intent.CreateChooser(intent, "Share log"));
+            intent.PutExtra(Intent.ExtraStream, contentUri);
+            intent.AddFlags(ActivityFlags.GrantReadUriPermission);
+
+            var chooser = Intent.CreateChooser(intent, "Share log")!;
+            var replacements = new Bundle();
+            foreach (var package in BrowserPackages) {
+                var extras = new Bundle();
+                extras.PutString(Intent.ExtraText, _reportUri.ToString());
+                replacements.PutBundle(package, extras);
+            }
+            chooser.PutExtra(Intent.ExtraReplacementExtras, replacements);
+
+            _activity.StartActivity(chooser);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogWarning(ex, "Failed to share the report.");

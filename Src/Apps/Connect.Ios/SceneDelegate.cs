@@ -1,5 +1,3 @@
-using ObjCRuntime;
-using VpnHood.AppLib.Ios.Common;
 using VpnHood.AppLib.Ios.Common.SpaWebView;
 
 namespace VpnHood.App.Connect.Ios;

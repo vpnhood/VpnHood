@@ -1,4 +1,3 @@
-using Foundation;
 using ObjCRuntime;
 using VpnHood.Core.Client.Devices.Ios;
 

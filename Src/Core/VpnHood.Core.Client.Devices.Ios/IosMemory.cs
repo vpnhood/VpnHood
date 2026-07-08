@@ -50,8 +50,8 @@ internal sealed class IosMemory : VhMemory
     /// </summary>
     public static void Install()
     {
-        if (VhMemory.Instance is not IosMemory)
-            VhMemory.Instance = new IosMemory();
+        if (Instance is not IosMemory)
+            Instance = new IosMemory();
     }
 
     /// <summary>

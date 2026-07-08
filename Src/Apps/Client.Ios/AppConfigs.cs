@@ -1,5 +1,4 @@
 using System.Text.Json;
-using VpnHood.App.Client;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
@@ -16,6 +15,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     // ---- iOS platform constants (referenced statically by the bootstrap; not sourced from settings) ----
 
     // Display name (UI + on-disk storage folder + NEVPNManager localized description).
+    // ReSharper disable once HeuristicUnreachableCode
     public const string AppName = IsDebugMode ? "VpnHood! Client (DEBUG)" : "VpnHood! Client";
 
     // App Group enabled on BOTH bundle ids (App + Extension Entitlements.plist). This is the only IPC
@@ -42,7 +42,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 
     // Client is "bring your own key": no built-in production server. Debug builds seed the shared sample key
     // for convenience; Release ships keyless and the user adds a key in the UI (IsAddAccessKeySupported).
-    public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
+    public string? DefaultAccessKey { get; set; } = IsDebug ? ClientOptions.SampleAccessKey : null;
 
     public string? Ga4MeasurementId { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }

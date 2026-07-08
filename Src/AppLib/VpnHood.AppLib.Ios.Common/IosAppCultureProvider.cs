@@ -1,5 +1,4 @@
 using System.Globalization;
-using Foundation;
 using VpnHood.AppLib.Abstractions;
 
 namespace VpnHood.AppLib.Ios.Common;

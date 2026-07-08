@@ -1,9 +1,7 @@
-using Foundation;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Ios.Common;
-using VpnHood.AppLib.Services.Ads;
 using VpnHood.Core.Client.Devices.Ios;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;

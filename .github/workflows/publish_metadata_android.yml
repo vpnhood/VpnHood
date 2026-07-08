@@ -1,8 +1,9 @@
-name: Publish Store Contents to Google Play
+name: Publish Metadata · Android (Google Play)
 
-# Manual-only: pushes the store listing (metadata, images, screenshots) from
-# fastlane/metadata/** to Google Play, attached to the latest production version code.
-# Use this to refresh the listing WITHOUT shipping a new binary.
+# Manual-only: pushes the store listing (metadata, images, screenshots) from fastlane/metadata/**
+# to Google Play, attached to the latest production version code. The Android twin of
+# publish_metadata_ios.yml. Use it to refresh the listing WITHOUT shipping a new binary
+# (client_publish.yml ships the Android binary to Play).
 #
 # Secrets:
 #   GOOGLE_PLAY_API_KEY   Google Play service-account JSON. If absent, publishing is SKIPPED with a

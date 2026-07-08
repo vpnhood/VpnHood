@@ -47,8 +47,7 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | Secret | Used by | Required? | What it is |
 |---|---|---|---|
 | `GITHUB_TOKEN` | all release/publish workflows | Automatic | Provided by GitHub; no action needed. |
-| `GH_TOKEN` | `publish_store_package.yml` | Optional | A PAT used only if you need broader scope than `GITHUB_TOKEN` for `gh release upload`; otherwise it falls back to `GITHUB_TOKEN`. |
-| `GOOGLE_PLAY_API_KEY` | `client_publish.yml`, `publish_store_package.yml`, `publish_store_contents.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → `client_publish.yml` publishes the AAB to Play and attaches the Play-signed APK to the release. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
+| `GOOGLE_PLAY_API_KEY` | `client_publish.yml`, `publish_metadata_android.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → `client_publish.yml` publishes the AAB to Play and attaches the Play-signed APK to the release. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
 | `ADVANCED_INSTALLER_LICENSE` | `client_publish.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
 | `AZURE_SIGNING_CREDENTIAL` | `client_publish.yml` | Optional (Windows signing) | The single Azure service-principal JSON you download from Azure (contains `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`; other fields ignored). Paste the whole file. Absent → MSI builds unsigned with a warning. |
 | `AZURE_SIGNING_TARGET` | `client_publish.yml` | Optional (Windows signing) | Single JSON in Azure Trusted Signing's `metadata.json` schema: `Endpoint`, `CodeSigningAccountName`, `CertificateProfileName`. Not secret and not part of the Azure credential file; required alongside it for signing to run. Store it as a repository **Variable**. |
@@ -159,7 +158,7 @@ Google and Web builds with one key); providing them separately keeps each store'
 > The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
 > CI builds fast. Re-enable it before shipping a production release.
 
-### Android client — Google Play (`publish_store_*.yml`)
+### Android client — Google Play (`client_publish.yml`, listing: `publish_metadata_android.yml`)
 - `GOOGLE_PLAY_API_KEY`: create a service account in the Google Play Console with the
   *Release* permission, generate a JSON key, and store the file contents.
 - Update `fastlane/Appfile` (`package_name`) to **your** application ID — the current

@@ -1,7 +1,14 @@
-param( [Parameter(Mandatory=$true)][object]$distribute );
+param(
+	[Parameter(Mandatory=$true)][object]$distribute,
+	# CI mode: generate ONLY the docker-compose helper files (VpnHoodServer.docker.yml/.sh) into the
+	# module folder and skip the image build/push entirely — the workflow pushes the multi-arch image
+	# with docker/build-push-action. Local runs never set this.
+	[object]$generateOnly = "0"
+	);
 
 $SolutionDir = Split-Path -Parent (Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot)));
 $distribute = $distribute -eq "1";
+$generateOnly = $generateOnly -eq "1";
 
 Write-Host;
 Write-Host "*** Creating Docker..." -BackgroundColor Blue -ForegroundColor White;
@@ -29,14 +36,35 @@ $module_installerFile = "$moduleDir/VpnHoodServer.docker.sh";
 # Calcualted Path
 $module_yamlFileName = $(Split-Path "$module_yamlFile" -leaf);
 
+# Release repo the compose file is downloaded from. In CI (VH_PUBLISH_REPO / GITHUB_REPOSITORY set)
+# this is the release repo the workflow runs in, so a fork points at its own; locally it falls back to
+# the canonical repo. Common.ps1 (sourced above) provides Resolve-PublishRepoUrl.
+$repoBaseUrl =
+	if (-not [string]::IsNullOrWhiteSpace($env:VH_PUBLISH_REPO) -or -not [string]::IsNullOrWhiteSpace($env:GITHUB_REPOSITORY)) {
+		Resolve-PublishRepoUrl;
+	}
+	else {
+		"https://github.com/vpnhood/VpnHood.App.Server";
+	}
+
 # server VpnHoodServer.docker.sh
 Write-Output "Make Server installation script for this docker";
-$linuxScript = (Get-Content -Path "$template_installerFile" -Raw).Replace('$composeUrlParam', "https://github.com/vpnhood/VpnHood.App.Server/releases/download/$versionTag/$module_yamlFileName");
+$linuxScript = (Get-Content -Path "$template_installerFile" -Raw).Replace('$composeUrlParam', "$repoBaseUrl/releases/download/$versionTag/$module_yamlFileName");
 $linuxScript = $linuxScript -replace "`r`n", "`n";
 $linuxScript | Out-File -FilePath "$module_installerFile" -Encoding ASCII -Force -NoNewline;
 
 # copy compose file
 Copy-Item -path "$template_yamlFile" -Destination "$module_yamlFile" -Force;
+
+# CI generate-only mode: the compose helper files are done; the multi-arch image is built/pushed by
+# the workflow's docker/build-push-action, so skip the entire local docker build below.
+if ($generateOnly) {
+	if ($isLatest) {
+		Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
+	}
+	Write-Host "generateOnly: compose files written; skipping local docker build." -ForegroundColor Yellow;
+	return;
+}
 
 # remove old docker containers from local
 $serverDockerImage="vpnhood/vpnhoodserver";

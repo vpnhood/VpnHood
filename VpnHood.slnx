@@ -60,7 +60,7 @@
   <Folder Name="/Pub/Server/">
     <File Path="CHANGELOG.Server.md" />
     <File Path="Pub/Server/Publish.ps1" />
-    <File Path="Pub/Server/PublishToGitHub.ps1" />
+    <File Path="Pub/Server/PublishByGithub.ps1" />
   </Folder>
   <Folder Name="/Samples/">
     <File Path="Samples/samples.txt" />

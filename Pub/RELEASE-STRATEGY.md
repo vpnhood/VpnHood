@@ -156,16 +156,34 @@ unrelated and remain — they are real build logic invoked directly by the app C
   github.repository_owner == 'vpnhood'`, so forks skip it entirely and never push the shared package
   IDs. Inside the org a missing `NUGET_API_KEY` is a hard error (the publish throws) — no warn-and-skip.
 
+## Server release (done — same split as Connect)
+
+The **server** releases to a **separate repo** (`vpnhood/VpnHood.App.Server`), the same split as
+Connect: the server's code + version live here in the monorepo, but the release is produced by
+`server_publish.yml` **in that repo**, which checks out this monorepo at build time. Because the
+workflow runs inside the target repo it creates the release with the automatic `github.token` — no
+cross-repo PAT. It funnels through the shared `Pub/Lib/PublishToGithub.ps1` (with `-assetSet server`
+and `-changelogFileName CHANGELOG.Server.md`), so one release creator serves every product.
+
+- **Branches.** The server release repo has only a **`main`** branch — there is no code there, so a
+  `develop` line would be meaningless. The `develop → main` prerelease/stable model lives HERE in the
+  monorepo (§2): a prerelease server release *builds from* `develop`; a stable one first fast-forwards
+  `main` via `bump.yml`. The server workflow just builds from whatever monorepo ref it is handed.
+- **No store, no fastlane.** The only "store" is Docker Hub. One `ubuntu-latest` job builds both the
+  Linux packages and the Windows-x64 zip (the server has no MSI/Advanced-Installer step, so Windows
+  cross-builds on Linux); a second job pushes the multi-arch image (skip-with-warning if the
+  `DOCKERHUB_*` secrets are absent).
+- **Trigger.** `Pub/Server/PublishByGithub.ps1` bumps this monorepo (publish/nuget OFF), waits, then
+  dispatches `server_publish.yml`. `Pub/Server/Publish.ps1` is now build-only for local smoke tests
+  (no bump, no distribute, no push) — distribution is CI-only, matching Client/Connect.
+
+Design + validation notes: [docs/cicd/server-publishing.md](../docs/cicd/server-publishing.md).
+
 ## Next steps (not yet implemented)
 
-1. **Server CI publish.** Server no longer bumps locally (that goes through `Pub/Bump.ps1` now), but
-   it still has no CI publish workflow — `Pub/Server/Publish.ps1 -distribute 1` uploads via the local
-   `Pub/Server/PublishToGitHub.ps1`. Add a `server_publish.yml` and route it through the shared
-   `Pub/Lib/PublishToGithub.ps1` so the "build + upload in CI" rule holds for every product.
-   (Connect is done — it has `connect_publish.yml` and releases via `Pub/Connect/PublishByGithub.ps1`.)
-2. **(Later) `modules/` folder** for any library that earns independent versioning/consumers — as
+1. **(Later) `modules/` folder** for any library that earns independent versioning/consumers — as
    git submodules, each self-contained (own props), released on its own cadence.
-3. **(Optional) Adopt CPM** as an isolated follow-up PR.
+2. **(Optional) Adopt CPM** as an isolated follow-up PR.
 
 ## What changed in this pass
 

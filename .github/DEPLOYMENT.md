@@ -216,7 +216,34 @@ Secrets: `APPLE_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE
 `.user/VpnHoodClient/ios/README.md`. `Pub/Lib/PrepareCiIosSigning.ps1` materializes the cert/profiles
 into a keychain at build time; `Pub/Lib/PublishIosApp.ps1` produces the `.ipa` + `VpnHoodClient-ios.json`.
 
+### Server (separate repo — `vpnhood/VpnHood.App.Server`)
+
+The server releases from a **separate repo**, the same split as Connect: the server's code + version
+live in this monorepo, but the release (GitHub release + Docker image) is produced by
+`server_publish.yml` **in `vpnhood/VpnHood.App.Server`**, which checks out this monorepo at build time.
+That repo has only a `main` branch (no `develop` — there is no code there); the `develop → main`
+prerelease/stable model lives here in the monorepo via `bump.yml`. Trigger it with
+`Pub/Server/PublishByGithub.ps1` (bumps this monorepo, then dispatches the server workflow).
+
+Because the workflow runs **inside** the server repo, it creates the release with the automatic
+`github.token` — **no cross-repo PAT needed** (same trick as Connect). One ubuntu job builds both the
+Linux packages and the Windows-x64 zip (the server has no MSI/Advanced-Installer step, so Windows
+cross-builds on Linux). Secrets/variables live on **that** repo, not here:
+
+| Secret / Variable | Required? | What it is |
+|---|---|---|
+| `GITHUB_TOKEN` | automatic | Creates the release in the server repo. No setup. |
+| `DOCKERHUB_USERNAME` | Optional (Docker push) | Docker Hub account/org that owns the image. Absent → the multi-arch image push is skipped with a warning (the release still ships Linux/Windows + compose files). |
+| `DOCKERHUB_TOKEN` | Optional (Docker push) | Docker Hub **access token** (not the password), with Read/Write/Delete on the image repo. |
+| `DOCKER_IMAGE` (variable) | Optional | Docker Hub image name (default `vpnhood/vpnhoodserver`). Set for a fork. |
+| `CODE_REPO` (variable) | Optional | Monorepo to build the server from (default `vpnhood/VpnHood`). Set for a fork. |
+
+Locally, `Pub/Server/Publish.ps1` is **build-only** for smoke tests (add `-docker 1` for a local
+host-arch image via `buildx --load`); it never pushes and never creates a release — distribution is
+CI-only, like the client.
+
 ## Maintainers: keep this in sync
 When you add or remove a `secrets.*` reference in any workflow under
 `.github/workflows/`, update the table and the relevant section above so forkers
-always have an accurate, complete list.
+always have an accurate, complete list. The **server** workflow lives in the separate
+`vpnhood/VpnHood.App.Server` repo; keep its secrets documented in the Server section above.

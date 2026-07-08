@@ -5,10 +5,10 @@
 	<string>VpnHood! Connect</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.vpnhood.connect.ios</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
-	<key>CFBundleVersion</key>
-	<string>1.0</string>
+	<!-- CFBundleShortVersionString / CFBundleVersion are injected by the .NET iOS SDK from
+	     ApplicationDisplayVersion / ApplicationVersion (set by Pub/Lib/PublishIosApp.ps1 from
+	     PubVersion.json). Do NOT hardcode them here: a literal value OVERRIDES the MSBuild props and
+	     ships every build as 1.0 (1.0), which also collides on the next TestFlight upload. -->
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<!-- The SPA is served over plain HTTP from an in-process loopback web server; allow it. -->

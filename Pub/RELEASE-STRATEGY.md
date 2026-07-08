@@ -78,7 +78,7 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
   *few* cohesive repos (not 60), place them outside `src/` (e.g. `/modules`), and make each
   self-contained. Deferred — no submodules for now.
   - **Planned interaction with NuGet publishing:** when submodules arrive, we still want to
-    **publish their NuGets from this repo's `nuget_publish.yml`** (one publishing pipeline), but with
+    **publish their NuGets from this repo's `publish_nugets.yml`** (one publishing pipeline), but with
     **each submodule owning its own version scope** (its own `Directory.Build.props`/version),
     decoupled from the monorepo's `PubVersion.json`. Implementation note for that day:
     [Pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1) currently packs every discovered project
@@ -102,7 +102,7 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    (`PubVersion.json` + `Directory.Build.props`) and pushes `develop` (a stable bump also fast-forwards
    `main`; a prerelease bump does not). It does **not** touch the changelog.
 3. If you didn't chain them, dispatch **Publish Client** (`client_publish.yml`) and/or **Publish
-   NuGet Packages** (`nuget_publish.yml`) against `develop` yourself — both are standalone.
+   NuGet Packages** (`publish_nugets.yml`) against `develop` yourself — both are standalone.
 
 `Pub/Client/Publish.ps1` is now **build-only** for local smoke testing (no bump, no distribute, no
 push).
@@ -142,7 +142,7 @@ unrelated and remain — they are real build logic invoked directly by the app C
 
 - **Windows runner + workloads.** The packable suite spans `net10.0`, `net10.0-android`,
   `net10.0-windows` (incl. the WPF library `VpnHood.AppLib.Win.Common.WpfSpa`) and `net11.0-ios`.
-  Only a Windows host can build the Windows/WPF projects, so `nuget_publish.yml` runs on
+  Only a Windows host can build the Windows/WPF projects, so `publish_nugets.yml` runs on
   `windows-latest`, installs the `android`+`ios` workloads, and installs the **.NET 11 preview** SDK
   (the `net11.0-ios` libraries need it; `global.json` `rollForward=latestMajor` then selects it).
 - **One parallel pack pass.** The orchestrator writes a throwaway solution (`_nuget_pack.slnx` at the
@@ -188,7 +188,7 @@ Design + validation notes: [docs/cicd/server-publishing.md](../docs/cicd/server-
 ## What changed in this pass
 
 - **CI-owned bump**: new [Pub/Bump.ps1](Bump.ps1) + [.github/workflows/bump.yml](../.github/workflows/bump.yml).
-- **Standalone NuGet publishing**: new [.github/workflows/nuget_publish.yml](../.github/workflows/nuget_publish.yml).
+- **Standalone NuGet publishing**: new [.github/workflows/publish_nugets.yml](../.github/workflows/publish_nugets.yml).
 - [Pub/Lib/Common.ps1](Lib/Common.ps1) — the local commit-to-main helpers were removed; `Pub/Bump.ps1`
   owns the push to `develop` (and the fast-forward to `main` on a stable bump, no `--force`).
 - **NuGet publish is one parallel pack pass** ([Pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1))

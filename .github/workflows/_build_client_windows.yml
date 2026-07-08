@@ -1,0 +1,105 @@
+name: Build Client · Windows (reusable)
+
+# Reusable build for the VpnHood Windows client — the single source of truth for the Windows build
+# steps. Called by client_publish.yml (full release pipeline) and client_windows_build.yml (standalone
+# build-only). Builds the binary (dotnet publish) then packages the MSI with Advanced Installer, and
+# uploads the `client-windows` artifact. The version (+ prerelease flag) is read from Pub/PubVersion.json.
+#
+# Secrets (pass with `secrets: inherit` from the caller):
+#   ADVANCED_INSTALLER_LICENSE   If absent, the MSI build is SKIPPED with a warning (job stays green);
+#                                no artifact is produced.
+#   AZURE_SIGNING_CREDENTIAL     OPTIONAL code signing. With AZURE_SIGNING_TARGET present, the exe + MSI
+#   AZURE_SIGNING_TARGET         are signed; absent -> UNSIGNED build (a warning). Signing failure is fatal.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Branch or commit to build (blank = the ref this run is on)"
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      # Missing license -> the Advanced Installer steps below are skipped (a warning is emitted) so the
+      # job still succeeds (green); it just doesn't produce/upload the MSI.
+      ADVANCED_INSTALLER_LICENSE: ${{ secrets.ADVANCED_INSTALLER_LICENSE }}
+      # Optional code signing — empty unless configured; PublishWinApp skips when absent.
+      # Single consolidated Azure credential: the JSON file you download from Azure (carries
+      # AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET). Present -> the MSI is signed; absent -> a warning
+      # is emitted and the MSI is built UNSIGNED. PublishWinApp.ps1 parses it.
+      AZURE_SIGNING_CREDENTIAL: ${{ secrets.AZURE_SIGNING_CREDENTIAL }}
+      # Trusted Signing target (NOT part of the Azure credential, and not secret) — a single JSON in
+      # Azure's metadata.json schema: { Endpoint, CodeSigningAccountName, CertificateProfileName }.
+      # Store it as a repository VARIABLE. Read from vars first, with a secrets fallback.
+      AZURE_SIGNING_TARGET: ${{ vars.AZURE_SIGNING_TARGET || secrets.AZURE_SIGNING_TARGET }}
+    steps:
+      - uses: actions/checkout@v5
+        with: { ref: "${{ inputs.ref }}" }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
+      # No license -> warn and skip the MSI build (the steps below are gated on the same condition).
+      - name: Warn if Advanced Installer license is missing
+        if: env.ADVANCED_INSTALLER_LICENSE == ''
+        shell: pwsh
+        run: |
+          Write-Host "::warning title=Advanced Installer license missing::ADVANCED_INSTALLER_LICENSE secret is not set; skipping the Windows MSI build. Add the secret (see .github/DEPLOYMENT.md) to include the installer in the release."
+      # Signing is optional. The post-build check in PublishWinApp.ps1 verifies the MSI's actual
+      # Authenticode signature and emits a single warning (console + GitHub ::warning:: annotation)
+      # when it is unsigned — including a clear "Azure signing not configured" message — so there is
+      # no separate pre-build guess here (it would double the annotation).
+      - name: Set up Advanced Installer
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        uses: caphyon/advinst-github-action@7edde34c6ff935e53e3de72a5699efcfceb5f6c6 # v2.0.3
+        with: { advinst-license: "${{ env.ADVANCED_INSTALLER_LICENSE }}" }
+      - name: Credentials stub
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        shell: pwsh
+        run: |
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          '' | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force
+      - name: Write client appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: ${{ vars.APPSETTINGS }}
+        run: |
+          # Shared app config embedded across all distributions (a strict Android publish requires it).
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            Write-Host "::warning::APPSETTINGS not set; building with default appsettings (a strict Android publish will fail)."
+          } else {
+            $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
+            New-Item -ItemType Directory -Path $u -Force | Out-Null
+            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+          }
+      - name: Build Windows client binary (dotnet publish)
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1" -stage publish
+      - name: Package Windows client MSI (Advanced Installer)
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1" -stage package
+      # Signature verification + the unsigned/Azure-not-configured warning now live in
+      # PublishWinApp.ps1 (package stage), so they run identically for local and CI builds.
+      - uses: actions/upload-artifact@v7
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        with:
+          name: client-windows
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ env.MODULE_DIR }}/**

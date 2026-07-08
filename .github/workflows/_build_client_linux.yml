@@ -1,0 +1,66 @@
+name: Build Client · Linux (reusable)
+
+# Reusable build for the VpnHood Linux client — the single source of truth for the Linux build
+# steps. Called by client_publish.yml (full release pipeline) and client_linux_build.yml (standalone
+# build-only). Builds x64 + arm64 + any via Src/Apps/Client.Linux.Web/_publish.ps1 and uploads the
+# `client-linux` artifact. The version (+ prerelease flag) is read from Pub/PubVersion.json in the
+# checked-out commit — CI does not bump or push the version.
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Branch or commit to build (blank = the ref this run is on)"
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with: { ref: "${{ inputs.ref }}" }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Credentials stub
+        shell: pwsh
+        run: |
+          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          '' | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force
+      - name: Write client appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: ${{ vars.APPSETTINGS }}
+        run: |
+          # Shared app config embedded across all distributions (a strict Android publish requires it).
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            Write-Host "::warning::APPSETTINGS not set; building with default appsettings (a strict Android publish will fail)."
+          } else {
+            $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
+            New-Item -ItemType Directory -Path $u -Force | Out-Null
+            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+          }
+      - name: Build Linux client
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Linux.Web/_publish.ps1"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: client-linux
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ env.MODULE_DIR }}/linux-x64/**
+            ${{ env.MODULE_DIR }}/linux-arm64/**
+            ${{ env.MODULE_DIR }}/linux-any/**

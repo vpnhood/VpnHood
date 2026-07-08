@@ -86,240 +86,33 @@ on:
         default: "100"
 
 jobs:
+  # Per-platform builds are reusable workflows (single source of truth) shared with the standalone
+  # client_{linux,windows,android}_build.yml entry points. Each uploads its artifact
+  # (client-linux / client-windows / client-android-<id>) for the store + release jobs below.
   build-linux:
     # TEMP/opt: skipped when only_aab is set so the Android/Play path can be iterated quickly.
     if: ${{ github.event.inputs.only_aab != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
-      - uses: actions/setup-dotnet@v5
-        with: { global-json-file: global.json }
-      - name: Resolve module dir
-        shell: pwsh
-        run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
-          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Credentials stub
-        shell: pwsh
-        run: |
-          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
-          New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '' | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force
-      - name: Write client appsettings
-        shell: pwsh
-        env:
-          APPSETTINGS: ${{ vars.APPSETTINGS }}
-        run: |
-          # Shared app config embedded across all distributions (a strict Android publish requires it).
-          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
-            Write-Host "::warning::APPSETTINGS not set; building with default appsettings (a strict Android publish will fail)."
-          } else {
-            $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
-            New-Item -ItemType Directory -Path $u -Force | Out-Null
-            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
-          }
-      - name: Build Linux client
-        shell: pwsh
-        run: |
-          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Linux.Web/_publish.ps1"
-        env: { DOTNET_NOLOGO: "1", DOTNET_CLI_TELEMETRY_OPTOUT: "1" }
-      - uses: actions/upload-artifact@v7
-        with:
-          name: client-linux
-          if-no-files-found: error
-          retention-days: 1
-          path: |
-            ${{ env.MODULE_DIR }}/linux-x64/**
-            ${{ env.MODULE_DIR }}/linux-arm64/**
-            ${{ env.MODULE_DIR }}/linux-any/**
+    uses: ./.github/workflows/_build_client_linux.yml
+    with:
+      ref: ${{ github.event.inputs.ref || github.ref_name }}
 
   build-windows:
     # TEMP/opt: skipped when only_aab is set so the Android/Play path can be iterated quickly.
     if: ${{ github.event.inputs.only_aab != 'true' }}
-    runs-on: windows-latest
-    env:
-      DOTNET_NOLOGO: "1"
-      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
-      # Missing license -> the Advanced Installer steps below are skipped (a warning is emitted) so the
-      # job still succeeds (green); it just doesn't produce/upload the MSI.
-      ADVANCED_INSTALLER_LICENSE: ${{ secrets.ADVANCED_INSTALLER_LICENSE }}
-      # Optional code signing — empty unless configured; PublishWinApp skips when absent.
-      # Single consolidated Azure credential: the JSON file you download from Azure (carries
-      # AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET). Present -> the MSI is signed; absent -> a warning
-      # is emitted and the MSI is built UNSIGNED. PublishWinApp.ps1 parses it.
-      AZURE_SIGNING_CREDENTIAL: ${{ secrets.AZURE_SIGNING_CREDENTIAL }}
-      # Trusted Signing target (NOT part of the Azure credential, and not secret) — a single JSON in
-      # Azure's metadata.json schema: { Endpoint, CodeSigningAccountName, CertificateProfileName }.
-      # Store it as a repository VARIABLE. Read from vars first, with a secrets fallback.
-      AZURE_SIGNING_TARGET: ${{ vars.AZURE_SIGNING_TARGET || secrets.AZURE_SIGNING_TARGET }}
-    steps:
-      - uses: actions/checkout@v5
-        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
-      - uses: actions/setup-dotnet@v5
-        with: { global-json-file: global.json }
-      - name: Resolve module dir
-        shell: pwsh
-        run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
-          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
-      # No license -> warn and skip the MSI build (the steps below are gated on the same condition).
-      - name: Warn if Advanced Installer license is missing
-        if: env.ADVANCED_INSTALLER_LICENSE == ''
-        shell: pwsh
-        run: |
-          Write-Host "::warning title=Advanced Installer license missing::ADVANCED_INSTALLER_LICENSE secret is not set; skipping the Windows MSI build. Add the secret (see .github/DEPLOYMENT.md) to include the installer in the release."
-      # Signing is optional. The post-build check in PublishWinApp.ps1 verifies the MSI's actual
-      # Authenticode signature and emits a single warning (console + GitHub ::warning:: annotation)
-      # when it is unsigned — including a clear "Azure signing not configured" message — so there is
-      # no separate pre-build guess here (it would double the annotation).
-      - name: Set up Advanced Installer
-        if: env.ADVANCED_INSTALLER_LICENSE != ''
-        uses: caphyon/advinst-github-action@7edde34c6ff935e53e3de72a5699efcfceb5f6c6 # v2.0.3
-        with: { advinst-license: "${{ env.ADVANCED_INSTALLER_LICENSE }}" }
-      - name: Credentials stub
-        if: env.ADVANCED_INSTALLER_LICENSE != ''
-        shell: pwsh
-        run: |
-          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user"
-          New-Item -ItemType Directory -Path $u -Force | Out-Null
-          '' | Out-File (Join-Path $u "nuget_api_key.txt") -Encoding ascii -Force
-      - name: Write client appsettings
-        shell: pwsh
-        env:
-          APPSETTINGS: ${{ vars.APPSETTINGS }}
-        run: |
-          # Shared app config embedded across all distributions (a strict Android publish requires it).
-          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
-            Write-Host "::warning::APPSETTINGS not set; building with default appsettings (a strict Android publish will fail)."
-          } else {
-            $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
-            New-Item -ItemType Directory -Path $u -Force | Out-Null
-            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
-          }
-      - name: Build Windows client binary (dotnet publish)
-        if: env.ADVANCED_INSTALLER_LICENSE != ''
-        shell: pwsh
-        run: |
-          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1" -stage publish
-      - name: Package Windows client MSI (Advanced Installer)
-        if: env.ADVANCED_INSTALLER_LICENSE != ''
-        shell: pwsh
-        run: |
-          & "$env:GITHUB_WORKSPACE/Src/Apps/Client.Win.Web/_publish.ps1" -stage package
-      # Signature verification + the unsigned/Azure-not-configured warning now live in
-      # PublishWinApp.ps1 (package stage), so they run identically for local and CI builds.
-      - uses: actions/upload-artifact@v7
-        if: env.ADVANCED_INSTALLER_LICENSE != ''
-        with:
-          name: client-windows
-          if-no-files-found: error
-          retention-days: 1
-          path: ${{ env.MODULE_DIR }}/**
+    uses: ./.github/workflows/_build_client_windows.yml
+    with:
+      ref: ${{ github.event.inputs.ref || github.ref_name }}
+    secrets: inherit
 
-  # Android is split into one matrix leg per store variant so they build in parallel
-  # (Google AAB / Web APK / Web arm64 APK are independent outputs). Trade-off: each leg
-  # repeats the Android workload + SDK provisioning (the bulk of the time), but on a
-  # public repo the runner minutes are free and wall-clock drops. Each leg uploads its
-  # own artifact (client-android-<id>); the release job stitches the three back together.
+  # Android builds by default (build_android defaults true); dispatch with build_android=false to skip
+  # it. The reusable workflow materializes the real application id (publish.json) when the PUBLISH var
+  # is set. Google Play upload is separately gated by publish_play (publish-play-android job).
   build-android:
-    # Android builds by default (build_android input defaults true); dispatch with build_android=false
-    # to skip it. The Write publish.json step below materializes the real application id when this runs.
-    # Google Play upload is separately gated by publish_play.
     if: ${{ github.event.inputs.build_android != 'false' }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: google-aab
-            label: Google AAB
-            script: Src/Apps/Client.Android.Google/_publish.ps1
-            outdir: android-google
-          - id: web-apk
-            label: Web APK
-            script: Src/Apps/Client.Android.Web/_publish.ps1
-            outdir: android-web
-          - id: web-arm64
-            label: Web arm64 APK
-            script: Src/Apps/Client.Android.Web/_publish-arm64.ps1
-            outdir: android-web-arm64
-    env:
-      DOTNET_NOLOGO: "1"
-      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
-      # Optional Android signing — empty unless configured; PrepareCiAndroidSigning.ps1
-      # falls back to an ephemeral keystore when these are absent.
-      ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64 }}
-      ANDROID_KEYSTORE_CLIENT_GOOGLE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_CLIENT_GOOGLE_PASSWORD }}
-      ANDROID_KEYSTORE_CLIENT_WEB_BASE64: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_BASE64 }}
-      ANDROID_KEYSTORE_CLIENT_WEB_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_CLIENT_WEB_PASSWORD }}
-    steps:
-      - uses: actions/checkout@v5
-        with: { ref: "${{ github.event.inputs.ref || github.ref_name }}" }
-      - uses: actions/setup-dotnet@v5
-        with: { global-json-file: global.json }
-      # .NET Android needs a JDK 17 on PATH (keytool + the build tooling).
-      - uses: actions/setup-java@v5
-        with: { distribution: temurin, java-version: "17" }
-      - name: Resolve module dir
-        shell: pwsh
-        run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/Pub/PubVersion.json" | ConvertFrom-Json
-          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=Pub/bin/$tag/VpnHoodClient" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Install .NET Android workload
-        shell: pwsh
-        run: dotnet workload install android
-      # Provision the Android SDK platform/build-tools the project targets (auto-accepts licenses).
-      - name: Provision Android SDK
-        shell: pwsh
-        run: |
-          dotnet build "$env:GITHUB_WORKSPACE/Src/Apps/Client.Android.Web/VpnHood.App.Client.Android.Web.csproj" `
-            -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=True -p:AndroidSdkPath="$env:ANDROID_HOME"
-      - name: Credentials + Android signing config
-        shell: pwsh
-        run: |
-          & "$env:GITHUB_WORKSPACE/Pub/Lib/PrepareCiAndroidSigning.ps1"
-      # Materialize the per-app publish.json from the PUBLISH variable BEFORE the build so
-      # PublishAndroidApp uses the real application id (com.vpnhood.client.android) instead of the
-      # csproj default (com.vpnhood.client.android.debug) — otherwise Google Play rejects the AAB.
-      # Passed via env (not inline ${{ }}) so the JSON braces/quotes don't break the run body.
-      - name: Write publish.json
-        if: vars.PUBLISH != ''
-        shell: pwsh
-        env:
-          PUBLISH: ${{ vars.PUBLISH }}
-        run: |
-          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
-          New-Item -ItemType Directory -Path $u -Force | Out-Null
-          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
-      - name: Write client appsettings
-        shell: pwsh
-        env:
-          APPSETTINGS: ${{ vars.APPSETTINGS }}
-        run: |
-          # Shared app config embedded across all distributions. publish.json above turns on strict
-          # mode, which REQUIRES this file — so a missing secret must fail the Android build loudly.
-          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
-            throw "APPSETTINGS variable is not set, but a strict Android publish requires .user/VpnHoodClient/appsettings.json."
-          }
-          $u = Join-Path (Split-Path -Parent $env:GITHUB_WORKSPACE) ".user/VpnHoodClient"
-          New-Item -ItemType Directory -Path $u -Force | Out-Null
-          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
-      # One store variant per leg (see matrix). Mirrors the android block of Pub/Client/Publish.ps1.
-      - name: Build Android client (${{ matrix.label }})
-        shell: pwsh
-        run: |
-          & "$env:GITHUB_WORKSPACE/${{ matrix.script }}"
-      - uses: actions/upload-artifact@v7
-        with:
-          name: client-android-${{ matrix.id }}
-          if-no-files-found: error
-          retention-days: 1
-          path: ${{ env.MODULE_DIR }}/${{ matrix.outdir }}/**
+    uses: ./.github/workflows/_build_client_android.yml
+    with:
+      ref: ${{ github.event.inputs.ref || github.ref_name }}
+    secrets: inherit
 
   # Publish the Android AAB to Google Play straight from the CI artifact (no GitHub round-trip).
   # Independent of the release: it consumes build-android's google-aab artifact, uploads to Play

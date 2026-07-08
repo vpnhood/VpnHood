@@ -52,35 +52,3 @@ function PrepareModuleFolder([string]$moduleDir, [string]$moduleDirLatest)
 		New-Item -ItemType Directory -Path $moduleDirLatest -Force | Out-Null;
 	}
 }
-
-# push to repo using gh api.
-# Do not show any message except error
-function PushTextToRepo {
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$repoName,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$path,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$content
-    )
-
-    $base64Content = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($content));
-    $sha = $(gh api "/repos/$repoName/contents/$path" --jq '.sha' 2>$null);
-        
-    $fields = @(
-        "--field", "message=Update version to $versionParam",
-        "--field", "content=$base64Content"
-    );
-        
-    if ($sha -ne $null -and $sha -ne "") {
-        $fields += "--field", "sha=$sha";
-    }
-        
-	$result = gh api --method PUT "/repos/$repoName/contents/$path" @fields --silent 2>&1
-	if ($LASTEXITCODE) { 
-		throw "PushTextToRepo failed: $result"
-	}
-}

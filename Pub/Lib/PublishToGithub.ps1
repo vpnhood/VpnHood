@@ -45,15 +45,6 @@ if ($isLatest) {
 	$releaseNote | Out-File -FilePath "$packageLatestDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 }
 
-# --- TEMP: disabled while the pipeline is being wired. These write to OTHER repos, which the ambient
-#          github.token cannot do; re-enable with a dedicated PAT (see .github/DEPLOYMENT.md).
-#   * push the per-version store changelog to the release repo's fastlane metadata
-#   * (connect only) trigger the dl.github.io mirror update
-# $fastlaneChangelogPath = "fastlane/metadata/android/en-US/changelogs/$versionCode.txt";
-# $storeChangelog = Changelog_GetRecentSecion $changeLog @("windows:", "linux:", "developer:");
-# $storeChangelog = $storeChangelog -replace "Android: ", "";
-# PushTextToRepo $repoName $fastlaneChangelogPath $storeChangelog
-
 # delete old release if exists
 Write-Host "delete old release if exists: $versionTag";
 $null = gh release view "$versionTag" --repo $repoName 2>&1;

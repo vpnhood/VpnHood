@@ -50,17 +50,11 @@ jobs:
         run: |
           set -e
 
-          # Use event context if triggered by release event, otherwise find latest
-          if [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
-            IS_PRERELEASE="${{ github.event.release.prerelease }}"
-            echo "📦 Using release from event: $TAG (prerelease=$IS_PRERELEASE)"
-          else
-            echo "Finding the absolute latest release (prerelease or stable)..."
-            RELEASE_INFO=$(gh api repos/${{ github.repository }}/releases --paginate --jq '[ .[] | select(.draft==false) ][0]')
-            TAG=$(echo "$RELEASE_INFO" | jq -r '.tag_name')
-            IS_PRERELEASE=$(echo "$RELEASE_INFO" | jq -r '.prerelease')
-          fi
+          # Always dispatch-triggered: find the absolute latest release (prerelease or stable)
+          echo "Finding the absolute latest release (prerelease or stable)..."
+          RELEASE_INFO=$(gh api repos/${{ github.repository }}/releases --paginate --jq '[ .[] | select(.draft==false) ][0]')
+          TAG=$(echo "$RELEASE_INFO" | jq -r '.tag_name')
+          IS_PRERELEASE=$(echo "$RELEASE_INFO" | jq -r '.prerelease')
 
           if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
             echo "❌ No release found"; exit 1

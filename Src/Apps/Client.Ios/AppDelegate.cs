@@ -42,7 +42,7 @@ public class AppDelegate : UIApplicationDelegate
             // Evaluate GetContainerUrl here — on the main thread, after iOS has fully initialized the
             // sandbox — so the App-Group container path (the App<->Extension IPC folder) is stable for
             // the whole session. If this is null the App Group entitlement is missing from the profile.
-            var sharedContainerPath = NSFileManager.DefaultManager.GetContainerUrl(AppConfigs.AppGroupId)?.Path;
+            var sharedContainerPath = NSFileManager.DefaultManager.GetContainerUrl(AppConfigs.AppGroupId).Path;
             VhLogger.Instance.LogInformation(
                 "FinishedLaunching: GetContainerUrl({AppGroupId}) = {Path}",
                 AppConfigs.AppGroupId, sharedContainerPath ?? "<null>");

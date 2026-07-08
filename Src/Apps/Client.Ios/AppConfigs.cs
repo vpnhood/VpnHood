@@ -42,7 +42,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 
     // Client is "bring your own key": no built-in production server. Debug builds seed the shared sample key
     // for convenience; Release ships keyless and the user adds a key in the UI (IsAddAccessKeySupported).
-    public string? DefaultAccessKey { get; set; } = IsDebug ? ClientOptions.SampleAccessKey : null;
+    // ReSharper disable once HeuristicUnreachableCode
+    public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
 
     public string? Ga4MeasurementId { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }

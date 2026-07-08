@@ -186,7 +186,7 @@ internal sealed class AndroidReportViewer
 
     private string ReportFileName()
     {
-        var name = System.IO.Path.GetFileName(_reportUri.LocalPath);
+        var name = Path.GetFileName(_reportUri.LocalPath);
         return string.IsNullOrEmpty(name) ? "report.txt" : name;
     }
 

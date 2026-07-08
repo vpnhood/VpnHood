@@ -28,6 +28,8 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
     private async Task DownloadAndViewAsync(Uri uri)
     {
         try {
+            // ReSharper disable once ShortLivedHttpClient
+            // we rarely use it and don't want to keep a static instance around; 
             using var httpClient = new HttpClient();
             var content = await httpClient.GetByteArrayAsync(uri);
 
@@ -86,6 +88,8 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
         refreshButton.Clicked += async (_, _) => {
             refreshButton.Enabled = false;
             try {
+                // ReSharper disable once ShortLivedHttpClient
+                // we rarely use it and don't want to keep a static instance around; 
                 using var httpClient = new HttpClient();
                 var content = await httpClient.GetByteArrayAsync(sourceUri);
                 await File.WriteAllBytesAsync(filePath, content);

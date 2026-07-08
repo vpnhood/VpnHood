@@ -1,5 +1,4 @@
-﻿using Android.App;
-using Android.Content;
+﻿using Android.Content;
 using Android.Webkit;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;

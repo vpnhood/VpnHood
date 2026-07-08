@@ -36,13 +36,8 @@ param(
 $ErrorActionPreference = "Stop";
 $workflowFile = "bump.yml";
 
-# Only set the publish token from .user if one isn't already provided (e.g. an ambient GITHUB_TOKEN
-# / gh auth). gh uses this to authenticate the dispatch.
-$solutionDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot);
-$tokenFile = "$solutionDir/../.user/github_publish_api_key.txt";
-if (-not $env:GITHUB_TOKEN -and (Test-Path $tokenFile)) {
-	$env:GITHUB_TOKEN = (Get-Content $tokenFile -Raw).Trim();
-}
+# gh authenticates the dispatch from its own login (gh auth login / keyring) or an ambient
+# GITHUB_TOKEN — no token file. Run `gh auth login` once if dispatch fails with a 401.
 
 # Resolve the target repo the same way the build does (no side effects: this resolver does NOT bump
 # the version, unlike Common.ps1, so it is safe to dot-source here).

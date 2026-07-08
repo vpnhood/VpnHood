@@ -23,12 +23,8 @@ Write-Host "*** Publish $packageDirName release to GitHub" -BackgroundColor Blue
 . "$PSScriptRoot/Common.ps1"
 . "$PSScriptRoot/utils/changelog_utils.ps1"
 
-# Only set the publish token from .user if one isn't already provided (e.g. an ambient GITHUB_TOKEN
-# / gh auth when running in CI). CI passes github.token via the environment.
-$tokenFile = "$userDir/github_publish_api_key.txt";
-if (-not $env:GITHUB_TOKEN -and (Test-Path $tokenFile)) {
-	$env:GITHUB_TOKEN = Get-Content $tokenFile;
-}
+# gh reads its token from the environment: CI passes github.token as GITHUB_TOKEN; locally it uses
+# your `gh auth login` (keyring) or an ambient GITHUB_TOKEN. No token file.
 
 $packageFileTitle = $packageDirName;
 # Honor an optional artifact-title override (publish.json PackageTitle) so the asset file names here

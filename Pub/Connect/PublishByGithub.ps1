@@ -30,12 +30,8 @@ param(
 
 $ErrorActionPreference = "Stop";
 
-# Only set the token from .user if one isn't already provided (e.g. ambient GITHUB_TOKEN / gh auth).
-$solutionDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot);
-$tokenFile = "$solutionDir/../.user/github_publish_api_key.txt";
-if (-not $env:GITHUB_TOKEN -and (Test-Path $tokenFile)) {
-	$env:GITHUB_TOKEN = (Get-Content $tokenFile -Raw).Trim();
-}
+# gh authenticates the dispatch from its own login (gh auth login / keyring) or an ambient
+# GITHUB_TOKEN — no token file. Run `gh auth login` once if dispatch fails with a 401.
 
 . "$PSScriptRoot/../Lib/ResolvePublishRepo.ps1";
 if ([string]::IsNullOrWhiteSpace($monoRepo)) { $monoRepo = Resolve-PublishRepoSlug; }
@@ -108,7 +104,7 @@ if ($LASTEXITCODE -ne 0) { throw "The bump run failed; Connect was NOT dispatche
 
 # --- Step 2: dispatch the Connect release (build from the freshly bumped develop) -----------
 Write-Host "Dispatching Connect release on $connectRepo ..." -ForegroundColor Cyan;
-gh workflow run connect_publish.yml `dont 
+gh workflow run connect_publish.yml `
 	--repo $connectRepo `
 	--ref main `
 	-f "ref=develop" `

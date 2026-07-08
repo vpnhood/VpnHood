@@ -101,7 +101,7 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    `then_publish` (create the GitHub release) and/or `then_publish_nugets`. It bumps the version once
    (`PubVersion.json` + `Directory.Build.props`) and pushes `develop` (a stable bump also fast-forwards
    `main`; a prerelease bump does not). It does **not** touch the changelog.
-3. If you didn't chain them, dispatch **Publish Client** (`client_publish.yml`) and/or **Publish
+3. If you didn't chain them, dispatch **Publish Client** (`publish_client.yml`) and/or **Publish
    NuGet Packages** (`publish_nugets.yml`) against `develop` yourself — both are standalone.
 
 `Pub/Client/Publish.ps1` is now **build-only** for local smoke testing (no bump, no distribute, no

@@ -9,7 +9,7 @@ param(
 # Build-only orchestrator: builds the client platforms locally for testing. It does NOT bump the
 # version, distribute, or push. The version bump lives in CI (Pub/Bump.ps1 via bump.yml), NuGet
 # publishing is CI-only (publish_nugets.yml — never published locally), and the GitHub release is
-# created by client_publish.yml. See Pub/RELEASE-STRATEGY.md.
+# created by publish_client.yml. See Pub/RELEASE-STRATEGY.md.
 . "$PSScriptRoot/../Lib/Common.ps1"
 
 $windows = $windows -eq "1";

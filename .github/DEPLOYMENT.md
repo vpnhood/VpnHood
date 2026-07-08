@@ -47,18 +47,18 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | Secret | Used by | Required? | What it is |
 |---|---|---|---|
 | `GITHUB_TOKEN` | all release/publish workflows | Automatic | Provided by GitHub; no action needed. |
-| `GOOGLE_PLAY_API_KEY` | `client_publish.yml`, `publish_metadata_android.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → `client_publish.yml` publishes the AAB to Play and attaches the Play-signed APK to the release. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
-| `ADVANCED_INSTALLER_LICENSE` | `client_publish.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
-| `AZURE_SIGNING_CREDENTIAL` | `client_publish.yml` | Optional (Windows signing) | The single Azure service-principal JSON you download from Azure (contains `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`; other fields ignored). Paste the whole file. Absent → MSI builds unsigned with a warning. |
-| `AZURE_SIGNING_TARGET` | `client_publish.yml` | Optional (Windows signing) | Single JSON in Azure Trusted Signing's `metadata.json` schema: `Endpoint`, `CodeSigningAccountName`, `CertificateProfileName`. Not secret and not part of the Azure credential file; required alongside it for signing to run. Store it as a repository **Variable**. |
-| `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Google AAB, plus its store password. The key alias is auto-detected; set `_ALIAS` only for a multi-entry keystore. |
-| `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
-| `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Google AAB, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Web. |
-| `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `client_publish.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Web APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Google. |
-| `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `client_publish.yml` | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
-| `IOS_PROVISION_APP_BASE64` | `client_publish.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app (`com.vpnhood.client.ios`). |
-| `IOS_PROVISION_EXT_BASE64` | `client_publish.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the Network Extension (`com.vpnhood.client.ios.networkextension`). The extension needs its own profile. |
-| `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `client_publish.yml` | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents**, its Key ID, and the Issuer ID. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
+| `GOOGLE_PLAY_API_KEY` | `publish_client.yml`, `publish_metadata_googleplay.yml` | Optional (Play) | Google Play service-account JSON (whole file contents). Present → `publish_client.yml` publishes the AAB to Play and attaches the Play-signed APK to the release. Absent → the Play publish is skipped with a warning (the job stays green); nothing is pushed to Google Play. |
+| `ADVANCED_INSTALLER_LICENSE` | `publish_client.yml` | Required for Windows | Advanced Installer license ID (used to register AI on the runner). |
+| `AZURE_SIGNING_CREDENTIAL` | `publish_client.yml` | Optional (Windows signing) | The single Azure service-principal JSON you download from Azure (contains `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`; other fields ignored). Paste the whole file. Absent → MSI builds unsigned with a warning. |
+| `AZURE_SIGNING_TARGET` | `publish_client.yml` | Optional (Windows signing) | Single JSON in Azure Trusted Signing's `metadata.json` schema: `Endpoint`, `CodeSigningAccountName`, `CertificateProfileName`. Not secret and not part of the Azure credential file; required alongside it for signing to run. Store it as a repository **Variable**. |
+| `ANDROID_KEYSTORE_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `publish_client.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Google AAB, plus its store password. The key alias is auto-detected; set `_ALIAS` only for a multi-entry keystore. |
+| `ANDROID_KEYSTORE_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `publish_client.yml` | Optional (Android signing) | Base64 of the keystore that signs the Client Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
+| `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `publish_client.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Google AAB, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Web. |
+| `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `publish_client.yml` | Optional (Android signing) | Base64 of the keystore that signs the Connect Web APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Google. |
+| `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `publish_client.yml` | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
+| `IOS_PROVISION_APP_BASE64` | `publish_client.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app (`com.vpnhood.client.ios`). |
+| `IOS_PROVISION_EXT_BASE64` | `publish_client.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the Network Extension (`com.vpnhood.client.ios.networkextension`). The extension needs its own profile. |
+| `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `publish_client.yml` | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents**, its Key ID, and the Issuer ID. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
 
 ## Building your own app (fork-friendly)
 
@@ -81,7 +81,7 @@ runtime `appsettings.json` is a single **shared** file at the app root, embedded
 by every distribution (google, web, windows, linux, and future iOS) — a superset where each distribution
 reads the keys it needs and ignores the rest. Signing keys/passwords live in a per-store subfolder
 (`google/`, `web/`), one file per GitHub **secret**, with the store in the filename so it matches the
-secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64`):
+secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_GOOGLE_BASE64`):
 
 ```
 .user/VpnHoodClient/publish.json                            all non-secret config (below)
@@ -121,10 +121,10 @@ Any absent file/field keeps the project default, so an unmodified clone builds e
 
 ## Per-platform setup
 
-### Linux client — `_build_client_linux.yml` (via `client_publish.yml`)
+### Linux client — `_publish_app.yml` (via `publish_client.yml`)
 No secrets required. Builds self-contained `linux-x64` / `linux-arm64` packages.
 
-### Android client — build (`_build_client_android.yml`, via `client_publish.yml`)
+### Android client — build (`_publish_app.yml`, via `publish_client.yml`)
 Builds the Google AAB, the Web APK, and the Web arm64 APK on an `ubuntu-latest` runner,
 reusing the existing publish scripts. A JDK 17 and the `.NET` Android workload are set up
 on the runner, and the Android SDK is auto-provisioned.
@@ -138,15 +138,15 @@ on the runner, and the Android SDK is auto-provisioned.
 
 To sign with real keys (encode the keystore first: `base64 -w0 my.keystore`):
 
-- `ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64` / `ANDROID_KEYSTORE_CLIENT_GOOGLE_PASSWORD`
+- `ANDROID_KEYSTORE_GOOGLE_BASE64` / `ANDROID_KEYSTORE_GOOGLE_PASSWORD`
   — the keystore that signs the **Client Google** AAB.
-- `ANDROID_KEYSTORE_CLIENT_WEB_BASE64` / `ANDROID_KEYSTORE_CLIENT_WEB_PASSWORD`
+- `ANDROID_KEYSTORE_WEB_BASE64` / `ANDROID_KEYSTORE_WEB_PASSWORD`
   — the keystore that signs the **Client Web** and **Web-arm64** APKs.
 
 Key aliases are **auto-detected** from each keystore at publish time, so you can use your own
 keystore without matching our alias or editing the repo. Only if your keystore holds **more than one
 key entry** (auto-detect won't guess) set the optional `ANDROID_KEYSTORE_<NAME>_ALIAS` secret naming
-the key to use — e.g. `ANDROID_KEYSTORE_CLIENT_GOOGLE_ALIAS`.
+the key to use — e.g. `ANDROID_KEYSTORE_GOOGLE_ALIAS`.
 
 Connect publishing, when wired into CI, uses `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` and
 `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` — each with an optional `_ALIAS` — the same way. They
@@ -158,7 +158,7 @@ Google and Web builds with one key); providing them separately keeps each store'
 > The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
 > CI builds fast. Re-enable it before shipping a production release.
 
-### Android client — Google Play (`client_publish.yml`, listing: `publish_metadata_android.yml`)
+### Android client — Google Play (`publish_client.yml`, listing: `publish_metadata_googleplay.yml`)
 - `GOOGLE_PLAY_API_KEY`: create a service account in the Google Play Console with the
   *Release* permission, generate a JSON key, and store the file contents.
 - Update `fastlane/Appfile` (`package_name`) to **your** application ID — the current
@@ -166,13 +166,13 @@ Google and Web builds with one key); providing them separately keeps each store'
   publish to it.
 - Track mapping is automatic: prereleases → `alpha`, stable → `production`.
 
-### Windows client — `_build_client_windows.yml` (via `client_publish.yml`)
+### Windows client — `_publish_app.yml` (via `publish_client.yml`)
 The MSI is built with **Advanced Installer** on a `windows-latest` runner.
 
 - **`ADVANCED_INSTALLER_LICENSE`** — your Advanced Installer license ID. The Caphyon
   action installs and registers Advanced Installer with it.
 
-**Code signing (optional, `client_publish.yml`):** signing is **off unless the Azure
+**Code signing (optional, `publish_client.yml`):** signing is **off unless the Azure
 credential and the Trusted Signing target are both present**, in which case the build signs
 the executable and the MSI via Microsoft Trusted Signing (`sign` CLI) and a signing failure is
 fatal. When `AZURE_SIGNING_CREDENTIAL` is absent the MSI is built **unsigned** with a warning. The
@@ -199,7 +199,7 @@ Do not reuse a third-party/previous signer — the published identity comes from
 certificate profile, so verify it resolves to **your** organization before shipping.
 
 ### iOS client
-`client_publish.yml` has a `build-ios` → `publish-appstore-ios` pair (mirroring Android → Play). Like
+`publish_client.yml` has a `build-ios` → `publish-appstore-ios` pair (mirroring Android → Play). Like
 every store leg it is **skip-with-warning** when its secrets are absent, but note two hard prerequisites:
 
 - **Runner.** The project targets `net11.0-ios` and needs the .NET 11 SDK + `ios` workload and **Xcode

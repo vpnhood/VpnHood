@@ -1,11 +1,11 @@
-name: Publish Metadata · iOS (App Store)
+name: Publish Metadata · App Store
 
 # Manual-only: pushes the App Store listing (metadata + screenshots) from fastlane/metadata/ios/**
-# to App Store Connect via fastlane deliver, WITHOUT uploading a build. The iOS twin of
-# publish_metadata_android.yml (Google Play). Use it to create/refresh the listing text + screenshots
-# independently of client_publish.yml (which ships the binary).
+# to App Store Connect via fastlane deliver, WITHOUT uploading a build. The App Store twin of
+# publish_metadata_googleplay.yml. Use it to create/refresh the listing text + screenshots
+# independently of publish_client.yml (which ships the binary).
 #
-# Secrets (App Store Connect API key — same trio used by client_publish.yml):
+# Secrets (App Store Connect API key — same trio used by publish_client.yml):
 #   APPSTORE_CONNECT_API_KEY / _API_KEY_ID / _ISSUER_ID   If the key is absent, the push is SKIPPED
 #       with a warning (job stays green). A present key that fails to push FAILS the job (red).
 

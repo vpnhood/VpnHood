@@ -1,0 +1,65 @@
+name: Publish Client (All Platforms)
+
+# Thin entry point: publishes the VpnHood CLIENT via the shared reusable workflow _publish_app.yml
+# (the single source of truth for build + Google Play/App Store + GitHub release, used by both client
+# and connect). Version/prerelease come from Pub/PubVersion.json in the built ref. Required secrets are
+# documented in .github/DEPLOYMENT.md and flow through via `secrets: inherit`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit to build (blank = the branch this workflow is dispatched from)"
+        required: false
+        default: ""
+      publish_release:
+        description: "Create the GitHub release"
+        type: boolean
+        required: false
+        default: false
+      build_android:
+        description: "Build the Android apps (Google AAB + Web APKs)."
+        type: boolean
+        required: false
+        default: true
+      publish_play:
+        description: "Publish the built AAB to Google Play (only applies when build_android is on)"
+        type: boolean
+        required: false
+        default: true
+      only_aab:
+        description: "Only build the Android AAB (+ Play publish); skip Linux/Windows/iOS. Fast Play iteration."
+        type: boolean
+        required: false
+        default: false
+      build_ios:
+        description: "Build the iOS app (.ipa)."
+        type: boolean
+        required: false
+        default: true
+      publish_appstore:
+        description: "Upload the built .ipa to TestFlight/App Store (only applies when build_ios is on)"
+        type: boolean
+        required: false
+        default: true
+      rollout:
+        description: "Google Play audience ratio (%) for a PRODUCTION release (1-100; 100 = full). Ignored on prerelease/alpha."
+        required: false
+        default: "100"
+
+jobs:
+  publish:
+    uses: ./.github/workflows/_publish_app.yml
+    with:
+      app: client
+      code_ref: ${{ inputs.ref || github.ref_name }}
+      publish_release: ${{ inputs.publish_release }}
+      build_android: ${{ inputs.build_android }}
+      publish_play: ${{ inputs.publish_play }}
+      only_aab: ${{ inputs.only_aab }}
+      build_ios: ${{ inputs.build_ios }}
+      publish_appstore: ${{ inputs.publish_appstore }}
+      rollout: ${{ inputs.rollout }}
+    secrets: inherit
+
+# Workflow not appearing after a fresh fork/import? See .github/DEPLOYMENT.md "Activating the workflows".

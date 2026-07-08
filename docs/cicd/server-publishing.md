@@ -47,7 +47,7 @@ run on GitHub Actions; local scripts are build-only.*
 |---|---|---|---|
 | Code lives in | this monorepo | this monorepo | this monorepo |
 | Release repo | this repo | `vpnhood/Vpnhood.App.Connect` | `vpnhood/VpnHood.App.Server` |
-| Workflow lives in | this repo — [client_publish.yml](../../.github/workflows/client_publish.yml) | the Connect repo — `connect_publish.yml` | **the Server repo — `server_publish.yml`** |
+| Workflow lives in | this repo — [publish_client.yml](../../.github/workflows/publish_client.yml) | the Connect repo — `connect_publish.yml` | **the Server repo — `server_publish.yml`** |
 | Token to create the release | automatic `github.token` (same-repo) | automatic `github.token` (workflow runs *in* the target repo) | **automatic `github.token`** (same trick) |
 | Trigger script | [Client/PublishByGithub.ps1](../../Pub/Client/PublishByGithub.ps1) | [Connect/PublishByGithub.ps1](../../Pub/Connect/PublishByGithub.ps1) | **new `Pub/Server/PublishByGithub.ps1`** |
 | Store leg | Google Play / App Store | Google Play / App Store | **none** (no fastlane, no store) |
@@ -82,7 +82,7 @@ From the current local flow ([Server/PublishToGitHub.ps1](../../Pub/Server/Publi
 
 ## Proposed workflow: `server_publish.yml` (in the Server repo)
 
-Shape mirrors `client_publish.yml`: parallel build jobs → a final `release` job that is the **only**
+Shape mirrors `publish_client.yml`: parallel build jobs → a final `release` job that is the **only**
 GitHub writer and runs last. No store jobs.
 
 ```yaml

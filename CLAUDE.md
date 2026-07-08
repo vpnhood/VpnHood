@@ -47,7 +47,7 @@ truth — follow them, and when a new durable convention is agreed, update this 
   store listings) run on **GitHub Actions — never from a developer machine**. Don't build release packages
   or run Fastlane locally; the runners hold the signing keys, toolchains, and store credentials. A local
   build is only ever for a quick smoke test, not for distribution.
-- **Client** releases from this repo (`client_publish.yml` + `bump.yml` via `Pub/Client/PublishByGithub.ps1`).
+- **Client** releases from this repo (`publish_client.yml` + `bump.yml` via `Pub/Client/PublishByGithub.ps1`).
   **Connect** releases from the sibling repo `vpnhood/Vpnhood.App.Connect` (`connect_publish.yml`, dispatched by
   `Pub/Connect/PublishByGithub.ps1`); that repo also holds the Connect Fastlane config + store metadata.
 - The iOS **App Store listing** (metadata + screenshots, no binary) is pushed by a Fastlane `deliver` lane

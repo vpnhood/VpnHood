@@ -55,7 +55,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run client_publish.yml --repo "${{ github.repository }}" --ref develop -f publish_release=true -f build_android=true -f rollout="${{ github.event.inputs.rollout }}"
+          gh workflow run publish_client.yml --repo "${{ github.repository }}" --ref develop -f publish_release=true -f build_android=true -f rollout="${{ github.event.inputs.rollout }}"
       - name: Dispatch NuGet publish
         if: ${{ github.event.inputs.then_publish_nugets == 'true' }}
         env:

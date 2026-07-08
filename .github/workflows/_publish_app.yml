@@ -1,0 +1,620 @@
+name: _publish_app (reusable)
+
+# SINGLE SOURCE OF TRUTH for publishing a VpnHood app — client OR connect. Called via `uses:` by
+# publish_client.yml (this repo) and publish_connect.yml (the vpnhood/Vpnhood.App.Connect repo).
+#
+# A reusable workflow runs in the CALLER's context, so github.repository / vars / secrets resolve to
+# whichever repo invoked it. That is the whole trick:
+#   * The build CODE is always checked out from vpnhood/VpnHood into code/ (one source of code + version).
+#   * The CALLER repo is checked out at the workspace root for its fastlane/ config + release target.
+#   * So client releases to vpnhood/VpnHood with the monorepo's fastlane; connect releases to the Connect
+#     repo with the Connect fastlane — same logic, no duplicated workflow.
+#
+# The `app` input (client|connect) drives every difference (package dir, Src/Apps/<prefix>.* scripts,
+# changelog drop tag, Android signing env mapping, iOS on/off, publish-repo resolution). Secret NAMES are
+# standardized across both repos (see .github/DEPLOYMENT.md), so `secrets: inherit` passes them 1:1.
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: "Which app to publish: client | connect"
+        type: string
+        required: true
+      code_ref:
+        description: "vpnhood/VpnHood branch or commit to build (blank = its default branch)"
+        type: string
+        required: false
+        default: ""
+      publish_release:
+        type: boolean
+        required: false
+        default: false
+      build_android:
+        type: boolean
+        required: false
+        default: true
+      publish_play:
+        type: boolean
+        required: false
+        default: true
+      only_aab:
+        type: boolean
+        required: false
+        default: false
+      build_ios:
+        type: boolean
+        required: false
+        default: true
+      publish_appstore:
+        type: boolean
+        required: false
+        default: true
+      rollout:
+        type: string
+        required: false
+        default: "100"
+
+env:
+  # The monorepo that holds the source for BOTH apps (public -> no checkout token needed).
+  CODE_REPO: vpnhood/VpnHood
+
+jobs:
+  # Derive the per-app constants once so the job bodies stay app-agnostic.
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      pkg: ${{ steps.d.outputs.pkg }}          # bin module dir + .user folder name
+      prefix: ${{ steps.d.outputs.prefix }}    # Src/Apps/<prefix>.* and VpnHood.App.<prefix>.*
+      drop_tag: ${{ steps.d.outputs.drop_tag }}
+      is_connect: ${{ steps.d.outputs.is_connect }}
+    steps:
+      - id: d
+        shell: bash
+        run: |
+          if [ "${{ inputs.app }}" = "connect" ]; then
+            { echo "pkg=VpnHoodConnect"; echo "prefix=Connect"; echo "drop_tag=#client"; echo "is_connect=true"; } >> "$GITHUB_OUTPUT"
+          else
+            { echo "pkg=VpnHoodClient"; echo "prefix=Client"; echo "drop_tag=#connect"; echo "is_connect=false"; } >> "$GITHUB_OUTPUT"
+          fi
+
+  build-linux:
+    needs: setup
+    # TEMP/opt: skipped when only_aab is set so the Android/Play path can be iterated quickly.
+    if: ${{ inputs.only_aab != true }}
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: code/global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=code/Pub/bin/$tag/${{ needs.setup.outputs.pkg }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Write appsettings
+        shell: pwsh
+        env: { APPSETTINGS: "${{ vars.APPSETTINGS }}" }
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            Write-Host "::warning::APPSETTINGS not set; building with default appsettings."
+          } else {
+            $u = Join-Path $env:GITHUB_WORKSPACE ".user/${{ needs.setup.outputs.pkg }}"
+            New-Item -ItemType Directory -Path $u -Force | Out-Null
+            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+          }
+      - name: Build Linux
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Src/Apps/${{ needs.setup.outputs.prefix }}.Linux.Web/_publish.ps1"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.app }}-linux
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ env.MODULE_DIR }}/linux-x64/**
+            ${{ env.MODULE_DIR }}/linux-arm64/**
+            ${{ env.MODULE_DIR }}/linux-any/**
+
+  build-windows:
+    needs: setup
+    if: ${{ inputs.only_aab != true }}
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # Missing license -> the MSI build is skipped with a warning (job stays green); no artifact.
+      ADVANCED_INSTALLER_LICENSE: ${{ secrets.ADVANCED_INSTALLER_LICENSE }}
+      # Optional Trusted Signing (present -> signed exe + MSI; absent -> unsigned + warning).
+      AZURE_SIGNING_CREDENTIAL: ${{ secrets.AZURE_SIGNING_CREDENTIAL }}
+      AZURE_SIGNING_TARGET: ${{ vars.AZURE_SIGNING_TARGET || secrets.AZURE_SIGNING_TARGET }}
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: code/global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=code/Pub/bin/$tag/${{ needs.setup.outputs.pkg }}/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Warn if Advanced Installer license is missing
+        if: env.ADVANCED_INSTALLER_LICENSE == ''
+        shell: pwsh
+        run: |
+          Write-Host "::warning title=Advanced Installer license missing::ADVANCED_INSTALLER_LICENSE is not set; skipping the Windows MSI build. The release will omit the installer."
+      - name: Set up Advanced Installer
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        uses: caphyon/advinst-github-action@7edde34c6ff935e53e3de72a5699efcfceb5f6c6 # v2.0.3
+        with: { advinst-license: "${{ env.ADVANCED_INSTALLER_LICENSE }}" }
+      - name: Write appsettings
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        shell: pwsh
+        env: { APPSETTINGS: "${{ vars.APPSETTINGS }}" }
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            Write-Host "::warning::APPSETTINGS not set; building with default appsettings."
+          } else {
+            $u = Join-Path $env:GITHUB_WORKSPACE ".user/${{ needs.setup.outputs.pkg }}"
+            New-Item -ItemType Directory -Path $u -Force | Out-Null
+            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+          }
+      # Two-stage split (publish then package) for clearer CI logs; PublishWinApp.ps1 handles both.
+      - name: Build Windows binary (dotnet publish)
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Src/Apps/${{ needs.setup.outputs.prefix }}.Win.Web/_publish.ps1" -stage publish
+      - name: Package Windows MSI (Advanced Installer)
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Src/Apps/${{ needs.setup.outputs.prefix }}.Win.Web/_publish.ps1" -stage package
+      - uses: actions/upload-artifact@v7
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        with:
+          name: ${{ inputs.app }}-windows
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ env.MODULE_DIR }}/**
+
+  build-android:
+    needs: setup
+    if: ${{ inputs.build_android == true }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: google-aab
+            label: Google AAB
+            subdir: Android.Google
+            script: _publish.ps1
+            outdir: android-google
+          - id: web-apk
+            label: Web APK
+            subdir: Android.Web
+            script: _publish.ps1
+            outdir: android-web
+          - id: web-arm64
+            label: Web arm64 APK
+            subdir: Android.Web
+            script: _publish-arm64.ps1
+            outdir: android-web-arm64
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      # Standardized secret names map to the app-specific env names android-signing.json expects
+      # (CLIENT_* for the client app, CONNECT_* for the connect app). Only the active app's vars are
+      # populated; PrepareCiAndroidSigning.ps1 falls back to an ephemeral keystore when absent.
+      ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64: ${{ inputs.app == 'client' && secrets.ANDROID_KEYSTORE_GOOGLE_BASE64 || '' }}
+      ANDROID_KEYSTORE_CLIENT_GOOGLE_PASSWORD: ${{ inputs.app == 'client' && secrets.ANDROID_KEYSTORE_GOOGLE_PASSWORD || '' }}
+      ANDROID_KEYSTORE_CLIENT_WEB_BASE64: ${{ inputs.app == 'client' && secrets.ANDROID_KEYSTORE_WEB_BASE64 || '' }}
+      ANDROID_KEYSTORE_CLIENT_WEB_PASSWORD: ${{ inputs.app == 'client' && secrets.ANDROID_KEYSTORE_WEB_PASSWORD || '' }}
+      ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64: ${{ inputs.app == 'connect' && secrets.ANDROID_KEYSTORE_GOOGLE_BASE64 || '' }}
+      ANDROID_KEYSTORE_CONNECT_GOOGLE_PASSWORD: ${{ inputs.app == 'connect' && secrets.ANDROID_KEYSTORE_GOOGLE_PASSWORD || '' }}
+      ANDROID_KEYSTORE_CONNECT_WEB_BASE64: ${{ inputs.app == 'connect' && secrets.ANDROID_KEYSTORE_WEB_BASE64 || '' }}
+      ANDROID_KEYSTORE_CONNECT_WEB_PASSWORD: ${{ inputs.app == 'connect' && secrets.ANDROID_KEYSTORE_WEB_PASSWORD || '' }}
+      # Connect embeds a default server access key per store; empty/unused for the client.
+      ACCESS_KEY_DEFAULT_GOOGLE: ${{ secrets.ACCESS_KEY_DEFAULT_GOOGLE }}
+      ACCESS_KEY_DEFAULT_WEB: ${{ secrets.ACCESS_KEY_DEFAULT_WEB }}
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: code/global.json }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: "17" }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=code/Pub/bin/$tag/${{ needs.setup.outputs.pkg }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Install .NET Android workload
+        shell: pwsh
+        run: dotnet workload install android
+      - name: Provision Android SDK
+        shell: pwsh
+        run: |
+          dotnet build "$env:GITHUB_WORKSPACE/code/Src/Apps/${{ needs.setup.outputs.prefix }}.Android.Web/VpnHood.App.${{ needs.setup.outputs.prefix }}.Android.Web.csproj" `
+            -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=True -p:AndroidSdkPath="$env:ANDROID_HOME"
+      - name: Credentials + Android signing config
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Pub/Lib/PrepareCiAndroidSigning.ps1"
+      - name: Write default access keys (connect)
+        if: needs.setup.outputs.is_connect == 'true'
+        shell: pwsh
+        run: |
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/${{ needs.setup.outputs.pkg }}"
+          if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_GOOGLE)) {
+            $d = Join-Path $u "google"; New-Item -ItemType Directory -Path $d -Force | Out-Null
+            $env:ACCESS_KEY_DEFAULT_GOOGLE | Out-File (Join-Path $d "access_key_default_google.txt") -Encoding ascii -Force -NoNewline
+          } else { Write-Host "::warning::ACCESS_KEY_DEFAULT_GOOGLE not set; the Google build has no default access key." }
+          if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_WEB)) {
+            $d = Join-Path $u "web"; New-Item -ItemType Directory -Path $d -Force | Out-Null
+            $env:ACCESS_KEY_DEFAULT_WEB | Out-File (Join-Path $d "access_key_default_web.txt") -Encoding ascii -Force -NoNewline
+          } else { Write-Host "::warning::ACCESS_KEY_DEFAULT_WEB not set; the web build has no default access key." }
+      - name: Write publish.json
+        if: vars.PUBLISH != ''
+        shell: pwsh
+        env: { PUBLISH: "${{ vars.PUBLISH }}" }
+        run: |
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/${{ needs.setup.outputs.pkg }}"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
+      - name: Write appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: "${{ vars.APPSETTINGS }}"
+          PUBLISH: "${{ vars.PUBLISH }}"
+        run: |
+          # publish.json (present when the PUBLISH var is set) turns on strict mode, which REQUIRES the
+          # shared appsettings — so a missing secret must fail the Android build loudly. Without it (a
+          # fork with no PUBLISH var) the build is non-strict, so warn and continue.
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            if (-not [string]::IsNullOrWhiteSpace($env:PUBLISH)) {
+              throw "APPSETTINGS variable is not set, but a strict Android publish (publish.json present) requires .user/${{ needs.setup.outputs.pkg }}/appsettings.json."
+            }
+            Write-Host "::warning::APPSETTINGS not set and no publish.json; building Android non-strict (debug application id)."
+            return
+          }
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/${{ needs.setup.outputs.pkg }}"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+      - name: Build Android (${{ matrix.label }})
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Src/Apps/${{ needs.setup.outputs.prefix }}.${{ matrix.subdir }}/${{ matrix.script }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.app }}-android-${{ matrix.id }}
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ env.MODULE_DIR }}/${{ matrix.outdir }}/**
+
+  # Publish the AAB to Google Play from the CI artifact, using the CALLER repo's fastlane (at root) +
+  # the standardized GOOGLE_PLAY_API_KEY. The AAB was built above; this never writes to GitHub.
+  publish-play-android:
+    needs: [setup, build-android]
+    if: needs.build-android.result == 'success' && inputs.publish_play != false
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_PLAY_API_KEY: ${{ secrets.GOOGLE_PLAY_API_KEY }}
+    steps:
+      - name: Checkout caller repo (fastlane, at root)
+        uses: actions/checkout@v5
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - name: Warn if Google Play API key is missing
+        if: env.GOOGLE_PLAY_API_KEY == ''
+        run: echo "::warning title=Google Play publish skipped::GOOGLE_PLAY_API_KEY is not set; the AAB will NOT be uploaded to Google Play and no Play-signed APK will be attached to the release."
+      - name: Download built AAB artifact
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        uses: actions/download-artifact@v8
+        with: { name: "${{ inputs.app }}-android-google-aab", path: aab }
+      - name: Resolve version, track, and paths
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        shell: bash
+        run: |
+          set -e
+          AAB_FILE=$(ls aab/*.aab 2>/dev/null | head -n1 || true)
+          META_FILE=$(ls aab/*-android.json 2>/dev/null | head -n1 || true)
+          if [ -z "$AAB_FILE" ] || [ -z "$META_FILE" ]; then
+            echo "❌ AAB or its -android.json metadata not found in the build-android artifact"; exit 1
+          fi
+          VERSION_NAME=$(jq -r '.Version' "$META_FILE")
+          VERSION_CODE=$(jq -r '(.VersionCode // .Build // .BuildNumber // "")' "$META_FILE")
+          if [ -z "$VERSION_CODE" ] || [ "$VERSION_CODE" = "null" ]; then
+            if echo "$VERSION_NAME" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              VERSION_CODE=$(echo "$VERSION_NAME" | awk -F'.' '{print $3}')
+            else
+              VERSION_CODE=$(echo "$VERSION_NAME" | tr -cd '0-9' | tail -c 9)
+            fi
+          fi
+          ROLLOUT_PCT="${{ inputs.rollout }}"
+          case "$ROLLOUT_PCT" in ''|*[!0-9]*) ROLLOUT_PCT=100 ;; esac
+          if [ "$ROLLOUT_PCT" -ge 100 ]; then ROLLOUT=""; else ROLLOUT=$(awk "BEGIN{printf \"%.2f\", $ROLLOUT_PCT/100}"); fi
+          PRERELEASE=$(jq -r '.Prerelease' code/Pub/PubVersion.json)
+          if [ "$PRERELEASE" = "true" ] || [ "$PRERELEASE" = "True" ]; then TRACK=alpha; else TRACK=production; fi
+          # Staged rollout is a production-only concept; testing tracks ship 'completed'.
+          if [ "$TRACK" != "production" ]; then ROLLOUT=""; fi
+          {
+            echo "AAB_PATH=$GITHUB_WORKSPACE/$AAB_FILE"
+            echo "VERSION_NAME=$VERSION_NAME"
+            echo "VERSION_CODE=$VERSION_CODE"
+            echo "ROLLOUT=$ROLLOUT"
+            echo "TRACK=$TRACK"
+          } >> $GITHUB_ENV
+          echo "✅ VersionName=$VERSION_NAME VersionCode=$VERSION_CODE Track=$TRACK Rollout='$ROLLOUT'"
+      - name: Set up Java
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: "17" }
+      - name: Set up Ruby
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        uses: ruby/setup-ruby@v1
+        with: { ruby-version: "3.3", bundler-cache: false }
+      - name: Install Fastlane
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        run: gem install fastlane --no-document
+      # fastlane runs from the workspace ROOT -> loads the CALLER repo's fastlane/ (its own Appfile).
+      - name: Upload AAB to Google Play (Fastlane)
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        run: |
+          echo "Uploading $AAB_PATH (versionCode=$VERSION_CODE rollout='$ROLLOUT') to track $TRACK"
+          if ! fastlane android playstore \
+            version_name:"$VERSION_NAME" \
+            version_code:"$VERSION_CODE" \
+            aab:"$AAB_PATH" \
+            track:"$TRACK" \
+            rollout:"$ROLLOUT"; then
+            echo "::error title=Google Play upload failed::Fastlane could not upload the AAB to track '$TRACK' (declared versionCode=$VERSION_CODE). 'Version code N has already been used' means the AAB's embedded versionCode is N — verify ApplicationVersion=$VERSION_CODE."
+            exit 1
+          fi
+      - name: Download Play-signed universal APK (Fastlane)
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        run: |
+          fastlane android download_signed version_code:"$VERSION_CODE"
+          SIGNED=$(find fastlane -type f -name "*.apk" | head -n1 || true)
+          if [ -z "$SIGNED" ]; then echo "❌ No Play-signed APK found after download"; exit 1; fi
+          BASE=$(basename "$AAB_PATH" .aab)
+          mkdir -p "$GITHUB_WORKSPACE/play-signed"
+          cp "$SIGNED" "$GITHUB_WORKSPACE/play-signed/${BASE}.apk"
+          echo "✅ Play-signed APK staged: play-signed/${BASE}.apk"
+      - name: Upload Play-signed APK artifact
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.app }}-android-play-signed
+          if-no-files-found: error
+          retention-days: 1
+          path: play-signed/**
+
+  # iOS build (client only — connect has no iOS project). Runs on the GitHub-hosted macos-26 image.
+  build-ios:
+    needs: setup
+    if: ${{ inputs.build_ios != false && inputs.only_aab != true && needs.setup.outputs.is_connect == 'false' }}
+    runs-on: macos-26
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERT_BASE64 }}
+      APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}
+      IOS_PROVISION_APP_BASE64: ${{ secrets.IOS_PROVISION_APP_BASE64 }}
+      IOS_PROVISION_EXT_BASE64: ${{ secrets.IOS_PROVISION_EXT_BASE64 }}
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v5
+        with: { dotnet-version: "11.0.100-preview.5.26302.115" }
+      - name: Install .NET iOS workload
+        shell: pwsh
+        run: dotnet workload install ios
+      - name: Select Xcode 26.5
+        uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: "26.5" }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=code/Pub/bin/$tag/${{ needs.setup.outputs.pkg }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Write publish.json
+        if: vars.PUBLISH != ''
+        shell: pwsh
+        env: { PUBLISH: "${{ vars.PUBLISH }}" }
+        run: |
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/${{ needs.setup.outputs.pkg }}"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
+      - name: Write appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: "${{ vars.APPSETTINGS }}"
+          PUBLISH: "${{ vars.PUBLISH }}"
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            if (-not [string]::IsNullOrWhiteSpace($env:PUBLISH)) {
+              throw "APPSETTINGS variable is not set, but a strict iOS publish (publish.json present) requires .user/${{ needs.setup.outputs.pkg }}/appsettings.json."
+            }
+            Write-Host "::warning::APPSETTINGS not set and no publish.json; building iOS non-strict."
+            return
+          }
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/${{ needs.setup.outputs.pkg }}"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+      - name: Prepare iOS signing
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Pub/Lib/PrepareCiIosSigning.ps1"
+      - name: Build iOS (.ipa)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Src/Apps/${{ needs.setup.outputs.prefix }}.Ios/_publish.ps1"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.app }}-ios
+          if-no-files-found: warn
+          retention-days: 1
+          path: ${{ env.MODULE_DIR }}/ios/**
+
+  publish-appstore-ios:
+    needs: [setup, build-ios]
+    if: needs.build-ios.result == 'success' && inputs.publish_appstore != false
+    runs-on: macos-26
+    env:
+      APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
+      APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
+      APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+      APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERT_BASE64 }}
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - name: Warn if App Store Connect API key is missing
+        if: env.APPSTORE_CONNECT_API_KEY == ''
+        run: echo "::warning title=App Store publish skipped::APPSTORE_CONNECT_API_KEY is not set; the .ipa will NOT be uploaded to TestFlight/App Store."
+      - name: Download iOS artifact
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        uses: actions/download-artifact@v8
+        with: { name: "${{ inputs.app }}-ios", path: ios }
+      - name: Resolve ipa + track
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        shell: bash
+        run: |
+          set -e
+          IPA=$(ls ios/*.ipa 2>/dev/null | head -n1 || true)
+          if [ -z "$IPA" ]; then
+            if [ -n "$APPLE_DISTRIBUTION_CERT_BASE64" ]; then
+              echo "::error title=iOS upload has no .ipa::A signed App Store build was intended (upload key + distribution cert set) but build-ios produced no .ipa. This is a real signing/build failure."
+              exit 1
+            fi
+            echo "::warning title=No .ipa to upload::build-ios produced no .ipa (unsigned build); nothing to send to App Store Connect."
+            echo "IPA_PATH=" >> $GITHUB_ENV
+          else
+            echo "IPA_PATH=$IPA" >> $GITHUB_ENV
+          fi
+          PRERELEASE=$(jq -r '.Prerelease' code/Pub/PubVersion.json)
+          if [ "$PRERELEASE" = "true" ] || [ "$PRERELEASE" = "True" ]; then echo "LANE=testflight" >> $GITHUB_ENV; else echo "LANE=appstore" >> $GITHUB_ENV; fi
+      - name: Set up Ruby
+        if: env.APPSTORE_CONNECT_API_KEY != '' && env.IPA_PATH != ''
+        uses: ruby/setup-ruby@v1
+        with: { ruby-version: "3.3", bundler-cache: false }
+      - name: Install Fastlane
+        if: env.APPSTORE_CONNECT_API_KEY != '' && env.IPA_PATH != ''
+        run: gem install fastlane --no-document
+      - name: Write ASC API key
+        if: env.APPSTORE_CONNECT_API_KEY != '' && env.IPA_PATH != ''
+        shell: bash
+        run: |
+          mkdir -p asc
+          jq -n --arg kid "$APPSTORE_CONNECT_API_KEY_ID" --arg iss "$APPSTORE_CONNECT_ISSUER_ID" --arg key "$APPSTORE_CONNECT_API_KEY" \
+            '{key_id:$kid, issuer_id:$iss, key:$key, in_house:false}' > asc/api_key.json
+      - name: Upload to TestFlight / App Store (Fastlane)
+        if: env.APPSTORE_CONNECT_API_KEY != '' && env.IPA_PATH != ''
+        run: |
+          if [ "$LANE" = "testflight" ]; then
+            echo "Uploading $IPA_PATH to TestFlight"
+            if ! fastlane run upload_to_testflight ipa:"$IPA_PATH" api_key_path:asc/api_key.json skip_waiting_for_build_processing:true; then
+              echo "::error title=TestFlight upload failed::Fastlane pilot could not upload the .ipa. A common cause is a CFBundleVersion that is not higher than the last build."
+              exit 1
+            fi
+          else
+            echo "Uploading $IPA_PATH to App Store Connect (App Store track)"
+            if ! fastlane run upload_to_app_store ipa:"$IPA_PATH" api_key_path:asc/api_key.json skip_metadata:true skip_screenshots:true submit_for_review:false force:true precheck_include_in_app_purchases:false; then
+              echo "::error title=App Store upload failed::Fastlane deliver could not upload the .ipa. Verify signing and that CFBundleVersion is higher than the last build."
+              exit 1
+            fi
+          fi
+
+  release:
+    needs: [setup, build-linux, build-windows, build-android, publish-play-android, build-ios, publish-appstore-ios]
+    if: >-
+      ${{ always()
+        && inputs.publish_release == true
+        && needs.build-linux.result == 'success'
+        && needs.build-windows.result != 'failure'
+        && needs.build-android.result != 'failure'
+        && needs.publish-play-android.result != 'failure'
+        && needs.build-ios.result != 'failure'
+        && needs.publish-appstore-ios.result != 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write   # to delete this run's artifacts in the final step
+    env:
+      # The release lands on the CALLER repo; ResolvePublishRepo reads whichever var matches the app.
+      VH_PUBLISH_REPO: ${{ needs.setup.outputs.is_connect == 'false' && github.repository || '' }}
+      VH_CONNECT_PUBLISH_REPO: ${{ needs.setup.outputs.is_connect == 'true' && github.repository || '' }}
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: code/global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=code/Pub/bin/$tag/${{ needs.setup.outputs.pkg }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+      # Reassemble the code/Pub/bin/<tag>/<pkg> layout PublishToGithub.ps1 expects. Windows/Android/iOS
+      # are optional (skipped builds upload nothing), so those downloads are best-effort.
+      - uses: actions/download-artifact@v8
+        with: { name: "${{ inputs.app }}-linux", path: "${{ env.MODULE_DIR }}" }
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with: { name: "${{ inputs.app }}-windows", path: "${{ env.MODULE_DIR }}/windows-web" }
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with: { name: "${{ inputs.app }}-android-google-aab", path: "${{ env.MODULE_DIR }}/android-google" }
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with: { name: "${{ inputs.app }}-android-web-apk", path: "${{ env.MODULE_DIR }}/android-web" }
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with: { name: "${{ inputs.app }}-android-web-arm64", path: "${{ env.MODULE_DIR }}/android-web-arm64" }
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with: { name: "${{ inputs.app }}-android-play-signed", path: "${{ env.MODULE_DIR }}/android-google" }
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with: { name: "${{ inputs.app }}-ios", path: "${{ env.MODULE_DIR }}/ios" }
+      - name: Create GitHub release (caller repo)
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          . "$env:GITHUB_WORKSPACE/code/Pub/Lib/ResolvePublishRepo.ps1"
+          $slug = if ("${{ needs.setup.outputs.is_connect }}" -eq "true") { Resolve-PublishRepoSlug -Connect } else { Resolve-PublishRepoSlug }
+          & "$env:GITHUB_WORKSPACE/code/Pub/Lib/PublishToGithub.ps1" `
+            -packageDirName "${{ needs.setup.outputs.pkg }}" `
+            -repoName $slug `
+            -dropChangelogTag "${{ needs.setup.outputs.drop_tag }}"
+      - name: Delete this run's artifacts
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ids=$(gh api --paginate \
+            "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+            --jq '.artifacts[].id')
+          if [ -z "$ids" ]; then echo "No artifacts to delete."; exit 0; fi
+          for id in $ids; do
+            echo "Deleting artifact id=$id"
+            gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" || true
+          done

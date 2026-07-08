@@ -1,0 +1,65 @@
+name: _build_app_linux (reusable)
+
+# Builds the Linux client/connect package from the vpnhood/VpnHood monorepo (checked out into code/).
+# Called by _publish_app.yml. Self-contained: derives the package dir + Src/Apps prefix from `app`.
+# Uploads the `<app>-linux` artifact.
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: "client | connect"
+        type: string
+        required: true
+      code_ref:
+        type: string
+        required: false
+        default: ""
+
+env:
+  CODE_REPO: vpnhood/VpnHood
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      PKG: ${{ inputs.app == 'connect' && 'VpnHoodConnect' || 'VpnHoodClient' }}
+      PREFIX: ${{ inputs.app == 'connect' && 'Connect' || 'Client' }}
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: code/global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=code/Pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Write appsettings
+        shell: pwsh
+        env: { APPSETTINGS: "${{ vars.APPSETTINGS }}" }
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            Write-Host "::warning::APPSETTINGS not set; building with default appsettings."
+          } else {
+            $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+            New-Item -ItemType Directory -Path $u -Force | Out-Null
+            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+          }
+      - name: Build Linux
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.Linux.Web/_publish.ps1"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.app }}-linux
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            ${{ env.MODULE_DIR }}/linux-x64/**
+            ${{ env.MODULE_DIR }}/linux-arm64/**
+            ${{ env.MODULE_DIR }}/linux-any/**

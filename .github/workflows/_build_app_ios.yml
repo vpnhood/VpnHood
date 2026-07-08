@@ -1,0 +1,90 @@
+name: _build_app_ios (reusable)
+
+# Builds the iOS .ipa from the vpnhood/VpnHood monorepo (checked out into code/). Called by
+# _publish_app.yml (client only today — connect has no iOS project). Runs on the GitHub-hosted
+# macos-26 image (Xcode 26.5 + .NET 11). Signing secrets arrive via `secrets: inherit`; when absent
+# the build is UNSIGNED (no .ipa, a warning) and the job stays green. Uploads `<app>-ios`.
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: "client | connect"
+        type: string
+        required: true
+      code_ref:
+        type: string
+        required: false
+        default: ""
+
+env:
+  CODE_REPO: vpnhood/VpnHood
+
+jobs:
+  build-ios:
+    runs-on: macos-26
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      PKG: ${{ inputs.app == 'connect' && 'VpnHoodConnect' || 'VpnHoodClient' }}
+      PREFIX: ${{ inputs.app == 'connect' && 'Connect' || 'Client' }}
+      APPLE_DISTRIBUTION_CERT_BASE64: ${{ secrets.APPLE_DISTRIBUTION_CERT_BASE64 }}
+      APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}
+      IOS_PROVISION_APP_BASE64: ${{ secrets.IOS_PROVISION_APP_BASE64 }}
+      IOS_PROVISION_EXT_BASE64: ${{ secrets.IOS_PROVISION_EXT_BASE64 }}
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v5
+        with: { dotnet-version: "11.0.100-preview.5.26302.115" }
+      - name: Install .NET iOS workload
+        shell: pwsh
+        run: dotnet workload install ios
+      - name: Select Xcode 26.5
+        uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: "26.5" }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=code/Pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Write publish.json
+        if: vars.PUBLISH != ''
+        shell: pwsh
+        env: { PUBLISH: "${{ vars.PUBLISH }}" }
+        run: |
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
+      - name: Write appsettings
+        shell: pwsh
+        env:
+          APPSETTINGS: "${{ vars.APPSETTINGS }}"
+          PUBLISH: "${{ vars.PUBLISH }}"
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            if (-not [string]::IsNullOrWhiteSpace($env:PUBLISH)) {
+              throw "APPSETTINGS variable is not set, but a strict iOS publish (publish.json present) requires .user/$env:PKG/appsettings.json."
+            }
+            Write-Host "::warning::APPSETTINGS not set and no publish.json; building iOS non-strict."
+            return
+          }
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+      - name: Prepare iOS signing
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Pub/Lib/PrepareCiIosSigning.ps1"
+      - name: Build iOS (.ipa)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.Ios/_publish.ps1"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.app }}-ios
+          if-no-files-found: warn
+          retention-days: 1
+          path: ${{ env.MODULE_DIR }}/ios/**

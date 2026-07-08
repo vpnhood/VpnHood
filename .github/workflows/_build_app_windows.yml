@@ -1,0 +1,83 @@
+name: _build_app_windows (reusable)
+
+# Builds the Windows MSI (client/connect) from the vpnhood/VpnHood monorepo (checked out into code/).
+# Called by _publish_app.yml. Two-stage publish/package for clearer CI logs. Uploads `<app>-windows`.
+# ADVANCED_INSTALLER_LICENSE missing -> skipped-with-warning (green, no artifact). AZURE_SIGNING_*
+# optional (present -> signed; absent -> unsigned + warning). Secrets arrive via `secrets: inherit`.
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: "client | connect"
+        type: string
+        required: true
+      code_ref:
+        type: string
+        required: false
+        default: ""
+
+env:
+  CODE_REPO: vpnhood/VpnHood
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      PKG: ${{ inputs.app == 'connect' && 'VpnHoodConnect' || 'VpnHoodClient' }}
+      PREFIX: ${{ inputs.app == 'connect' && 'Connect' || 'Client' }}
+      ADVANCED_INSTALLER_LICENSE: ${{ secrets.ADVANCED_INSTALLER_LICENSE }}
+      AZURE_SIGNING_CREDENTIAL: ${{ secrets.AZURE_SIGNING_CREDENTIAL }}
+      AZURE_SIGNING_TARGET: ${{ vars.AZURE_SIGNING_TARGET || secrets.AZURE_SIGNING_TARGET }}
+    steps:
+      - name: Checkout code (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      - uses: actions/setup-dotnet@v5
+        with: { global-json-file: code/global.json }
+      - name: Resolve module dir
+        shell: pwsh
+        run: |
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
+          "MODULE_DIR=code/Pub/bin/$tag/$env:PKG/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Warn if Advanced Installer license is missing
+        if: env.ADVANCED_INSTALLER_LICENSE == ''
+        shell: pwsh
+        run: |
+          Write-Host "::warning title=Advanced Installer license missing::ADVANCED_INSTALLER_LICENSE is not set; skipping the Windows MSI build. The release will omit the installer."
+      - name: Set up Advanced Installer
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        uses: caphyon/advinst-github-action@7edde34c6ff935e53e3de72a5699efcfceb5f6c6 # v2.0.3
+        with: { advinst-license: "${{ env.ADVANCED_INSTALLER_LICENSE }}" }
+      - name: Write appsettings
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        shell: pwsh
+        env: { APPSETTINGS: "${{ vars.APPSETTINGS }}" }
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
+            Write-Host "::warning::APPSETTINGS not set; building with default appsettings."
+          } else {
+            $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+            New-Item -ItemType Directory -Path $u -Force | Out-Null
+            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+          }
+      - name: Build Windows binary (dotnet publish)
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.Win.Web/_publish.ps1" -stage publish
+      - name: Package Windows MSI (Advanced Installer)
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.Win.Web/_publish.ps1" -stage package
+      - uses: actions/upload-artifact@v7
+        if: env.ADVANCED_INSTALLER_LICENSE != ''
+        with:
+          name: ${{ inputs.app }}-windows
+          if-no-files-found: error
+          retention-days: 1
+          path: ${{ env.MODULE_DIR }}/**

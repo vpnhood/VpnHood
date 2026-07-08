@@ -1,8 +1,8 @@
 name: Build Client · Android (reusable)
 
 # Reusable build for the VpnHood Android client — the single source of truth for the Android build
-# steps. Called by client_publish.yml (full release pipeline) and client_android_build.yml (standalone
-# build-only). Android is split into one matrix leg per store variant so they build in parallel
+# steps. Called by client_publish.yml (the full release pipeline) via `uses:`. Android is split into
+# one matrix leg per store variant so they build in parallel
 # (Google AAB / Web APK / Web arm64 APK are independent outputs). Each leg uploads its own artifact
 # (client-android-<id>). The version (+ prerelease flag) is read from Pub/PubVersion.json.
 #

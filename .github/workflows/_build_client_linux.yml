@@ -1,8 +1,8 @@
 name: Build Client · Linux (reusable)
 
 # Reusable build for the VpnHood Linux client — the single source of truth for the Linux build
-# steps. Called by client_publish.yml (full release pipeline) and client_linux_build.yml (standalone
-# build-only). Builds x64 + arm64 + any via Src/Apps/Client.Linux.Web/_publish.ps1 and uploads the
+# steps. Called by client_publish.yml (the full release pipeline) via `uses:`. Builds x64 + arm64 +
+# any via Src/Apps/Client.Linux.Web/_publish.ps1 and uploads the
 # `client-linux` artifact. The version (+ prerelease flag) is read from Pub/PubVersion.json in the
 # checked-out commit — CI does not bump or push the version.
 

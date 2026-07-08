@@ -1,8 +1,8 @@
 name: Build Client · Windows (reusable)
 
 # Reusable build for the VpnHood Windows client — the single source of truth for the Windows build
-# steps. Called by client_publish.yml (full release pipeline) and client_windows_build.yml (standalone
-# build-only). Builds the binary (dotnet publish) then packages the MSI with Advanced Installer, and
+# steps. Called by client_publish.yml (the full release pipeline) via `uses:`. Builds the binary
+# (dotnet publish) then packages the MSI with Advanced Installer, and
 # uploads the `client-windows` artifact. The version (+ prerelease flag) is read from Pub/PubVersion.json.
 #
 # Secrets (pass with `secrets: inherit` from the caller):

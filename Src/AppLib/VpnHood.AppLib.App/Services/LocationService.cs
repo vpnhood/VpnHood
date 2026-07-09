@@ -138,7 +138,7 @@ public class LocationService : IRegionProvider
             };
 
             // InternalLocationService needs current ip from external service, so it is inside the if block
-            // It is slow on some devices
+            // It is slow on some devices, so it does not worth it
             // if (IpRangeLocationProvider is not null)
               //  providers.Add(IpRangeLocationProvider);
 

@@ -105,7 +105,7 @@ public class LocationService : IRegionProvider
         }
 
         // try to get the current ip location by local service
-        var ipLocation = await TryGetCurrentIpLocationByLocal(cancellationToken).Vhc();
+        var ipLocation = await TryGetCurrentIpLocation(cancellationToken).Vhc();
         if (ipLocation != null)
             return ipLocation;
 
@@ -117,8 +117,10 @@ public class LocationService : IRegionProvider
         return _settingsService.Settings.ClientIpLocation;
     }
 
-    private async Task<IpLocation?> TryGetCurrentIpLocationByLocal(CancellationToken cancellationToken)
+    private async Task<IpLocation?> TryGetCurrentIpLocation(CancellationToken cancellationToken)
     {
+        // even IpRangeLocationProvider need external service to get current ip,
+        // so if external service is disabled, return null
         if (!_useExternalLocationService)
             return null;
 
@@ -136,11 +138,12 @@ public class LocationService : IRegionProvider
             };
 
             // InternalLocationService needs current ip from external service, so it is inside the if block
-            if (IpRangeLocationProvider is not null)
-                providers.Add(IpRangeLocationProvider);
+            // It is slow on some devices
+            // if (IpRangeLocationProvider is not null)
+              //  providers.Add(IpRangeLocationProvider);
 
-            var compositeProvider = new CompositeCurrentIpLocationProvider(VhLogger.Instance, providers,
-                providerTimeout: _locationServiceTimeout);
+            var compositeProvider = new CompositeCurrentIpLocationProvider(
+                VhLogger.Instance, providers, providerTimeout: _locationServiceTimeout);
             var ipLocation = await compositeProvider.GetCurrentLocation(cancellationToken).Vhc();
             _settingsService.Settings.ClientIpLocation = ipLocation;
             _settingsService.Settings.Save();

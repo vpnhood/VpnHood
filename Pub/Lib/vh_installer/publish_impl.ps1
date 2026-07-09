@@ -9,7 +9,6 @@ param(
  
 $SolutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot));
 $runtime = "$os-$cpu";
-$releaseUrl = "$repoBaseUrl/releases/download/$versionTag";
 
 # Get project infomration
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
@@ -26,6 +25,12 @@ Write-Host "*** Creating $assemblyName-$runtime Module ..." -BackgroundColor Blu
 
 # Init script
 . "$SolutionDir/Pub/Lib/Common.ps1";
+
+# Build the release URL only AFTER Common.ps1 is sourced: $versionTag is defined there (via
+# VersionBump.ps1). Computing it earlier leaves the version segment empty on the first call and
+# stale on the second (both invocations share one dot-sourced scope), producing broken URLs like
+# ".../releases/download//VpnHoodServer-linux-x64.sh".
+$releaseUrl = "$repoBaseUrl/releases/download/$versionTag";
 
 #update project version
 UpdateProjectVersion $projectFile;

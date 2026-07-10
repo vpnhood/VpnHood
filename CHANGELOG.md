@@ -1,6 +1,7 @@
 # Latest
 * Feature: Support QUIC on Windows and Linux
 * Improve: Initialization speed when using split tunneling by country
+* Improve: SOCKS & HTTP proxies stability
 * Improve: Memory usage & stability
 
 # v7.9.811

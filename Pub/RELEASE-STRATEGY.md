@@ -77,6 +77,8 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
   submodule with no props of its own silently inherits the parent's version). If adopted: group a
   *few* cohesive repos (not 60), place them outside `src/` (e.g. `/modules`), and make each
   self-contained. Deferred — no submodules for now.
+  - Note: libraries that already live in a fully **separate repo** (not an in-tree submodule) are a
+    different, now-implemented story — see "Module repos" below.
   - **Planned interaction with NuGet publishing:** when submodules arrive, we still want to
     **publish their NuGets from this repo's `publish_nugets.yml`** (one publishing pipeline), but with
     **each submodule owning its own version scope** (its own `Directory.Build.props`/version),
@@ -178,6 +180,36 @@ and `-changelogFileName CHANGELOG.Server.md`), so one release creator serves eve
   (no bump, no distribute, no push) — distribution is CI-only, matching Client/Connect.
 
 Design + validation notes: [docs/cicd/server-publishing.md](../docs/cicd/server-publishing.md).
+
+## Module repos — separate library repos publishing their own NuGets
+
+Some vpnhood libraries live in their own repos ("module repos", e.g. `VpnHood.Core.Proxies`) and
+ship their own NuGets on their own cadence — while staying **version-aligned** with the monorepo.
+They all publish through ONE shared cross-repo module in this repo, so the logic exists once:
+
+- [.github/workflows/publish_module_nugets.yml](../.github/workflows/publish_module_nugets.yml) —
+  reusable workflow the module repo calls with ~10 lines
+  (`uses: vpnhood/VpnHood/.github/workflows/publish_module_nugets.yml@develop`, `secrets: inherit`,
+  `permissions: contents: write`). Internal repos pin `@develop` (lockstep — same rationale as the
+  `publish_app.yml` callers). This is **not** part of the forker/skeleton contract: forkers consume
+  the published NuGets; they never call this.
+- [Pub/Lib/PublishModuleNugets.ps1](Lib/PublishModuleNugets.ps1) — the logic. **Version rule:**
+  read the monorepo version — **always from `develop`** (develop always carries the highest
+  version); if it is ahead of the module's own `Pub/PubVersion.json`, **adopt** it, otherwise
+  **bump the module's own build number** (the module may run ahead; the next monorepo bump
+  leapfrogs and re-syncs). Then pack every packable project (same `IsPackable` opt-out discovery
+  as `publish_nugets.yml`) and push — **a stable `X.Y.Z`**, per rule #3 above (prerelease lines
+  are an app concept). A manual-only `prerelease` input exists as an escape hatch (appends
+  `-prerelease`; the bump still commits, so the next stable publish just takes the next build
+  number) — the normal flow never uses it. CI commits the bump back to the dispatched branch
+  (CI-owned bump, like `bump.yml` here).
+
+To onboard a module repo: add `Pub/PubVersion.json` (`{Version, BumpTime}`), a root
+`Directory.Build.props` carrying the single `<Version>` (remove per-csproj `<Version>`s so it
+applies), `IsPackable=false` on non-library projects, and the small `publish_nugets.yml`
+dispatcher — see `VpnHood.Core.Proxies` for the reference shape. Optionally a root `_publish.ps1`
+one-shot trigger (commit pending work → pull → push → `gh workflow run publish_nugets.yml`) so a
+publish is a single local command; the CI still does all the real work.
 
 ## Next steps (not yet implemented)
 

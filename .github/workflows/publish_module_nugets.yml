@@ -1,0 +1,93 @@
+name: publish_module_nugets (reusable)
+
+# Reusable NuGet publisher for MODULE repos — separate vpnhood library repos (e.g.
+# VpnHood.Core.Proxies) that ship their own NuGets on their own cadence but stay version-aligned
+# with the monorepo. The module repo calls this as a cross-repo module:
+#
+#   uses: vpnhood/VpnHood/.github/workflows/publish_module_nugets.yml@develop
+#   secrets: inherit          # org NUGET_API_KEY
+#   (caller grants permissions: contents: write — the version bump is committed back)
+#
+# INTERNAL repos only, pinned @develop (lockstep with the monorepo, same rationale as the
+# publish_app.yml callers). This is NOT part of the forker/skeleton contract — forkers consume the
+# published NuGets and never call this.
+#
+# The logic lives in Pub/Lib/PublishModuleNugets.ps1 (checked out from this repo):
+#   - Version-sync: adopt the monorepo's develop version when it is ahead of the module's
+#     Pub/PubVersion.json, otherwise bump the module's own build number; commit the bump back.
+#   - Pack every packable project in the caller repo and push to nuget.org — a STABLE X.Y.Z,
+#     matching the monorepo rule ("NuGet is always a stable Release version" in
+#     Pub/RELEASE-STRATEGY.md). The `prerelease` input is a MANUAL-ONLY escape hatch that appends
+#     `-prerelease`; the normal flow never sets it.
+#
+# A reusable workflow runs in the CALLER's context: the plain checkout, github.repository,
+# github.ref_name and secrets all resolve to the module repo that invoked it.
+
+on:
+  workflow_call:
+    inputs:
+      runs_on:
+        description: "Runner image; module libraries are normally OS-neutral"
+        type: string
+        required: false
+        default: ubuntu-latest
+      dotnet_version:
+        description: ".NET SDK version installed for the pack"
+        type: string
+        required: false
+        default: "10.0.x"
+      code_ref:
+        description: "vpnhood/VpnHood ref for the publish scripts (the version is ALWAYS read from develop regardless)"
+        type: string
+        required: false
+        default: develop
+      prerelease:
+        description: "MANUAL-ONLY: publish X.Y.Z-prerelease instead of the stable version (the normal flow never sets this)"
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      NUGET_API_KEY:
+        required: true
+
+jobs:
+  publish-module-nugets:
+    # Same org gate as publish_nugets.yml: only vpnhood repos publish the shared package IDs.
+    if: github.repository_owner == 'vpnhood'
+    runs-on: ${{ inputs.runs_on }}
+    permissions:
+      contents: write   # push the version-bump commit back to the module repo (caller must grant it)
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      # The module repo (the caller) at the dispatched ref, under module/ — kept out of the root so
+      # the vh/ script checkout below can never leak into the module's packable-project discovery.
+      - name: Checkout module repo (caller)
+        uses: actions/checkout@v5
+        with: { path: module, persist-credentials: true }
+      # This repo ONLY for the Pub/ scripts (sparse). The module's new version is NOT read from
+      # this checkout — the script always fetches develop's PubVersion.json itself, so a pinned
+      # code_ref could never silently freeze the version source.
+      - name: Checkout vpnhood/VpnHood publish scripts
+        uses: actions/checkout@v5
+        with:
+          repository: vpnhood/VpnHood
+          ref: ${{ inputs.code_ref }}
+          path: vh
+          sparse-checkout: Pub
+      - uses: actions/setup-dotnet@v5
+        with: { dotnet-version: "${{ inputs.dotnet_version }}" }
+      - name: Configure git identity
+        run: |
+          git -C module config user.name "github-actions[bot]"
+          git -C module config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Publish module NuGets
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          & "$env:GITHUB_WORKSPACE/vh/Pub/Lib/PublishModuleNugets.ps1" `
+            -moduleDir "$env:GITHUB_WORKSPACE/module" `
+            -branch "${{ github.ref_name }}" `
+            -prerelease:$("${{ inputs.prerelease }}" -eq "true")

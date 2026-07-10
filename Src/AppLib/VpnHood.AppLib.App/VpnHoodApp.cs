@@ -132,6 +132,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ipLocationZipData: options.Resources.IpLocationZipData);
         locationService.StateChanged += LocationService_StateChanged;
 
+        var splitCountryService = new SplitCountryService(settingsService, locationService,
+            ipLocationZipData: options.Resources.IpLocationZipData);
+        splitCountryService.StateChanged += LocationService_StateChanged;
+
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
@@ -216,6 +220,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DeviceUiProvider = deviceUiProvider,
             Tracker = tracker,
             LocationService = locationService,
+            SplitCountryService = splitCountryService,
             AccountService = options.AccountProvider is null
                 ? null
                 : new AppAccountService(
@@ -484,7 +489,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 return AppConnectionState.None;
 
             if (clientState == ClientState.Initializing ||
-                Services.LocationService.IsFindingCountryIpRange ||
+                Services.SplitCountryService.IsBusy ||
                 Services.LocationService.IsFindingCountryCode)
                 return AppConnectionState.Initializing;
 
@@ -1146,7 +1151,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VerifyPremiumFeature(AppFeature.SplitCountry);
 
         var dbPath = Path.Combine(_device.VpnServiceConfigFolder, "ip-filters", "split-country.db");
-        var action = await Services.LocationService.EnsureSplitIpDb(dbPath, cancellationToken).Vhc();
+        var action = await Services.SplitCountryService.EnsureSplitIpDb(dbPath, cancellationToken).Vhc();
         return action is FilterAction.Default ? (null, FilterAction.Default) : (dbPath, action);
     }
 
@@ -1321,6 +1326,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         SettingsService.BeforeSave -= SettingsBeforeSave;
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
         Services.LocationService.StateChanged -= LocationService_StateChanged;
+        Services.SplitCountryService.StateChanged -= LocationService_StateChanged;
         _vpnServiceManager.Dispose();
         Services.UpdaterService?.Dispose();
         Services.Dispose();

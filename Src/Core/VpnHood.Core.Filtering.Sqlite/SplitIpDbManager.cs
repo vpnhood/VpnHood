@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Microsoft.Data.Sqlite;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 
@@ -24,7 +25,7 @@ public static class SplitIpDbManager
 
         await SplitIpDbBuilder
             .BuildAsync(dbPath, zipArchiveFactory, countryCodes, assetHash, cancellationToken)
-            .ConfigureAwait(false);
+            .Vhc();
     }
 
     private static bool IsUpToDate(string dbPath, string assetHash, string selectionSignature)

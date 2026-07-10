@@ -18,7 +18,8 @@
   **Deviation:** kept `VpnHoodClient.SessionIncludeIpRangesByApp` — it now exposes only the small allow set and still
   serves `ServerNetFilterConfigTest` correctly (no country in that test), so removing it is churn without gain.
   **No change needed** in `ClientSessionBuilder`: its intersection logic is unchanged; `IncludeIpRangesByApp` is just small now.
-- ✅ **Step 5** — app side. `LocationService.EnsureSplitIpDb(dbPath, ct)` replaces `GetIncludeCountryIpRanges`:
+- ✅ **Step 5** — app side. New `SplitCountryService.EnsureSplitIpDb(dbPath, ct)` replaces `LocationService.GetIncludeCountryIpRanges`
+  (decoupled: LocationService stays a pure region provider; SplitCountryService uses it only as a data source):
   maps `SplitCountryMode` → countries + `FilterAction` (IncludeList→Include, ExcludeList/ExcludeMyCountry→Exclude,
   IncludeAll→Default/no db), assetHash = zip `_checksum.txt` (fallback MD5 of zip bytes), calls
   `SplitIpDbManager.EnsureAsync`; on failure falls back to IncludeAll (same policy as before).

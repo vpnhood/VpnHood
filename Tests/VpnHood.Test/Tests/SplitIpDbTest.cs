@@ -212,37 +212,37 @@ public class SplitIpDbTest : TestBase
         string[] available = ["US", "TR", "DE", "FR", "IR"];
 
         // "everything except one" stores the one and flips the action
-        var (codes, action) = LocationService.ResolveSplitIpDbSelection(
+        var (codes, action) = SplitCountryService.ResolveSplitIpDbSelection(
             available, ["US", "TR", "DE", "FR"], FilterAction.Include);
         CollectionAssert.AreEquivalent(new[] { "IR" }, codes);
         Assert.AreEqual(FilterAction.Exclude, action);
 
         // same for the exclude direction
-        (codes, action) = LocationService.ResolveSplitIpDbSelection(
+        (codes, action) = SplitCountryService.ResolveSplitIpDbSelection(
             available, ["US", "TR", "DE", "FR"], FilterAction.Exclude);
         CollectionAssert.AreEquivalent(new[] { "IR" }, codes);
         Assert.AreEqual(FilterAction.Include, action);
 
         // small selection stays as-is (ExcludeMyCountry case)
-        (codes, action) = LocationService.ResolveSplitIpDbSelection(available, ["ir"], FilterAction.Exclude);
+        (codes, action) = SplitCountryService.ResolveSplitIpDbSelection(available, ["ir"], FilterAction.Exclude);
         CollectionAssert.AreEquivalent(new[] { "IR" }, codes);
         Assert.AreEqual(FilterAction.Exclude, action);
 
         // tie (complement == selected) must not invert: deterministic and stable
-        (codes, action) = LocationService.ResolveSplitIpDbSelection(
+        (codes, action) = SplitCountryService.ResolveSplitIpDbSelection(
             ["US", "TR"], ["us"], FilterAction.Include);
         CollectionAssert.AreEquivalent(new[] { "US" }, codes);
         Assert.AreEqual(FilterAction.Include, action);
 
         // unknown selected codes contribute nothing and must not skew the size comparison
-        (codes, action) = LocationService.ResolveSplitIpDbSelection(
+        (codes, action) = SplitCountryService.ResolveSplitIpDbSelection(
             available, ["US", "TR", "DE", "FR", "XX", "YY"], FilterAction.Include);
         CollectionAssert.AreEquivalent(new[] { "IR" }, codes);
         Assert.AreEqual(FilterAction.Exclude, action);
 
         // all selected => empty complement stored, flipped action (nothing excluded => tunnel everything)
-        (codes, action) = LocationService.ResolveSplitIpDbSelection(available, available, FilterAction.Include);
-        Assert.AreEqual(0, codes.Length);
+        (codes, action) = SplitCountryService.ResolveSplitIpDbSelection(available, available, FilterAction.Include);
+        Assert.IsEmpty(codes);
         Assert.AreEqual(FilterAction.Exclude, action);
     }
 }

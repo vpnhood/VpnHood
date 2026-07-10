@@ -2,7 +2,7 @@
 
 namespace VpnHood.Core.Filtering.Abstractions;
 
-public class StaticIpFilter(IIpFilter? nextFilter) : IIpFilter
+public class StaticIpFilter(IIpFilter? nextFilter, bool autoDisposeNextFilter = true) : IIpFilter
 {
     public IpRangeOrderedList BlockedRanges { get; set; } = [];
     public IpRangeOrderedList ExcludeRanges { get; set; } = [];
@@ -31,6 +31,7 @@ public class StaticIpFilter(IIpFilter? nextFilter) : IIpFilter
 
     public void Dispose()
     {
-        nextFilter?.Dispose();
+        if (autoDisposeNextFilter)
+            nextFilter?.Dispose();
     }
 }

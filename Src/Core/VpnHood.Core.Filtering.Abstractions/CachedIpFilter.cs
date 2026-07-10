@@ -3,7 +3,7 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.Abstractions;
 
-public class CachedIpFilter(IIpFilter nextFilter, TimeSpan timeout) : IIpFilter
+public class CachedIpFilter(IIpFilter nextFilter, TimeSpan timeout, bool autoDisposeNextFilter = true) : IIpFilter
 {
     private readonly TimeoutDictionary<IpEndPointValue, TimeoutItem<FilterAction>> _cache = new(timeout);
 
@@ -25,6 +25,7 @@ public class CachedIpFilter(IIpFilter nextFilter, TimeSpan timeout) : IIpFilter
     public void Dispose()
     {
         _cache.Dispose();
-        nextFilter.Dispose();
+        if (autoDisposeNextFilter)
+            nextFilter.Dispose();
     }
 }

@@ -21,16 +21,18 @@ namespace VpnHood.Core.Filtering.Sqlite;
 public sealed class SqliteIpFilter : IIpFilter
 {
     private readonly IIpFilter? _next;
+    private readonly bool _autoDisposeNextFilter;
     private readonly FilterAction _action;
     private readonly string _connectionString;
     private readonly ThreadLocal<Reader> _reader;
     private readonly ConcurrentBag<Reader> _allReaders = new();
     private volatile bool _disposed;
 
-    public SqliteIpFilter(IIpFilter? next, string dbPath, FilterAction action)
+    public SqliteIpFilter(IIpFilter? next, string dbPath, FilterAction action, bool autoDisposeNextFilter = true)
     {
         SplitIpSqlite.EnsureInitialized();
         _next = next;
+        _autoDisposeNextFilter = autoDisposeNextFilter;
         _action = action;
         _connectionString = new SqliteConnectionStringBuilder {
             DataSource = dbPath,
@@ -98,7 +100,8 @@ public sealed class SqliteIpFilter : IIpFilter
         _reader.Dispose();
         while (_allReaders.TryTake(out var reader))
             reader.Dispose();
-        _next?.Dispose();
+        if (_autoDisposeNextFilter)
+            _next?.Dispose();
     }
 
     // Per-thread read-only connection with prepared point-query statements (one per address family).

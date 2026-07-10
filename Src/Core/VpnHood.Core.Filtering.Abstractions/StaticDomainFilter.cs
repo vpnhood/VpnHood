@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Core.Filtering.Abstractions;
 
-public class StaticDomainFilter(IDomainFilter? nextFilter) : IDomainFilter
+public class StaticDomainFilter(IDomainFilter? nextFilter, bool autoDisposeNextFilter = true) : IDomainFilter
 {
     private string[] _invertedBlocks = [];
     private string[] _invertedExcludes = [];
@@ -126,6 +126,7 @@ public class StaticDomainFilter(IDomainFilter? nextFilter) : IDomainFilter
 
     public void Dispose()
     {
-        nextFilter?.Dispose();
+        if (autoDisposeNextFilter)
+            nextFilter?.Dispose();
     }
 }

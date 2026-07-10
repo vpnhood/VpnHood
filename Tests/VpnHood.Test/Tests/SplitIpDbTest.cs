@@ -296,11 +296,15 @@ public class SplitIpDbTest : TestBase
             () => new[] { IpRange.Parse("1.0.0.0 - 1.0.0.255") }.ToOrderedList(),
             () => "sig-1").BuildAsync(dbPath, TestCt);
 
-        // the client's pipe shape (outermost first), with the db gate innermost
-        var pipe = new CachedIpFilter(
-            new StaticIpFilter(new SqliteIpFilter(next: null, dbPath, FilterAction.Include)),
-            TimeSpan.FromMinutes(60));
-        Assert.AreEqual(FilterAction.Default, pipe.Process(IpProtocol.Tcp, Ep("1.0.0.1"))); // opens the connection
+        // opting out of ownership must leave the inner filter untouched
+        var innerFilter = new SqliteIpFilter(next: null, dbPath, FilterAction.Include);
+        new StaticIpFilter(innerFilter, autoDisposeNextFilter: false).Dispose();
+        Assert.AreEqual(FilterAction.Default, innerFilter.Process(IpProtocol.Tcp, Ep("1.0.0.1")),
+            "inner filter must survive when the wrapper does not own it");
+
+        // the client's pipe shape (outermost first) owns the whole chain by default
+        var pipe = new CachedIpFilter(new StaticIpFilter(innerFilter), TimeSpan.FromMinutes(60));
+        Assert.AreEqual(FilterAction.Default, pipe.Process(IpProtocol.Tcp, Ep("1.0.0.1")));
         pipe.Dispose();
 
         // deleting must succeed: dispose released every handle down the chain

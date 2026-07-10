@@ -11,8 +11,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <InternalsVisibleTo Include="VpnHood.Test" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\..\Core\VpnHood.Core.IpLocations\VpnHood.Core.IpLocations.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
 	</ItemGroup>
 

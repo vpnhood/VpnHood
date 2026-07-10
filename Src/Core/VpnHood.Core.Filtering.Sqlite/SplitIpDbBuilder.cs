@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using Microsoft.Data.Sqlite;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 
@@ -28,7 +29,7 @@ public static class SplitIpDbBuilder
         var connectionString = new SqliteConnectionStringBuilder {
             DataSource = tempPath,
             Mode = SqliteOpenMode.ReadWriteCreate,
-            Pooling = false // keep no handle on the file so we can move/delete it afterwards
+            Pooling = false // keep no handle on the file so we can move/delete it afterward
         }.ToString();
 
         await using (var connection = new SqliteConnection(connectionString)) {
@@ -38,48 +39,47 @@ public static class SplitIpDbBuilder
             Execute(connection, "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-16000;");
             Execute(connection, SplitIpDb.CreateTablesSql);
 
-            using (var zip = zipArchiveFactory())
-            await using (var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken)
-                             .ConfigureAwait(false)) {
-                using var insertV4 = CreateInsertCommand(connection, transaction, "range_v4");
-                using var insertV6 = CreateInsertCommand(connection, transaction, "range_v6");
+            await using var zip = zipArchiveFactory();
+            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
+            await using var insertV4 = CreateInsertCommand(connection, transaction, "range_v4");
+            await using var insertV6 = CreateInsertCommand(connection, transaction, "range_v6");
 
-                var rowCount = 0;
-                foreach (var countryCode in countryCodes) {
-                    var entry = zip.GetEntry($"{countryCode.ToLowerInvariant()}.ips");
-                    if (entry is null)
-                        continue; // unknown country code → nothing to add
+            var rowCount = 0;
+            foreach (var countryCode in countryCodes) {
+                var entry = zip.GetEntry($"{countryCode.ToLowerInvariant()}.ips");
+                if (entry is null)
+                    continue; // unknown country code → nothing to add
 
-                    await using var stream = entry.Open();
-                    foreach (var (start, end) in IpRangeOrderedList.DeserializeRaw(stream)) {
-                        if (start.Length == 4) {
-                            insertV4.Parameters[0].Value = SplitIpDb.ToV4Key(start);
-                            insertV4.Parameters[1].Value = SplitIpDb.ToV4Key(end);
-                            insertV4.ExecuteNonQuery();
-                        }
-                        else {
-                            insertV6.Parameters[0].Value = start;
-                            insertV6.Parameters[1].Value = end;
-                            insertV6.ExecuteNonQuery();
-                        }
-
-                        if (++rowCount % CancellationCheckInterval == 0)
-                            cancellationToken.ThrowIfCancellationRequested();
+                await using var stream = await entry.OpenAsync(cancellationToken);
+                foreach (var (start, end) in IpRangeOrderedList.DeserializeRaw(stream)) {
+                    if (start.Length == 4) {
+                        insertV4.Parameters[0].Value = SplitIpDb.ToV4Key(start);
+                        insertV4.Parameters[1].Value = SplitIpDb.ToV4Key(end);
+                        await insertV4.ExecuteNonQueryAsync(cancellationToken);
                     }
+                    else {
+                        insertV6.Parameters[0].Value = start;
+                        insertV6.Parameters[1].Value = end;
+                        await insertV6.ExecuteNonQueryAsync(cancellationToken);
+                    }
+
+                    if (++rowCount % CancellationCheckInterval == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
                 }
-
-                // meta written in the data transaction, EXCEPT built_complete (set only after indexes exist)
-                SetMeta(connection, transaction, SplitIpDb.KeySchemaVersion, SplitIpDb.SchemaVersion.ToString());
-                SetMeta(connection, transaction, SplitIpDb.KeyAssetHash, assetHash);
-                SetMeta(connection, transaction, SplitIpDb.KeySelectionSignature, selectionSignature);
-
-                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             }
+
+            // meta written in the data transaction, EXCEPT built_complete (set only after indexes exist)
+            SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeySchemaVersion, SplitIpDb.SchemaVersion.ToString());
+            SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeyAssetHash, assetHash);
+            SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeySelectionSignature, selectionSignature);
+
+            // the transaction ends HERE; index creation is deliberately outside it (index-after-bulk-insert)
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
             Execute(connection, SplitIpDb.CreateIndexesSql);
 
             // finalize: only now the db is complete and queryable
-            SetMeta(connection, transaction: null, SplitIpDb.KeyBuiltComplete, "1");
+            SplitIpDb.SetMeta(connection, transaction: null, SplitIpDb.KeyBuiltComplete, "1");
         }
 
         SqliteConnection.ClearAllPools();
@@ -101,16 +101,6 @@ public static class SplitIpDbBuilder
         command.Parameters[1].ParameterName = "$end";
         command.Prepare();
         return command;
-    }
-
-    private static void SetMeta(SqliteConnection connection, SqliteTransaction? transaction, string key, string value)
-    {
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "INSERT OR REPLACE INTO meta (key, value) VALUES ($key, $value)";
-        command.Parameters.AddWithValue("$key", key);
-        command.Parameters.AddWithValue("$value", value);
-        command.ExecuteNonQuery();
     }
 
     private static void Execute(SqliteConnection connection, string sql)

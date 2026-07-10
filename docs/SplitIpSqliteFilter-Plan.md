@@ -18,8 +18,14 @@
   **Deviation:** kept `VpnHoodClient.SessionIncludeIpRangesByApp` — it now exposes only the small allow set and still
   serves `ServerNetFilterConfigTest` correctly (no country in that test), so removing it is churn without gain.
   **No change needed** in `ClientSessionBuilder`: its intersection logic is unchanged; `IncludeIpRangesByApp` is just small now.
-- ⏳ **Step 5** — app side (`VpnHoodApp.GetIncludeIpRanges` / `LocationService`): resolve (countries, mode) + asset hash +
-  shared db path, call `SplitIpDbManager.EnsureAsync`, populate the descriptor instead of materializing ranges. NOT STARTED.
+- ✅ **Step 5** — app side. `LocationService.EnsureSplitIpDb(dbPath, ct)` replaces `GetIncludeCountryIpRanges`:
+  maps `SplitCountryMode` → countries + `FilterAction` (IncludeList→Include, ExcludeList/ExcludeMyCountry→Exclude,
+  IncludeAll→Default/no db), assetHash = zip `_checksum.txt` (fallback MD5 of zip bytes), calls
+  `SplitIpDbManager.EnsureAsync`; on failure falls back to IncludeAll (same policy as before).
+  `VpnHoodApp.GetIncludeIpRanges` is now sync and returns only the small SplitIpViaApp set;
+  `PrepareSplitIpDb` builds the descriptor with db at `<IDevice.VpnServiceConfigFolder>/ip-filters/split-country.db`
+  (on iOS that folder is inside the shared app-group container — the only path the NE can read).
+  `ConnectInternal2` fills `SplitIpDbPath`/`SplitIpAction`. AppLib.App now refs `Filtering.Sqlite`.
 
 All tests green so far (13). Nothing committed.
 
@@ -247,9 +253,14 @@ Multi-MB cross-process payload gone → path + a few small arrays.
 ## App-side flow (`VpnHoodApp.GetIncludeIpRanges` / `LocationService`)
 
 1. Resolve `(countries, mode)` from `SplitCountryMode` + `SplitCountries` (ExcludeMyCountry resolves client country first).
-2. `assetHash` = zip checksum; `dbPath` in shared filter-db folder.
-3. `await SplitIpDbManager.EnsureAsync(...)` — builds only on change, **in the app process**.
-4. Fill descriptor + small app arrays. Stop returning the materialized country `IpRangeOrderedList`.
+2. **Invert to the smaller set** (`LocationService.ResolveSplitIpDbSelection`): the db is mode-independent, so a
+   selection and its complement (vs the asset's available codes) express the same split. Always store the strictly
+   smaller set and flip Include<->Exclude — "all countries except one" stores one country, not 244. Deterministic
+   (no invert on tie); Block is never inverted (it has no complement form). Note: uncovered IPs (in no country's
+   ranges) follow the flipped action's default, which matches user intent ("everything except X" tunnels them).
+3. `assetHash` = zip checksum; `dbPath` in shared filter-db folder.
+4. `await SplitIpDbManager.EnsureAsync(...)` — builds only on change, **in the app process**.
+5. Fill descriptor + small app arrays. Stop returning the materialized country `IpRangeOrderedList`.
 
 `GetSupportedSplitCountries` still uses the zip's `GetCountryCodes` (cheap) — no db.
 `ClientHelper.GetDnsServers` uses point queries (`IsIncluded`) — works against the composed pipe unchanged;
@@ -264,11 +275,12 @@ just call it after the pipe is configured.
 ## Storage layout
 
 ```
-<shared>/ipfilter/split-country.db      ← built now  (build temp: split-country.db.tmp)
-<shared>/ipfilter/split-app-ip.db       ← later (own gate, symmetric)
-<shared>/domainfilter/split-domain.db   ← later (own IDomainFilter-side class)
+<IDevice.VpnServiceConfigFolder>/ip-filters/split-country.db   ← built now (build temp: split-country.db.tmp)
+<IDevice.VpnServiceConfigFolder>/ip-filters/split-app-ip.db    ← later (own gate, symmetric)
+<IDevice.VpnServiceConfigFolder>/.../split-domain.db           ← later (own IDomainFilter-side class)
 ```
-Shared path reachable by both app-builder and VpnService.
+`VpnServiceConfigFolder` is the folder the VpnService already reads its config from — reachable by both the
+app-builder and the VpnService process (on iOS it is inside the shared app-group container).
 
 **Static filenames — NOT versioned, NOT per country.** `split-country.db` is a *single* file holding the union
 of ALL currently-selected countries' ranges (`range_v4`/`range_v6`). Its selection signature + asset hash live

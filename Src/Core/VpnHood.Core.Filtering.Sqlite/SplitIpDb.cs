@@ -1,6 +1,8 @@
+using Microsoft.Data.Sqlite;
+
 namespace VpnHood.Core.Filtering.Sqlite;
 
-// Shared schema, meta keys and address conversion for the split-country IP db.
+// Shared schema, meta keys/accessors and address conversion for the split-country IP db.
 // One db per selection context; two range tables (IPv4 as INTEGER, IPv6 as 16-byte BLOB) + a meta table.
 internal static class SplitIpDb
 {
@@ -33,4 +35,25 @@ internal static class SplitIpDb
             .Select(c => c.ToUpperInvariant())
             .Distinct()
             .OrderBy(c => c, StringComparer.Ordinal));
+
+    public static Dictionary<string, string> ReadMeta(SqliteConnection connection)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT key, value FROM meta";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            result[reader.GetString(0)] = reader.GetString(1);
+        return result;
+    }
+
+    public static void SetMeta(SqliteConnection connection, SqliteTransaction? transaction, string key, string value)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "INSERT OR REPLACE INTO meta (key, value) VALUES ($key, $value)";
+        command.Parameters.AddWithValue("$key", key);
+        command.Parameters.AddWithValue("$value", value);
+        command.ExecuteNonQuery();
+    }
 }

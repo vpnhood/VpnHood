@@ -29,6 +29,7 @@ using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -749,6 +750,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     ? UserSettings.DnsServers
                     : null;
 
+            // split-country: build or reuse the on-disk filter db and pass its descriptor
+            var (splitIpDbPath, splitIpAction) = await PrepareSplitIpDb(cancellationToken).Vhc();
+
             // create clientOptions
             var clientOptions = new ClientOptions {
                 AppName = Resources.Strings.AppName,
@@ -758,8 +762,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UnstableTimeout = _unstableTimeout,
                 AutoWaitTimeout = _autoWaitTimeout,
                 SplitLocalNetwork = UserSettings.UseSplitLocalNetwork,
-                IncludeIpRangesByApp = (await GetIncludeIpRanges(cancellationToken)).ToArray(),
+                IncludeIpRangesByApp = GetIncludeIpRanges().ToArray(),
                 BlockIpRangesByApp = GetBlockIpRangesByApp(),
+                SplitIpDbPath = splitIpDbPath,
+                SplitIpAction = splitIpAction,
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 PacketChannelBufferSize = _packetChannelBufferSize,
@@ -1113,13 +1119,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    public async Task<IpRangeOrderedList> GetIncludeIpRanges(CancellationToken cancellationToken)
+    // The small app-level allow set (SplitIpViaApp). Country split no longer materializes ranges here —
+    // it travels as a SplitIpDbPath/SplitIpAction descriptor (see PrepareSplitIpDb).
+    public IpRangeOrderedList GetIncludeIpRanges()
     {
-        // get country ip ranges
-        if (SettingsService.Settings.UserSettings.SplitCountryMode is not SplitCountryMode.IncludeAll)
-            VerifyPremiumFeature(AppFeature.SplitCountry);
-
-        var ipRanges = await Services.LocationService.GetIncludeCountryIpRanges(cancellationToken);
+        var ipRanges = IpNetwork.All.ToIpRanges();
 
         // calculate AppFilter IPs
         if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp)) {
@@ -1131,6 +1135,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
 
         return ipRanges;
+    }
+
+    // Build or reuse the on-disk split-country db and return the ClientOptions descriptor for it.
+    // The db lives in VpnServiceConfigFolder because that is the only folder the VpnService process is
+    // guaranteed to read (on iOS it is the shared app-group container).
+    private async Task<(string? DbPath, FilterAction Action)> PrepareSplitIpDb(CancellationToken cancellationToken)
+    {
+        if (SettingsService.Settings.UserSettings.SplitCountryMode is not SplitCountryMode.IncludeAll)
+            VerifyPremiumFeature(AppFeature.SplitCountry);
+
+        var dbPath = Path.Combine(_device.VpnServiceConfigFolder, "ip-filters", "split-country.db");
+        var action = await Services.LocationService.EnsureSplitIpDb(dbPath, cancellationToken).Vhc();
+        return action is FilterAction.Default ? (null, FilterAction.Default) : (dbPath, action);
     }
 
     public IpRange[] GetBlockIpRangesByApp()

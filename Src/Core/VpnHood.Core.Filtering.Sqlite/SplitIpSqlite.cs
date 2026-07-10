@@ -5,13 +5,10 @@ namespace VpnHood.Core.Filtering.Sqlite;
 public static class SplitIpSqlite
 {
     private static bool _initialized;
-    private static readonly object InitLock = new();
+    private static readonly Lock InitLock = new();
 
     public static void EnsureInitialized()
     {
-        if (_initialized)
-            return;
-
         lock (InitLock) {
             if (_initialized)
                 return;

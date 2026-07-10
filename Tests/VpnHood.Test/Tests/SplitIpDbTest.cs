@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Net;
 using Microsoft.Data.Sqlite;
+using VpnHood.AppLib.Services;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.Toolkit.Net;
@@ -203,5 +204,45 @@ public class SplitIpDbTest : TestBase
     {
         public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint) => action;
         public void Dispose() { }
+    }
+
+    [TestMethod]
+    public void Selection_inverts_to_smaller_set()
+    {
+        string[] available = ["US", "TR", "DE", "FR", "IR"];
+
+        // "everything except one" stores the one and flips the action
+        var (codes, action) = LocationService.ResolveSplitIpDbSelection(
+            available, ["US", "TR", "DE", "FR"], FilterAction.Include);
+        CollectionAssert.AreEquivalent(new[] { "IR" }, codes);
+        Assert.AreEqual(FilterAction.Exclude, action);
+
+        // same for the exclude direction
+        (codes, action) = LocationService.ResolveSplitIpDbSelection(
+            available, ["US", "TR", "DE", "FR"], FilterAction.Exclude);
+        CollectionAssert.AreEquivalent(new[] { "IR" }, codes);
+        Assert.AreEqual(FilterAction.Include, action);
+
+        // small selection stays as-is (ExcludeMyCountry case)
+        (codes, action) = LocationService.ResolveSplitIpDbSelection(available, ["ir"], FilterAction.Exclude);
+        CollectionAssert.AreEquivalent(new[] { "IR" }, codes);
+        Assert.AreEqual(FilterAction.Exclude, action);
+
+        // tie (complement == selected) must not invert: deterministic and stable
+        (codes, action) = LocationService.ResolveSplitIpDbSelection(
+            ["US", "TR"], ["us"], FilterAction.Include);
+        CollectionAssert.AreEquivalent(new[] { "US" }, codes);
+        Assert.AreEqual(FilterAction.Include, action);
+
+        // unknown selected codes contribute nothing and must not skew the size comparison
+        (codes, action) = LocationService.ResolveSplitIpDbSelection(
+            available, ["US", "TR", "DE", "FR", "XX", "YY"], FilterAction.Include);
+        CollectionAssert.AreEquivalent(new[] { "IR" }, codes);
+        Assert.AreEqual(FilterAction.Exclude, action);
+
+        // all selected => empty complement stored, flipped action (nothing excluded => tunnel everything)
+        (codes, action) = LocationService.ResolveSplitIpDbSelection(available, available, FilterAction.Include);
+        Assert.AreEqual(0, codes.Length);
+        Assert.AreEqual(FilterAction.Exclude, action);
     }
 }

@@ -8,6 +8,9 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // selection signature + schema version + built_complete flag) — no sidecar files.
 public static class SplitIpDbManager
 {
+    // zipArchiveFactory (not an open ZipArchive): the common case is "already up to date" — every connect after
+    // the first with an unchanged selection returns at the IsUpToDate check, and the zip is never opened at all.
+    // The factory is invoked (and its archive disposed) only on the rare rebuild path.
     public static async Task EnsureAsync(
         string dbPath,
         Func<ZipArchive> zipArchiveFactory,
@@ -40,7 +43,7 @@ public static class SplitIpDbManager
             using var connection = new SqliteConnection(connectionString);
             connection.Open();
 
-            var meta = ReadMeta(connection);
+            var meta = SplitIpDb.ReadMeta(connection);
             return meta.TryGetValue(SplitIpDb.KeyBuiltComplete, out var complete) && complete == "1" &&
                    meta.TryGetValue(SplitIpDb.KeySchemaVersion, out var schema) &&
                    schema == SplitIpDb.SchemaVersion.ToString() &&
@@ -53,14 +56,4 @@ public static class SplitIpDbManager
         }
     }
 
-    private static Dictionary<string, string> ReadMeta(SqliteConnection connection)
-    {
-        var result = new Dictionary<string, string>(StringComparer.Ordinal);
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT key, value FROM meta";
-        using var reader = command.ExecuteReader();
-        while (reader.Read())
-            result[reader.GetString(0)] = reader.GetString(1);
-        return result;
-    }
 }

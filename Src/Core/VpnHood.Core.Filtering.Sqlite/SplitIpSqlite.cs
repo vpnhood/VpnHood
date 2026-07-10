@@ -1,0 +1,22 @@
+namespace VpnHood.Core.Filtering.Sqlite;
+
+// Microsoft.Data.Sqlite.Core does not auto-register a native provider; the bundle package supplies
+// Batteries_V2.Init(). Call this once before touching any SqliteConnection.
+public static class SplitIpSqlite
+{
+    private static bool _initialized;
+    private static readonly object InitLock = new();
+
+    public static void EnsureInitialized()
+    {
+        if (_initialized)
+            return;
+
+        lock (InitLock) {
+            if (_initialized)
+                return;
+            SQLitePCL.Batteries_V2.Init();
+            _initialized = true;
+        }
+    }
+}

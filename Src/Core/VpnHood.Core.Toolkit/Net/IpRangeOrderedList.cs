@@ -74,6 +74,23 @@ public class IpRangeOrderedList :
         return new IpRangeOrderedList(ipRanges);
     }
 
+    // Streams the serialized ranges as raw address bytes (4 for IPv4, 16 for IPv6) in file order,
+    // without allocating IpRange/IPAddress objects and without sorting. The serialized stream is already
+    // sorted+unified, so consumers that only need to persist the ranges (e.g. bulk-insert into SQLite)
+    // can skip the object graph entirely. Note: BinaryReader disposes the stream when enumeration ends.
+    public static IEnumerable<(byte[] Start, byte[] End)> DeserializeRaw(Stream stream)
+    {
+        using var reader = new BinaryReader(stream);
+        var length = reader.ReadInt32();
+        for (var i = 0; i < length; i++) {
+            var firstIpLength = reader.ReadByte();
+            var firstIpBytes = reader.ReadBytes(firstIpLength);
+            var lastIpLength = reader.ReadByte();
+            var lastIpBytes = reader.ReadBytes(lastIpLength);
+            yield return (firstIpBytes, lastIpBytes);
+        }
+    }
+
     public bool IsAll()
     {
         // use ToIpRanges for All to improve performance

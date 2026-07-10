@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Logging;
@@ -18,11 +19,22 @@ public class ClientOptions
         AppName = "VpnHoodEngine"
     };
 
+    // Small app-level allow set (All, or SplitIpViaApp includes) intersected with server/device ranges.
+    // The (potentially huge) split-country ranges no longer live here — they are in the SQLite db below.
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] IncludeIpRangesByApp { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] BlockIpRangesByApp { get; set; } = [];
+
+    // Split-country descriptor: path to the SQLite db of selected-country ranges, and what membership means.
+    // Include ⇒ tunnel only members; Exclude ⇒ bypass members; Block ⇒ drop members; Default (or null path)
+    // ⇒ no country split. See docs/SplitIpSqliteFilter-Plan.md.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public string? SplitIpDbPath { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public FilterAction SplitIpAction { get; set; }
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] IncludeIpRangesByDevice { get; set; } = IpNetwork.All.ToIpRanges().ToArray();

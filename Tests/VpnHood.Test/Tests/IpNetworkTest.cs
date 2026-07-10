@@ -44,6 +44,38 @@ public class IpNetworkTest : TestBase
     }
 
     [TestMethod]
+    public void DeserializeRaw_matches_Deserialize()
+    {
+        var ranges = new[] {
+            IpRange.Parse("1.1.1.1 - 1.1.1.10"),
+            IpRange.Parse("9.9.9.0 - 9.9.9.255"),
+            IpRange.Parse("192.168.0.0 - 192.168.255.255"),
+            IpRange.Parse("AA::0000 - AA::FFFF"),
+            IpRange.Parse("2001:db8:: - 2001:db8::ffff")
+        }.ToOrderedList();
+
+        using var ms = new MemoryStream();
+        ranges.Serialize(ms);
+        var bytes = ms.ToArray(); // MemoryStream.ToArray() is valid even after Serialize disposes the stream
+
+        // object path (allocates IpRange/IPAddress, sorts+unifies)
+        var deserialized = IpRangeOrderedList.Deserialize(new MemoryStream(bytes)).ToArray();
+
+        // raw streaming path (no object graph, no sort) — reconstruct to compare
+        var raw = IpRangeOrderedList.DeserializeRaw(new MemoryStream(bytes))
+            .Select(x => new IpRange(new IPAddress(x.Start), new IPAddress(x.End)))
+            .ToArray();
+
+        CollectionAssert.AreEqual(deserialized, raw);
+
+        // family is carried by byte length (4 = IPv4, 16 = IPv6) — what the SQLite builder keys on
+        var lengths = IpRangeOrderedList.DeserializeRaw(new MemoryStream(bytes))
+            .Select(x => x.Start.Length).ToArray();
+        Assert.IsTrue(lengths.Contains(4), "expected some IPv4 ranges");
+        Assert.IsTrue(lengths.Contains(16), "expected some IPv6 ranges");
+    }
+
+    [TestMethod]
     public void IpNetwork_Unit()
     {
         var ipNetwork = IpNetwork.Parse("192.168.23.23/32");

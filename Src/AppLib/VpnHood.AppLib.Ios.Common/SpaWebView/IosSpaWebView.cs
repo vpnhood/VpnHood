@@ -54,7 +54,6 @@ public sealed class IosSpaWebView : ISpaWebView
         // (users zoom by accident and can't reset). Pin the viewport scale and swallow the pinch
         // gesture. Unlike mobile Safari, an app WKWebView honors user-scalable=no. Injected at
         // document-end so it overrides whatever viewport the SPA's HTML declared.
-        config.UserContentController ??= new WKUserContentController();
         config.UserContentController.AddUserScript(new WKUserScript(
             new NSString(
                 "var vp = document.querySelector('meta[name=viewport]');" +

@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>SQLite-backed IP range filter (split-country) for VpnHood.</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!--Use Microsoft.Data.Sqlite.Core (not Microsoft.Data.Sqlite) so consuming heads choose the native
+		    SQLitePCLRaw provider per platform and the base stays small. Batteries_V2.Init() is called from
+		    SplitIpSqlite.EnsureInitialized().
+
+		    bundle_e_sqlite3 3.0.3 ships the patched e_sqlite3 native for ALL runtime variants — including the
+		    RID-specific .android / .ios natives — fixing GHSA-2m69-gcr7-jv3q (e_sqlite3 <= 2.1.11) at every head
+		    with no per-RID override. There is NO stable 2.1.12 bundle (only a 2.1.12-pre), so 3.0.x is the patched
+		    stable line; MDS.Core 10.0.9 only requires SQLitePCLRaw.core >= 2.1.11, which 3.0.x satisfies. Verified by
+		    the SplitIpDb tests (real open/insert/query on the native). Keep >= 3.0.3.
+		    (Do NOT use 2.1.11 + a lib.e_sqlite3 override: it misses the .android/.ios native and Android flags NU1903.)
+
+		    Apple heads may later swap bundle_e_sqlite3 for SQLitePCLRaw.bundle_sqlite3 (system libsqlite3, no shipped
+		    native binary) to shrink the iOS binary — see docs/SplitIpSqliteFilter-Plan.md.-->
+		<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.9" />
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Filtering.Abstractions\VpnHood.Core.Filtering.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

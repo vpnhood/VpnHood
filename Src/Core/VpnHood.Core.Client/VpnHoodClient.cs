@@ -4,6 +4,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Filtering.DomainFiltering.Observation;
 using VpnHood.Core.Proxies.EndPointManagement;
@@ -118,8 +119,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         Tracker = tracker;
         ChannelProtocol = options.ChannelProtocol;
 
-        // Prepare filters
-        _staticIpFilter = new StaticIpFilter(netFilter?.IpFilter);
+        // Prepare filters.
+        // Split-country (when enabled) is a lean SQLite gate chained as the inner filter: it runs first and
+        // bypasses non-selected addresses, while the StaticIpFilter terminal grants Include for the small
+        // server∩device∩app allow set. The (former ~97MB) country ranges never enter memory here.
+        var innerIpFilter = netFilter?.IpFilter;
+        if (!string.IsNullOrEmpty(options.SplitIpDbPath) && options.SplitIpAction != FilterAction.Default)
+            innerIpFilter = new SqliteIpFilter(innerIpFilter, options.SplitIpDbPath, options.SplitIpAction);
+        _staticIpFilter = new StaticIpFilter(innerIpFilter);
         var staticDomainFilter = new StaticDomainFilter(netFilter?.DomainFilter) {
             Blocks = options.DomainFilterPolicy.Blocks,
             Excludes = options.DomainFilterPolicy.Excludes,

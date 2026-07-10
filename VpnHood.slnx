@@ -136,6 +136,7 @@
     <Project Path="Src/Core/VpnHood.Core.Common/VpnHood.Core.Common.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Filtering.Abstractions/VpnHood.Core.Filtering.Abstractions.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Filtering.DomainFiltering/VpnHood.Core.Filtering.DomainFiltering.csproj" />
+    <Project Path="Src/Core/VpnHood.Core.Filtering.Sqlite/VpnHood.Core.Filtering.Sqlite.csproj" />
     <Project Path="Src/Core/VpnHood.Core.IpLocations.SqliteProvider/VpnHood.Core.IpLocations.SqliteProvider.csproj" />
     <Project Path="Src/Core/VpnHood.Core.IpLocations/VpnHood.Core.IpLocations.csproj" />
     <Project Path="Src/Core/VpnHood.Core.Packets/VpnHood.Core.Packets.csproj" />

@@ -17,7 +17,7 @@
 		    (Do NOT use 2.1.11 + a lib.e_sqlite3 override: it misses the .android/.ios native and Android flags NU1903.)
 
 		    Apple heads may later swap bundle_e_sqlite3 for SQLitePCLRaw.bundle_sqlite3 (system libsqlite3, no shipped
-		    native binary) to shrink the iOS binary — see docs/SplitIpSqliteFilter-Plan.md.-->
+		    native binary) to shrink the iOS binary.-->
 		<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.9" />
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
 	</ItemGroup>

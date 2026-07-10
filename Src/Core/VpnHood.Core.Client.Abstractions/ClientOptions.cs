@@ -29,7 +29,7 @@ public class ClientOptions
 
     // Split-country descriptor: path to the SQLite db of selected-country ranges, and what membership means.
     // Include ⇒ tunnel only members; Exclude ⇒ bypass members; Block ⇒ drop members; Default (or null path)
-    // ⇒ no country split. See docs/SplitIpSqliteFilter-Plan.md.
+    // ⇒ no country split. See docs/SplitIpFilter.md.
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? SplitIpDbPath { get; set; }
 

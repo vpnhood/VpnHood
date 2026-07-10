@@ -2,14 +2,14 @@ using Microsoft.Data.Sqlite;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 
-// Shared schema, meta keys/accessors and address conversion for the split-country IP db.
+// Shared schema, meta keys/accessors and address conversion for split-ip dbs.
 // One db per selection context; two range tables (IPv4 as INTEGER, IPv6 as 16-byte BLOB) + a meta table.
 internal static class SplitIpDb
 {
-    public const int SchemaVersion = 1;
+    // 2: asset_hash + selection_signature collapsed into a single context-agnostic source_signature
+    public const int SchemaVersion = 2;
 
-    public const string KeyAssetHash = "asset_hash";
-    public const string KeySelectionSignature = "selection_signature";
+    public const string KeySourceSignature = "source_signature";
     public const string KeySchemaVersion = "schema_version";
     public const string KeyBuiltComplete = "built_complete";
 
@@ -27,14 +27,6 @@ internal static class SplitIpDb
     // Used both when inserting v4 ranges and when querying a v4 address, so ordering is consistent.
     public static long ToV4Key(ReadOnlySpan<byte> bytes) =>
         ((long)bytes[0] << 24) | ((long)bytes[1] << 16) | ((long)bytes[2] << 8) | bytes[3];
-
-    // Canonical selection signature: distinct, upper-cased country codes, ordinal-sorted, comma-joined.
-    // Mode is intentionally NOT part of the signature (db content is mode-independent — see docs plan).
-    public static string BuildSelectionSignature(IEnumerable<string> countryCodes) =>
-        string.Join(',', countryCodes
-            .Select(c => c.ToUpperInvariant())
-            .Distinct()
-            .OrderBy(c => c, StringComparer.Ordinal));
 
     public static Dictionary<string, string> ReadMeta(SqliteConnection connection)
     {

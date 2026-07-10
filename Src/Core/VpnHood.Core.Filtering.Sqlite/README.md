@@ -4,23 +4,30 @@ SQLite-backed IP range membership filter. Answers one question per packet — *i
 stored range set?* — from an on-disk database instead of an in-memory range list, so range sets of any
 size cost (almost) no RAM at runtime.
 
-It is context-agnostic infrastructure: it stores IP ranges, not countries. The split-country feature is
-one consumer (see `docs/SplitIpFilter.md` in the repo root for the end-to-end architecture); future
-contexts (per-app IP splits, etc.) reuse these same classes with their own db file.
+It is context-agnostic infrastructure: it stores IP ranges and knows nothing about where they come
+from. A context plugs in by deriving from `SplitIpDbBuilder` (or instantiating the generic
+`IpRangeListDbBuilder`) and supplying two things: a cheap source signature and the ranges. Current
+consumers: **split-country** (`split-country.db` — its `SplitCountryDbBuilder`, which owns the
+ip-location zip layout, lives in AppLib next to `SplitCountryService`) and **split-ip-via-app**
+(`split-ip-via-app.db`, the user's merged include/exclude list, plus `split-ip-via-app-blocks.db`, the
+block set — both via `IpRangeListDbBuilder`). Each db gets its own pipe stage. The shared architecture
+lives in `docs/split-ip/README.md` in the repo root; each context's policy in its sibling
+`split-country.md` / `split-ip-via-app.md`.
 
 ## Components
 
 | Class | Role |
 | --- | --- |
-| `SplitIpDbBuilder` | One-shot builder: streams serialized ranges from a zip into a new db file. |
-| `SplitIpDbManager` | `EnsureAsync` — reuse the db if its meta matches (asset hash + selection), rebuild otherwise. |
+| `SplitIpDbBuilder` | Abstract base: shared build core (schema, bulk-insert transaction, meta, index-after-insert, atomic replace) + `EnsureAsync` staleness check. Derived classes supply `BuildSourceSignature()` and `InsertRangesAsync()`. |
+| `IpRangeListDbBuilder` | Generic concrete builder: stores an already-merged `IpRangeOrderedList` as-is; both inputs are lazy factories. |
+| `SplitIpDbInserter` | The raw-statement insert hot loop handed to `InsertRangesAsync`; dispatches by address length. |
 | `SqliteIpFilter` | Runtime `IIpFilter`: read-only per-packet membership gate driven by a `FilterAction`. |
-| `SplitIpDb` | Shared schema, meta keys/accessors, key conversion, selection signature (internal). |
+| `SplitIpDb` | Shared schema, meta keys/accessors, key conversion (internal). |
 | `SplitIpSqlite` | One-time `SQLitePCL.Batteries_V2.Init()` (required by `Microsoft.Data.Sqlite.Core`). |
 
 ## Database format
 
-One db per selection context, static filename, schema version 1:
+One db per selection context, static filename, schema version 2:
 
 ```sql
 CREATE TABLE range_v4 (start_ip INTEGER NOT NULL, end_ip INTEGER NOT NULL);
@@ -37,19 +44,24 @@ CREATE INDEX ix_range_v6 ON range_v6(start_ip);
   address ordering exactly.
 - **Ranges are stored as-is (mode-independent).** What membership *means* — tunnel, bypass, block — is
   decided by the `FilterAction` passed to `SqliteIpFilter` at runtime, never baked into the db. A set
-  and its complement can therefore express the same split (see the inversion rule in the root doc).
+  and its complement can therefore express the same split (see the inversion rule in
+  `docs/split-ip/split-country.md`).
 
 ### Meta keys (rebuild detection)
 
-The db is self-describing — no sidecar files. `SplitIpDbManager.IsUpToDate` opens it read-only and
+The db is self-describing — no sidecar files. `SplitIpDbBuilder.EnsureAsync` opens it read-only and
 requires ALL of:
 
 | Key | Meaning |
 | --- | --- |
 | `schema_version` | Must equal the code's `SplitIpDb.SchemaVersion`. |
-| `asset_hash` | Identifies the source asset build; mismatch ⇒ asset updated ⇒ rebuild. |
-| `selection_signature` | Canonical stored set: distinct, upper-cased codes, ordinal-sorted, comma-joined. |
+| `source_signature` | Context-defined identity of the source; mismatch ⇒ source changed ⇒ rebuild. |
 | `built_complete` | `"1"` only after indexes exist; a crash mid-build can never be mistaken for a valid db. |
+
+What goes into `source_signature` is the context's choice — the base only compares strings; each
+builder's `BuildSourceSignature()` composes it so it changes iff the stored set would change (asset
+hash + selection for split-country, source-file mtime + length for split-ip-via-app — see the docs in
+`docs/split-ip/`). It runs on every ensure, so it must stay cheap: hashes and stat, never a parse.
 
 Any open/read error also counts as stale (corrupt/locked ⇒ rebuild).
 
@@ -61,16 +73,18 @@ VpnService):
 1. Build into `<dbPath>.tmp`, then atomically `File.Move` over the target. A crash never leaves a
    half-built db in place; VPN connections are exclusive, so the target is never in use.
 2. Durability is irrelevant for a rebuildable file: `journal_mode=OFF; synchronous=OFF`.
-3. Input ranges stream via `IpRangeOrderedList.DeserializeRaw` — no `IpRange` allocation, no sorting
-   (the `.ips` assets are already sorted and unified).
-4. The insert hot loop uses **raw SQLitePCL statements** (prepare once, bind/step/reset per row) on the
+3. The derived builder streams its ranges through `SplitIpDbInserter.Insert(start, end)` — raw
+   big-endian address bytes, so sources that are already serialized (the `.ips` assets, read via
+   `IpRangeOrderedList.DeserializeRaw`) never allocate `IpRange` objects.
+4. The inserter uses **raw SQLitePCL statements** (prepare once, bind/step/reset per row) on the
    connection's handle. The `SqliteCommand` path costs ~30µs/row on Android (Mono) vs ~1µs/row raw —
-   measured on an emulator, an all-countries build (618k rows, 30MB db) dropped from 16.8s to 0.65s.
+   measured on an emulator, an all-countries build (618k rows, 30MB db) dropped from 16.3s to 0.65s.
 5. `_checksum`-style meta is written inside the data transaction; `built_complete` only after
    `CREATE INDEX`.
 
-`EnsureAsync` takes a `Func<ZipArchive>` rather than an open archive: the common case ("already up to
-date", i.e. every connect after the first) returns at the meta check without opening the zip at all.
+`InsertRangesAsync` (and the factories of `IpRangeListDbBuilder`) run only on the rebuild path: the
+common case ("already up to date", i.e. every connect after the first) returns at `EnsureAsync`'s meta
+check without opening the zip or parsing the text files at all.
 
 ## Runtime filter — `SqliteIpFilter`
 

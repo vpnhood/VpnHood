@@ -1,4 +1,4 @@
-﻿using Ga4.Trackers;
+using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Services.Accounts;
@@ -14,6 +14,7 @@ public class AppServices : IDisposable
     public required AppProxyEndPointService ProxyEndPointService { get; init; }
     public required LocationService LocationService { get; init; }
     public required SplitCountryService SplitCountryService { get; init; }
+    public required SplitIpViaAppService SplitIpViaAppService { get; init; }
     public required IDeviceUiProvider DeviceUiProvider { get; init; }
     public required IAppCultureProvider CultureProvider { get; init; }
     public required IAppUserReviewProvider? UserReviewProvider { get; init; }

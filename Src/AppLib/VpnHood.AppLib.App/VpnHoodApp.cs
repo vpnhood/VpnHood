@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -136,6 +136,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ipLocationZipData: options.Resources.IpLocationZipData);
         splitCountryService.StateChanged += LocationService_StateChanged;
 
+        var splitIpViaAppService = new SplitIpViaAppService(settingsService);
+        splitIpViaAppService.StateChanged += LocationService_StateChanged;
+
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
@@ -221,6 +224,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Tracker = tracker,
             LocationService = locationService,
             SplitCountryService = splitCountryService,
+            SplitIpViaAppService = splitIpViaAppService,
             AccountService = options.AccountProvider is null
                 ? null
                 : new AppAccountService(
@@ -490,6 +494,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             if (clientState == ClientState.Initializing ||
                 Services.SplitCountryService.IsBusy ||
+                Services.SplitIpViaAppService.IsBusy ||
                 Services.LocationService.IsFindingCountryCode)
                 return AppConnectionState.Initializing;
 
@@ -755,8 +760,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     ? UserSettings.DnsServers
                     : null;
 
-            // split-country: build or reuse the on-disk filter db and pass its descriptor
-            var (splitIpDbPath, splitIpAction) = await PrepareSplitIpDb(cancellationToken).Vhc();
+            // split-ip (country + app): build or reuse the on-disk filter dbs and pass their descriptors
+            var splitIpDbFilters = await PrepareSplitIpDbs(cancellationToken).Vhc();
 
             // create clientOptions
             var clientOptions = new ClientOptions {
@@ -767,10 +772,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UnstableTimeout = _unstableTimeout,
                 AutoWaitTimeout = _autoWaitTimeout,
                 SplitLocalNetwork = UserSettings.UseSplitLocalNetwork,
-                IncludeIpRangesByApp = GetIncludeIpRanges().ToArray(),
-                BlockIpRangesByApp = GetBlockIpRangesByApp(),
-                SplitIpDbPath = splitIpDbPath,
-                SplitIpAction = splitIpAction,
+                SplitIpDbFilters = splitIpDbFilters,
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 PacketChannelBufferSize = _packetChannelBufferSize,
@@ -1124,43 +1126,26 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // The small app-level allow set (SplitIpViaApp). Country split no longer materializes ranges here —
-    // it travels as a SplitIpDbPath/SplitIpAction descriptor (see PrepareSplitIpDb).
-    public IpRangeOrderedList GetIncludeIpRanges()
-    {
-        var ipRanges = IpNetwork.All.ToIpRanges();
-
-        // calculate AppFilter IPs
-        if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp)) {
-            ipRanges = ipRanges.Intersect(
-                IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpSettings.AppIncludes));
-
-            ipRanges = ipRanges.Exclude(
-                IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpSettings.AppExcludes));
-        }
-
-        return ipRanges;
-    }
-
-    // Build or reuse the on-disk split-country db and return the ClientOptions descriptor for it.
-    // The db lives in VpnServiceConfigFolder because that is the only folder the VpnService process is
-    // guaranteed to read (on iOS it is the shared app-group container).
-    private async Task<(string? DbPath, FilterAction Action)> PrepareSplitIpDb(CancellationToken cancellationToken)
+    // Build or reuse the on-disk split-ip dbs (split-country + split-ip-via-app) and return one ClientOptions
+    // descriptor per active context. The dbs live in VpnServiceConfigFolder because that is the only folder
+    // the VpnService process is guaranteed to read (on iOS it is the shared app-group container).
+    private async Task<SplitIpDbFilter[]> PrepareSplitIpDbs(CancellationToken cancellationToken)
     {
         if (SettingsService.Settings.UserSettings.SplitCountryMode is not SplitCountryMode.IncludeAll)
             VerifyPremiumFeature(AppFeature.SplitCountry);
 
-        var dbPath = Path.Combine(_device.VpnServiceConfigFolder, "ip-filters", "split-country.db");
-        var action = await Services.SplitCountryService.EnsureSplitIpDb(dbPath, cancellationToken).Vhc();
-        return action is FilterAction.Default ? (null, FilterAction.Default) : (dbPath, action);
-    }
+        var filters = new List<SplitIpDbFilter>();
+        var dbFolder = Path.Combine(_device.VpnServiceConfigFolder, "ip-filters");
 
-    public IpRange[] GetBlockIpRangesByApp()
-    {
+        var countryDbPath = Path.Combine(dbFolder, "split-country.db");
+        var countryAction = await Services.SplitCountryService.EnsureSplitIpDb(countryDbPath, cancellationToken).Vhc();
+        if (countryAction is not FilterAction.Default)
+            filters.Add(new SplitIpDbFilter { DbPath = countryDbPath, Action = countryAction });
+
         if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp))
-            return IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpSettings.AppBlocks);
+            filters.AddRange(await Services.SplitIpViaAppService.EnsureSplitIpDbs(dbFolder, cancellationToken).Vhc());
 
-        return [];
+        return filters.ToArray();
     }
 
     public DomainFilterPolicy GetDomainFilterPolicy()
@@ -1327,6 +1312,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
         Services.LocationService.StateChanged -= LocationService_StateChanged;
         Services.SplitCountryService.StateChanged -= LocationService_StateChanged;
+        Services.SplitIpViaAppService.StateChanged -= LocationService_StateChanged;
         _vpnServiceManager.Dispose();
         Services.UpdaterService?.Dispose();
         Services.Dispose();

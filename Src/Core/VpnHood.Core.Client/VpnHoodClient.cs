@@ -81,8 +81,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             AccessCode = options.AccessCode,
             ExcludeApps = options.ExcludeApps,
             IncludeApps = options.IncludeApps,
-            IncludeIpRangesByApp = options.IncludeIpRangesByApp,
-            BlockIpRangesByApp = options.BlockIpRangesByApp,
             IncludeIpRangesByDevice = options.IncludeIpRangesByDevice,
             DnsServers = options.DnsServers,
             SessionName = options.SessionName,
@@ -120,12 +118,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ChannelProtocol = options.ChannelProtocol;
 
         // Prepare filters.
-        // Split-country (when enabled) is a lean SQLite gate chained as the inner filter: it runs first and
-        // bypasses non-selected addresses, while the StaticIpFilter terminal grants Include for the small
-        // server∩device∩app allow set. The (former ~97MB) country ranges never enter memory here.
+        // Each split-ip db (country, app allow set, app blocks) is a lean SQLite gate chained as an inner
+        // filter: Include gates bypass non-members (chained Include gates compose as intersection), Block
+        // gates drop members, and the StaticIpFilter terminal grants Include for the server∩device allow
+        // set. The (former ~97MB) split ranges never enter memory here.
         var innerIpFilter = netFilter?.IpFilter;
-        if (!string.IsNullOrEmpty(options.SplitIpDbPath) && options.SplitIpAction != FilterAction.Default)
-            innerIpFilter = new SqliteIpFilter(innerIpFilter, options.SplitIpDbPath, options.SplitIpAction);
+        foreach (var splitIpDbFilter in options.SplitIpDbFilters.Where(x => x.Action != FilterAction.Default))
+            innerIpFilter = new SqliteIpFilter(innerIpFilter, splitIpDbFilter.DbPath, splitIpDbFilter.Action);
         _staticIpFilter = new StaticIpFilter(innerIpFilter);
         var staticDomainFilter = new StaticDomainFilter(netFilter?.DomainFilter) {
             Blocks = options.DomainFilterPolicy.Blocks,

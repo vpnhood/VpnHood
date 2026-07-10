@@ -24,7 +24,8 @@ public class SplitCountryService(
 
     // Build or reuse the on-disk split-country db for the current SplitCountryMode and return how the
     // client should interpret membership (SqliteIpFilter semantics). Returns Default when there is no
-    // country split; on failure it falls back to IncludeAll (same policy as the old range materialization).
+    // country split. Failures propagate and fail the connect: a split the user configured is enforced or
+    // the connection does not proceed — never silently skipped.
     // The (potentially huge) country ranges never enter memory — they stream from the zip into SQLite.
     public async Task<FilterAction> EnsureSplitIpDb(string dbPath, CancellationToken cancellationToken)
     {
@@ -55,17 +56,12 @@ public class SplitCountryService(
                 "Preparing split-country filter db... Mode: {Mode}, Action: {Action}, Countries: {Countries}",
                 splitCountryMode, action, string.Join(',', storedCodes));
 
-            await SplitIpDbManager.EnsureAsync(dbPath,
+            var dbBuilder = new SplitCountryDbBuilder(
                 () => new ZipArchive(new MemoryStream(ipLocationZipData)),
-                storedCodes, GetIpLocationAssetHash(), cancellationToken).Vhc();
+                storedCodes, GetIpLocationAssetHash());
+            await dbBuilder.EnsureAsync(dbPath, cancellationToken).Vhc();
 
             return action;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not prepare the split-country filter db.");
-            settingsService.Settings.UserSettings.SplitCountryMode = SplitCountryMode.IncludeAll;
-            settingsService.Settings.Save();
-            return FilterAction.Default;
         }
         finally {
             IsBusy = false;
@@ -111,7 +107,7 @@ public class SplitCountryService(
         return (complement, action is FilterAction.Include ? FilterAction.Exclude : FilterAction.Include);
     }
 
-    // Identifies the ip-location asset build so SplitIpDbManager can detect a changed asset. Prefer the
+    // Identifies the ip-location asset build so SplitCountryDbBuilder can detect a changed asset. Prefer the
     // zip's own _checksum.txt (stamped at asset build time); fall back to hashing the zip bytes.
     private string GetIpLocationAssetHash()
     {

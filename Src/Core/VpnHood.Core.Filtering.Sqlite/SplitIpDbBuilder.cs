@@ -1,27 +1,38 @@
-using System.IO.Compression;
 using Microsoft.Data.Sqlite;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 
-// One-shot builder for the split-country IP db. Runs in the app process (memory is fine there); the resulting
-// file is opened read-only by the VpnService. Builds to a temp file then atomically replaces the target, so a
-// crash never leaves a half-built db in place (VPN connections are exclusive, so the target is never in use).
-public static class SplitIpDbBuilder
+// Base one-shot builder for split-ip dbs: owns the shared build core (schema, bulk-insert transaction,
+// meta, index-after-insert, atomic replace) and the staleness check. Derived classes supply only the
+// context's business: what identifies the source (BuildSourceSignature) and how to stream its ranges
+// (InsertRangesAsync). Builds run in the app process (memory is fine there); the resulting file is opened
+// read-only by the VpnService. A crash never leaves a half-built db in place — the build targets a temp
+// file that atomically replaces the target (VPN connections are exclusive, so the target is never in use).
+public abstract class SplitIpDbBuilder
 {
-    private const int CancellationCheckInterval = 20000;
+    // Context identity, stored as the db's source_signature meta: must change iff the stored set would
+    // change. Invoked on every EnsureAsync, so it must be cheap (compose from hashes/stat, never parse).
+    protected abstract string BuildSourceSignature();
 
-    public static async Task BuildAsync(
-        string dbPath,
-        Func<ZipArchive> zipArchiveFactory,
-        IReadOnlyCollection<string> countryCodes,
-        string assetHash,
-        CancellationToken cancellationToken)
+    // Stream the context's ranges into the db. Invoked only on the rebuild path.
+    protected abstract Task InsertRangesAsync(SplitIpDbInserter inserter, CancellationToken cancellationToken);
+
+    // Reuse the db when its own meta matches the current source signature (no sidecar files), rebuild
+    // otherwise. The common case — every connect after the first with an unchanged source — returns at
+    // the meta check without touching the source at all.
+    public async Task EnsureAsync(string dbPath, CancellationToken cancellationToken)
+    {
+        if (IsUpToDate(dbPath, BuildSourceSignature()))
+            return;
+
+        await BuildAsync(dbPath, cancellationToken).Vhc();
+    }
+
+    public async Task BuildAsync(string dbPath, CancellationToken cancellationToken)
     {
         SplitIpSqlite.EnsureInitialized();
 
-        var selectionSignature = SplitIpDb.BuildSelectionSignature(countryCodes);
         var tempPath = dbPath + ".tmp";
         DeleteDbFiles(tempPath);
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
@@ -39,44 +50,15 @@ public static class SplitIpDbBuilder
             Execute(connection, "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-16000;");
             Execute(connection, SplitIpDb.CreateTablesSql);
 
-            await using var zip = zipArchiveFactory();
             await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
 
-            // Hot loop uses raw SQLitePCL statements on the connection's handle (prepare once, bind/step/reset
-            // per row). The SqliteCommand path costs ~30µs/row on Android (Mono) vs ~1µs/row raw — measured on
-            // an emulator: all-countries build 16.3s → 0.65s. Same handle, so the rows join the transaction above.
-            var db = connection.Handle!;
-            using var insertV4 = PrepareRaw(db, "INSERT INTO range_v4 (start_ip, end_ip) VALUES (?, ?)");
-            using var insertV6 = PrepareRaw(db, "INSERT INTO range_v6 (start_ip, end_ip) VALUES (?, ?)");
-
-            var rowCount = 0;
-            foreach (var countryCode in countryCodes) {
-                var entry = zip.GetEntry($"{countryCode.ToLowerInvariant()}.ips");
-                if (entry is null)
-                    continue; // unknown country code → nothing to add
-
-                await using var stream = await entry.OpenAsync(cancellationToken);
-                foreach (var (start, end) in IpRangeOrderedList.DeserializeRaw(stream)) {
-                    if (start.Length == 4) {
-                        SQLitePCL.raw.sqlite3_bind_int64(insertV4, 1, SplitIpDb.ToV4Key(start));
-                        SQLitePCL.raw.sqlite3_bind_int64(insertV4, 2, SplitIpDb.ToV4Key(end));
-                        StepReset(db, insertV4);
-                    }
-                    else {
-                        SQLitePCL.raw.sqlite3_bind_blob(insertV6, 1, start);
-                        SQLitePCL.raw.sqlite3_bind_blob(insertV6, 2, end);
-                        StepReset(db, insertV6);
-                    }
-
-                    if (++rowCount % CancellationCheckInterval == 0)
-                        cancellationToken.ThrowIfCancellationRequested();
-                }
-            }
+            // the inserter's raw statements run on the connection's handle, so the rows join the transaction
+            using (var inserter = new SplitIpDbInserter(connection.Handle!, cancellationToken))
+                await InsertRangesAsync(inserter, cancellationToken).Vhc();
 
             // meta written in the data transaction, EXCEPT built_complete (set only after indexes exist)
             SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeySchemaVersion, SplitIpDb.SchemaVersion.ToString());
-            SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeyAssetHash, assetHash);
-            SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeySelectionSignature, selectionSignature);
+            SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeySourceSignature, BuildSourceSignature());
 
             // the transaction ends HERE; index creation is deliberately outside it (index-after-bulk-insert)
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -94,23 +76,33 @@ public static class SplitIpDbBuilder
         File.Move(tempPath, dbPath, overwrite: true);
     }
 
-    private static SQLitePCL.sqlite3_stmt PrepareRaw(SQLitePCL.sqlite3 db, string sql)
+    private static bool IsUpToDate(string dbPath, string sourceSignature)
     {
-        CheckRc(db, SQLitePCL.raw.sqlite3_prepare_v2(db, sql, out var statement));
-        return statement;
-    }
+        if (!File.Exists(dbPath))
+            return false;
 
-    private static void StepReset(SQLitePCL.sqlite3 db, SQLitePCL.sqlite3_stmt statement)
-    {
-        CheckRc(db, SQLitePCL.raw.sqlite3_step(statement));
-        SQLitePCL.raw.sqlite3_reset(statement);
-    }
+        try {
+            SplitIpSqlite.EnsureInitialized();
+            var connectionString = new SqliteConnectionStringBuilder {
+                DataSource = dbPath,
+                Mode = SqliteOpenMode.ReadOnly,
+                Pooling = false
+            }.ToString();
 
-    private static void CheckRc(SQLitePCL.sqlite3 db, int rc)
-    {
-        if (rc is SQLitePCL.raw.SQLITE_OK or SQLitePCL.raw.SQLITE_DONE or SQLitePCL.raw.SQLITE_ROW)
-            return;
-        throw new SqliteException($"SQLite error {rc}: {SQLitePCL.raw.sqlite3_errmsg(db).utf8_to_string()}", rc);
+            using var connection = new SqliteConnection(connectionString);
+            connection.Open();
+
+            var meta = SplitIpDb.ReadMeta(connection);
+            return meta.TryGetValue(SplitIpDb.KeyBuiltComplete, out var complete) && complete == "1" &&
+                   meta.TryGetValue(SplitIpDb.KeySchemaVersion, out var schema) &&
+                   schema == SplitIpDb.SchemaVersion.ToString() &&
+                   meta.TryGetValue(SplitIpDb.KeySourceSignature, out var signature) &&
+                   signature == sourceSignature;
+        }
+        catch {
+            // missing/corrupt/locked db → rebuild
+            return false;
+        }
     }
 
     private static void Execute(SqliteConnection connection, string sql)

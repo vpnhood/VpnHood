@@ -175,8 +175,9 @@ internal class ClientSessionBuilder(
                 useQuic: channelProtocol == ChannelProtocol.Quic && hostQuicEndPoint != null,
                 quicEndPoint: hostQuicEndPoint);
 
-            staticIpFilter.IncludeRanges = config.IncludeIpRangesByApp.ToOrderedList();
-            staticIpFilter.BlockedRanges = config.BlockIpRangesByApp.ToOrderedList();
+            // the terminal Include granter starts from All; app/country splits and app blocks are inner
+            // SqliteIpFilter gates
+            staticIpFilter.IncludeRanges = IpNetwork.All.ToIpRanges();
 
             var dnsConfig = ClientHelper.GetDnsServers(
                 config.DnsServers,

@@ -24,8 +24,6 @@ public class VpnHoodClientConfig
     public required string[]? IncludeApps { get; init; }
     public required string[]? ExcludeApps { get; init; }
     public required IReadOnlyList<IpRange> IncludeIpRangesByDevice { get; init; }
-    public required IReadOnlyList<IpRange> IncludeIpRangesByApp { get; init; }
-    public required IReadOnlyList<IpRange> BlockIpRangesByApp { get; init; }
     public required IReadOnlyList<IPAddress>? DnsServers { get; init; }
     public required TimeSpan SessionTimeout { get; init; }
     public required TimeSpan AutoWaitTimeout { get; init; }

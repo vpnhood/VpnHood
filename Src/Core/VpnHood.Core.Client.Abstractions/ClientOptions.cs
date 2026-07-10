@@ -19,22 +19,10 @@ public class ClientOptions
         AppName = "VpnHoodEngine"
     };
 
-    // Small app-level allow set (All, or SplitIpViaApp includes) intersected with server/device ranges.
-    // The (potentially huge) split-country ranges no longer live here — they are in the SQLite db below.
-    [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
-    public IpRange[] IncludeIpRangesByApp { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
-
-    [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
-    public IpRange[] BlockIpRangesByApp { get; set; } = [];
-
-    // Split-country descriptor: path to the SQLite db of selected-country ranges, and what membership means.
-    // Include ⇒ tunnel only members; Exclude ⇒ bypass members; Block ⇒ drop members; Default (or null path)
-    // ⇒ no country split. See docs/SplitIpFilter.md.
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string? SplitIpDbPath { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public FilterAction SplitIpAction { get; set; }
+    // Split-ip descriptors: one SQLite db + action per context (split-country, split-ip-via-app allow +
+    // block sets). The ranges themselves never travel cross-process — the client chains one read-only
+    // SqliteIpFilter per entry. See docs/split-ip/README.md.
+    public SplitIpDbFilter[] SplitIpDbFilters { get; set; } = [];
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] IncludeIpRangesByDevice { get; set; } = IpNetwork.All.ToIpRanges().ToArray();

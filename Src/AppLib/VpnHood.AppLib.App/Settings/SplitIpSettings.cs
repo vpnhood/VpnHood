@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.Settings;
+namespace VpnHood.AppLib.Settings;
 
 public class SplitIpSettings(string folderPath)
 {
@@ -68,6 +68,23 @@ public class SplitIpSettings(string folderPath)
     public string AppBlocks {
         get => Read("app_blocks");
         set => Write("app_blocks", value);
+    }
+
+    // Cheap change signatures of the app split-ip sources (mtime + length; no content read). Stored as the
+    // db's source_signature meta so SplitIpDbBuilder.EnsureAsync detects stale dbs without parsing the text files.
+    // Every settings write rewrites the file, so the signature always changes with the content. A missing
+    // file counts as an empty one (readers auto-create it on first access).
+    public string GetAppFilterSignature() => BuildFileSignature("app_includes", "app_excludes");
+    public string GetAppBlocksSignature() => BuildFileSignature("app_blocks");
+
+    private string BuildFileSignature(params string[] fileTitles)
+    {
+        return string.Join(',', fileTitles.Select(fileTitle => {
+            var fileInfo = new FileInfo(Path.Combine(folderPath, fileTitle + ".txt"));
+            return fileInfo.Exists
+                ? $"{fileTitle}:{fileInfo.LastWriteTimeUtc.Ticks}:{fileInfo.Length}"
+                : $"{fileTitle}:none";
+        }));
     }
 
     private string Read(string fileTitle)

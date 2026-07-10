@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using Microsoft.Data.Sqlite;
 using VpnHood.AppLib.Services;
+using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.Toolkit.Net;
@@ -24,6 +25,9 @@ public class SplitIpDbTest : TestBase
 
         return ms.ToArray();
     }
+
+    private static SplitCountryDbBuilder CreateCountryBuilder(byte[] zipBytes, string[] countryCodes, string assetHash) =>
+        new(() => new ZipArchive(new MemoryStream(zipBytes)), countryCodes, assetHash);
 
     private static long CountRows(string dbPath, string table)
     {
@@ -63,7 +67,7 @@ public class SplitIpDbTest : TestBase
     }
 
     [TestMethod]
-    public async Task Build_creates_ranges_and_meta()
+    public async Task Country_build_creates_ranges_and_meta()
     {
         // disjoint, non-adjacent ranges so ToOrderedList() does not merge them (predictable counts)
         var zipBytes = CreateIpsZip(new Dictionary<string, IpRange[]> {
@@ -72,21 +76,35 @@ public class SplitIpDbTest : TestBase
         });
 
         var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "split-country.db");
-        await SplitIpDbBuilder.BuildAsync(dbPath, () => new ZipArchive(new MemoryStream(zipBytes)),
-            ["US", "TR"], "hash-1", TestCt);
+        await CreateCountryBuilder(zipBytes, ["US", "TR"], "hash-1").BuildAsync(dbPath, TestCt);
 
         Assert.IsTrue(File.Exists(dbPath));
         Assert.AreEqual(3, CountRows(dbPath, "range_v4"), "expected 3 IPv4 ranges (US:2 + TR:1)");
         Assert.AreEqual(1, CountRows(dbPath, "range_v6"), "expected 1 IPv6 range");
 
         Assert.AreEqual("1", ReadMeta(dbPath, "built_complete"));
-        Assert.AreEqual("hash-1", ReadMeta(dbPath, "asset_hash"));
-        Assert.AreEqual("TR,US", ReadMeta(dbPath, "selection_signature"), "signature must be sorted+upper");
-        Assert.AreEqual("1", ReadMeta(dbPath, "schema_version"));
+        Assert.AreEqual("hash-1|TR,US", ReadMeta(dbPath, "source_signature"), "asset hash + sorted+upper codes");
+        Assert.AreEqual("2", ReadMeta(dbPath, "schema_version"));
     }
 
     [TestMethod]
-    public async Task Ensure_reuses_when_unchanged_and_rebuilds_on_change()
+    public async Task Country_build_skips_unknown_codes()
+    {
+        var zipBytes = CreateIpsZip(new Dictionary<string, IpRange[]> {
+            ["US"] = [IpRange.Parse("1.0.0.0 - 1.0.0.255")]
+        });
+
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "split-country-unknown.db");
+        await CreateCountryBuilder(zipBytes, ["US", "XX"], "hash-1").BuildAsync(dbPath, TestCt);
+
+        // XX has no .ips entry in the asset → contributes no rows, but the build still succeeds
+        Assert.AreEqual(1, CountRows(dbPath, "range_v4"));
+        Assert.AreEqual("1", ReadMeta(dbPath, "built_complete"));
+        Assert.AreEqual("hash-1|US,XX", ReadMeta(dbPath, "source_signature"));
+    }
+
+    [TestMethod]
+    public async Task Country_ensure_reuses_when_unchanged_and_rebuilds_on_change()
     {
         var zipBytes = CreateIpsZip(new Dictionary<string, IpRange[]> {
             ["US"] = [IpRange.Parse("1.0.0.0 - 1.0.0.255")],
@@ -96,27 +114,106 @@ public class SplitIpDbTest : TestBase
         var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "split-country.db");
         var ct = TestCt;
 
-        await SplitIpDbManager.EnsureAsync(dbPath, ZipFactory, ["US", "TR"], "hash-1", ct);
+        await CreateCountryBuilder(zipBytes, ["US", "TR"], "hash-1").EnsureAsync(dbPath, ct);
 
         // sentinel survives only if the db is NOT rebuilt
         WriteMeta(dbPath, "sentinel", "keep");
 
         // same asset + same selection (order/case-insensitive) → reuse, sentinel stays
-        await SplitIpDbManager.EnsureAsync(dbPath, ZipFactory, ["tr", "us"], "hash-1", ct);
+        await CreateCountryBuilder(zipBytes, ["tr", "us"], "hash-1").EnsureAsync(dbPath, ct);
         Assert.AreEqual("keep", ReadMeta(dbPath, "sentinel"), "must reuse when nothing changed");
 
         // asset hash changed → rebuild, sentinel gone
-        await SplitIpDbManager.EnsureAsync(dbPath, ZipFactory, ["US", "TR"], "hash-2", ct);
+        await CreateCountryBuilder(zipBytes, ["US", "TR"], "hash-2").EnsureAsync(dbPath, ct);
         Assert.IsNull(ReadMeta(dbPath, "sentinel"), "must rebuild when asset hash changes");
 
         // selection changed → rebuild, sentinel gone
         WriteMeta(dbPath, "sentinel", "keep");
-        await SplitIpDbManager.EnsureAsync(dbPath, ZipFactory, ["US"], "hash-2", ct);
+        await CreateCountryBuilder(zipBytes, ["US"], "hash-2").EnsureAsync(dbPath, ct);
         Assert.IsNull(ReadMeta(dbPath, "sentinel"), "must rebuild when selection changes");
-        Assert.AreEqual("US", ReadMeta(dbPath, "selection_signature"));
-        return;
+        Assert.AreEqual("hash-2|US", ReadMeta(dbPath, "source_signature"));
+    }
 
-        ZipArchive ZipFactory() => new(new MemoryStream(zipBytes));
+    [TestMethod]
+    public async Task RangeList_build_creates_ranges_and_meta()
+    {
+        // disjoint, non-adjacent ranges so ToOrderedList() does not merge them (predictable counts)
+        var ipRanges = new[] {
+            IpRange.Parse("1.0.0.0 - 1.0.0.255"),
+            IpRange.Parse("3.0.0.0 - 3.0.0.255"),
+            IpRange.Parse("2001:db8:: - 2001:db8::ffff")
+        }.ToOrderedList();
+
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "range-list.db");
+        await new IpRangeListDbBuilder(() => ipRanges, () => "sig-1").BuildAsync(dbPath, TestCt);
+
+        Assert.IsTrue(File.Exists(dbPath));
+        Assert.AreEqual(2, CountRows(dbPath, "range_v4"));
+        Assert.AreEqual(1, CountRows(dbPath, "range_v6"));
+        Assert.AreEqual("1", ReadMeta(dbPath, "built_complete"));
+        Assert.AreEqual("sig-1", ReadMeta(dbPath, "source_signature"));
+
+        // the stored set answers membership like any other split-ip db
+        using var filter = new SqliteIpFilter(next: null, dbPath, FilterAction.Include);
+        Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("3.0.0.128")));
+        Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("2001:db8::10")));
+        Assert.AreEqual(FilterAction.Exclude, filter.Process(IpProtocol.Tcp, Ep("2.0.0.1")));
+    }
+
+    [TestMethod]
+    public async Task RangeList_ensure_reuses_by_signature_and_parses_only_on_rebuild()
+    {
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "range-list.db");
+        var signature = "sig-1";
+        var rangesFactoryCalls = 0;
+
+        IpRangeOrderedList RangesFactory()
+        {
+            rangesFactoryCalls++;
+            return new[] { IpRange.Parse("1.0.0.0 - 1.0.0.255") }.ToOrderedList();
+        }
+
+        var dbBuilder = new IpRangeListDbBuilder(RangesFactory, () => signature);
+
+        await dbBuilder.EnsureAsync(dbPath, TestCt);
+        Assert.AreEqual(1, rangesFactoryCalls);
+
+        // same signature → reuse; the source must not be parsed at all
+        await dbBuilder.EnsureAsync(dbPath, TestCt);
+        Assert.AreEqual(1, rangesFactoryCalls, "must not invoke the ranges factory when the db is up to date");
+
+        // changed signature → rebuild
+        signature = "sig-2";
+        await dbBuilder.EnsureAsync(dbPath, TestCt);
+        Assert.AreEqual(2, rangesFactoryCalls);
+        Assert.AreEqual("sig-2", ReadMeta(dbPath, "source_signature"));
+    }
+
+    [TestMethod]
+    public async Task Ensure_rebuilds_on_stale_schema_incomplete_build_or_corrupt_db()
+    {
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "staleness.db");
+        var ipRanges = new[] { IpRange.Parse("1.0.0.0 - 1.0.0.255") }.ToOrderedList();
+        var dbBuilder = new IpRangeListDbBuilder(() => ipRanges, () => "sig-1");
+
+        // schema version mismatch (older/newer app) → rebuild
+        await dbBuilder.EnsureAsync(dbPath, TestCt);
+        WriteMeta(dbPath, "schema_version", "1");
+        WriteMeta(dbPath, "sentinel", "keep");
+        await dbBuilder.EnsureAsync(dbPath, TestCt);
+        Assert.IsNull(ReadMeta(dbPath, "sentinel"), "must rebuild on schema version mismatch");
+
+        // incomplete build (crash before indexes) → rebuild
+        WriteMeta(dbPath, "built_complete", "0");
+        WriteMeta(dbPath, "sentinel", "keep");
+        await dbBuilder.EnsureAsync(dbPath, TestCt);
+        Assert.IsNull(ReadMeta(dbPath, "sentinel"), "must rebuild when built_complete is not set");
+
+        // corrupt file → rebuild without throwing
+        await File.WriteAllTextAsync(dbPath, "not a sqlite db", TestCt);
+        await dbBuilder.EnsureAsync(dbPath, TestCt);
+        Assert.AreEqual("1", ReadMeta(dbPath, "built_complete"), "must recover from a corrupt db");
+        Assert.AreEqual(1, CountRows(dbPath, "range_v4"));
     }
 
     private async Task<string> BuildUsDbAsync()
@@ -128,8 +225,7 @@ public class SplitIpDbTest : TestBase
             ]
         });
         var dbPath = Path.Combine(TestHelper.WorkingPath, "filter", "split-country.db");
-        await SplitIpDbBuilder.BuildAsync(dbPath, () => new ZipArchive(new MemoryStream(zipBytes)),
-            ["US"], "hash-1", TestCt);
+        await CreateCountryBuilder(zipBytes, ["US"], "hash-1").BuildAsync(dbPath, TestCt);
         return dbPath;
     }
 
@@ -204,6 +300,51 @@ public class SplitIpDbTest : TestBase
     {
         public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint) => action;
         public void Dispose() { }
+    }
+
+    [TestMethod]
+    public async Task SplitIpViaApp_service_builds_merged_db_and_detects_changes()
+    {
+        var storagePath = Path.Combine(TestHelper.WorkingPath, "split-ip-via-app-service");
+        Directory.CreateDirectory(storagePath);
+        var settingsService = new AppSettingsService(storagePath, remoteSettingsUrl: null, debugMode: true);
+        var service = new SplitIpViaAppService(settingsService);
+        var includeDbPath = Path.Combine(storagePath, "split-ip-via-app.db");
+        var blockDbPath = Path.Combine(storagePath, "split-ip-via-app-blocks.db");
+
+        // the UseSplitIpViaApp gate lives in the caller; empty/missing sources build no-op dbs
+        // (include merges to All, blocks to None), which route identically to no filter
+        var filters = await service.EnsureSplitIpDbs(storagePath, TestCt);
+        CollectionAssert.AreEqual(new[] { FilterAction.Include, FilterAction.Block },
+            filters.Select(x => x.Action).ToArray());
+        using (var filter = new SqliteIpFilter(next: null, includeDbPath, FilterAction.Include))
+            Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("9.9.9.9")));
+        using (var filter = new SqliteIpFilter(next: null, blockDbPath, FilterAction.Block))
+            Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("9.9.9.9")));
+
+        // includes − excludes merged into ONE stored set with Include semantics; blocks in their own db
+        settingsService.SplitIpSettings.AppIncludes = "1.0.0.0 - 1.0.0.255";
+        settingsService.SplitIpSettings.AppExcludes = "1.0.0.128 - 1.0.0.255";
+        settingsService.SplitIpSettings.AppBlocks = "5.0.0.5";
+        await service.EnsureSplitIpDbs(storagePath, TestCt);
+
+        using (var filter = new SqliteIpFilter(next: null, includeDbPath, FilterAction.Include)) {
+            Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("1.0.0.10")));
+            Assert.AreEqual(FilterAction.Exclude, filter.Process(IpProtocol.Tcp, Ep("1.0.0.200")),
+                "excluded sub-range must not be a member of the merged set");
+            Assert.AreEqual(FilterAction.Exclude, filter.Process(IpProtocol.Tcp, Ep("9.9.9.9")));
+        }
+
+        using (var filter = new SqliteIpFilter(next: null, blockDbPath, FilterAction.Block)) {
+            Assert.AreEqual(FilterAction.Block, filter.Process(IpProtocol.Tcp, Ep("5.0.0.5")));
+            Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("5.0.0.6")));
+        }
+
+        // source file change → signature change → rebuild with the new merge
+        settingsService.SplitIpSettings.AppExcludes = string.Empty;
+        await service.EnsureSplitIpDbs(storagePath, TestCt);
+        using (var filter = new SqliteIpFilter(next: null, includeDbPath, FilterAction.Include))
+            Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("1.0.0.200")));
     }
 
     [TestMethod]

@@ -24,10 +24,13 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private readonly Lock _serverLock = new();
     private Timer? _healthTimer;
     private int _healthCheckBusy;
+    private int _inconclusiveProbes;
     private static readonly TimeSpan HealthCheckInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMilliseconds(500);
     private const int ProbeAttempts = 3;
+    private const int MaxInconclusiveProbes = 3;
     private static readonly TimeSpan ProbeRetryDelay = TimeSpan.FromMilliseconds(50);
+    private static readonly TimeSpan RestartReadyTimeout = TimeSpan.FromSeconds(3);
     public Uri Url { get; }
 
     public string SpaHash => _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
@@ -84,6 +87,9 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     {
         var ret = new VpnHoodAppWebServer(options ?? new WebServerOptions());
         ret.Start();
+        // Don't hand the URL to a web view until the accept loop is actually taking connections;
+        // Start() can return inside that window and the first page load would be refused.
+        ret.WaitUntilReachable();
         ret.StartHealthMonitor();
         return ret;
     }
@@ -115,17 +121,47 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         }
     }
 
+    private enum ProbeResult
+    {
+        Connected,
+        Refused, // nothing is accepting on the port — authoritative death
+        Inconclusive // timed out or failed oddly — the listener may still be fine on a busy system
+    }
+
     // Restart the server if it is not actually reachable. Returns true if it had to restart.
     private bool HealIfUnreachable()
     {
-        if (IsReachable())
-            return false;
+        if (IsListening) {
+            switch (Probe()) {
+                case ProbeResult.Connected:
+                    _inconclusiveProbes = 0;
+                    return false;
 
+                case ProbeResult.Inconclusive when ++_inconclusiveProbes < MaxInconclusiveProbes:
+                    // A timeout is not proof the listener is dead: right after the OS thaws a frozen
+                    // process (Android's cached-apps freezer on resume) loopback connects can time out
+                    // for a moment even though the server is healthy. Restarting a healthy server here
+                    // is what strands the UI on a dead page, so act only on consecutive inconclusive
+                    // checks. A genuinely dead listener refuses (fast) and never reaches this branch.
+                    VhLogger.Instance.LogWarning(
+                        "SPA web server probe was inconclusive ({Count}/{Max}); deferring restart.",
+                        _inconclusiveProbes, MaxInconclusiveProbes);
+                    return false;
+            }
+        }
+
+        _inconclusiveProbes = 0;
         lock (_serverLock) {
             VhLogger.Instance.LogWarning("SPA web server is not reachable; restarting it.");
             Stop();
             Start();
         }
+
+        // Announce the restart only once the new listener actually accepts. Start() can return
+        // before the accept loop is bound; a reload sent into that window gets connection-refused
+        // and lands the web view on an error page. Waiting also happens outside the lock, and the
+        // _healthCheckBusy guard keeps the next timer tick from probing the half-started listener.
+        WaitUntilReachable();
 
         // Notify outside the lock so subscribers can't deadlock against a state transition.
         Restarted?.Invoke(this, EventArgs.Empty);
@@ -135,35 +171,57 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     // Authoritative liveness check. IsListening is only the server's own belief and can stay true
     // after the OS tears the socket down, so when it claims to be up we confirm with a real loopback
     // connect. The probe is done outside _serverLock so a slow connect never blocks Start/Stop.
-    private bool IsReachable()
+    // Retries a few times before giving a verdict: a listener that has just (re)started can briefly
+    // refuse connects in the window between Start() returning and its accept loop binding, and it
+    // must not be torn down for that transient (it caused a spurious restart right after launch).
+    private ProbeResult Probe()
     {
-        if (!IsListening)
-            return false;
-
-        // Retry a few times before declaring the server dead: a listener that has just (re)started
-        // can briefly refuse connects in the window between Start() returning and its accept loop
-        // binding, and we must NOT tear the server down for that transient (it caused a spurious
-        // restart right after launch). A genuinely dead server fails every attempt (fast refusal),
-        // so this stays responsive.
+        var sawInconclusive = false;
         for (var attempt = 0; attempt < ProbeAttempts; attempt++) {
             if (attempt > 0)
                 Thread.Sleep(ProbeRetryDelay);
 
-            // Cancellation (not Wait(timeout)) so the connect task is always observed on timeout — a
-            // stray faulted task here would surface as an unhandled-task-exception SIGABRT.
-            try {
-                using var client = new TcpClient();
-                using var cts = new CancellationTokenSource(ProbeTimeout);
-                client.ConnectAsync(IPAddress.Loopback, Url.Port, cts.Token).AsTask().GetAwaiter().GetResult();
-                if (client.Connected)
-                    return true;
-            }
-            catch {
-                // Try again until attempts are exhausted.
-            }
+            var result = TryConnect();
+            if (result == ProbeResult.Connected)
+                return ProbeResult.Connected;
+            sawInconclusive |= result == ProbeResult.Inconclusive;
         }
 
-        return false;
+        return sawInconclusive ? ProbeResult.Inconclusive : ProbeResult.Refused;
+    }
+
+    private ProbeResult TryConnect()
+    {
+        // Cancellation (not Wait(timeout)) so the connect task is always observed on timeout — a
+        // stray faulted task here would surface as an unhandled-task-exception SIGABRT.
+        try {
+            using var client = new TcpClient();
+            using var cts = new CancellationTokenSource(ProbeTimeout);
+            client.ConnectAsync(IPAddress.Loopback, Url.Port, cts.Token).AsTask().GetAwaiter().GetResult();
+            return client.Connected ? ProbeResult.Connected : ProbeResult.Refused;
+        }
+        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.ConnectionRefused
+                                             or SocketError.ConnectionReset) {
+            return ProbeResult.Refused;
+        }
+        catch {
+            return ProbeResult.Inconclusive;
+        }
+    }
+
+    // Block (briefly) until the just-(re)started listener accepts a loopback connect, so callers can
+    // safely point a web view at it the moment this returns. Bounded: if the listener is genuinely
+    // broken the health monitor will keep healing it, and the platforms recover failed loads.
+    private void WaitUntilReachable()
+    {
+        var deadline = Environment.TickCount64 + (long)RestartReadyTimeout.TotalMilliseconds;
+        while (Environment.TickCount64 < deadline) {
+            if (TryConnect() == ProbeResult.Connected)
+                return;
+            Thread.Sleep(ProbeRetryDelay);
+        }
+
+        VhLogger.Instance.LogError("SPA web server is still not reachable after being started.");
     }
 
     // The lock serializes the state transitions now that several triggers can drive them
@@ -206,6 +264,10 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             Stop();
             Start();
         }
+
+        // Callers reload the web view right after a restart, so don't return before the new accept
+        // loop is actually taking connections (outside the lock; see WaitUntilReachable).
+        WaitUntilReachable();
     }
 
     // Make sure the loopback listener is actually reachable, restarting it if it is not. iOS can

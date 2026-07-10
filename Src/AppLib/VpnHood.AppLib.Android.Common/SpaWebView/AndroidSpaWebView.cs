@@ -23,13 +23,8 @@ public sealed class AndroidSpaWebView : ISpaWebView
     private Activity Activity => _activityEvent.Activity;
 
     public event EventHandler? PageLoaded;
-    // Android relies on the server health monitor + resume signal + Restarted reload for recovery, so
-    // these two are declared for the interface but not raised here. Suppress the "never used" warning —
-    // the omission is intended.
-#pragma warning disable CS0067
     public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
     public event EventHandler? ContentProcessGone;
-#pragma warning restore CS0067
 
     public AndroidSpaWebView(IActivityEvent activityEvent, AndroidSpaWebViewMainActivityOptions options)
     {
@@ -54,6 +49,8 @@ public sealed class AndroidSpaWebView : ISpaWebView
 
         var webViewClient = new AndroidSpaWebViewClient();
         webViewClient.PageLoaded += (_, _) => PageLoaded?.Invoke(this, EventArgs.Empty);
+        webViewClient.LoadFailed += OnWebViewLoadFailed;
+        webViewClient.RenderProcessGone += OnWebViewRenderProcessGone;
         _webView.SetWebViewClient(webViewClient);
         _webView.SetWebChromeClient(new AndroidSpaWebChromeClient());
         if (VpnHoodApp.Instance.Features.IsDebugMode)
@@ -99,6 +96,37 @@ public sealed class AndroidSpaWebView : ISpaWebView
     public void OnActivityResume() => _webView?.OnResume();
     public bool CanGoBack() => _webView?.CanGoBack() == true;
     public void GoBack() => _webView?.GoBack();
+
+    // The main document could not connect to the loopback server, so Chromium's own error page is on
+    // screen. Swap back to the loading screen while SpaWebViewHost recovers (server heal + reload) —
+    // the user must never be left staring at a "can't connect to server" page.
+    private void OnWebViewLoadFailed(object? sender, SpaLoadFailedEventArgs e)
+    {
+        HideWebView();
+        LoadFailed?.Invoke(this, e);
+    }
+
+    // The render process died; the WebView instance is unusable from now on (reloading it does
+    // nothing), so it must be destroyed and rebuilt before the host reloads the SPA.
+    private void OnWebViewRenderProcessGone(object? sender, EventArgs e)
+    {
+        var oldWebView = _webView;
+        _webView = null;
+        HideWebView(); // detaches the dead WebView by swapping the content view to the loader
+        oldWebView?.Destroy();
+
+        Initialize();
+        ContentProcessGone?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void HideWebView()
+    {
+        if (!_webViewShown)
+            return;
+
+        AndroidAppLoader.Init(Activity);
+        _webViewShown = false;
+    }
 
     private void ShowWebView()
     {

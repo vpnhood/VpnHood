@@ -26,5 +26,6 @@ public class CachedDomainFilter(IDomainFilter netFilter, TimeSpan timeout) : IDo
     public void Dispose()
     {
         _cache.Dispose();
+        netFilter.Dispose();
     }
 }

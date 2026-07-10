@@ -31,5 +31,6 @@ public class StaticIpFilter(IIpFilter? nextFilter) : IIpFilter
 
     public void Dispose()
     {
+        nextFilter?.Dispose();
     }
 }

@@ -126,5 +126,6 @@ public class StaticDomainFilter(IDomainFilter? nextFilter) : IDomainFilter
 
     public void Dispose()
     {
+        nextFilter?.Dispose();
     }
 }

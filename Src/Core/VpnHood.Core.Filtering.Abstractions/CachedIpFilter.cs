@@ -25,5 +25,6 @@ public class CachedIpFilter(IIpFilter nextFilter, TimeSpan timeout) : IIpFilter
     public void Dispose()
     {
         _cache.Dispose();
+        nextFilter.Dispose();
     }
 }

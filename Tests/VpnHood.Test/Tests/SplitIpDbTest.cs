@@ -286,6 +286,29 @@ public class SplitIpDbTest : TestBase
     }
 
     [TestMethod]
+    public async Task Filter_pipe_dispose_releases_db_file()
+    {
+        // Regression: the pipe is disposed from its outermost stage only (NetFilter → CachedIpFilter →
+        // StaticIpFilter → SqliteIpFilter). A broken link leaks the SQLite connections, keeps the db file
+        // locked, and fails the next rebuild with "file is being used by another process".
+        var dbPath = Path.Combine(TestHelper.WorkingPath, "split-ip-db", "dispose-chain.db");
+        await new IpRangeListDbBuilder(
+            () => new[] { IpRange.Parse("1.0.0.0 - 1.0.0.255") }.ToOrderedList(),
+            () => "sig-1").BuildAsync(dbPath, TestCt);
+
+        // the client's pipe shape (outermost first), with the db gate innermost
+        var pipe = new CachedIpFilter(
+            new StaticIpFilter(new SqliteIpFilter(next: null, dbPath, FilterAction.Include)),
+            TimeSpan.FromMinutes(60));
+        Assert.AreEqual(FilterAction.Default, pipe.Process(IpProtocol.Tcp, Ep("1.0.0.1"))); // opens the connection
+        pipe.Dispose();
+
+        // deleting must succeed: dispose released every handle down the chain
+        File.Delete(dbPath);
+        Assert.IsFalse(File.Exists(dbPath));
+    }
+
+    [TestMethod]
     public async Task Filter_defers_to_inner_next_when_non_default()
     {
         var dbPath = await BuildUsDbAsync();

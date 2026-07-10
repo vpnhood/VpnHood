@@ -110,10 +110,15 @@ public class AppDelegate : UIApplicationDelegate
             // throughput ≈ StreamProxyBufferSize / RTT. 2 KB capped it at ~2 Mbps. 32 KB lifts that ~16×.
             // (Memory is per-ACTIVE-flow: 2 buffers × 32 KB; the many-idle-flows case is bounded separately.)
             StreamProxyBufferSize = new TransferBufferSize(32 * 1024, 32 * 1024),
-            // Larger buffer for the TCP kernel/proxy path than StreamProxyBufferSize: keeps throughput
-            // near the auto-tuned baseline while the per-burst transient still fits under the ~52 MB
-            // jetsam line (device-validated). Desktop/Android are unaffected — this is iOS-only config.
-            TcpKernelBufferSize = new TransferBufferSize(256 * 1024, 256 * 1024),
+            // Kernel buffer for EVERY managed TCP socket the client opens — the transport connections
+            // to the server AND the per-flow direct sockets of split/exclude ("passthru") flows. The
+            // passthru sockets are the sizing constraint: unlike tunneled flows (QUIC streams bounded
+            // tunnel-wide by IosQuicClient's 256 KB aggregate window), each excluded flow pins its own
+            // socket buffers, up to the TcpStack's 40-connection cap. The former 256 KB let a
+            // split-country browse pin ~40 × 512 KB ≈ 20 MB and jetsam the extension; 64 KB bounds the
+            // worst case to ~5 MB while still allowing ~25 Mbps per flow at 20 ms RTT (in-country hosts
+            // are low-RTT). Desktop/Android are unaffected — this is iOS-only config.
+            TcpKernelBufferSize = new TransferBufferSize(64 * 1024, 64 * 1024),
             // Log level: Information in production. The iOS diagnostics switch (DiagnosticsEnabled, seeded
             // from VH_IOS_DIAGNOSTICS) drops it to Debug so the extension's vpn-ext.log carries the
             // TcpStack "+CONN/-CONN" connection-lifecycle lines and the [VHQUIC] +open/-close/brake events

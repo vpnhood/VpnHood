@@ -1,5 +1,6 @@
-# v8.0.824
 * Feature: Support QUIC on Windows and Linux
+* Improve: Initialization speed when using split tunneling by country
+* Improve: Memory usage & stability
 
 # v7.9.811
 * Update: Huge performance improvement in Cloak Mode

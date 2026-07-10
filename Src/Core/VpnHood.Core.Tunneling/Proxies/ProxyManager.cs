@@ -1,6 +1,7 @@
 ﻿using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Sockets;
@@ -14,6 +15,8 @@ public class ProxyManager : PassthroughPacketTransport
     private readonly List<ProxyChannel> _streamProxyChannels = [];
     private readonly IPacketProxyPool? _pingProxyPool;
     private readonly IPacketProxyPool _udpProxyPool;
+    private readonly Job _cleanupJob;
+    private Traffic _removedChannelsTraffic = new();
 
     public bool IsIpV6Supported { get; set; } = true;
     public int PingClientCount => _pingProxyPool?.ClientCount ?? 0;
@@ -29,7 +32,7 @@ public class ProxyManager : PassthroughPacketTransport
     public Traffic Traffic {
         get {
             lock (_streamProxyChannels) {
-                var traffic = new Traffic(PacketStat.SentBytes, PacketStat.ReceivedBytes);
+                var traffic = new Traffic(PacketStat.SentBytes, PacketStat.ReceivedBytes) + _removedChannelsTraffic;
                 // ReSharper disable once ForCanBeConvertedToForeach
                 // ReSharper disable once LoopCanBeConvertedToQuery
                 for (var i = 0; i < _streamProxyChannels.Count; i++)
@@ -59,6 +62,12 @@ public class ProxyManager : PassthroughPacketTransport
             ? new UdpProxyPoolEx(udpProxyPoolOptions)
             : new UdpProxyPool(udpProxyPoolOptions);
         _udpProxyPool.PacketReceived += Proxy_PacketReceived;
+
+        // Sweep dead stream channels out of the tracking list. A ProxyChannel disposes ITSELF when either
+        // side dies (its CheckAlive job), but stayed in _streamProxyChannels until the manager was disposed,
+        // pinning the whole per-flow object graph (local TCP connection buffers + host socket). Long
+        // sessions with many bypassed flows (split-country) leaked this into the iOS jetsam limit.
+        _cleanupJob = new Job(Cleanup, nameof(ProxyManager));
 
         // create Ping proxy pools
         if (options.IsPingSupported) {
@@ -100,6 +109,29 @@ public class ProxyManager : PassthroughPacketTransport
         }
     }
 
+    private ValueTask Cleanup(CancellationToken cancellationToken)
+    {
+        CleanupChannels();
+        return default;
+    }
+
+    public void CleanupChannels()
+    {
+        lock (_streamProxyChannels) {
+            // Only Disposed channels are swept: a dead-but-undisposed channel disposes itself via its own
+            // CheckAlive job, and skipping NotStarted avoids racing AddChannel's post-add Start().
+            for (var i = _streamProxyChannels.Count - 1; i >= 0; i--) {
+                var channel = _streamProxyChannels[i];
+                if (channel.State != PacketChannelState.Disposed)
+                    continue;
+
+                // keep Traffic monotonic after the channel is dropped from the sum
+                _removedChannelsTraffic += channel.Traffic;
+                _streamProxyChannels.RemoveAt(i);
+            }
+        }
+    }
+
     public void AddChannel(ProxyChannel channel, bool disposeOnFail)
     {
         try {
@@ -120,6 +152,8 @@ public class ProxyManager : PassthroughPacketTransport
 
     protected override void DisposeManaged()
     {
+        _cleanupJob.Dispose();
+
         // dispose udp proxy pool
         _udpProxyPool.PacketReceived -= Proxy_PacketReceived;
         _udpProxyPool.Dispose();

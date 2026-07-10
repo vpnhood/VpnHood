@@ -153,7 +153,11 @@ GlobalReceiveBudget − totalPipeBuffered)`; `UpdateAdvertisedWindow()` tracks `
 via `TcpStackDiagnostics` (`ActiveDiagnostics` static, read by the probe).
 
 **Host** — `Src/Apps/Client.Ios/AppDelegate.cs`: `MaxPacketChannelCount=1`, `PacketChannelBufferSize=16 KB`,
-`UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=256 KB`. **TEMP:**
+`UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB`
+(2026-07-09: 256 KB → 64 KB. The knob applies to every managed TCP socket via `ConfiguringSocketFactory`,
+including the per-flow direct sockets of split/exclude "passthru" flows — one real kernel socket per
+excluded flow, unbounded in aggregate unlike the QUIC tunnel windows. At 256 KB a split-country browse
+could pin ~40 × 512 KB ≈ 20 MB of socket buffers → jetsam; 64 KB bounds it to ~5 MB worst case). **TEMP:**
 `UseTcpProxy=true` forced + `AccessKey=<test key>` — both **DO NOT COMMIT**. TFM `net11.0-ios` on App +
 Extension + the 3 iOS core libs (Devices.Ios, IosTun, AppLib.Ios.Common); 28 neutral libs stay `net10.0`.
 

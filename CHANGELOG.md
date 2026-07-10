@@ -1,3 +1,4 @@
+# Latest
 * Feature: Support QUIC on Windows and Linux
 * Improve: Initialization speed when using split tunneling by country
 * Improve: Memory usage & stability

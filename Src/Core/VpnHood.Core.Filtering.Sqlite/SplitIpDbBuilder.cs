@@ -41,8 +41,13 @@ public static class SplitIpDbBuilder
 
             await using var zip = zipArchiveFactory();
             await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
-            await using var insertV4 = CreateInsertCommand(connection, transaction, "range_v4");
-            await using var insertV6 = CreateInsertCommand(connection, transaction, "range_v6");
+
+            // Hot loop uses raw SQLitePCL statements on the connection's handle (prepare once, bind/step/reset
+            // per row). The SqliteCommand path costs ~30µs/row on Android (Mono) vs ~1µs/row raw — measured on
+            // an emulator: all-countries build 16.3s → 0.65s. Same handle, so the rows join the transaction above.
+            var db = connection.Handle!;
+            using var insertV4 = PrepareRaw(db, "INSERT INTO range_v4 (start_ip, end_ip) VALUES (?, ?)");
+            using var insertV6 = PrepareRaw(db, "INSERT INTO range_v6 (start_ip, end_ip) VALUES (?, ?)");
 
             var rowCount = 0;
             foreach (var countryCode in countryCodes) {
@@ -53,14 +58,14 @@ public static class SplitIpDbBuilder
                 await using var stream = await entry.OpenAsync(cancellationToken);
                 foreach (var (start, end) in IpRangeOrderedList.DeserializeRaw(stream)) {
                     if (start.Length == 4) {
-                        insertV4.Parameters[0].Value = SplitIpDb.ToV4Key(start);
-                        insertV4.Parameters[1].Value = SplitIpDb.ToV4Key(end);
-                        await insertV4.ExecuteNonQueryAsync(cancellationToken);
+                        SQLitePCL.raw.sqlite3_bind_int64(insertV4, 1, SplitIpDb.ToV4Key(start));
+                        SQLitePCL.raw.sqlite3_bind_int64(insertV4, 2, SplitIpDb.ToV4Key(end));
+                        StepReset(db, insertV4);
                     }
                     else {
-                        insertV6.Parameters[0].Value = start;
-                        insertV6.Parameters[1].Value = end;
-                        await insertV6.ExecuteNonQueryAsync(cancellationToken);
+                        SQLitePCL.raw.sqlite3_bind_blob(insertV6, 1, start);
+                        SQLitePCL.raw.sqlite3_bind_blob(insertV6, 2, end);
+                        StepReset(db, insertV6);
                     }
 
                     if (++rowCount % CancellationCheckInterval == 0)
@@ -89,18 +94,23 @@ public static class SplitIpDbBuilder
         File.Move(tempPath, dbPath, overwrite: true);
     }
 
-    private static SqliteCommand CreateInsertCommand(SqliteConnection connection, SqliteTransaction transaction,
-        string table)
+    private static SQLitePCL.sqlite3_stmt PrepareRaw(SQLitePCL.sqlite3 db, string sql)
     {
-        var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = $"INSERT INTO {table} (start_ip, end_ip) VALUES ($start, $end)";
-        command.Parameters.Add(command.CreateParameter());
-        command.Parameters[0].ParameterName = "$start";
-        command.Parameters.Add(command.CreateParameter());
-        command.Parameters[1].ParameterName = "$end";
-        command.Prepare();
-        return command;
+        CheckRc(db, SQLitePCL.raw.sqlite3_prepare_v2(db, sql, out var statement));
+        return statement;
+    }
+
+    private static void StepReset(SQLitePCL.sqlite3 db, SQLitePCL.sqlite3_stmt statement)
+    {
+        CheckRc(db, SQLitePCL.raw.sqlite3_step(statement));
+        SQLitePCL.raw.sqlite3_reset(statement);
+    }
+
+    private static void CheckRc(SQLitePCL.sqlite3 db, int rc)
+    {
+        if (rc is SQLitePCL.raw.SQLITE_OK or SQLitePCL.raw.SQLITE_DONE or SQLitePCL.raw.SQLITE_ROW)
+            return;
+        throw new SqliteException($"SQLite error {rc}: {SQLitePCL.raw.sqlite3_errmsg(db).utf8_to_string()}", rc);
     }
 
     private static void Execute(SqliteConnection connection, string sql)

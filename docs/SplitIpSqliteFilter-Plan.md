@@ -28,7 +28,13 @@
   (on iOS that folder is inside the shared app-group container — the only path the NE can read).
   `ConnectInternal2` fills `SplitIpDbPath`/`SplitIpAction`. AppLib.App now refs `Filtering.Sqlite`.
 
-All tests green so far (13). Nothing committed.
+All tests green so far (13).
+
+**Build perf (measured, Android x86_64 emulator, Release):** the `SqliteCommand` insert path cost ~30µs/row
+on Mono (all 244 countries = 16.8s — over the 4s "needs progress UI" bar). Rewritten hot loop with raw
+SQLitePCL bind/step/reset on `connection.Handle`: US=120ms, half-of-world=358ms, all-244=652ms (618k rows,
+30MB db). Real ARM devices ~2-4x slower ⇒ worst realistic case (half, due to inversion) well under 2s —
+**no ProgressMonitor needed**. Desktop CoreCLR: ~1s ADO / ~0.3s raw for all countries.
 
 ## Goal
 

@@ -93,6 +93,10 @@ hashes and stat, never a parse.
 
 Any open/read error also counts as stale (corrupt/locked ⇒ rebuild).
 
+The builder cares only about the file it is asked about: if a db FILE is ever renamed, cleaning up the
+old file is the caller's responsibility — the builder never deletes anything beyond its own db (and
+its `-wal`/`-shm`/`-journal`/`.tmp` siblings).
+
 ## Build strategy
 
 `BuildAsync` is a disposable one-shot that runs in the app process (not the memory-constrained

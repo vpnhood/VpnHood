@@ -41,7 +41,9 @@ public abstract class SplitDbBuilder
 
         var tempPath = dbPath + ".tmp";
         DeleteDbFiles(tempPath);
-        Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+        var folderPath = Path.GetDirectoryName(Path.GetFullPath(dbPath))
+            ?? throw new ArgumentException($"The db path has no parent folder: {dbPath}", nameof(dbPath));
+        Directory.CreateDirectory(folderPath);
 
         // every handle on the temp file is released when this returns, so it can be moved
         await BuildTempDbAsync(tempPath, cancellationToken).Vhc();

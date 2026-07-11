@@ -92,7 +92,10 @@ process — build to temp file, atomic rename, so no torn db and no orphans.
 `VpnServiceConfigFolder` is the folder the VpnService already reads its config from — the one location
 guaranteed readable by both processes. On iOS it lives inside the shared app-group container (the only
 path a Network Extension can read). Filenames are static and per context, not versioned and not per
-selection: connections are exclusive, so the file is never in use at rebuild time.
+selection: connections are exclusive, so the file is never in use at rebuild time. A schema change
+rebuilds each db in place (its `schema_version` meta no longer matches); if a db file is ever RENAMED,
+deleting the old file is the renamer's responsibility — the builder only manages the file it is asked
+about.
 
 ## Future work
 

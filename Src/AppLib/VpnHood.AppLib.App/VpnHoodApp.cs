@@ -29,7 +29,6 @@ using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
@@ -760,8 +759,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     ? UserSettings.DnsServers
                     : null;
 
-            // split-ip (country + app): build or reuse the on-disk filter dbs and pass their descriptors
-            var splitIpDbFilters = await PrepareSplitIpDbs(cancellationToken).Vhc();
+            // split-ip (country + app): build or reuse the on-disk filter dbs and pass their paths
+            var splitIpDbPaths = await PrepareSplitIpDbs(cancellationToken).Vhc();
 
             // create clientOptions
             var clientOptions = new ClientOptions {
@@ -772,7 +771,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UnstableTimeout = _unstableTimeout,
                 AutoWaitTimeout = _autoWaitTimeout,
                 SplitLocalNetwork = UserSettings.UseSplitLocalNetwork,
-                SplitIpDbFilters = splitIpDbFilters,
+                SplitIpDbPaths = splitIpDbPaths,
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 PacketChannelBufferSize = _packetChannelBufferSize,
@@ -1126,32 +1125,35 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // Build or reuse the on-disk split-ip dbs (split-country + split-ip-via-app) and return one ClientOptions
-    // descriptor per active context. The dbs live in VpnServiceConfigFolder because that is the only folder
-    // the VpnService process is guaranteed to read (on iOS it is the shared app-group container).
-    private async Task<SplitIpDbFilter[]> PrepareSplitIpDbs(CancellationToken cancellationToken)
+    // Build or reuse the on-disk split-ip dbs (split-country + split-ip-via-app) and return the path of each
+    // active one — the dbs are self-describing (include/exclude/block sets), so nothing else travels. They
+    // live in VpnServiceConfigFolder because that is the only folder the VpnService process is guaranteed to
+    // read (on iOS it is the shared app-group container).
+    private async Task<string[]> PrepareSplitIpDbs(CancellationToken cancellationToken)
     {
-        if (SettingsService.Settings.UserSettings.SplitCountryMode is not SplitCountryMode.IncludeAll)
-            VerifyPremiumFeature(AppFeature.SplitCountry);
-
-        var filters = new List<SplitIpDbFilter>();
+        var dbPaths = new List<string>();
         var dbFolder = Path.Combine(_device.VpnServiceConfigFolder, "ip-filters");
 
-        var countryDbPath = Path.Combine(dbFolder, "split-country.db");
-        var countryAction = await Services.SplitCountryService.EnsureSplitIpDb(countryDbPath, cancellationToken).Vhc();
-        if (countryAction is not FilterAction.Default)
-            filters.Add(new SplitIpDbFilter { DbPath = countryDbPath, Action = countryAction });
+        if (SettingsService.Settings.UserSettings.SplitCountryMode is not SplitCountryMode.IncludeAll &&
+            CheckPremiumFeature(AppFeature.SplitCountry)) {
+            var countryDbPath = Path.Combine(dbFolder, "split-country.db");
+            if (await Services.SplitCountryService.EnsureSplitIpDb(countryDbPath, cancellationToken).Vhc())
+                dbPaths.Add(countryDbPath);
+        }
 
-        if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp))
-            filters.AddRange(await Services.SplitIpViaAppService.EnsureSplitIpDbs(dbFolder, cancellationToken).Vhc());
+        if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp)) {
+            var viaAppDbPath = Path.Combine(dbFolder, "split-ip-via-app.db");
+            await Services.SplitIpViaAppService.EnsureSplitIpDb(viaAppDbPath, cancellationToken).Vhc();
+            dbPaths.Add(viaAppDbPath);
+        }
 
-        return filters.ToArray();
+        return dbPaths.ToArray();
     }
 
     public DomainFilterPolicy GetDomainFilterPolicy()
     {
         // return empty if it is premium feature but not allowed to avoid unnecessary parsing
-        return CheckPremiumFeature(AppFeature.SplitDomain) && UserSettings.UseSplitDomain
+        return UserSettings.UseSplitDomain && CheckPremiumFeature(AppFeature.SplitDomain)
             ? new DomainFilterPolicy {
                 Includes = DomainTextFileParser.Parse(SettingsService.SplitDomainSettings.Includes) ?? [],
                 Excludes = DomainTextFileParser.Parse(SettingsService.SplitDomainSettings.Excludes) ?? [],

@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Logging;
@@ -19,10 +18,11 @@ public class ClientOptions
         AppName = "VpnHoodEngine"
     };
 
-    // Split-ip descriptors: one SQLite db + action per context (split-country, split-ip-via-app allow +
-    // block sets). The ranges themselves never travel cross-process — the client chains one read-only
-    // SqliteIpFilter per entry. See docs/split-ip/README.md.
-    public SplitIpDbFilter[] SplitIpDbFilters { get; set; } = [];
+    // Split-ip db paths: one self-describing SQLite db per context (split-country, split-ip-via-app). Each
+    // db carries its own include/exclude/block sets, so no action travels with it, and the ranges themselves
+    // never travel cross-process — the client chains one read-only SqliteIpFilter per path.
+    // See docs/split-ip/README.md.
+    public string[] SplitIpDbPaths { get; set; } = [];
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] IncludeIpRangesByDevice { get; set; } = IpNetwork.All.ToIpRanges().ToArray();

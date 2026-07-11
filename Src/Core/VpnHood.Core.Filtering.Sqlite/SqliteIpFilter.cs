@@ -7,42 +7,49 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 
-// Lean country gate: answers "is this address in the selected-country set?" from an on-disk SQLite db and
-// never returns Include (only the terminal granter does; tunneling is expressed as Default so outer gates
-// still apply). The configured action decides what membership means:
-//   Default => Default (db is never queried)
-//   Include => member ? Default : Exclude   (tunnel only the selected set; the rest bypasses)
-//   Exclude => member ? Exclude : Default   (bypass the selected set; the rest tunnels)
-//   Block   => member ? Block   : Default   (drop the selected set; the rest tunnels)
-// Other concerns (server routability, blocks, app includes/excludes) belong in their own pipe stages, not here.
-//
-// The db is immutable at runtime (built once, opened read-only). Each thread gets its own read-only connection
-// with prepared statements; CachedIpFilter shields this from all but the first packet to a new endpoint.
+// Self-describing split-ip gate: answers membership for the db's include/exclude/block sets. Like every
+// stage in the client pipe it only vetoes (Exclude/Block) or passes (Default = "no objection"; undecided
+// traffic tunnels). Include is NEVER returned here — it is reserved as an explicit override lane (domain
+// force-list, ICMP force), and an inner Include would short-circuit outer gates.
+//   block set:   member ⇒ Block   (drop entirely)
+//   exclude set: member ⇒ Exclude (bypass the tunnel)
+//   include set: non-empty and NOT a member ⇒ Exclude (chained include gates compose as intersection)
+// The db is immutable at runtime (built once, opened read-only): which sets are populated is probed once
+// at construction, so absent concerns cost nothing on the hot path. Each thread gets its own read-only
+// connection with lazily prepared point queries; CachedIpFilter shields this from all but the first packet
+// to a new endpoint.
 public sealed class SqliteIpFilter : IIpFilter
 {
     private readonly IIpFilter? _next;
     private readonly bool _autoDisposeNextFilter;
-    private readonly FilterAction _action;
-    private readonly string _connectionString;
+    private readonly bool _hasIncludes;
+    private readonly bool _hasExcludes;
+    private readonly bool _hasBlocks;
     private readonly ThreadLocal<Reader> _reader;
-    private readonly ConcurrentBag<Reader> _allReaders = new();
+    private readonly ConcurrentBag<Reader> _allReaders = [];
     private volatile bool _disposed;
 
-    public SqliteIpFilter(IIpFilter? next, string dbPath, FilterAction action, bool autoDisposeNextFilter = true)
+    public SqliteIpFilter(IIpFilter? next, string dbPath, bool autoDisposeNextFilter = true)
     {
         SplitIpSqlite.EnsureInitialized();
         _next = next;
         _autoDisposeNextFilter = autoDisposeNextFilter;
-        _action = action;
-        _connectionString = new SqliteConnectionStringBuilder {
+        var connectionString = new SqliteConnectionStringBuilder {
             DataSource = dbPath,
             Mode = SqliteOpenMode.ReadOnly,
             Cache = SqliteCacheMode.Private,
             Pooling = false
         }.ToString();
 
+        // a set is one logical list spanning both families (only-v4 includes still constrain v6 addresses)
+        using var connection = new SqliteConnection(connectionString);
+        connection.Open();
+        _hasIncludes = HasRows(connection, FilterAction.Include);
+        _hasExcludes = HasRows(connection, FilterAction.Exclude);
+        _hasBlocks = HasRows(connection, FilterAction.Block);
+
         _reader = new ThreadLocal<Reader>(() => {
-            var reader = new Reader(_connectionString);
+            var reader = new Reader(connectionString);
             _allReaders.Add(reader);
             return reader;
         });
@@ -54,41 +61,53 @@ public sealed class SqliteIpFilter : IIpFilter
         if (result != FilterAction.Default)
             return result;
 
-        if (_action == FilterAction.Default)
-            return FilterAction.Default; // no action configured; skip the db check
-
-        var member = Contains(endPoint.Address);
-        return _action switch {
-            FilterAction.Include => member ? FilterAction.Default : FilterAction.Exclude,
-            FilterAction.Exclude => member ? FilterAction.Exclude : FilterAction.Default,
-            FilterAction.Block => member ? FilterAction.Block : FilterAction.Default,
-            _ => FilterAction.Default
-        };
-    }
-
-    private bool Contains(IPAddress address)
-    {
+        var address = endPoint.Address;
         if (address.IsIPv4MappedToIPv6)
             address = address.MapToIPv4();
 
+        if (_hasBlocks && Contains(FilterAction.Block, address))
+            return FilterAction.Block;
+
+        if (_hasExcludes && Contains(FilterAction.Exclude, address))
+            return FilterAction.Exclude;
+
+        if (_hasIncludes && !Contains(FilterAction.Include, address))
+            return FilterAction.Exclude;
+
+        return FilterAction.Default;
+    }
+
+    private bool Contains(FilterAction action, IPAddress address)
+    {
         var reader = _reader.Value!;
         if (address.AddressFamily == AddressFamily.InterNetwork) {
             Span<byte> bytes = stackalloc byte[4];
             address.TryWriteBytes(bytes, out _);
             var key = SplitIpDb.ToV4Key(bytes);
-            reader.V4.Parameters[0].Value = key;
-            using var row = reader.V4.ExecuteReader();
+            var command = reader.GetCommand(action, isV4: true);
+            command.Parameters[0].Value = key;
+            using var row = command.ExecuteReader();
             return row.Read() && row.GetInt64(0) >= key; // start_ip <= key already; check end_ip
         }
         else {
             var bytes = address.GetAddressBytes(); // 16-byte big-endian
-            reader.V6.Parameters[0].Value = bytes;
-            using var row = reader.V6.ExecuteReader();
+            var command = reader.GetCommand(action, isV4: false);
+            command.Parameters[0].Value = bytes;
+            using var row = command.ExecuteReader();
             if (!row.Read())
                 return false;
             var end = (byte[])row.GetValue(0);
             return end.AsSpan().SequenceCompareTo(bytes) >= 0; // memcmp: end_ip >= addr
         }
+    }
+
+    private static bool HasRows(SqliteConnection connection, FilterAction action)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText =
+            $"SELECT EXISTS(SELECT 1 FROM {SplitIpDb.GetTableName(action, isV4: true)}) " +
+            $"OR EXISTS(SELECT 1 FROM {SplitIpDb.GetTableName(action, isV4: false)})";
+        return (long)command.ExecuteScalar()! == 1;
     }
 
     public void Dispose()
@@ -104,24 +123,27 @@ public sealed class SqliteIpFilter : IIpFilter
             _next?.Dispose();
     }
 
-    // Per-thread read-only connection with prepared point-query statements (one per address family).
+    // Per-thread read-only connection with lazily prepared point-query statements (one per set + family).
     private sealed class Reader : IDisposable
     {
-        public readonly SqliteConnection Connection;
-        public readonly SqliteCommand V4;
-        public readonly SqliteCommand V6;
+        private readonly SqliteConnection _connection;
+        private readonly SqliteCommand?[] _commands = new SqliteCommand?[8];
 
         public Reader(string connectionString)
         {
-            Connection = new SqliteConnection(connectionString);
-            Connection.Open();
-            V4 = CreateQuery("range_v4");
-            V6 = CreateQuery("range_v6");
+            _connection = new SqliteConnection(connectionString);
+            _connection.Open();
+        }
+
+        public SqliteCommand GetCommand(FilterAction action, bool isV4)
+        {
+            var index = ((int)action << 1) | (isV4 ? 1 : 0);
+            return _commands[index] ??= CreateQuery(SplitIpDb.GetTableName(action, isV4));
         }
 
         private SqliteCommand CreateQuery(string table)
         {
-            var command = Connection.CreateCommand();
+            var command = _connection.CreateCommand();
             // greatest start_ip <= @a (single index seek); caller checks its end_ip
             command.CommandText = $"SELECT end_ip FROM {table} WHERE start_ip <= $a ORDER BY start_ip DESC LIMIT 1";
             command.Parameters.Add(command.CreateParameter());
@@ -132,9 +154,9 @@ public sealed class SqliteIpFilter : IIpFilter
 
         public void Dispose()
         {
-            V4.Dispose();
-            V6.Dispose();
-            Connection.Dispose();
+            foreach (var command in _commands)
+                command?.Dispose();
+            _connection.Dispose();
         }
     }
 }

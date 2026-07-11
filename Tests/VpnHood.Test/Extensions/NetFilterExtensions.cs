@@ -52,9 +52,10 @@ public static class NetFilterExtensions
         public bool IsIpIncluded(IPAddress ipAddress)
         {
             var result = ipFilter?.Process(IpProtocol.Tcp,
-                new IpEndPointValue(ipAddress, 443));
+                new IpEndPointValue(ipAddress, 443)) ?? FilterAction.Default;
 
-            return result == FilterAction.Include;
+            // tunnel when no gate vetoed (Default) or an override forced it (Include)
+            return result is FilterAction.Default or FilterAction.Include;
         }
     }
 }

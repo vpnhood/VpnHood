@@ -1,9 +1,8 @@
 # Split-IP-via-app filtering
 
 Policy of the **split-ip-via-app** context (`UseSplitIpViaApp`): how the user's IP filter text files
-become `split-ip-via-app.db` + `split-ip-via-app-blocks.db` and what membership means. The shared
-architecture (descriptors, filter pipe, storage, rebuild mechanics) is in [README.md](README.md); the
-db format is in the
+become `split-ip-via-app.db` and what membership means. The shared architecture (filter pipe, storage,
+rebuild mechanics) is in [README.md](README.md); the db format is in the
 [Filtering.Sqlite README](../../Src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
 
 Naming: "via app" says WHERE the IP split is enforced — by the app's own filter pipe inside the tunnel,
@@ -18,45 +17,40 @@ write, premium-gated by `AppFeature.SplitIpViaApp`):
 
 | File | Meaning when non-empty |
 | --- | --- |
-| `app_includes.txt` | Only these ranges are tunnel-eligible (empty ⇒ All). |
+| `app_includes.txt` | Only these ranges are tunnel-eligible (empty ⇒ no constraint). |
 | `app_excludes.txt` | These ranges bypass the tunnel (empty ⇒ None). |
 | `app_blocks.txt` | These ranges are dropped entirely at app level (empty ⇒ None). |
 
 The on/off gate is `UserSettings.UseSplitIpViaApp` (checked together with the premium feature by
 `VpnHoodApp.PrepareSplitIpDbs`) — the service has no emptiness short path. Missing files count as
-empty, and empty sources build no-op dbs that route identically to no filter.
+empty, and empty sources leave the db's sets empty, which is a no-op gate that routes identically to
+no filter.
 
-## Two dbs: one merged allow set (`Include`) + one block set (`Block`)
+## One db, three sets that mirror the files
 
-`SplitIpViaAppService.EnsureSplitIpDbs` prepares both and returns their descriptors:
+`SplitIpViaAppService.EnsureSplitIpDb` stores each source file into its own set of the single
+`split-ip-via-app.db`, exactly as written — no merge algebra:
 
-- **`split-ip-via-app.db`** — includes and excludes merged into ONE range list:
+- **include** — a non-empty set vetoes non-members (`Exclude`); members pass as `Default`. Chained
+  with the country include set this composes as intersection.
+- **exclude** — members bypass the tunnel (`Exclude`). Checked before the include set, so an address in
+  both is excluded — the same outcome the old `All ∩ includes − excludes` merge produced.
+- **block** — members are dropped entirely (`Block`). Superior to both other sets, so a blocked address
+  is dropped even if the include set contains it.
 
-  ```text
-  stored set = All ∩ includes − excludes
-  ```
-
-  stored with the `Include` action: membership means "eligible for tunnel", non-members bypass. There
-  is no include/exclude pair at runtime, so the db needs no mode and a selection has exactly one
-  canonical stored form.
-
-- **`split-ip-via-app-blocks.db`** — the blocks list as-is, stored with the `Block` action: members
-  are dropped entirely. `Block` is superior in the pipe, so a blocked address is dropped even if the
-  allow set contains it.
-
-No inversion rule applies here (unlike [split-country](split-country.md)): inverting an arbitrary
-range list yields about the same number of rows (`|¬S| ≤ |S| + 2`), so storing the complement could
-never make the db meaningfully smaller. The row count is proportional to what the user wrote, nothing
-more.
+Each table answers "what did the user write", which makes the db directly inspectable, and the build is
+a plain parse-and-insert per file. No inversion rule applies here (unlike
+[split-country](split-country.md)): inverting an arbitrary range list yields about the same number of
+rows (`|¬S| ≤ |S| + 2`), so storing the complement could never make the db meaningfully smaller. The
+row count is proportional to what the user wrote, nothing more.
 
 ## Change detection
 
-Each db has its own `source_signature` = mtime + length of its source files
-(`app_includes:<ticks>:<len>,app_excludes:…` for the allow db; `app_blocks:…` for the block db).
-This is stat-only: ordinary connects never read — let alone parse — the text files; the parse/merge
-runs only on the rare rebuild path (`IpRangeListDbBuilder` takes both inputs as *factories*). Every
-settings write rewrites the file, so the signature always moves with the content; a spurious touch
-just costs one fast rebuild.
+`source_signature` = mtime + length of all three source files
+(`app_includes:<ticks>:<len>,app_excludes:…,app_blocks:…`). This is stat-only: ordinary connects never
+read — let alone parse — the text files; the parse runs only on the rare rebuild path
+(`IpRangeListDbBuilder` takes every set as a *factory*). Every settings write rewrites the file, so
+the signature always moves with the content; a spurious touch just costs one fast rebuild.
 
 ## Failure policy
 

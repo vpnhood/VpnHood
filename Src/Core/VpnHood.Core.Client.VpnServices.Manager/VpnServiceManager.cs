@@ -356,8 +356,9 @@ public class VpnServiceManager : IDisposable
         // Initialize cll this method, so it must be finished to make sure the service is not interrupted
         using var scopeLock = await _stopLock.LockAsync().Vhc();
 
-        // stop the service
-        if (!ConnectionInfo.IsStarted())
+        // stop the service. Disconnecting does NOT count as stopped: the client is still closing its
+        // session and releasing its resources (filter dbs, adapter) until it reaches a terminal state
+        if (ConnectionInfo.ClientState is ClientState.None or ClientState.Disposed)
             return true;
 
         using var stopTimeoutCts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(5));
@@ -372,11 +373,13 @@ public class VpnServiceManager : IDisposable
                 ConnectionInfo.ClientState);
         }
 
-        // wait for the service to stop
+        // wait for the service to reach a terminal state; the VpnServiceHost publishes Disposed after the
+        // client has fully released its resources. Returning on Disconnecting would let the next connect
+        // race the teardown (e.g. rebuild a split-ip db still held open by the disposing client).
         VhLogger.Instance.LogDebug("Waiting for VpnService to stop.");
         stopTimeoutCts.CancelAfter(TimeSpan.FromSeconds(5));
         try {
-            while (ConnectionInfo.IsStarted()) {
+            while (ConnectionInfo.ClientState is not (ClientState.None or ClientState.Disposed)) {
                 await RefreshConnectionInfo(true, stopTimeoutCts.Token).Vhc();
                 await Task.Delay(200, stopTimeoutCts.Token).Vhc();
             }

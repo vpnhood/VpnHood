@@ -175,8 +175,8 @@ internal class ClientSessionBuilder(
                 useQuic: channelProtocol == ChannelProtocol.Quic && hostQuicEndPoint != null,
                 quicEndPoint: hostQuicEndPoint);
 
-            // the terminal Include granter starts from All; app/country splits and app blocks are inner
-            // SqliteIpFilter gates
+            // the include veto starts from All and is narrowed to the server∩device allow set below;
+            // app/country splits and app blocks are inner SqliteIpFilter gates
             staticIpFilter.IncludeRanges = IpNetwork.All.ToIpRanges();
 
             var dnsConfig = ClientHelper.GetDnsServers(

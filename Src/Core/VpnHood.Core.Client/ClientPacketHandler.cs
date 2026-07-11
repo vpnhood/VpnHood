@@ -81,18 +81,19 @@ internal class ClientPacketHandler(
         if (ShouldPassthroughForAd(ipPacket))
             filterAction = FilterAction.Exclude;
 
-        // force by ICMP echo request. Some adapters can not handle protected ICMP packets, so we have to force them to bypass the tunnel.
+        // force by ICMP echo request. The local proxy can not handle ICMP, so echo requests are forced
+        // through the tunnel even when a gate excluded them.
         if (ipPacket.IsIcmpEcho())
             filterAction = FilterAction.Include;
 
         // detect DoT
         IsDnsOverTlsDetected |= ipPacket.Protocol is IpProtocol.Tcp && ipPacket.ExtractTcp().DestinationPort == 853;
 
-        // check is the packet in the range. 
-        if (filterAction is FilterAction.Include)
-            ProcessOutgoingPacketInclude(ipPacket);
-        else // default or exclude
+        // tunnel unless a gate vetoed: Default means "no objection" and stays inside the tunnel (fail-closed)
+        if (filterAction is FilterAction.Exclude)
             ProcessOutgoingPacketExclude(ipPacket);
+        else // include or default
+            ProcessOutgoingPacketInclude(ipPacket);
     }
 
     private void ProcessOutgoingPacketInclude(IpPacket ipPacket)

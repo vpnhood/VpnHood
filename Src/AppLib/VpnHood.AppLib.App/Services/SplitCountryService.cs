@@ -3,7 +3,6 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -22,16 +21,17 @@ public class SplitCountryService(
 
     public bool IsBusy { get; private set; }
 
-    // Build or reuse the on-disk split-country db for the current SplitCountryMode and return how the
-    // client should interpret membership (SqliteIpFilter semantics). Returns Default when there is no
-    // country split. Failures propagate and fail the connect: a split the user configured is enforced or
-    // the connection does not proceed — never silently skipped.
+    // Build or reuse the on-disk split-country db for the current SplitCountryMode. The selected countries'
+    // ranges are written into the db's include or exclude set — the db self-describes what membership means,
+    // so only its path travels. Returns false when there is no country split (IncludeAll). Failures propagate
+    // and fail to connect: a split the user configured is enforced or the connection does not proceed —
+    // never silently skipped.
     // The (potentially huge) country ranges never enter memory — they stream from the zip into SQLite.
-    public async Task<FilterAction> EnsureSplitIpDb(string dbPath, CancellationToken cancellationToken)
+    public async Task<bool> EnsureSplitIpDb(string dbPath, CancellationToken cancellationToken)
     {
         var splitCountryMode = settingsService.Settings.UserSettings.SplitCountryMode;
         if (splitCountryMode is SplitCountryMode.IncludeAll)
-            return FilterAction.Default;
+            return false;
 
         try {
             // set loading state
@@ -46,11 +46,16 @@ public class SplitCountryService(
                 ? [await GetSplitMyCountryCodeAsync(cancellationToken).Vhc()]
                 : settingsService.UserSettings.SplitCountries;
 
-            // short path: store whichever of (selected, complement) is smaller and flip the action to match,
+            // short path: store whichever of (selected, complement) is smaller in the matching set,
             // so an "everything except one" selection builds a one-country db
             var availableCodes = await locationService.IpRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
             var (storedCodes, action) = ResolveSplitIpDbSelection(availableCodes, countryCodes,
                 splitCountryMode is SplitCountryMode.IncludeList ? FilterAction.Include : FilterAction.Exclude);
+
+            // an empty include set stores no constraint (tunnel everything) — the opposite of what an
+            // include list with no known country means; fail loud instead of silently ignoring the split
+            if (storedCodes.Length == 0 && action is FilterAction.Include)
+                throw new InvalidOperationException("The split country include list contains no known country.");
 
             VhLogger.Instance.LogInformation(
                 "Preparing split-country filter db... Mode: {Mode}, Action: {Action}, Countries: {Countries}",
@@ -58,10 +63,10 @@ public class SplitCountryService(
 
             var dbBuilder = new SplitCountryDbBuilder(
                 () => new ZipArchive(new MemoryStream(ipLocationZipData)),
-                storedCodes, GetIpLocationAssetHash());
+                storedCodes, GetIpLocationAssetHash(), action);
             await dbBuilder.EnsureAsync(dbPath, cancellationToken).Vhc();
 
-            return action;
+            return true;
         }
         finally {
             IsBusy = false;
@@ -79,9 +84,10 @@ public class SplitCountryService(
         return countryCode;
     }
 
-    // The db is mode-independent (ranges stored as-is; the action travels in the descriptor), so a selection
-    // and its complement express the same split. Deterministic rule: always store the strictly smaller set and
-    // flip Include<->Exclude to match — an "all countries except one" selection stores one country, not 244.
+    // A selection and its complement express the same split when the target set flips (Include<->Exclude),
+    // so deterministically store the strictly smaller one — an "all countries except one" selection stores
+    // one country, not 244. Never flip INTO an empty include set though: an empty include table means "no
+    // constraint" (tunnel everything), the opposite of "exclude every known country".
     // Selected codes unknown to the asset contribute no ranges and are dropped before comparing.
     internal static (string[] StoredCodes, FilterAction Action) ResolveSplitIpDbSelection(
         string[] availableCodes, string[] selectedCodes, FilterAction action)
@@ -103,6 +109,9 @@ public class SplitCountryService(
 
         if (complement.Length >= selected.Length)
             return (selected, action);
+
+        if (complement.Length == 0 && action is FilterAction.Exclude)
+            return (selected, action); // don't flip: ([], Include) would constrain nothing
 
         return (complement, action is FilterAction.Include ? FilterAction.Exclude : FilterAction.Include);
     }

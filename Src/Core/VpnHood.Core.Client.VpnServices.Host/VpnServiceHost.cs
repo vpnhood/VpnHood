@@ -301,9 +301,11 @@ public class VpnServiceHost : IDisposable
             if (client != null)
                 await client.DisposeAsync();
 
-            // overwrite last exception if exists
-            if (exception != null)
-                await UpdateConnectionInfo(ClientState.Disposed, null, exception, CancellationToken.None);
+            // always publish the terminal state: the app-side TryStop waits for it before reporting the
+            // service stopped — the client releases its resources (filter dbs, adapter) only during
+            // DisposeAsync, so leaving "Disconnecting" as the last published state lets the next connect
+            // race that teardown. Also overwrites the last exception if one exists.
+            await UpdateConnectionInfo(ClientState.Disposed, null, exception, CancellationToken.None);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not disconnect the client.");

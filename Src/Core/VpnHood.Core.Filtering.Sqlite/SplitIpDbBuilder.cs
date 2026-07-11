@@ -12,7 +12,7 @@ namespace VpnHood.Core.Filtering.Sqlite;
 public abstract class SplitIpDbBuilder
 {
     // Context identity, stored as the db's source_signature meta: must change iff the stored set would
-    // change. Invoked on every EnsureAsync, so it must be cheap (compose from hashes/stat, never parse).
+    // change. Invoked on every EnsureAsync, so it must be cheap (compose of hashes/stat, never parse).
     protected abstract string BuildSourceSignature();
 
     // Stream the context's ranges into the db. Invoked only on the rebuild path.
@@ -37,43 +37,48 @@ public abstract class SplitIpDbBuilder
         DeleteDbFiles(tempPath);
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 
+        // every handle on the temp file is released when this returns, so it can be moved
+        await BuildTempDbAsync(tempPath, cancellationToken).Vhc();
+        SqliteConnection.ClearAllPools();
+
+        // atomic replace (target is never open — connections are exclusive)
+        DeleteDbFiles(dbPath);
+        File.Move(tempPath, dbPath, overwrite: true);
+    }
+
+    private async Task BuildTempDbAsync(string tempPath, CancellationToken cancellationToken)
+    {
         var connectionString = new SqliteConnectionStringBuilder {
             DataSource = tempPath,
             Mode = SqliteOpenMode.ReadWriteCreate,
             Pooling = false // keep no handle on the file so we can move/delete it afterward
         }.ToString();
 
-        await using (var connection = new SqliteConnection(connectionString)) {
-            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
-            // disposable build → durability irrelevant; go fast
-            Execute(connection, "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-16000;");
-            Execute(connection, SplitIpDb.CreateTablesSql);
+        // disposable build → durability irrelevant; go fast
+        Execute(connection, "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-16000;");
+        Execute(connection, SplitIpDb.CreateTablesSql);
 
-            await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken).Vhc();
 
-            // the inserter's raw statements run on the connection's handle, so the rows join the transaction
-            using (var inserter = new SplitIpDbInserter(connection.Handle!, cancellationToken))
-                await InsertRangesAsync(inserter, cancellationToken).Vhc();
+        // the inserter's raw statements run on the connection's handle, so the rows join the transaction;
+        // declared after the connection so its statements are finalized before the connection closes
+        using var inserter = new SplitIpDbInserter(connection.Handle!, cancellationToken);
+        await InsertRangesAsync(inserter, cancellationToken).Vhc();
 
-            // meta written in the data transaction, EXCEPT built_complete (set only after indexes exist)
-            SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeySchemaVersion, SplitIpDb.SchemaVersion.ToString());
-            SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeySourceSignature, BuildSourceSignature());
+        // meta written in the data transaction, EXCEPT built_complete (set only after indexes exist)
+        SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeySchemaVersion, SplitIpDb.SchemaVersion.ToString());
+        SplitIpDb.SetMeta(connection, transaction, SplitIpDb.KeySourceSignature, BuildSourceSignature());
 
-            // the transaction ends HERE; index creation is deliberately outside it (index-after-bulk-insert)
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        // the transaction ends HERE; index creation is deliberately outside it (index-after-bulk-insert)
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
 
-            Execute(connection, SplitIpDb.CreateIndexesSql);
+        Execute(connection, SplitIpDb.CreateIndexesSql);
 
-            // finalize: only now the db is complete and queryable
-            SplitIpDb.SetMeta(connection, transaction: null, SplitIpDb.KeyBuiltComplete, "1");
-        }
-
-        SqliteConnection.ClearAllPools();
-
-        // atomic replace (target is never open — connections are exclusive)
-        DeleteDbFiles(dbPath);
-        File.Move(tempPath, dbPath, overwrite: true);
+        // finalize: only now the db is complete and queryable
+        SplitIpDb.SetMeta(connection, transaction: null, SplitIpDb.KeyBuiltComplete, "1");
     }
 
     private static bool IsUpToDate(string dbPath, string sourceSignature)

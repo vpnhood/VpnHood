@@ -66,18 +66,18 @@ internal class ClientStreamHandler(
                 case FilterAction.Block:
                     throw new NetFilterException("A host has been blocked.");
 
-                case FilterAction.Include:
-                    // Create and add to tunnel channel
-                    VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Include a Host to VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
-                    await AddTunnelChannel(streamConnection, hostEndPoint, cancellationToken).Vhc();
-                    _stat.TcpTunnelledCount++;
-                    break;
-
-                default: // exclude
+                case FilterAction.Exclude:
                     // Create and add to exclude channel
                     VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Exclude a Host from VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
                     await AddPassthruChannel(streamConnection, hostEndPoint, cancellationToken).Vhc();
                     _stat.TcpPassthruCount++;
+                    break;
+
+                default: // include or default — tunnel unless a gate vetoed (fail-closed)
+                    // Create and add to tunnel channel
+                    VhLogger.Instance.LogDebug(GeneralEventId.ProxyChannel, "Include a Host to VPN. HostEp: {HostEp}", VhLogger.Format(hostEndPoint));
+                    await AddTunnelChannel(streamConnection, hostEndPoint, cancellationToken).Vhc();
+                    _stat.TcpTunnelledCount++;
                     break;
             }
         }

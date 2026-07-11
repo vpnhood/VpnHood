@@ -1,21 +1,21 @@
 # Split-country filtering
 
 Policy of the **split-country** context: which countries' IP ranges go into `split-country.db` and
-what membership means. The shared architecture (descriptors, filter pipe, storage, rebuild mechanics)
-is in [README.md](README.md); the db format is in the
+what membership means. The shared architecture (filter pipe, storage, rebuild mechanics) is in
+[README.md](README.md); the db format is in the
 [Filtering.Sqlite README](../../Src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
 
 ## Selection
 
-`SplitCountryService.EnsureSplitIpDb` maps the user's `SplitCountryMode` to a country set and a
-`FilterAction`:
+`SplitCountryService.EnsureSplitIpDb` maps the user's `SplitCountryMode` to a country set and the
+db set that stores it (the db self-describes — only its path travels):
 
-| SplitCountryMode | Countries | Action |
+| SplitCountryMode | Countries | Target set |
 | --- | --- | --- |
-| `IncludeAll` | — | `Default` (no db, filter not created) |
-| `IncludeList` | `UserSettings.SplitCountries` | `Include` |
-| `ExcludeList` | `UserSettings.SplitCountries` | `Exclude` |
-| `ExcludeMyCountry` | client country (fresh lookup, no cache/server hint) | `Exclude` |
+| `IncludeAll` | — | none (no db, filter not created) |
+| `IncludeList` | `UserSettings.SplitCountries` | include |
+| `ExcludeList` | `UserSettings.SplitCountries` | exclude |
+| `ExcludeMyCountry` | client country (fresh lookup, no cache/server hint) | exclude |
 
 The country ranges never enter memory — `SplitCountryDbBuilder` streams them from the ip-location zip
 into SQLite. The builder lives next to the service (not in `Filtering.Sqlite`): the zip layout and the
@@ -23,29 +23,32 @@ asset-hash signature are country business, the sqlite project stays context-agno
 
 Failures propagate and fail the connect (fail-closed): connecting with the split silently not applied
 could route traffic the user meant to keep out of the tunnel — for `ExcludeMyCountry` that can be
-safety-critical.
+safety-critical. An include list that resolves to no known country is likewise an error (an empty
+include set means "no constraint" — the opposite of the user's intent).
 
 ## The inversion rule (smaller-set short path)
 
-The db stores ranges as-is; the action gives them meaning. A selection and its complement (against the
-asset's available countries) therefore express the same split, so
-`SplitCountryService.ResolveSplitIpDbSelection` always stores the **strictly smaller** set and flips
-`Include`↔`Exclude` to match. "All countries except one" — whether the UI sends 243 includes or one
-exclude — stores one country and builds in milliseconds. Ties don't invert (deterministic); selected
-codes unknown to the asset are dropped before comparing; `Block` is never inverted (no complement form).
+A selection and its complement (against the asset's available countries) express the same split when
+the target set flips, so `SplitCountryService.ResolveSplitIpDbSelection` stores the **strictly
+smaller** one and flips include↔exclude to match. "All countries except one" — whether the UI sends
+243 includes or one exclude — stores one country and builds in milliseconds. Ties don't invert
+(deterministic); selected codes unknown to the asset are dropped before comparing. One guard: it never
+flips INTO an empty include set ("exclude every known country" stays a full exclude set, because an
+empty include set constrains nothing).
 
-Consequence: addresses covered by *no* country in the asset (unallocated space) follow the flipped
-action's default. For "everything except X" they are tunneled, which matches user intent.
+Consequence: addresses covered by *no* country in the asset (unallocated space) follow the stored
+set's default. For "everything except X" they are tunneled, which matches user intent.
 
 This rule is country-specific: the complement is cheap because it means streaming fewer country
 *files*. Contexts that store arbitrary range lists (split-ip-via-app) gain nothing from inversion.
 
 ## Change detection
 
-`source_signature` = asset hash + the stored selection (distinct, upper-cased, ordinal-sorted codes).
-The asset hash is the zip's `_checksum.txt` (stamped at asset build time), falling back to an MD5 of
-the zip bytes. Ordinary connects hit the signature check and never open the zip. The mode is
-intentionally NOT part of the signature — the db content is mode-independent (see the inversion rule).
+`source_signature` = asset hash + target set + the stored selection (distinct, upper-cased,
+ordinal-sorted codes). The asset hash is the zip's `_checksum.txt` (stamped at asset build time),
+falling back to an MD5 of the zip bytes. Ordinary connects hit the signature check and never open the
+zip. The target set IS part of the signature: the same codes stored as include vs exclude are
+different db contents, so a mode flip rebuilds.
 
 ## Performance (measured)
 

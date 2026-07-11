@@ -118,13 +118,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ChannelProtocol = options.ChannelProtocol;
 
         // Prepare filters.
-        // Each split-ip db (country, app allow set, app blocks) is a lean SQLite gate chained as an inner
-        // filter: Include gates bypass non-members (chained Include gates compose as intersection), Block
-        // gates drop members, and the StaticIpFilter terminal grants Include for the server∩device allow
-        // set. The (former ~97MB) split ranges never enter memory here.
+        // Every stage is a veto gate: it may Exclude (bypass) or Block (drop); Default means "no objection"
+        // and undecided traffic tunnels (fail-closed: a missing gate keeps traffic inside the VPN, it never
+        // leaks around it). Each split-ip db (country, via-app) is a lean self-describing SQLite gate chained
+        // as an inner filter, and the StaticIpFilter vetoes non-members of the server∩device allow set.
+        // The (former ~97MB) split ranges never enter memory here.
         var innerIpFilter = netFilter?.IpFilter;
-        foreach (var splitIpDbFilter in options.SplitIpDbFilters.Where(x => x.Action != FilterAction.Default))
-            innerIpFilter = new SqliteIpFilter(innerIpFilter, splitIpDbFilter.DbPath, splitIpDbFilter.Action);
+        foreach (var splitIpDbPath in options.SplitIpDbPaths)
+            innerIpFilter = new SqliteIpFilter(innerIpFilter, splitIpDbPath);
         _staticIpFilter = new StaticIpFilter(innerIpFilter);
         var staticDomainFilter = new StaticDomainFilter(netFilter?.DomainFilter) {
             Blocks = options.DomainFilterPolicy.Blocks,

@@ -99,7 +99,7 @@ public class ProxyManagerTest
         public string ConnectionId { get; set; } = Guid.NewGuid().ToString();
         public string ConnectionName => "test";
         public bool IsServer => false;
-        public bool Connected => stream.CanRead && stream.CanWrite;
+        public bool Connected => stream is { CanRead: true, CanWrite: true };
         public Stream Stream => stream;
         public IPEndPoint LocalEndPoint { get; } = new(IPAddress.Loopback, 1);
         public IPEndPoint RemoteEndPoint { get; } = new(IPAddress.Loopback, 2);

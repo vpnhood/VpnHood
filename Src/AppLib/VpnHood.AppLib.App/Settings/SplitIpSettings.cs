@@ -70,13 +70,14 @@ public class SplitIpSettings(string folderPath)
         set => Write("app_blocks", value);
     }
 
-    // Cheap change signatures of the app split-ip sources (mtime + length; no content read). Stored as the
+    // Cheap change signature of the app split-ip sources (mtime + length; no content read). Stored as the
     // db's source_signature meta so SplitIpDbBuilder.EnsureAsync detects stale dbs without parsing the text files.
-    // Every settings write rewrites the file, so the signature always changes with the content. A missing
+    // Every setting write rewrites the file, so the signature always changes with the content. A missing
     // file counts as an empty one (readers auto-create it on first access).
-    public string GetAppFilterSignature() => BuildFileSignature("app_includes", "app_excludes");
-    public string GetAppBlocksSignature() => BuildFileSignature("app_blocks");
+    public string GetSplitIpViaAppSignature() => BuildFileSignature("app_includes", "app_excludes", "app_blocks");
 
+    // kept human-readable on purpose: the db's source_signature meta then shows exactly which file
+    // (modified time/length) the db was built from, so a did-it-rebuild question is answered by inspection
     private string BuildFileSignature(params string[] fileTitles)
     {
         return string.Join(',', fileTitles.Select(fileTitle => {

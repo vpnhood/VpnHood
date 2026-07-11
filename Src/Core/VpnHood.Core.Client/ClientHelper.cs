@@ -12,7 +12,9 @@ internal static class ClientHelper
 {
     private static bool IsIncluded(IIpFilter clientIpFilter, IPAddress ipAddress)
     {
-        return clientIpFilter.Process(IpProtocol.Udp, new IpEndPointValue(ipAddress, 53)) is FilterAction.Include;
+        // tunnel when no gate vetoed (Default) or an override forced it (Include)
+        return clientIpFilter.Process(IpProtocol.Udp, new IpEndPointValue(ipAddress, 53))
+            is FilterAction.Default or FilterAction.Include;
     }
 
     /// <summary>

@@ -5,13 +5,13 @@ How split-ip filtering works end to end: the app process builds a small on-disk 
 selections into `ClientOptions.IncludeIpRangesByApp` (~97MB of `IpRange[]`, JSON-shipped cross-process
 and re-deserialized), which exceeded the iOS Network Extension memory limit.
 
-This doc is the cross-scope map: the shared flow, the descriptor contract, and the filter pipe. What
+This doc is the cross-scope map: the shared flow, the cross-process contract, and the filter pipe. What
 each context stores and when it rebuilds is that context's policy — see its own doc:
 
-| Context | Dbs | Policy doc |
+| Context | Db | Policy doc |
 | --- | --- | --- |
 | split-country | `split-country.db` | [split-country.md](split-country.md) |
-| split-ip-via-app | `split-ip-via-app.db` + `split-ip-via-app-blocks.db` | [split-ip-via-app.md](split-ip-via-app.md) |
+| split-ip-via-app | `split-ip-via-app.db` | [split-ip-via-app.md](split-ip-via-app.md) |
 
 The db format, meta/rebuild rules, and filter semantics are the contract of the
 `VpnHood.Core.Filtering.Sqlite` project — see its
@@ -22,47 +22,52 @@ The db format, meta/rebuild rules, and filter semantics are the contract of the
 ```text
 App process (VpnHoodApp / AppLib)                    VpnService process (VpnHoodClient)
 ─────────────────────────────────                    ──────────────────────────────────
-VpnHoodApp.PrepareSplitIpDbs                         ClientOptions.SplitIpDbFilters[]
-  ├─ SplitCountryService.EnsureSplitIpDb               └─ one SqliteIpFilter per entry
-  ├─ SplitIpViaAppService.EnsureSplitIpDbs                    (read-only, per-packet)
-  │    (allow set + blocks)                                 chained into the filter pipe
-  └─ each: SplitIpDbBuilder.EnsureAsync
+VpnHoodApp.PrepareSplitIpDbs                         ClientOptions.SplitIpDbPaths[]
+  ├─ SplitCountryService.EnsureSplitIpDb               └─ one SqliteIpFilter per path
+  ├─ SplitIpViaAppService.EnsureSplitIpDb                     (read-only, per-packet)
+  └─ each: SplitIpDbBuilder.EnsureAsync                     chained into the filter pipe
        └─ rebuild only if meta says stale
 ```
 
 1. **Before connecting**, `VpnHoodApp.PrepareSplitIpDbs` asks each context's service to build or reuse
-   its dbs, gated by that context's user setting (`SplitCountryMode` ≠ `IncludeAll`; `UseSplitIpViaApp`).
-   A service yields one descriptor per db — the `FilterAction` the client should apply to membership;
-   a context that is off contributes no descriptors and its dbs are skipped entirely. Failures propagate
-   and fail the connect (fail-closed): a split the user configured is enforced or the connection does
-   not proceed, never silently skipped.
+   its db, gated by that context's user setting (`SplitCountryMode` ≠ `IncludeAll`; `UseSplitIpViaApp`).
+   A context that is off contributes no path and its db is skipped entirely. Failures propagate and
+   fail the connect (fail-closed): a split the user configured is enforced or the connection does not
+   proceed, never silently skipped.
 
-2. **The descriptors travel, not the ranges.** `ClientOptions` carries only `SplitIpDbFilters` — an
-   array of `{ DbPath, Action }`; the cross-process payload is paths and enums instead of megabytes of
-   ranges.
+2. **Only paths travel, not the ranges.** Each db is **self-describing** — it stores up to three sets
+   (include, exclude, block) and which sets are populated *is* its semantic — so `ClientOptions`
+   carries only `SplitIpDbPaths`; the cross-process payload is file paths instead of megabytes of
+   ranges (and no per-db action, either).
 
-3. **At runtime**, `VpnHoodClient` chains one `SqliteIpFilter` per descriptor into its filter pipe.
+3. **At runtime**, `VpnHoodClient` chains one `SqliteIpFilter` per path into its filter pipe.
    Pipe order (outermost first):
 
    ```text
    CachedIpFilter (60-min per-endpoint memo)
-     └─ StaticIpFilter (server ∩ device allow set; grants Include)
-          └─ SqliteIpFilter (split-ip-via-app blocks gate; Block action)
-               └─ SqliteIpFilter (split-ip-via-app allow gate; Include action)
-                    └─ SqliteIpFilter (split-country gate; Include or Exclude action)
-                         └─ platform NetFilter (optional)
+     └─ StaticIpFilter (server ∩ device allow set)
+          └─ SqliteIpFilter (split-ip-via-app: include/exclude/block sets)
+               └─ SqliteIpFilter (split-country: include or exclude set)
+                    └─ platform NetFilter (optional)
    ```
 
-   Composition rule: each stage runs its inner `next` first and returns the first non-`Default` action.
-   "Tunnel" is expressed as `Default` (defer) so every gate applies; only the terminal `StaticIpFilter`
-   grants `Include`. `Exclude`/`Block` are superior. Chained `Include` gates therefore compose as set
-   **intersection**: an address tunnels only if every active gate contains it.
+   Composition rule: each stage runs its inner `next` first and returns the first non-`Default`
+   verdict. **Every gate is a veto**: it may return `Exclude` (bypass) or `Block` (drop), and `Default`
+   means "no objection". Undecided traffic tunnels — fail-closed for a VPN: a missing or empty gate
+   keeps traffic inside the tunnel, it never leaks around it. A non-empty include set vetoes
+   non-members, so chained include sets compose as set **intersection**: an address tunnels only if
+   every active include set contains it. Within one db the precedence is block > exclude >
+   include-veto.
+
+   `FilterAction.Include` is never returned by IP gates. It survives only as an explicit override
+   lane: the domain force-list and the ICMP force use it to push traffic through the tunnel past every
+   gate.
 
 ## Rebuilds and change detection
 
 `SplitIpDbBuilder.EnsureAsync` reuses a db when its meta table matches the context's
 `source_signature` — an opaque string each context's builder composes so that it changes iff the
-stored set would change (see the context docs for what goes into it). Ordinary connects hit this check
+stored sets would change (see the context docs for what goes into it). Ordinary connects hit this check
 and never touch the source (zip or text files). Source changes trigger a one-shot rebuild in the app
 process — build to temp file, atomic rename, so no torn db and no orphans.
 
@@ -71,7 +76,6 @@ process — build to temp file, atomic rename, so no torn db and no orphans.
 ```text
 <IDevice.VpnServiceConfigFolder>/ip-filters/split-country.db
 <IDevice.VpnServiceConfigFolder>/ip-filters/split-ip-via-app.db
-<IDevice.VpnServiceConfigFolder>/ip-filters/split-ip-via-app-blocks.db
 ```
 
 `VpnServiceConfigFolder` is the folder the VpnService already reads its config from — the one location

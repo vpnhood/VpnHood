@@ -138,6 +138,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var splitIpViaAppService = new SplitIpViaAppService(settingsService);
         splitIpViaAppService.StateChanged += LocationService_StateChanged;
 
+        var splitDomainService = new SplitDomainService(settingsService);
+        splitDomainService.StateChanged += LocationService_StateChanged;
+
         ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
@@ -224,6 +227,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             LocationService = locationService,
             SplitCountryService = splitCountryService,
             SplitIpViaAppService = splitIpViaAppService,
+            SplitDomainService = splitDomainService,
             AccountService = options.AccountProvider is null
                 ? null
                 : new AppAccountService(
@@ -761,6 +765,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // split-ip (country + app): build or reuse the on-disk filter dbs and pass their paths
             var splitIpDbPaths = await PrepareSplitIpDbs(cancellationToken).Vhc();
+            var splitDomainDbPaths = await PrepareSplitDomainDbs(cancellationToken).Vhc();
 
             // create clientOptions
             var clientOptions = new ClientOptions {
@@ -772,6 +777,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AutoWaitTimeout = _autoWaitTimeout,
                 SplitLocalNetwork = UserSettings.UseSplitLocalNetwork,
                 SplitIpDbPaths = splitIpDbPaths,
+                SplitDomainDbPaths = splitDomainDbPaths,
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 PacketChannelBufferSize = _packetChannelBufferSize,
@@ -789,7 +795,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PlanId = planId,
                 AccessCode = accessCode,
                 IsTcpProxySupported = Features.IsTcpProxySupported,
-                DomainFilterPolicy = GetDomainFilterPolicy(),
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
                 AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
                 AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
@@ -1150,16 +1155,17 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return dbPaths.ToArray();
     }
 
-    public DomainFilterPolicy GetDomainFilterPolicy()
+    // Build or reuse the on-disk split-domain db and return its path when the split-domain feature is
+    // active — like the split-ip dbs it is self-describing (include/exclude/block domain sets), so only
+    // the path travels cross-process.
+    private async Task<string[]> PrepareSplitDomainDbs(CancellationToken cancellationToken)
     {
-        // return empty if it is premium feature but not allowed to avoid unnecessary parsing
-        return UserSettings.UseSplitDomain && CheckPremiumFeature(AppFeature.SplitDomain)
-            ? new DomainFilterPolicy {
-                Includes = DomainTextFileParser.Parse(SettingsService.SplitDomainSettings.Includes) ?? [],
-                Excludes = DomainTextFileParser.Parse(SettingsService.SplitDomainSettings.Excludes) ?? [],
-                Blocks = DomainTextFileParser.Parse(SettingsService.SplitDomainSettings.Blocks) ?? []
-            }
-            : new DomainFilterPolicy();
+        if (!UserSettings.UseSplitDomain || !CheckPremiumFeature(AppFeature.SplitDomain))
+            return [];
+
+        var dbPath = Path.Combine(_device.VpnServiceConfigFolder, "domain-filters", "split-domain.db");
+        await Services.SplitDomainService.EnsureSplitDomainDb(dbPath, cancellationToken).Vhc();
+        return [dbPath];
     }
 
     public async Task CopyLogToStream(Stream destination)

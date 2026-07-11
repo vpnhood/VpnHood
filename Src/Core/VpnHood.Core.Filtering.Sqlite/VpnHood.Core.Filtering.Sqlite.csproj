@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>SQLite-backed IP range filter (split-country) for VpnHood.</Description>
+		<Description>SQLite-backed IP range and domain filters (split-country, split-ip, split-domain) for VpnHood.</Description>
 		<TargetFramework>net10.0</TargetFramework>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<!--Use Microsoft.Data.Sqlite.Core (not Microsoft.Data.Sqlite) so consuming heads choose the native
 		    SQLitePCLRaw provider per platform and the base stays small. Batteries_V2.Init() is called from
-		    SplitIpSqlite.EnsureInitialized().
+		    SplitSqlite.EnsureInitialized().
 
 		    bundle_e_sqlite3 3.0.3 ships the patched e_sqlite3 native for ALL runtime variants — including the
 		    RID-specific .android / .ios natives — fixing GHSA-2m69-gcr7-jv3q (e_sqlite3 <= 2.1.11) at every head

@@ -127,14 +127,21 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         foreach (var splitIpDbPath in options.SplitIpDbPaths)
             innerIpFilter = new SqliteIpFilter(innerIpFilter, splitIpDbPath);
         _staticIpFilter = new StaticIpFilter(innerIpFilter);
-        var staticDomainFilter = new StaticDomainFilter(netFilter?.DomainFilter) {
-            Blocks = options.DomainFilterPolicy.Blocks,
-            Excludes = options.DomainFilterPolicy.Excludes,
-            Includes = options.DomainFilterPolicy.Includes
-        };
+
+        // Domain gates: the same self-describing dbs with domain sets. A domain decision preempts the IP
+        // gates, and the include set is the override lane — a member domain is forced through the tunnel
+        // past any IP-gate veto (domains are more specific knowledge than IPs).
+        var innerDomainFilter = netFilter?.DomainFilter;
+        var hasDomainRules = false;
+        foreach (var splitDomainDbPath in options.SplitDomainDbPaths) {
+            var splitDomainFilter = new SqliteDomainFilter(innerDomainFilter, splitDomainDbPath);
+            hasDomainRules |= !splitDomainFilter.IsEmpty;
+            innerDomainFilter = splitDomainFilter;
+        }
+
         _netFilter = new NetFilter {
             IpFilter = new CachedIpFilter(_staticIpFilter, TimeSpan.FromMinutes(60)),
-            DomainFilter = new CachedDomainFilter(staticDomainFilter, TimeSpan.FromMinutes(60)),
+            DomainFilter = new CachedDomainFilter(innerDomainFilter, TimeSpan.FromMinutes(60)),
             IpMapper = netFilter?.IpMapper
         };
 
@@ -161,7 +168,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _netFilter.DomainFilter,
             sniEventId: GeneralEventId.Sni,
             tlsBufferSize: TunnelDefaults.PrefetchStreamBufferSize);
-        _domainFilteringService.IsEnabled |= options.ForceLogSni || !staticDomainFilter.IsEmpty;
+        _domainFilteringService.IsEnabled |= options.ForceLogSni || hasDomainRules;
 
         // init vpnAdapter events
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();

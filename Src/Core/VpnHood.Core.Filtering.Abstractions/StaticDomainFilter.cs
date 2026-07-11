@@ -38,43 +38,23 @@ public class StaticDomainFilter(IDomainFilter? nextFilter, bool autoDisposeNextF
     private static string[] BuildSortedInvertedArray(IReadOnlyList<string> domains)
     {
         var inverted = domains
-            .Select(NormalizeDomain)
+            .Select(DomainUtils.NormalizeDomain)
             .Where(d => d.Length > 0)
-            .Select(InvertDomain)
+            .Select(DomainUtils.InvertDomain)
             .OrderBy(d => d, StringComparer.Ordinal)
             .ToArray();
 
         return inverted;
     }
 
-    private static string NormalizeDomain(string? domain)
-    {
-        if (string.IsNullOrWhiteSpace(domain))
-            return string.Empty;
-
-        var normalized = domain.Trim().ToLowerInvariant();
-        if (normalized.StartsWith("*.", StringComparison.Ordinal))
-            normalized = normalized[2..];
-
-        return normalized;
-    }
-
-    // Inverts domain parts: "www.google.com" -> "com.google.www"
-    private static string InvertDomain(string domain)
-    {
-        var parts = domain.Split('.');
-        Array.Reverse(parts);
-        return string.Join('.', parts);
-    }
-
     // it accepts wildcard such as *.example.com, which will match example.com, sub.example.com, etc.
     public FilterAction Process(string? domain)
     {
-        var normalizedDomain = NormalizeDomain(domain);
+        var normalizedDomain = DomainUtils.NormalizeDomain(domain);
         if (normalizedDomain.Length == 0)
             return FilterAction.Default;
 
-        var invertedDomain = InvertDomain(normalizedDomain);
+        var invertedDomain = DomainUtils.InvertDomain(normalizedDomain);
 
         if (IsMatch(invertedDomain, _invertedBlocks))
             return FilterAction.Block;

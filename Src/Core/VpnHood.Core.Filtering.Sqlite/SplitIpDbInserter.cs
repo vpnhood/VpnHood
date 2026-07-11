@@ -18,9 +18,10 @@ public sealed class SplitIpDbInserter : IDisposable
     private readonly SQLitePCL.sqlite3_stmt?[] _statements = new SQLitePCL.sqlite3_stmt?[8];
     private int _rowCount;
 
-    internal SplitIpDbInserter(SQLitePCL.sqlite3 db, CancellationToken cancellationToken)
+    internal SplitIpDbInserter(SqliteConnection connection, CancellationToken cancellationToken)
     {
-        _db = db;
+        // the raw handle stays an implementation detail of this hot loop; nothing above this layer sees it
+        _db = connection.GetRequiredHandle();
         _cancellationToken = cancellationToken;
     }
 
@@ -31,13 +32,13 @@ public sealed class SplitIpDbInserter : IDisposable
             var statement = GetStatement(action, isV4: true);
             SQLitePCL.raw.sqlite3_bind_int64(statement, 1, SplitIpDb.ToV4Key(start));
             SQLitePCL.raw.sqlite3_bind_int64(statement, 2, SplitIpDb.ToV4Key(end));
-            StepReset(_db, statement);
+            SplitDbRaw.StepReset(_db, statement);
         }
         else {
             var statement = GetStatement(action, isV4: false);
             SQLitePCL.raw.sqlite3_bind_blob(statement, 1, start);
             SQLitePCL.raw.sqlite3_bind_blob(statement, 2, end);
-            StepReset(_db, statement);
+            SplitDbRaw.StepReset(_db, statement);
         }
 
         if (++_rowCount % CancellationCheckInterval == 0)
@@ -47,7 +48,7 @@ public sealed class SplitIpDbInserter : IDisposable
     private SQLitePCL.sqlite3_stmt GetStatement(FilterAction action, bool isV4)
     {
         var index = ((int)action << 1) | (isV4 ? 1 : 0);
-        return _statements[index] ??= PrepareRaw(_db,
+        return _statements[index] ??= SplitDbRaw.PrepareRaw(_db,
             $"INSERT INTO {SplitIpDb.GetTableName(action, isV4)} (start_ip, end_ip) VALUES (?, ?)");
     }
 
@@ -55,24 +56,5 @@ public sealed class SplitIpDbInserter : IDisposable
     {
         foreach (var statement in _statements)
             statement?.Dispose();
-    }
-
-    private static SQLitePCL.sqlite3_stmt PrepareRaw(SQLitePCL.sqlite3 db, string sql)
-    {
-        CheckRc(db, SQLitePCL.raw.sqlite3_prepare_v2(db, sql, out var statement));
-        return statement;
-    }
-
-    private static void StepReset(SQLitePCL.sqlite3 db, SQLitePCL.sqlite3_stmt statement)
-    {
-        CheckRc(db, SQLitePCL.raw.sqlite3_step(statement));
-        SQLitePCL.raw.sqlite3_reset(statement);
-    }
-
-    private static void CheckRc(SQLitePCL.sqlite3 db, int rc)
-    {
-        if (rc is SQLitePCL.raw.SQLITE_OK or SQLitePCL.raw.SQLITE_DONE or SQLitePCL.raw.SQLITE_ROW)
-            return;
-        throw new SqliteException($"SQLite error {rc}: {SQLitePCL.raw.sqlite3_errmsg(db).utf8_to_string()}", rc);
     }
 }

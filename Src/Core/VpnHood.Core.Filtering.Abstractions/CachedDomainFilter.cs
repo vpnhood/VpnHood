@@ -2,18 +2,18 @@
 
 namespace VpnHood.Core.Filtering.Abstractions;
 
-public class CachedDomainFilter(IDomainFilter nextFilter, TimeSpan timeout, bool autoDisposeNextFilter = true) : IDomainFilter
+public class CachedDomainFilter(IDomainFilter? nextFilter, TimeSpan timeout, bool autoDisposeNextFilter = true) : IDomainFilter
 {
     private readonly TimeoutDictionary<string, TimeoutItem<FilterAction>> _cache = new(timeout);
     public FilterAction Process(string? domain)
     {
         if (domain == null)
-            return nextFilter.Process(domain);
+            return nextFilter?.Process(domain) ?? FilterAction.Default;
 
         if (_cache.TryGetValue(domain, out var cachedAction))
             return cachedAction.Value;
 
-        var action = nextFilter.Process(domain);
+        var action = nextFilter?.Process(domain) ?? FilterAction.Default;
         _cache.TryAdd(domain, new TimeoutItem<FilterAction>(action));
         return action;
     }
@@ -27,6 +27,6 @@ public class CachedDomainFilter(IDomainFilter nextFilter, TimeSpan timeout, bool
     {
         _cache.Dispose();
         if (autoDisposeNextFilter)
-            nextFilter.Dispose();
+            nextFilter?.Dispose();
     }
 }

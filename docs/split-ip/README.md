@@ -12,6 +12,7 @@ each context stores and when it rebuilds is that context's policy — see its ow
 | --- | --- | --- |
 | split-country | `split-country.db` | [split-country.md](split-country.md) |
 | split-ip-via-app | `split-ip-via-app.db` | [split-ip-via-app.md](split-ip-via-app.md) |
+| split-domain | `split-domain.db` | [split-domain.md](split-domain.md) |
 
 The db format, meta/rebuild rules, and filter semantics are the contract of the
 `VpnHood.Core.Filtering.Sqlite` project — see its
@@ -29,19 +30,19 @@ VpnHoodApp.PrepareSplitIpDbs                         ClientOptions.SplitIpDbPath
        └─ rebuild only if meta says stale
 ```
 
-1. **Before connecting**, `VpnHoodApp.PrepareSplitIpDbs` asks each context's service to build or reuse
-   its db, gated by that context's user setting (`SplitCountryMode` ≠ `IncludeAll`; `UseSplitIpViaApp`).
-   A context that is off contributes no path and its db is skipped entirely. Failures propagate and
-   fail the connect (fail-closed): a split the user configured is enforced or the connection does not
-   proceed, never silently skipped.
+1. **Before connecting**, `VpnHoodApp.PrepareSplitIpDbs` / `PrepareSplitDomainDbs` ask each context's
+   service to build or reuse its db, gated by that context's user setting (`SplitCountryMode` ≠
+   `IncludeAll`; `UseSplitIpViaApp`; `UseSplitDomain`). A context that is off contributes no path and
+   its db is skipped entirely. Failures propagate and fail the connect (fail-closed): a split the user
+   configured is enforced or the connection does not proceed, never silently skipped.
 
 2. **Only paths travel, not the ranges.** Each db is **self-describing** — it stores up to three sets
    (include, exclude, block) and which sets are populated *is* its semantic — so `ClientOptions`
-   carries only `SplitIpDbPaths`; the cross-process payload is file paths instead of megabytes of
-   ranges (and no per-db action, either).
+   carries only `SplitIpDbPaths` and `SplitDomainDbPaths`; the cross-process payload is file paths
+   instead of megabytes of ranges (and no per-db action, either).
 
-3. **At runtime**, `VpnHoodClient` chains one `SqliteIpFilter` per path into its filter pipe.
-   Pipe order (outermost first):
+3. **At runtime**, `VpnHoodClient` chains one `SqliteIpFilter` / `SqliteDomainFilter` per path into
+   its two filter pipes. Pipe order (outermost first):
 
    ```text
    CachedIpFilter (60-min per-endpoint memo)
@@ -49,19 +50,28 @@ VpnHoodApp.PrepareSplitIpDbs                         ClientOptions.SplitIpDbPath
           └─ SqliteIpFilter (split-ip-via-app: include/exclude/block sets)
                └─ SqliteIpFilter (split-country: include or exclude set)
                     └─ platform NetFilter (optional)
+
+   CachedDomainFilter (60-min per-domain memo)
+     └─ SqliteDomainFilter (split-domain: include/exclude/block sets)
+          └─ platform DomainFilter (optional)
    ```
 
-   Composition rule: each stage runs its inner `next` first and returns the first non-`Default`
-   verdict. **Every gate is a veto**: it may return `Exclude` (bypass) or `Block` (drop), and `Default`
-   means "no objection". Undecided traffic tunnels — fail-closed for a VPN: a missing or empty gate
-   keeps traffic inside the tunnel, it never leaks around it. A non-empty include set vetoes
+   The domain pipe runs first (on the extracted SNI); any non-`Default` domain verdict preempts the IP
+   pipe entirely.
+
+   IP composition rule: each stage runs its inner `next` first and returns the first non-`Default`
+   verdict. **Every IP gate is a veto**: it may return `Exclude` (bypass) or `Block` (drop), and
+   `Default` means "no objection". Undecided traffic tunnels — fail-closed for a VPN: a missing or
+   empty gate keeps traffic inside the tunnel, it never leaks around it. A non-empty include set vetoes
    non-members, so chained include sets compose as set **intersection**: an address tunnels only if
    every active include set contains it. Within one db the precedence is block > exclude >
    include-veto.
 
    `FilterAction.Include` is never returned by IP gates. It survives only as an explicit override
-   lane: the domain force-list and the ICMP force use it to push traffic through the tunnel past every
-   gate.
+   lane: the **domain include set** and the ICMP force use it to push traffic through the tunnel past
+   every gate. Domain gates therefore consult their own sets before `next` (an include override must
+   not be second-guessed), and "tunnel nothing except aaa.com" is expressed as domain-include
+   `aaa.com` + via-app IP-exclude `0.0.0.0/0, ::/0` — see [split-domain.md](split-domain.md).
 
 ## Rebuilds and change detection
 
@@ -76,6 +86,7 @@ process — build to temp file, atomic rename, so no torn db and no orphans.
 ```text
 <IDevice.VpnServiceConfigFolder>/ip-filters/split-country.db
 <IDevice.VpnServiceConfigFolder>/ip-filters/split-ip-via-app.db
+<IDevice.VpnServiceConfigFolder>/domain-filters/split-domain.db
 ```
 
 `VpnServiceConfigFolder` is the folder the VpnService already reads its config from — the one location
@@ -85,7 +96,5 @@ selection: connections are exclusive, so the file is never in use at rebuild tim
 
 ## Future work
 
-- `split-domain.db` as a sibling context reusing the same `Filtering.Sqlite` infrastructure — one db
-  and one pipe stage per context.
 - Server-not-included block/split policy as its own pipe filter (kept out of `SqliteIpFilter` by
   design).

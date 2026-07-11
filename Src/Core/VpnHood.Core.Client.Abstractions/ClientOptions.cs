@@ -24,6 +24,12 @@ public class ClientOptions
     // See docs/split-ip/README.md.
     public string[] SplitIpDbPaths { get; set; } = [];
 
+    // Split-domain db paths: the string twin of SplitIpDbPaths (split-domain). Each db carries its own
+    // include/exclude/block domain sets; the client chains one read-only SqliteDomainFilter per path.
+    // Unlike the ip sets, the include set is the override lane: a member domain is forced through the
+    // tunnel past any ip-gate veto.
+    public string[] SplitDomainDbPaths { get; set; } = [];
+
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
     public IpRange[] IncludeIpRangesByDevice { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
 
@@ -64,7 +70,6 @@ public class ClientOptions
     public bool IsTcpProxySupported { get; set; } = true;
     public string? ServerLocation { get; set; }
     public ConnectPlanId PlanId { get; set; }
-    public DomainFilterPolicy DomainFilterPolicy { get; set; } = new();
     public bool ForceLogSni { get; set; }
     public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(5);
     public string? AccessCode { get; set; }

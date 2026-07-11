@@ -1,3 +1,5 @@
+using VpnHood.AppLib.Utils;
+
 namespace VpnHood.AppLib.Settings;
 
 public class SplitDomainSettings(string folderPath)
@@ -27,6 +29,14 @@ public class SplitDomainSettings(string folderPath)
         get => Read("blocks");
         set => Write("blocks", value);
     }
+
+    // Stat-only change signature of the split-domain sources, stored as the db's source_signature meta
+    // so SplitDomainDbBuilder.EnsureAsync detects stale dbs without parsing the text files. Every setting
+    // write rewrites its file, so the signature always changes with the content.
+    public string GetSplitDomainSignature() => AppUtils.BuildFileSignature(
+        Path.Combine(folderPath, "includes.txt"),
+        Path.Combine(folderPath, "excludes.txt"),
+        Path.Combine(folderPath, "blocks.txt"));
 
     private string Read(string fileTitle)
     {

@@ -31,7 +31,7 @@ public sealed class SqliteIpFilter : IIpFilter
 
     public SqliteIpFilter(IIpFilter? next, string dbPath, bool autoDisposeNextFilter = true)
     {
-        SplitIpSqlite.EnsureInitialized();
+        SplitSqlite.EnsureInitialized();
         _next = next;
         _autoDisposeNextFilter = autoDisposeNextFilter;
         var connectionString = new SqliteConnectionStringBuilder {

@@ -16,7 +16,7 @@ each context stores and when it rebuilds is that context's policy — see its ow
 
 The db format, meta/rebuild rules, and filter semantics are the contract of the
 `VpnHood.Core.Filtering.Sqlite` project — see its
-[README](../../Src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
+[README](../../src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
 
 ## Flow
 

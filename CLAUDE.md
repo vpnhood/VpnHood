@@ -3,6 +3,12 @@
 The shared coding conventions and working agreements for this repo. They are the source of
 truth — follow them, and when a new durable convention is agreed, update this file.
 
+## Repo layout
+- Top-level directories are lowercase: `src/`, `tests/`, `samples/`, `docs/`, `pub/`. Deeper levels
+  keep their own casing (`pub/Lib`, `src/Apps`, …).
+- Module repos (e.g. VpnHood.Core.Proxies) keep a **capitalized** `Pub/` — module-relative paths in
+  `pub/Lib/PublishModuleNugets.ps1` are `Pub/...` on purpose; don't lowercase them.
+
 ## UI
 - The UI/front-end is a separate SPA project (VpnHood.Client.WebUI), located at `..\VpnHood.Client.WebUI\`
   relative to this repo. It consumes the generated TypeScript API stub.
@@ -33,8 +39,8 @@ truth — follow them, and when a new durable convention is agreed, update this 
   the same as HTTP2, so we treat it the same as TCP.
 
 ## iOS (Client & Connect apps)
-- The iOS apps live in `Src/Apps/{Client,Connect}.Ios` (host) + `…{Client,Connect}.Ios.Extension` (Network
-  Extension `.appex`); the real device/extension/TUN/TCP-stack code is in `Src/Core/*` (`Devices.Ios`,
+- The iOS apps live in `src/Apps/{Client,Connect}.Ios` (host) + `…{Client,Connect}.Ios.Extension` (Network
+  Extension `.appex`); the real device/extension/TUN/TCP-stack code is in `src/Core/*` (`Devices.Ios`,
   `VpnAdapters.IosTun`, `TcpStack`, `Quic.Ios`). The extension projects are one-file `[Register]` shims.
 - **Read [`docs/ios/`](docs/ios/) before working on anything iOS** — especially
   `ios-extension-memory-and-throughput.md` before touching memory/throughput/TCP-stack code (the extension
@@ -47,9 +53,9 @@ truth — follow them, and when a new durable convention is agreed, update this 
   store listings) run on **GitHub Actions — never from a developer machine**. Don't build release packages
   or run Fastlane locally; the runners hold the signing keys, toolchains, and store credentials. A local
   build is only ever for a quick smoke test, not for distribution.
-- **Client** releases from this repo (`publish_client.yml` + `bump.yml` via `Pub/Client/PublishByGithub.ps1`).
+- **Client** releases from this repo (`publish_client.yml` + `bump.yml` via `pub/Client/PublishByGithub.ps1`).
   **Connect** releases from the sibling repo `vpnhood/Vpnhood.App.Connect` (`connect_publish.yml`, dispatched by
-  `Pub/Connect/PublishByGithub.ps1`); that repo also holds the Connect Fastlane config + store metadata.
+  `pub/Connect/PublishByGithub.ps1`); that repo also holds the Connect Fastlane config + store metadata.
 - The iOS **App Store listing** (metadata + screenshots, no binary) is pushed by a Fastlane `deliver` lane
   (`ios upload_metadata`) via its own workflow — Connect: `publish_appstore_metadata.yml`. The TestFlight
   **build** ships separately through the `*_publish.yml` iOS leg. Connect iOS is TestFlight-only for now.

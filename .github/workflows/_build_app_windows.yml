@@ -40,9 +40,9 @@ jobs:
       - name: Resolve module dir
         shell: pwsh
         run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=code/Pub/bin/$tag/$env:PKG/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "MODULE_DIR=code/pub/bin/$tag/$env:PKG/windows-web" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Warn if Advanced Installer license is missing
         if: env.ADVANCED_INSTALLER_LICENSE == ''
         shell: pwsh
@@ -68,12 +68,12 @@ jobs:
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.Win.Web/_publish.ps1" -stage publish
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Win.Web/_publish.ps1" -stage publish
       - name: Package Windows MSI (Advanced Installer)
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.Win.Web/_publish.ps1" -stage package
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Win.Web/_publish.ps1" -stage package
       - uses: actions/upload-artifact@v7
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         with:

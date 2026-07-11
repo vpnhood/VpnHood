@@ -3,7 +3,7 @@
 Policy of the **split-country** context: which countries' IP ranges go into `split-country.db` and
 what membership means. The shared architecture (filter pipe, storage, rebuild mechanics) is in
 [README.md](README.md); the db format is in the
-[Filtering.Sqlite README](../../Src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
+[Filtering.Sqlite README](../../src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
 
 ## Selection
 

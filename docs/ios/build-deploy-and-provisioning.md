@@ -8,12 +8,12 @@ How to build the App + Network Extension, install/run on device, stream logs, an
 > [ios-extension-memory-and-throughput.md](ios-extension-memory-and-throughput.md) for the runtime/memory rationale.
 
 ## Project layout (in this monorepo)
-The iOS apps live under `Src/Apps/` — one host project + one Network-Extension (`.appex`) project each:
+The iOS apps live under `src/Apps/` — one host project + one Network-Extension (`.appex`) project each:
 
 | App | Host csproj | Extension csproj | App bundle id |
 |-----|-------------|------------------|---------------|
-| Client  | `Src/Apps/Client.Ios/VpnHood.App.Client.Ios.csproj`   | `Src/Apps/Client.Ios.Extension/…`   | `com.vpnhood.client.ios` |
-| Connect | `Src/Apps/Connect.Ios/VpnHood.App.Connect.Ios.csproj` | `Src/Apps/Connect.Ios.Extension/…`  | `com.vpnhood.connect.ios` |
+| Client  | `src/Apps/Client.Ios/VpnHood.App.Client.Ios.csproj`   | `src/Apps/Client.Ios.Extension/…`   | `com.vpnhood.client.ios` |
+| Connect | `src/Apps/Connect.Ios/VpnHood.App.Connect.Ios.csproj` | `src/Apps/Connect.Ios.Extension/…`  | `com.vpnhood.connect.ios` |
 
 The host references the extension as an `IsAppExtension` `ProjectReference`, so **building the host also builds
 and bundles the appex**. All iOS build settings are inlined per-csproj (no shared props file).
@@ -33,23 +33,23 @@ and bundles the appex**. All iOS build settings are inlined per-csproj (no share
 Debug AOT emits ~51 MB and hits the 52 MB jetsam limit — **always build Release** for the device.
 ```bash
 # Client (swap Client.Ios -> Connect.Ios for the Connect app)
-rm -rf Src/Apps/Client.Ios/bin Src/Apps/Client.Ios/obj \
-       Src/Apps/Client.Ios.Extension/bin Src/Apps/Client.Ios.Extension/obj   # clean: avoid stale AOT
-~/.dotnet11/dotnet build Src/Apps/Client.Ios/VpnHood.App.Client.Ios.csproj \
+rm -rf src/Apps/Client.Ios/bin src/Apps/Client.Ios/obj \
+       src/Apps/Client.Ios.Extension/bin src/Apps/Client.Ios.Extension/obj   # clean: avoid stale AOT
+~/.dotnet11/dotnet build src/Apps/Client.Ios/VpnHood.App.Client.Ios.csproj \
   -f net11.0-ios -r ios-arm64 -c Release \
   -p:ArchiveOnBuild=false \
   -p:_DeviceName=:v2:udid=$DEVICE \
   -p:SolutionDir="$(pwd)/"
 ```
 - `-p:SolutionDir="$(pwd)/"` (trailing slash **required**) is mandatory in Release — without it the core `.csproj`
-  files emit `CS8101: pathmap incorrectly formatted` (the `PathMap` in `Src/Directory.Build.props` needs it).
+  files emit `CS8101: pathmap incorrectly formatted` (the `PathMap` in `src/Directory.Build.props` needs it).
 - Repo uses `.slnx`; build the host csproj directly. The host build also builds the Extension appex.
-- Output: `Src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app`
+- Output: `src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app`
   (contains `PlugIns/VpnHood.App.Client.Ios.Extension.appex`).
 
 ## Deploy & run (devicectl)
 ```bash
-APP=Src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
+APP=src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
 xcrun devicectl device install app     --device $DEVICE "$APP"
 xcrun devicectl device process launch  --device $DEVICE com.vpnhood.client.ios
 ```
@@ -80,7 +80,7 @@ build for device (bundle ids `com.vpnhood.connect.ios` / `.networkextension`, Ap
 
 ### Diagnose a stale profile
 ```bash
-APP=Src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
+APP=src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
 # what the embedded profile allows
 security cms -D -i "$APP/embedded.mobileprovision" \
   | plutil -convert xml1 - -o - | grep -A3 -E "ProvisionedDevices|application-groups|TeamIdentifier"

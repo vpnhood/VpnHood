@@ -2,21 +2,21 @@
 
 ### Changes Made
 
-1. **Updated ProxyServerType enum** (`Src/Core/VpnHood.Core.Client.Abstractions/ProxyServerType.cs`)
+1. **Updated ProxyServerType enum** (`src/Core/VpnHood.Core.Client.Abstractions/ProxyServerType.cs`)
    - Added support for `Socks4`, `Http`, and `Https` proxy types
    - Maintained backward compatibility with existing `Socks5` type
 
-2. **Refactored ProxyServerManager** (`Src/Core/VpnHood.Core.Client/ClientProxies/ProxyServerManager.cs`)
+2. **Refactored ProxyServerManager** (`src/Core/VpnHood.Core.Client/ClientProxies/ProxyServerManager.cs`)
    - Replaced hardcoded SOCKS5 implementation with a proxy type factory pattern
    - Added `ConnectToProxyAsync` method to handle different proxy types
    - Currently supports SOCKS5 with placeholders for other types
    - Improved logging to include proxy type information
    - Maintained backward compatibility with existing SOCKS5 functionality
 
-3. **Updated ClientProxyMode enum** (`Src/AppLib/VpnHood.AppLib.App/Settings/ClientProxyMode.cs`)
+3. **Updated ClientProxyMode enum** (`src/AppLib/VpnHood.AppLib.App/Settings/ClientProxyMode.cs`)
    - Added `Socks4`, `Http`, and `Https` options to match ProxyServerType
 
-4. **Enhanced Unit Tests** (`Tests/VpnHood.Test/Tests/ProxyServerManagerTest.cs`)
+4. **Enhanced Unit Tests** (`tests/VpnHood.Test/Tests/ProxyServerManagerTest.cs`)
    - Added tests for multiple proxy type support
    - Added tests to verify unsupported proxy types are handled properly
    - Maintained existing test coverage

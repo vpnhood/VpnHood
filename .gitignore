@@ -348,13 +348,13 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
-/Src/Apps/Client.Win.Web.Setup/VpnHood.App.Client.Win.Web.Setup-cache
-/Src/Apps/Connect.Win.Web.Setup/VpnHood.App.Connect.Win.Web.Setup-cache
+/src/Apps/Client.Win.Web.Setup/VpnHood.App.Client.Win.Web.Setup-cache
+/src/Apps/Connect.Win.Web.Setup/VpnHood.App.Connect.Win.Web.Setup-cache
 
 #
 *.tmp.csproj.working/
 *.tmp.csproj
 .working/
 
-# Throwaway solution written by Pub/Lib/PublishNugets.ps1 to pack all packable projects in one pass
+# Throwaway solution written by pub/Lib/PublishNugets.ps1 to pack all packable projects in one pass
 /_nuget_pack.slnx

@@ -49,9 +49,9 @@ jobs:
       - name: Resolve module dir
         shell: pwsh
         run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=code/Pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "MODULE_DIR=code/pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Write default access key (connect)
         if: inputs.app == 'connect'
         shell: pwsh
@@ -88,11 +88,11 @@ jobs:
       - name: Prepare iOS signing
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/Pub/Lib/PrepareCiIosSigning.ps1" -appFolder $env:PKG
+          & "$env:GITHUB_WORKSPACE/code/pub/Lib/PrepareCiIosSigning.ps1" -appFolder $env:PKG
       - name: Build iOS (.ipa)
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.Ios/_publish.ps1"
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Ios/_publish.ps1"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.app }}-ios

@@ -71,21 +71,21 @@ jobs:
       - name: Resolve module dir
         shell: pwsh
         run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=code/Pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "MODULE_DIR=code/pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Install .NET Android workload
         shell: pwsh
         run: dotnet workload install android
       - name: Provision Android SDK
         shell: pwsh
         run: |
-          dotnet build "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.Android.Web/VpnHood.App.$env:PREFIX.Android.Web.csproj" `
+          dotnet build "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Android.Web/VpnHood.App.$env:PREFIX.Android.Web.csproj" `
             -t:InstallAndroidDependencies -p:AcceptAndroidSDKLicenses=True -p:AndroidSdkPath="$env:ANDROID_HOME"
       - name: Credentials + Android signing config
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/Pub/Lib/PrepareCiAndroidSigning.ps1"
+          & "$env:GITHUB_WORKSPACE/code/pub/Lib/PrepareCiAndroidSigning.ps1"
       - name: Write default access keys (connect)
         if: inputs.app == 'connect'
         shell: pwsh
@@ -129,7 +129,7 @@ jobs:
       - name: Build Android (${{ matrix.label }})
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.${{ matrix.subdir }}/${{ matrix.script }}"
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.${{ matrix.subdir }}/${{ matrix.script }}"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.app }}-android-${{ matrix.id }}

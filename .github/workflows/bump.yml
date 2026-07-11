@@ -1,9 +1,9 @@
 name: Bump Version
 
-# The ONLY place the version is bumped. Increments Pub/PubVersion.json (+ Directory.Build.props),
+# The ONLY place the version is bumped. Increments pub/PubVersion.json (+ Directory.Build.props),
 # commits, and fast-forwards develop + main (no force). The CHANGELOG is hand-maintained and is
 # never rewritten here. Bumping in CI (not on a developer's machine) avoids version-file conflicts
-# between developers. See Pub/RELEASE-STRATEGY.md.
+# between developers. See pub/RELEASE-STRATEGY.md.
 #
 # Optional chaining ("do both"): after bumping it can dispatch the client publish and/or the NuGet
 # publish against the freshly bumped commit — while each of those workflows also stays independently
@@ -49,7 +49,7 @@ jobs:
         shell: pwsh
         run: |
           $bump = if ("${{ github.event.inputs.prerelease }}" -eq "true") { 2 } else { 1 }
-          & "$env:GITHUB_WORKSPACE/Pub/Bump.ps1" -bump $bump
+          & "$env:GITHUB_WORKSPACE/pub/Bump.ps1" -bump $bump
       - name: Dispatch client publish
         if: ${{ github.event.inputs.then_publish == 'true' }}
         env:

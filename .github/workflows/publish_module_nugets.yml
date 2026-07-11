@@ -12,12 +12,12 @@ name: publish_module_nugets (reusable)
 # publish_app.yml callers). This is NOT part of the forker/skeleton contract — forkers consume the
 # published NuGets and never call this.
 #
-# The logic lives in Pub/Lib/PublishModuleNugets.ps1 (checked out from this repo):
+# The logic lives in pub/Lib/PublishModuleNugets.ps1 (checked out from this repo):
 #   - Version-sync: adopt the monorepo's develop version when it is ahead of the module's
-#     Pub/PubVersion.json, otherwise bump the module's own build number; commit the bump back.
+#     pub/PubVersion.json, otherwise bump the module's own build number; commit the bump back.
 #   - Pack every packable project in the caller repo and push to nuget.org — a STABLE X.Y.Z,
 #     matching the monorepo rule ("NuGet is always a stable Release version" in
-#     Pub/RELEASE-STRATEGY.md). The `prerelease` input is a MANUAL-ONLY escape hatch that appends
+#     pub/RELEASE-STRATEGY.md). The `prerelease` input is a MANUAL-ONLY escape hatch that appends
 #     `-prerelease`; the normal flow never sets it.
 #
 # A reusable workflow runs in the CALLER's context: the plain checkout, github.repository,
@@ -66,7 +66,7 @@ jobs:
       - name: Checkout module repo (caller)
         uses: actions/checkout@v5
         with: { path: module, persist-credentials: true }
-      # This repo ONLY for the Pub/ scripts (sparse). The module's new version is NOT read from
+      # This repo ONLY for the pub/ scripts (sparse). The module's new version is NOT read from
       # this checkout — the script always fetches develop's PubVersion.json itself, so a pinned
       # code_ref could never silently freeze the version source.
       - name: Checkout vpnhood/VpnHood publish scripts
@@ -75,7 +75,7 @@ jobs:
           repository: vpnhood/VpnHood
           ref: ${{ inputs.code_ref }}
           path: vh
-          sparse-checkout: Pub
+          sparse-checkout: pub
       - uses: actions/setup-dotnet@v5
         with: { dotnet-version: "${{ inputs.dotnet_version }}" }
       - name: Configure git identity
@@ -87,7 +87,7 @@ jobs:
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
-          & "$env:GITHUB_WORKSPACE/vh/Pub/Lib/PublishModuleNugets.ps1" `
+          & "$env:GITHUB_WORKSPACE/vh/pub/Lib/PublishModuleNugets.ps1" `
             -moduleDir "$env:GITHUB_WORKSPACE/module" `
             -branch "${{ github.ref_name }}" `
             -prerelease:$("${{ inputs.prerelease }}" -eq "true")

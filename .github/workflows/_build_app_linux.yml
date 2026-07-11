@@ -1,7 +1,7 @@
 name: _build_app_linux (reusable)
 
 # Builds the Linux client/connect package from the vpnhood/VpnHood monorepo (checked out into code/).
-# Called by publish_app.yml. Self-contained: derives the package dir + Src/Apps prefix from `app`.
+# Called by publish_app.yml. Self-contained: derives the package dir + src/Apps prefix from `app`.
 # Uploads the `<app>-linux` artifact.
 
 on:
@@ -36,9 +36,9 @@ jobs:
       - name: Resolve module dir
         shell: pwsh
         run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=code/Pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "MODULE_DIR=code/pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Write appsettings
         shell: pwsh
         env: { APPSETTINGS: "${{ vars.APPSETTINGS }}" }
@@ -53,7 +53,7 @@ jobs:
       - name: Build Linux
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/Src/Apps/$env:PREFIX.Linux.Web/_publish.ps1"
+          & "$env:GITHUB_WORKSPACE/code/src/Apps/$env:PREFIX.Linux.Web/_publish.ps1"
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.app }}-linux

@@ -131,7 +131,7 @@ jobs:
           ROLLOUT_PCT="${{ inputs.rollout }}"
           case "$ROLLOUT_PCT" in ''|*[!0-9]*) ROLLOUT_PCT=100 ;; esac
           if [ "$ROLLOUT_PCT" -ge 100 ]; then ROLLOUT=""; else ROLLOUT=$(awk "BEGIN{printf \"%.2f\", $ROLLOUT_PCT/100}"); fi
-          PRERELEASE=$(jq -r '.Prerelease' code/Pub/PubVersion.json)
+          PRERELEASE=$(jq -r '.Prerelease' code/pub/PubVersion.json)
           if [ "$PRERELEASE" = "true" ] || [ "$PRERELEASE" = "True" ]; then TRACK=alpha; else TRACK=production; fi
           if [ "$TRACK" != "production" ]; then ROLLOUT=""; fi
           {
@@ -223,7 +223,7 @@ jobs:
           else
             echo "IPA_PATH=$IPA" >> $GITHUB_ENV
           fi
-          PRERELEASE=$(jq -r '.Prerelease' code/Pub/PubVersion.json)
+          PRERELEASE=$(jq -r '.Prerelease' code/pub/PubVersion.json)
           # Connect is TestFlight-ONLY (not yet App Store review compliant) — never upload_to_app_store.
           # Client: prerelease -> TestFlight, stable -> App Store.
           if [ "${{ inputs.app }}" = "connect" ]; then
@@ -294,10 +294,10 @@ jobs:
       - name: Resolve module dir
         shell: pwsh
         run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/code/Pub/PubVersion.json" | ConvertFrom-Json
+          $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=code/Pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
-      # Reassemble the code/Pub/bin/<tag>/<pkg> layout PublishToGithub.ps1 expects. Windows/Android/iOS
+          "MODULE_DIR=code/pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+      # Reassemble the code/pub/bin/<tag>/<pkg> layout PublishToGithub.ps1 expects. Windows/Android/iOS
       # are optional (skipped builds upload nothing), so those downloads are best-effort.
       - uses: actions/download-artifact@v8
         with:
@@ -338,9 +338,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          . "$env:GITHUB_WORKSPACE/code/Pub/Lib/ResolvePublishRepo.ps1"
+          . "$env:GITHUB_WORKSPACE/code/pub/Lib/ResolvePublishRepo.ps1"
           $slug = if ("${{ inputs.app }}" -eq "connect") { Resolve-PublishRepoSlug -Connect } else { Resolve-PublishRepoSlug }
-          & "$env:GITHUB_WORKSPACE/code/Pub/Lib/PublishToGithub.ps1" `
+          & "$env:GITHUB_WORKSPACE/code/pub/Lib/PublishToGithub.ps1" `
             -packageDirName "$env:PKG" `
             -repoName $slug `
             -dropChangelogTag "$env:DROP_TAG"

@@ -3,7 +3,7 @@
 Status: **implemented (pending first CI validation run).** The **VpnHood Server** release now runs on
 GitHub Actions, mirroring Client/Connect. The design below is the original plan; the "As built"
 section records where the final implementation differs from it. See
-[Pub/RELEASE-STRATEGY.md](../../Pub/RELEASE-STRATEGY.md) "Server release".
+[pub/RELEASE-STRATEGY.md](../../pub/RELEASE-STRATEGY.md) "Server release".
 
 ## As built (deltas from the plan below)
 
@@ -14,14 +14,14 @@ section records where the final implementation differs from it. See
 - **One build job, not two.** The server Windows package is a self-contained `dotnet publish -r
   win-x64` + `Compress-Archive` (no MSI/Advanced Installer), so it **cross-builds on `ubuntu-latest`**
   alongside Linux — the planned separate `windows-latest` job was collapsed away.
-- **Release script:** decision **A** — the shared `Pub/Lib/PublishToGithub.ps1` gained
-  `-changelogFileName` + `-assetSet` (`app`|`server`); the standalone `Pub/Server/PublishToGitHub.ps1`
+- **Release script:** decision **A** — the shared `pub/Lib/PublishToGithub.ps1` gained
+  `-changelogFileName` + `-assetSet` (`app`|`server`); the standalone `pub/Server/PublishToGitHub.ps1`
   was deleted. One release creator for all three products.
 - **Docker:** `docker/build-push-action` (multi-arch) → Docker Hub, gated on `DOCKERHUB_*` +
   `push_docker`; skip-with-warning when absent. `publish_docker.ps1` gained `-generateOnly` to emit
   the compose files in CI without a local image build.
-- **Files:** `Pub/Server/Publish.ps1` (build-only), new `Pub/Server/PublishByGithub.ps1`,
-  `Src/Apps/Server.Net/_publish.ps1` (env-resolved release URL). Secrets doc: `.github/DEPLOYMENT.md`.
+- **Files:** `pub/Server/Publish.ps1` (build-only), new `pub/Server/PublishByGithub.ps1`,
+  `src/Apps/Server.Net/_publish.ps1` (env-resolved release URL). Secrets doc: `.github/DEPLOYMENT.md`.
 - **Not yet done:** push `server_publish.yml` to the server repo's `main`, set the Docker Hub secrets,
   and run the validation sequence at the bottom of this doc. Nothing has been pushed or dispatched.
 
@@ -49,13 +49,13 @@ run on GitHub Actions; local scripts are build-only.*
 | Release repo | this repo | `vpnhood/Vpnhood.App.Connect` | `vpnhood/VpnHood.App.Server` |
 | Workflow lives in | this repo — [publish_client.yml](../../.github/workflows/publish_client.yml) | the Connect repo — `connect_publish.yml` | **the Server repo — `server_publish.yml`** |
 | Token to create the release | automatic `github.token` (same-repo) | automatic `github.token` (workflow runs *in* the target repo) | **automatic `github.token`** (same trick) |
-| Trigger script | [Client/PublishByGithub.ps1](../../Pub/Client/PublishByGithub.ps1) | [Connect/PublishByGithub.ps1](../../Pub/Connect/PublishByGithub.ps1) | **new `Pub/Server/PublishByGithub.ps1`** |
+| Trigger script | [Client/PublishByGithub.ps1](../../pub/Client/PublishByGithub.ps1) | [Connect/PublishByGithub.ps1](../../pub/Connect/PublishByGithub.ps1) | **new `pub/Server/PublishByGithub.ps1`** |
 | Store leg | Google Play / App Store | Google Play / App Store | **none** (no fastlane, no store) |
 | Extra artifact | — | — | **multi-arch Docker image → Docker Hub** |
 
 ### Why mirror Connect (the chosen architecture)
 
-The server already releases to a **separate** repo — [Pub/Server/PublishToGitHub.ps1](../../Pub/Server/PublishToGitHub.ps1)
+The server already releases to a **separate** repo — [pub/Server/PublishToGitHub.ps1](../../pub/Server/PublishToGitHub.ps1)
 hardcodes `vpnhood/VpnHood.App.Server` (a release-only repo: no source, just releases + install
 scripts + docker-compose). Connect solved "release to another repo" by running its workflow **inside**
 that repo, so the automatic `github.token` is enough — **no long-lived cross-repo PAT.** We copy that:
@@ -68,9 +68,9 @@ that repo, so the automatic `github.token` is enough — **no long-lived cross-r
 
 ## What CI must produce (the server's release assets)
 
-From the current local flow ([Server/PublishToGitHub.ps1](../../Pub/Server/PublishToGitHub.ps1) +
-[Server/_publish.ps1](../../Src/Apps/Server.Net/_publish.ps1) +
-[publish_docker.ps1](../../Src/Apps/Server.Net/Pub/publish_docker.ps1)):
+From the current local flow ([Server/PublishToGitHub.ps1](../../pub/Server/PublishToGitHub.ps1) +
+[Server/_publish.ps1](../../src/Apps/Server.Net/_publish.ps1) +
+[publish_docker.ps1](../../src/Apps/Server.Net/pub/publish_docker.ps1)):
 
 - **Linux** (`linux-x64`, `linux-arm64`, `linux-any`): `.tar.gz`, install `.sh`, update `.json`,
   plus the msquic variant script. Built with plain `dotnet publish` on `ubuntu-latest`.
@@ -97,7 +97,7 @@ jobs:
   build-windows   (windows-latest)  -> artifact: server-windows
   build-docker    (ubuntu-latest)   -> docker/build-push-action, multi-arch, --push to Docker Hub
   release         (ubuntu-latest, needs: [build-linux, build-windows, build-docker])
-                  # downloads artifacts, reassembles Pub/bin/<tag>/VpnHoodServer,
+                  # downloads artifacts, reassembles pub/bin/<tag>/VpnHoodServer,
                   # creates the release in THIS (server) repo via the shared release script.
 ```
 
@@ -108,12 +108,12 @@ Each job:
    Docker build drops `global.json` and uses SDK 10.x as it already does).
 3. Write the `../.user` credential **stub** (`nuget_api_key.txt`) so `Common.ps1` loads — same
    pattern every client job uses.
-4. Run the existing `Src/Apps/Server.Net/_publish.ps1` (Linux+Windows) unchanged.
+4. Run the existing `src/Apps/Server.Net/_publish.ps1` (Linux+Windows) unchanged.
 
 ### Docker in CI (the one real behavior change)
 
 Today the multi-arch image is `docker buildx … --push`ed **from a laptop** using local Docker Hub
-creds ([publish_docker.ps1](../../Src/Apps/Server.Net/Pub/publish_docker.ps1) `-distribute 1`). In
+creds ([publish_docker.ps1](../../src/Apps/Server.Net/pub/publish_docker.ps1) `-distribute 1`). In
 CI:
 
 - Use `docker/setup-qemu-action` + `docker/setup-buildx-action` + `docker/build-push-action` (CI
@@ -127,31 +127,31 @@ compose keep pointing there, no consumer-facing change.
 
 ## Local script changes (keep offline build, drop offline publish)
 
-- [Pub/Server/Publish.ps1](../../Pub/Server/Publish.ps1): **remove the `-distribute` path.** It
+- [pub/Server/Publish.ps1](../../pub/Server/Publish.ps1): **remove the `-distribute` path.** It
   becomes build-only for smoke tests, matching the note already in the file ("Remove the distribute
-  path once server_publish.yml exists") and mirroring what was done to `Pub/Client/Publish.ps1`.
+  path once server_publish.yml exists") and mirroring what was done to `pub/Client/Publish.ps1`.
   `-docker 1` still does a **local host-arch** `buildx … --load` (no push) for smoke testing — this
   is the "build offline" path.
-- [Pub/Server/PublishToGitHub.ps1](../../Pub/Server/PublishToGitHub.ps1): **retire in favor of the
-  shared** [Pub/Lib/PublishToGithub.ps1](../../Pub/Lib/PublishToGithub.ps1) (per RELEASE-STRATEGY
+- [pub/Server/PublishToGitHub.ps1](../../pub/Server/PublishToGitHub.ps1): **retire in favor of the
+  shared** [pub/Lib/PublishToGithub.ps1](../../pub/Lib/PublishToGithub.ps1) (per RELEASE-STRATEGY
   next-step #1), so all three products create releases through one script. The shared script's asset
   list is currently client/connect-specific (Android/MSI), so it must be made **asset-set aware** —
   see the decision below.
-- New `Pub/Server/PublishByGithub.ps1`: a trimmed copy of
-  [Pub/Connect/PublishByGithub.ps1](../../Pub/Connect/PublishByGithub.ps1) — bump the monorepo
+- New `pub/Server/PublishByGithub.ps1`: a trimmed copy of
+  [pub/Connect/PublishByGithub.ps1](../../pub/Connect/PublishByGithub.ps1) — bump the monorepo
   (publish OFF, nuget OFF), wait, then dispatch `server_publish.yml` in the Server repo. No
   rollout/store prompts; add a `-pushDocker` switch. Only prompt: release vs prerelease.
 
 ### Decision needed: how the shared release script learns the server's assets
 
-The shared [Pub/Lib/PublishToGithub.ps1](../../Pub/Lib/PublishToGithub.ps1) hardcodes the
+The shared [pub/Lib/PublishToGithub.ps1](../../pub/Lib/PublishToGithub.ps1) hardcodes the
 Android/Linux/Windows **client** asset list. Two clean ways to include the server's different set
 (linux tar.gz + win-x64 zip + docker compose files, no Android/MSI):
 
 - **A. Parameterize the asset list.** Add a `-product server|client|connect` (or an explicit
   `-assets` array) so each product supplies its own set; one release creator for all three. Most in
   the spirit of "route server through the shared script". *(Recommended.)*
-- **B. Keep a thin `Pub/Server/PublishToGithub.ps1`** that only computes the server asset list, then
+- **B. Keep a thin `pub/Server/PublishToGithub.ps1`** that only computes the server asset list, then
   calls the shared script for the generic delete-old / create-release / release-note logic.
 
 Both end at one release-creation code path; A is less indirection.
@@ -175,7 +175,7 @@ is public, so a plain `actions/checkout` works with no token (Connect already do
 ## Trigger flow (end to end)
 
 ```text
-Pub/Server/PublishByGithub.ps1
+pub/Server/PublishByGithub.ps1
   1. gh workflow run bump.yml   --repo vpnhood/VpnHood            (prerelease?, then_publish=false, nugets=false)
      -> waits for the bump to finish (version pushed to develop [+ main if stable])
   2. gh workflow run server_publish.yml --repo vpnhood/VpnHood.App.Server --ref main
@@ -184,20 +184,20 @@ Pub/Server/PublishByGithub.ps1
         creates the release in vpnhood/VpnHood.App.Server
 ```
 
-Version stays single-sourced: the server shares the monorepo `Pub/PubVersion.json`; only `bump.yml`
+Version stays single-sourced: the server shares the monorepo `pub/PubVersion.json`; only `bump.yml`
 ever writes it. Release notes come from `CHANGELOG.Server.md` (hand-maintained; CI only reads it).
 
 ## Files this will touch
 
 - **New** `.github/workflows/server_publish.yml` — but it must live in the **Server** repo, not
   here. (Keep a copy/reference in this repo's docs; the authoritative file ships to `VpnHood.App.Server`.)
-- **New** `Pub/Server/PublishByGithub.ps1`.
-- **Edit** `Pub/Server/Publish.ps1` — delete the `-distribute` branch (build-only).
-- **Edit/retire** `Pub/Server/PublishToGitHub.ps1` → shared `Pub/Lib/PublishToGithub.ps1` (per the
+- **New** `pub/Server/PublishByGithub.ps1`.
+- **Edit** `pub/Server/Publish.ps1` — delete the `-distribute` branch (build-only).
+- **Edit/retire** `pub/Server/PublishToGitHub.ps1` → shared `pub/Lib/PublishToGithub.ps1` (per the
   asset-set decision above).
-- **Edit** `Pub/RELEASE-STRATEGY.md` — move "Server CI publish" from *Next steps* to *done*.
+- **Edit** `pub/RELEASE-STRATEGY.md` — move "Server CI publish" from *Next steps* to *done*.
 - **Edit** `.github/DEPLOYMENT.md` — add the Docker Hub secrets + a Server section.
-- **Edit** `Src/Apps/Server.Net/Pub/publish_docker.ps1` — CI path uses `build-push-action`; the
+- **Edit** `src/Apps/Server.Net/pub/publish_docker.ps1` — CI path uses `build-push-action`; the
   local path keeps the host-arch `--load` smoke build.
 
 ## Open questions before implementing
@@ -221,4 +221,4 @@ ever writes it. Release notes come from `CHANGELOG.Server.md` (hand-maintained; 
 2. Add Docker Hub secrets to the fork; re-run with `push_docker=true` to a throwaway Docker Hub repo.
 3. Full run with `publish_release=true` on the fork; verify all assets attach and the compose files
    are present.
-4. Only then wire `Pub/Server/PublishByGithub.ps1` against the real repos.
+4. Only then wire `pub/Server/PublishByGithub.ps1` against the real repos.

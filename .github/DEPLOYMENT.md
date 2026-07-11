@@ -30,7 +30,7 @@ git commit -am "ci: activate workflows" && git push
 gh api repos/<owner>/<repo>/actions/workflows -q .total_count
 ```
 
-`Pub/Client/PublishByGithub.ps1` also pre-checks this and fails with the same instruction if a
+`pub/Client/PublishByGithub.ps1` also pre-checks this and fails with the same instruction if a
 workflow it needs is not yet indexed.
 
 ## How to set a secret
@@ -129,7 +129,7 @@ Builds the Google AAB, the Web APK, and the Web arm64 APK on an `ubuntu-latest` 
 reusing the existing publish scripts. A JDK 17 and the `.NET` Android workload are set up
 on the runner, and the Android SDK is auto-provisioned.
 
-**Signing (optional):** signing config is built by `Pub/Lib/PrepareCiAndroidSigning.ps1`.
+**Signing (optional):** signing config is built by `pub/Lib/PrepareCiAndroidSigning.ps1`.
 
 - Each keystore below is independent: set a key's group and its real keystore is used.
 - If a key's secrets are absent, an **ephemeral throwaway keystore** is generated so the build still
@@ -153,7 +153,7 @@ Connect publishing, when wired into CI, uses `ANDROID_KEYSTORE_CONNECT_GOOGLE_BA
 are separate secrets even though you may load the **same** keystore bytes into both (Connect signs its
 Google and Web builds with one key); providing them separately keeps each store's keystore self-contained.
 `PrepareCiAndroidSigning.ps1` materializes each into `.user/<app>/<store>/android_keystore_<store>.p12`
-(+ `_password.txt`, optional `_alias.txt`) — see `Pub/Lib/android-signing.json` for the secret→app/store map.
+(+ `_password.txt`, optional `_alias.txt`) — see `pub/Lib/android-signing.json` for the secret→app/store map.
 
 > The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
 > CI builds fast. Re-enable it before shipping a production release.
@@ -212,8 +212,8 @@ every store leg it is **skip-with-warning** when its secrets are absent, but not
 Secrets: `APPLE_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE64`,
 `IOS_PROVISION_EXT_BASE64` (build/signing) and `APPSTORE_CONNECT_API_KEY` + `_API_KEY_ID` +
 `APPSTORE_CONNECT_ISSUER_ID` (upload). How to obtain and base64 each is documented step-by-step in
-`.user/VpnHoodClient/ios/README.md`. `Pub/Lib/PrepareCiIosSigning.ps1` materializes the cert/profiles
-into a keychain at build time; `Pub/Lib/PublishIosApp.ps1` produces the `.ipa` + `VpnHoodClient-ios.json`.
+`.user/VpnHoodClient/ios/README.md`. `pub/Lib/PrepareCiIosSigning.ps1` materializes the cert/profiles
+into a keychain at build time; `pub/Lib/PublishIosApp.ps1` produces the `.ipa` + `VpnHoodClient-ios.json`.
 
 ### Server (separate repo — `vpnhood/VpnHood.App.Server`)
 
@@ -222,7 +222,7 @@ live in this monorepo, but the release (GitHub release + Docker image) is produc
 `server_publish.yml` **in `vpnhood/VpnHood.App.Server`**, which checks out this monorepo at build time.
 That repo has only a `main` branch (no `develop` — there is no code there); the `develop → main`
 prerelease/stable model lives here in the monorepo via `bump.yml`. Trigger it with
-`Pub/Server/PublishByGithub.ps1` (bumps this monorepo, then dispatches the server workflow).
+`pub/Server/PublishByGithub.ps1` (bumps this monorepo, then dispatches the server workflow).
 
 Because the workflow runs **inside** the server repo, it creates the release with the automatic
 `github.token` — **no cross-repo PAT needed** (same trick as Connect). One ubuntu job builds both the
@@ -237,7 +237,7 @@ cross-builds on Linux). Secrets/variables live on **that** repo, not here:
 | `DOCKER_IMAGE` (variable) | Optional | Docker Hub image name (default `vpnhood/vpnhoodserver`). Set for a fork. |
 | `CODE_REPO` (variable) | Optional | Monorepo to build the server from (default `vpnhood/VpnHood`). Set for a fork. |
 
-Locally, `Pub/Server/Publish.ps1` is **build-only** for smoke tests (add `-docker 1` for a local
+Locally, `pub/Server/Publish.ps1` is **build-only** for smoke tests (add `-docker 1` for a local
 host-arch image via `buildx --load`); it never pushes and never creates a release — distribution is
 CI-only, like the client.
 

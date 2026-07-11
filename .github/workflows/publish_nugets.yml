@@ -1,9 +1,9 @@
 name: Publish NuGet Packages
 
-# Packs and pushes all VpnHood NuGet libraries at the version currently in Pub/PubVersion.json.
+# Packs and pushes all VpnHood NuGet libraries at the version currently in pub/PubVersion.json.
 # Standalone: dispatch it on its own whenever you want to (re)publish the libraries. It does NOT bump
 # the version — bump first with the "Bump Version" workflow (which can also chain into this one). The
-# whole src/ suite shares one version and is published together (see Pub/RELEASE-STRATEGY.md);
+# whole src/ suite shares one version and is published together (see pub/RELEASE-STRATEGY.md);
 # packages are normally published as a stable Release version.
 #
 # Smoke mode: tick "smoke" to validate the whole pack+push pipeline WITHOUT burning a real version —
@@ -70,4 +70,4 @@ jobs:
         shell: pwsh
         run: |
           $smoke = "${{ github.event.inputs.smoke }}" -eq "true"
-          & "$env:GITHUB_WORKSPACE/Pub/Lib/PublishNugets.ps1" -smoke:$smoke
+          & "$env:GITHUB_WORKSPACE/pub/Lib/PublishNugets.ps1" -smoke:$smoke

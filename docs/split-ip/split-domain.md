@@ -3,7 +3,7 @@
 Policy of the **split-domain** context (`UseSplitDomain`): how the user's domain filter text files
 become `split-domain.db` and what membership means. The shared architecture (filter pipes, storage,
 rebuild mechanics) is in [README.md](README.md); the db format is in the
-[Filtering.Sqlite README](../../Src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
+[Filtering.Sqlite README](../../src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
 
 Domains are matched on the **extracted SNI** (TLS ClientHello over TCP, QUIC initial). That makes the
 domain gate inherently partial: traffic that carries no readable domain (plain TCP/UDP, raw-IP

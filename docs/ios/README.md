@@ -1,8 +1,8 @@
 # VpnHood iOS — engineering notes
 
 Index for the iOS Client & Connect apps and their Network Extension. The apps are thin: they live in
-`Src/Apps/{Client,Connect}.Ios` (host) + `…{Client,Connect}.Ios.Extension` (`.appex`), and the real
-device/extension/TUN/TCP-stack implementation is in `Src/Core/*`
+`src/Apps/{Client,Connect}.Ios` (host) + `…{Client,Connect}.Ios.Extension` (`.appex`), and the real
+device/extension/TUN/TCP-stack implementation is in `src/Core/*`
 (`VpnHood.Core.Client.Devices.Ios`, `VpnHood.Core.VpnAdapters.IosTun`, `VpnHood.Core.TcpStack`,
 `VpnHood.Core.Quic.Ios`). Client and Connect share all of it — Connect is just a branding variant whose
 per-product values live in its `AppConfigs.cs`.

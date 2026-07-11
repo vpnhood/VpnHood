@@ -3,7 +3,7 @@
 Policy of the **split-ip-via-app** context (`UseSplitIpViaApp`): how the user's IP filter text files
 become `split-ip-via-app.db` and what membership means. The shared architecture (filter pipe, storage,
 rebuild mechanics) is in [README.md](README.md); the db format is in the
-[Filtering.Sqlite README](../../Src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
+[Filtering.Sqlite README](../../src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
 
 Naming: "via app" says WHERE the IP split is enforced — by the app's own filter pipe inside the tunnel,
 as opposed to `UseSplitIpViaDevice`, where the split decides which ranges the OS routes into the VPN

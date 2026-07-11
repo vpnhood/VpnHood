@@ -7,7 +7,7 @@ hardware UDID `00008030-001544500A38802E` • **Builds with:** `~/.dotnet11/dotn
 
 > This file merges the three working docs (`ios-memory-jetsam-investigation`, `ios-net11-coreclr-proxy-speed`,
 > and Gemini's `upload-speed-and-memory-stabilization`) into one accurate record. Code changes live in the
-> core projects under `Src/Core`; the app glue is under `Src/Apps/{Client,Connect}.Ios[.Extension]`. The
+> core projects under `src/Core`; the app glue is under `src/Apps/{Client,Connect}.Ios[.Extension]`. The
 > **batched native tun write** (Part 4) lives on
 > core branch `feat/ios-tun-batch-write`; the rest landed on `development`.
 
@@ -53,7 +53,7 @@ hardware UDID `00008030-001544500A38802E` • **Builds with:** `~/.dotnet11/dotn
 - **CoreCLR boot fix (required):** under CoreCLR's managed-static registrar, pointing
   `NSExtensionPrincipalClass` at the core `IosVpnService` crashes on launch:
   `ObjCRuntime.RuntimeException: Could not find the assembly VpnHood.Core.Client.Devices.Ios`. Fix = a thin
-  local **`Src/Apps/Client.Ios.Extension/PacketTunnelProvider.cs`** subclass of `IosVpnService` (roots the core assembly), with
+  local **`src/Apps/Client.Ios.Extension/PacketTunnelProvider.cs`** subclass of `IosVpnService` (roots the core assembly), with
   `Info.plist NSExtensionPrincipalClass = PacketTunnelProvider`. (Mono tolerated its absence.)
 
 | | Mono (net10) | **CoreCLR (net11)** |
@@ -143,7 +143,7 @@ up to `QueueCapacity` ≈ 255 packets per cycle) and hands the whole list to `Se
 
 ## Current configuration (working tree)
 
-**iOS TCP-stack profile** — `Src/Core/VpnHood.Core.TcpStack/LocalTcpStackOptions.cs` `Ios`:
+**iOS TCP-stack profile** — `src/Core/VpnHood.Core.TcpStack/LocalTcpStackOptions.cs` `Ios`:
 `ReceiveWindowSize=0xFFFF (64 KB)`, **`GlobalReceiveBudget=6 MB`**, `RetxBufferSize=16 KB`,
 **`MaxConnections=100`**, `AcceptQueueCapacity=128`, **`IdleTimeout=20 s`**, **`IdleCheckInterval=5 s`**.
 
@@ -152,7 +152,7 @@ GlobalReceiveBudget − totalPipeBuffered)`; `UpdateAdvertisedWindow()` tracks `
 `OnAppConsumed` sends a window-update when `(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`. Diagnostics
 via `TcpStackDiagnostics` (`ActiveDiagnostics` static, read by the probe).
 
-**Host** — `Src/Apps/Client.Ios/AppDelegate.cs`: `MaxPacketChannelCount=1`, `PacketChannelBufferSize=16 KB`,
+**Host** — `src/Apps/Client.Ios/AppDelegate.cs`: `MaxPacketChannelCount=1`, `PacketChannelBufferSize=16 KB`,
 `UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB`
 (2026-07-09: 256 KB → 64 KB. The knob applies to every managed TCP socket via `ConfiguringSocketFactory`,
 including the per-flow direct sockets of split/exclude "passthru" flows — one real kernel socket per

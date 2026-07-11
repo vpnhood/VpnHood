@@ -1,0 +1,103 @@
+﻿﻿using System.IO.Compression;
+using System.Net;
+using System.Runtime.InteropServices;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Assets.Ip2LocationLite;
+using VpnHood.Core.IpLocations.Providers.Offlines;
+using VpnHood.Core.IpLocations.SqliteProvider;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
+
+namespace VpnHood.AppLib.Test.Tests;
+
+[TestClass]
+public class IpLocationTest : TestAppBase
+{
+    [TestMethod]
+    public async Task CheckSqliteFromLocationFile()
+    {
+        var sqliteConnectionString = new SqliteConnectionStringBuilder {
+            DataSource = "file:IpLocations?mode=memory&cache=shared",
+            Mode = SqliteOpenMode.Memory,
+            Cache = SqliteCacheMode.Shared
+        }.ToString();
+
+        await using var keepAliveConnection = new SqliteConnection(sqliteConnectionString);
+        await keepAliveConnection.OpenAsync();
+
+        await using (var memoryStream = new MemoryStream(Ip2LocationLiteDb.ZipData)) {
+            await IpLocationSqliteBuilder.Build(memoryStream, keepAliveConnection);
+        }
+
+        await using var ipLocationSqliteProvider =
+            await IpLocationSqliteProvider.Open(keepAliveConnection, leaveOpen: true);
+        using var localRangeProvider = new LocalIpRangeLocationProvider(
+            () => new ZipArchive(new MemoryStream(Ip2LocationLiteDb.ZipData)),
+            () => null);
+
+        // compare ip ranges for a country
+        var sqliteRanges = await ipLocationSqliteProvider.GetIpRanges("TR", TestCt);
+        var localRanges = await localRangeProvider.GetIpRanges("TR", TestCt);
+        Assert.IsTrue(sqliteRanges.SequenceEqual(localRanges), "SQLite ranges differ from local ranges for TR.");
+
+        // get country by ip using provider
+        var ipToCheck = IPAddress.Parse("75.63.95.93");
+        var sqliteLocation = await ipLocationSqliteProvider.GetLocation(ipToCheck, TestCt);
+        var localLocation = await localRangeProvider.GetLocation(ipToCheck, TestCt);
+        Assert.AreEqual(sqliteLocation.CountryCode, localLocation.CountryCode,
+            "Country code mismatch between providers.");
+
+        // verify ip is in country ranges
+        var sqliteCountryRanges = await ipLocationSqliteProvider.GetIpRanges(sqliteLocation.CountryCode, TestCt);
+        Assert.IsTrue(sqliteCountryRanges.Any(x => x.IsInRange(ipToCheck)),
+            "SQLite provider ranges do not contain test IP.");
+    }
+
+    private async Task UpdateIp2LocationFile()
+    {
+        // update current ipLocation in app project after a week
+        var vhFolder = TestHelper.GetParentDirectory(Directory.GetCurrentDirectory(), 6);
+        var solutionFolder = Path.Combine(vhFolder, "VpnHood.AppLib.Assets.IpLocations");
+        var projectFolder = Path.Combine(solutionFolder, "VpnHood.AppLib.Assets.Ip2LocationLite");
+        var ipLocationFile = Path.Combine(projectFolder, "Resources", "IpLocations.zip");
+        VhLogger.Instance.LogInformation("ipLocationFile: {ipLocationFile}", ipLocationFile);
+        if (!Directory.Exists(projectFolder))
+            throw new DirectoryNotFoundException("Ip2Location Project was not found.");
+
+        // find token (stored as its own secret file under .user, see pub/Lib secret layout)
+        var userSecretFile = Path.Combine(vhFolder, ".user", "ip2location_token.txt");
+        var ip2LocationToken = (await File.ReadAllTextAsync(userSecretFile)).Trim();
+        ArgumentException.ThrowIfNullOrWhiteSpace(ip2LocationToken);
+
+        await Ip2LocationDbParser.UpdateLocalDb(ipLocationFile, ip2LocationToken, forIpRange: true);
+
+        // commit project and sync
+        try {
+            var gitBase = $"--git-dir=\"{solutionFolder}/.git\" --work-tree=\"{solutionFolder}\"";
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} commit -a -m Publish", TestCt);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} pull", TestCt);
+            await OsUtils.ExecuteCommandAsync("git", $"{gitBase} push", TestCt);
+        }
+        catch (ExternalException ex) when (ex.ErrorCode == 1) {
+            VhLogger.Instance.LogInformation("Nothing has been updated.");
+        }
+    }
+
+    [TestMethod]
+    public async Task IpLocations_must_be_loaded()
+    {
+        await UpdateIp2LocationFile();
+
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.UseInternalLocationService = true;
+        await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
+        Assert.IsNotNull(app.Services.LocationService.IpRangeLocationProvider);
+        var countryCodes = await app.Services.LocationService.IpRangeLocationProvider.GetCountryCodes(TestCt);
+        Assert.IsTrue(countryCodes.Any(x => x == "US"),
+            "Countries has not been extracted.");
+
+        // make sure GetIpRange works
+        Assert.IsTrue((await app.Services.LocationService.IpRangeLocationProvider.GetIpRanges("US", TestCt)).Any());
+    }
+}

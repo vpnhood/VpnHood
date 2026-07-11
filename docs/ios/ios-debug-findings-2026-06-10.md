@@ -5,14 +5,14 @@ mode. The core-repo changes from this session may be reverted — **this documen
 record of the real bugs found**, so they can be re-applied independently of all the experimental
 tuning that accompanied them.
 
-All file paths below are core projects under `Src/Core` in this repo.
+All file paths below are core projects under `src/Core` in this repo.
 
 ---
 
 ## Confirmed bugs (re-apply these even after a revert)
 
 ### 1. Thread race in `WritePacket` → SIGABRT crash
-**File:** `Src/Core/VpnHood.Core.VpnAdapters.IosTun/IosVpnAdapter.cs`, `WritePacket`
+**File:** `src/Core/VpnHood.Core.VpnAdapters.IosTun/IosVpnAdapter.cs`, `WritePacket`
 **Symptom:** extension dies with SIGABRT at any memory level (not jetsam). Confirmed by a
 symbolicated native crash report: `objc_exception_throw → std::terminate → abort`.
 **Cause:** `WritePacket` reuses shared single-instance state (`_writeBuffer`, `_writeDataArray`,
@@ -24,7 +24,7 @@ NSInvalidArgumentException → SIGABRT.
 wrap the whole method body in `lock (_writeLock)`.
 
 ### 2. TLS connection dispose-leak on failed HTTP/WebSocket upgrade
-**File:** `Src/Core/VpnHood.Core.Client/ConnectorServices/ConnectorService.cs`,
+**File:** `src/Core/VpnHood.Core.Client/ConnectorServices/ConnectorService.cs`,
 `GetConnectionToServer`
 **Symptom:** extension footprint climbs ~3 MB/min until jetsam; diagnostics showed **321
 connections finalized without ever being disposed** in one run.
@@ -47,7 +47,7 @@ catch {
 ```
 
 ### 3. Packet-channel recreation retry flood (no backoff) — ALL PLATFORMS
-**File:** `Src/Core/VpnHood.Core.Client/ClientSession.cs`, `ManagePacketChannels` (triggered from
+**File:** `src/Core/VpnHood.Core.Client/ClientSession.cs`, `ManagePacketChannels` (triggered from
 `ProcessOutgoingPacket`)
 **Symptom:** when the packet channel dies and recreation fails persistently, the client hammers
 the server: measured **464 TLS handshakes and 323 `TcpPacketChannel` requests in ~60 s** (~5/s).
@@ -61,7 +61,7 @@ backoff window (1 s, 2 s, 4 s … capped at 15 s). Reset the counter on success.
 `_packetChannelFailCount`, `_packetChannelLastFailTime`.
 
 ### 4. Unconditional IPv6 route injection defeats route-level split tunneling
-**File:** `Src/Core/VpnHood.Core.VpnAdapters.IosTun/IosVpnAdapter.cs`, `AdapterOpen` (IPv6 block)
+**File:** `src/Core/VpnHood.Core.VpnAdapters.IosTun/IosVpnAdapter.cs`, `AdapterOpen` (IPv6 block)
 **Symptom:** with device-level split configured to exclude everything (tunnel routes = DNS /32s
 only), browser traffic still entered the extension (`pk>0`) and jetsam deaths continued. Safari
 prefers IPv6.
@@ -77,7 +77,7 @@ var includes = IsIpVersionSupported(IpVersion.IPv6) || !wantsBroadV6
 ```
 
 ### 5. DNS unreachable in device-level split mode
-**File:** `Src/Core/VpnHood.Core.Client/ClientSessionBuilder.cs` (where `VpnAdapterOptions` is built)
+**File:** `src/Core/VpnHood.Core.Client/ClientSessionBuilder.cs` (where `VpnAdapterOptions` is built)
 **Symptom:** with `UseSplitIpViaDevice` + `DeviceExcludes = "0.0.0.0/0\n::/0"`, the adapter include
 routes are empty, so the system cannot deliver DNS queries to the tunnel's DNS servers — name
 resolution silently breaks.

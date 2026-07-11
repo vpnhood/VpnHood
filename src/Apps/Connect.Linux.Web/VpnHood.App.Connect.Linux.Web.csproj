@@ -21,12 +21,8 @@
 	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.
 	     Conditional so a fork without them still builds; AppConfigs reads them at startup. -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json"
-			LogicalName="AppSettings.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json')" />
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json"
-			LogicalName="AppSettings_Environment.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json" LogicalName="AppSettings.json" Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.json')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json" LogicalName="AppSettings_Environment.json" Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json')" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -35,7 +31,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.737" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.740" />
 	</ItemGroup>
 
 </Project>

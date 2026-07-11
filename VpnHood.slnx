@@ -84,7 +84,9 @@
     <Project Path="src/AppLib/VpnHood.AppLib.Android.GooglePlay/VpnHood.AppLib.Android.GooglePlay.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Ios/">
-    <Project Path="src/AppLib/VpnHood.AppLib.Ios.Common/VpnHood.AppLib.Ios.Common.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Ios.Common/VpnHood.AppLib.Ios.Common.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
   </Folder>
   <Folder Name="/src/AppLib/Linux/">
     <Project Path="src/AppLib/VpnHood.AppLib.Linux.Common/VpnHood.AppLib.Linux.Common.csproj" />
@@ -106,9 +108,12 @@
     <Project Path="src/Apps/Client.Linux.Web/VpnHood.App.Client.Linux.Web.csproj" />
     <Project Path="src/Apps/Client.Win.Web/VpnHood.App.Client.Win.Web.csproj" />
     <Project Path="src/Apps/Client.Ios/VpnHood.App.Client.Ios.csproj">
+      <Build Solution="Debug|*" Project="false" />
       <Deploy />
     </Project>
-    <Project Path="src/Apps/Client.Ios.Extension/VpnHood.App.Client.Ios.Extension.csproj" />
+    <Project Path="src/Apps/Client.Ios.Extension/VpnHood.App.Client.Ios.Extension.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
     <Project Path="src/Apps/Client/VpnHood.App.Client.csproj" />
     <Project Path="src/Apps/Connect.Android.Google/VpnHood.App.Connect.Android.Google.csproj">
       <Deploy />
@@ -119,9 +124,12 @@
     <Project Path="src/Apps/Connect.Linux.Web/VpnHood.App.Connect.Linux.Web.csproj" />
     <Project Path="src/Apps/Connect.Win.Web/VpnHood.App.Connect.Win.Web.csproj" />
     <Project Path="src/Apps/Connect.Ios/VpnHood.App.Connect.Ios.csproj">
+      <Build Solution="Debug|*" Project="false" />
       <Deploy />
     </Project>
-    <Project Path="src/Apps/Connect.Ios.Extension/VpnHood.App.Connect.Ios.Extension.csproj" />
+    <Project Path="src/Apps/Connect.Ios.Extension/VpnHood.App.Connect.Ios.Extension.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
     <Project Path="src/Apps/Server.Net/VpnHood.App.Server.Net.csproj" />
   </Folder>
   <Folder Name="/src/Core/">

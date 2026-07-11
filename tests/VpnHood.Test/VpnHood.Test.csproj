@@ -1,4 +1,4 @@
-﻿<Project Sdk="MSTest.Sdk/4.2.3">
+﻿<Project Sdk="MSTest.Sdk/4.3.0">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<IsPackable>false</IsPackable>
@@ -48,6 +48,14 @@
 		<None Update="WinDivert.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="MSTest.TestAdapter" Version="4.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="MSTest.TestFramework" Version="4.3.0" />
 	</ItemGroup>
 
 </Project>

@@ -7,14 +7,14 @@
 # Version rule:
 #   1. Read the monorepo's published version — ALWAYS from `develop` (develop always carries the
 #      highest version; `main` only advances on a stable bump).
-#   2. Monorepo ahead of the module's Pub/PubVersion.json -> ADOPT the monorepo version (keeps the
+#   2. Monorepo ahead of the module's pub/PubVersion.json -> ADOPT the monorepo version (keeps the
 #      family aligned). Otherwise -> bump the module's own build number (the module ran ahead; the
 #      next monorepo bump leapfrogs it and re-syncs).
 #   3. The published version is a stable `X.Y.Z` — the same rule as the monorepo's NuGets
 #      (RELEASE-STRATEGY.md: "NuGet is always a stable Release version"; prerelease lines are an
 #      APP concept). The -prerelease switch below is a MANUAL-ONLY escape hatch; nothing in the
 #      normal flow sets it. The branch only determines where the bump commit is pushed.
-# The new version is stamped into the module's Pub/PubVersion.json (+ root Directory.Build.props)
+# The new version is stamped into the module's pub/PubVersion.json (+ root Directory.Build.props)
 # and committed back to the published branch BEFORE packing — CI owns the bump, exactly like the
 # monorepo's bump.yml (a failed pack burns a cheap version number; an unrecorded bump would make
 # the next run silently skip-duplicate).
@@ -38,8 +38,7 @@ param(
 $ErrorActionPreference = "Stop";
 
 $moduleDir = (Resolve-Path $moduleDir).Path;
-# Module repos keep their publish dir capitalized (`Pub/`), unlike the monorepo's `pub/`.
-$versionFile = Join-Path $moduleDir "Pub/PubVersion.json";
+$versionFile = Join-Path $moduleDir "pub/PubVersion.json";
 if (!(Test-Path $versionFile)) { throw "PublishModuleNugets: $versionFile not found — is $moduleDir an onboarded module repo?"; }
 
 if ([string]::IsNullOrWhiteSpace($branch)) { $branch = git -C $moduleDir branch --show-current; }
@@ -79,7 +78,7 @@ if ($noPush) {
 	Write-Host "noPush set: skipping the bump commit." -ForegroundColor Yellow;
 }
 else {
-	git -C $moduleDir add -- "Pub/PubVersion.json";
+	git -C $moduleDir add -- "pub/PubVersion.json";
 	if (Test-Path $propsFile) { git -C $moduleDir add -- "Directory.Build.props"; }
 	git -C $moduleDir commit -m "Publish $versionTag";
 	if ($LASTEXITCODE -ne 0) { throw "git commit failed (exit $LASTEXITCODE)"; }
@@ -96,7 +95,7 @@ $projectFiles = Get-ChildItem -Path $moduleDir -Recurse -File -Filter "*.csproj"
 	Sort-Object FullName;
 if (@($projectFiles).Count -eq 0) { throw "PublishModuleNugets: no packable project found under $moduleDir."; }
 
-$packDir = Join-Path $moduleDir "Pub/bin/nuget";
+$packDir = Join-Path $moduleDir "pub/bin/nuget";
 Remove-Item $packDir -Recurse -Force -ErrorAction Ignore;
 New-Item -ItemType Directory -Path $packDir -Force | Out-Null;
 

@@ -24,10 +24,10 @@ if ([string]::IsNullOrWhiteSpace($nugetApiKey)) {
 }
 
 # Discover packable projects: a project IS a package unless it opts out with <IsPackable>false</IsPackable>.
-$projectFiles = Get-ChildItem -Path "$solutionDir/Src" -Recurse -File -Filter "*.csproj" |
+$projectFiles = Get-ChildItem -Path "$solutionDir/src" -Recurse -File -Filter "*.csproj" |
 	Where-Object { [System.IO.File]::ReadAllText($_.FullName) -notmatch "(?i)<IsPackable>\s*false\s*</IsPackable>" } |
 	Sort-Object FullName;
-Write-Host "Discovered $($projectFiles.Count) packable project(s) under Src." -ForegroundColor Cyan;
+Write-Host "Discovered $($projectFiles.Count) packable project(s) under src." -ForegroundColor Cyan;
 
 # Write a throwaway solution of ONLY those projects at the repo root (so its relative paths resolve),
 # then pack it in ONE MSBuild pass: shared dependencies build once and projects pack in parallel,

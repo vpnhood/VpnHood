@@ -12,9 +12,6 @@
     <File Path="pub/PubVersion.json" />
     <File Path="pub/RELEASE-STRATEGY.md" />
     <File Path="README.md" />
-    <Properties Name="FolderGlobals">
-      <Property Name="C_5_4Users_4Developer_4source_4repos_4Vh_4VpnHood_4Pub_4Version_1json__JsonSchema" />
-    </Properties>
   </Folder>
   <Folder Name="/pub/Client/">
     <File Path="pub/Client/Publish.ps1" />

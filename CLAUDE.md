@@ -5,9 +5,8 @@ truth — follow them, and when a new durable convention is agreed, update this 
 
 ## Repo layout
 - Top-level directories are lowercase: `src/`, `tests/`, `samples/`, `docs/`, `pub/`. Deeper levels
-  keep their own casing (`pub/Lib`, `src/Apps`, …).
-- Module repos (e.g. VpnHood.Core.Proxies) keep a **capitalized** `Pub/` — module-relative paths in
-  `pub/Lib/PublishModuleNugets.ps1` are `Pub/...` on purpose; don't lowercase them.
+  keep their own casing (`pub/Lib`, `src/Apps`, …). Module repos (e.g. VpnHood.Core.Proxies) follow
+  the same convention (`pub/PubVersion.json`).
 
 ## UI
 - The UI/front-end is a separate SPA project (VpnHood.Client.WebUI), located at `..\VpnHood.Client.WebUI\`

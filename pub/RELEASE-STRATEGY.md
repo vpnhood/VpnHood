@@ -195,7 +195,7 @@ They all publish through ONE shared cross-repo module in this repo, so the logic
   the published NuGets; they never call this.
 - [pub/Lib/PublishModuleNugets.ps1](Lib/PublishModuleNugets.ps1) — the logic. **Version rule:**
   read the monorepo version — **always from `develop`** (develop always carries the highest
-  version); if it is ahead of the module's own `Pub/PubVersion.json`, **adopt** it, otherwise
+  version); if it is ahead of the module's own `pub/PubVersion.json`, **adopt** it, otherwise
   **bump the module's own build number** (the module may run ahead; the next monorepo bump
   leapfrogs and re-syncs). Then pack every packable project (same `IsPackable` opt-out discovery
   as `publish_nugets.yml`) and push — **a stable `X.Y.Z`**, per rule #3 above (prerelease lines
@@ -204,8 +204,8 @@ They all publish through ONE shared cross-repo module in this repo, so the logic
   number) — the normal flow never uses it. CI commits the bump back to the dispatched branch
   (CI-owned bump, like `bump.yml` here).
 
-To onboard a module repo: add `Pub/PubVersion.json` (`{Version, BumpTime}`, capitalized `Pub/` —
-the module-repo convention; only the monorepo uses lowercase `pub/`), a root
+To onboard a module repo: add `pub/PubVersion.json` (`{Version, BumpTime}`, lowercase `pub/` —
+the same layout convention as the monorepo), a root
 `Directory.Build.props` carrying the single `<Version>` (remove per-csproj `<Version>`s so it
 applies), `IsPackable=false` on non-library projects, and the small `publish_nugets.yml`
 dispatcher — see `VpnHood.Core.Proxies` for the reference shape. Optionally a root `_publish.ps1`

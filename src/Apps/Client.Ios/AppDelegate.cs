@@ -104,7 +104,7 @@ public class AppDelegate : UIApplicationDelegate
             // Log level: Information in production. To investigate, add the "/log:debug" debug command in
             // the UI (Debug Data 1) — below-Information logging auto-enables the iOS diagnostics in the
             // extension (IosDiagnostics.ApplyLogLevel), so vpn-ext.log carries the TcpStack "+CONN/-CONN"
-            // and [VHQUIC] +open/-close/brake lines (EventIds "TcpStack"/"Quic") plus ext-mem.log.
+            // and [VHQUIC] +CONN/-CONN/brake lines (EventIds "TcpStack"/"Quic") plus ext-mem.log.
             LogServiceOptions = new LogServiceOptions {
                 MinLogLevel = LogLevel.Information
             },

@@ -8,6 +8,6 @@ namespace VpnHood.Core.Quic.Ios;
 /// </summary>
 public static class IosQuicEventIds
 {
-    /// <summary>EventId for all iOS QUIC diagnostics (stream +open/-close lifecycle + the jetsam-brake summary).</summary>
+    /// <summary>EventId for all iOS QUIC diagnostics (stream +CONN/-CONN lifecycle + the jetsam-brake summary).</summary>
     public static readonly EventId Quic = new(10002, "Quic");
 }

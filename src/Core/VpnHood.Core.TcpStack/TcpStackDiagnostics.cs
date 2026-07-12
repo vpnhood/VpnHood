@@ -44,6 +44,28 @@ public sealed class TcpStackDiagnostics
     /// <summary>Gets the maximum number of simultaneous connections configured for this stack.</summary>
     public int ConfiguredMaxConnections { get; internal set; }
 
+    // Logs one connection-lifecycle line: "[TcpStack] ±CONN live=NNN mem=MM.MMB detail". Fixed-width
+    // live/mem columns come FIRST (live 3 digits, mem 5 chars) so they stay in the same on-screen columns
+    // in the live device console; the long detail (endpoint pair) goes last. IosQuicDiagnostics.LogConn
+    // duplicates this shape on purpose (kept in sync by hand — no shared helper) so TcpStack and QUIC
+    // lifecycle lines stay column-aligned when interleaved.
+    private static void LogConn(string evt, int live, object detail)
+    {
+        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStack,
+            "[TcpStack] {Event} live={Live} mem={Memory}MB {Detail}",
+            evt, live.ToString("D3"), FootprintFixed(), detail);
+    }
+
+    // Fixed-width (5 chars, F1: "  8.3", " 43.2", "102.4") so the mem column stays aligned across
+    // +CONN/-CONN lines when eyeballing the live device console. "  n/a" keeps the width. The footprint (the
+    // number the host memory limit is enforced against — e.g. iOS jetsam phys_footprint) comes from the
+    // device-set VhMemory.Instance; null on platforms that don't supply it → the column shows n/a.
+    private static string FootprintFixed()
+    {
+        var mb = VhMemory.Instance.GetInfo().ProcessFootprintMb;
+        return mb.HasValue ? $"{mb.Value,5:F1}" : "  n/a";
+    }
+
     internal void SetConnectionCount(int count)
     {
         Volatile.Write(ref _connectionCount, count);
@@ -64,9 +86,8 @@ public sealed class TcpStackDiagnostics
         var live = Interlocked.Increment(ref _establishedConnections);
         // Low-frequency lifecycle event (one per connection): logged at Debug and UNGATED so it's visible
         // when the log level is Debug without enabling the per-packet hot-path traces. Volume is
-        // per-connection, not per-packet, so it never floods. The format is the shared ConnLifecycleLog
-        // shape (same as the iOS QUIC stream lines) so interleaved lines stay column-aligned.
-        ConnLifecycleLog.Opened(TcpStackEventIds.TcpStack, "TcpStack", live, endPointPair);
+        // per-connection, not per-packet, so it never floods.
+        LogConn("+CONN", live, endPointPair);
     }
 
     /// <summary>
@@ -78,10 +99,7 @@ public sealed class TcpStackDiagnostics
         var live = Interlocked.Decrement(ref _establishedConnections);
         // Low-frequency lifecycle event (one per connection): see IncrementEstablishedConnections — logged
         // at Debug, ungated, so it's visible at Debug level without the hot-path traces.
-        // FORMAT: same fixed-width live/mem columns as +CONN; reason + endpoint trail at the end.
-        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStack,
-            "[TcpStack] -CONN live={LiveEstablished} mem={Memory}MB {EndPointPair} ({Reason})",
-            live.ToString("D3"), FootprintFixed(), endPointPair, reason);
+        LogConn("-CONN", live, $"{endPointPair} ({reason})");
     }
 
     internal void AddPipeBufferedBytes(long bytes) => Interlocked.Add(ref _totalPipeBufferedBytes, bytes);

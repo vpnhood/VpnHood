@@ -109,7 +109,7 @@ per-stream queue pool.
 
 ## Diagnostics (temporary — marked `ToDo: remove diagnose`)
 
-`IosQuicClient.LiveStreamCount` / `StreamSeq` and the `[VHQUIC] +open/-close id=… live=…` log lines
+`IosQuicClient.LiveStreamCount` / `StreamSeq` and the `[VHQUIC] +CONN/-CONN live=… id=…` log lines
 in `IosQuicStream` exist to confirm streams (= native `NWConnection`s) are released promptly at
 flow-end rather than lingering. `LiveStreamCount` is `public static` so the iOS memory probe in
 another assembly can read it. Remove once the lifecycle is settled.

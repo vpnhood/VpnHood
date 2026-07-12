@@ -35,19 +35,9 @@ public static class IosQuicDiagnostics
     /// <summary>Bytes handed to <c>nw_connection_send</c> whose completion callback has not yet fired.</summary>
     public static long OutstandingSendBytes => Interlocked.Read(ref _outstandingSendBytes);
 
-    // Fixed-width (5 chars, F1: "  8.3", " 43.2", "102.4") footprint column so the mem field stays aligned
-    // across +open/-close lines when eyeballing the live device console — exactly like TcpStack's +CONN/-CONN.
-    // The number is the live phys_footprint the host memory limit is enforced against (iOS jetsam),
-    // read from the device-set VhMemory.Instance; null on platforms that don't supply it → "  n/a".
-    private static string FootprintFixed()
-    {
-        var mb = VhMemory.Instance.GetInfo().ProcessFootprintMb;
-        return mb.HasValue ? $"{mb.Value,5:F1}" : "  n/a";
-    }
-
     // ---- stream lifecycle ------------------------------------------------------------------------
     /// <summary>
-    /// Records a QUIC stream open (logs <c>[VHQUIC] +open</c>) and returns the assigned monotonic id so
+    /// Records a QUIC stream open (logs <c>[VHQUIC] +CONN</c>) and returns the assigned monotonic id so
     /// the matching close can be paired in the log. Returns 0 (and logs nothing) when disabled.
     /// </summary>
     public static int OnStreamOpened()
@@ -55,23 +45,37 @@ public static class IosQuicDiagnostics
         if (!Enabled) return 0;
         var id = Interlocked.Increment(ref _streamSeq);
         var live = Interlocked.Increment(ref _liveStreamCount);
-        // FORMAT mirrors TcpStack's +CONN: fixed-width live/mem columns FIRST so they stay in the same
-        // on-screen columns in the live device console; the stream id trails (QUIC's analogue of the pair).
-        VhLogger.Instance.LogDebug(IosQuicEventIds.Quic,
-            "[VHQUIC] +open live={Live} mem={Memory}MB id={Id}",
-            live.ToString("D3"), FootprintFixed(), id);
+        LogConn("+CONN", live, id);
         return id;
     }
 
-    /// <summary>Records a QUIC stream close (logs <c>[VHQUIC] -close</c>). No-op unless enabled.</summary>
+    /// <summary>Records a QUIC stream close (logs <c>[VHQUIC] -CONN</c>). No-op unless enabled.</summary>
     public static void OnStreamClosed(int id)
     {
         if (!Enabled) return;
         var live = Interlocked.Decrement(ref _liveStreamCount);
-        // FORMAT: same fixed-width live/mem columns as +open (and TcpStack's -CONN); id trails at the end.
+        LogConn("-CONN", live, id);
+    }
+
+    // Logs one stream-lifecycle line: "[VHQUIC] ±CONN live=NNN mem=MM.MMB id=N". Fixed-width live/mem
+    // columns come FIRST (live 3 digits, mem 5 chars) and the stream id (QUIC's analogue of the endpoint
+    // pair) trails. TcpStackDiagnostics.LogConn duplicates this shape on purpose (kept in sync by hand —
+    // no shared helper) so TcpStack and QUIC lifecycle lines stay column-aligned when interleaved.
+    private static void LogConn(string evt, int live, int id)
+    {
         VhLogger.Instance.LogDebug(IosQuicEventIds.Quic,
-            "[VHQUIC] -close live={Live} mem={Memory}MB id={Id}",
-            live.ToString("D3"), FootprintFixed(), id);
+            "[VHQUIC] {Event} live={Live} mem={Memory}MB id={Id}",
+            evt, live.ToString("D3"), FootprintFixed(), id);
+    }
+
+    // Fixed-width (5 chars, F1: "  8.3", " 43.2", "102.4") so the mem column stays aligned across
+    // +CONN/-CONN lines when eyeballing the live device console. "  n/a" keeps the width. The footprint (the
+    // number the host memory limit is enforced against — iOS jetsam phys_footprint) comes from the
+    // device-set VhMemory.Instance; null on platforms that don't supply it → the column shows n/a.
+    private static string FootprintFixed()
+    {
+        var mb = VhMemory.Instance.GetInfo().ProcessFootprintMb;
+        return mb.HasValue ? $"{mb.Value,5:F1}" : "  n/a";
     }
 
     // ---- teardown timing -------------------------------------------------------------------------

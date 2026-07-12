@@ -93,12 +93,13 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // Active memory systems — REQUIRED, always on (device-measured 2026-06-14): the GC guard keeps the
         // extension under the ~52 MB jetsam limit (without it, it crashes IMMEDIATELY on tunnel start), and
         // installing the memory reader as VhMemory.Instance lets the QUIC download brake read this process's
-        // live phys_footprint. These are NOT diagnostics — they run regardless of IosDiagnostics.
+        // live phys_footprint. These are NOT diagnostics — they run regardless of the diagnostics gates.
         IosMemoryGuard.Start();
         IosMemory.Install();
 
-        // NOTE: IosDiagnostics is applied later, in CreateAdapter — it follows the log level from
-        // ClientOptions.LogServiceOptions, which is not known until the host loads vpn.config.
+        // NOTE: the iOS diagnostics gates (IosQuicDiagnostics/IosTunDiagnostics/IosMemoryMonitor.Enabled)
+        // are read-only, computed from VhLogger.MinLogLevel — which the host's LogService sets from
+        // ClientOptions.LogServiceOptions once it loads vpn.config. Nothing to wire up here.
 
         _startTunnelCompletionHandler = startTunnelCompletionHandler;
         _completionFired = false;
@@ -183,11 +184,9 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
-        // Apply the iOS diagnostics master switch from the effective log level (set by the host's LogService
-        // from ClientOptions.LogServiceOptions just before this call: below Information = diagnostics on),
-        // then start the memory probe — a no-op unless just enabled. Re-evaluated on every (re)connect, so
-        // toggling "/log:debug" in the app UI turns the diagnostics on and off with it.
-        IosDiagnostics.ApplyLogLevel(VhLogger.MinLogLevel);
+        // Start the memory probe — a no-op unless diagnostics are on (IosMemoryMonitor.Enabled follows
+        // VhLogger.MinLogLevel, set by the host's LogService from ClientOptions.LogServiceOptions just
+        // before this call). Called per (re)connect so a "/log:debug" reconnect can start it later.
         IosMemoryMonitor.Start();
 
         return new IosVpnAdapter(this, new IosVpnAdapterSettings {

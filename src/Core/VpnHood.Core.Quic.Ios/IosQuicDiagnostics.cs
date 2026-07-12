@@ -15,8 +15,10 @@ namespace VpnHood.Core.Quic.Ios;
 /// live phys_footprint is published always-on through <c>VhMemory.Instance</c> by the iOS footprint
 /// sampler, not by this class. The host's memory probe reads the public snapshot properties below; it does not
 /// own these counters.
-/// <para>Off in production; set by the <c>IosDiagnostics</c> master switch (Devices.Ios) — the one place
-/// that enables all the iOS diagnostics together in both the App and Extension processes.</para>
+/// <para>Off in production; there is no dedicated switch — <see cref="Enabled"/> is computed from
+/// <c>VhLogger.MinLogLevel</c>, so below-Information logging (e.g. the <c>/log:debug</c> DebugCommand in
+/// the app UI, flowing to the Extension via <c>ClientOptions.LogServiceOptions</c>) enables all the iOS
+/// diagnostics together.</para>
 /// </remarks>
 public static class IosQuicDiagnostics
 {
@@ -27,8 +29,8 @@ public static class IosQuicDiagnostics
     private static long _maxStreamCancelMs;
 
     // ---- public state ----------------------------------------------------------------------------
-    /// <summary>Master switch. Defaults to <c>false</c> (production); set via <c>IosDiagnostics</c>.</summary>
-    public static bool Enabled { get; set; }
+    /// <summary>Read-only master gate: on whenever the effective log level is below Information.</summary>
+    public static bool Enabled => VhLogger.MinLogLevel < LogLevel.Information;
 
     /// <summary>Live count of open QUIC streams (= native NWConnections).</summary>
     public static int LiveStreamCount => Volatile.Read(ref _liveStreamCount);

@@ -1,5 +1,7 @@
 using System.Net;
+using Microsoft.Extensions.Logging;
 using NetworkExtension;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.VpnAdapters.IosTun;
@@ -13,8 +15,10 @@ namespace VpnHood.Core.VpnAdapters.IosTun;
 /// <remarks>
 /// The host's memory probe reads the public snapshot properties below to correlate phys_footprint with
 /// traffic; it does not own these counters.
-/// <para>Off in production; set by the <c>IosDiagnostics</c> master switch (Devices.Ios) — the one place
-/// that enables all the iOS diagnostics together in both the App and Extension processes.</para>
+/// <para>Off in production; there is no dedicated switch — <see cref="Enabled"/> is computed from
+/// <c>VhLogger.MinLogLevel</c>, so below-Information logging (e.g. the <c>/log:debug</c> DebugCommand in
+/// the app UI, flowing to the Extension via <c>ClientOptions.LogServiceOptions</c>) enables all the iOS
+/// diagnostics together.</para>
 /// </remarks>
 public static class IosTunDiagnostics
 {
@@ -26,8 +30,8 @@ public static class IosTunDiagnostics
     private static long _maxTunWriteMs;
 
     // ---- public state ----------------------------------------------------------------------------
-    /// <summary>Master switch. Defaults to <c>false</c> (production); set via <c>IosDiagnostics</c>.</summary>
-    public static bool Enabled { get; set; }
+    /// <summary>Read-only master gate: on whenever the effective log level is below Information.</summary>
+    public static bool Enabled => VhLogger.MinLogLevel < LogLevel.Information;
 
     /// <summary>Cumulative bytes written inbound (server → device) through the TUN adapter.</summary>
     public static long InboundBytes => Interlocked.Read(ref _inboundBytes);

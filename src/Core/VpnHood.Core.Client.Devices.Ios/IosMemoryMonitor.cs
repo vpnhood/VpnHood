@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Quic.Ios;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.VpnAdapters.IosTun;
 
 namespace VpnHood.Core.Client.Devices.Ios;
@@ -31,11 +33,11 @@ internal static class IosMemoryMonitor
     private const double Mib = 1024.0 * 1024.0;
 
     /// <summary>
-    /// Gates this probe (<c>ext-mem.log</c> + <c>ext-crash.log</c>). Defaults to <c>false</c> (production);
-    /// set via the <see cref="IosDiagnostics"/> master switch, the same one the per-subsystem diagnostics
-    /// receive, so one switch enables the whole aggregate probe. Set it before <see cref="Start"/>.
+    /// Read-only gate for this probe (<c>ext-mem.log</c> + <c>ext-crash.log</c>): on whenever the effective
+    /// log level is below Information — the same rule the per-subsystem diagnostics compute, so one log-level
+    /// change enables the whole aggregate probe.
     /// </summary>
-    public static bool Enabled { get; set; }
+    public static bool Enabled => VhLogger.MinLogLevel < LogLevel.Information;
 
     /// <summary>
     /// Starts the probe (idempotent) — a no-op unless <see cref="Enabled"/>. Call once from
@@ -67,7 +69,9 @@ internal static class IosMemoryMonitor
             var tick = 0;
             while (true) {
                 try {
-                    if (IosMemory.TryRead(out var vm) && vm.Footprint > 0) {
+                    // Enabled is dynamic (it follows the log level, which a reconnect can change):
+                    // go quiet instead of exiting so a later /log:debug reconnect resumes sampling.
+                    if (Enabled && IosMemory.TryRead(out var vm) && vm.Footprint > 0) {
                         var mb = vm.Footprint / Mib;
                         if (mb > peakMb) peakMb = mb;
 

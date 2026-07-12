@@ -102,9 +102,9 @@ public class AppDelegate : UIApplicationDelegate
             // are low-RTT). Desktop/Android are unaffected — this is iOS-only config.
             TcpKernelBufferSize = new TransferBufferSize(64 * 1024, 64 * 1024),
             // Log level: Information in production. To investigate, add the "/log:debug" debug command in
-            // the UI (Debug Data 1) — below-Information logging auto-enables the iOS diagnostics in the
-            // extension (IosDiagnostics.ApplyLogLevel), so vpn-ext.log carries the TcpStack "+CONN/-CONN"
-            // and [VHQUIC] +CONN/-CONN/brake lines (EventIds "TcpStack"/"Quic") plus ext-mem.log.
+            // the UI (Debug Data 1) — the iOS diagnostics gates are computed from VhLogger.MinLogLevel, so
+            // below-Information logging auto-enables them in the extension: vpn-ext.log carries the TcpStack
+            // "+CONN/-CONN" and [VHQUIC] +CONN/-CONN/brake lines (EventIds "TcpStack"/"Quic") plus ext-mem.log.
             LogServiceOptions = new LogServiceOptions {
                 MinLogLevel = LogLevel.Information
             },

@@ -32,8 +32,22 @@ internal sealed class IosQuicConnection(
             ? IPAddress.IPv6Any
             : IPAddress.Any, 0);
 
+    // Circuit breaker for outbound stream opens. nw_connection_group_extract_connection returns NULL when
+    // the tunnel cannot create another stream — typically QUIC stream-credit starvation (the cumulative
+    // MAX_STREAMS budget is spent and the server has not granted more). Every new proxied flow retries the
+    // open immediately, so without a backoff a starved tunnel gets hammered with native extract calls and
+    // connector churn that deepen the stall (observed on-device 2026-07-11: repeated "Failed to open a new
+    // QUIC stream" bursts during a 37 s tunnel-wide stall). While in backoff, opens fail fast without
+    // touching the native group; flows retry after the window with fresh credit odds.
+    private const int OpenFailBackoffMs = 500;
+    private long _openFailBackoffUntilTick;
+
     public async ValueTask<Stream> OpenOutboundStreamAsync(CancellationToken cancellationToken)
     {
+        if (Environment.TickCount64 < Volatile.Read(ref _openFailBackoffUntilTick))
+            throw new IOException(
+                "Failed to open a new QUIC stream over the tunnel (backing off after a failed open).");
+
         // Open a new bidirectional outgoing stream over the existing QUIC tunnel. For a multiplex group a
         // NULL endpoint tells Network.framework to create a brand-new stream over the group's existing
         // tunnel (this is what Swift's NWConnection(from: group) does). The managed
@@ -45,8 +59,11 @@ internal sealed class IosQuicConnection(
         // transport and Start() fails with POSIX error 50 (network down).
         var streamHandle = nw_connection_group_extract_connection(
             connectionGroup.GetCheckedHandle(), IntPtr.Zero, IntPtr.Zero);
-        var stream = Runtime.GetINativeObject<NWConnection>(streamHandle, owns: true)
-            ?? throw new IOException("Failed to open a new QUIC stream over the tunnel.");
+        var stream = Runtime.GetINativeObject<NWConnection>(streamHandle, owns: true);
+        if (stream == null) {
+            Volatile.Write(ref _openFailBackoffUntilTick, Environment.TickCount64 + OpenFailBackoffMs);
+            throw new IOException("Failed to open a new QUIC stream over the tunnel.");
+        }
 
         return await StartStreamAsync(stream, cancellationToken).Vhc();
     }

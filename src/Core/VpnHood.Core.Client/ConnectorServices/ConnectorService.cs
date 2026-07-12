@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels.Streams;
@@ -80,6 +81,9 @@ internal class ConnectorService : IDisposable
                 options.VpnEndPoint,
                 UserCertificateValidationCallback)
             : null;
+
+        if (_quicConnectionFactory != null)
+            _quicConnectionFactory.PanicRecycled += QuicConnectionFactory_PanicRecycled;
 
         // after quic (propagates to the QUIC factory if present)
         _idleConnectionTimeout = TimeSpan.FromSeconds(30).WhenNoDebugger();
@@ -197,6 +201,26 @@ internal class ConnectorService : IDisposable
             : CreateSimpleConnection(streamConnection, contentLength, cancellationToken); // Simple HTTP connection
     }
 
+    // Gate on FRESH server connections (pooled reuse is not gated). Every fresh connection is a full
+    // QUIC-stream open or TCP+TLS(+WebSocket) handshake whose native cost (Security/Network.framework
+    // state, kernel socket buffers) lives outside every managed budget. A churn burst — e.g. a browser
+    // re-opening dozens of flows after a tunnel stall — otherwise fires 10-20 handshakes simultaneously;
+    // on iOS (~52 MB jetsam limit) such a burst spiked phys_footprint several MB inside 500 ms and killed
+    // the extension even with the download-ingest and SYN-admission gates active (2026-07-11 on-device:
+    // 232 fresh connections in a 12 min session, 11 inside one burst). Browsers cap ~6 per host for the
+    // same reason; the tunnel talks to ONE server, and waiters usually pick up a pooled connection freed
+    // meanwhile, so a small cap is safe. Static: the budget being protected (process footprint) is
+    // process-wide, and a reconnect can briefly overlap two ConnectorService instances.
+    private static readonly SemaphoreSlim ConnectGate =
+        new(OperatingSystem.IsIOS() && !OperatingSystem.IsMacCatalyst() ? 3 : 8);
+
+    // While the process footprint is critical, hold fresh establishment entirely (aligned with the QUIC
+    // ingest gate and the TCP-stack admission gate at 42 MB): in the jammed-tunnel state native handshake
+    // transients do not drain, so even serialized creates ratchet the footprint. Flows either get a pooled
+    // connection, wait it out, or fail on their own RequestTimeout — all better than a jetsam kill.
+    // No memory reader installed (ProcessFootprintMb is null) → comparison is false → no hold.
+    private const double ConnectMemoryLimitMb = 41.0;
+
     public async Task<IStreamConnection> GetConnectionToServer(string streamId, int contentLength,
         Action? onConnectAttempt, CancellationToken cancellationToken)
     {
@@ -204,19 +228,28 @@ internal class ConnectorService : IDisposable
         if (UseQuic && _quicConnectionFactory == null)
             throw new InvalidOperationException("QUIC is not supported by the current socket factory.");
 
-        var rawConnection = UseQuic
-            ? await _quicConnectionFactory!.CreateConnection(streamId, cancellationToken).Vhc()
-            : await _tcpConnectionFactory.CreateConnection(streamId, onConnectAttempt, cancellationToken).Vhc();
-
+        await ConnectGate.WaitAsync(cancellationToken).Vhc();
         try {
-            // Apply HTTP framing on top of the raw connection
-            var connection = await CreateHttpConnection(rawConnection, contentLength, cancellationToken).Vhc();
-            lock (Stat) Stat.CreatedConnectionCount++;
-            return connection;
+            while (VhMemory.Instance.GetInfo().ProcessFootprintMb >= ConnectMemoryLimitMb)
+                await Task.Delay(100, cancellationToken).Vhc();
+
+            var rawConnection = UseQuic
+                ? await _quicConnectionFactory!.CreateConnection(streamId, cancellationToken).Vhc()
+                : await _tcpConnectionFactory.CreateConnection(streamId, onConnectAttempt, cancellationToken).Vhc();
+
+            try {
+                // Apply HTTP framing on top of the raw connection
+                var connection = await CreateHttpConnection(rawConnection, contentLength, cancellationToken).Vhc();
+                lock (Stat) Stat.CreatedConnectionCount++;
+                return connection;
+            }
+            catch {
+                rawConnection.Dispose();
+                throw;
+            }
         }
-        catch {
-            rawConnection.Dispose();
-            throw;
+        finally {
+            ConnectGate.Release();
         }
     }
 
@@ -309,6 +342,12 @@ internal class ConnectorService : IDisposable
         return ret;
     }
 
+    private void QuicConnectionFactory_PanicRecycled(object? sender, EventArgs e)
+    {
+        VhLogger.Instance.LogWarning(GeneralEventId.Request,
+            "ConnectorService: QUIC pool panic recycle triggered. Clearing all idle shared connections.");
+        PreventReuseChannel();
+    }
 
     private void Dispose(bool disposing)
     {
@@ -321,7 +360,10 @@ internal class ConnectorService : IDisposable
 
             // Dispose connection factories
             _tcpConnectionFactory.Dispose();
-            _quicConnectionFactory?.DisposeAsync().VhBlock();
+            if (_quicConnectionFactory != null) {
+                _quicConnectionFactory.PanicRecycled -= QuicConnectionFactory_PanicRecycled;
+                _quicConnectionFactory.DisposeAsync().VhBlock();
+            }
 
             // Prevent reuse of client streams
             PreventReuseChannel();

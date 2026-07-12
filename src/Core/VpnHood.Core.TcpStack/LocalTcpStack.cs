@@ -8,6 +8,7 @@ using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.TcpStack.Abstractions;
 using VpnHood.Core.TcpStack.Primitives;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.TcpStack;
@@ -233,6 +234,18 @@ public sealed class LocalTcpStack : ITcpStack
                 // silently dropped, black-holing the new connection until the idle timeout.
                 SendAckOnly(existingConn);
             return;
+        }
+
+        // Memory admission gate: while the process footprint is critical, DROP the SYN silently — no
+        // RST — so the peer's own SYN-retransmit paces new-flow establishment until memory recedes (see
+        // LocalTcpStackOptions.AdmissionMemoryLimitMb). Checked BEFORE the connection cap so pressure
+        // never triggers admit-by-evicting churn. null (default) short-circuits: desktop/Android unchanged.
+        if (_options.AdmissionMemoryLimitMb is { } admissionLimitMb) {
+            var footprintMb = VhMemory.Instance.GetInfo().ProcessFootprintMb;
+            if (footprintMb >= admissionLimitMb) {
+                Diagnostics.OnAdmissionDeferred(ipEndPointPair, footprintMb.Value);
+                return;
+            }
         }
 
         // Admission control: cap concurrent connections to bound aggregate buffer memory on

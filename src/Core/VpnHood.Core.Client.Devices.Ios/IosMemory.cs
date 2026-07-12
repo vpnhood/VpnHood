@@ -54,24 +54,24 @@ internal sealed class IosMemory : VhMemory
             Instance = new IosMemory();
     }
 
-    /// <summary>
-    /// Live memory snapshot for the current process: footprint (mach phys_footprint) and total system memory
-    /// (NSProcessInfo.PhysicalMemory). System-wide used memory is not read here, so it stays <c>null</c>.
-    /// Reads fresh each call (no background sampler); cheap enough for the QUIC read hot path.
-    /// </summary>
+    // Total system memory never changes while the process runs — read it ONCE. GetInfo is called from
+    // hot paths (per QUIC receive-arm, per SYN under the admission gate, gate watcher polls), and
+    // NSProcessInfo.ProcessInfo is an Objective-C round-trip per call; the footprint itself stays a pure
+    // mach task_info read.
+    private static long? _totalMemory;
+
     public override VhMemoryInfo GetInfo()
     {
         var footprint = TryRead(out var vm) && vm.Footprint > 0 ? vm.Footprint : (long?)null;
 
-        long? total = null;
         try {
-            total = (long)NSProcessInfo.ProcessInfo.PhysicalMemory;
+            _totalMemory ??= (long)NSProcessInfo.ProcessInfo.PhysicalMemory;
         }
         catch { /* best-effort */ }
 
         return new VhMemoryInfo {
             ProcessFootprintBytes = footprint,
-            TotalBytes = total,
+            TotalBytes = _totalMemory,
             UsedBytes = null
         };
     }

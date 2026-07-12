@@ -161,6 +161,20 @@ public sealed class LocalTcpStackOptions
     /// </summary>
     public int AcceptQueueCapacity { get; init; }
 
+    /// <summary>
+    /// Memory admission gate: while the process footprint (read from <c>VhMemory.Instance</c>, the number
+    /// the host memory limit is enforced against — e.g. iOS jetsam phys_footprint) is at or above this
+    /// many MB, new SYNs are DROPPED SILENTLY — no connection, no RST. Every admitted flow triggers
+    /// establishment work whose memory cost is outside this stack's budgets (a QUIC stream open or a
+    /// fallback TLS connection to the server: native handshake state + pinned kernel socket buffers), so
+    /// under memory pressure admitting-by-evicting only churns. A silent drop turns the peer's own
+    /// SYN-retransmit (~1 s backoff) into the pacing mechanism: existing flows keep working and the SYN
+    /// retry lands when the footprint has receded.
+    /// <para><c>null</c> (default) disables the gate (zero overhead on the SYN path). No memory reader
+    /// installed (footprint reads null) also disables it.</para>
+    /// </summary>
+    public double? AdmissionMemoryLimitMb { get; init; }
+
     // ---- Presets ----
 
     /// <summary>
@@ -197,7 +211,12 @@ public sealed class LocalTcpStackOptions
         EvictionMinIdle = TimeSpan.FromSeconds(15),
         AcceptQueueCapacity = 128,
         IdleTimeout = TimeSpan.FromSeconds(20), // Reap idle keep-alive connections rapidly
-        IdleCheckInterval = TimeSpan.FromSeconds(5) // Check frequently to keep memory footprint bounded
+        IdleCheckInterval = TimeSpan.FromSeconds(5), // Check frequently to keep memory footprint bounded
+        // Defer NEW flows while phys_footprint is critical (same threshold the QUIC ingest gate closes
+        // at). 2026-07-11 on-device: with download ingest fully gated, a browse burst's establishment
+        // stampede (12+ fallback TLS connections in 500 ms) still climbed native ~4-5 MB/s into the
+        // jetsam kill — establishment cost is the one flow-driven consumer no other bound covers.
+        AdmissionMemoryLimitMb = 42.0
     };
 
     /// <summary>

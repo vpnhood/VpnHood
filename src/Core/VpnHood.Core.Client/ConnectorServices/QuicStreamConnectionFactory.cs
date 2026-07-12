@@ -1,9 +1,13 @@
 using System.Net;
 using System.Net.Security;
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
+using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
 
 namespace VpnHood.Core.Client.ConnectorServices;
@@ -47,7 +51,65 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
         _quicClient = quicClient;
         _vpnEndPoint = vpnEndPoint;
         _certificateValidationCallback = certificateValidationCallback;
-        _cleanupJob = new Job(Cleanup, "QuicStreamConnectionCleanup");
+        // 2 s cadence: jammed-item disposal (the panic recycle has its own faster watchdog below).
+        _cleanupJob = new Job(Cleanup, TimeSpan.FromSeconds(2), "QuicStreamConnectionCleanup");
+        StartMemoryWatchdog();
+    }
+
+    // PANIC RECYCLE (memory-capped hosts): when the process footprint is within a few MB of the platform
+    // kill limit (iOS extension jetsam ≈ 52 MB), dispose EVERY pooled connection. Network.framework grants
+    // QUIC flow-control credit as IT buffers (not as the app reads), so under fast downloads or a stalled
+    // path it hoards inbound/unacked frames in native malloc (device-measured 2026-07-12: malloc_small
+    // 5 → 34-39 MB) that no managed budget can see or bound; disposing the connections is the only
+    // guaranteed release, and flows re-establish over fresh connections. A brief tunnel blip beats a
+    // jetsam kill. Threshold + urgency are device-measured: a speed-test burst climbs up to ~3 MB/s, and a
+    // 2 s detection cadence lost that race by ~2 MB (run 9, died at 49.8 three seconds after a passing
+    // 46.0 reading) — hence a dedicated 250 ms watchdog rather than the cleanup job.
+    private const double PanicFootprintMb = 44.0;
+
+    // iOS-only: the threshold is scaled to the ~52 MB Network Extension jetsam limit — on desktop-class
+    // hosts a 45 MB footprint is normal and recycling there would be destructive. (Today only iOS installs
+    // a footprint-reporting VhMemory, but guard by platform so a future desktop reader stays safe.)
+    private void StartMemoryWatchdog()
+    {
+        if (!OperatingSystem.IsIOS() || OperatingSystem.IsMacCatalyst())
+            return;
+
+        new Thread(() => {
+            while (!_disposed) {
+                try {
+                    if (VhMemory.Instance.GetInfo().ProcessFootprintMb >= PanicFootprintMb) {
+                        RecycleAll();
+                        Thread.Sleep(2000); // let disposal free native buffers and the footprint recede
+                        continue;
+                    }
+                }
+                catch { /* the watchdog must never die */ }
+                Thread.Sleep(250);
+            }
+        }) { IsBackground = true, Name = "QuicPoolMemoryWatchdog" }.Start();
+    }
+
+    public event EventHandler? PanicRecycled;
+
+    private void RecycleAll()
+    {
+        List<QuicStreamConnectionItem> items;
+        lock (_items) {
+            items = [.. _items];
+            _items.Clear();
+        }
+
+        if (items.Count > 0) {
+            VhLogger.Instance.LogWarning(GeneralEventId.Request,
+                "QUIC pool panic recycle: process footprint is near the platform kill limit. " +
+                "Disposing all {Count} pooled connections to release native buffers.", items.Count);
+
+            foreach (var item in items)
+                _ = item.SafeDisposeAsync();
+        }
+
+        PanicRecycled?.Invoke(this, EventArgs.Empty);
     }
 
     public Task<IStreamConnection> CreateConnection(string connectionId, CancellationToken cancellationToken)
@@ -87,11 +149,14 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
 
         var disposeTasks = new List<Task>();
 
-        // Remove idle connections with no active streams if they have been idle for too long,
-        // if they are already dead, or if they have reached their lifetime stream limit.
+        // Remove connections that are jammed (bad connection — disposed IMMEDIATELY, zombie streams and
+        // all, to free the native buffers nw hoards on a stalled path) or that drained naturally (dead or
+        // idle-expired with no active streams). The footprint panic recycle runs in its own watchdog.
         lock (_items) {
-            foreach (var item in _items.Where(x=>x.ActiveStreamCount == 0).ToArray()) {
-                if (item.IsDead || item.ZeroActiveSince + IdleConnectionTimeout <= FastDateTime.Now) {
+            foreach (var item in _items.ToArray()) {
+                var drained = item.ActiveStreamCount == 0 &&
+                              (item.IsDead || item.ZeroActiveSince + IdleConnectionTimeout <= FastDateTime.Now);
+                if (item.IsJammed || drained) {
                     _items.Remove(item);
                     disposeTasks.Add(item.SafeDisposeAsync().AsTask());
                 }

@@ -30,6 +30,17 @@ internal class QuicStreamConnectionItem(
 
     public bool IsDead { get; private set; }
 
+    /// <summary>
+    /// True when a stream open failed with a REAL error (not the caller's own cancellation): the underlying
+    /// QUIC connection itself is bad — e.g. stream-credit starvation or a stalled path. Unlike a merely
+    /// <see cref="IsDead"/> item (which drains naturally), a jammed item must be disposed EVEN WITH active
+    /// streams: its streams are zombies that never close, and on a stalled path Network.framework hoards
+    /// every unacknowledged frame in native memory (device-measured 2026-07-12: +16.6 MB of MALLOC_SMALL
+    /// into the iOS extension's ~52 MB jetsam limit). Disposing frees that hoard at once and fails the
+    /// zombie flows over to a fresh connection.
+    /// </summary>
+    public bool IsJammed { get; private set; }
+
     /// <summary>Number of streams currently open.</summary>
     public int ActiveStreamCount { get; private set; }
 
@@ -80,8 +91,12 @@ internal class QuicStreamConnectionItem(
 
             return connection;
         }
-        catch {
+        catch (Exception ex) {
             IsDead = true; // already protected by asyncLock
+            // Cancellation is the CALLER giving up (timeout/dispose) — the connection may be healthy, so
+            // let it drain naturally. Any other failure condemns the connection itself; see IsJammed.
+            if (ex is not OperationCanceledException)
+                IsJammed = true;
             throw;
         }
     }

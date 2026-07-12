@@ -99,6 +99,22 @@ public sealed class TcpStackDiagnostics
 
     internal void AddPipeBufferedBytes(long bytes) => Interlocked.Add(ref _totalPipeBufferedBytes, bytes);
 
+    // ---- memory admission gate -----------------------------------------------------------------
+    private long _lastAdmissionLogTick;
+
+    /// <summary>
+    /// Records a SYN silently deferred by the memory admission gate. The log line is throttled to ~1/s
+    /// because a browse burst can defer dozens of SYNs (plus their retransmits) in one pressure episode.
+    /// </summary>
+    internal void OnAdmissionDeferred(IPEndPointPairValue endPointPair, double footprintMb)
+    {
+        if (!ShouldLog(ref _lastAdmissionLogTick, 1000))
+            return;
+        VhLogger.Instance.LogDebug(TcpStackEventIds.TcpStack,
+            "[TcpStack] admission deferred (mem={Memory}MB): dropping new SYN {EndPointPair} silently; peer will retry",
+            footprintMb.ToString("F1"), endPointPair);
+    }
+
     // --- Verbose data-path tracing -------------------------------------------------------------
     // All hot-path trace logging lives here so LocalTcpConnection/LocalTcpStack stay free of
     // formatting, gating and throttling concerns. Each method is a no-op (a single bool read) when

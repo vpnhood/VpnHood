@@ -1,7 +1,6 @@
 using Network;
 using System.Buffers;
 using System.Runtime.InteropServices;
-using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -47,17 +46,16 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
     public override bool CanRead => !_disposed && !_aborted;
     public override bool CanWrite => !_disposed && !_aborted;
 
-    // JETSAM GUARD thresholds: at full download rate the per-packet native transients (NSData copies
+    // JETSAM GUARD history: at full download rate the per-packet native transients (NSData copies
     // retained briefly by NE/nw beyond our dispose) float several MB above baseline and their peaks
     // ratchet over the extension's 52 MB limit with no leak or backlog anywhere else (2026-07-01, third
     // crash flavor: no freeze, sendQ=0, pipeBuf=0, footprint oscillating 32->48 MB at 130 Mbps).
-    // Braking the receive-arm — the single intake point of the whole download pipeline — while the
+    // Stopping the receive-arm — the single intake point of the whole download pipeline — while the
     // footprint is near the limit lets those transients drain; throughput only pays while within
-    // ~7 MB of death. No memory reader installed (VhMemory.Instance) reports 0 -> guard inactive.
-    // 2026-07-02: brake earlier — the guarded crash showed a +6.6 MB spike inside ONE probe tick
-    // (40.4 → 47.0), so by 45 the stale reading was already fatal. Start braking at 42.
-    private const double GuardBrakeMb = 42.0;
-    private const double GuardHardBrakeMb = 46.0;
+    // ~7 MB of death. 2026-07-11: the per-stream 25/100 ms delay brake that lived here did NOT scale —
+    // 40+ streams delaying independently still admitted ~28 MB/s and it fired once in 134 s while the
+    // footprint ratcheted 42 → 49.8 into a jetsam kill — replaced by the GLOBAL IosQuicIngestGate
+    // (shared close/reopen thresholds with hysteresis; braking strength independent of stream count).
 
     public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
@@ -70,27 +68,14 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
         if (_aborted)
             return ValueTask.FromException<int>(new ObjectDisposedException(nameof(IosQuicStream)));
 
-        // JETSAM GUARD: delay BEFORE arming the native receive so no new buffer is requested while
-        // the footprint is critical. The guarded path only runs while already near the limit. The value is a
-        // live phys_footprint read via the ambient VhMemory.Instance; no reader installed -> 0 -> inactive.
-        var footprint = VhMemory.Instance.GetInfo().ProcessFootprintMb ?? 0;
-        if (footprint >= GuardBrakeMb)
-            return ThrottledReadAsync(buffer, footprint, cancellationToken);
-
+        // DO NOT throttle or block reads to save memory — device-measured 2026-07-12 (REGION-CENSUS):
+        // Network.framework grants QUIC flow-control credit as IT buffers (not as the app reads), so
+        // inbound data piles up in NATIVE malloc_small whenever reads lag the wire rate, and blocking
+        // reads (the old 25/100 ms brake, then a global footprint gate) LOCKS that hoard in — the only
+        // thing that shrinks it is reading it out. Footprint pressure is handled where the memory truly
+        // lives instead: the connection pool disposes jammed connections immediately and panic-recycles
+        // all connections near the platform kill limit (QuicStreamConnectionFactory).
         return ArmReceive(buffer, cancellationToken);
-    }
-
-    private async ValueTask<int> ThrottledReadAsync(Memory<byte> buffer, double footprint, CancellationToken cancellationToken)
-    {
-        var hard = footprint >= GuardHardBrakeMb;
-        // Diagnostics only: counted always, but self-throttled to ~1 summary line/sec (no-op in production).
-        IosQuicDiagnostics.TraceBrake(footprint, hard);
-        await Task.Delay(hard ? 100 : 25, cancellationToken).Vhc();
-        if (_disposed || _readEof)
-            return 0;
-        if (_aborted)
-            throw new ObjectDisposedException(nameof(IosQuicStream));
-        return await ArmReceive(buffer, cancellationToken).Vhc();
     }
 
     private ValueTask<int> ArmReceive(Memory<byte> buffer, CancellationToken cancellationToken)

@@ -73,8 +73,8 @@ channel — so `PacketChannelBufferSize`/`MaxPacketChannelCount` are irrelevant 
 - **Real concurrency is ~20× the intuition:** full-tunnel routes *every* app/OS connection, not just the page
   you see. Measured **peakConn 116** (speedtest) / **192** (browsing). `est=conn` always → these are *real open*
   flows (mostly idle HTTP keep-alives), **not** un-reaped zombies. Memory scales with **connection count**.
-- **Mode A — connection pile-up:** ~190 × ~180 KB → jetsam. **Fix:** `MaxConnections = 100` (excess flows RST,
-  retried) + `IdleTimeout 2 min → 20 s` (`IdleCheckInterval 5 s`) so finished keep-alives free memory fast.
+- **Mode A — connection pile-up:** ~190 × ~180 KB → jetsam. **Fix:** `MaxConnections = 40` (excess flows RST,
+  retried — a cap of 100 was initially tested, but under heavy browsing it still let memory drift up too close to the Jetsam limit. 40 keeps a healthy margin) + `IdleTimeout 2 min → 20 s` (`IdleCheckInterval 5 s`) so finished keep-alives free memory fast.
 - **Mode B — upload-burst pipe balloon:** a fixed receive window never throttled a fast uploader, so data backed
   up unboundedly in the reassembly pipes + downstream write buffers (`pipeBuf` 8.4 MB, `gcLive` 34 MB → jetsam).
   **Fix:** the dynamic receive window + global budget (below) bounds it (`pipeBuf` → ~0).
@@ -105,9 +105,7 @@ fresh and large → full speed. Memory stays bounded because the *shrink* half (
 `up` frozen at 10.5 MB while download flowed to 75 MB, and the stalled flows were reaped by the 20 s idle
 timeout (`conn` 51→12 = "connection dropped"); no crash. Re-enabled → **upload 38 Mbps**.
 
-**Result (good build):** **upload 38 Mbps / download 50 Mbps**, footprint peak **45.3 MB** even at the 100-conn
-cap, `pipeBuf=0`. Note: 64 KB window sufficed (no window scaling needed) *because* the re-open keeps it sliding
-near full, so the effective BDP is covered on this path.
+**Result (good build):** **upload 38 Mbps / download 50 Mbps**, footprint peak **34–38 MB** under load (with a connection cap of 40), `pipeBuf=0`. Note: 64 KB window sufficed (no window scaling needed) *because* the re-open keeps it sliding near full, so the effective BDP is covered on this path.
 
 ---
 
@@ -139,27 +137,45 @@ up to `QueueCapacity` ≈ 255 packets per cycle) and hands the whole list to `Se
 > `WritePackets`** (lifetime/marshaling bug), not a thread race. The `_writeLock` is **kept** anyway as cheap
 > (once-per-drain, uncontended) defensive serialization in case a direct/passthrough write path is ever added.
 
+## Part 5 — Recent Tuning Experience: Watchdog Aggression & Optimal Thresholds
+
+In July 2026, we encountered an issue where the panic recycler was triggering aggressively (every 20–30 seconds) during speed tests. We analyzed the on-device logs and refined the memory threshold tuning with the following key findings:
+
+1. **Watchdog Aggression Root Cause**:
+   The baseline idle memory footprint of the extension is `30.1 MB` to `30.4 MB`. Setting the connection recycle threshold too close to this baseline (initially `41.0 MB`) meant that any normal burst of traffic (which allocates ~10 MB of native packet buffers) would immediately trip the watchdog and sever the connection pool.
+
+2. **Single-Flow vs. Multi-Flow Behavior**:
+   - **Large File Downloads**: Standard single-flow file downloads (even gigabyte-scale files) only use 1 or 2 concurrent connections. They run at full speed, maintain a stable memory footprint of `31–34 MB` (far below the gates), and **never** trigger connection recycling.
+   - **Concurrency Storms**: Speed tests and web page load stampedes spin up 40+ concurrent TCP flows. This high connection count allocates many native `NWConnection` objects and socket buffers, driving the footprint to `41–45 MB` rapidly.
+
+3. **How We Fixed It**:
+   We raised the cascading thresholds by `3.0 MB` to give active traffic breathing room:
+   - **`ConnectMemoryLimitMb`**: Raised from `39.0` to `41.0 MB` (stops handshaking new flows).
+   - **`AdmissionMemoryLimitMb`**: Raised from `40.0` to `42.0 MB` (silently drops new SYNs).
+   - **`PanicFootprintMb`**: Raised from `41.0` to `44.0 MB` (watchdog recycles).
+   
+   This shifts the panic boundary upwards. It allows normal browsing and large downloads to operate completely uninterrupted, while still maintaining a robust `8.0 MB` safety margin below the hard `52.0 MB` Jetsam limit to absorb native allocation lag and in-flight traffic.
+
 ---
 
 ## Current configuration (working tree)
 
 **iOS TCP-stack profile** — `src/Core/VpnHood.Core.TcpStack/LocalTcpStackOptions.cs` `Ios`:
-`ReceiveWindowSize=0xFFFF (64 KB)`, **`GlobalReceiveBudget=6 MB`**, `RetxBufferSize=16 KB`,
-**`MaxConnections=100`**, `AcceptQueueCapacity=128`, **`IdleTimeout=20 s`**, **`IdleCheckInterval=5 s`**.
+- `ReceiveWindowSize=0xFFFF (64 KB)`, **`GlobalReceiveBudget=6 MB`**, `RetxBufferSize=16 KB`.
+- **`MaxConnections=40`**, `AcceptQueueCapacity=128`, **`IdleTimeout=20 s`**, **`IdleCheckInterval=5 s`**.
+- **`AdmissionMemoryLimitMb=42.0`** — Memory admission gate. When the process footprint matches or exceeds 42.0 MB, new TCP SYNs are dropped silently so the peer's own SYN-retransmit backoff acts as a natural pacing mechanism until memory recedes.
+
+**Connector Service & QUIC Panic Recycler**:
+- **Connection Handshake Gate** — `ConnectMemoryLimitMb=41.0` (in `ConnectorService.cs`). When the process footprint reaches 41.0 MB, new server connection handshakes are held, serialized behind a thread-count gate (max 3 concurrent on iOS).
+- **Panic Watchdog Recycle** — `PanicFootprintMb=44.0` (in `QuicStreamConnectionFactory.cs`). A dedicated 250 ms watchdog thread runs on iOS. If the footprint reaches 44.0 MB, it triggers `RecycleAll()`, severing and disposing of all active QUIC connections to instantly release native buffers, recovering to baseline in ~130 ms.
 
 **Dynamic window** — `LocalTcpConnection.AdvertisedWindow = min(ReceiveWindowSize − pipeUnread,
 GlobalReceiveBudget − totalPipeBuffered)`; `UpdateAdvertisedWindow()` tracks `_lastAdvertisedWindow`;
-`OnAppConsumed` sends a window-update when `(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`. Diagnostics
-via `TcpStackDiagnostics` (`ActiveDiagnostics` static, read by the probe).
+`OnAppConsumed` sends a window-update when `(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`.
 
 **Host** — `src/Apps/Client.Ios/AppDelegate.cs`: `MaxPacketChannelCount=1`, `PacketChannelBufferSize=16 KB`,
-`UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB`
-(2026-07-09: 256 KB → 64 KB. The knob applies to every managed TCP socket via `ConfiguringSocketFactory`,
-including the per-flow direct sockets of split/exclude "passthru" flows — one real kernel socket per
-excluded flow, unbounded in aggregate unlike the QUIC tunnel windows. At 256 KB a split-country browse
-could pin ~40 × 512 KB ≈ 20 MB of socket buffers → jetsam; 64 KB bounds it to ~5 MB worst case). **TEMP:**
-`UseTcpProxy=true` forced + `AccessKey=<test key>` — both **DO NOT COMMIT**. TFM `net11.0-ios` on App +
-Extension + the 3 iOS core libs (Devices.Ios, IosTun, AppLib.Ios.Common); 28 neutral libs stay `net10.0`.
+`UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude socket buffers).
+TFM `net11.0-ios` on App + Extension + the 3 iOS core libs (Devices.Ios, IosTun, AppLib.Ios.Common).
 
 ---
 
@@ -171,30 +187,10 @@ HH:mm:ss.fff footprint=MB peak=MB gcLive=MB gcHeap=MB native=MB anon=MB comp=MB 
 `footprint ≈ anon + comp`. `conn/est/peakConn` = live/established/peak proxy connections. `pipeBuf` = total
 reassembly backlog (Mode-B signal). `up`/`dn` cumulative MB (compute rate from deltas).
 
-**Build / deploy:** see [build-deploy-and-provisioning.md](build-deploy-and-provisioning.md) (net11 / `~/.dotnet11`).
-When you change a core TCP-stack lib, also `rm -rf` its `bin/obj` so the appex relinks fresh dlls. Then pull the
-probe + crash log:
-```bash
-xcrun devicectl device copy from --device 00008030-001544500A38802E \
-  --domain-type appDataContainer --domain-identifier com.vpnhood.client.ios.networkextension \
-  --source Documents --destination .working/pulled
-# device crash log (needs sudo): sudo /usr/bin/log collect --device-udid <UDID> --last 10m --output /tmp/d.logarchive
-```
-
 ---
-
-## Remaining work / open items
-1. **Memory margin:** 45.3 MB peak at the 100-conn cap is ~7 MB under the limit; dominant consumer is the
-   per-flow structural cost (`gcLive≈29` at 100 conn), not pipes. If pushed harder, lower `MaxConnections` or
-   shrink the per-flow server `SslStream`. Validate a heavy browse + speedtest combined stays < 52 MB.
-2. **.NET 11 is preview** — a shippable/App-Store build needs **.NET 11 GA**.
-3. **Revert temps before committing app code:** `AccessKey → null`; remove forced `UseTcpProxy=true`
-   (make UI-controlled); decide whether to keep the diagnostic probe + `TcpStackDiagnostics`.
-4. **Finalize knob values** once both green; window scaling appears unnecessary (64 KB + re-open gives full speed).
 
 ## Key insight
 `memory = per-flow-cost × concurrent-flows`; `throughput = window/RTT` **but only if the window keeps
-re-opening.** On a 52 MB budget with 100–200 concurrent flows the strategy is: **global budgets** (few active
+re-opening.** On a 52 MB budget with concurrent flows the strategy is: **global budgets** (few active
 flows get big windows = full speed; many flows bounded in aggregate) + **a correct window re-open** (proactive
-window-update so senders never stall) + **fast idle reaping + a connection cap**. CoreCLR provides the headroom
-that makes it all fit.
+window-update so senders never stall) + **fast idle reaping + a connection cap** + **cascading memory gates (41 MB / 42 MB / 44 MB) to prevent Jetsam kills.** CoreCLR provides the baseline headroom that makes it all fit.

@@ -13,7 +13,6 @@ per-product values live in its `AppConfigs.cs`.
 - **Memory & throughput** (52 MB jetsam, proxy mode, .NET 11/CoreCLR) → [ios-extension-memory-and-throughput.md](ios-extension-memory-and-throughput.md)
   — **read before changing anything memory-/throughput-/TCP-stack-related.**
 - **Extension runtime rules & gotchas** → [extension-runtime-rules.md](extension-runtime-rules.md)
-- *(historical)* [ios-debug-findings-2026-06-10.md](ios-debug-findings-2026-06-10.md)
 
 ## Always-on iOS rules
 - **Build Release for the device** (Debug AOT ≈51 MB hits the ~52 MB jetsam limit).

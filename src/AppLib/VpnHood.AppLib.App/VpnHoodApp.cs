@@ -580,9 +580,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         bool isDebug)
     {
         var logLevel = appLogOptions.MinLogLevel;
-        // /mem-diagnostics implies Debug: its [VHQUIC]/+CONN traces are LogDebug lines, useless if filtered.
-        if (HasDebugCommand(userSettings, DebugCommands.LogDebug) ||
-            HasDebugCommand(userSettings, DebugCommands.MemDiagnostics) || isDebug) logLevel = LogLevel.Debug;
+        if (HasDebugCommand(userSettings, DebugCommands.LogDebug) || isDebug) logLevel = LogLevel.Debug;
         if (HasDebugCommand(userSettings, DebugCommands.LogTrace)) logLevel = LogLevel.Trace;
         var logOptions = new LogServiceOptions {
             MinLogLevel = logLevel,

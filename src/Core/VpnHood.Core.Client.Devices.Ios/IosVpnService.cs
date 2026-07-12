@@ -97,8 +97,8 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         IosMemoryGuard.Start();
         IosMemory.Install();
 
-        // NOTE: IosDiagnostics is applied later, in CreateAdapter — the switch travels as a DebugCommand in
-        // ClientOptions.DebugData1 (set from the app UI), which is not readable until the host loads vpn.config.
+        // NOTE: IosDiagnostics is applied later, in CreateAdapter — it follows the log level from
+        // ClientOptions.LogServiceOptions, which is not known until the host loads vpn.config.
 
         _startTunnelCompletionHandler = startTunnelCompletionHandler;
         _completionFired = false;
@@ -183,10 +183,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
-        // Apply the iOS diagnostics master switch from the debug commands (ClientOptions.DebugData1, set via
-        // the app UI's "/mem-diagnostics"), then start the memory probe — a no-op unless just enabled.
-        // Re-evaluated on every (re)connect so removing the command in the UI also turns diagnostics off.
-        IosDiagnostics.ApplyDebugData(debugData);
+        // Apply the iOS diagnostics master switch from the effective log level (set by the host's LogService
+        // from ClientOptions.LogServiceOptions just before this call: below Information = diagnostics on),
+        // then start the memory probe — a no-op unless just enabled. Re-evaluated on every (re)connect, so
+        // toggling "/log:debug" in the app UI turns the diagnostics on and off with it.
+        IosDiagnostics.ApplyLogLevel(VhLogger.MinLogLevel);
         IosMemoryMonitor.Start();
 
         return new IosVpnAdapter(this, new IosVpnAdapterSettings {

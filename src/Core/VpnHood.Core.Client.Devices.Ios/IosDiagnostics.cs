@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using VpnHood.Core.Quic.Ios;
 using VpnHood.Core.VpnAdapters.IosTun;
 
@@ -9,18 +10,14 @@ namespace VpnHood.Core.Client.Devices.Ios;
 /// <see cref="IosMemoryMonitor"/>) so nothing needs to be flipped individually. Off by default = production.
 /// </summary>
 /// <remarks>
-/// Enabled through the app UI: add <c>/mem-diagnostics</c> to Debug Data 1 (a standard DebugCommand). It
-/// travels the existing debug-data path — <c>UserSettings.DebugData1</c> → <c>ClientOptions.DebugData1</c> →
-/// <c>vpn.config</c> → <c>VpnServiceHost</c> → <c>IosVpnService.CreateAdapter</c>, which calls
-/// <see cref="ApplyDebugData"/> in the Extension process. No environment variable is involved: iOS spawns
-/// the Extension itself, so a devicectl launch env could never reach it anyway. The same command also drops
-/// the log level to Debug (see <c>VpnHoodApp.GetLogOptions</c>) so the [VHQUIC]/+CONN traces surface.
+/// There is no dedicated switch: diagnostics follow the effective log level. Turning on debug logging in the
+/// app UI (the <c>/log:debug</c> or <c>/log:trace</c> DebugCommand, or a debug-mode build) flows via
+/// <c>ClientOptions.LogServiceOptions</c> into the Extension's LogService, and
+/// <c>IosVpnService.CreateAdapter</c> calls <see cref="ApplyLogLevel"/> on every (re)connect — diagnostics
+/// are on whenever the level is below Information, off otherwise.
 /// </remarks>
 public static class IosDiagnostics
 {
-    /// <summary>Must equal <c>DebugCommands.MemDiagnostics</c> (AppLib cannot be referenced from here).</summary>
-    public const string DebugCommand = "/mem-diagnostics";
-
     private static bool _enabled;
 
     /// <summary>Master switch; assigning it fans out to all per-subsystem diagnostic gates.</summary>
@@ -34,13 +31,9 @@ public static class IosDiagnostics
         }
     }
 
-    /// <summary>
-    /// Sets <see cref="Enabled"/> from a ClientOptions debug-data string (space-separated commands, matched
-    /// case-insensitively — the same semantics as <c>VpnHoodApp.HasDebugCommand</c>).
-    /// </summary>
-    public static void ApplyDebugData(string? debugData)
+    /// <summary>Sets <see cref="Enabled"/> from the effective log level: on when below Information.</summary>
+    public static void ApplyLogLevel(LogLevel minLogLevel)
     {
-        Enabled = debugData?.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Contains(DebugCommand, StringComparer.OrdinalIgnoreCase) == true;
+        Enabled = minLogLevel < LogLevel.Information;
     }
 }

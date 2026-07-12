@@ -4,9 +4,6 @@ public static class DebugCommands
 {
     public const string CaptureContext = "/capture-context";
     public const string DropUdp = "/drop-udp";
-    // Memory/transport diagnostics. Global command; currently only iOS consumes it (must equal
-    // IosDiagnostics.DebugCommand — Devices.Ios cannot reference AppLib, so the literal is duplicated).
-    public const string MemDiagnostics = "/mem-diagnostics";
     public const string KillSpaServer = "/kill-spa-server";
     public const string LogDebug = "/log:debug";
     public const string LogTrace = "/log:trace";
@@ -21,7 +18,6 @@ public static class DebugCommands
     public static string[] All => [
         CaptureContext,
         DropUdp,
-        MemDiagnostics,
         LogDebug,
         LogTrace,
         KillSpaServer,

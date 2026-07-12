@@ -101,10 +101,10 @@ public class AppDelegate : UIApplicationDelegate
             // worst case to ~5 MB while still allowing ~25 Mbps per flow at 20 ms RTT (in-country hosts
             // are low-RTT). Desktop/Android are unaffected — this is iOS-only config.
             TcpKernelBufferSize = new TransferBufferSize(64 * 1024, 64 * 1024),
-            // Log level: Information in production. To investigate, add the "/mem-diagnostics" debug command
-            // in the UI (Debug Data 1) — it enables the iOS diagnostics in the extension AND drops the log
-            // level to Debug (VpnHoodApp.GetLogOptions), so vpn-ext.log carries the TcpStack "+CONN/-CONN"
-            // and [VHQUIC] +open/-close/brake lines (EventIds "TcpStack"/"Quic").
+            // Log level: Information in production. To investigate, add the "/log:debug" debug command in
+            // the UI (Debug Data 1) — below-Information logging auto-enables the iOS diagnostics in the
+            // extension (IosDiagnostics.ApplyLogLevel), so vpn-ext.log carries the TcpStack "+CONN/-CONN"
+            // and [VHQUIC] +open/-close/brake lines (EventIds "TcpStack"/"Quic") plus ext-mem.log.
             LogServiceOptions = new LogServiceOptions {
                 MinLogLevel = LogLevel.Information
             },

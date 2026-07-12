@@ -94,51 +94,7 @@ public static class IosQuicDiagnostics
     /// <summary>Worst single QUIC stream teardown (ms) since the last call; reading resets it to 0.</summary>
     public static long TakeMaxStreamCancelMs() => Interlocked.Exchange(ref _maxStreamCancelMs, 0);
 
-    // ---- jetsam brake tracing --------------------------------------------------------------------
-    private static long _brakeCount;
-    private static long _hardBrakeCount;
-    private static double _brakePeakFootprintMb;
-    private static long _lastBrakeLogTick;
 
-    /// <summary>
-    /// Records a jetsam-brake activation (from <c>IosQuicStream.ThrottledReadAsync</c>). Every call is
-    /// counted, but a summary line is emitted at most once per second — so a brake that fires on every
-    /// read while the footprint sits near the limit produces ~1 line/sec instead of flooding the log.
-    /// The line reports how many brakes (and how many HARD brakes) fired in the window and the peak
-    /// footprint seen, which is what you actually want to know. No-op unless <see cref="Enabled"/>.
-    /// </summary>
-    public static void TraceBrake(double footprintMb, bool hard)
-    {
-        if (!Enabled) return;
-
-        Interlocked.Increment(ref _brakeCount);
-        if (hard) Interlocked.Increment(ref _hardBrakeCount);
-
-        // Track the worst footprint seen this window (best-effort CAS loop). The success check
-        // compares bit patterns because CompareExchange itself compares doubles bitwise.
-        while (true) {
-            var prevPeak = Volatile.Read(ref _brakePeakFootprintMb);
-            if (footprintMb <= prevPeak)
-                break;
-            var witnessed = Interlocked.CompareExchange(ref _brakePeakFootprintMb, footprintMb, prevPeak);
-            if (BitConverter.DoubleToInt64Bits(witnessed) == BitConverter.DoubleToInt64Bits(prevPeak))
-                break;
-        }
-
-        // Time-throttle: only one thread per ~1s window wins the right to flush + log.
-        var now = Environment.TickCount64;
-        var last = Interlocked.Read(ref _lastBrakeLogTick);
-        if (now - last < 1000) return;
-        if (Interlocked.CompareExchange(ref _lastBrakeLogTick, now, last) != last) return;
-
-        var count = Interlocked.Exchange(ref _brakeCount, 0);
-        var hardCount = Interlocked.Exchange(ref _hardBrakeCount, 0);
-        var peak = Interlocked.Exchange(ref _brakePeakFootprintMb, 0);
-        var windowMs = last == 0 ? 0 : now - last;
-        VhLogger.Instance.LogDebug(IosQuicEventIds.Quic,
-            "[VHQUIC] brake x{Count} (hard={Hard}) peak={Peak}MB over {WindowMs}ms",
-            count, hardCount, peak.ToString("F1"), windowMs);
-    }
 
     // ---- in-flight sends -------------------------------------------------------------------------
     /// <summary>Adds to the in-flight QUIC send-bytes counter. No-op unless <see cref="Enabled"/>.</summary>

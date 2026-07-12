@@ -97,12 +97,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         IosMemoryGuard.Start();
         IosMemory.Install();
 
-        // TEMP DIAGNOSTIC (do NOT commit): force the iOS diagnostics on. On device an extension process is
-        // spawned by iOS and does NOT inherit VH_IOS_DIAGNOSTICS from the devicectl launch, so the env-var
-        // seed can't reach here — flip the switches explicitly to see the [VHQUIC] brake trace / ext-mem.log.
-        // Revert (delete these two lines) before a production build.
-        IosQuicDiagnostics.Enabled = true;
-        IosMemoryMonitor.Enabled = true;
+
 
         // Diagnostics probe (ext-mem.log / ext-crash.log) — a no-op unless VH_IOS_DIAGNOSTICS is set.
         IosMemoryMonitor.Start();

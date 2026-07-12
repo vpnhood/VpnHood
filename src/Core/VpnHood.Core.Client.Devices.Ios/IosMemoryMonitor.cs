@@ -32,10 +32,10 @@ internal static class IosMemoryMonitor
 
     /// <summary>
     /// Gates this probe (<c>ext-mem.log</c> + <c>ext-crash.log</c>). Defaults to <c>false</c> (production);
-    /// seeded from the <c>VH_IOS_DIAGNOSTICS</c> env var, the same switch the per-subsystem diagnostics read,
-    /// so one variable enables the whole aggregate probe. Set it before <see cref="Start"/> to take effect.
+    /// set via the <see cref="IosDiagnostics"/> master switch, the same one the per-subsystem diagnostics
+    /// receive, so one switch enables the whole aggregate probe. Set it before <see cref="Start"/>.
     /// </summary>
-    public static bool Enabled { get; set; } = ReadEnvDefault();
+    public static bool Enabled { get; set; }
 
     /// <summary>
     /// Starts the probe (idempotent) — a no-op unless <see cref="Enabled"/>. Call once from
@@ -171,18 +171,5 @@ internal static class IosMemoryMonitor
             $"rdAge={rdAge} wrAge={wrAge} wrMax={wrMax} cancelMax={cancelMax} " +
             $"dn={dnMb:F1}MB up={upMb:F1}MB" +
             (mb >= 50 ? " <<< NEAR 52MB JETSAM" : "") + "\n");
-    }
-
-    // Seed Enabled from the VH_IOS_DIAGNOSTICS env var (any of 1/true/yes) so one switch turns on all the
-    // iOS diagnostics for a dev/simulator run without a code change.
-    private static bool ReadEnvDefault()
-    {
-        try {
-            var value = Environment.GetEnvironmentVariable("VH_IOS_DIAGNOSTICS");
-            return value is "1" or "true" or "True" or "TRUE" or "yes" or "YES";
-        }
-        catch {
-            return false;
-        }
     }
 }

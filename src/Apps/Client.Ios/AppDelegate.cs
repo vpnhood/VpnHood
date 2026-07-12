@@ -11,24 +11,6 @@ namespace VpnHood.App.Client.Ios;
 [Register("AppDelegate")]
 public class AppDelegate : UIApplicationDelegate
 {
-    // iOS diagnostics switch (app side) — mirrors the extension-side gates (IosQuicDiagnostics /
-    // IosMemoryMonitor), seeded from the VH_IOS_DIAGNOSTICS env var (1/true/yes). Off by default =
-    // production. When on, the app tells the extension to log at Debug (via LogServiceOptions below), so
-    // the TcpStack "+CONN/-CONN" connection-lifecycle lines and the [VHQUIC] +open/-close/brake events
-    // (EventIds "TcpStack"/"Quic") surface in vpn-ext.log instead of being filtered out at Information.
-    private static readonly bool DiagnosticsEnabled = ReadDiagnosticsEnv();
-
-    private static bool ReadDiagnosticsEnv()
-    {
-        try {
-            var value = Environment.GetEnvironmentVariable("VH_IOS_DIAGNOSTICS");
-            return value is "1" or "true" or "True" or "TRUE" or "yes" or "YES";
-        }
-        catch {
-            return false;
-        }
-    }
-
     public override bool FinishedLaunching(UIApplication application, NSDictionary? launchOptions)
     {
         if (!VpnHoodApp.IsInit) {
@@ -119,12 +101,12 @@ public class AppDelegate : UIApplicationDelegate
             // worst case to ~5 MB while still allowing ~25 Mbps per flow at 20 ms RTT (in-country hosts
             // are low-RTT). Desktop/Android are unaffected — this is iOS-only config.
             TcpKernelBufferSize = new TransferBufferSize(64 * 1024, 64 * 1024),
-            // Log level: Information in production. The iOS diagnostics switch (DiagnosticsEnabled, seeded
-            // from VH_IOS_DIAGNOSTICS) drops it to Debug so the extension's vpn-ext.log carries the
-            // TcpStack "+CONN/-CONN" connection-lifecycle lines and the [VHQUIC] +open/-close/brake events
-            // (EventIds "TcpStack"/"Quic"). Flows to the extension via ClientOptions.LogServiceOptions.
+            // Log level: Information in production. To investigate, add the "/mem-diagnostics" debug command
+            // in the UI (Debug Data 1) — it enables the iOS diagnostics in the extension AND drops the log
+            // level to Debug (VpnHoodApp.GetLogOptions), so vpn-ext.log carries the TcpStack "+CONN/-CONN"
+            // and [VHQUIC] +open/-close/brake lines (EventIds "TcpStack"/"Quic").
             LogServiceOptions = new LogServiceOptions {
-                MinLogLevel = DiagnosticsEnabled ? LogLevel.Debug : LogLevel.Information
+                MinLogLevel = LogLevel.Information
             },
             AdOptions = new AppAdOptions {
                 PreloadAd = false

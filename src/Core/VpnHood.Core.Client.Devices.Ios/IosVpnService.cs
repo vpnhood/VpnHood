@@ -93,14 +93,12 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // Active memory systems — REQUIRED, always on (device-measured 2026-06-14): the GC guard keeps the
         // extension under the ~52 MB jetsam limit (without it, it crashes IMMEDIATELY on tunnel start), and
         // installing the memory reader as VhMemory.Instance lets the QUIC download brake read this process's
-        // live phys_footprint. These are NOT diagnostics — they run regardless of VH_IOS_DIAGNOSTICS.
+        // live phys_footprint. These are NOT diagnostics — they run regardless of IosDiagnostics.
         IosMemoryGuard.Start();
         IosMemory.Install();
 
-
-
-        // Diagnostics probe (ext-mem.log / ext-crash.log) — a no-op unless VH_IOS_DIAGNOSTICS is set.
-        IosMemoryMonitor.Start();
+        // NOTE: IosDiagnostics is applied later, in CreateAdapter — the switch travels as a DebugCommand in
+        // ClientOptions.DebugData1 (set from the app UI), which is not readable until the host loads vpn.config.
 
         _startTunnelCompletionHandler = startTunnelCompletionHandler;
         _completionFired = false;
@@ -185,6 +183,12 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
+        // Apply the iOS diagnostics master switch from the debug commands (ClientOptions.DebugData1, set via
+        // the app UI's "/mem-diagnostics"), then start the memory probe — a no-op unless just enabled.
+        // Re-evaluated on every (re)connect so removing the command in the UI also turns diagnostics off.
+        IosDiagnostics.ApplyDebugData(debugData);
+        IosMemoryMonitor.Start();
+
         return new IosVpnAdapter(this, new IosVpnAdapterSettings {
             AdapterName = adapterSettings.AdapterName,
             Blocking = adapterSettings.Blocking,

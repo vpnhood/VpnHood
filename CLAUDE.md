@@ -46,6 +46,8 @@ truth — follow them, and when a new durable convention is agreed, update this 
   runs under a ~52 MB jetsam limit).
 - Build **Release** for device with `~/.dotnet11/dotnet` (TFM `net11.0-ios` / CoreCLR — the system `dotnet`
   can't target it). Don't commit a test `AccessKey` in `AppConfigs.cs` (production defaults to `null`).
+- When asked to build/run/launch an app without naming the product, use the **Client** app
+  (`src/Apps/Client.Ios`), not Connect.
 
 ## CI/CD & publishing
 - All app **builds** (`.ipa`/AAB/MSI/Linux) and **Fastlane publishing** (Google Play, TestFlight/App Store,

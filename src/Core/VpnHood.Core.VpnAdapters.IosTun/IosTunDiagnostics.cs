@@ -13,8 +13,8 @@ namespace VpnHood.Core.VpnAdapters.IosTun;
 /// <remarks>
 /// The host's memory probe reads the public snapshot properties below to correlate phys_footprint with
 /// traffic; it does not own these counters.
-/// <para>Off in production; seeded from the <c>VH_IOS_DIAGNOSTICS</c> environment variable (any of
-/// <c>1</c>/<c>true</c>/<c>yes</c>) so one switch enables all the iOS diagnostics together.</para>
+/// <para>Off in production; set by the <c>IosDiagnostics</c> master switch (Devices.Ios) — the one place
+/// that enables all the iOS diagnostics together in both the App and Extension processes.</para>
 /// </remarks>
 public static class IosTunDiagnostics
 {
@@ -26,8 +26,8 @@ public static class IosTunDiagnostics
     private static long _maxTunWriteMs;
 
     // ---- public state ----------------------------------------------------------------------------
-    /// <summary>Master switch. Defaults to <c>false</c> (production); seeded from <c>VH_IOS_DIAGNOSTICS</c>.</summary>
-    public static bool Enabled { get; set; } = ReadEnvDefault();
+    /// <summary>Master switch. Defaults to <c>false</c> (production); set via <c>IosDiagnostics</c>.</summary>
+    public static bool Enabled { get; set; }
 
     /// <summary>Cumulative bytes written inbound (server → device) through the TUN adapter.</summary>
     public static long InboundBytes => Interlocked.Read(ref _inboundBytes);
@@ -118,18 +118,5 @@ public static class IosTunDiagnostics
                 $"dns({dnsServers.Count}): {string.Join(", ", dnsServers.Select(d => d.ToString()))}\n", cancellationToken);
         }
         catch { /* best-effort */ }
-    }
-
-    // Seed Enabled from the VH_IOS_DIAGNOSTICS env var (any of 1/true/yes) so one switch turns on all
-    // the iOS diagnostics for a dev/simulator run without a code change.
-    private static bool ReadEnvDefault()
-    {
-        try {
-            var value = Environment.GetEnvironmentVariable("VH_IOS_DIAGNOSTICS");
-            return value is "1" or "true" or "True" or "TRUE" or "yes" or "YES";
-        }
-        catch {
-            return false;
-        }
     }
 }

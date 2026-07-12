@@ -15,8 +15,8 @@ namespace VpnHood.Core.Quic.Ios;
 /// live phys_footprint is published always-on through <c>VhMemory.Instance</c> by the iOS footprint
 /// sampler, not by this class. The host's memory probe reads the public snapshot properties below; it does not
 /// own these counters.
-/// <para>Off in production; seeded from the <c>VH_IOS_DIAGNOSTICS</c> environment variable (any of
-/// <c>1</c>/<c>true</c>/<c>yes</c>) so one switch enables all the iOS diagnostics together.</para>
+/// <para>Off in production; set by the <c>IosDiagnostics</c> master switch (Devices.Ios) — the one place
+/// that enables all the iOS diagnostics together in both the App and Extension processes.</para>
 /// </remarks>
 public static class IosQuicDiagnostics
 {
@@ -27,8 +27,8 @@ public static class IosQuicDiagnostics
     private static long _maxStreamCancelMs;
 
     // ---- public state ----------------------------------------------------------------------------
-    /// <summary>Master switch. Defaults to <c>false</c> (production); seeded from <c>VH_IOS_DIAGNOSTICS</c>.</summary>
-    public static bool Enabled { get; set; } = ReadEnvDefault();
+    /// <summary>Master switch. Defaults to <c>false</c> (production); set via <c>IosDiagnostics</c>.</summary>
+    public static bool Enabled { get; set; }
 
     /// <summary>Live count of open QUIC streams (= native NWConnections).</summary>
     public static int LiveStreamCount => Volatile.Read(ref _liveStreamCount);
@@ -109,18 +109,5 @@ public static class IosQuicDiagnostics
     {
         if (Enabled)
             Interlocked.Add(ref _outstandingSendBytes, -bytes);
-    }
-
-    // Seed Enabled from the VH_IOS_DIAGNOSTICS env var (any of 1/true/yes) so one switch turns on all
-    // the iOS diagnostics for a dev/simulator run without a code change.
-    private static bool ReadEnvDefault()
-    {
-        try {
-            var value = Environment.GetEnvironmentVariable("VH_IOS_DIAGNOSTICS");
-            return value is "1" or "true" or "True" or "TRUE" or "yes" or "YES";
-        }
-        catch {
-            return false;
-        }
     }
 }

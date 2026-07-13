@@ -25,8 +25,8 @@ public class IosSocketFactory : SystemSocketFactory
         // download per RTT (~20 Mbps @100 ms, ~70 Mbps @30 ms): deliberately SLOWER but with a hard memory
         // bound, per product call — stability over top speed on iOS. Pass null for any window to use the OS default.
         ? new IosQuicClient(
-            initialMaxStreamDataBidirectionalLocal: 32 * 1024,
-            initialMaxStreamDataBidirectionalRemote: 32 * 1024,
-            initialMaxData: 256 * 1024)
+            initialMaxStreamDataBidirectionalLocal: 4 * 1024,
+            initialMaxStreamDataBidirectionalRemote: 4 * 1024,
+            initialMaxData: 16 * 1024)
         : throw new NotSupportedException("QUIC is not supported on this platform.");
 }

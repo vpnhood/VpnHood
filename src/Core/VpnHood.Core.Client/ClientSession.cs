@@ -448,7 +448,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             // add the new channel
             var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
                 StreamConnection = requestResult.StreamConnection,
-                BufferSize = TunnelDefaults.ConnectionPacketBufferSize,
+                BufferSize = Config.PacketChannelBufferSize ?? TunnelDefaults.ConnectionPacketBufferSize,
                 ChannelId = request.ChannelId,
                 RequestTime = request.RequestTime,
                 Blocking = true,

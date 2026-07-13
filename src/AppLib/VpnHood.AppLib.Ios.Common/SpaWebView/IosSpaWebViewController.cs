@@ -12,6 +12,14 @@ public class IosSpaWebViewController : UIViewController
     private SpaWebViewHost? _host;
     private NSObject? _foregroundObserver;
 
+    // Rotation is opt-in: the SPA is portrait-first, so the controller locks to portrait unless the
+    // implementor enables rotation. On iPad the mask is only honored when the host app also sets
+    // UIRequiresFullScreen in its Info.plist (multitasking-capable iPad apps ignore it).
+    public bool AllowRotation { get; init; }
+
+    public override UIInterfaceOrientationMask GetSupportedInterfaceOrientations() =>
+        AllowRotation ? UIInterfaceOrientationMask.All : UIInterfaceOrientationMask.Portrait;
+
     // Edge-to-edge: paint the whole window (incl. the status-bar and home-indicator safe areas)
     // with the SPA's window background so the system bars blend into the app, matching Android.
     private static UIColor BackgroundColor => GetWindowBackgroundColor() ?? UIColor.SystemBackground;

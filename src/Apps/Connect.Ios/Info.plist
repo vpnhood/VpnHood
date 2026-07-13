@@ -28,6 +28,11 @@
 	<array>
 		<string>arm64</string>
 	</array>
+	<!-- Opt out of iPad multitasking so IosSpaWebViewController's orientation mask (portrait lock by
+	     default; see AllowRotation) is honored — multitasking-capable iPad apps must support all
+	     orientations and ignore the view controller's mask. -->
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

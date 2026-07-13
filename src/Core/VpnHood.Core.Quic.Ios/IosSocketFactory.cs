@@ -7,11 +7,18 @@ namespace VpnHood.Core.Quic.Ios;
 /// A <see cref="SystemSocketFactory"/> that adds iOS (Network.framework) QUIC client support.
 /// TCP/UDP creation is inherited from the base factory.
 /// </summary>
-public class IosSocketFactory : SystemSocketFactory
+/// <param name="memoryScale">Scale factor applied to the QUIC receive windows; sampled each time a QUIC
+/// client is created. 1 = the tight jetsam-safe baseline; larger values trade memory for throughput
+/// (e.g. the iOS service passes 2 while the TCP proxy is off — see <see cref="CreateQuicClient"/>).</param>
+public class IosSocketFactory(Func<int> memoryScale) : SystemSocketFactory
 {
     public override bool IsQuicSupported => IosQuicClient.IsSupported;
 
-    public override IQuicClient CreateQuicClient() => IosQuicClient.IsSupported
+    public override IQuicClient CreateQuicClient()
+    {
+        if (!IosQuicClient.IsSupported)
+            throw new NotSupportedException("QUIC is not supported on this platform.");
+
         // BACKPRESSURE / NATIVE-MEMORY CAP (iOS 52 MB jetsam fix). Without an explicit QUIC receive window,
         // Network.framework advertises a large default, so on a download burst the server floods each stream
         // and inbound data buffers in NATIVE memory faster than the proxy drains it — phys_footprint spiked
@@ -24,9 +31,15 @@ public class IosSocketFactory : SystemSocketFactory
         // +6.6 MB in 250 ms at full rate and jetsam-killed the extension. 256 KB caps tunnel-wide in-flight
         // download per RTT (~20 Mbps @100 ms, ~70 Mbps @30 ms): deliberately SLOWER but with a hard memory
         // bound, per product call — stability over top speed on iOS. Pass null for any window to use the OS default.
-        ? new IosQuicClient(
-            initialMaxStreamDataBidirectionalLocal: 4 * 1024,
-            initialMaxStreamDataBidirectionalRemote: 4 * 1024,
-            initialMaxData: 16 * 1024)
-        : throw new NotSupportedException("QUIC is not supported on this platform.");
+        //
+        // memoryScale lets the caller scale these baseline windows for memory/throughput trade-offs it knows
+        // about (e.g. ×2 while the TCP proxy is off: TCP then rides the packet channel, so far fewer QUIC
+        // streams buffer downloads concurrently). Sampled here, so the windows are fixed per QUIC client
+        // (per session build); a mid-session change applies on the next reconnect.
+        var scale = (ulong)Math.Max(1, memoryScale());
+        return new IosQuicClient(
+            initialMaxStreamDataBidirectionalLocal: scale * 4 * 1024,
+            initialMaxStreamDataBidirectionalRemote: scale * 4 * 1024,
+            initialMaxData: scale * 16 * 1024);
+    }
 }

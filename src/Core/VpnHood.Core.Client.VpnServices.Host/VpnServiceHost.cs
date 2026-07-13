@@ -32,6 +32,18 @@ public class VpnServiceHost : IDisposable
     internal VpnHoodClient RequiredClient =>
         Client ?? throw new InvalidOperationException("Client is not initialized.");
 
+    /// <summary>
+    /// The current TCP-proxy status. Prefers the live session value (it reflects server capability and
+    /// domain-filtering overrides), falls back to the client's configured value before the session is
+    /// established, and to false when there is no client yet.
+    /// </summary>
+    public bool IsTcpProxy {
+        get {
+            var client = Client;
+            return client?.Session?.Status.IsTcpProxy ?? client?.UseTcpProxy ?? false;
+        }
+    }
+
     internal VpnServiceContext Context { get; }
     public static ConnectionInfo DefaultConnectionInfo => VpnServiceContext.DefaultConnectionInfo;
 

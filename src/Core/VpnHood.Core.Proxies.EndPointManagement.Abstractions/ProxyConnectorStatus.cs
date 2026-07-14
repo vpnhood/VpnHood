@@ -1,11 +1,10 @@
 ﻿namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
-public class ProxyEndPointManagerStatus
+public class ProxyConnectorStatus
 {
-    public required ProxyEndPointInfo[] ProxyEndPointInfos { get; init; } = [];
     public required bool IsAnySucceeded { get; init; }
     public required bool AutoUpdate { get; init; }
-    public required ProxyEndPointStatus SessionStatus { get; init; }
+    public required ProxySessionStatus SessionStatus { get; init; }
     public required int SucceededServerCount { get; init; }
     public required int FailedServerCount { get; init; }
     public required int UnknownServerCount { get; init; }

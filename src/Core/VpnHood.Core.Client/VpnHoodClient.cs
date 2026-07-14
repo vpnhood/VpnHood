@@ -8,7 +8,10 @@ using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Filtering.DomainFiltering.Observation;
 using VpnHood.Core.Proxies.EndPointManagement;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Net;
@@ -39,7 +42,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public event EventHandler? StateChanged;
     public Token Token { get; }
     public VpnHoodClientConfig Config { get; }
-    public ProxyEndPointManager ProxyEndPointManager { get; }
+    public IProxyConnector ProxyConnector { get; }
     public IClientSession? Session => _session;
     public IClientSession RequiredSession => _session ?? throw new InvalidOperationException("Session is not created yet.");
     public ITracker? Tracker { get; }
@@ -145,12 +148,19 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IpMapper = netFilter?.IpMapper
         };
 
-        // External Proxies
-        ProxyEndPointManager = new ProxyEndPointManager(
-            proxyOptions: options.ProxyOptions ?? new ProxyOptions(),
-            storagePath: Path.Combine(storageFolder, "proxies"),
-            socketFactory: socketFactory,
-            serverCheckTimeout: options.ServerQueryTimeout);
+        // External Proxies. Single mode is the lightweight path (no store); Managed mode uses the
+        // shared SQLite endpoint store that the app process also reads/writes.
+        var proxyOptions = options.ProxyOptions ?? new ProxyOptions();
+        ProxyConnector = proxyOptions.Mode switch {
+            ProxyMode.Simple when proxyOptions.ProxyEndPoint != null =>
+                new SimpleProxyConnector(proxyOptions.ProxyEndPoint, socketFactory),
+            ProxyMode.Managed => new ManagedProxyConnector(
+                proxyOptions: proxyOptions,
+                store: new ProxyEndPointStore(Path.Combine(storageFolder, "proxies", "proxies.db")),
+                socketFactory: socketFactory,
+                serverCheckTimeout: options.ServerQueryTimeout),
+            _ => new NullProxyConnector()
+        };
 
         // server finder
         _serverFinder = new ServerFinder(socketFactory,
@@ -159,7 +169,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             endPointStrategy: options.EndPointStrategy,
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null,
-            proxyEndPointManager: ProxyEndPointManager,
+            proxyConnector: ProxyConnector,
             includeIpV6: _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6));
 
 
@@ -177,7 +187,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ProgressStatus? StateProgress =>
         State switch {
             ClientState.FindingReachableServer or ClientState.FindingBestServer => _serverFinder.Progress,
-            ClientState.ValidatingProxies => ProxyEndPointManager.Progress,
+            ClientState.ValidatingProxies => ProxyConnector.Progress,
             _ => null
         };
 
@@ -236,6 +246,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // Connecting. Must before IsIpv6Supported
         State = ClientState.Connecting;
 
+        // load the proxy working set before the session builder and server finder use the connector
+        await ProxyConnector.Init(cancellationToken).Vhc();
+
         var sessionBuilder = new ClientSessionBuilder(
             vpnAdapter: _vpnAdapter,
             socketFactory: _socketFactory,
@@ -243,7 +256,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             config: Config,
             tracker: Tracker,
             serverFinder: _serverFinder,
-            proxyEndPointManager: ProxyEndPointManager,
+            proxyConnector: ProxyConnector,
             domainFilteringService: _domainFilteringService,
             netFilter: _netFilter,
             staticIpFilter: _staticIpFilter,
@@ -283,6 +296,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await _session.DisposeAsync();
         }
 
+        // flush and dispose the proxy connector while we can still await; the sync Dispose
+        // below then skips it (connector dispose is idempotent)
+        await ProxyConnector.SafeDisposeAsync();
+
         Dispose();
     }
 
@@ -304,12 +321,14 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         _netFilter.Dispose();
 
-        // dispose ConnectorService before ProxyEndPointManager as it uses ProxyEndPointManager
+        // dispose ConnectorService before ProxyConnector as it uses ProxyConnector
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");
 
-        // dispose ProxyEndPointManager before adapter get closed and it needs Adapter's SocketFactory
-        VhLogger.Instance.LogDebug("Disposing ProxyEndPointManager...");
-        ProxyEndPointManager.Dispose();
+        // dispose ProxyConnector before adapter get closed and it needs Adapter's SocketFactory.
+        // this sync path cannot await; the flush runs in the background and only touches the
+        // endpoint db (no-op when DisposeAsync already disposed the connector)
+        VhLogger.Instance.LogDebug("Disposing ProxyConnector...");
+        _ = ProxyConnector.SafeDisposeAsync();
 
         // disposing adapter
         if (Config.AutoDisposeVpnAdapter) {

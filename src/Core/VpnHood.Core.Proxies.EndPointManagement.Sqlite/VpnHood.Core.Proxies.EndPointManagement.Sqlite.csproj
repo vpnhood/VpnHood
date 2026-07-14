@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>SQLite-backed shared proxy endpoint store for VpnHood endpoint management.</Description>
+		<TargetFramework>net10.0</TargetFramework>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!--Use Microsoft.Data.Sqlite.Core (not Microsoft.Data.Sqlite) so consuming heads choose the native
+		    SQLitePCLRaw provider per platform and the base stays small. Batteries_V2.Init() is called from
+		    SqliteHelper.EnsureInitialized().
+
+		    bundle_e_sqlite3 3.0.3 ships the patched e_sqlite3 native for ALL runtime variants — including the
+		    RID-specific .android / .ios natives — fixing GHSA-2m69-gcr7-jv3q (e_sqlite3 <= 2.1.11) at every head
+		    with no per-RID override. See VpnHood.Core.Filtering.Sqlite.csproj for the full rationale; keep the
+		    two projects' versions in sync.-->
+		<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.9" />
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.Core.Proxies.EndPointManagement.Abstractions\VpnHood.Core.Proxies.EndPointManagement.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

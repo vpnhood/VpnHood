@@ -1,63 +1,102 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Settings;
-using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Proxies;
 
-public class AppProxyEndPointService
+public class AppProxyEndPointService(
+    string dbPath,
+    IIpLocationProvider? ipLocationProvider,
+    IDeviceUiProvider deviceUiProvider,
+    VpnServiceManager vpnServiceManager,
+    AppSettingsService settingsService)
 {
-    private readonly Lazy<ServiceData> _lazyData;
-    private ServiceData Data => _lazyData.Value;
-    private readonly HostCountryResolver? _hostCountryResolver;
-    private readonly string _customInfoFilePath;
-    private readonly IDeviceUiProvider _deviceUiProvider;
-    private readonly VpnServiceManager _vpnServiceManager;
-    private readonly AppSettingsService _settingsService;
-    private AppProxySettings ProxySettings => _settingsService.UserSettings.ProxySettings;
-
-    public AppProxyEndPointService(string storageFolder,
-        IIpLocationProvider? ipLocationProvider,
-        IDeviceUiProvider deviceUiProvider,
-        VpnServiceManager vpnServiceManager,
-        AppSettingsService settingsService)
-    {
-        Directory.CreateDirectory(storageFolder);
-        _customInfoFilePath = Path.Combine(storageFolder, "proxy_infos.json");
-        _deviceUiProvider = deviceUiProvider;
-        _vpnServiceManager = vpnServiceManager;
-        _settingsService = settingsService;
-        _hostCountryResolver = ipLocationProvider != null ? new HostCountryResolver(ipLocationProvider) : null;
-        // defer reading proxy_infos.json (and creating its folder) until proxy data is first used
-        _lazyData = new Lazy<ServiceData>(() => JsonUtils.TryDeserializeFile<ServiceData>(_customInfoFilePath) ?? new ServiceData());
-        vpnServiceManager.Reconfigured += OnVpnServiceManagerOnReconfigured;
-    }
+    // defer opening the shared endpoint db until proxy data is first used
+    private readonly Lazy<IProxyEndPointStore> _lazyStore = new(() => new ProxyEndPointStore(dbPath));
+    private IProxyEndPointStore Store => _lazyStore.Value;
+    private readonly HostCountryResolver? _hostCountryResolver = ipLocationProvider != null ? new HostCountryResolver(ipLocationProvider) : null;
+    private bool _pendingResetStates;
+    private bool? _hasCustomEndPointsCache;
+    private DateTime _hasCustomEndPointsCacheTime = DateTime.MinValue;
+    private static readonly TimeSpan HasCustomEndPointsCacheTimeout = TimeSpan.FromSeconds(10);
+    private AppProxySettings ProxySettings => settingsService.UserSettings.ProxySettings;
 
     public bool IsProxyEndPointActive {
         get {
             return ProxySettings.Mode switch {
                 AppProxyMode.NoProxy => false,
                 AppProxyMode.Device =>
-                    _deviceUiProvider.IsProxySettingsSupported &&
-                    _deviceUiProvider.GetProxySettings() != null,
-                _ => Data.CustomEndPointInfos.Any()
+                    deviceUiProvider.IsProxySettingsSupported &&
+                    deviceUiProvider.GetProxySettings() != null,
+                // this state property cannot await; serve the last-known value and refresh it
+                // in the background. Mutations refresh the cache themselves, so it is only ever
+                // stale when the core process changes the db (url auto-update)
+                _ => HasCustomEndPointsCached()
             };
         }
     }
 
-    public AppProxyEndPointInfo? GetDeviceProxy()
+    private bool HasCustomEndPointsCached()
     {
-        UpdateNodesByCore();
-        return Data.SystemNodeInfo;
+        if (_hasCustomEndPointsCache is null ||
+            FastDateTime.UtcNow - _hasCustomEndPointsCacheTime > HasCustomEndPointsCacheTimeout)
+            _ = VhUtils.TryInvokeAsync("Refresh custom proxy endpoint existence",
+                () => RefreshHasCustomEndPoints());
+
+        return _hasCustomEndPointsCache ?? false;
     }
 
-    public PagedResult<AppProxyEndPointInfo> ListProxies(
+    private async Task<bool> RefreshHasCustomEndPoints()
+    {
+        _hasCustomEndPointsCache = await Store.Count().Vhc() > 0;
+        _hasCustomEndPointsCacheTime = FastDateTime.UtcNow;
+        return _hasCustomEndPointsCache.Value;
+    }
+
+    public AppProxyEndPointInfo? GetDeviceProxy()
+    {
+        if (!deviceUiProvider.IsProxySettingsSupported)
+            return null;
+
+        var deviceProxySettings = deviceUiProvider.GetProxySettings();
+        if (deviceProxySettings?.ProxyUrl is null)
+            return null;
+
+        var deviceProxyEndPoint = VhUtils.TryInvoke("Parse device proxy url",
+            () => ProxyEndPointParser.FromUrl(deviceProxySettings.ProxyUrl));
+        if (deviceProxyEndPoint is null)
+            return null;
+
+        // the device proxy is not stored; while connected in Device mode its status is the
+        // session status reported by the core's single-proxy connector, projected onto the
+        // endpoint dto (rating fields stay at their defaults; nothing rates a device proxy)
+        var sessionStatus = ProxySettings.Mode is AppProxyMode.Device
+            ? vpnServiceManager.ConnectionInfo.ProxyConnectorStatus?.SessionStatus
+            : null;
+
+        var status = new ProxyEndPointStatus();
+        if (sessionStatus != null) {
+            status.SucceededCount = sessionStatus.SucceededCount;
+            status.FailedCount = sessionStatus.FailedCount;
+            status.Latency = sessionStatus.Latency;
+            status.LastSucceeded = sessionStatus.LastSucceeded;
+            status.LastFailed = sessionStatus.LastFailed;
+            status.ErrorMessage = sessionStatus.ErrorMessage;
+        }
+
+        return new AppProxyEndPointInfo {
+            EndPoint = deviceProxyEndPoint,
+            CountryCode = null,
+            Status = status
+        };
+    }
+
+    public async Task<PagedResult<AppProxyEndPointInfo>> ListProxies(
         string? search = null,
         bool includeSucceeded = true,
         bool includeFailed = true,
@@ -66,236 +105,118 @@ public class AppProxyEndPointService
         int? recordIndex = null,
         int? recordCount = null)
     {
-        recordIndex ??= 0;
-        recordCount ??= int.MaxValue;
-
-        UpdateNodesByCore();
-
-        var items = Data.CustomEndPointInfos
-            .Where(x => includeDisabled || x.EndPoint.IsEnabled)
-            .Where(x => search == null ||
-                x.EndPoint.Host.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                x.CountryCode?.Contains(search, StringComparison.OrdinalIgnoreCase) == true)
-            .Where(x =>
-                (includeSucceeded && x.Status.IsLastUsedSucceeded) ||
-                (includeFailed && x.Status.IsLastUsedFailed) ||
-                (includeUnknown && !x.Status.HasUsed));
-
-        // Get total count before pagination
-        // ReSharper disable once PossibleMultipleEnumeration
-        var totalCount = items.Count();
-
-        // Order results and apply pagination
-        // ReSharper disable once PossibleMultipleEnumeration
-        var pagedItems = items
-            .OrderByDescending(x => x.EndPoint.IsEnabled)
-            .ThenBy(x => x.Status.Quality)
-            .Skip(recordIndex.Value)
-            .Take(recordCount.Value)
-            .ToArray();
+        // filtering, ordering and paging run inside the store; only the requested page is loaded
+        var result = await Store.List(new ProxyEndPointStoreListParams {
+            Search = search,
+            IncludeSucceeded = includeSucceeded,
+            IncludeFailed = includeFailed,
+            IncludeUnknown = includeUnknown,
+            IncludeDisabled = includeDisabled,
+            RecordIndex = recordIndex ?? 0,
+            RecordCount = recordCount ?? int.MaxValue
+        }).Vhc();
 
         return new PagedResult<AppProxyEndPointInfo> {
-            Items = pagedItems,
-            TotalCount = totalCount
+            Items = result.Items.Select(ToAppInfo).ToArray(),
+            TotalCount = result.TotalCount
         };
     }
 
-    public AppProxyEndPointInfo Get(string id)
+    public async Task<AppProxyEndPointInfo> Get(string id)
     {
-        var res = Data.CustomEndPointInfos.Single(x => x.EndPoint.Id == id);
-        return res;
+        var record = await Store.Get(id).Vhc() ??
+                     throw new KeyNotFoundException($"ProxyEndPoint not found. Id: {id}");
+        return ToAppInfo(record);
     }
 
-    public AppProxyEndPointInfo Add(ProxyEndPoint proxyEndPoint)
-    {
-        var ret = AddInternal(proxyEndPoint);
-        Save();
-        return ret;
-    }
-
-    public AppProxyEndPointInfo Update(string id, ProxyEndPoint proxyEndPoint)
-    {
-        var res = UpdateInternal(id, proxyEndPoint);
-        Save();
-        return res;
-    }
-
-    public void Delete(string proxyEndPointId)
-    {
-        Data.CustomEndPointInfos = Data.CustomEndPointInfos.Where(x => x.EndPoint.Id != proxyEndPointId).ToArray();
-        Save();
-    }
-
-    public void DeleteAll(
-        bool deleteSucceeded = true,
-        bool deleteFailed = true,
-        bool deleteUnknown = true,
-        bool deleteDisabled = true)
-    {
-        var items = Data.CustomEndPointInfos.AsEnumerable();
-
-        if (deleteSucceeded)
-            items = items.Where(info => info.Status is not { HasUsed: true, IsLastUsedSucceeded: true });
-
-        if (deleteFailed)
-            items = items.Where(info => info.Status is not { HasUsed: true, IsLastUsedFailed: true });
-
-        if (deleteUnknown)
-            items = items.Where(info => info.Status.HasUsed);
-
-        if (deleteDisabled)
-            items = items.Where(info => info.EndPoint.IsEnabled);
-
-        Data.CustomEndPointInfos = items.ToArray();
-        Save();
-    }
-
-    public void DisableAllFailed()
-    {
-        foreach (var info in Data.CustomEndPointInfos) {
-            if (info.Status is { HasUsed: true, IsLastUsedSucceeded: false })
-                info.EndPoint.IsEnabled = false;
-        }
-
-        Save();
-    }
-
-    private AppProxyEndPointInfo AddInternal(ProxyEndPoint proxyEndPoint)
+    public async Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint)
     {
         proxyEndPoint = ProxyEndPointParser.Normalize(proxyEndPoint);
 
-        // update if already exists
-        var existing = Data.CustomEndPointInfos.FirstOrDefault(n => n.EndPoint.Id == proxyEndPoint.Id);
-        if (existing != null)
-            return UpdateInternal(proxyEndPoint.Id, proxyEndPoint);
+        // adding an existing endpoint updates it and keeps its status
+        await Store.Upsert([new ProxyEndPointRecord { EndPoint = proxyEndPoint }]).Vhc();
+        await RefreshHasCustomEndPoints().Vhc();
+        settingsService.Save(); // fire changes
 
-        // add a new endpoint
-        var newNodeInfo = new AppProxyEndPointInfo {
-            EndPoint = proxyEndPoint,
-            CountryCode = null,
-            Status = new ProxyEndPointStatus()
-        };
-        Data.CustomEndPointInfos = Data.CustomEndPointInfos.Append(newNodeInfo).ToArray();
-        return newNodeInfo;
+        return await Get(proxyEndPoint.Id).Vhc();
     }
 
-    private AppProxyEndPointInfo UpdateInternal(string proxyEndPointId, ProxyEndPoint proxyEndPoint)
+    public async Task<AppProxyEndPointInfo> Update(string id, ProxyEndPoint proxyEndPoint)
     {
         proxyEndPoint = ProxyEndPointParser.Normalize(proxyEndPoint);
+        var oldRecord = await Store.Get(id).Vhc() ??
+                        throw new KeyNotFoundException($"ProxyEndPoint not found. Id: {id}");
 
-        // replace the ProxyEndPoint and keep its position. find the endpoint by GetId
-        var endPointInfo = Data.CustomEndPointInfos.Single(x => x.EndPoint.Id == proxyEndPointId);
-        endPointInfo.EndPoint = proxyEndPoint;
+        // keep the status even when the natural key (and so the id) changed
+        if (proxyEndPoint.Id != id)
+            await Store.Delete([id]).Vhc();
 
-        // return updated node
-        var updatedNode = ListProxies().Items.Single(x => x.EndPoint.Id == proxyEndPoint.Id);
-        return updatedNode;
+        await Store.Upsert([
+            new ProxyEndPointRecord {
+                EndPoint = proxyEndPoint,
+                Status = oldRecord.Status,
+                CountryCode = oldRecord.CountryCode
+            }
+        ], keepExistingStatus: false).Vhc();
+
+        settingsService.Save(); // fire changes
+        return await Get(proxyEndPoint.Id).Vhc();
     }
 
-    private void UpdateNodesByCore()
+    public async Task Delete(string proxyEndPointId)
     {
-        UpdateManualNodes();
-        UpdateSystemNode();
-
-        // save if updated from vpn service
-        if (ShouldUpdateNodesFromVpnService)
-            Save(updateSettings: false);
+        await Store.Delete([proxyEndPointId]).Vhc();
+        await RefreshHasCustomEndPoints().Vhc();
+        settingsService.Save(); // fire changes
     }
 
-
-    private void UpdateSystemNode()
+    public async Task DeleteAll(DeleteAllOptions? options = null)
     {
-        var connectionInfo = _vpnServiceManager.ConnectionInfo;
-        var runtimeNodes = connectionInfo.ProxyManagerStatus?.ProxyEndPointInfos ?? [];
-
-        if (!_deviceUiProvider.IsProxySettingsSupported)
-            return;
-
-        var oldDeviceEndPoint = Data.SystemNodeInfo?.EndPoint;
-
-        try {
-            // update device proxy endpoint 
-            var deviceProxySettings = _deviceUiProvider.GetProxySettings();
-            if (deviceProxySettings?.ProxyUrl is null) {
-                Data.SystemNodeInfo = null;
-                return;
-            }
-
-            // parse device proxy url
-            var deviceProxyEndPoint = VhUtils.TryInvoke("Parse device proxy url",
-                () => ProxyEndPointParser.FromUrl(deviceProxySettings.ProxyUrl));
-            if (deviceProxyEndPoint is null) {
-                Data.SystemNodeInfo = null;
-                return;
-            }
-
-            // ensure SystemNodeInfo exists
-            Data.SystemNodeInfo ??= new AppProxyEndPointInfo {
-                EndPoint = deviceProxyEndPoint,
-                CountryCode = null,
-                Status = new ProxyEndPointStatus()
-            };
-
-            // update endpoint info
-            Data.SystemNodeInfo.EndPoint = deviceProxyEndPoint;
-
-            // update status
-            if (ShouldUpdateNodesFromVpnService) {
-                var runtimeNode = runtimeNodes.FirstOrDefault(n => n.EndPoint.Id == deviceProxyEndPoint.Id);
-                if (runtimeNode != null)
-                    Data.SystemNodeInfo.Status = runtimeNode.Status;
-            }
-        }
-        finally {
-            if (Data.SystemNodeInfo?.EndPoint.Id != oldDeviceEndPoint?.Id) {
-                Save(updateSettings: true); // fire change if endpoint changed
-            }
-        }
+        await Store.DeleteAll(options ?? new DeleteAllOptions()).Vhc();
+        await RefreshHasCustomEndPoints().Vhc();
+        settingsService.Save(); // fire changes
     }
 
-    private void UpdateManualNodes()
+    public async Task DisableAllFailed()
     {
-        if (!ShouldUpdateNodesFromVpnService ||
-            ProxySettings.Mode is not AppProxyMode.Manual)
-            return;
+        await Store.DisableAllFailed().Vhc();
+        settingsService.Save(); // fire changes
+    }
 
-        var connectionInfo = _vpnServiceManager.ConnectionInfo;
-        var runtimeNodes = connectionInfo.ProxyManagerStatus?.ProxyEndPointInfos ?? [];
+    public async Task Import(string content)
+    {
+        // parse new endpoints
+        var newProxyEndPoints = ProxyEndPointParser
+            .ExtractFromContent(content)
+            .Select(ProxyEndPointParser.FromUrl)
+            .ToArray();
 
-        // determine if we should override nodes
-        var overrideNodes =
-            runtimeNodes.Any() &&
-            ProxySettings.AutoUpdateOptions.Url != null &&
-            connectionInfo.ProxyManagerStatus?.AutoUpdate is true;
+        // merge into the shared store with the standard priority rules
+        var autoUpdateOptions = ProxySettings.AutoUpdateOptions;
+        await Store.Merge(newProxyEndPoints, autoUpdateOptions.MaxItemCount, autoUpdateOptions.MaxPenalty,
+            autoUpdateOptions.RemoveDuplicateIps).Vhc();
 
-        // Remove old nodes that do not exist in runtime nodes
-        if (overrideNodes) {
-            // remove NodeInfos that are not in runtimeEndpoints
-            var runtimeNodeIds = runtimeNodes.Select(n => n.EndPoint.Id);
-            Data.CustomEndPointInfos =
-                Data.CustomEndPointInfos.Where(n => runtimeNodeIds.Contains(n.EndPoint.Id)).ToArray();
+        await RefreshHasCustomEndPoints().Vhc();
+        settingsService.Save(); // fire changes
+    }
 
-            // add NodeInfos that are in runtimeNodes but not in EndPointInfos
-            var existingNodeIds = Data.CustomEndPointInfos.Select(n => n.EndPoint.Id);
-            var newNodes = runtimeNodes
-                .Where(n => !existingNodeIds.Contains(n.EndPoint.Id))
-                .Select(endPointInfo => new AppProxyEndPointInfo {
-                    EndPoint = endPointInfo.EndPoint,
-                    CountryCode = null,
-                    Status = endPointInfo.Status
-                });
+    public async Task ReloadUrl(CancellationToken cancellationToken)
+    {
+        // fetch endpoints from url and merge
+        // ReSharper disable once ShortLivedHttpClient
+        using var httpClient = new HttpClient();
+        var content = await httpClient.GetStringAsync(ProxySettings.AutoUpdateOptions.Url, cancellationToken);
+        await Import(content).Vhc();
+    }
 
-            Data.CustomEndPointInfos = Data.CustomEndPointInfos.Concat(newNodes).ToArray();
-        }
+    public async Task ResetStates()
+    {
+        await Store.ResetStatuses().Vhc();
 
-        // update status
-        var endpointDict = Data.CustomEndPointInfos.ToDictionary(info => info.EndPoint.Id, info => info);
-        foreach (var runtimeNode in runtimeNodes) {
-            if (endpointDict.TryGetValue(runtimeNode.EndPoint.Id, out var existing)) {
-                existing.Status = runtimeNode.Status;
-                existing.EndPoint.IsEnabled = runtimeNode.EndPoint.IsEnabled;
-            }
-        }
+        // make the next GetProxyOptions tell a live core to discard its in-memory statuses
+        // instead of flushing them back over the reset
+        _pendingResetStates = true;
+        settingsService.Save(); // fire changes
     }
 
     // ReSharper disable once UnusedMember.Local
@@ -305,135 +226,54 @@ public class AppProxyEndPointService
         if (_hostCountryResolver is null)
             return;
 
-        // resolve all host with domain name 
+        // resolve all host with domain name
         proxyEndPointInfos = proxyEndPointInfos.Where(x => x.CountryCode is null).ToArray();
         var hostCountries = await _hostCountryResolver
             .GetHostCountries(proxyEndPointInfos.Select(x => x.EndPoint.Host), cancellationToken);
 
-        foreach (var proxyEndPointInfo in proxyEndPointInfos)
-            proxyEndPointInfo.CountryCode = hostCountries.GetValueOrDefault(proxyEndPointInfo.EndPoint.Host);
+        foreach (var proxyEndPointInfo in proxyEndPointInfos) {
+            var countryCode = hostCountries.GetValueOrDefault(proxyEndPointInfo.EndPoint.Host);
+            if (countryCode != null)
+                await Store.SetCountryCode(proxyEndPointInfo.EndPoint.Id, countryCode).Vhc();
+        }
     }
 
-    private bool ShouldUpdateNodesFromVpnService =>
-        _vpnServiceManager.ConnectionInfo.CreatedTime > Data.UpdateTime &&
-        !_vpnServiceManager.IsReconfiguring;
-
-    public void Import(string content)
+    public async Task<ProxyOptions> GetProxyOptions()
     {
-        // parse new endpoints
-        var newProxyEndPoints = ProxyEndPointParser
-            .ExtractFromContent(content)
-            .Select(ProxyEndPointParser.FromUrl)
-            .ToArray();
+        var resetStates = _pendingResetStates;
+        _pendingResetStates = false;
 
-        // merge with existing endpoints
-        var autoUpdateOptions = ProxySettings.AutoUpdateOptions;
-        var endpoints = ProxyEndPointUpdater.Merge(Data.CustomEndPointInfos, newProxyEndPoints,
-            autoUpdateOptions.MaxItemCount, autoUpdateOptions.MaxPenalty, autoUpdateOptions.RemoveDuplicateIps);
+        // this decides Managed vs None for a real connection, so read fresh from the store.
+        // an auto-update url counts even with an empty store; the core downloads the initial list
+        var hasCustomEndPoints = ProxySettings.Mode is AppProxyMode.Manual &&
+                                 (await RefreshHasCustomEndPoints().Vhc() ||
+                                  ProxySettings.AutoUpdateOptions.Url != null);
 
-        // remove Data.CustomEndPointInfos that does not exist in endpoints
-        var endpointIds = endpoints.Select(e => e.Id).ToHashSet();
-        Data.CustomEndPointInfos = Data.CustomEndPointInfos
-            .Where(info => endpointIds.Contains(info.EndPoint.Id))
-            .ToArray();
-
-        // add new endpoints
-        var newEndPointInfos = endpoints.Select(x => new AppProxyEndPointInfo {
-            EndPoint = x,
-            CountryCode = null,
-            Status = new ProxyEndPointStatus()
-        });
-        Data.CustomEndPointInfos = Data.CustomEndPointInfos.Concat(newEndPointInfos).ToArray();
-
-        // save changes
-        Save();
-    }
-
-    public async Task ReloadUrl(CancellationToken cancellationToken)
-    {
-        // fetch endpoints from url and merge
-        // ReSharper disable once ShortLivedHttpClient
-        using var httpClient = new HttpClient();
-        var content = await httpClient.GetStringAsync(ProxySettings.AutoUpdateOptions.Url, cancellationToken);
-        Import(content);
-    }
-
-    public void ResetStates()
-    {
-        // remove from local state
-        foreach (var endPointInfo in Data.CustomEndPointInfos)
-            endPointInfo.Status = new ProxyEndPointStatus();
-
-        // reset system proxy endpoint status
-        if (Data.SystemNodeInfo != null)
-            Data.SystemNodeInfo.Status = new ProxyEndPointStatus();
-
-        Data.ResetStates = true;
-        Save();
-    }
-
-    private void Save(bool updateSettings = true)
-    {
-        Data.UpdateTime = DateTime.Now; // make sure to use latest data
-        Data.CustomEndPointInfos =
-            Data.CustomEndPointInfos.DistinctBy(x => x.EndPoint.Id).ToArray(); // remove duplicates
-
-        // customize serialization to ignore Url and Id properties
-        var resolver = new DefaultJsonTypeInfoResolver();
-        resolver.Modifiers.Add(typeInfo => {
-            if (typeInfo.Type == typeof(ProxyEndPoint)) {
-                var prop = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(ProxyEndPoint.Url));
-                if (prop is not null)
-                    typeInfo.Properties.Remove(prop);
-
-                prop = typeInfo.Properties.FirstOrDefault(p => p.Name == nameof(ProxyEndPoint.Id));
-                if (prop is not null)
-                    typeInfo.Properties.Remove(prop);
-            }
-        });
-
-        // serialize to file
-        var json = JsonSerializer.Serialize(Data, new JsonSerializerOptions {
-            WriteIndented = true,
-            TypeInfoResolver = resolver
-        });
-
-        File.WriteAllText(_customInfoFilePath, json);
-
-        if (updateSettings)
-            _settingsService.Save(); // fire changes
-    }
-
-    private void OnVpnServiceManagerOnReconfigured(object? sender,
-        ClientReconfigureParams clientReconfigureParams)
-    {
-        if (clientReconfigureParams.ProxyOptions.ResetStates)
-            Data.ResetStates = false;
-    }
-
-    public ProxyOptions GetProxyOptions()
-    {
-        UpdateNodesByCore();
-
-        var proxyEndPoints = ProxySettings.Mode switch {
-            AppProxyMode.NoProxy => [],
-            AppProxyMode.Device => Data.SystemNodeInfo != null ? [Data.SystemNodeInfo.EndPoint] : [],
-            AppProxyMode.Manual => Data.CustomEndPointInfos.Select(x => x.EndPoint).ToArray(),
-            _ => []
+        var mode = ProxySettings.Mode switch {
+            AppProxyMode.Device => ProxyMode.Simple,
+            AppProxyMode.Manual when hasCustomEndPoints => ProxyMode.Managed,
+            _ => ProxyMode.None
         };
 
+        // the device proxy travels inline; it never enters the shared store
+        var singleProxyEndPoint = mode is ProxyMode.Simple ? GetDeviceProxy()?.EndPoint : null;
+        if (mode is ProxyMode.Simple && singleProxyEndPoint is null)
+            mode = ProxyMode.None;
+
         return new ProxyOptions {
-            ResetStates = Data.ResetStates,
-            ProxyEndPoints = proxyEndPoints,
+            Mode = mode,
+            ProxyEndPoint = singleProxyEndPoint,
+            ResetStates = resetStates,
             AutoUpdateOptions = ProxySettings.AutoUpdateOptions
         };
     }
 
-    private class ServiceData
+    private static AppProxyEndPointInfo ToAppInfo(ProxyEndPointRecord record)
     {
-        public DateTime UpdateTime { get; set; } = DateTime.MinValue;
-        public AppProxyEndPointInfo[] CustomEndPointInfos { get; set; } = [];
-        public AppProxyEndPointInfo? SystemNodeInfo { get; set; }
-        public bool ResetStates { get; set; }
+        return new AppProxyEndPointInfo {
+            EndPoint = record.EndPoint,
+            Status = record.Status,
+            CountryCode = record.CountryCode
+        };
     }
 }

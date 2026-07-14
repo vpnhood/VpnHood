@@ -104,6 +104,11 @@ public static class VhLogger
         return IsAnonymousMode ? VhUtils.RedactHostName(dnsName) : dnsName;
     }
 
+    public static string FormatHostName(string? dnsName, int port)
+    {
+        return $"{FormatHostName(dnsName)}:{port}";
+    }
+
     public static string FormatIpPacket(string ipPacketText)
     {
         if (!IsAnonymousMode)

@@ -3,6 +3,7 @@ using VpnHood.AppLib.Services.Proxies;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Toolkit.Utils;
 // ReSharper disable InvalidXmlDocComment
 
 namespace VpnHood.AppLib.Swagger.Controllers;

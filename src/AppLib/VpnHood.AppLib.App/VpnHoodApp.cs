@@ -242,7 +242,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     appVersion: Features.Version,
                     updateOptions: options.UpdaterOptions),
             ProxyEndPointService = new AppProxyEndPointService(
-                storageFolder: Path.Combine(StorageFolderPath, "proxy_endpoints"),
+                dbPath: Path.Combine(_device.VpnServiceConfigFolder, "proxies", "proxies.db"),
                 ipLocationProvider: locationService.IpRangeLocationProvider,
                 vpnServiceManager: _vpnServiceManager,
                 deviceUiProvider: deviceUiProvider,
@@ -319,17 +319,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var state = State;
             var disconnectRequired = false;
             if (ConnectionInfo.IsStarted()) {
-                var reconfigureParams = new ClientReconfigureParams {
-                    ChannelProtocol = UserSettings.ChannelProtocol,
-                    DropQuic = UserSettings.DropQuic,
-                    UseTcpProxy = UserSettings.UseTcpProxy,
-                    DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-                    ProxyOptions = Services.ProxyEndPointService.GetProxyOptions()
-                };
-
                 // it is not important to take effect immediately
                 // clear all services pending state after reconfigure
-                _ = _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None);
+                _ = VhUtils.TryInvokeAsync("Reconfigure after settings change", ReconfigureVpnService);
 
                 // check is disconnect required
                 disconnectRequired =
@@ -370,6 +362,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         catch (Exception ex) {
             ReportError(ex, "Could not apply settings.");
         }
+    }
+
+    private async Task ReconfigureVpnService()
+    {
+        var reconfigureParams = new ClientReconfigureParams {
+            ChannelProtocol = UserSettings.ChannelProtocol,
+            DropQuic = UserSettings.DropQuic,
+            UseTcpProxy = UserSettings.UseTcpProxy,
+            DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
+            ProxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc()
+        };
+
+        await _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None).Vhc();
     }
 
     private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
@@ -422,7 +427,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
                 SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
                 ServerLocationInfo = StateHelper.GetServerLocationInfo(connectionInfo?.SessionInfo, clientProfileInfo),
-                ProxyEndPointManagerStatus = lastConnectionInfo.ProxyManagerStatus?.ToAppDto(),
+                ProxyConnectorStatus = lastConnectionInfo.ProxyConnectorStatus?.ToAppDto(),
                 ConnectionState = connectionState,
                 CanConnect = connectionState.CanConnect(),
                 CanDiagnose = connectionState.CanDiagnose(_appPersistState.HasDiagnoseRequested),
@@ -768,6 +773,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var splitDomainDbPaths = await PrepareSplitDomainDbs(cancellationToken).Vhc();
 
             // create clientOptions
+            var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
             var clientOptions = new ClientOptions {
                 AppName = Resources.Strings.AppName,
                 ClientId = Features.ClientId,
@@ -815,7 +821,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview,
-                ProxyOptions = Services.ProxyEndPointService.GetProxyOptions()
+                ProxyOptions = proxyOptions
             };
 
             VhLogger.Instance.LogDebug(

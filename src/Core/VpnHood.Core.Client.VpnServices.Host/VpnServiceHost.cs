@@ -242,9 +242,12 @@ public class VpnServiceHost : IDisposable
 
     public async Task UpdateConnectionInfo(VpnHoodClient client, Exception? ex, CancellationToken cancellationToken)
     {
+        // flush pending proxy statuses so the app process sees fresh data in the shared endpoint store
+        await client.ProxyConnector.Flush().Vhc();
+
         var connectionInfo = new ConnectionInfo {
             CreatedTime = FastDateTime.Now,
-            ProxyManagerStatus = client.ProxyEndPointManager.Status,
+            ProxyConnectorStatus = client.ProxyConnector.Status,
             SessionName = client.Config.SessionName,
             SessionInfo = client.Session?.Info,
             SessionStatus = client.Session?.Status.ToDto(),
@@ -262,7 +265,7 @@ public class VpnServiceHost : IDisposable
     {
         var connectionInfo = new ConnectionInfo {
             CreatedTime = FastDateTime.Now,
-            ProxyManagerStatus = null,
+            ProxyConnectorStatus = null,
             SessionInfo = null,
             SessionStatus = null,
             ClientState = clientState,

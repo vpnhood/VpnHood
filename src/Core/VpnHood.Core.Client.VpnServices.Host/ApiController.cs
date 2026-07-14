@@ -137,7 +137,7 @@ internal class ApiController : IDisposable
         return Task.CompletedTask;
     }
 
-    private Task Reconfigure(ApiReconfigureRequest request, CancellationToken cancellationToken)
+    private async Task Reconfigure(ApiReconfigureRequest request, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
 
@@ -145,9 +145,7 @@ internal class ApiController : IDisposable
         VpnHoodClient.DropUdp = request.Params.DropUdp;
         VpnHoodClient.DropQuic = request.Params.DropQuic;
         VpnHoodClient.ChannelProtocol = request.Params.ChannelProtocol;
-        VpnHoodClient.ProxyEndPointManager.UpdateOptions(request.Params.ProxyOptions);
-
-        return Task.CompletedTask;
+        await VpnHoodClient.ProxyConnector.UpdateOptions(request.Params.ProxyOptions).Vhc();
     }
 
     private Task SetWaitForAd(ApiSetWaitForAdRequest request, CancellationToken cancellationToken)

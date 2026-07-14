@@ -2,7 +2,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Proxies.EndPointManagement;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
@@ -14,7 +14,7 @@ namespace VpnHood.Core.Client.ConnectorServices;
 
 internal class TcpStreamConnectionFactory(
     ISocketFactory socketFactory,
-    ProxyEndPointManager proxyEndPointManager,
+    IProxyConnector proxyConnector,
     VpnEndPoint vpnEndPoint,
     RemoteCertificateValidationCallback certificateValidationCallback)
     : IDisposable
@@ -29,8 +29,8 @@ internal class TcpStreamConnectionFactory(
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
                 "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
 
-            if (proxyEndPointManager.IsEnabled)
-                tcpClient = await proxyEndPointManager.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
+            if (proxyConnector.IsEnabled)
+                tcpClient = await proxyConnector.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
             else {
                 tcpClient = socketFactory.CreateTcpClient(tcpEndPoint);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
@@ -39,8 +39,8 @@ internal class TcpStreamConnectionFactory(
             return await AuthenticateTls(connectionId, tcpClient, cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            if (proxyEndPointManager.IsEnabled && tcpClient != null)
-                proxyEndPointManager.RecordFailed(tcpClient, ex);
+            if (proxyConnector.IsEnabled && tcpClient != null)
+                proxyConnector.RecordFailed(tcpClient, ex);
 
             tcpClient?.Dispose();
             throw;

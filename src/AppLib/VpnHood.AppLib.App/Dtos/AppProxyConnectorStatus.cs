@@ -2,9 +2,9 @@
 
 namespace VpnHood.AppLib.Dtos;
 
-public class AppProxyEndPointManagerStatus
+public class AppProxyConnectorStatus
 {
-    public required ProxyEndPointStatus SessionStatus { get; init; }
+    public required ProxySessionStatus SessionStatus { get; init; }
     public required int SucceededServerCount { get; init; }
     public required int FailedServerCount { get; init; }
     public required int UnknownServerCount { get; init; }

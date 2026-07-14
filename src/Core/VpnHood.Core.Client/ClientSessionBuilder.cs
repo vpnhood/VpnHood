@@ -12,7 +12,7 @@ using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Common.Trackers;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering;
-using VpnHood.Core.Proxies.EndPointManagement;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
@@ -32,7 +32,7 @@ internal class ClientSessionBuilder(
     VpnHoodClientConfig config,
     ITracker? tracker,
     ServerFinder serverFinder,
-    ProxyEndPointManager proxyEndPointManager,
+    IProxyConnector proxyConnector,
     DomainFilteringService domainFilteringService,
     NetFilter netFilter,
     StaticIpFilter staticIpFilter,
@@ -63,14 +63,15 @@ internal class ClientSessionBuilder(
             config.Version, VpnHoodClientConfig.MinProtocolVersion, VpnHoodClientConfig.MaxProtocolVersion,
             VhLogger.FormatId(config.ClientId));
 
-        if (proxyEndPointManager.IsEnabled) {
+        if (proxyConnector.IsEnabled) {
             setState(ClientState.ValidatingProxies);
-            await proxyEndPointManager.CheckServers(linkedCts.Token).Vhc();
+            await proxyConnector.CheckServers(linkedCts.Token).Vhc();
 
-            VhLogger.Instance.LogInformation("Proxy servers: {Count}",
-                proxyEndPointManager.Status.ProxyEndPointInfos.Count(x => x.Status.ErrorMessage is null));
+            var status = proxyConnector.Status;
+            VhLogger.Instance.LogInformation("Proxy servers succeeded: {Count}",
+                status.SucceededServerCount);
 
-            if (!proxyEndPointManager.Status.IsAnySucceeded)
+            if (!status.IsAnySucceeded)
                 throw new UnreachableProxyServerException();
         }
 
@@ -95,7 +96,7 @@ internal class ClientSessionBuilder(
 
             var connectorService = new ConnectorService(
                 new ConnectorServiceOptions {
-                    ProxyEndPointManager = proxyEndPointManager,
+                    ProxyConnector = proxyConnector,
                     SocketFactory = socketFactory,
                     VpnEndPoint = vpnEndPoint,
                     RequestTimeout = config.TcpConnectTimeout,

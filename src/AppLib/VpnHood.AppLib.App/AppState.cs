@@ -13,7 +13,7 @@ public class AppState
     public required AppConnectionState ConnectionState { get; init; }
     public required AppSessionInfo? SessionInfo { get; init; }
     public required AppSessionStatus? SessionStatus { get; init; }
-    public required AppProxyEndPointManagerStatus? ProxyEndPointManagerStatus { get; init; }
+    public required AppProxyConnectorStatus? ProxyConnectorStatus { get; init; }
     public required AppServerLocationInfo? ServerLocationInfo { get; init; }
     public required DateTime? ConnectRequestTime { get; init; }
     public required ApiError? LastError { get; init; }

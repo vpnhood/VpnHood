@@ -14,6 +14,9 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
     public ProxyEndPoint EndPoint => endPointInfo.EndPoint;
     public IPEndPoint? IpEndPoint { get; init; }
 
+    /// <summary>Set when the status or enabled state changed since the last store flush.</summary>
+    public bool IsDirty { get; set; }
+
     public long GetSortValue(long currentRequestCount)
     {
         lock (_lock) {
@@ -29,6 +32,7 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
     public void RecordSuccess(TimeSpan latency, TimeSpan? fastestLatency, long currentQueuePos)
     {
         lock (_lock) {
+            IsDirty = true;
             Status.SucceededCount++;
             Status.Latency = latency;
             Status.LastSucceeded = FastDateTime.UtcNow;
@@ -61,6 +65,7 @@ internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
     public void RecordFailed(Exception? exception, long currentQueuePos)
     {
         lock (_lock) {
+            IsDirty = true;
             Status.Penalty++;
             Status.Penalty++;
             Status.FailedCount++;

@@ -71,7 +71,7 @@ internal class ConnectorService : IDisposable
 
         _tcpConnectionFactory = new TcpStreamConnectionFactory(
             options.SocketFactory,
-            options.ProxyEndPointManager,
+            options.ProxyConnector,
             options.VpnEndPoint,
             UserCertificateValidationCallback);
 

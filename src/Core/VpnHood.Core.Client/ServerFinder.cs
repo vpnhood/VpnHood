@@ -7,7 +7,7 @@ using VpnHood.Core.Client.ConnectorServices;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Proxies.EndPointManagement;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Net;
@@ -26,7 +26,7 @@ public class ServerFinder(
     EndPointStrategy endPointStrategy,
     IPEndPoint[] customServerEndpoints,
     ITracker? tracker,
-    ProxyEndPointManager proxyEndPointManager,
+    IProxyConnector proxyConnector,
     bool includeIpV6,
     int maxDegreeOfParallelism = 10)
 {
@@ -141,7 +141,7 @@ public class ServerFinder(
             isIpV6Supported: IncludeIpV6, hasRedirected: false));
 
         // throw specific exception for proxy server issues
-        if (proxyEndPointManager is { IsEnabled: true, Status.IsAnySucceeded: false })
+        if (proxyConnector is { IsEnabled: true, Status.IsAnySucceeded: false })
             throw new UnreachableProxyServerException();
 
         throw new UnreachableServerException();
@@ -184,7 +184,7 @@ public class ServerFinder(
             isIpV6Supported: IncludeIpV6, hasRedirected: true));
 
         // throw specific exception for proxy server issues
-        if (proxyEndPointManager is { IsEnabled: true, Status.IsAnySucceeded: false })
+        if (proxyConnector is { IsEnabled: true, Status.IsAnySucceeded: false })
             throw new UnreachableProxyServerException();
 
         // throw unreachable server location exception
@@ -267,11 +267,11 @@ public class ServerFinder(
 
         using var searchingCts = new CancellationTokenSource(); // this will be canceled when a server is found
         using var parallelCts = CancellationTokenSource.CreateLinkedTokenSource(searchingCts.Token, cancellationToken);
-        var oldUseRecentSucceeded = proxyEndPointManager.UseRecentSucceeded;
+        var oldUseRecentSucceeded = proxyConnector.UseRecentSucceeded;
         try {
             // Optimize proxy selection for server verification
             // We should not try proxies that may fail as it will slow down the process
-            proxyEndPointManager.UseRecentSucceeded = true;
+            proxyConnector.UseRecentSucceeded = true;
 
             // Use SemaphoreSlim to control max degree of parallelism
             using var semaphore = new SemaphoreSlim(maxDegreeOfParallelism, maxDegreeOfParallelism);
@@ -324,7 +324,7 @@ public class ServerFinder(
             // A server has been found, this is expected
         }
         finally {
-            proxyEndPointManager.UseRecentSucceeded = oldUseRecentSucceeded;
+            proxyConnector.UseRecentSucceeded = oldUseRecentSucceeded;
         }
 
         return hostStatuses;
@@ -381,7 +381,7 @@ public class ServerFinder(
     {
         var connectorService = new ConnectorServiceOptions {
             VpnEndPoint = vpnEndPoint,
-            ProxyEndPointManager = proxyEndPointManager,
+            ProxyConnector = proxyConnector,
             SocketFactory = socketFactory,
             RequestTimeout = serverQueryTimeout,
             AllowChannelReuse = false

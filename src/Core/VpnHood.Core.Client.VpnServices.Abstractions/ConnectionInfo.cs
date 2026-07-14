@@ -7,7 +7,7 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions;
 
 public class ConnectionInfo
 {
-    public required ProxyEndPointManagerStatus? ProxyManagerStatus { get; init; }
+    public required ProxyConnectorStatus? ProxyConnectorStatus { get; init; }
     public required DateTime? CreatedTime { get; init; }
     public string? SessionName { get; init; }
     public required ClientState ClientState { get; init; }

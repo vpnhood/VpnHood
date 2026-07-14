@@ -74,14 +74,14 @@ public static class AppDtoConverterExtensions
         return apiError;
     }
 
-    public static AppProxyEndPointManagerStatus ToAppDto(this ProxyEndPointManagerStatus sessionStatus)
+    public static AppProxyConnectorStatus ToAppDto(this ProxyConnectorStatus status)
     {
-        return new AppProxyEndPointManagerStatus {
-            SessionStatus = sessionStatus.SessionStatus,
-            SucceededServerCount = sessionStatus.SucceededServerCount,
-            FailedServerCount = sessionStatus.FailedServerCount,
-            UnknownServerCount = sessionStatus.UnknownServerCount,
-            DisabledServerCount = sessionStatus.DisabledServerCount
+        return new AppProxyConnectorStatus {
+            SessionStatus = status.SessionStatus,
+            SucceededServerCount = status.SucceededServerCount,
+            FailedServerCount = status.FailedServerCount,
+            UnknownServerCount = status.UnknownServerCount,
+            DisabledServerCount = status.DisabledServerCount
         };
     }
 

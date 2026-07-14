@@ -3223,6 +3223,7 @@ export class AppFeatures implements IAppFeatures {
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
     isTcpProxySupported!: boolean;
+    isQuicSupported!: boolean;
     isSplitDomainSupported!: boolean;
     isUserReviewSupported!: boolean;
     isTv!: boolean;
@@ -3268,6 +3269,7 @@ export class AppFeatures implements IAppFeatures {
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : null as any;
             this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : null as any;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
+            this.isQuicSupported = _data["isQuicSupported"] !== undefined ? _data["isQuicSupported"] : null as any;
             this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
             this.isUserReviewSupported = _data["isUserReviewSupported"] !== undefined ? _data["isUserReviewSupported"] : null as any;
             this.isTv = _data["isTv"] !== undefined ? _data["isTv"] : null as any;
@@ -3329,6 +3331,7 @@ export class AppFeatures implements IAppFeatures {
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : null as any;
         data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : null as any;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
+        data["isQuicSupported"] = this.isQuicSupported !== undefined ? this.isQuicSupported : null as any;
         data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
         data["isUserReviewSupported"] = this.isUserReviewSupported !== undefined ? this.isUserReviewSupported : null as any;
         data["isTv"] = this.isTv !== undefined ? this.isTv : null as any;
@@ -3374,6 +3377,7 @@ export interface IAppFeatures {
     isAccountSupported: boolean;
     isBillingSupported: boolean;
     isTcpProxySupported: boolean;
+    isQuicSupported: boolean;
     isSplitDomainSupported: boolean;
     isUserReviewSupported: boolean;
     isTv: boolean;
@@ -3486,7 +3490,7 @@ export class AppState implements IAppState {
     connectionState!: AppConnectionState;
     sessionInfo?: AppSessionInfo | null;
     sessionStatus?: AppSessionStatus | null;
-    proxyEndPointManagerStatus?: AppProxyEndPointManagerStatus | null;
+    proxyConnectorStatus?: AppProxyConnectorStatus | null;
     serverLocationInfo?: AppServerLocationInfo | null;
     connectRequestTime?: Date | null;
     lastError?: ApiError | null;
@@ -3536,7 +3540,7 @@ export class AppState implements IAppState {
             this.connectionState = _data["connectionState"] !== undefined ? _data["connectionState"] : null as any;
             this.sessionInfo = _data["sessionInfo"] ? AppSessionInfo.fromJS(_data["sessionInfo"]) : null as any;
             this.sessionStatus = _data["sessionStatus"] ? AppSessionStatus.fromJS(_data["sessionStatus"]) : null as any;
-            this.proxyEndPointManagerStatus = _data["proxyEndPointManagerStatus"] ? AppProxyEndPointManagerStatus.fromJS(_data["proxyEndPointManagerStatus"]) : null as any;
+            this.proxyConnectorStatus = _data["proxyConnectorStatus"] ? AppProxyConnectorStatus.fromJS(_data["proxyConnectorStatus"]) : null as any;
             this.serverLocationInfo = _data["serverLocationInfo"] ? AppServerLocationInfo.fromJS(_data["serverLocationInfo"]) : null as any;
             this.connectRequestTime = _data["connectRequestTime"] ? new Date(_data["connectRequestTime"].toString()) : null as any;
             this.lastError = _data["lastError"] ? ApiError.fromJS(_data["lastError"]) : null as any;
@@ -3581,7 +3585,7 @@ export class AppState implements IAppState {
         data["connectionState"] = this.connectionState !== undefined ? this.connectionState : null as any;
         data["sessionInfo"] = this.sessionInfo ? this.sessionInfo.toJSON() : null as any;
         data["sessionStatus"] = this.sessionStatus ? this.sessionStatus.toJSON() : null as any;
-        data["proxyEndPointManagerStatus"] = this.proxyEndPointManagerStatus ? this.proxyEndPointManagerStatus.toJSON() : null as any;
+        data["proxyConnectorStatus"] = this.proxyConnectorStatus ? this.proxyConnectorStatus.toJSON() : null as any;
         data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : null as any;
         data["connectRequestTime"] = this.connectRequestTime ? this.connectRequestTime.toISOString() : null as any;
         data["lastError"] = this.lastError ? this.lastError.toJSON() : null as any;
@@ -3619,7 +3623,7 @@ export interface IAppState {
     connectionState: AppConnectionState;
     sessionInfo?: AppSessionInfo | null;
     sessionStatus?: AppSessionStatus | null;
-    proxyEndPointManagerStatus?: AppProxyEndPointManagerStatus | null;
+    proxyConnectorStatus?: AppProxyConnectorStatus | null;
     serverLocationInfo?: AppServerLocationInfo | null;
     connectRequestTime?: Date | null;
     lastError?: ApiError | null;
@@ -4325,14 +4329,14 @@ export interface IAppConnectorStat {
     requestCount: number;
 }
 
-export class AppProxyEndPointManagerStatus implements IAppProxyEndPointManagerStatus {
-    sessionStatus!: ProxyEndPointStatus;
+export class AppProxyConnectorStatus implements IAppProxyConnectorStatus {
+    sessionStatus!: ProxySessionStatus;
     succeededServerCount!: number;
     failedServerCount!: number;
     unknownServerCount!: number;
     disabledServerCount!: number;
 
-    constructor(data?: IAppProxyEndPointManagerStatus) {
+    constructor(data?: IAppProxyConnectorStatus) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -4340,13 +4344,13 @@ export class AppProxyEndPointManagerStatus implements IAppProxyEndPointManagerSt
             }
         }
         if (!data) {
-            this.sessionStatus = new ProxyEndPointStatus();
+            this.sessionStatus = new ProxySessionStatus();
         }
     }
 
     init(_data?: any) {
         if (_data) {
-            this.sessionStatus = _data["sessionStatus"] ? ProxyEndPointStatus.fromJS(_data["sessionStatus"]) : new ProxyEndPointStatus();
+            this.sessionStatus = _data["sessionStatus"] ? ProxySessionStatus.fromJS(_data["sessionStatus"]) : new ProxySessionStatus();
             this.succeededServerCount = _data["succeededServerCount"] !== undefined ? _data["succeededServerCount"] : null as any;
             this.failedServerCount = _data["failedServerCount"] !== undefined ? _data["failedServerCount"] : null as any;
             this.unknownServerCount = _data["unknownServerCount"] !== undefined ? _data["unknownServerCount"] : null as any;
@@ -4354,9 +4358,9 @@ export class AppProxyEndPointManagerStatus implements IAppProxyEndPointManagerSt
         }
     }
 
-    static fromJS(data: any): AppProxyEndPointManagerStatus {
+    static fromJS(data: any): AppProxyConnectorStatus {
         data = typeof data === 'object' ? data : {};
-        let result = new AppProxyEndPointManagerStatus();
+        let result = new AppProxyConnectorStatus();
         result.init(data);
         return result;
     }
@@ -4372,26 +4376,23 @@ export class AppProxyEndPointManagerStatus implements IAppProxyEndPointManagerSt
     }
 }
 
-export interface IAppProxyEndPointManagerStatus {
-    sessionStatus: ProxyEndPointStatus;
+export interface IAppProxyConnectorStatus {
+    sessionStatus: ProxySessionStatus;
     succeededServerCount: number;
     failedServerCount: number;
     unknownServerCount: number;
     disabledServerCount: number;
 }
 
-export class ProxyEndPointStatus implements IProxyEndPointStatus {
-    penalty!: number;
+export class ProxySessionStatus implements IProxySessionStatus {
     succeededCount!: number;
     failedCount!: number;
     latency?: string | null;
     lastSucceeded?: Date | null;
     lastFailed?: Date | null;
     errorMessage?: string | null;
-    queuePosition!: number;
-    quality!: StatusQuality;
 
-    constructor(data?: IProxyEndPointStatus) {
+    constructor(data?: IProxySessionStatus) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -4402,60 +4403,41 @@ export class ProxyEndPointStatus implements IProxyEndPointStatus {
 
     init(_data?: any) {
         if (_data) {
-            this.penalty = _data["penalty"] !== undefined ? _data["penalty"] : null as any;
             this.succeededCount = _data["succeededCount"] !== undefined ? _data["succeededCount"] : null as any;
             this.failedCount = _data["failedCount"] !== undefined ? _data["failedCount"] : null as any;
             this.latency = _data["latency"] !== undefined ? _data["latency"] : null as any;
             this.lastSucceeded = _data["lastSucceeded"] ? new Date(_data["lastSucceeded"].toString()) : null as any;
             this.lastFailed = _data["lastFailed"] ? new Date(_data["lastFailed"].toString()) : null as any;
             this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : null as any;
-            this.queuePosition = _data["queuePosition"] !== undefined ? _data["queuePosition"] : null as any;
-            this.quality = _data["quality"] !== undefined ? _data["quality"] : null as any;
         }
     }
 
-    static fromJS(data: any): ProxyEndPointStatus {
+    static fromJS(data: any): ProxySessionStatus {
         data = typeof data === 'object' ? data : {};
-        let result = new ProxyEndPointStatus();
+        let result = new ProxySessionStatus();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["penalty"] = this.penalty !== undefined ? this.penalty : null as any;
         data["succeededCount"] = this.succeededCount !== undefined ? this.succeededCount : null as any;
         data["failedCount"] = this.failedCount !== undefined ? this.failedCount : null as any;
         data["latency"] = this.latency !== undefined ? this.latency : null as any;
         data["lastSucceeded"] = this.lastSucceeded ? this.lastSucceeded.toISOString() : null as any;
         data["lastFailed"] = this.lastFailed ? this.lastFailed.toISOString() : null as any;
         data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : null as any;
-        data["queuePosition"] = this.queuePosition !== undefined ? this.queuePosition : null as any;
-        data["quality"] = this.quality !== undefined ? this.quality : null as any;
         return data;
     }
 }
 
-export interface IProxyEndPointStatus {
-    penalty: number;
+export interface IProxySessionStatus {
     succeededCount: number;
     failedCount: number;
     latency?: string | null;
     lastSucceeded?: Date | null;
     lastFailed?: Date | null;
     errorMessage?: string | null;
-    queuePosition: number;
-    quality: StatusQuality;
-}
-
-export enum StatusQuality {
-    Unknown = "Unknown",
-    Excellent = "Excellent",
-    Good = "Good",
-    Fair = "Fair",
-    Poor = "Poor",
-    VeryPoor = "VeryPoor",
-    Failed = "Failed",
 }
 
 export class ApiError implements IApiError {
@@ -6481,6 +6463,84 @@ export enum ProxyProtocol {
     Socks5 = "Socks5",
     Http = "Http",
     Https = "Https",
+}
+
+export class ProxyEndPointStatus implements IProxyEndPointStatus {
+    penalty!: number;
+    succeededCount!: number;
+    failedCount!: number;
+    latency?: string | null;
+    lastSucceeded?: Date | null;
+    lastFailed?: Date | null;
+    errorMessage?: string | null;
+    queuePosition!: number;
+    quality!: StatusQuality;
+
+    constructor(data?: IProxyEndPointStatus) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.penalty = _data["penalty"] !== undefined ? _data["penalty"] : null as any;
+            this.succeededCount = _data["succeededCount"] !== undefined ? _data["succeededCount"] : null as any;
+            this.failedCount = _data["failedCount"] !== undefined ? _data["failedCount"] : null as any;
+            this.latency = _data["latency"] !== undefined ? _data["latency"] : null as any;
+            this.lastSucceeded = _data["lastSucceeded"] ? new Date(_data["lastSucceeded"].toString()) : null as any;
+            this.lastFailed = _data["lastFailed"] ? new Date(_data["lastFailed"].toString()) : null as any;
+            this.errorMessage = _data["errorMessage"] !== undefined ? _data["errorMessage"] : null as any;
+            this.queuePosition = _data["queuePosition"] !== undefined ? _data["queuePosition"] : null as any;
+            this.quality = _data["quality"] !== undefined ? _data["quality"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): ProxyEndPointStatus {
+        data = typeof data === 'object' ? data : {};
+        let result = new ProxyEndPointStatus();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["penalty"] = this.penalty !== undefined ? this.penalty : null as any;
+        data["succeededCount"] = this.succeededCount !== undefined ? this.succeededCount : null as any;
+        data["failedCount"] = this.failedCount !== undefined ? this.failedCount : null as any;
+        data["latency"] = this.latency !== undefined ? this.latency : null as any;
+        data["lastSucceeded"] = this.lastSucceeded ? this.lastSucceeded.toISOString() : null as any;
+        data["lastFailed"] = this.lastFailed ? this.lastFailed.toISOString() : null as any;
+        data["errorMessage"] = this.errorMessage !== undefined ? this.errorMessage : null as any;
+        data["queuePosition"] = this.queuePosition !== undefined ? this.queuePosition : null as any;
+        data["quality"] = this.quality !== undefined ? this.quality : null as any;
+        return data;
+    }
+}
+
+export interface IProxyEndPointStatus {
+    penalty: number;
+    succeededCount: number;
+    failedCount: number;
+    latency?: string | null;
+    lastSucceeded?: Date | null;
+    lastFailed?: Date | null;
+    errorMessage?: string | null;
+    queuePosition: number;
+    quality: StatusQuality;
+}
+
+export enum StatusQuality {
+    Unknown = "Unknown",
+    Excellent = "Excellent",
+    Good = "Good",
+    Fair = "Fair",
+    Poor = "Poor",
+    VeryPoor = "VeryPoor",
+    Failed = "Failed",
 }
 
 export class PagedResultOfAppProxyEndPointInfo implements IPagedResultOfAppProxyEndPointInfo {

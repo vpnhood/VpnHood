@@ -2,6 +2,7 @@
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Toolkit.Utils;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
@@ -123,8 +124,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
 
     public Task ResetStates(CancellationToken cancellationToken)
     {
-        ProxyEndPointService.ResetStates();
-        return Task.CompletedTask;
+        return ProxyEndPointService.ResetStates();
     }
 
     public Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken)
@@ -139,11 +139,11 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         bool includeFailed,
         bool includeUnknown,
         bool includeDisabled,
-        int? recordIndex, 
+        int? recordIndex,
         int? recordCount,
         CancellationToken cancellationToken)
     {
-        var result = ProxyEndPointService.ListProxies(
+        return ProxyEndPointService.ListProxies(
             search: search,
             includeSucceeded: includeSucceeded,
             includeFailed: includeFailed,
@@ -151,14 +151,12 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
             includeDisabled: includeDisabled,
             recordIndex: recordIndex,
             recordCount: recordCount);
-        return Task.FromResult(result);
     }
 
     public Task<AppProxyEndPointInfo> Get(string proxyEndPointId, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        var item = ProxyEndPointService.Get(proxyEndPointId);
-        return Task.FromResult(item);
+        return ProxyEndPointService.Get(proxyEndPointId);
     }
 
     public Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults, CancellationToken cancellationToken)
@@ -175,20 +173,17 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
 
     public Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
-        var res = ProxyEndPointService.Update(proxyEndPointId, proxyEndPoint);
-        return Task.FromResult(res);
+        return ProxyEndPointService.Update(proxyEndPointId, proxyEndPoint);
     }
 
     public Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken)
     {
-        var res = ProxyEndPointService.Add(proxyEndPoint);
-        return Task.FromResult(res);
+        return ProxyEndPointService.Add(proxyEndPoint);
     }
 
     public Task Delete(string proxyEndPointId, CancellationToken cancellationToken)
     {
-        ProxyEndPointService.Delete(proxyEndPointId);
-        return Task.CompletedTask;
+        return ProxyEndPointService.Delete(proxyEndPointId);
     }
 
     public Task DeleteAll(
@@ -198,24 +193,22 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         bool deleteDisabled,
         CancellationToken cancellationToken)
     {
-        ProxyEndPointService.DeleteAll(
-            deleteSucceeded: deleteSucceeded, 
-            deleteFailed: deleteFailed,
-            deleteUnknown: deleteUnknown,
-            deleteDisabled: deleteDisabled);
-        return Task.CompletedTask;
+        return ProxyEndPointService.DeleteAll(new DeleteAllOptions {
+            DeleteSucceeded = deleteSucceeded,
+            DeleteFailed = deleteFailed,
+            DeleteUnknown = deleteUnknown,
+            DeleteDisabled = deleteDisabled
+        });
     }
 
     public Task Import(string content, CancellationToken cancellationToken)
     {
-        ProxyEndPointService.Import(content);
-        return Task.CompletedTask;
+        return ProxyEndPointService.Import(content);
     }
 
     public Task DisableAllFailed(CancellationToken cancellationToken)
     {
-        ProxyEndPointService.DisableAllFailed();
-        return Task.CompletedTask;
+        return ProxyEndPointService.DisableAllFailed();
     }
 
     public Task ReloadUrl(CancellationToken cancellationToken)

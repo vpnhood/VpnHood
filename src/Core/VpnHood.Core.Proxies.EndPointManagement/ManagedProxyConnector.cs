@@ -1,9 +1,8 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
@@ -16,61 +15,77 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Proxies.EndPointManagement;
 
-public class ProxyEndPointManager : IDisposable
+public class ManagedProxyConnector : IProxyConnector
 {
     private ProxyEndPointEntry? _fastestEntry;
     private long _queuePosition;
     private readonly TimeSpan _serverCheckTimeout;
     private readonly ISocketFactory _socketFactory;
+    private readonly IProxyEndPointStore _store;
     private ProxyEndPointEntry[] _proxyEndPointEntries;
     private ProgressMonitor? _progressMonitor;
-    private readonly string _proxyEndPointInfosFile;
     private Job? _autoUpdateJob;
+    private readonly Job _flushJob;
     private ProxyAutoUpdateOptions _autoUpdateOptions;
     private bool _disposed;
+    private bool _initialized;
+    private readonly bool _resetStates;
     private bool _verifyTls;
     private readonly DateTime _sessionCreatedTime = FastDateTime.UtcNow;
-    private readonly ProxyEndPointStatus _sessionStatus = new();
+    private readonly ProxySessionStatus _sessionStatus = new();
     private const int CheckServerMaxDegreeOfParallelism = 50;
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromSeconds(10);
 
     public bool IsEnabled { get; private set; }
     public bool UseRecentSucceeded { get; set; }
     public ProgressStatus? Progress => _progressMonitor?.Progress;
-    public TimeSpan? RequestTimeout { get; set; }
 
-
-    public ProxyEndPointManager(
+    public ManagedProxyConnector(
         ProxyOptions proxyOptions,
-        string storagePath,
+        IProxyEndPointStore store,
         ISocketFactory socketFactory,
         TimeSpan? serverCheckTimeout = null)
     {
         _serverCheckTimeout = serverCheckTimeout ?? TimeSpan.FromSeconds(7);
         _socketFactory = socketFactory;
-        _proxyEndPointInfosFile = Path.Combine(storagePath, "proxies.json");
+        _store = store;
         _autoUpdateOptions = proxyOptions.AutoUpdateOptions;
         _verifyTls = proxyOptions.VerifyTls;
-        IsEnabled = proxyOptions.ProxyEndPoints.Any();
+        _resetStates = proxyOptions.ResetStates;
+        _proxyEndPointEntries = [];
 
-        // load last NodeInfos
-        var data = JsonUtils.TryDeserializeFile<Data>(_proxyEndPointInfosFile) ?? new Data();
-        _queuePosition = data.QueuePosition;
-        _proxyEndPointEntries =
-            UpdateEntriesByOptions(data.EndPointInfos.Select(x => new ProxyEndPointEntry(x)), proxyOptions)
-                .ToArray();
+        // periodic write-behind of dirty statuses; cheap no-op when nothing changed
+        _flushJob = new Job(FlushJob,
+            new JobOptions {
+                Interval = FlushInterval,
+                Name = "ProxyEndPointFlush",
+                AutoStart = true
+            });
+    }
+
+    public async Task Init(CancellationToken cancellationToken)
+    {
+        if (_initialized)
+            return;
+        _initialized = true;
+
+        if (_resetStates)
+            await VhUtils.TryInvokeAsync("Reset proxy endpoint statuses", _store.ResetStatuses).Vhc();
+
+        // load the working set from the shared store; the store list is authoritative
+        await ReloadEntries().Vhc();
 
         // Start auto-update if configured
         if (_autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null)
             StartAutoUpdate(_autoUpdateOptions.Interval.Value);
     }
 
-    public ProxyEndPointManagerStatus Status {
+    public ProxyConnectorStatus Status {
         get {
             lock (_sessionStatus)
-                return new ProxyEndPointManagerStatus {
+                return new ProxyConnectorStatus {
                     AutoUpdate = _autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null,
                     SessionStatus = _sessionStatus,
-                    ProxyEndPointInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray(),
                     IsAnySucceeded = _proxyEndPointEntries.Any(x => x.Status.ErrorMessage is null),
                     SucceededServerCount =
                         _proxyEndPointEntries.Count(x => x.EndPoint.IsEnabled && x.Status.IsLastUsedSucceeded),
@@ -83,16 +98,60 @@ public class ProxyEndPointManager : IDisposable
         }
     }
 
-    public void UpdateOptions(ProxyOptions proxyOptions)
+    public IReadOnlyList<ProxyEndPointInfo> GetEndPointInfos() =>
+        _proxyEndPointEntries.Select(x => x.Info).ToArray();
+
+    private async Task<ProxyEndPointEntry[]> LoadEntries()
     {
-        IsEnabled = proxyOptions.ProxyEndPoints.Any();
+        var records = await _store.List().Vhc();
+        return records
+            .Select(x => new ProxyEndPointEntry(x.ToInfo()))
+            .ToArray();
+    }
+
+    private async Task ReloadEntries()
+    {
+        // dropping the old entries also drops their dirty flags
+        _proxyEndPointEntries = await LoadEntries().Vhc();
+        _queuePosition = await _store.GetQueuePosition().Vhc();
+        IsEnabled = _proxyEndPointEntries.Length > 0;
+    }
+
+    public async Task UpdateOptions(ProxyOptions proxyOptions)
+    {
         _verifyTls = proxyOptions.VerifyTls;
-        _proxyEndPointEntries = UpdateEntriesByOptions(_proxyEndPointEntries, proxyOptions).ToArray();
+
+        if (proxyOptions.ResetStates) {
+            // discard in-memory statuses instead of flushing them back over the app's reset
+            await VhUtils.TryInvokeAsync("Reset proxy endpoint statuses", _store.ResetStatuses).Vhc();
+        }
+        else {
+            await Flush().Vhc();
+        }
+
+        await ReloadEntries().Vhc();
 
         // start new job if needed
         _autoUpdateOptions = proxyOptions.AutoUpdateOptions;
         if (_autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null)
             StartAutoUpdate(_autoUpdateOptions.Interval.Value);
+    }
+
+    private ValueTask FlushJob(CancellationToken cancellationToken)
+    {
+        return new ValueTask(Flush());
+    }
+
+    public async Task Flush()
+    {
+        var dirtyEntries = _proxyEndPointEntries.Where(x => x.IsDirty).ToArray();
+        if (dirtyEntries.Length == 0)
+            return;
+
+        await _store.UpdateStatuses(dirtyEntries.Select(x => x.Info).ToArray()).Vhc();
+        await _store.SetQueuePosition(_queuePosition).Vhc();
+        foreach (var entry in dirtyEntries)
+            entry.IsDirty = false;
     }
 
     private void StartAutoUpdate(TimeSpan interval)
@@ -121,27 +180,23 @@ public class ProxyEndPointManager : IDisposable
 
             // memory more efficient to create a new client for infrequent requests
             using var httpClient = new HttpClient();
-            var currentInfos = _proxyEndPointEntries.Select(x => x.Info).ToArray();
             var newEndPoints = await ProxyEndPointUpdater
                 .LoadFromUrlAsync(httpClient, _autoUpdateOptions.Url, cancellationToken).Vhc();
-            var mergedEndPoints = ProxyEndPointUpdater.Merge(currentInfos, newEndPoints,
-                _autoUpdateOptions.MaxItemCount, _autoUpdateOptions.MaxPenalty, _autoUpdateOptions.RemoveDuplicateIps);
 
-            if (mergedEndPoints.Length == 0) {
+            if (newEndPoints.Length == 0) {
                 VhLogger.Instance.LogWarning("No proxies found in downloaded content from {Url}",
                     _autoUpdateOptions.Url);
                 return;
             }
 
-            VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}",
-                mergedEndPoints.Length);
-            _proxyEndPointEntries = UpdateEntries(_proxyEndPointEntries, mergedEndPoints,
-                resetStates: false, keepEnabledState: true).ToArray();
+            // merge into the shared store and reload the working set with preserved statuses
+            await Flush().Vhc();
+            await _store.Merge(newEndPoints, _autoUpdateOptions.MaxItemCount, _autoUpdateOptions.MaxPenalty,
+                _autoUpdateOptions.RemoveDuplicateIps).Vhc();
+            await ReloadEntries().Vhc();
 
-            // Save updated list
-            VhLogger.Instance.LogInformation("Updated proxy list. Total proxies: {Count}",
+            VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}",
                 _proxyEndPointEntries.Length);
-            SaveNodeInfos();
 
             // Check servers
             await CheckServers(cancellationToken);
@@ -149,58 +204,6 @@ public class ProxyEndPointManager : IDisposable
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to update proxy list from {Url}", _autoUpdateOptions.Url);
         }
-    }
-
-    private static IEnumerable<ProxyEndPointEntry> UpdateEntriesByOptions(IEnumerable<ProxyEndPointEntry> items,
-        ProxyOptions options)
-    {
-        items = UpdateEntries(items, options.ProxyEndPoints,
-            resetStates: options.ResetStates, keepEnabledState: false);
-        return items;
-    }
-
-    // this is used to add new endpoints and remove old endpoints from options
-    private static IEnumerable<ProxyEndPointEntry> UpdateEntries(
-        IEnumerable<ProxyEndPointEntry> existingEntries,
-        ProxyEndPoint[] newEntries,
-        bool resetStates,
-        bool keepEnabledState)
-    {
-        // create dictionary for existing entries using linq
-        var existingEntryDic = existingEntries.DistinctBy(x => x.EndPoint.Id).ToDictionary(x => x.EndPoint.Id);
-        var newEntryDic = newEntries.DistinctBy(x => x.Id).ToDictionary(x => x.Id);
-
-        // update existing entries
-        foreach (var existingEntry in existingEntryDic.Values) {
-            var newEntry = newEntryDic.GetValueOrDefault(existingEntry.EndPoint.Id);
-            var oldEndPoint = existingEntry.Info.EndPoint;
-
-            // remove entries not in new list
-            if (newEntry == null) {
-                existingEntryDic.Remove(existingEntry.EndPoint.Id);
-                continue;
-            }
-
-            // reset states of current items
-            if (resetStates)
-                existingEntry.Info.Status = new ProxyEndPointStatus();
-
-            // update existing entries IsEnabled
-            existingEntry.Info.EndPoint = newEntry;
-            if (keepEnabledState)
-                existingEntry.Info.EndPoint.IsEnabled = oldEndPoint.IsEnabled;
-        }
-
-        // add new endpoints
-        foreach (var newEntry in newEntries.Where(x => !existingEntryDic.ContainsKey(x.Id))) {
-            var entry = new ProxyEndPointEntry(new ProxyEndPointInfo {
-                EndPoint = newEntry,
-                Status = new ProxyEndPointStatus()
-            });
-            existingEntryDic.Add(newEntry.Id, entry);
-        }
-
-        return existingEntryDic.Select(x => x.Value);
     }
 
     private async Task<TimeSpan> CheckConnectionAsync(IProxyClient proxyClient,
@@ -277,7 +280,7 @@ public class ProxyEndPointManager : IDisposable
             await Parallel.ForEachAsync(endpoints, parallelOptions, async (entry, ct) => {
                 TcpClient? tcpClient = null;
                 try {
-                    // do not stop 
+                    // do not stop
                     if (successCount >= satisfiedSuccessCount &&
                         entry.Status.Quality is not StatusQuality.Unknown)
                         return;
@@ -322,8 +325,10 @@ public class ProxyEndPointManager : IDisposable
                 var isProtocolRejected = error is ProxyClientException {
                     SocketErrorCode: SocketError.ProtocolNotSupported or SocketError.AccessDenied
                 };
-                if (isProtocolRejected)
+                if (isProtocolRejected) {
                     entry.EndPoint.IsEnabled = false;
+                    entry.IsDirty = true;
+                }
             }
 
             // make sure throw cancellation exception if cancelled
@@ -331,6 +336,7 @@ public class ProxyEndPointManager : IDisposable
         }
         finally {
             _progressMonitor = null;
+            await Flush().Vhc();
         }
     }
 
@@ -347,7 +353,7 @@ public class ProxyEndPointManager : IDisposable
 
         // if there is at least one succeeded server, failed servers should not be more than 2
         // this is to avoid trying too many failed servers when there are good servers available
-        
+
         // Only apply the rule when there is at least one succeeded server
         if (!ordered.Any(x => x.Status.IsLastUsedSucceeded))
             return ordered;
@@ -394,7 +400,7 @@ public class ProxyEndPointManager : IDisposable
         return GetOrderedEntriesQuery().ToArray();
     }
 
-    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint, 
+    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint,
         Action? onAttempt, CancellationToken cancellationToken)
     {
         // get ordered endpoints
@@ -438,6 +444,7 @@ public class ProxyEndPointManager : IDisposable
                         dup.EndPoint.IsEnabled = false;
                         var url = entry.EndPoint.BuildUrlWithoutPassword();
                         dup.Status.ErrorMessage = $"Duplicate IP disabled in favour of {url}";
+                        dup.IsDirty = true;
                     }
                 }
 
@@ -472,9 +479,7 @@ public class ProxyEndPointManager : IDisposable
             lock (_sessionStatus) {
                 _sessionStatus.SucceededCount++;
                 _sessionStatus.LastSucceeded = DateTime.UtcNow;
-                _sessionStatus.QueuePosition = _queuePosition;
                 _sessionStatus.Latency = entry.Status.Latency;
-                _sessionStatus.Penalty = entry.Status.Penalty;
                 _sessionStatus.ErrorMessage = null;
             }
         }
@@ -487,9 +492,7 @@ public class ProxyEndPointManager : IDisposable
             lock (_sessionStatus) {
                 _sessionStatus.FailedCount++;
                 _sessionStatus.LastFailed = DateTime.UtcNow;
-                _sessionStatus.QueuePosition = _queuePosition;
                 _sessionStatus.Latency = null;
-                _sessionStatus.Penalty = entry.Status.Penalty;
                 _sessionStatus.ErrorMessage = entry.Status.ErrorMessage;
             }
         }
@@ -508,31 +511,16 @@ public class ProxyEndPointManager : IDisposable
         }
     }
 
-    private void SaveNodeInfos()
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(_proxyEndPointInfosFile)!);
-        var data = new Data {
-            QueuePosition = _queuePosition,
-            EndPointInfos = Status.ProxyEndPointInfos
-        };
-        File.WriteAllText(_proxyEndPointInfosFile, JsonSerializer.Serialize(data));
-    }
-
-    private class Data
-    {
-        public ProxyEndPointInfo[] EndPointInfos { get; init; } = [];
-        public long QueuePosition { get; init; }
-    }
-
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_disposed) return;
         _disposed = true;
 
         _autoUpdateJob?.Dispose();
-        // Dispose HTTP client
+        _flushJob.Dispose();
 
-        // save current NodeInfos
-        VhUtils.TryInvoke("Save ProxyEndPoints status", SaveNodeInfos);
+        // persist pending statuses to the shared store (Flush already swallows its own errors)
+        await Flush().Vhc();
+        _store.Dispose();
     }
 }

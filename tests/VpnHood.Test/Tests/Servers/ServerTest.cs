@@ -450,11 +450,16 @@ public class ServerTest : TestBase
         await using var server = await TestHelper.CreateServer(accessManager, autoStart: false);
         await server.Start(TestCt);
 
-        // wait for bad config 
+        // wait for bad config
         await VhTestUtil.AssertEqualsWait(ServerState.BadConfig, ()=>server.State, cancellationToken: TestCt);
 
+        // the state flips to BadConfig before the status carrying EndPointStatuses reaches
+        // the access manager, so wait for the report instead of reading it immediately
+        await VhTestUtil.AssertEqualsWait(true, () => accessManager.LastEndPointStatuses != null,
+            "EndPointStatuses should be reported", cancellationToken: TestCt);
+
         // Assert: the status reported to access manager contains EndPointStatuses with an error for the occupied endpoint
-        var endPointStatuses = accessManager.LastServerStatus?.EndPointStatuses;
+        var endPointStatuses = accessManager.LastEndPointStatuses;
         Assert.IsNotNull(endPointStatuses, "EndPointStatuses should be reported");
         Assert.IsNotEmpty(endPointStatuses, "EndPointStatuses should have at least one entry");
 
@@ -481,6 +486,11 @@ public class ServerTest : TestBase
 
         // Assert: the server still reaches Ready (TCP works); it must NOT halt on the bad QUIC endpoint.
         Assert.AreEqual(ServerState.Ready, server.State);
+
+        // the state flips to Ready before the status carrying EndPointStatuses reaches
+        // the access manager, so wait for the report instead of reading it immediately
+        await VhTestUtil.AssertEqualsWait(true, () => accessManager.LastEndPointStatuses != null,
+            "EndPointStatuses should be reported", cancellationToken: TestCt);
 
         // and configuration as a whole must not be reported as failed
         Assert.IsNull(accessManager.LastServerStatus?.ConfigError,

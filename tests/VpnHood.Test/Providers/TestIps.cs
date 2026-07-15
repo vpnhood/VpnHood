@@ -1,10 +1,13 @@
 ﻿using System.Net;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Test.Providers;
 
-public class TestIps 
+public class TestIps
 {
+    private static readonly Lock DedicatedLocalIpLock = new();
+    private static IPAddress _lastDedicatedLocalIp = IPAddress.Parse("127.0.10.0");
     public IPAddress RemoteTestIpV6 { get; } = IPAddress.Parse("2001:db8::1");
     public IPAddress LocalTestIpV6 => IPAddress.IPv6Loopback;
     public IReadOnlyList<IPAddress> RemoteTestIps { get; } 
@@ -12,6 +15,8 @@ public class TestIps
     public IPAddress RemoteInvalidTestIpV4 { get; } = IPAddress.Parse("198.18.12.1");
     public IPAddress LocalBlockedClientIpAddress { get; }
     public IPAddress LocalBlockedServerIpAddress { get; }
+    public IPAddress LocalNsTestIp { get; }
+    public IPAddress RemoteNsTestIp { get; }
 
     public IReadOnlyList<IPAddress> AllRemoteTestIps {
         get => RemoteTestIps
@@ -19,6 +24,22 @@ public class TestIps
             .Append(RemoteInvalidTestIpV4)
             .Concat(RemoteTestIps)
             .ToList();
+    }
+
+    /// <summary>
+    /// Allocates a dedicated loopback IP where the given UDP port is free. Services that must
+    /// listen on a well-known port (e.g. DNS 53) get their own IP, so concurrent test instances
+    /// never share listeners.
+    /// </summary>
+    public static IPAddress AllocateDedicatedLocalIp(int udpPort)
+    {
+        lock (DedicatedLocalIpLock) {
+            var ip = IPAddressUtil.Increment(_lastDedicatedLocalIp);
+            while (VhUtils.GetFreeUdpEndPoint(ip, udpPort).Port != udpPort)
+                ip = IPAddressUtil.Increment(ip);
+            _lastDedicatedLocalIp = ip;
+            return ip;
+        }
     }
 
     public TestIps()
@@ -51,6 +72,14 @@ public class TestIps
         localStartIp = IPAddressUtil.Increment(localStartIp);
         localIpV4S.Add(localStartIp);
         LocalBlockedClientIpAddress = localStartIp;
+
+        // NS echo must listen on the well-known DNS port (53), so it gets a dedicated loopback IP
+        // where port 53 is free; this lets concurrent test instances bind their own NS listener
+        LocalNsTestIp = AllocateDedicatedLocalIp(udpPort: 53);
+        localIpV4S.Add(LocalNsTestIp);
+        remoteStartIp = IPAddressUtil.Increment(remoteStartIp);
+        remoteIpV4S.Add(remoteStartIp);
+        RemoteNsTestIp = remoteStartIp;
 
         // map remote test ips to local test ips
         LocalTestIps = localIpV4S;

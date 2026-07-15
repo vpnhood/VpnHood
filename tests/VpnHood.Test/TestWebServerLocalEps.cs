@@ -91,7 +91,10 @@ public class TestWebServerLocalEps
 
         HttpV4EndPointBlockedClient = AllocateFreeTcpEndPoint(testIps.LocalBlockedClientIpAddress);
         HttpV4EndPointBlockedServer = AllocateFreeTcpEndPoint(testIps.LocalBlockedServerIpAddress);
-        UdpNsEchoEndPoint1 = new IPEndPoint(testIps.LocalTestIps[3], 53);
+
+        // NS echo must listen on the well-known DNS port (53) for DNS detection, so it uses a
+        // dedicated loopback IP where port 53 is free instead of a shared test IP
+        UdpNsEchoEndPoint1 = new IPEndPoint(testIps.LocalNsTestIp, 53);
         HttpV4EndPointRefused1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
     }
 

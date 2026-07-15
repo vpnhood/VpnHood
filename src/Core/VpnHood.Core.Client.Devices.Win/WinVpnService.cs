@@ -34,6 +34,11 @@ public class WinVpnService : IVpnServiceHandler, IDisposable
         _ = _vpnServiceHost.TryDisconnect();
     }
 
+    public VpnHoodClientFactory CreateClientFactory()
+    {
+        return new VpnHoodClientFactory();
+    }
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         IVpnAdapter vpnAdapter = debugData?.Contains("/windivert", StringComparison.OrdinalIgnoreCase) is true

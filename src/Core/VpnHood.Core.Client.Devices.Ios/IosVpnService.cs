@@ -186,6 +186,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         completionHandler();
     }
 
+    public VpnHoodClientFactory CreateClientFactory()
+    {
+        return new VpnHoodClientFactory();
+    }
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         // Start the memory probe — a no-op unless diagnostics are on (IosMemoryMonitor.Enabled follows

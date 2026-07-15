@@ -33,6 +33,11 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
         _ = _vpnServiceHost.TryDisconnect();
     }
 
+    public VpnHoodClientFactory CreateClientFactory()
+    {
+        return new VpnHoodClientFactory();
+    }
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         var vpnAdapter = new LinuxTunVpnAdapter(new LinuxVpnAdapterSettings {

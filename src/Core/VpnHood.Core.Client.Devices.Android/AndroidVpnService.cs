@@ -111,6 +111,11 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     }
 
 
+    public VpnHoodClientFactory CreateClientFactory()
+    {
+        return new VpnHoodClientFactory();
+    }
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
         return new AndroidVpnAdapter(this, new AndroidVpnAdapterSettings {

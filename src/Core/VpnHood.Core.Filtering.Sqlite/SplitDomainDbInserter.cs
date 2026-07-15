@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Filtering.Sqlite.Extensions;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 

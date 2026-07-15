@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 
-namespace VpnHood.Core.Filtering.Sqlite;
+namespace VpnHood.Core.Filtering.Sqlite.Extensions;
 
 internal static class SqliteConnectionExtensions
 {

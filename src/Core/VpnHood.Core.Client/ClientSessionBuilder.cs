@@ -32,7 +32,7 @@ internal class ClientSessionBuilder(
     VpnHoodClientConfig config,
     ITracker? tracker,
     ServerFinder serverFinder,
-    IProxyConnector proxyConnector,
+    IProxyConnector? proxyConnector,
     DomainFilteringService domainFilteringService,
     NetFilter netFilter,
     StaticIpFilter staticIpFilter,
@@ -63,9 +63,9 @@ internal class ClientSessionBuilder(
             config.Version, VpnHoodClientConfig.MinProtocolVersion, VpnHoodClientConfig.MaxProtocolVersion,
             VhLogger.FormatId(config.ClientId));
 
-        if (proxyConnector.IsEnabled) {
+        if (proxyConnector is { IsEnabled: true }) {
             setState(ClientState.ValidatingProxies);
-            await proxyConnector.CheckServers(linkedCts.Token).Vhc();
+            await proxyConnector.CheckServers(socketFactory, linkedCts.Token).Vhc();
 
             var status = proxyConnector.Status;
             VhLogger.Instance.LogInformation("Proxy servers succeeded: {Count}",

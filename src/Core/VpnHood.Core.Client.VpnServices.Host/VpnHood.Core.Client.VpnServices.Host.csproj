@@ -7,6 +7,9 @@
 	<ItemGroup>
    <ProjectReference Include="..\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
    <ProjectReference Include="..\VpnHood.Core.Client\VpnHood.Core.Client.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.Proxies.EndPointManagement\VpnHood.Core.Proxies.EndPointManagement.csproj" />
+   <ProjectReference Include="..\VpnHood.Core.Proxies.EndPointManagement.Sqlite\VpnHood.Core.Proxies.EndPointManagement.Sqlite.csproj" />
    <ProjectReference Include="..\VpnHood.Core.VpnAdapters.Abstractions\VpnHood.Core.VpnAdapters.Abstractions.csproj" />
 	</ItemGroup>
 

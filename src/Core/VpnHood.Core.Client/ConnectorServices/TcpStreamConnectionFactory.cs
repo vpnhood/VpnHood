@@ -14,7 +14,7 @@ namespace VpnHood.Core.Client.ConnectorServices;
 
 internal class TcpStreamConnectionFactory(
     ISocketFactory socketFactory,
-    IProxyConnector proxyConnector,
+    IProxyConnector? proxyConnector,
     VpnEndPoint vpnEndPoint,
     RemoteCertificateValidationCallback certificateValidationCallback)
     : IDisposable
@@ -29,8 +29,9 @@ internal class TcpStreamConnectionFactory(
             VhLogger.Instance.LogDebug(GeneralEventId.Request,
                 "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
 
-            if (proxyConnector.IsEnabled)
-                tcpClient = await proxyConnector.ConnectAsync(tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
+            if (proxyConnector is { IsEnabled: true })
+                tcpClient = await proxyConnector
+                    .ConnectAsync(socketFactory, tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
             else {
                 tcpClient = socketFactory.CreateTcpClient(tcpEndPoint);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
@@ -39,7 +40,7 @@ internal class TcpStreamConnectionFactory(
             return await AuthenticateTls(connectionId, tcpClient, cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            if (proxyConnector.IsEnabled && tcpClient != null)
+            if (proxyConnector is { IsEnabled: true } && tcpClient != null)
                 proxyConnector.RecordFailed(tcpClient, ex);
 
             tcpClient?.Dispose();

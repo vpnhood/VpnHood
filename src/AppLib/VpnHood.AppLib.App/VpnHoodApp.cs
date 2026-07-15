@@ -782,8 +782,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UnstableTimeout = _unstableTimeout,
                 AutoWaitTimeout = _autoWaitTimeout,
                 SplitLocalNetwork = UserSettings.UseSplitLocalNetwork,
-                SplitIpDbPaths = splitIpDbPaths,
-                SplitDomainDbPaths = splitDomainDbPaths,
+                UseDomainFilter = splitDomainDbPaths.Any(),
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 PacketChannelBufferSize = _packetChannelBufferSize,
@@ -820,7 +819,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionName = profileInfo.ClientProfileName,
                 CustomServerEndpoints = profileInfo.CustomServerEndpoints,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
-                UserReview = Settings.UserReview,
+                UserReview = Settings.UserReview
+            };
+
+            // what the VpnService must resolve into services itself; the client only gets ClientOptions
+            var serviceOptions = new VpnServiceOptions {
+                ClientOptions = clientOptions,
+                SplitIpDbPaths = splitIpDbPaths,
+                SplitDomainDbPaths = splitDomainDbPaths,
                 ProxyOptions = proxyOptions
             };
 
@@ -834,12 +840,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     .ResolveHostEndPoints(token.ServerToken, UserSettings.EndPointStrategy, cancellationToken).Vhc();
                 await Diagnoser.CheckEndPoints(hostEndPoints, cancellationToken).Vhc();
                 await Diagnoser.CheckPureNetwork(cancellationToken).Vhc();
-                await _vpnServiceManager.Start(clientOptions, cancellationToken).Vhc();
+                await _vpnServiceManager.Start(serviceOptions, cancellationToken).Vhc();
                 await Diagnoser.CheckVpnNetwork(cancellationToken).Vhc();
             }
             // start client
             else {
-                await _vpnServiceManager.Start(clientOptions, cancellationToken).Vhc();
+                await _vpnServiceManager.Start(serviceOptions, cancellationToken).Vhc();
             }
 
             var connectionInfo = ConnectionInfo;

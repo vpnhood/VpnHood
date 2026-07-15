@@ -28,10 +28,10 @@ internal class VpnServiceContext(string configFolder)
 
     public ConnectionInfo ConnectionInfo { get; private set; } = DefaultConnectionInfo;
 
-    public ClientOptions? TryReadClientOptions()
+    public VpnServiceOptions? TryReadServiceOptions()
     {
         try {
-            return ReadClientOptions();
+            return ReadServiceOptions();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not read client options from file.");
@@ -39,13 +39,13 @@ internal class VpnServiceContext(string configFolder)
         }
     }
 
-    public ClientOptions ReadClientOptions()
+    public VpnServiceOptions ReadServiceOptions()
     {
         var json = File.ReadAllText(ConfigFilePath);
 
-        var opts = JsonSerializer.Deserialize<ClientOptions>(json);
+        var opts = JsonSerializer.Deserialize<VpnServiceOptions>(json);
         if (opts == null)
-            throw new InvalidDataException("ClientOptions could not be deserialized!");
+            throw new InvalidDataException($"{nameof(VpnServiceOptions)} could not be deserialized!");
         return opts;
     }
 

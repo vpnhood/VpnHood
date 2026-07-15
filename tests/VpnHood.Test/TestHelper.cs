@@ -7,6 +7,10 @@ using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Proxies.EndPointManagement;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
 using VpnHood.Core.Quic.MsQuic;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Abstractions;
@@ -323,6 +327,23 @@ public class TestHelper : IDisposable
         };
     }
 
+    // mirrors VpnServiceHost.CreateProxyConnector so tests exercise the same wiring as production.
+    // proxyOptions is a service-level concern, so it is passed beside ClientOptions, not inside it.
+    private async Task<IProxyConnector?> CreateProxyConnector(ClientOptions clientOptions,
+        ProxyOptions? proxyOptions)
+    {
+        proxyOptions ??= new ProxyOptions();
+        return proxyOptions.Mode switch {
+            ProxyMode.Simple when proxyOptions.ProxyEndPoint != null =>
+                new SimpleProxyConnector(proxyOptions.ProxyEndPoint),
+            ProxyMode.Managed => await ManagedProxyConnector.Create(
+                proxyOptions: proxyOptions,
+                store: new ProxyEndPointStore(Path.Combine(WorkingPath, "ClientCore", "proxies", "proxies.db")),
+                serverCheckTimeout: clientOptions.ServerQueryTimeout),
+            _ => null
+        };
+    }
+
     public Task<VpnHoodClient> CreateClient(Token token,
         IVpnAdapter? vpnAdapter = null,
         string? clientId = null,
@@ -335,14 +356,15 @@ public class TestHelper : IDisposable
     public async Task<VpnHoodClient> CreateClient(
         ClientOptions clientOptions,
         IVpnAdapter? vpnAdapter = null,
-        bool autoConnect = true)
+        bool autoConnect = true,
+        ProxyOptions? proxyOptions = null)
     {
         vpnAdapter ??= new TestVpnAdapter(new TestVpnAdapterOptions());
         var client = new VpnHoodClient(vpnAdapter,
             socketFactory: new TestSocketFactory(),
             netFilter: ClientNetFilter,
-            storageFolder: Path.Combine(WorkingPath, "ClientCore"),
-            new TestTracker(), 
+            proxyConnector: await CreateProxyConnector(clientOptions, proxyOptions),
+            new TestTracker(),
             clientOptions);
 
         // test starting the client

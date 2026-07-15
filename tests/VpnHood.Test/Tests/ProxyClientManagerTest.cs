@@ -29,21 +29,17 @@ public class ManagedProxyConnectorTest : TestBase
     [TestMethod]
     public async Task IsEnabled_False_When_No_Servers()
     {
-        var socketFactory = new TestSocketFactory();
-        var mgr = new ManagedProxyConnector(new ProxyOptions(), await CreateStore(), socketFactory);
-        await mgr.Init(TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore());
         Assert.IsFalse(mgr.IsEnabled);
     }
 
     [TestMethod]
     public async Task IsEnabled_True_When_Servers_Exist()
     {
-        var socketFactory = new TestSocketFactory();
         var store = await CreateStore(
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 });
 
-        var mgr = new ManagedProxyConnector(new ProxyOptions(), store, socketFactory);
-        await mgr.Init(TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store);
         Assert.IsTrue(mgr.IsEnabled);
     }
 
@@ -51,27 +47,24 @@ public class ManagedProxyConnectorTest : TestBase
     public async Task ConnectAsync_With_No_Servers_Throws_NetworkUnreachable()
     {
         var socketFactory = new TestSocketFactory();
-        var mgr = new ManagedProxyConnector(new ProxyOptions(), await CreateStore(), socketFactory);
-        await mgr.Init(TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), await CreateStore());
         var target = new IPEndPoint(IPAddress.Loopback, 443);
 
         var ex = await Assert.ThrowsExactlyAsync<SocketException>(async () =>
-            await mgr.ConnectAsync(target, null, TestCt));
+            await mgr.ConnectAsync(socketFactory, target, null, TestCt));
         Assert.AreEqual((int)SocketError.NetworkUnreachable, ex.ErrorCode);
     }
 
     [TestMethod]
     public async Task Constructor_Supports_Multiple_Proxy_Types()
     {
-        var socketFactory = new TestSocketFactory();
         var store = await CreateStore(
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks5, Host = "127.0.0.1", Port = 1080 },
             new ProxyEndPoint { Protocol = ProxyProtocol.Socks4, Host = "127.0.0.1", Port = 1081 },
             new ProxyEndPoint { Protocol = ProxyProtocol.Http, Host = "127.0.0.1", Port = 8080 },
             new ProxyEndPoint { Protocol = ProxyProtocol.Https, Host = "127.0.0.1", Port = 8443 });
 
-        var mgr = new ManagedProxyConnector(new ProxyOptions(), store, socketFactory);
-        await mgr.Init(TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store);
 
         Assert.IsTrue(mgr.IsEnabled);
         Assert.HasCount(4, mgr.GetEndPointInfos());
@@ -123,9 +116,8 @@ public class ManagedProxyConnectorTest : TestBase
                 Port = endPoint2.Port
             });
 
-        var mgr = new ManagedProxyConnector(new ProxyOptions(), store, socketFactory);
-        await mgr.Init(TestCt);
-        await mgr.CheckServers(TestCt);
+        var mgr = await ManagedProxyConnector.Create(new ProxyOptions(), store);
+        await mgr.CheckServers(socketFactory, TestCt);
 
         // All non-SOCKS5 servers should be marked as inactive
         Assert.IsTrue(mgr.GetEndPointInfos().All(status => !status.EndPoint.IsEnabled));
@@ -150,15 +142,13 @@ public class ManagedProxyConnectorTest : TestBase
         var proxyOptions = new ProxyOptions { VerifyTls = false };
 
         // first manager records a successful check and flushes on dispose
-        var mgr = new ManagedProxyConnector(proxyOptions, await CreateStore(proxyEndPoint), socketFactory);
-        await mgr.Init(TestCt);
-        await mgr.CheckServers(TestCt);
+        var mgr = await ManagedProxyConnector.Create(proxyOptions, await CreateStore(proxyEndPoint));
+        await mgr.CheckServers(socketFactory, TestCt);
         Assert.IsTrue(mgr.GetEndPointInfos().Single().Status.SucceededCount >= 1);
         await mgr.DisposeAsync();
 
         // a new manager over the same db restores the statuses
-        var mgr2 = new ManagedProxyConnector(proxyOptions, await CreateStore(), socketFactory);
-        await mgr2.Init(TestCt);
+        var mgr2 = await ManagedProxyConnector.Create(proxyOptions, await CreateStore());
         var restored = mgr2.GetEndPointInfos().Single();
         Assert.AreEqual(proxyEndPoint.Id, restored.EndPoint.Id);
         Assert.IsTrue(restored.Status.SucceededCount >= 1);
@@ -203,12 +193,13 @@ public class ManagedProxyConnectorTest : TestBase
 
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.AllowChannelReuse = false; // make sure not reuse connections
-        clientOptions.ProxyOptions = new ProxyOptions { Mode = ProxyMode.Managed };
-        var clientServerDom = await ClientServerDom.Create(TestHelper, clientOptions);
+        var clientServerDom = await ClientServerDom.Create(TestHelper, clientOptions,
+            proxyOptions: new ProxyOptions { Mode = ProxyMode.Managed });
 
         await TestHelper.Test_Https();
 
-        var mgr = (ManagedProxyConnector)clientServerDom.Client.ProxyConnector;
+        var mgr = clientServerDom.Client.ProxyConnector as ManagedProxyConnector;
+        Assert.IsNotNull(mgr);
         var proxyEndPointInfos = mgr.GetEndPointInfos();
         Assert.IsTrue(proxyEndPointInfos.All(x => x.Status.SucceededCount >= 1));
     }
@@ -224,22 +215,23 @@ public class ManagedProxyConnectorTest : TestBase
 
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.AllowChannelReuse = false; // make sure not reuse connections
-        clientOptions.ProxyOptions = new ProxyOptions {
-            Mode = ProxyMode.Simple,
-            ProxyEndPoint = new ProxyEndPoint {
-                Protocol = ProxyProtocol.Socks5,
-                Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
-                Port = socks5ProxyServer.ListenerEndPoint.Port
-            }
-        };
-        var clientServerDom = await ClientServerDom.Create(TestHelper, clientOptions);
+        var clientServerDom = await ClientServerDom.Create(TestHelper, clientOptions,
+            proxyOptions: new ProxyOptions {
+                Mode = ProxyMode.Simple,
+                ProxyEndPoint = new ProxyEndPoint {
+                    Protocol = ProxyProtocol.Socks5,
+                    Host = socks5ProxyServer.ListenerEndPoint.Address.ToString(),
+                    Port = socks5ProxyServer.ListenerEndPoint.Port
+                }
+            });
 
         await TestHelper.Test_Https();
 
         // the lightweight path must not create the shared endpoint db
-        Assert.IsInstanceOfType<SimpleProxyConnector>(clientServerDom.Client.ProxyConnector);
+        var connector = clientServerDom.Client.ProxyConnector as SimpleProxyConnector;
+        Assert.IsNotNull(connector);
         Assert.IsFalse(File.Exists(ClientStoreDbPath));
-        var status = clientServerDom.Client.ProxyConnector.Status;
+        var status = connector.Status;
         Assert.IsTrue(status.SessionStatus.SucceededCount >= 1);
     }
 }

@@ -4,13 +4,9 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Filtering.DomainFiltering.Observation;
-using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
-using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Monitoring;
@@ -18,7 +14,6 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
-using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
 namespace VpnHood.Core.Client;
@@ -28,7 +23,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool _disposed;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly IVpnAdapter _vpnAdapter;
-    private readonly ConfiguringSocketFactory _socketFactory;
+    private readonly ISocketFactory _socketFactory;
     private ClientState _lastState = ClientState.None;
     private readonly Lock _stateEventLock = new();
     private readonly ServerFinder _serverFinder;
@@ -42,7 +37,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public event EventHandler? StateChanged;
     public Token Token { get; }
     public VpnHoodClientConfig Config { get; }
-    public IProxyConnector ProxyConnector { get; }
+    // null when the caller configured no proxy: connections then go direct
+    public IProxyConnector? ProxyConnector { get; }
     public IClientSession? Session => _session;
     public IClientSession RequiredSession => _session ?? throw new InvalidOperationException("Session is not created yet.");
     public ITracker? Tracker { get; }
@@ -58,7 +54,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         IVpnAdapter vpnAdapter,
         ISocketFactory socketFactory,
         NetFilter? netFilter,
-        string? storageFolder,
+        IProxyConnector? proxyConnector,
         ITracker? tracker,
         ClientOptions options)
     {
@@ -66,9 +62,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             options.MaxPacketChannelTimespan < options.MinPacketChannelTimespan)
             throw new ArgumentNullException(nameof(options.MaxPacketChannelTimespan),
                 $"{nameof(options.MaxPacketChannelTimespan)} must be bigger or equal than {nameof(options.MinPacketChannelTimespan)}.");
-
-        if (string.IsNullOrEmpty(storageFolder))
-            storageFolder = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath!)!, "vpn-service");
 
         // build config
         Config = new VpnHoodClientConfig {
@@ -109,57 +102,30 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         };
 
         Token = Token.FromAccessKey(options.AccessKey);
-        socketFactory = vpnAdapter.CanProtectSocket ? new AdapterSocketFactory(socketFactory, vpnAdapter) : socketFactory;
-        _socketFactory = new ConfiguringSocketFactory(new BindingSocketFactory(socketFactory)) {
-            KeepAlive = true,
-            NoDelay = true,
-            TcpKernelBufferSize = options.TcpKernelBufferSize
-        };
-        socketFactory = _socketFactory;// make sure the decorated factory is used in the rest of the code
+
+        // the client owns this decoration so that no caller can supply an unprotected factory; services
+        // built outside (e.g. the proxy connector) are handed the decorated one in Connect
+        // make sure the decorated factory is used in the rest of the code
+        socketFactory = ClientHelper.CreateSocketFactory(socketFactory, vpnAdapter, options);
+        _socketFactory = socketFactory;
         _vpnAdapter = vpnAdapter;
         Tracker = tracker;
         ChannelProtocol = options.ChannelProtocol;
+        ProxyConnector = proxyConnector;
 
-        // Prepare filters.
+        // Prepare filters. The gate chain (e.g. the split-ip/split-domain dbs) is supplied by the caller
+        // via netFilter; the client only adds its own gates and the caching layer on top of it.
         // Every stage is a veto gate: it may Exclude (bypass) or Block (drop); Default means "no objection"
         // and undecided traffic tunnels (fail-closed: a missing gate keeps traffic inside the VPN, it never
-        // leaks around it). Each split-ip db (country, via-app) is a lean self-describing SQLite gate chained
-        // as an inner filter, and the StaticIpFilter vetoes non-members of the server∩device allow set.
-        // The (former ~97MB) split ranges never enter memory here.
-        var innerIpFilter = netFilter?.IpFilter;
-        foreach (var splitIpDbPath in options.SplitIpDbPaths)
-            innerIpFilter = new SqliteIpFilter(innerIpFilter, splitIpDbPath);
-        _staticIpFilter = new StaticIpFilter(innerIpFilter);
+        // leaks around it). The StaticIpFilter vetoes non-members of the server∩device allow set.
+        _staticIpFilter = new StaticIpFilter(netFilter?.IpFilter);
 
-        // Domain gates: the same self-describing dbs with domain sets. A domain decision preempts the IP
-        // gates, and the include set is the override lane — a member domain is forced through the tunnel
-        // past any IP-gate veto (domains are more specific knowledge than IPs).
-        var innerDomainFilter = netFilter?.DomainFilter;
-        var hasDomainRules = false;
-        foreach (var splitDomainDbPath in options.SplitDomainDbPaths) {
-            var splitDomainFilter = new SqliteDomainFilter(innerDomainFilter, splitDomainDbPath);
-            hasDomainRules |= !splitDomainFilter.IsEmpty;
-            innerDomainFilter = splitDomainFilter;
-        }
-
+        // Domain gates preempt the IP gates, and their include set is the override lane — a member domain is
+        // forced through the tunnel past any IP-gate veto (domains are more specific knowledge than IPs).
         _netFilter = new NetFilter {
             IpFilter = new CachedIpFilter(_staticIpFilter, TimeSpan.FromMinutes(60)),
-            DomainFilter = new CachedDomainFilter(innerDomainFilter, TimeSpan.FromMinutes(60)),
+            DomainFilter = new CachedDomainFilter(netFilter?.DomainFilter, TimeSpan.FromMinutes(60)),
             IpMapper = netFilter?.IpMapper
-        };
-
-        // External Proxies. Single mode is the lightweight path (no store); Managed mode uses the
-        // shared SQLite endpoint store that the app process also reads/writes.
-        var proxyOptions = options.ProxyOptions ?? new ProxyOptions();
-        ProxyConnector = proxyOptions.Mode switch {
-            ProxyMode.Simple when proxyOptions.ProxyEndPoint != null =>
-                new SimpleProxyConnector(proxyOptions.ProxyEndPoint, socketFactory),
-            ProxyMode.Managed => new ManagedProxyConnector(
-                proxyOptions: proxyOptions,
-                store: new ProxyEndPointStore(Path.Combine(storageFolder, "proxies", "proxies.db")),
-                socketFactory: socketFactory,
-                serverCheckTimeout: options.ServerQueryTimeout),
-            _ => new NullProxyConnector()
         };
 
         // server finder
@@ -178,7 +144,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             _netFilter.DomainFilter,
             sniEventId: GeneralEventId.Sni,
             tlsBufferSize: TunnelDefaults.PrefetchStreamBufferSize);
-        _domainFilteringService.IsEnabled |= options.ForceLogSni || hasDomainRules;
+        _domainFilteringService.IsEnabled |= options.ForceLogSni || options.UseDomainFilter;
 
         // init vpnAdapter events
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
@@ -187,7 +153,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ProgressStatus? StateProgress =>
         State switch {
             ClientState.FindingReachableServer or ClientState.FindingBestServer => _serverFinder.Progress,
-            ClientState.ValidatingProxies => ProxyConnector.Progress,
+            ClientState.ValidatingProxies => ProxyConnector?.Progress,
             _ => null
         };
 
@@ -245,9 +211,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // Connecting. Must before IsIpv6Supported
         State = ClientState.Connecting;
-
-        // load the proxy working set before the session builder and server finder use the connector
-        await ProxyConnector.Init(cancellationToken).Vhc();
 
         var sessionBuilder = new ClientSessionBuilder(
             vpnAdapter: _vpnAdapter,

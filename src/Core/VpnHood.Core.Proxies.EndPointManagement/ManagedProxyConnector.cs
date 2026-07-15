@@ -20,16 +20,16 @@ public class ManagedProxyConnector : IProxyConnector
     private ProxyEndPointEntry? _fastestEntry;
     private long _queuePosition;
     private readonly TimeSpan _serverCheckTimeout;
-    private readonly ISocketFactory _socketFactory;
     private readonly IProxyEndPointStore _store;
+    // the most recent protected factory handed to us by a caller; the auto-update job has no caller of its
+    // own, so it reuses this one and simply skips the check before the first connect
+    private ISocketFactory? _lastSocketFactory;
     private ProxyEndPointEntry[] _proxyEndPointEntries;
     private ProgressMonitor? _progressMonitor;
     private Job? _autoUpdateJob;
     private readonly Job _flushJob;
     private ProxyAutoUpdateOptions _autoUpdateOptions;
     private bool _disposed;
-    private bool _initialized;
-    private readonly bool _resetStates;
     private bool _verifyTls;
     private readonly DateTime _sessionCreatedTime = FastDateTime.UtcNow;
     private readonly ProxySessionStatus _sessionStatus = new();
@@ -40,18 +40,15 @@ public class ManagedProxyConnector : IProxyConnector
     public bool UseRecentSucceeded { get; set; }
     public ProgressStatus? Progress => _progressMonitor?.Progress;
 
-    public ManagedProxyConnector(
+    private ManagedProxyConnector(
         ProxyOptions proxyOptions,
         IProxyEndPointStore store,
-        ISocketFactory socketFactory,
-        TimeSpan? serverCheckTimeout = null)
+        TimeSpan? serverCheckTimeout)
     {
         _serverCheckTimeout = serverCheckTimeout ?? TimeSpan.FromSeconds(7);
-        _socketFactory = socketFactory;
         _store = store;
         _autoUpdateOptions = proxyOptions.AutoUpdateOptions;
         _verifyTls = proxyOptions.VerifyTls;
-        _resetStates = proxyOptions.ResetStates;
         _proxyEndPointEntries = [];
 
         // periodic write-behind of dirty statuses; cheap no-op when nothing changed
@@ -63,21 +60,30 @@ public class ManagedProxyConnector : IProxyConnector
             });
     }
 
-    public async Task Init(CancellationToken cancellationToken)
+    /// <summary>
+    /// Builds a connector with its working set already loaded, so IsEnabled and Status are accurate as soon
+    /// as it exists. Loading is async, hence a factory method rather than a constructor.
+    /// </summary>
+    public static async Task<ManagedProxyConnector> Create(
+        ProxyOptions proxyOptions,
+        IProxyEndPointStore store,
+        TimeSpan? serverCheckTimeout = null,
+        CancellationToken cancellationToken = default)
     {
-        if (_initialized)
-            return;
-        _initialized = true;
+        _ = cancellationToken;
+        var connector = new ManagedProxyConnector(proxyOptions, store, serverCheckTimeout);
 
-        if (_resetStates)
-            await VhUtils.TryInvokeAsync("Reset proxy endpoint statuses", _store.ResetStatuses).Vhc();
+        if (proxyOptions.ResetStates)
+            await VhUtils.TryInvokeAsync("Reset proxy endpoint statuses", store.ResetStatuses).Vhc();
 
         // load the working set from the shared store; the store list is authoritative
-        await ReloadEntries().Vhc();
+        await connector.ReloadEntries().Vhc();
 
         // Start auto-update if configured
-        if (_autoUpdateOptions.Interval > TimeSpan.Zero && _autoUpdateOptions.Url != null)
-            StartAutoUpdate(_autoUpdateOptions.Interval.Value);
+        if (connector._autoUpdateOptions.Interval > TimeSpan.Zero && connector._autoUpdateOptions.Url != null)
+            connector.StartAutoUpdate(connector._autoUpdateOptions.Interval.Value);
+
+        return connector;
     }
 
     public ProxyConnectorStatus Status {
@@ -198,8 +204,11 @@ public class ManagedProxyConnector : IProxyConnector
             VhLogger.Instance.LogInformation("Downloaded and merged proxy list. Total proxies: {Count}",
                 _proxyEndPointEntries.Length);
 
-            // Check servers
-            await CheckServers(cancellationToken);
+            // Check servers with the last factory a caller gave us. Before the first connect there is none;
+            // GetOrderedEntries then checks the merged endpoints on that connect anyway.
+            var socketFactory = _lastSocketFactory;
+            if (socketFactory != null)
+                await CheckServers(socketFactory, cancellationToken);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Failed to update proxy list from {Url}", _autoUpdateOptions.Url);
@@ -240,19 +249,22 @@ public class ManagedProxyConnector : IProxyConnector
         }
     }
 
-    public Task CheckServers(CancellationToken cancellationToken)
+    public Task CheckServers(ISocketFactory socketFactory, CancellationToken cancellationToken)
     {
+        _lastSocketFactory = socketFactory;
+
         const int satisfiedSuccessCount = 10;
         var endpoints = _proxyEndPointEntries
             .Where(x => x.EndPoint.IsEnabled)
             .OrderBy(x => x.Status.Quality)
             .ToArray();
 
-        return CheckServers(endpoints, satisfiedSuccessCount, cancellationToken);
+        return CheckServers(socketFactory, endpoints, satisfiedSuccessCount, cancellationToken);
     }
 
 
-    private async Task CheckServers(IEnumerable<ProxyEndPointEntry> endpoints,
+    private async Task CheckServers(ISocketFactory socketFactory,
+        IEnumerable<ProxyEndPointEntry> endpoints,
         int satisfiedSuccessCount,
         CancellationToken cancellationToken)
     {
@@ -286,7 +298,7 @@ public class ManagedProxyConnector : IProxyConnector
                         return;
 
                     var proxyClient = await ProxyClientFactory.CreateProxyClient(entry.EndPoint, ct).Vhc();
-                    tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
+                    tcpClient = socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
                     tcpClient.ReceiveBufferSize = 1024 * 4;
                     tcpClient.SendBufferSize = 1024 * 4;
                     var latency = await CheckConnectionAsync(proxyClient, tcpClient, _progressMonitor, ct).Vhc();
@@ -384,7 +396,8 @@ public class ManagedProxyConnector : IProxyConnector
 
     private readonly AsyncLock _connectLock = new();
 
-    private async Task<ProxyEndPointEntry[]> GetOrderedEntries(CancellationToken cancellationToken)
+    private async Task<ProxyEndPointEntry[]> GetOrderedEntries(ISocketFactory socketFactory,
+        CancellationToken cancellationToken)
     {
         // lock till get an ordered list with at least one succeeded server
         // if there is a failed server on top, all connection must wait till re-check is done
@@ -396,15 +409,17 @@ public class ManagedProxyConnector : IProxyConnector
             return endPointEntries;
 
         // push the failed ones to the end and try again
-        await CheckServers(endPointEntries, 1, cancellationToken);
+        await CheckServers(socketFactory, endPointEntries, 1, cancellationToken);
         return GetOrderedEntriesQuery().ToArray();
     }
 
-    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint,
+    public async Task<TcpClient> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint,
         Action? onAttempt, CancellationToken cancellationToken)
     {
+        _lastSocketFactory = socketFactory;
+
         // get ordered endpoints
-        var entries = await GetOrderedEntries(cancellationToken);
+        var entries = await GetOrderedEntries(socketFactory, cancellationToken);
 
         // try to connect to a proxy server
         foreach (var entry in entries) {
@@ -420,7 +435,7 @@ public class ManagedProxyConnector : IProxyConnector
 
                 // create proxy client
                 var proxyClient = await ProxyClientFactory.CreateProxyClient(entry.EndPoint, cancellationToken).Vhc();
-                tcpClient = _socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
+                tcpClient = socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
 
                 // connect to the target endpoint
                 await proxyClient.ConnectAsync(tcpClient, ipEndPoint, cancellationToken).Vhc();

@@ -4,12 +4,33 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.VpnAdapters.Abstractions;
 // ReSharper disable PossibleMultipleEnumeration
 
 namespace VpnHood.Core.Client;
 
 internal static class ClientHelper
 {
+    /// <summary>
+    /// Wraps the caller's factory into the one the client and its services must use. Protecting the socket
+    /// is mandatory: an unprotected socket is captured by our own adapter, so traffic to the server or to
+    /// the proxies would loop back into the tunnel it is trying to establish.
+    /// </summary>
+    public static ConfiguringSocketFactory CreateSocketFactory(ISocketFactory socketFactory,
+        IVpnAdapter vpnAdapter, ClientOptions options)
+    {
+        if (vpnAdapter.CanProtectSocket)
+            socketFactory = new AdapterSocketFactory(socketFactory, vpnAdapter);
+
+        return new ConfiguringSocketFactory(new BindingSocketFactory(socketFactory)) {
+            KeepAlive = true,
+            NoDelay = true,
+            TcpKernelBufferSize = options.TcpKernelBufferSize
+        };
+    }
+
     private static bool IsIncluded(IIpFilter clientIpFilter, IPAddress ipAddress)
     {
         // tunnel when no gate vetoed (Default) or an override forced it (Include)

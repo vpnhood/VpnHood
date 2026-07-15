@@ -90,8 +90,10 @@ public class VpnServiceManager : IDisposable
 
     public bool IsStarted => _isInitializing || ConnectionInfo.IsStarted();
 
-    public async Task Start(ClientOptions clientOptions, CancellationToken cancellationToken)
+    public async Task Start(VpnServiceOptions serviceOptions, CancellationToken cancellationToken)
     {
+        var clientOptions = serviceOptions.ClientOptions;
+
         // wait for vpn service
         try {
             if (IsStarted)
@@ -106,7 +108,7 @@ public class VpnServiceManager : IDisposable
             _connectionInfo = SetConnectionInfo(ClientState.Initializing);
 
             // save vpn config
-            await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(clientOptions),
+            await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(serviceOptions),
                 cancellationToken).Vhc();
 
             // prepare vpn service

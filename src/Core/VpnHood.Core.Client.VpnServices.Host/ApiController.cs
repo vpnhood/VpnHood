@@ -145,7 +145,8 @@ internal class ApiController : IDisposable
         VpnHoodClient.DropUdp = request.Params.DropUdp;
         VpnHoodClient.DropQuic = request.Params.DropQuic;
         VpnHoodClient.ChannelProtocol = request.Params.ChannelProtocol;
-        await VpnHoodClient.ProxyConnector.UpdateOptions(request.Params.ProxyOptions).Vhc();
+        if (VpnHoodClient.ProxyConnector != null)
+            await VpnHoodClient.ProxyConnector.UpdateOptions(request.Params.ProxyOptions).Vhc();
     }
 
     private Task SetWaitForAd(ApiSetWaitForAdRequest request, CancellationToken cancellationToken)

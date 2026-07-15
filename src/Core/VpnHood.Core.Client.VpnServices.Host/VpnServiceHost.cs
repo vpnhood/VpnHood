@@ -6,6 +6,11 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Filtering.Sqlite;
+using VpnHood.Core.Proxies.EndPointManagement;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
@@ -64,9 +69,9 @@ public class VpnServiceHost : IDisposable
         // (e.g. os_log on iOS); when null the LogService falls back to its default VhDeviceLoggerProvider.
         _logService = withLogger ? new LogService(Context.LogFilePath, deviceLoggerProviderFactory) : null;
         VhLogger.TcpCloseEventId = GeneralEventId.Stream;
-        var clientOptions = Context.TryReadClientOptions();
-        if (_logService != null && clientOptions != null) {
-            _logService.Start(clientOptions.LogServiceOptions);
+        var serviceOptions = Context.TryReadServiceOptions();
+        if (_logService != null && serviceOptions != null) {
+            _logService.Start(serviceOptions.ClientOptions.LogServiceOptions);
         }
 
         // start apiController; the transport (IMessageListener) owns endpoint/key concerns
@@ -159,7 +164,8 @@ public class VpnServiceHost : IDisposable
         
         try {
             // read client options and start log service
-            var clientOptions = Context.ReadClientOptions();
+            var serviceOptions = Context.ReadServiceOptions();
+            var clientOptions = serviceOptions.ClientOptions;
             _logService?.Start(clientOptions.LogServiceOptions, deleteOldReport: false);
 
             // check if auto start is allowed
@@ -205,10 +211,10 @@ public class VpnServiceHost : IDisposable
                 vpnAdapter: clientOptions.UseNullCapture
                     ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
                     : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1),
-                storageFolder: Context.ConfigFolder,
-                netFilter: _netFilter,
-                tracker: tracker,
                 socketFactory: _socketFactory,
+                netFilter: CreateNetFilter(serviceOptions),
+                proxyConnector: await CreateProxyConnector(serviceOptions, cancellationToken).Vhc(),
+                tracker: tracker,
                 options: clientOptions
             );
             Client.StateChanged += VpnHoodClient_StateChanged;
@@ -235,6 +241,45 @@ public class VpnServiceHost : IDisposable
         }
     }
 
+    // Builds the gate chain the client filters with. Each split db (country, via-app, domain) is a lean
+    // self-describing read-only SQLite gate chained as an inner filter over the host's own filter, so the
+    // (former ~97MB) split ranges never enter memory. A gate holding no rules yet is still chained: it may
+    // be filled later, and it simply defers to the next filter until then.
+    private NetFilter CreateNetFilter(VpnServiceOptions serviceOptions)
+    {
+        var ipFilter = _netFilter?.IpFilter;
+        foreach (var splitIpDbPath in serviceOptions.SplitIpDbPaths)
+            ipFilter = new SqliteIpFilter(ipFilter, splitIpDbPath);
+
+        var domainFilter = _netFilter?.DomainFilter;
+        foreach (var splitDomainDbPath in serviceOptions.SplitDomainDbPaths)
+            domainFilter = new SqliteDomainFilter(domainFilter, splitDomainDbPath);
+
+        return new NetFilter {
+            IpFilter = ipFilter,
+            DomainFilter = domainFilter,
+            IpMapper = _netFilter?.IpMapper
+        };
+    }
+
+    // External proxies. Simple mode is the lightweight path (no store); Managed mode uses the shared SQLite
+    // endpoint store that the app process also reads/writes. Null means no proxy: connections go direct.
+    private async Task<IProxyConnector?> CreateProxyConnector(VpnServiceOptions serviceOptions,
+        CancellationToken cancellationToken)
+    {
+        var proxyOptions = serviceOptions.ProxyOptions ?? new ProxyOptions();
+        return proxyOptions.Mode switch {
+            ProxyMode.Simple when proxyOptions.ProxyEndPoint != null =>
+                new SimpleProxyConnector(proxyOptions.ProxyEndPoint),
+            ProxyMode.Managed => await ManagedProxyConnector.Create(
+                proxyOptions: proxyOptions,
+                store: new ProxyEndPointStore(Path.Combine(Context.ConfigFolder, "proxies", "proxies.db")),
+                serverCheckTimeout: serviceOptions.ClientOptions.ServerQueryTimeout,
+                cancellationToken: cancellationToken).Vhc(),
+            _ => null
+        };
+    }
+
     public Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
     {
         return UpdateConnectionInfo(client, null, cancellationToken);
@@ -243,11 +288,12 @@ public class VpnServiceHost : IDisposable
     public async Task UpdateConnectionInfo(VpnHoodClient client, Exception? ex, CancellationToken cancellationToken)
     {
         // flush pending proxy statuses so the app process sees fresh data in the shared endpoint store
-        await client.ProxyConnector.Flush().Vhc();
+        if (client.ProxyConnector != null)
+            await client.ProxyConnector.Flush().Vhc();
 
         var connectionInfo = new ConnectionInfo {
             CreatedTime = FastDateTime.Now,
-            ProxyConnectorStatus = client.ProxyConnector.Status,
+            ProxyConnectorStatus = client.ProxyConnector?.Status,
             SessionName = client.Config.SessionName,
             SessionInfo = client.Session?.Info,
             SessionStatus = client.Session?.Status.ToDto(),

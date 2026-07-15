@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Toolkit.Monitoring;
+using VpnHood.Core.Toolkit.Sockets;
 
 namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 
@@ -16,12 +17,16 @@ public interface IProxyConnector : IAsyncDisposable
     ProgressStatus? Progress { get; }
     ProxyConnectorStatus Status { get; }
 
-    /// <summary>Load implementation state such as the endpoint working set. Call once before first use.</summary>
-    Task Init(CancellationToken cancellationToken);
+    /// <summary>
+    /// Connects to <paramref name="ipEndPoint"/> through a proxy.
+    /// <paramref name="socketFactory"/> is passed per call rather than held: proxy traffic must leave the
+    /// tunnel, so the sockets have to come from the caller's protected factory.
+    /// </summary>
+    Task<TcpClient> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint, Action? onAttempt,
+        CancellationToken cancellationToken);
 
-    Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint, Action? onAttempt, CancellationToken cancellationToken);
     void RecordFailed(TcpClient tcpClient, Exception ex);
-    Task CheckServers(CancellationToken cancellationToken);
+    Task CheckServers(ISocketFactory socketFactory, CancellationToken cancellationToken);
     Task UpdateOptions(ProxyOptions proxyOptions);
 
     /// <summary>Persist any pending state (no-op for non-persistent implementations).</summary>

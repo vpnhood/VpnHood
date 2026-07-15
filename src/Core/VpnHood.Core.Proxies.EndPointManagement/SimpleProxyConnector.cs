@@ -14,7 +14,7 @@ namespace VpnHood.Core.Proxies.EndPointManagement;
 /// Lightweight connector for a single proxy endpoint (device proxy or a library-supplied proxy).
 /// No persistence, no auto-update, no rating/rotation — just connect through the given proxy.
 /// </summary>
-public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint, ISocketFactory socketFactory)
+public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint)
     : IProxyConnector
 {
     private readonly ProxySessionStatus _sessionStatus = new();
@@ -23,12 +23,6 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint, ISocketFactory so
     public bool IsEnabled => true;
     public bool UseRecentSucceeded { get; set; } // single endpoint; ordering does not apply
     public ProgressStatus? Progress => null;
-
-    public Task Init(CancellationToken cancellationToken)
-    {
-        // nothing to load
-        return Task.CompletedTask;
-    }
 
     public ProxyConnectorStatus Status {
         get {
@@ -45,19 +39,34 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint, ISocketFactory so
         }
     }
 
-    public async Task<TcpClient> ConnectAsync(IPEndPoint ipEndPoint, Action? onAttempt,
-        CancellationToken cancellationToken)
+    public async Task<TcpClient> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint,
+        Action? onAttempt, CancellationToken cancellationToken)
     {
-            VhLogger.Instance.LogDebug(
-                "Connecting via a {ProxyType} proxy server {ProxyServer}...",
-                _proxyEndPoint.Protocol, VhLogger.FormatHostName(_proxyEndPoint.Host));
+        VhLogger.Instance.LogDebug(
+            "Connecting via a {ProxyType} proxy server {ProxyServer}...",
+            _proxyEndPoint.Protocol, VhLogger.FormatHostName(_proxyEndPoint.Host));
 
+        var tickCount = Environment.TickCount64;
+        TcpClient? tcpClient = null;
+        try {
             var proxyClient = await ProxyClientFactory.CreateProxyClient(_proxyEndPoint, cancellationToken).Vhc();
-            var tcpClient = socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
+            tcpClient = socketFactory.CreateTcpClient(proxyClient.ProxyEndPoint);
             await proxyClient.ConnectAsync(tcpClient, ipEndPoint, cancellationToken).Vhc();
 
+            RecordSuccess(TimeSpan.FromMilliseconds(Environment.TickCount64 - tickCount));
             onAttempt?.Invoke();
             return tcpClient;
+        }
+        catch (Exception ex) {
+            // let's not assume bad server if caller cancelled the operation
+            if (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested) {
+                RecordFailed(ex);
+                onAttempt?.Invoke();
+            }
+
+            tcpClient?.Dispose();
+            throw;
+        }
     }
 
     public void RecordFailed(TcpClient tcpClient, Exception ex)
@@ -85,7 +94,7 @@ public class SimpleProxyConnector(ProxyEndPoint proxyEndPoint, ISocketFactory so
         }
     }
 
-    public Task CheckServers(CancellationToken cancellationToken)
+    public Task CheckServers(ISocketFactory socketFactory, CancellationToken cancellationToken)
     {
         // a single proxy is used as-is; failures surface on connect
         return Task.CompletedTask;

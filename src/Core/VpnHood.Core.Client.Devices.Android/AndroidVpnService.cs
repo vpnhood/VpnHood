@@ -76,7 +76,6 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                 _vpnServiceHost ??= new VpnServiceHost(
                     configFolder: VpnServiceConfigFolder,
                     vpnServiceHandler: this,
-                    netFilter: null,
                     socketFactory: new AndroidSocketFactory(),
                     messageListener: new TcpMessageListener(VpnServiceConfigFolder));
 

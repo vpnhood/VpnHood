@@ -17,8 +17,7 @@ public class WinVpnService : IVpnServiceHandler, IDisposable
         string configFolder)
     {
         _vpnServiceHost = new VpnServiceHost(
-            configFolder, 
-            netFilter: null,
+            configFolder,
             vpnServiceHandler: this,
             socketFactory: new MsQuicSocketFactory(),
             messageListener: new TcpMessageListener(configFolder),

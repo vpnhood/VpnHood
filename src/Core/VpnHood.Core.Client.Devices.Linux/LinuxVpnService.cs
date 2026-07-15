@@ -19,7 +19,6 @@ public class LinuxVpnService : IVpnServiceHandler, IDisposable
             configFolder: configFolder, 
             vpnServiceHandler: this,
             socketFactory: new MsQuicSocketFactory(),
-            netFilter: null,
             messageListener: new TcpMessageListener(configFolder),
             withLogger: false);
     }

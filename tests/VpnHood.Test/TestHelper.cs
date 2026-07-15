@@ -109,7 +109,7 @@ public class TestHelper : IDisposable
     }
 
     public Token CreateAccessToken(VpnHoodServer server,
-        int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null, 
+        int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null,
         Traffic? maxSpeedMbps = null)
     {
         var fileAccessManager = GetFileAccessManagerFromServer(server);
@@ -150,7 +150,7 @@ public class TestHelper : IDisposable
                 TrackLocalPort = true
             },
             NetFilterOptions = new NetFilterOptions {
-                IncludeLocalNetwork = false 
+                IncludeLocalNetwork = false
             },
             SessionOptions = {
                 SyncCacheSize = 50

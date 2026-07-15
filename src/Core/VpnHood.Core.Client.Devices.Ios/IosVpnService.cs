@@ -126,7 +126,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                 // the app's LogServiceOptions). deviceLoggerProviderFactory routes LogToDevice to os_log
                 // (IosDeviceLoggerProvider) instead of the default Trace sink (which is /dev/null in an extension).
                 _vpnServiceHost = new VpnServiceHost(configFolder, this, sf,
-                    netFilter: null, withLogger: true, messageListener: _messageListener,
+                    withLogger: true, messageListener: _messageListener,
                     deviceLoggerProviderFactory: includeScopes => new IosDeviceLoggerProvider(
                         OsLogSubsystem, includeScopes));
                 _ = _vpnServiceHost.TryConnect(true);

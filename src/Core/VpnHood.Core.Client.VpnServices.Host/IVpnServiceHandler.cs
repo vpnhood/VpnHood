@@ -6,6 +6,15 @@ namespace VpnHood.Core.Client.VpnServices.Host;
 public interface IVpnServiceHandler
 {
     IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData);
+
+    /// <summary>
+    /// Names the factory that builds the VpnHoodClient for each connection. The default composition is
+    /// <see cref="VpnHoodClientFactory"/>; return a derived factory to replace a single piece (filters,
+    /// proxy connector, tracker). The host calls this per connection and keeps ownership of the created
+    /// client (state wiring and dispose) — the factory must not hold a reference to it.
+    /// </summary>
+    VpnHoodClientFactory CreateClientFactory() => new();
+
     void ShowNotification(ConnectionInfo connectionInfo);
     void StopNotification();
     void StopSelf();

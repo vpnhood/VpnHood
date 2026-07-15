@@ -1,5 +1,6 @@
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+// ReSharper disable AccessToDisposedClosure
 
 namespace VpnHood.Test.Tests;
 
@@ -349,7 +350,7 @@ public class ProxyEndPointStoreTest : TestBase
         }
 
         // corrupt the file
-        File.WriteAllText(dbPath, "this is not a sqlite database at all --------------------");
+        await File.WriteAllTextAsync(dbPath, "this is not a sqlite database at all --------------------");
 
         // a new store must recreate it empty instead of failing (legacy data is disposable)
         using (var store = new ProxyEndPointStore(dbPath)) {

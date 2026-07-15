@@ -13,6 +13,7 @@ public class TestVpnService
     : IVpnServiceHandler, IDisposable
 {
     private readonly Func<VpnAdapterSettings, IVpnAdapter> _vpnAdapterFactory;
+    private readonly NetFilter _netFilter;
     private readonly VpnServiceHost _vpnServiceHost;
     public bool IsDisposed { get; private set; }
     public IVpnAdapter? CurrentVpnAdapter { get; private set; }
@@ -24,16 +25,16 @@ public class TestVpnService
         Func<VpnAdapterSettings, IVpnAdapter> vpnAdapterFactory)
     {
         _vpnAdapterFactory = vpnAdapterFactory;
+        _netFilter = netFilter;
         _vpnServiceHost = new VpnServiceHost(
             configFolder,
             this,
             socketFactory: new TestSocketFactory(),
-            netFilter: netFilter,
             messageListener: new TcpMessageListener(configFolder),
             withLogger: false);
     }
 
-    // it is not async to simulate real environment
+        // it is not async to simulate real environment
     public void OnConnect()
     {
         _ = _vpnServiceHost.TryConnect();
@@ -49,6 +50,11 @@ public class TestVpnService
         CurrentVpnAdapter = _vpnAdapterFactory(adapterSettings);
         CurrentVpnAdapter.Disposed += (_, _) => CurrentVpnAdapter = null;
         return CurrentVpnAdapter;
+    }
+
+    public VpnHoodClientFactory CreateClientFactory()
+    {
+        return new TestClientFactory(_netFilter);
     }
 
     public void ShowNotification(ConnectionInfo connectionInfo)
@@ -76,3 +82,4 @@ public class TestVpnService
         VhLogger.Instance.LogInformation("TestVpnService has been disposed.");
     }
 }
+

@@ -4,13 +4,6 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
-using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
-using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Filtering.Sqlite;
-using VpnHood.Core.Proxies.EndPointManagement;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
-using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
@@ -25,7 +18,6 @@ public class VpnServiceHost : IDisposable
     private readonly ApiController _apiController;
     private readonly IVpnServiceHandler _vpnServiceHandler;
     private readonly ISocketFactory _socketFactory;
-    private readonly NetFilter? _netFilter;
     private readonly LogService? _logService;
     private CancellationTokenSource _connectCts = new();
     private readonly TimeSpan _killServiceTimeout = TimeSpan.FromSeconds(3);
@@ -55,14 +47,12 @@ public class VpnServiceHost : IDisposable
     public VpnServiceHost(string configFolder,
         IVpnServiceHandler vpnServiceHandler,
         ISocketFactory socketFactory,
-        NetFilter? netFilter,
         IMessageListener messageListener,
         bool withLogger = true,
         Func<bool, ILoggerProvider>? deviceLoggerProviderFactory = null)
     {
         Context = new VpnServiceContext(configFolder);
         _socketFactory = socketFactory;
-        _netFilter = netFilter;
         _vpnServiceHandler = vpnServiceHandler;
 
         // initialize logger. deviceLoggerProviderFactory lets a platform supply its own device log sink
@@ -188,15 +178,6 @@ public class VpnServiceHost : IDisposable
                 clientOptions.LogServiceOptions.LogEventNames.Contains(nameof(GeneralEventId.Sni),
                     StringComparer.OrdinalIgnoreCase);
 
-            // create tracker
-            var trackerFactory = TryCreateTrackerFactory(clientOptions.TrackerFactoryAssemblyQualifiedName);
-            var tracker = trackerFactory?.TryCreateTracker(new TrackerCreateParams {
-                ClientId = clientOptions.ClientId,
-                ClientVersion = clientOptions.Version,
-                Ga4MeasurementId = clientOptions.Ga4MeasurementId,
-                UserAgent = clientOptions.UserAgent
-            });
-
             // create client
             VhLogger.Instance.LogDebug("VpnService is creating a new VpnHoodClient.");
             var adapterSetting = new VpnAdapterSettings {
@@ -205,18 +186,27 @@ public class VpnServiceHost : IDisposable
                 AutoDisposePackets = true
             };
 
+            // null-capture is host debug plumbing, so the adapter is resolved here and handed to the
+            // handler ready-made
+            var vpnAdapter = clientOptions.UseNullCapture
+                ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
+                : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1);
+
             // assign Client member to monitor states while connecting, even if the client is not connected yet.
             // This is important to update the connection info file and notification correctly.
-            Client = new VpnHoodClient(
-                vpnAdapter: clientOptions.UseNullCapture
-                    ? new NullVpnAdapter(autoDisposePackets: true, blocking: false)
-                    : _vpnServiceHandler.CreateAdapter(adapterSetting, clientOptions.DebugData1),
-                socketFactory: _socketFactory,
-                netFilter: CreateNetFilter(serviceOptions),
-                proxyConnector: await CreateProxyConnector(serviceOptions, cancellationToken).Vhc(),
-                tracker: tracker,
-                options: clientOptions
-            );
+            try {
+                Client = await _vpnServiceHandler.CreateClientFactory().Create(new VpnHoodClientParams {
+                    ServiceOptions = serviceOptions,
+                    VpnAdapter = vpnAdapter,
+                    SocketFactory = _socketFactory,
+                    ConfigFolder = Context.ConfigFolder
+                }, cancellationToken).Vhc();
+            }
+            catch {
+                vpnAdapter.Dispose(); // the client owns the adapter only once constructed
+                throw;
+            }
+
             Client.StateChanged += VpnHoodClient_StateChanged;
 
             // show notification.
@@ -239,45 +229,6 @@ public class VpnServiceHost : IDisposable
             VhLogger.Instance.LogError(ex, "VpnServiceHost could not establish the connection.");
             _ = Client?.DisposeAsync();
         }
-    }
-
-    // Builds the gate chain the client filters with. Each split db (country, via-app, domain) is a lean
-    // self-describing read-only SQLite gate chained as an inner filter over the host's own filter, so the
-    // (former ~97MB) split ranges never enter memory. A gate holding no rules yet is still chained: it may
-    // be filled later, and it simply defers to the next filter until then.
-    private NetFilter CreateNetFilter(VpnServiceOptions serviceOptions)
-    {
-        var ipFilter = _netFilter?.IpFilter;
-        foreach (var splitIpDbPath in serviceOptions.SplitIpDbPaths)
-            ipFilter = new SqliteIpFilter(ipFilter, splitIpDbPath);
-
-        var domainFilter = _netFilter?.DomainFilter;
-        foreach (var splitDomainDbPath in serviceOptions.SplitDomainDbPaths)
-            domainFilter = new SqliteDomainFilter(domainFilter, splitDomainDbPath);
-
-        return new NetFilter {
-            IpFilter = ipFilter,
-            DomainFilter = domainFilter,
-            IpMapper = _netFilter?.IpMapper
-        };
-    }
-
-    // External proxies. Simple mode is the lightweight path (no store); Managed mode uses the shared SQLite
-    // endpoint store that the app process also reads/writes. Null means no proxy: connections go direct.
-    private async Task<IProxyConnector?> CreateProxyConnector(VpnServiceOptions serviceOptions,
-        CancellationToken cancellationToken)
-    {
-        var proxyOptions = serviceOptions.ProxyOptions ?? new ProxyOptions();
-        return proxyOptions.Mode switch {
-            ProxyMode.Simple when proxyOptions.ProxyEndPoint != null =>
-                new SimpleProxyConnector(proxyOptions.ProxyEndPoint),
-            ProxyMode.Managed => await ManagedProxyConnector.Create(
-                proxyOptions: proxyOptions,
-                store: new ProxyEndPointStore(Path.Combine(Context.ConfigFolder, "proxies", "proxies.db")),
-                serverCheckTimeout: serviceOptions.ClientOptions.ServerQueryTimeout,
-                cancellationToken: cancellationToken).Vhc(),
-            _ => null
-        };
     }
 
     public Task UpdateConnectionInfo(VpnHoodClient client, CancellationToken cancellationToken)
@@ -324,26 +275,6 @@ public class VpnServiceHost : IDisposable
         await Context.TryWriteConnectionInfo(connectionInfo, cancellationToken);
     }
 
-
-    private static ITrackerFactory? TryCreateTrackerFactory(string? assemblyQualifiedName)
-    {
-        if (string.IsNullOrEmpty(assemblyQualifiedName))
-            return null;
-
-        try {
-            var type = Type.GetType(assemblyQualifiedName);
-            if (type == null)
-                return null;
-
-            var trackerFactory = Activator.CreateInstance(type) as ITrackerFactory;
-            return trackerFactory;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not create tracker factory. ClassName: {className}",
-                assemblyQualifiedName);
-            return null;
-        }
-    }
 
     public async Task TryDisconnect(Exception? exception = null)
     {

@@ -46,7 +46,7 @@ public class AppProxyEndPointService(
         if (_hasCustomEndPointsCache is null ||
             FastDateTime.UtcNow - _hasCustomEndPointsCacheTime > HasCustomEndPointsCacheTimeout)
             _ = VhUtils.TryInvokeAsync("Refresh custom proxy endpoint existence",
-                () => RefreshHasCustomEndPoints());
+                RefreshHasCustomEndPoints);
 
         return _hasCustomEndPointsCache ?? false;
     }

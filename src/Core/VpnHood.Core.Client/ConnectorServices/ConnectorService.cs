@@ -207,7 +207,7 @@ internal class ConnectorService : IDisposable
     // re-opening dozens of flows after a tunnel stall — otherwise fires 10-20 handshakes simultaneously;
     // on iOS (~52 MB jetsam limit) such a burst spiked phys_footprint several MB inside 500 ms and killed
     // the extension even with the download-ingest and SYN-admission gates active (2026-07-11 on-device:
-    // 232 fresh connections in a 12 min session, 11 inside one burst). Browsers cap ~6 per host for the
+    // 232 fresh connections in a 12-min session, 11 inside one burst). Browsers cap ~6 per host for the
     // same reason; the tunnel talks to ONE server, and waiters usually pick up a pooled connection freed
     // meanwhile, so a small cap is safe. Static: the budget being protected (process footprint) is
     // process-wide, and a reconnect can briefly overlap two ConnectorService instances.

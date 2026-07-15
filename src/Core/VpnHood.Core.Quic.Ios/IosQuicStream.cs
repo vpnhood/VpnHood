@@ -53,7 +53,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
     // Stopping the receive-arm — the single intake point of the whole download pipeline — while the
     // footprint is near the limit lets those transients drain; throughput only pays while within
     // ~7 MB of death. 2026-07-11: the per-stream 25/100 ms delay brake that lived here did NOT scale —
-    // 40+ streams delaying independently still admitted ~28 MB/s and it fired once in 134 s while the
+    // 40+ streams delaying independently still admitted ~28 MB/s, and it fired once in 134 s while the
     // footprint ratcheted 42 → 49.8 into a jetsam kill — replaced by the GLOBAL IosQuicIngestGate
     // (shared close/reopen thresholds with hysteresis; braking strength independent of stream count).
 

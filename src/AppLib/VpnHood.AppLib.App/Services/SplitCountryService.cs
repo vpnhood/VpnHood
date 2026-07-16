@@ -1,25 +1,49 @@
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.IpLocations;
+using VpnHood.Core.IpLocations.Providers.Offlines;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services;
 
-// Prepares the on-disk split-country filter db before connecting. Uses LocationService only as a data
-// source (client country, available country codes); the split policy, asset hashing and db orchestration
-// live here so LocationService stays a pure region provider.
+// Owns the country->ip-ranges data (split-by-country) and prepares the on-disk split-country filter
+// db before connecting. The client country itself comes from AppRegionInfo and country names from
+// AppCountryInfo; nothing is discovered here.
 public class SplitCountryService(
     AppSettingsService settingsService,
-    LocationService locationService,
-    byte[]? ipLocationZipData)
+    byte[]? ipLocationZipData) : IDisposable
 {
     private string? _ipLocationAssetHash;
     public event EventHandler? StateChanged;
 
     public bool IsBusy { get; private set; }
+
+    // split-by-country is available when the ip-location asset is provided
+    public IIpRangeLocationProvider? IpRangeLocationProvider { get; } = ipLocationZipData != null
+        ? new LocalIpRangeLocationProvider(
+            () => new ZipArchive(new MemoryStream(ipLocationZipData!)),
+            () => AppRegionInfo.CurrentRegion.Name)
+        : null;
+
+    public async Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
+    {
+        if (IpRangeLocationProvider is null)
+            return [];
+
+        // get all countries from IpRangeLocationProvider
+        var splitByCountries = await IpRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
+        var countryInfos = AppCountryInfo.GetAll()
+            .Where(country => splitByCountries.Contains(country.CountryCode))
+            .ToArray();
+
+        return countryInfos;
+    }
 
     // Build or reuse the on-disk split-country db for the current SplitCountryMode. The selected countries'
     // ranges are written into the db's include or exclude set — the db self-describes what membership means,
@@ -38,17 +62,17 @@ public class SplitCountryService(
             IsBusy = true;
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            if (locationService.IpRangeLocationProvider is null || ipLocationZipData is null)
-                throw new InvalidOperationException("Could not use internal location service because it is disabled.");
+            if (IpRangeLocationProvider is null || ipLocationZipData is null)
+                throw new InvalidOperationException("Could not split by country because the ip-location asset is not provided.");
 
             // resolve the selected countries
             string[] countryCodes = splitCountryMode is SplitCountryMode.ExcludeMyCountry
-                ? [await GetSplitMyCountryCodeAsync(cancellationToken).Vhc()]
+                ? [GetSplitMyCountryCode()]
                 : settingsService.UserSettings.SplitCountries;
 
             // short path: store whichever of (selected, complement) is smaller in the matching set,
             // so an "everything except one" selection builds a one-country db
-            var availableCodes = await locationService.IpRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
+            var availableCodes = await IpRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
             var (storedCodes, action) = ResolveSplitIpDbSelection(availableCodes, countryCodes,
                 splitCountryMode is SplitCountryMode.IncludeList ? FilterAction.Include : FilterAction.Exclude);
 
@@ -74,11 +98,10 @@ public class SplitCountryService(
         }
     }
 
-    // do not use cache and server country code, maybe client on satellite, and they need to split their own country IPs
-    private async Task<string> GetSplitMyCountryCodeAsync(CancellationToken cancellationToken)
+    // country comes from the current region; never discovered
+    private static string GetSplitMyCountryCode()
     {
-        var countryCode = await locationService
-            .GetClientCountryCodeAsync(allowVpnServer: false, allowCache: false, cancellationToken).Vhc();
+        var countryCode = AppRegionInfo.CurrentRegion.Name;
         VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}",
             VhUtils.TryGetCountryName(countryCode));
         return countryCode;
@@ -134,5 +157,10 @@ public class SplitCountryService(
         }
 
         return _ipLocationAssetHash;
+    }
+
+    public void Dispose()
+    {
+        IpRangeLocationProvider?.Dispose();
     }
 }

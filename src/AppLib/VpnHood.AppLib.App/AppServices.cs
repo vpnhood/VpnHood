@@ -12,7 +12,6 @@ public class AppServices : IDisposable
     public required AppAccountService? AccountService { get; init; }
     public required AppUpdaterService? UpdaterService { get; init; }
     public required AppProxyEndPointService ProxyEndPointService { get; init; }
-    public required LocationService LocationService { get; init; }
     public required SplitCountryService SplitCountryService { get; init; }
     public required SplitIpViaAppService SplitIpViaAppService { get; init; }
     public required SplitDomainService SplitDomainService { get; init; }
@@ -23,6 +22,6 @@ public class AppServices : IDisposable
     public void Dispose()
     {
         UpdaterService?.Dispose();
-        LocationService.Dispose();
+        SplitCountryService.Dispose();
     }
 }

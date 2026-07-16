@@ -29,8 +29,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
     public AppUpdaterOptions? UpdaterOptions { get; set; }
-    public bool UseInternalLocationService { get; set; } = true;
-    public bool UseExternalLocationService { get; set; } = true;
     public AppResources Resources { get; set; } = new();
 
     // ReSharper disable once StringLiteralTypo
@@ -53,10 +51,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromMinutes(4).WhenNoDebugger();
     public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
-
-    public TimeSpan LocationServiceTimeout { get; set; } =
-        TimeSpan.FromSeconds(3); // ignore debugger attach to let check when there is no internet
-
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }

@@ -26,8 +26,6 @@ public class TestAppHelper : TestHelper
             EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no SPA in test, so we need to use event watcher
             Ga4MeasurementId = null,
             TrackerFactory = new TestTrackerFactory(),
-            UseInternalLocationService = false,
-            UseExternalLocationService = false,
             AllowEndPointTracker = true,
             ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,
@@ -89,5 +87,12 @@ public class TestAppHelper : TestHelper
     public string BuildAccessCode()
     {
         return AccessCodeUtils.Build(GenerateSecureRandomDigits(18));
+    }
+
+    public override void Dispose()
+    {
+        // AppRegionInfo is process-global; don't let a test's country override leak into the next test
+        AppRegionInfo.Reset();
+        base.Dispose();
     }
 }

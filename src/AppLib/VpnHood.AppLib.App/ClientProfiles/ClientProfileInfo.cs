@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Utils;
@@ -40,7 +41,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public ClientPolicy? ClientPolicy => _clientPolicy.Value;
 
     private readonly Lazy<ClientPolicy?> _clientPolicy = new(() => {
-        var countryCode = VpnHoodApp.Instance.Services.LocationService.GetClientCountryCode(allowVpnServer: true);
+        var countryCode = AppRegionInfo.CurrentRegion.Name;
         return clientProfile.Token.ClientPolicies?.FirstOrDefault(x => 
                    x.ClientCountries.Any(y => y.Equals(countryCode, StringComparison.OrdinalIgnoreCase))) ??
                clientProfile.Token.ClientPolicies?.FirstOrDefault(x => x.ClientCountries.Any(y => y == "*"));

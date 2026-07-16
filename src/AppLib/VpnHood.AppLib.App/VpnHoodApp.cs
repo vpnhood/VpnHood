@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -124,14 +123,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _trackerFactory = options.TrackerFactory ??
                           (options.IsDebugMode ? new NullTrackerFactory() : new BuiltInTrackerFactory());
 
-        var locationService = new LocationService(settingsService,
-            useExternalLocationService: options.UseExternalLocationService,
-            useInternalLocationService: options.UseInternalLocationService,
-            locationServiceTimeout: options.LocationServiceTimeout,
-            ipLocationZipData: options.Resources.IpLocationZipData);
-        locationService.StateChanged += LocationService_StateChanged;
-
-        var splitCountryService = new SplitCountryService(settingsService, locationService,
+        var splitCountryService = new SplitCountryService(settingsService,
             ipLocationZipData: options.Resources.IpLocationZipData);
         splitCountryService.StateChanged += LocationService_StateChanged;
 
@@ -224,7 +216,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UserReviewProvider = options.UserReviewProvider,
             DeviceUiProvider = deviceUiProvider,
             Tracker = tracker,
-            LocationService = locationService,
             SplitCountryService = splitCountryService,
             SplitIpViaAppService = splitIpViaAppService,
             SplitDomainService = splitDomainService,
@@ -243,7 +234,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     updateOptions: options.UpdaterOptions),
             ProxyEndPointService = new AppProxyEndPointService(
                 dbPath: Path.Combine(_device.VpnServiceConfigFolder, "proxies", "proxies.db"),
-                ipLocationProvider: locationService.IpRangeLocationProvider,
+                ipLocationProvider: splitCountryService.IpRangeLocationProvider,
                 vpnServiceManager: _vpnServiceManager,
                 deviceUiProvider: deviceUiProvider,
                 settingsService: settingsService)
@@ -251,7 +242,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // create ad service
         var adService = new AppAdService(
-            regionProvider: locationService,
             adProviderItems: options.AdProviderItems,
             loadAdTimeout: options.AdOptions.LoadAdTimeout,
             loadAdPostDelay: options.AdOptions.LoadAdPostDelay,
@@ -283,10 +273,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private async Task OnStartup()
     {
-        // track ip location (try local provider, the server as satellite ip accepted if local failed)
+        // track first launch with the locale-based country
         try {
             if (!SettingsService.Settings.IsStartupTrackerSent) {
-                var countryCode = await Services.LocationService.GetClientCountryCodeAsync(allowVpnServer: false, CancellationToken.None);
+                var countryCode = AppRegionInfo.CurrentRegion.Name;
                 await Services.Tracker.Track(AppTrackerBuilder.BuildFirstLaunch(Features.ClientId, countryCode));
                 SettingsService.Settings.IsStartupTrackerSent = true;
                 SettingsService.Settings.Save();
@@ -340,9 +330,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // set default ContinueOnCapturedContext
             TaskExtensions.DefaultContinueOnCapturedContext =
                 HasDebugCommand(DebugCommands.CaptureContext);
-
-            // Update the profile country code if it is not set. Profile country policy always follows VpnServer location service
-            ClientProfileService.ClientCountryCode = Services.LocationService.GetClientCountryCode(true);
 
             // Enable trackers
             Services.Tracker.IsEnabled = UserSettings.AllowAnonymousTracker;
@@ -426,7 +413,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 ConfigTime = Settings.ConfigTime,
                 SessionStatus = connectionInfo?.SessionStatus?.ToAppDto(AdManager.CanExtendByRewardedAd),
                 SessionInfo = connectionInfo?.SessionInfo?.ToAppDto(),
-                ServerLocationInfo = StateHelper.GetServerLocationInfo(connectionInfo?.SessionInfo, clientProfileInfo, Services.LocationService),
+                ServerLocationInfo = StateHelper.GetServerLocationInfo(connectionInfo?.SessionInfo, clientProfileInfo),
                 ProxyConnectorStatus = lastConnectionInfo.ProxyConnectorStatus?.ToAppDto(),
                 ConnectionState = connectionState,
                 CanConnect = connectionState.CanConnect(),
@@ -440,7 +427,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LogExists = _logService.Exists,
                 IsDiagnosing = _appPersistState.HasDiagnoseRequested && !IsIdle,
                 HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
-                ClientCountryInfo = Services.LocationService.TryGetClientCountryInfo(),
+                ClientCountryInfo = AppCountryInfo.TryGet(AppRegionInfo.CurrentRegion.Name),
                 ConnectRequestTime = _appPersistState.ConnectRequestTime,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
                 SystemUiCultureInfo = new UiCultureInfo(SystemUiCulture),
@@ -467,7 +454,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private bool PromotionExists()
     {
         // not applied on china
-        if (Services.LocationService.GetClientCountryCode(false).Equals("CN", StringComparison.OrdinalIgnoreCase))
+        if (AppRegionInfo.CurrentRegion.Name.Equals("CN", StringComparison.OrdinalIgnoreCase))
             return false;
 
         // check remote settings
@@ -502,8 +489,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             if (clientState == ClientState.Initializing ||
                 Services.SplitCountryService.IsBusy ||
-                Services.SplitIpViaAppService.IsBusy ||
-                Services.LocationService.IsFindingCountryCode)
+                Services.SplitIpViaAppService.IsBusy)
                 return AppConnectionState.Initializing;
 
             if (clientState == ClientState.Waiting)
@@ -702,8 +688,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 JsonSerializer.Serialize(UserSettings, new JsonSerializerOptions { WriteIndented = true }));
             if (connectOptions.Diagnose) // log country name
                 VhLogger.Instance.LogInformation("CountryCode: {CountryCode}",
-                    VhUtils.TryGetCountryName(await Services.LocationService.GetClientCountryCodeAsync(
-                            allowVpnServer: false, allowCache: true, linkedCts.Token).Vhc()));
+                    VhUtils.TryGetCountryName(AppRegionInfo.CurrentRegion.Name));
 
             // request features for the first time
             VhLogger.Instance.LogDebug("Requesting Features ...");
@@ -855,11 +840,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // update the access token if AccessKey is set
             if (!string.IsNullOrWhiteSpace(connectionInfo.SessionInfo.AccessKey))
                 ClientProfileService.TryUpdateTokenByAccessKey(token.TokenId, connectionInfo.SessionInfo.AccessKey);
-
-            // update client country
-            if (connectionInfo.SessionInfo.ClientCountry != null)
-                UpdateClientIpLocationFromServer(connectionInfo.SessionInfo.ClientPublicIpAddress,
-                    connectionInfo.SessionInfo.ClientCountry);
         }
         catch (OperationCanceledException ex) when (_connectTimeoutCts.IsCancellationRequested) {
             throw new ConnectionTimeoutException(
@@ -904,11 +884,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             sessionException.SessionResponse.AccessKey = null;
         }
 
-        // update client country by server
-        if (sessionException.SessionResponse is { ClientCountry: not null, ClientPublicAddress: not null })
-            UpdateClientIpLocationFromServer(sessionException.SessionResponse.ClientPublicAddress,
-                sessionException.SessionResponse.ClientCountry);
-
         // process session error codes
         switch (sessionException.SessionResponse.ErrorCode) {
             // reset the selected location if no server available or premium location required
@@ -946,22 +921,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // check if the debug command is enabled
         return userSettings.DebugData1?.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(command, StringComparer.OrdinalIgnoreCase) == true;
-    }
-
-    private void UpdateClientIpLocationFromServer(IPAddress publicIpAddress, string countryCode)
-    {
-        var clientIpLocationByServer = new IpLocation {
-            CountryCode = countryCode,
-            IpAddress = publicIpAddress,
-            RegionName = null,
-            CityName = null,
-            CountryName = VhUtils.TryGetCountryName(countryCode) ?? "Unknown"
-        };
-
-        if (!JsonUtils.JsonEquals(clientIpLocationByServer, SettingsService.Settings.ClientIpLocationByServer)) {
-            SettingsService.Settings.ClientIpLocationByServer = clientIpLocationByServer;
-            SettingsService.Settings.Save();
-        }
     }
 
     private async Task RequestFeatures(CancellationToken cancellationToken)
@@ -1330,7 +1289,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         SettingsService.BeforeSave -= SettingsBeforeSave;
         _vpnServiceManager.StateChanged -= VpnService_StateChanged;
-        Services.LocationService.StateChanged -= LocationService_StateChanged;
         Services.SplitCountryService.StateChanged -= LocationService_StateChanged;
         Services.SplitIpViaAppService.StateChanged -= LocationService_StateChanged;
         _vpnServiceManager.Dispose();

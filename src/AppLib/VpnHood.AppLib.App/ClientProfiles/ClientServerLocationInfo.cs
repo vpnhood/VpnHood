@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.ClientProfiles;
@@ -12,8 +13,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
             if (CountryCode == AutoCountryCode)
                 return AutoCountryCode;
 
-            return VpnHoodApp.Instance.Services.LocationService
-                .TryGetCountryInfo(CountryCode)?.TranslatedName ?? CountryName;
+            return AppCountryInfo.TryGet(CountryCode)?.TranslatedName ?? CountryName;
         }
     }
 
@@ -21,7 +21,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
     public static ClientServerLocationInfo[] CreateFromToken(ClientProfile clientProfile)
     {
-        var clientCountry = VpnHoodApp.Instance.Services.LocationService.GetClientCountryCode(allowVpnServer: true);
+        var clientCountry = AppRegionInfo.CurrentRegion.Name;
         var token = clientProfile.Token;
 
         // get country policy

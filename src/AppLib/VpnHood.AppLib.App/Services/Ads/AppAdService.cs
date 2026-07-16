@@ -9,7 +9,6 @@ using VpnHood.Core.Toolkit.Utils;
 namespace VpnHood.AppLib.Services.Ads;
 
 public class AppAdService(
-    IRegionProvider regionProvider,
     IReadOnlyList<AppAdProviderItem> adProviderItems,
     TimeSpan loadAdTimeout,
     TimeSpan loadAdPostDelay,
@@ -61,9 +60,7 @@ public class AppAdService(
 
     public async Task LoadInterstitialAd(IUiContext uiContext, bool useFallback, CancellationToken cancellationToken)
     {
-        // don't use VPN for loading ad
-        var countryCode =
-            await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken).Vhc();
+        var countryCode = AppRegionInfo.CurrentRegion.Name;
         await LoadAd(_compositeInterstitialAdService, uiContext, isPreload: true,
             countryCode: countryCode, useFallback: useFallback,
             cancellationToken: cancellationToken).Vhc();
@@ -104,8 +101,7 @@ public class AppAdService(
     {
         string? countryCode = null;
         try {
-            countryCode = await regionProvider.GetClientCountryCodeAsync(allowVpnServer: false, cancellationToken)
-                .Vhc();
+            countryCode = AppRegionInfo.CurrentRegion.Name;
 
             // Load and sw ad
             var result = await LoadAndShowAd(appCompositeAdService, uiContext, sessionId, countryCode,

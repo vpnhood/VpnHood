@@ -90,14 +90,13 @@ public class IpLocationTest : TestAppBase
         await UpdateIp2LocationFile();
 
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.UseInternalLocationService = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        Assert.IsNotNull(app.Services.LocationService.IpRangeLocationProvider);
-        var countryCodes = await app.Services.LocationService.IpRangeLocationProvider.GetCountryCodes(TestCt);
+        Assert.IsNotNull(app.Services.SplitCountryService.IpRangeLocationProvider);
+        var countryCodes = await app.Services.SplitCountryService.IpRangeLocationProvider.GetCountryCodes(TestCt);
         Assert.IsTrue(countryCodes.Any(x => x == "US"),
             "Countries has not been extracted.");
 
         // make sure GetIpRange works
-        Assert.IsTrue((await app.Services.LocationService.IpRangeLocationProvider.GetIpRanges("US", TestCt)).Any());
+        Assert.IsTrue((await app.Services.SplitCountryService.IpRangeLocationProvider.GetIpRanges("US", TestCt)).Any());
     }
 }

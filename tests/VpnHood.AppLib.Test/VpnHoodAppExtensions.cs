@@ -1,7 +1,7 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.IpLocations;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test;
@@ -45,13 +45,7 @@ public static class VpnHoodAppExtensions
 
         public void UpdateClientCountry(string countryCode)
         {
-            app.SettingsService.Settings.ClientIpLocation = new IpLocation {
-                IpAddress = IPAddress.Parse("1.2.3.4"), // Dummy IP address
-                CountryCode = countryCode,
-                CountryName = VhUtils.TryGetCountryName(countryCode) ?? "Unknown",
-                CityName = null,
-                RegionName = null
-            };
+            AppRegionInfo.CurrentRegion = new RegionInfo(countryCode);
 
             // Reload client profile service to apply changes as region may be cached due to lazy load
             app.ClientProfileService.Reload();

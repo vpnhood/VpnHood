@@ -1,7 +1,6 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Net;
-using System.Reflection;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;

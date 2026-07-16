@@ -6,7 +6,6 @@ using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.IpLocations;
-using VpnHood.Core.IpLocations.Providers.Offlines;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 

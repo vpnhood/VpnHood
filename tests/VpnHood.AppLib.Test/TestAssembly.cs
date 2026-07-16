@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using VpnHood.Test;
+﻿using VpnHood.Test;
 
 namespace VpnHood.AppLib.Test;
 

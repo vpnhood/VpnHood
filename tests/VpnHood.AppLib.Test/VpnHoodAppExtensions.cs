@@ -45,10 +45,8 @@ public static class VpnHoodAppExtensions
 
         public void UpdateClientCountry(string countryCode)
         {
+            // ClientProfileService detects the region change itself and rebuilds its cached info
             AppRegionInfo.CurrentRegion = new RegionInfo(countryCode);
-
-            // Reload client profile service to apply changes as region may be cached due to lazy load
-            app.ClientProfileService.Reload();
         }
     }
 }

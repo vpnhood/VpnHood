@@ -4,35 +4,35 @@ using VpnHood.Test.Providers;
 
 namespace VpnHood.Test;
 
-public class TestWebServerLocalEps
+public class TestWebServerLocalEps(TestIps testIps)
 {
-    public IPEndPoint HttpsV4EndPoint1 { get; }
-    public IPEndPoint HttpsV4EndPoint2 { get; }
+    public IPEndPoint HttpsV4EndPoint1 { get; } = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint HttpsV4EndPoint2 { get; } = AllocateFreeTcpEndPoint(testIps.LocalTestIps[1]);
 
-    public IPEndPoint HttpV4EndPoint1 { get; }
-    public IPEndPoint HttpV4EndPoint2 { get; }
+    public IPEndPoint HttpV4EndPoint1 { get; } = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint HttpV4EndPoint2 { get; } = AllocateFreeTcpEndPoint(testIps.LocalTestIps[1]);
 
-    public IPEndPoint UdpEchoEndPoint1 { get; }
-    public IPEndPoint UdpEchoEndPoint2 { get; }
-    public IPEndPoint UdpEchoEndPoint3 { get; }
-    public IPEndPoint UdpEchoEndPoint1V6 { get; }
-    public IPEndPoint UdpEchoEndPoint2V6 { get; }
+    public IPEndPoint UdpEchoEndPoint1 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint UdpEchoEndPoint2 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIps[1]);
+    public IPEndPoint UdpEchoEndPoint3 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIps[1]);
+    public IPEndPoint UdpEchoEndPoint1V6 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIpV6);
+    public IPEndPoint UdpEchoEndPoint2V6 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIpV6);
 
-    public IPEndPoint QuicEndPoint1 { get; } 
-    public IPEndPoint QuicEndPoint2 { get; } 
-    public IPEndPoint QuicUploadEndPoint1 { get; }
-    public IPEndPoint QuicDownloadEndPoint1 { get; }
+    public IPEndPoint QuicEndPoint1 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint QuicEndPoint2 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint QuicUploadEndPoint1 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint QuicDownloadEndPoint1 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
 
-    public IPEndPoint TcpDataEndPoint1 { get; }
-    public IPEndPoint TcpUploadEndPoint1 { get; }
-    public IPEndPoint TcpDownloadEndPoint1 { get; }
-    public IPEndPoint UdpUploadEndPoint1 { get; }
-    public IPEndPoint UdpDownloadEndPoint1 { get; }
+    public IPEndPoint TcpDataEndPoint1 { get; } = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint TcpUploadEndPoint1 { get; } = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint TcpDownloadEndPoint1 { get; } = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint UdpUploadEndPoint1 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
+    public IPEndPoint UdpDownloadEndPoint1 { get; } = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
 
-    public IPEndPoint HttpV4EndPointBlockedClient { get; }
-    public IPEndPoint HttpV4EndPointBlockedServer { get; }
-    public IPEndPoint UdpNsEchoEndPoint1 { get; }
-    public IPEndPoint HttpV4EndPointRefused1 { get; }
+    public IPEndPoint HttpV4EndPointBlockedClient { get; } = AllocateFreeTcpEndPoint(testIps.LocalBlockedClientIpAddress);
+    public IPEndPoint HttpV4EndPointBlockedServer { get; } = AllocateFreeTcpEndPoint(testIps.LocalBlockedServerIpAddress);
+    public IPEndPoint UdpNsEchoEndPoint1 { get; } = new(testIps.LocalNsTestIp, 53);
+    public IPEndPoint HttpV4EndPointRefused1 { get; } = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
 
     public Uri HttpsUrl1 => new($"https://{HttpsV4EndPoint1}/file1");
     public Uri HttpsUrl2 => new($"https://{HttpsV4EndPoint2}/file1");
@@ -46,7 +46,7 @@ public class TestWebServerLocalEps
     private static int _nextTcpPort = 15000;
     private static int _nextUdpPort = 25000;
 
-    private IPEndPoint AllocateFreeTcpEndPoint(IPAddress address)
+    private static IPEndPoint AllocateFreeTcpEndPoint(IPAddress address)
     {
         while (true) {
             var port = Interlocked.Increment(ref _nextTcpPort);
@@ -55,7 +55,7 @@ public class TestWebServerLocalEps
         }
     }
 
-    private IPEndPoint AllocateFreeUdpEndPoint(IPAddress address)
+    private static IPEndPoint AllocateFreeUdpEndPoint(IPAddress address)
     {
         while (true) {
             var port = Interlocked.Increment(ref _nextUdpPort);
@@ -64,41 +64,10 @@ public class TestWebServerLocalEps
         }
     }
 
-    public TestWebServerLocalEps(TestIps testIps)
-    {
-        // Use dynamic ports to avoid port conflicts between sequential test runs
-        HttpsV4EndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
-        HttpsV4EndPoint2 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[1]);
-
-        HttpV4EndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
-        HttpV4EndPoint2 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[1]);
-
-        UdpEchoEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
-        UdpEchoEndPoint2 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[1]);
-        UdpEchoEndPoint3 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[1]);
-        UdpEchoEndPoint1V6 = AllocateFreeUdpEndPoint(testIps.LocalTestIpV6);
-        UdpEchoEndPoint2V6 = AllocateFreeUdpEndPoint(testIps.LocalTestIpV6);
-
-        // must be 127.0.0.1 for quic to work on loopback adapter
-        QuicEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
-        QuicEndPoint2 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
-        QuicUploadEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
-        QuicDownloadEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
-
-        TcpDataEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
-        TcpUploadEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
-        TcpDownloadEndPoint1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
-        UdpUploadEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
-        UdpDownloadEndPoint1 = AllocateFreeUdpEndPoint(testIps.LocalTestIps[0]);
-
-        HttpV4EndPointBlockedClient = AllocateFreeTcpEndPoint(testIps.LocalBlockedClientIpAddress);
-        HttpV4EndPointBlockedServer = AllocateFreeTcpEndPoint(testIps.LocalBlockedServerIpAddress);
-
-        // NS echo must listen on the well-known DNS port (53) for DNS detection, so it uses a
-        // dedicated loopback IP where port 53 is free instead of a shared test IP
-        UdpNsEchoEndPoint1 = new IPEndPoint(testIps.LocalNsTestIp, 53);
-        HttpV4EndPointRefused1 = AllocateFreeTcpEndPoint(testIps.LocalTestIps[0]);
-    }
+    // Use dynamic ports to avoid port conflicts between sequential test runs
+    // must be 127.0.0.1 for quic to work on loopback adapter
+    // NS echo must listen on the well-known DNS port (53) for DNS detection, so it uses a
+    // dedicated loopback IP where port 53 is free instead of a shared test IP
 
     public IReadOnlyList<IPEndPoint> AllHttpEndPoints => [
         HttpV4EndPoint1,

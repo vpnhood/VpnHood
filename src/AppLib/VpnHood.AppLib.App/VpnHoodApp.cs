@@ -79,6 +79,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
     private ConnectionInfo ConnectionInfo => _vpnServiceManager.ConnectionInfo;
+    internal IIpRangeLocationProvider? IpRangeLocationProvider => _ipRangeLocationProvider;
     public string TempFolderPath => Path.Combine(StorageFolderPath, "Temp");
     public event EventHandler? ConnectionStateChanged;
     public event EventHandler? UiHasChanged;
@@ -942,8 +943,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             countryCode);
 
         UserSettings.CountryCode = countryCode;
-        SettingsService.Save(); // ApplySettings applies it to AppRegionInfo
-        ClientProfileService.Reload(); // policies depend on the client country
+        SettingsService.Save(); // ApplySettings applies it to AppRegionInfo; ClientProfileService rebuilds its cache on region change
     }
 
     public bool HasDebugCommand(string command)

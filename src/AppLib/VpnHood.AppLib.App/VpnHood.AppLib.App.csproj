@@ -12,6 +12,7 @@
 
 	<ItemGroup>
 	  <InternalsVisibleTo Include="VpnHood.Test" />
+	  <InternalsVisibleTo Include="VpnHood.AppLib.Test" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
@@ -14,6 +15,7 @@ public class ClientProfileService
     private List<ClientProfile> _clientProfiles;
     private readonly Lock _updateByUrlLock = new();
     private ClientProfileInfo? _cashInfo;
+    private string? _cashInfoRegion;
 
     private string ClientProfilesFilePath => Path.Combine(field, FilenameProfiles);
 
@@ -25,10 +27,14 @@ public class ClientProfileService
 
     public ClientProfileInfo? FindInfo(Guid clientProfileId)
     {
-        if (_cashInfo?.ClientProfileId == clientProfileId)
+        // the cached info bakes in the client country (policy & locations), so it is only valid
+        // while the region it was built for is still the current one
+        if (_cashInfo?.ClientProfileId == clientProfileId &&
+            _cashInfoRegion == AppRegionInfo.CurrentRegion.Name)
             return _cashInfo;
 
         var clientProfile = FindById(clientProfileId);
+        _cashInfoRegion = AppRegionInfo.CurrentRegion.Name;
         _cashInfo = clientProfile?.ToInfo();
         return _cashInfo;
     }

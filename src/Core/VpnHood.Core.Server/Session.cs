@@ -413,10 +413,8 @@ public class Session : IDisposable
 
         TcpClient? tcpClientHost = null;
         IStreamConnection? tcpConnectionHost = null;
+        var slotReserved = false;
         try {
-            // manage wait count
-            Interlocked.Increment(ref _tcpConnectWaitCount);
-
             // filter before mapper because it supposes to filter user requests
             if (_netFilter.IpFilter?.Process(IpProtocol.Tcp, request.DestinationEndPoint.ToValue()) == FilterAction.Block) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "NetFilter");
@@ -435,8 +433,9 @@ public class Session : IDisposable
                 "Connecting to the requested endpoint. RequestedEP: {Format}",
                 VhLogger.Format(request.DestinationEndPoint));
 
-            // Apply limitation before create connection to host
+            // Apply limitation before create connection to host. It reserves a channel slot on success
             VerifyTcpChannelRequest(streamConnection, request);
+            slotReserved = true;
 
             //set reuseAddress to  true to prevent error only one usage of each socket address is normally permitted
             tcpClientHost = _socketFactory.CreateTcpClient(request.DestinationEndPoint);
@@ -473,7 +472,13 @@ public class Session : IDisposable
             var proxyChannel = new ProxyChannel(streamConnection.ToString()!, tcpConnectionHost, streamConnection,
                 _streamProxyBufferSize, Tunnel.TrafficMeter);
 
-            Tunnel.AddChannel(proxyChannel, disposeIfFailed: true);
+            // swap the reserved slot with the channel atomically, so a concurrent request can
+            // neither count this request twice nor slip in through a gap and overshoot the limit
+            lock (_verifyRequestLock) {
+                Tunnel.AddChannel(proxyChannel, disposeIfFailed: true);
+                Interlocked.Decrement(ref _tcpConnectWaitCount);
+                slotReserved = false;
+            }
         }
         catch {
             tcpClientHost?.Dispose();
@@ -481,7 +486,8 @@ public class Session : IDisposable
             throw;
         }
         finally {
-            Interlocked.Decrement(ref _tcpConnectWaitCount);
+            if (slotReserved)
+                Interlocked.Decrement(ref _tcpConnectWaitCount);
         }
     }
 
@@ -491,20 +497,23 @@ public class Session : IDisposable
             // NetScan limit
             VerifyNetScan(IpProtocol.Tcp, request.DestinationEndPoint.ToValue(), request.RequestId);
 
-            // Channel Count limit
-            if (TcpChannelCount + _tcpConnectWaitCount > _maxTcpChannelCount) {
+            // Channel Count limit. Pending connects hold a reserved channel slot, so count them too
+            if (TcpChannelCount + _tcpConnectWaitCount >= _maxTcpChannelCount) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raise();
                 throw new MaxTcpChannelException(streamConnection.RemoteEndPoint, this, request.RequestId);
             }
 
             // Check tcp wait limit
-            if (TcpConnectWaitCount > _maxTcpConnectWaitCount) {
+            if (TcpConnectWaitCount >= _maxTcpConnectWaitCount) {
                 LogTrack(IpProtocol.Tcp, null, request.DestinationEndPoint.ToValue(), false, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raise();
                 throw new MaxTcpConnectWaitException(streamConnection.RemoteEndPoint, this,
                     request.RequestId);
             }
+
+            // passed all limits; reserve a channel slot until the channel is added or the request fails
+            Interlocked.Increment(ref _tcpConnectWaitCount);
         }
     }
 

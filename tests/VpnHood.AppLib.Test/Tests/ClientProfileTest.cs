@@ -50,7 +50,7 @@ public class ClientProfileTest : TestAppBase
         Assert.AreEqual(tokens[0].TokenId, clientProfiles[0].Token.TokenId);
         Assert.AreEqual(tokens[1].TokenId, clientProfiles[1].Token.TokenId);
         Assert.AreEqual(tokens[0].TokenId,
-            clientProfiles.Single(x => x.ClientProfileId == app1.Features.BuiltInClientProfileId).Token.TokenId);
+            clientProfiles.Single(x => x.ClientProfileId == app1.UserSettings.ClientProfileId).Token.TokenId);
 
         // BuiltIn token should not be removed
         foreach (var clientProfile in clientProfiles) {

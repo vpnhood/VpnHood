@@ -3219,7 +3219,6 @@ export class AppFeatures implements IAppFeatures {
     uiName?: string | null;
     isPremiumFlagSupported!: boolean;
     isAddAccessKeySupported!: boolean;
-    builtInClientProfileId?: string | null;
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
     isTcpProxySupported!: boolean;
@@ -3236,6 +3235,7 @@ export class AppFeatures implements IAppFeatures {
     allowEndPointStrategy!: boolean;
     autoRemoveExpiredPremium!: boolean;
     isAdSupported!: boolean;
+    isRewardedAdSupported!: boolean;
     webUiPort?: number | null;
     premiumFeatures!: AppFeature[];
     channelProtocols!: ChannelProtocol[];
@@ -3265,7 +3265,6 @@ export class AppFeatures implements IAppFeatures {
             this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : null as any;
             this.isPremiumFlagSupported = _data["isPremiumFlagSupported"] !== undefined ? _data["isPremiumFlagSupported"] : null as any;
             this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : null as any;
-            this.builtInClientProfileId = _data["builtInClientProfileId"] !== undefined ? _data["builtInClientProfileId"] : null as any;
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : null as any;
             this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : null as any;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
@@ -3289,6 +3288,7 @@ export class AppFeatures implements IAppFeatures {
             this.allowEndPointStrategy = _data["allowEndPointStrategy"] !== undefined ? _data["allowEndPointStrategy"] : null as any;
             this.autoRemoveExpiredPremium = _data["autoRemoveExpiredPremium"] !== undefined ? _data["autoRemoveExpiredPremium"] : null as any;
             this.isAdSupported = _data["isAdSupported"] !== undefined ? _data["isAdSupported"] : null as any;
+            this.isRewardedAdSupported = _data["isRewardedAdSupported"] !== undefined ? _data["isRewardedAdSupported"] : null as any;
             this.webUiPort = _data["webUiPort"] !== undefined ? _data["webUiPort"] : null as any;
             if (Array.isArray(_data["premiumFeatures"])) {
                 this.premiumFeatures = [] as any;
@@ -3327,7 +3327,6 @@ export class AppFeatures implements IAppFeatures {
         data["uiName"] = this.uiName !== undefined ? this.uiName : null as any;
         data["isPremiumFlagSupported"] = this.isPremiumFlagSupported !== undefined ? this.isPremiumFlagSupported : null as any;
         data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : null as any;
-        data["builtInClientProfileId"] = this.builtInClientProfileId !== undefined ? this.builtInClientProfileId : null as any;
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : null as any;
         data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : null as any;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
@@ -3348,6 +3347,7 @@ export class AppFeatures implements IAppFeatures {
         data["allowEndPointStrategy"] = this.allowEndPointStrategy !== undefined ? this.allowEndPointStrategy : null as any;
         data["autoRemoveExpiredPremium"] = this.autoRemoveExpiredPremium !== undefined ? this.autoRemoveExpiredPremium : null as any;
         data["isAdSupported"] = this.isAdSupported !== undefined ? this.isAdSupported : null as any;
+        data["isRewardedAdSupported"] = this.isRewardedAdSupported !== undefined ? this.isRewardedAdSupported : null as any;
         data["webUiPort"] = this.webUiPort !== undefined ? this.webUiPort : null as any;
         if (Array.isArray(this.premiumFeatures)) {
             data["premiumFeatures"] = [];
@@ -3373,7 +3373,6 @@ export interface IAppFeatures {
     uiName?: string | null;
     isPremiumFlagSupported: boolean;
     isAddAccessKeySupported: boolean;
-    builtInClientProfileId?: string | null;
     isAccountSupported: boolean;
     isBillingSupported: boolean;
     isTcpProxySupported: boolean;
@@ -3390,6 +3389,7 @@ export interface IAppFeatures {
     allowEndPointStrategy: boolean;
     autoRemoveExpiredPremium: boolean;
     isAdSupported: boolean;
+    isRewardedAdSupported: boolean;
     webUiPort?: number | null;
     premiumFeatures: AppFeature[];
     channelProtocols: ChannelProtocol[];
@@ -4119,8 +4119,8 @@ export interface IServerLocationInfo {
 }
 
 export class AppServerLocationInfo extends ServerLocationInfo implements IAppServerLocationInfo {
-    translatedCountryName!: string;
     hasMultipleRegions!: boolean;
+    translatedCountryName!: string;
 
     constructor(data?: IAppServerLocationInfo) {
         super(data);
@@ -4129,8 +4129,8 @@ export class AppServerLocationInfo extends ServerLocationInfo implements IAppSer
     override init(_data?: any) {
         super.init(_data);
         if (_data) {
-            this.translatedCountryName = _data["translatedCountryName"] !== undefined ? _data["translatedCountryName"] : null as any;
             this.hasMultipleRegions = _data["hasMultipleRegions"] !== undefined ? _data["hasMultipleRegions"] : null as any;
+            this.translatedCountryName = _data["translatedCountryName"] !== undefined ? _data["translatedCountryName"] : null as any;
         }
     }
 
@@ -4143,16 +4143,16 @@ export class AppServerLocationInfo extends ServerLocationInfo implements IAppSer
 
     override toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["translatedCountryName"] = this.translatedCountryName !== undefined ? this.translatedCountryName : null as any;
         data["hasMultipleRegions"] = this.hasMultipleRegions !== undefined ? this.hasMultipleRegions : null as any;
+        data["translatedCountryName"] = this.translatedCountryName !== undefined ? this.translatedCountryName : null as any;
         super.toJSON(data);
         return data;
     }
 }
 
 export interface IAppServerLocationInfo extends IServerLocationInfo {
-    translatedCountryName: string;
     hasMultipleRegions: boolean;
+    translatedCountryName: string;
 }
 
 export enum SessionSuppressType {
@@ -5027,6 +5027,7 @@ export class UserSettings implements IUserSettings {
     isTcpProxyPrompted!: boolean;
     isQuickLaunchPrompted!: boolean;
     cultureCode?: string | null;
+    countryCode?: string | null;
     clientProfileId?: string | null;
     maxPacketChannelCount!: number;
     splitAppMode!: SplitAppMode;
@@ -5073,6 +5074,7 @@ export class UserSettings implements IUserSettings {
             this.isTcpProxyPrompted = _data["isTcpProxyPrompted"] !== undefined ? _data["isTcpProxyPrompted"] : null as any;
             this.isQuickLaunchPrompted = _data["isQuickLaunchPrompted"] !== undefined ? _data["isQuickLaunchPrompted"] : null as any;
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : null as any;
+            this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : null as any;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : null as any;
             this.maxPacketChannelCount = _data["maxPacketChannelCount"] !== undefined ? _data["maxPacketChannelCount"] : null as any;
             this.splitAppMode = _data["splitAppMode"] !== undefined ? _data["splitAppMode"] : null as any;
@@ -5134,6 +5136,7 @@ export class UserSettings implements IUserSettings {
         data["isTcpProxyPrompted"] = this.isTcpProxyPrompted !== undefined ? this.isTcpProxyPrompted : null as any;
         data["isQuickLaunchPrompted"] = this.isQuickLaunchPrompted !== undefined ? this.isQuickLaunchPrompted : null as any;
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : null as any;
+        data["countryCode"] = this.countryCode !== undefined ? this.countryCode : null as any;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : null as any;
         data["maxPacketChannelCount"] = this.maxPacketChannelCount !== undefined ? this.maxPacketChannelCount : null as any;
         data["splitAppMode"] = this.splitAppMode !== undefined ? this.splitAppMode : null as any;
@@ -5179,6 +5182,7 @@ export interface IUserSettings {
     isTcpProxyPrompted: boolean;
     isQuickLaunchPrompted: boolean;
     cultureCode?: string | null;
+    countryCode?: string | null;
     clientProfileId?: string | null;
     maxPacketChannelCount: number;
     splitAppMode: SplitAppMode;

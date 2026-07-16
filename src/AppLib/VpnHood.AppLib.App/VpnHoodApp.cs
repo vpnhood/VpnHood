@@ -186,7 +186,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // add a default test public server if not added yet
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
-        Features.BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId;
 
         // remove all legacy the client profile for single profile app
 #pragma warning disable CS0618 // Type or member is obsolete

@@ -13,7 +13,6 @@ public class AppFeatures
     public required string? UiName { get; init; }
     public required bool IsPremiumFlagSupported { get; init; }
     public required bool IsAddAccessKeySupported { get; init; }
-    public Guid? BuiltInClientProfileId { get; set; }
     public required bool IsAccountSupported { get; init; }
     public required bool IsBillingSupported { get; init; }
     public required bool IsTcpProxySupported { get; init; }

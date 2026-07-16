@@ -20,7 +20,9 @@ public abstract class TestBase
     [TestCleanup]
     public void TestCleanup()
     {
-        TestHelper.Dispose();
+        // TestHelper is null when TestInitialize failed; don't mask the root error with an NRE
+        // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
+        TestHelper?.Dispose();
     }
 
     protected static void Log(string message)

@@ -61,8 +61,9 @@ public class NetScanTest : TestBase
         Assert.IsFalse(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4").ToValue()));
         Assert.IsFalse(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444").ToValue()));
 
-        await Task.Delay(TimeSpan.FromSeconds(1), TestCt);
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4").ToValue()));
-        Assert.IsTrue(netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444").ToValue()));
+        // poll instead of delaying exactly the timeout; expiry is measured by wall clock
+        // while Task.Delay waits on the monotonic timer, so an exact-boundary wait is flaky
+        await AssertEqualsWait(true, () => netScanDetector.Verify(IPEndPoint.Parse("10.10.10.4").ToValue()));
+        await AssertEqualsWait(true, () => netScanDetector.Verify(IPEndPoint.Parse("10.10.11.1:444").ToValue()));
     }
 }

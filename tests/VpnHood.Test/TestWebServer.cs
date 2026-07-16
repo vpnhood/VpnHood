@@ -38,9 +38,9 @@ public class TestWebServer : IDisposable
         TestIps = testIps;
         LocalEps = new TestWebServerLocalEps(testIps);
         MockEps = new TestWebServerMockEps(LocalEps, testIps);
-        UdpClients = LocalEps.AllUdpEchoEndPoints.Select(x => new UdpClient(x)).ToArray();
-        UdpUploadClients = LocalEps.AllUdpUploadEndPoints.Select(x => new UdpClient(x)).ToArray();
-        UdpDownloadClients = LocalEps.AllUdpDownloadEndPoints.Select(x => new UdpClient(x)).ToArray();
+        UdpClients = LocalEps.AllUdpEchoEndPoints.Select(BindUdpClient).ToArray();
+        UdpUploadClients = LocalEps.AllUdpUploadEndPoints.Select(BindUdpClient).ToArray();
+        UdpDownloadClients = LocalEps.AllUdpDownloadEndPoints.Select(BindUdpClient).ToArray();
 
         // Init files
         FileContent1 = string.Empty;
@@ -78,13 +78,17 @@ public class TestWebServer : IDisposable
     public Task Start()
     {
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer Started...");
-        try {
-            foreach (var webServer in _webServers)
+        foreach (var webServer in _webServers) {
+            try {
                 webServer.StartAsync(CancellationToken);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogInformation(GeneralEventId.Test, ex, "TestWebServer could not start");
-            throw;
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(GeneralEventId.Test, ex,
+                    "TestWebServer could not start. EndPoint: {Hostname}:{Port}. {PortOwners}",
+                    webServer.Settings.Hostname, webServer.Settings.Port,
+                    PortDiagnostics.GetPortOwners(webServer.Settings.Port, ProtocolType.Tcp));
+                throw;
+            }
         }
 
         VhLogger.Instance.LogInformation(GeneralEventId.Test, "TestWebServer starting UDP...");
@@ -99,6 +103,34 @@ public class TestWebServer : IDisposable
         StartTcpDataServer();
 
         return Task.CompletedTask;
+    }
+
+    // the endpoint was probed as free at allocation time, so a failure here means another
+    // process grabbed it in between; report the owner so the log names the culprit
+    private static UdpClient BindUdpClient(IPEndPoint endPoint)
+    {
+        try {
+            return new UdpClient(endPoint);
+        }
+        catch (SocketException ex) {
+            throw new InvalidOperationException(
+                $"Failed to bind UDP endpoint {endPoint}. SocketErrorCode: {ex.SocketErrorCode}. " +
+                PortDiagnostics.GetPortOwners(endPoint.Port, ProtocolType.Udp), ex);
+        }
+    }
+
+    private static TcpListener StartTcpListener(IPEndPoint endPoint)
+    {
+        try {
+            var listener = new TcpListener(endPoint);
+            listener.Start();
+            return listener;
+        }
+        catch (SocketException ex) {
+            throw new InvalidOperationException(
+                $"Failed to bind TCP endpoint {endPoint}. SocketErrorCode: {ex.SocketErrorCode}. " +
+                PortDiagnostics.GetPortOwners(endPoint.Port, ProtocolType.Tcp), ex);
+        }
     }
 
     public static TestWebServer Create(TestIps filterIps)
@@ -179,22 +211,19 @@ public class TestWebServer : IDisposable
     private void StartTcpDataServer()
     {
         foreach (var endpoint in LocalEps.AllTcpDataEndPoints) {
-            var listener = new TcpListener(endpoint);
-            listener.Start();
+            var listener = StartTcpListener(endpoint);
             _tcpDataListeners.Add(listener);
             _ = AcceptTcpDataClients(listener);
         }
 
         foreach (var endpoint in LocalEps.AllTcpUploadEndPoints) {
-            var listener = new TcpListener(endpoint);
-            listener.Start();
+            var listener = StartTcpListener(endpoint);
             _tcpDataListeners.Add(listener);
             _ = AcceptTcpUploadClients(listener);
         }
 
         foreach (var endpoint in LocalEps.AllTcpDownloadEndPoints) {
-            var listener = new TcpListener(endpoint);
-            listener.Start();
+            var listener = StartTcpListener(endpoint);
             _tcpDataListeners.Add(listener);
             _ = AcceptTcpDownloadClients(listener);
         }

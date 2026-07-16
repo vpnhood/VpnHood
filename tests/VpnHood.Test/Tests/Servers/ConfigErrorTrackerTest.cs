@@ -1,6 +1,7 @@
 using System.Text.Json;
 using VpnHood.Core.Quic.MsQuic;
 using VpnHood.Core.Server;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Providers;
 
@@ -302,7 +303,7 @@ public class ConfigErrorTrackerTest : TestBase
 
         await using var server = CreateServer(accessManager,
             configureInterval: TimeSpan.FromMilliseconds(50),
-            retryInterval: TimeSpan.FromMilliseconds(200));
+            retryInterval: TimeSpan.FromSeconds(1));
 
         // Act: start (IsPaused is false, configure fails, RecordError activates pause)
         await server.Start(TestCt);
@@ -313,12 +314,11 @@ public class ConfigErrorTrackerTest : TestBase
         Assert.AreEqual(lastConfigureTime, accessManager.LastConfigureTime,
             "Immediate retry should be blocked by IsPaused.");
 
-        // Wait for retry interval to elapse
-        await Task.Delay(250, TestCt);
-
-        // Now retry should be allowed
-        await server.ConfigureAndSendStatus(TestCt);
-        Assert.AreNotEqual(lastConfigureTime, accessManager.LastConfigureTime,
-            "Retry should be allowed after RetryInterval has elapsed.");
+        // Retry should be allowed after RetryInterval has elapsed; poll because the exact
+        // moment shifts under load
+        await VhTestUtil.AssertEqualsWait(true, async () => {
+            await server.ConfigureAndSendStatus(TestCt);
+            return accessManager.LastConfigureTime != lastConfigureTime;
+        }, "Retry should be allowed after RetryInterval has elapsed.", cancellationToken: TestCt);
     }
 }

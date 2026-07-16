@@ -58,6 +58,7 @@ public class ServerTest : TestBase
 
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Auto_sync_sessions_by_interval()
     {
         // Create Server
@@ -195,6 +196,7 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Restore_session_after_restarting_server()
     {
         // create server
@@ -222,6 +224,7 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Recover_should_call_access_server_only_once()
     {
         using var accessManager = TestHelper.CreateAccessManager();
@@ -272,6 +275,7 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_should_close_session_if_it_does_not_exist_in_access_server()
     {
         // create server
@@ -348,6 +352,7 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // listens on the fixed well-known port 80
     public async Task AcmeHttp01Challenge()
     {
         VhLogger.IsAnonymousMode = true;
@@ -370,6 +375,7 @@ public class ServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // listens on the fixed well-known port 80
     public async Task Http01Challenge_should_return_NotFound_for_invalid_token()
     {
         // create server

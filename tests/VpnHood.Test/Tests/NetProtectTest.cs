@@ -3,6 +3,7 @@
 namespace VpnHood.Test.Tests;
 
 [TestClass]
+[DoNotParallelize] // uses the machine-wide WinDivert adapter
 public class NetProtectTest : TestBase
 {
     [TestMethod]

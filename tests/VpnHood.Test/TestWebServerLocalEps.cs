@@ -41,8 +41,10 @@ public class TestWebServerLocalEps
     public Uri QuicUrl1 => new($"https://{QuicEndPoint1}/file1");
     public Uri QuicUrl2 => new($"https://{QuicEndPoint2}/file2");
 
-    private int _nextTcpPort = 15000;
-    private int _nextUdpPort = 25000;
+    // static so concurrent instances allocate disjoint ports; the free check alone is not enough
+    // because ports are bound after allocation, not at allocation time
+    private static int _nextTcpPort = 15000;
+    private static int _nextUdpPort = 25000;
 
     private IPEndPoint AllocateFreeTcpEndPoint(IPAddress address)
     {

@@ -12,6 +12,7 @@ namespace VpnHood.Core.TcpStack.Test;
 // run on Windows. On other platforms MSTest skips them instead of failing on the missing native lib.
 [TestClass]
 [OSCondition(OperatingSystems.Windows)]
+[DoNotParallelize] // uses the machine-wide WinDivert adapter
 public sealed class TcpStackIntegrationTest
 {
     private static readonly IPAddress TestServerIp = IPAddress.Parse("11.0.0.1");

@@ -20,6 +20,7 @@ public class UtilTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // timing-sensitive; CPU contention shifts the report period
     public async Task EventReportCounter()
     {
         VhLogger.MinLogLevel = LogLevel.Information;

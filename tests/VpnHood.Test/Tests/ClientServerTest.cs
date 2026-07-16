@@ -25,6 +25,7 @@ public class ClientServerTest : TestBase
 {
     [TestMethod]
     [Obsolete]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Redirect_Server_HostEndPoint()
     {
         // Create Server 1
@@ -52,6 +53,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Redirect_Server_ServerToken()
     {
         // Create Server 1
@@ -128,6 +130,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task UdpPackets_Drop()
     {
         // Create Server
@@ -144,6 +147,7 @@ public class ClientServerTest : TestBase
 
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task MaxPacketChannels()
     {
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
@@ -192,6 +196,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task PacketChannel_Stream()
     {
         // Create Server
@@ -212,6 +217,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task PacketChannel_Udp()
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
@@ -276,6 +282,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Client_must_dispose_after_server_stopped()
     {
         await using var server = await TestHelper.CreateServer();
@@ -304,6 +311,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task PacketChannel_after_client_reconnection()
     {
         //create a shared udp client among connection
@@ -331,6 +339,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Reset_tcp_connection_immediately_after_vpn_connected()
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
@@ -363,6 +372,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Disconnect_if_session_closed_by_server()
     {
         // create server
@@ -465,6 +475,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Disconnect_if_client_not_supported()
     {
         // create server
@@ -481,6 +492,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_limit_by_Max_TcpConnectWait()
     {
         // create vpn adapter
@@ -509,6 +521,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_limit_by_Max_TcpChannel()
     {
         // create access server
@@ -545,6 +558,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Reusing_ChunkStream()
     {
         // Create Server
@@ -650,6 +664,7 @@ public class ClientServerTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task ServerVpnAdapter_by_udp()
     {
         using var vpnAdapter = new TestUdpServerVpnAdapter();

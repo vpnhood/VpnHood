@@ -16,6 +16,7 @@ public class AccessTest : TestBase
 
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_reject_invalid_requests()
     {
         await using var server = await TestHelper.CreateServer();
@@ -46,6 +47,7 @@ public class AccessTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_reject_expired_access_hello()
     {
         await using var server = await TestHelper.CreateServer();
@@ -60,6 +62,7 @@ public class AccessTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_reject_expired_access_at_runtime()
     {
         var managerOptions = TestHelper.CreateFileAccessManagerOptions();
@@ -91,6 +94,7 @@ public class AccessTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_reject_trafficOverflow_access()
     {
         // create server
@@ -209,8 +213,13 @@ public class AccessTest : TestBase
         // create default token with 2 client count
         var client1 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),
             token: token);
+        var serverSession1 = server.GetSession(client1);
         await client1.DisposeAsync();
         await client1.WaitForState(ClientState.Disposed);
+
+        // wait for the server to close the session before reconnecting with the same clientId;
+        // otherwise the new session may suppress the not-yet-closed one
+        await VhTestUtil.AssertEqualsWait(true, () => serverSession1.IsDisposed, cancellationToken: TestCt);
 
         // suppress by yourself
         await using var client2 = await TestHelper.CreateClient(vpnAdapter: new TestNullVpnAdapter(),

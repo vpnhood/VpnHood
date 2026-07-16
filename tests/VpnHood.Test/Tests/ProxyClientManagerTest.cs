@@ -157,6 +157,7 @@ public class ManagedProxyConnectorTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Connect_via_proxy()
     {
         // create a local SOCKS5 proxy using Socks5ProxyServer
@@ -205,6 +206,7 @@ public class ManagedProxyConnectorTest : TestBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Connect_via_single_proxy()
     {
         // create a local SOCKS5 proxy using Socks5ProxyServer

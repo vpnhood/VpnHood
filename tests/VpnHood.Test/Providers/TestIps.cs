@@ -6,8 +6,6 @@ namespace VpnHood.Test.Providers;
 
 public class TestIps
 {
-    private static readonly Lock DedicatedLocalIpLock = new();
-    private static IPAddress _lastDedicatedLocalIp = IPAddress.Parse("127.0.10.0");
     public IPAddress RemoteTestIpV6 { get; } = IPAddress.Parse("2001:db8::1");
     public IPAddress LocalTestIpV6 => IPAddress.IPv6Loopback;
     public IReadOnlyList<IPAddress> RemoteTestIps { get; } 
@@ -27,18 +25,18 @@ public class TestIps
     }
 
     /// <summary>
-    /// Allocates a dedicated loopback IP where the given UDP port is free. Services that must
-    /// listen on a well-known port (e.g. DNS 53) get their own IP, so concurrent test instances
-    /// never share listeners.
+    /// Allocates a dedicated loopback IP (127.0.10.0+) where the given UDP port is free. Services
+    /// that must listen on a well-known port (e.g. DNS 53) get their own IP, so concurrent test
+    /// instances never share listeners. The IP index comes from a machine-wide counter, so
+    /// parallel test hosts never try the same IP.
     /// </summary>
     public static IPAddress AllocateDedicatedLocalIp(int udpPort)
     {
-        lock (DedicatedLocalIpLock) {
-            var ip = IPAddressUtil.Increment(_lastDedicatedLocalIp);
-            while (VhUtils.GetFreeUdpEndPoint(ip, udpPort).Port != udpPort)
-                ip = IPAddressUtil.Increment(ip);
-            _lastDedicatedLocalIp = ip;
-            return ip;
+        while (true) {
+            var index = CrossProcessCounter.Next("DedicatedIpIndex", first: 1, last: 50000);
+            var ip = new IPAddress([127, 0, (byte)(10 + index / 256), (byte)(index % 256)]);
+            if (VhUtils.GetFreeUdpEndPoint(ip, udpPort).Port == udpPort)
+                return ip;
         }
     }
 

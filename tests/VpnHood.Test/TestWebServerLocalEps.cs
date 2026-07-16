@@ -41,15 +41,12 @@ public class TestWebServerLocalEps(TestIps testIps)
     public Uri QuicUrl1 => new($"https://{QuicEndPoint1}/file1");
     public Uri QuicUrl2 => new($"https://{QuicEndPoint2}/file2");
 
-    // static so concurrent instances allocate disjoint ports; the free check alone is not enough
-    // because ports are bound after allocation, not at allocation time
-    private static int _nextTcpPort = 15000;
-    private static int _nextUdpPort = 25000;
-
+    // machine-wide counters so parallel test hosts never allocate the same port; the free check
+    // alone is not enough because ports are bound after allocation, not at allocation time
     private static IPEndPoint AllocateFreeTcpEndPoint(IPAddress address)
     {
         while (true) {
-            var port = Interlocked.Increment(ref _nextTcpPort);
+            var port = CrossProcessCounter.Next("TcpPort", first: 15000, last: 45000);
             var ep = VhUtils.GetFreeTcpEndPoint(address, port);
             if (ep.Port == port) return ep;
         }
@@ -58,7 +55,7 @@ public class TestWebServerLocalEps(TestIps testIps)
     private static IPEndPoint AllocateFreeUdpEndPoint(IPAddress address)
     {
         while (true) {
-            var port = Interlocked.Increment(ref _nextUdpPort);
+            var port = CrossProcessCounter.Next("UdpPort", first: 25000, last: 49000);
             var ep = VhUtils.GetFreeUdpEndPoint(address, port);
             if (ep.Port == port) return ep;
         }

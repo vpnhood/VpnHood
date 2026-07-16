@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
+using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Abstractions;
@@ -33,16 +34,21 @@ public static class StateHelper
         return null;
     }
 
+
+
     public static AppServerLocationInfo? GetServerLocationInfo(
         SessionInfo? sessionInfo,
-        ClientProfileInfo? clientProfileInfo)
+        ClientProfileInfo? clientProfileInfo,
+        LocationService locationService)
     {
+
         // get session server location info
         var sessionServerLocationInfo = sessionInfo?.ServerLocationInfo;
         if (sessionServerLocationInfo != null) {
             return AppServerLocationInfo.FromInfo(
                 sessionServerLocationInfo,
-                clientProfileInfo?.HasMultipleRegion(sessionServerLocationInfo.CountryCode) == true);
+                clientProfileInfo?.HasMultipleRegion(sessionServerLocationInfo.CountryCode) == true,
+                locationService);
         }
 
         // return user selected 
@@ -52,7 +58,8 @@ public static class StateHelper
         return
              AppServerLocationInfo.FromInfo(
                  clientProfileInfo.SelectedLocationInfo,
-                 clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode));
+                 clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode),
+                 locationService);
 
     }
 

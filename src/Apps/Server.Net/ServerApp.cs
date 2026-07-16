@@ -75,10 +75,9 @@ public class ServerApp : IDisposable
             ? JsonUtils.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();
 
-        // set downloads path and create folder if it is our defaults
+        // set downloads path for diagnose
+        // do not create by default to prevent fingerprinting the server
         _downloadsPath = AppSettings.DownloadsPath ?? Path.Combine(storagePath, "downloads");
-        if (string.IsNullOrWhiteSpace(AppSettings.DownloadsPath))
-            Directory.CreateDirectory(_downloadsPath);
 
         // Init File Logger before starting server
         VhLogger.MinLogLevel = AppSettings.LogLevel;

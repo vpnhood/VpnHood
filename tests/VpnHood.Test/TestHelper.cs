@@ -1,12 +1,13 @@
 ﻿using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Reflection;
 using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Filtering.Abstractions;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
@@ -34,7 +35,7 @@ namespace VpnHood.Test;
 
 public class TestHelper : IDisposable
 {
-    private static readonly string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "VpnHood.Test");
+    public static string AssemblyWorkingPath = Path.Combine(Path.GetTempPath(), "VpnHood.Test");
 
     public class TestAppUiContext : IUiContext
     {

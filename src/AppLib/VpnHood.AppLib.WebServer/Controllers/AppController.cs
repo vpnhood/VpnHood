@@ -176,7 +176,7 @@ internal class AppController : ControllerBase, IAppController
             Features = App.Features,
             IntentFeatures = new DeviceIntentFeatures(App.Services.DeviceUiProvider, App.Services.UserReviewProvider),
             UserSettings = App.UserSettings,
-            ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo()).ToArray(),
+            ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo(App.Features)).ToArray(),
             State = App.State,
             AvailableCultureInfos = App.Services.CultureProvider.AvailableCultures
                 .Select(x => new UiCultureInfo(x))

@@ -7,7 +7,7 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.ClientProfiles;
 
-public class ClientProfileInfo(ClientProfile clientProfile)
+public class ClientProfileInfo(ClientProfile clientProfile, AppFeatures appFeatures)
 {
     public Guid ClientProfileId => clientProfile.ClientProfileId;
     public string ClientProfileName => GetTitle();
@@ -21,7 +21,7 @@ public class ClientProfileInfo(ClientProfile clientProfile)
     public bool IsBuiltIn => clientProfile.IsBuiltIn;
     public string? AccessCode => AccessCodeUtils.Redact(clientProfile.AccessCode);
     public bool IsAccessCodeFromAccount => clientProfile.IsAccessCodeFromAccount;
-    public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile);
+    public ClientServerLocationInfo[] LocationInfos => ClientServerLocationInfo.CreateFromToken(clientProfile, appFeatures);
     public bool CanGoPremium => ClientPolicy?.PremiumByCode == true || ClientPolicy?.PremiumByPurchase == true;
     public bool CanTryPremium => ClientPolicy?.PremiumByTrial != null;
 

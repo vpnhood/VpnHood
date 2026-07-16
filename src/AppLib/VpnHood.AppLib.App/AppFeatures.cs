@@ -13,7 +13,7 @@ public class AppFeatures
     public required string? UiName { get; init; }
     public required bool IsPremiumFlagSupported { get; init; }
     public required bool IsAddAccessKeySupported { get; init; }
-    public required Guid? BuiltInClientProfileId { get; init; }
+    public Guid? BuiltInClientProfileId { get; set; }
     public required bool IsAccountSupported { get; init; }
     public required bool IsBillingSupported { get; init; }
     public required bool IsTcpProxySupported { get; init; }
@@ -30,6 +30,7 @@ public class AppFeatures
     public required bool AllowEndPointStrategy { get; init; }
     public required bool AutoRemoveExpiredPremium { get; set; }
     public required bool IsAdSupported { get; set; }
+    public required bool IsRewardedAdSupported { get; init; }
     public required int? WebUiPort { get; set; }
     public required AppFeature[] PremiumFeatures { get; init; }
     public required IReadOnlyList<ChannelProtocol> ChannelProtocols { get; init; }

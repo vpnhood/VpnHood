@@ -102,7 +102,7 @@ public class AndroidAppMainActivityHandler
     protected void ImportAccessKey(string accessKey)
     {
         var profiles = VpnHoodApp.Instance.ClientProfileService.List();
-        var profileInfo = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo();
+        var profileInfo = VpnHoodApp.Instance.ClientProfileService.ImportAccessKey(accessKey).ToInfo(VpnHoodApp.Instance.Features);
         VpnHoodApp.Instance.UserSettings.ClientProfileId = profileInfo.ClientProfileId;
 
         var isNew = profiles.Any(x => x.ClientProfileId == profileInfo.ClientProfileId);

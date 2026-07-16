@@ -19,7 +19,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
     public ServerLocationOptions Options { get; set; } = new() { Normal = 0 };
 
-    public static ClientServerLocationInfo[] CreateFromToken(ClientProfile clientProfile)
+    public static ClientServerLocationInfo[] CreateFromToken(ClientProfile clientProfile, AppFeatures appFeatures)
     {
         var clientCountry = AppRegionInfo.CurrentRegion.Name;
         var token = clientProfile.Token;
@@ -35,7 +35,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var isManaged = items.Any(x => x.Tags?.Contains(ServerRegisteredTags.Premium) == true) || policy != null;
         if (isManaged) {
             foreach (var item in items)
-                item.RecalculateOptions(policy, clientProfile.IsPremium); // treat non-public as premium
+                item.RecalculateOptions(policy, clientProfile.IsPremium, appFeatures); // treat non-public as premium
         }
 
         // show unblockable only if the policy is set
@@ -46,7 +46,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
     }
 
 
-    private void RecalculateOptions(ClientPolicy? policy, bool isPremium)
+    private void RecalculateOptions(ClientPolicy? policy, bool isPremium, AppFeatures appFeatures)
     {
         var tags = Tags ?? [];
         Options = new ServerLocationOptions {
@@ -69,8 +69,8 @@ public class ClientServerLocationInfo : ServerLocationInfo
             return;
         }
 
-        var isBillingSupported = VpnHoodApp.Instance.Features.IsBillingSupported;
-        var isRewardedAdSupported = VpnHoodApp.Instance.AdManager.AdService.CanShowRewarded;
+        var isBillingSupported = appFeatures.IsBillingSupported;
+        var isRewardedAdSupported = appFeatures.IsRewardedAdSupported;
         Options.Normal = Options.HasFree ? policy.Normal : null;
         Options.NormalByRewardedAd = Options.HasFree && isRewardedAdSupported ? policy.NormalByRewardedAd : null;
         Options.PremiumByTrial = Options.HasPremium ? policy.PremiumByTrial : null;

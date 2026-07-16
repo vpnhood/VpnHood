@@ -144,11 +144,49 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var splitDomainService = new SplitDomainService(settingsService);
         splitDomainService.StateChanged += LocationService_StateChanged;
 
-        ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles));
+        var protocols = new List<ChannelProtocol> { ChannelProtocol.Tcp, ChannelProtocol.Udp };
+        if (_device.IsQuicSupported)
+            protocols.Add(ChannelProtocol.Quic);
+
+        // initialize features
+        Features = new AppFeatures {
+            Version = appVersion,
+            IsExcludeAppsSupported = _device.IsExcludeAppsSupported,
+            IsIncludeAppsSupported = _device.IsIncludeAppsSupported,
+            IsAddAccessKeySupported = options.IsAddAccessKeySupported,
+            IsPremiumFlagSupported = !options.IsAddAccessKeySupported,
+            AutoRemoveExpiredPremium = options.AutoRemoveExpiredPremium,
+            AllowEndPointStrategy = options.AllowEndPointStrategy,
+            IsTv = device.IsTv,
+            AdjustForSystemBars = options.AdjustForSystemBars,
+            UiName = options.UiName,
+            IsAccountSupported = options.AccountProvider != null,
+            IsBillingSupported = options.AccountProvider?.BillingProvider != null,
+            IsTcpProxySupported = device.IsTcpProxySupported,
+            IsQuicSupported = device.IsQuicSupported,
+            IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
+            IsUserReviewSupported = options.UserReviewProvider != null,
+            GaMeasurementId = options.Ga4MeasurementId,
+            WebUiPort = options.WebUiPort,
+            ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
+            AppId = options.AppId,
+            AppName = options.Resources.Strings.AppName,
+            DebugCommands = DebugCommands.All,
+            IsDebugMode = options.IsDebugMode,
+            CustomData = options.CustomData,
+            PremiumFeatures = options.PremiumFeatures,
+            IsAdSupported = options.AdProviderItems.Any(),
+            IsRewardedAdSupported = options.AdProviderItems.Any(x => x.AdProvider.AdType == AppAdType.RewardedAd),
+            IsProxySupported = true,
+            ChannelProtocols = protocols.ToArray()
+        };
+
+        ClientProfileService = new ClientProfileService(Path.Combine(StorageFolderPath, FolderNameProfiles), Features);
         Diagnoser.StateChanged += (_, _) => FireConnectionStateChanged();
 
         // add a default test public server if not added yet
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
+        Features.BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId;
 
         // remove all legacy the client profile for single profile app
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -171,43 +209,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // set the default server location if not set
         var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
-
-        var protocols = new List<ChannelProtocol> { ChannelProtocol.Tcp, ChannelProtocol.Udp };
-        if (_device.IsQuicSupported)
-            protocols.Add(ChannelProtocol.Quic);
-
-        // initialize features
-        Features = new AppFeatures {
-            Version = appVersion,
-            IsExcludeAppsSupported = _device.IsExcludeAppsSupported,
-            IsIncludeAppsSupported = _device.IsIncludeAppsSupported,
-            IsAddAccessKeySupported = options.IsAddAccessKeySupported,
-            IsPremiumFlagSupported = !options.IsAddAccessKeySupported,
-            AutoRemoveExpiredPremium = options.AutoRemoveExpiredPremium,
-            AllowEndPointStrategy = options.AllowEndPointStrategy,
-            IsTv = device.IsTv,
-            AdjustForSystemBars = options.AdjustForSystemBars,
-            UiName = options.UiName,
-            BuiltInClientProfileId = builtInProfileIds.FirstOrDefault()?.ClientProfileId,
-            IsAccountSupported = options.AccountProvider != null,
-            IsBillingSupported = options.AccountProvider?.BillingProvider != null,
-            IsTcpProxySupported = device.IsTcpProxySupported,
-            IsQuicSupported = device.IsQuicSupported,
-            IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
-            IsUserReviewSupported = options.UserReviewProvider != null,
-            GaMeasurementId = options.Ga4MeasurementId,
-            WebUiPort = options.WebUiPort,
-            ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
-            AppId = options.AppId,
-            AppName = options.Resources.Strings.AppName,
-            DebugCommands = DebugCommands.All,
-            IsDebugMode = options.IsDebugMode,
-            CustomData = options.CustomData,
-            PremiumFeatures = options.PremiumFeatures,
-            IsAdSupported = options.AdProviderItems.Any(),
-            IsProxySupported = true,
-            ChannelProtocols = protocols.ToArray()
-        };
 
         // create tracker
         var tracker = _trackerFactory.TryCreateTracker(new TrackerCreateParams {

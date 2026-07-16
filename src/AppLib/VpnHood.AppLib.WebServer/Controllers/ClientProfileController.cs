@@ -54,13 +54,13 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
     public Task<ClientProfileInfo> AddByAccessKey(string accessKey, CancellationToken cancellationToken)
     {
         var clientProfile = App.ClientProfileService.ImportAccessKey(accessKey);
-        return Task.FromResult(clientProfile.ToInfo());
+        return Task.FromResult(clientProfile.ToInfo(App.Features));
     }
 
     public Task<ClientProfileInfo> Get(Guid clientProfileId, CancellationToken cancellationToken)
     {
         var clientProfile = App.ClientProfileService.Get(clientProfileId);
-        return Task.FromResult(clientProfile.ToInfo());
+        return Task.FromResult(clientProfile.ToInfo(App.Features));
     }
 
     public Task<string> GetAccessCode(Guid clientProfileId, CancellationToken cancellationToken)
@@ -72,7 +72,7 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
     public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams, CancellationToken cancellationToken)
     {
         var clientProfile = App.ClientProfileService.Update(clientProfileId, updateParams);
-        return Task.FromResult(clientProfile.ToInfo());
+        return Task.FromResult(clientProfile.ToInfo(App.Features));
     }
 
     public async Task Delete(Guid clientProfileId, CancellationToken cancellationToken)

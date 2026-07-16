@@ -1,4 +1,4 @@
-﻿using System.Net.Sockets;
+using System.Net.Sockets;
 using System.Text;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.Core.Common.Exceptions;
@@ -133,7 +133,7 @@ public class AccessCodeTest : TestAppBase
         });
 
         // check account is 
-        var clientProfileInfo = clientProfile.ToInfo();
+        var clientProfileInfo = clientProfile.ToInfo(app.Features);
         Assert.IsTrue(clientProfileInfo.IsPremium);
         Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.CanGoPremium);
         Assert.IsFalse(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByCode);

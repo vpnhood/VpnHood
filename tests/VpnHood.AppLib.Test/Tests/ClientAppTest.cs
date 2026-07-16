@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Test.Providers;
@@ -349,7 +349,7 @@ public class ClientAppTest : TestAppBase
 
         // reload clientProfile
         clientProfile = clientApp.ClientProfileService.Get(clientProfile.ClientProfileId);
-        Assert.IsTrue(clientProfile.ToInfo().SelectedLocationInfo?.IsAuto);
+        Assert.IsTrue(clientProfile.ToInfo(clientApp.Features).SelectedLocationInfo?.IsAuto);
     }
 
     [TestMethod]

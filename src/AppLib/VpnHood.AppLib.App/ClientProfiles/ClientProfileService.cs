@@ -14,14 +14,16 @@ public class ClientProfileService
     private const string FilenameProfiles = "vpn_profiles.json";
     private List<ClientProfile> _clientProfiles;
     private readonly Lock _updateByUrlLock = new();
+    private readonly AppFeatures _appFeatures;
     private ClientProfileInfo? _cashInfo;
     private string? _cashInfoRegion;
 
     private string ClientProfilesFilePath => Path.Combine(field, FilenameProfiles);
 
-    public ClientProfileService(string folderPath)
+    public ClientProfileService(string folderPath, AppFeatures appFeatures)
     {
         ClientProfilesFilePath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
+        _appFeatures = appFeatures;
         _clientProfiles = Load().ToList();
     }
 
@@ -35,7 +37,7 @@ public class ClientProfileService
 
         var clientProfile = FindById(clientProfileId);
         _cashInfoRegion = AppRegionInfo.CurrentRegion.Name;
-        _cashInfo = clientProfile?.ToInfo();
+        _cashInfo = clientProfile?.ToInfo(_appFeatures);
         return _cashInfo;
     }
 

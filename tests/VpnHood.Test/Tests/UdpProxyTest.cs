@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
@@ -14,20 +15,30 @@ public class UdpProxyTest : TestBase
 {
     private class MyPacketProxyCallbacks : IPacketProxyCallbacks
     {
-        private IpPacket? LastReceivedPacket { get; set; }
+        // keep all packets, not just the last one; proxy workers report their echoes in any
+        // order, and a single "last packet" slot loses the awaited echo when another packet
+        // arrives after it
+        private readonly ConcurrentQueue<IpPacket> _receivedPackets = new();
 
         public void PacketReceived(object? sender, IpPacket ipPacket)
         {
-            LastReceivedPacket = ipPacket;
+            _receivedPackets.Enqueue(ipPacket);
         }
 
         public Task WaitForUdpPacket(IpPacket ipPacket, TimeSpan? timeout = null)
         {
+            // clone the request because the pool owns the queued packet; matching the payload
+            // makes each wait find its own echo even when an older packet with the same
+            // address signature is already queued
+            var request = ipPacket.Clone();
+            var requestUdp = request.ExtractUdp();
+
             return WaitForUdpPacket(p =>
-                    p.DestinationAddress.Equals(ipPacket.SourceAddress) &&
-                    p.ExtractUdp().DestinationPort == ipPacket.ExtractUdp().SourcePort &&
-                    p.SourceAddress.Equals(ipPacket.DestinationAddress) &&
-                    p.ExtractUdp().SourcePort == ipPacket.ExtractUdp().DestinationPort
+                    p.DestinationAddress.Equals(request.SourceAddress) &&
+                    p.SourceAddress.Equals(request.DestinationAddress) &&
+                    p.ExtractUdp().DestinationPort == requestUdp.SourcePort &&
+                    p.ExtractUdp().SourcePort == requestUdp.DestinationPort &&
+                    p.ExtractUdp().Payload.Span.SequenceEqual(requestUdp.Payload.Span)
                 , timeout);
         }
 
@@ -37,12 +48,14 @@ public class UdpProxyTest : TestBase
 
             const int waitTime = 200;
             for (var elapsed = 0; elapsed < timeout.Value.TotalMilliseconds; elapsed += waitTime) {
-                if (LastReceivedPacket != null && checkFunc(LastReceivedPacket))
+                if (_receivedPackets.Any(checkFunc))
                     return;
                 await Task.Delay(waitTime);
             }
 
-            throw new TimeoutException();
+            throw new TimeoutException(
+                $"The expected UDP packet was not received. " +
+                $"ReceivedPackets: {string.Join(" | ", _receivedPackets)}");
         }
 
         public void OnConnectionRequested(IpProtocol protocolType, IpEndPointValue remoteEndPoint)

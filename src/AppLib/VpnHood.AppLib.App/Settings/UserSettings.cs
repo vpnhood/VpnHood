@@ -14,6 +14,7 @@ public class UserSettings
     public bool IsTcpProxyPrompted { get; set; }
     public bool IsQuickLaunchPrompted { get; set; }
     public string? CultureCode { get; set; }
+    public string? CountryCode { get; set; }
     public Guid? ClientProfileId { get; set; }
     public int MaxPacketChannelCount { get; set; } = ClientOptions.Default.MaxPacketChannelCount;
     public SplitAppMode SplitAppMode { get; set; } = SplitAppMode.All;

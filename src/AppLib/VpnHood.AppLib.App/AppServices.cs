@@ -22,6 +22,5 @@ public class AppServices : IDisposable
     public void Dispose()
     {
         UpdaterService?.Dispose();
-        SplitCountryService.Dispose();
     }
 }

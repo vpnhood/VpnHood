@@ -91,12 +91,12 @@ public class IpLocationTest : TestAppBase
 
         var appOptions = TestAppHelper.CreateAppOptions();
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
-        Assert.IsNotNull(app.Services.SplitCountryService.IpRangeLocationProvider);
-        var countryCodes = await app.Services.SplitCountryService.IpRangeLocationProvider.GetCountryCodes(TestCt);
+        Assert.IsNotNull(app.IpRangeLocationProvider);
+        var countryCodes = await app.IpRangeLocationProvider.GetCountryCodes(TestCt);
         Assert.IsTrue(countryCodes.Any(x => x == "US"),
             "Countries has not been extracted.");
 
         // make sure GetIpRange works
-        Assert.IsTrue((await app.Services.SplitCountryService.IpRangeLocationProvider.GetIpRanges("US", TestCt)).Any());
+        Assert.IsTrue((await app.IpRangeLocationProvider.GetIpRanges("US", TestCt)).Any());
     }
 }

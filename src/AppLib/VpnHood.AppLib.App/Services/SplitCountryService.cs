@@ -12,32 +12,26 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services;
 
-// Owns the country->ip-ranges data (split-by-country) and prepares the on-disk split-country filter
-// db before connecting. The client country itself comes from AppRegionInfo and country names from
+// Prepares the on-disk split-country filter db before connecting. Uses the app's ip-range provider
+// as a data source; the client country itself comes from AppRegionInfo and country names from
 // AppCountryInfo; nothing is discovered here.
 public class SplitCountryService(
     AppSettingsService settingsService,
-    byte[]? ipLocationZipData) : IDisposable
+    IIpRangeLocationProvider? ipRangeLocationProvider,
+    byte[]? ipLocationZipData)
 {
     private string? _ipLocationAssetHash;
     public event EventHandler? StateChanged;
 
     public bool IsBusy { get; private set; }
 
-    // split-by-country is available when the ip-location asset is provided
-    public IIpRangeLocationProvider? IpRangeLocationProvider { get; } = ipLocationZipData != null
-        ? new LocalIpRangeLocationProvider(
-            () => new ZipArchive(new MemoryStream(ipLocationZipData!)),
-            () => AppRegionInfo.CurrentRegion.Name)
-        : null;
-
     public async Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
-        if (IpRangeLocationProvider is null)
+        if (ipRangeLocationProvider is null)
             return [];
 
-        // get all countries from IpRangeLocationProvider
-        var splitByCountries = await IpRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
+        // get all countries from the ip-range provider
+        var splitByCountries = await ipRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
         var countryInfos = AppCountryInfo.GetAll()
             .Where(country => splitByCountries.Contains(country.CountryCode))
             .ToArray();
@@ -62,7 +56,7 @@ public class SplitCountryService(
             IsBusy = true;
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            if (IpRangeLocationProvider is null || ipLocationZipData is null)
+            if (ipRangeLocationProvider is null || ipLocationZipData is null)
                 throw new InvalidOperationException("Could not split by country because the ip-location asset is not provided.");
 
             // resolve the selected countries
@@ -72,7 +66,7 @@ public class SplitCountryService(
 
             // short path: store whichever of (selected, complement) is smaller in the matching set,
             // so an "everything except one" selection builds a one-country db
-            var availableCodes = await IpRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
+            var availableCodes = await ipRangeLocationProvider.GetCountryCodes(cancellationToken).Vhc();
             var (storedCodes, action) = ResolveSplitIpDbSelection(availableCodes, countryCodes,
                 splitCountryMode is SplitCountryMode.IncludeList ? FilterAction.Include : FilterAction.Exclude);
 
@@ -103,7 +97,7 @@ public class SplitCountryService(
     {
         var countryCode = AppRegionInfo.CurrentRegion.Name;
         VhLogger.Instance.LogInformation("Client CountryCode is: {CountryCode}",
-            VhUtils.TryGetCountryName(countryCode));
+            AppCountryInfo.TryGet(countryCode)?.EnglishName);
         return countryCode;
     }
 
@@ -157,10 +151,5 @@ public class SplitCountryService(
         }
 
         return _ipLocationAssetHash;
-    }
-
-    public void Dispose()
-    {
-        IpRangeLocationProvider?.Dispose();
     }
 }

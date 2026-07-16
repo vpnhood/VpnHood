@@ -1,19 +1,19 @@
-﻿using VpnHood.Core.Common.Tokens;
+﻿using VpnHood.AppLib.Services;
+using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.Dtos;
 
 public class AppServerLocationInfo : ServerLocationInfo
 {
-    public string? TranslatedCountryName { get; init; }
     public bool HasMultipleRegions { get; init; }
 
-    private static string GetTranslatedCountryName(ServerLocationInfo serverLocationInfo)
-    {
-        if (serverLocationInfo.CountryCode == AutoCountryCode)
-            return serverLocationInfo.CountryName;
+    public string TranslatedCountryName {
+        get {
+            if (CountryCode == AutoCountryCode)
+                return CountryName;
 
-        return AppCountryInfo.TryGet(serverLocationInfo.CountryCode)?.TranslatedName
-               ?? serverLocationInfo.CountryName;
+            return AppCountryInfo.TryGet(CountryCode)?.TranslatedName ?? CountryName;
+        }
     }
 
     public static AppServerLocationInfo FromInfo(
@@ -24,8 +24,7 @@ public class AppServerLocationInfo : ServerLocationInfo
             CountryCode = serverLocationInfo.CountryCode,
             RegionName = serverLocationInfo.RegionName,
             Tags = serverLocationInfo.Tags,
-            HasMultipleRegions = hasMultipleRegions,
-            TranslatedCountryName = GetTranslatedCountryName(serverLocationInfo)
+            HasMultipleRegions = hasMultipleRegions
         };
     }
 }

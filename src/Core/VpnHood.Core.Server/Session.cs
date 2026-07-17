@@ -105,8 +105,7 @@ public class Session : IDisposable
             IsPingSupported = true,
             PacketProxyCallbacks = new PacketProxyCallbacks(this),
             AutoDisposePackets = true,
-            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
-            UseUdpProxy2 = options.UseUdpProxy2Value
+            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity
         });
         _proxyManager.PacketReceived += Proxy_PacketsReceived;
         _trackingOptions = trackingOptions;

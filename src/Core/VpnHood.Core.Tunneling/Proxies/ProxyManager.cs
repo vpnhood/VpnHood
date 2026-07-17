@@ -58,9 +58,7 @@ public class ProxyManager : PassthroughPacketTransport
         };
 
         // create UDP proxy pool
-        _udpProxyPool = options.UseUdpProxy2
-            ? new UdpProxyPoolEx(udpProxyPoolOptions)
-            : new UdpProxyPool(udpProxyPoolOptions);
+        _udpProxyPool = new UdpProxyPool(udpProxyPoolOptions);
         _udpProxyPool.PacketReceived += Proxy_PacketReceived;
 
         // Sweep dead stream channels out of the tracking list. A ProxyChannel disposes ITSELF when either

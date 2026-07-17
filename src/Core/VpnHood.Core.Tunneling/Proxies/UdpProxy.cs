@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
@@ -16,14 +16,17 @@ namespace VpnHood.Core.Tunneling.Proxies;
 internal class UdpProxy : SinglePacketTransport, ITimeoutItem
 {
     private readonly UdpClient _udpClient;
-    private readonly IPEndPoint? _sourceEndPoint;
     private IPEndPoint? _destinationEndPoint;
+    private readonly byte[] _destinationAddressBytes = new byte[16];
+    private int _destinationAddressLength;
+    private bool? _dontFragment;
+    public TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>> DestinationEndPointMap { get; }
     public IPEndPoint LocalEndPoint { get; }
     public AddressFamily AddressFamily { get; }
     public DateTime LastUsedTime { get; set; }
     public new bool IsDisposed => base.IsDisposed;
 
-    public UdpProxy(UdpClient udpClient, IPEndPoint? sourceEndPoint, int queueCapacity, bool autoDisposePackets)
+    public UdpProxy(UdpClient udpClient, TimeSpan udpTimeout, int queueCapacity, bool autoDisposePackets)
         : base(new PacketTransportOptions {
             AutoDisposePackets = autoDisposePackets,
             Blocking = false,
@@ -31,7 +34,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         })
     {
         _udpClient = udpClient;
-        _sourceEndPoint = sourceEndPoint;
+        DestinationEndPointMap = new TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>>(udpTimeout);
         LastUsedTime = FastDateTime.Now;
         LocalEndPoint = udpClient.Client.GetLocalEndPoint();
         AddressFamily = LocalEndPoint.AddressFamily;
@@ -43,25 +46,28 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         _ = StartReceivingAsync();
     }
 
-    protected virtual IPEndPoint? GetSourceEndPoint(IPEndPoint remoteEndPoint)
-    {
-        return _sourceEndPoint;
-    }
-
     protected override async ValueTask SendPacketAsync(IpPacket ipPacket)
     {
         try {
-            // IpV4 fragmentation
-            if (ipPacket.Protocol == IpProtocol.IPv4 && ipPacket is IpV4Packet ipV4Packet && AddressFamily.IsV4())
-                _udpClient.DontFragment =
-                    ipV4Packet.DontFragment; // Never call this for IPv6, it will throw exception for any value
-
             var udpPacket = ipPacket.ExtractUdp();
 
-            // check if the destination endpoint is changed. Prevent reallocating the buffer
-            if (_destinationEndPoint == null || !_destinationEndPoint.Address.Equals(ipPacket.DestinationAddress) ||
-                _destinationEndPoint.Port != udpPacket.DestinationPort)
+            // IpV4 fragmentation. DontFragment is a setsockopt syscall, so set it only when it changes.
+            // Never call this for IPv6, it will throw exception for any value
+            if (AddressFamily.IsV4() && ipPacket is IpV4Packet ipV4Packet && _dontFragment != ipV4Packet.DontFragment) {
+                _udpClient.DontFragment = ipV4Packet.DontFragment;
+                _dontFragment = ipV4Packet.DontFragment;
+            }
+
+            // check if the destination endpoint is changed via the address span,
+            // so steady traffic allocates no IPAddress or IPEndPoint
+            if (_destinationEndPoint == null ||
+                _destinationEndPoint.Port != udpPacket.DestinationPort ||
+                !ipPacket.DestinationAddressSpan.SequenceEqual(
+                    _destinationAddressBytes.AsSpan(0, _destinationAddressLength))) {
                 _destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
+                _destinationAddressLength = ipPacket.DestinationAddressSpan.Length;
+                ipPacket.DestinationAddressSpan.CopyTo(_destinationAddressBytes);
+            }
 
             // send packet to destination
             var sentBytes = await _udpClient.SendAsync(udpPacket.Payload, _destinationEndPoint).Vhc();
@@ -80,19 +86,25 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
 
     private async Task StartReceivingAsync()
     {
+        var consecutiveErrors = 0;
         while (!IsDisposed) {
             try {
                 var udpResult = await _udpClient.ReceiveAsync().Vhc();
-                LastUsedTime = FastDateTime.Now; // keep worker alive while receiving traffic
+                consecutiveErrors = 0;
 
-                // find the audience (sourceEndPoint)
-                var sourceEndPoint = GetSourceEndPoint(udpResult.RemoteEndPoint);
-                if (sourceEndPoint == null) {
-                    VhLogger.Instance.LogInformation(GeneralEventId.Udp, "Could not find UDP source address.");
-                    return;
+                // drop packets from unmapped remote endpoints (internet noise or a reply after the
+                // mapping timed out) and keep receiving; other flows still rely on this shared socket.
+                // Unmapped packets must not refresh LastUsedTime, or noise would pin idle workers
+                if (!DestinationEndPointMap.TryGetValue(udpResult.RemoteEndPoint, out var sourceEndPoint)) {
+                    if (VhLogger.MinLogLevel <= LogLevel.Debug)
+                        VhLogger.Instance.LogDebug(GeneralEventId.Udp,
+                            "Dropped a UDP packet from an unmapped remote endpoint. RemoteEndPoint: {RemoteEndPoint}",
+                            VhLogger.Format(udpResult.RemoteEndPoint));
+                    continue;
                 }
 
-                var ipPacket = PacketBuilder.BuildUdp(udpResult.RemoteEndPoint, sourceEndPoint, udpResult.Buffer);
+                LastUsedTime = FastDateTime.Now; // keep worker alive while receiving traffic
+                var ipPacket = PacketBuilder.BuildUdp(udpResult.RemoteEndPoint, sourceEndPoint.Value, udpResult.Buffer);
                 ipPacket.UpdateAllChecksums();
                 OnPacketReceived(ipPacket);
             }
@@ -106,12 +118,17 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in UdpProxy receive loop.");
+
+                // a persistent synchronous error must not hot-spin the shared receive loop
+                if (++consecutiveErrors >= 10)
+                    await Task.Delay(1000).Vhc();
             }
         }
     }
 
     protected override void DisposeManaged()
     {
+        DestinationEndPointMap.Dispose();
         _udpClient.Dispose();
 
         base.DisposeManaged();

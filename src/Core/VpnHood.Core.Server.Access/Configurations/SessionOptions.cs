@@ -35,7 +35,6 @@ public class SessionOptions
     public int? MaxTcpChannelCount { get; set; }
     public int? NetScanLimit { get; set; }
     public TimeSpan? NetScanTimeout { get; set; }
-    public bool? UseUdpProxy2 { get; set; }
     public bool? AllowTcpProxy { get; set; }
     public bool? AllowTcpPacket { get; set; }
 
@@ -85,9 +84,6 @@ public class SessionOptions
     public int MaxTcpChannelCountValue => MaxTcpChannelCount ?? 1000;
 
     [JsonIgnore]
-    public bool UseUdpProxy2Value => UseUdpProxy2 ?? true;
-
-    [JsonIgnore]
     public bool AllowTcpProxyValue => AllowTcpProxy ?? true;
 
     [JsonIgnore]
@@ -115,7 +111,6 @@ public class SessionOptions
         if (obj.MaxTcpChannelCount != null) MaxTcpChannelCount = obj.MaxTcpChannelCount;
         if (obj.NetScanLimit != null) NetScanLimit = obj.NetScanLimit;
         if (obj.NetScanTimeout != null) NetScanTimeout = obj.NetScanTimeout;
-        if (obj.UseUdpProxy2 != null) UseUdpProxy2 = obj.UseUdpProxy2;
         if (obj.AllowTcpProxy != null) AllowTcpProxy = obj.AllowTcpProxy;
         if (obj.AllowTcpPacket != null) AllowTcpPacket = obj.AllowTcpPacket;
     }
@@ -141,7 +136,6 @@ public class SessionOptions
         MaxTcpChannelCount = MaxTcpChannelCountValue;
         NetScanLimit = NetScanLimit;
         NetScanTimeout = NetScanTimeout;
-        UseUdpProxy2 = UseUdpProxy2Value;
         AllowTcpProxy = AllowTcpProxyValue;
         AllowTcpPacket = AllowTcpPacketValue;
     }

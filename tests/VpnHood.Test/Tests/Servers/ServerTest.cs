@@ -342,8 +342,7 @@ public class ServerTest : TestBase
                 TcpConnectTimeout = TimeSpan.FromMinutes(53),
                 TcpTimeout = TimeSpan.FromMinutes(54),
                 Timeout = TimeSpan.FromMinutes(55),
-                UdpTimeout = TimeSpan.FromMinutes(56),
-                UseUdpProxy2 = true
+                UdpTimeout = TimeSpan.FromMinutes(56)
             }
         };
 

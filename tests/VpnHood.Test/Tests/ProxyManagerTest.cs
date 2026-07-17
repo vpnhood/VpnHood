@@ -35,7 +35,6 @@ public class ProxyManagerTest
             PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
             UdpBufferSize = null,
             LogScope = null,
-            UseUdpProxy2 = true,
             AutoDisposePackets = true
         });
     }

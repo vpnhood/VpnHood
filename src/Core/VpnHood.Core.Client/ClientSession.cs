@@ -110,7 +110,6 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             IcmpTimeout = TunnelDefaults.IcmpTimeout,
             UdpBufferSize = Config.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
             LogScope = null,
-            UseUdpProxy2 = true,
             AutoDisposePackets = true
         });
         _proxyManager.PacketReceived += Proxy_PacketReceived;

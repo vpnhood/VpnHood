@@ -358,3 +358,6 @@ MigrationBackup/
 
 # Throwaway solution written by pub/Lib/PublishNugets.ps1 to pack all packable projects in one pass
 /_nuget_pack.slnx
+
+# Personal Claude Code settings (may contain approved local commands); team settings live in .claude/settings.json
+.claude/settings.local.json

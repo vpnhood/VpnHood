@@ -10,7 +10,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     where TValue : ITimeoutItem where TKey : notnull
 {
     private readonly ConcurrentDictionary<TKey, TValue> _items = new();
-    private DateTime _lastCleanupTime = DateTime.MinValue;
+    private long _lastCleanupTimeTicks;
     private bool _disposed;
 
     public bool AutoCleanup { get; set; } = true;
@@ -117,18 +117,27 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     public void Cleanup(bool force = false)
     {
         // do nothing if there is no timeout
-        if (Timeout == null)
+        var timeout = Timeout;
+        if (timeout == null)
+            return;
+
+        // fast path: this runs on hot packet paths, so skip the lock while the last sweep is recent.
+        // A stale read at worst delays or duplicates one sweep round
+        var minTicks = timeout.Value.Ticks / 3;
+        if (!force && FastDateTime.Now.Ticks - Volatile.Read(ref _lastCleanupTimeTicks) < minTicks)
             return;
 
         // return if already checked
         lock (_cleanupLock) {
-            if (!force && FastDateTime.Now - _lastCleanupTime < Timeout / 3)
+            if (!force && FastDateTime.Now.Ticks - Volatile.Read(ref _lastCleanupTimeTicks) < minTicks)
                 return;
-            _lastCleanupTime = FastDateTime.Now;
+            Volatile.Write(ref _lastCleanupTimeTicks, FastDateTime.Now.Ticks);
 
             // remove timeout items
-            foreach (var item in _items.Where(x => IsExpired(x.Value)))
-                TryRemove(item.Key, out _);
+            foreach (var item in _items) {
+                if (IsExpired(item.Value))
+                    TryRemove(item.Key, out _);
+            }
         }
     }
 

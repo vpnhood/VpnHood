@@ -21,6 +21,7 @@ public class VpnServiceManager : IDisposable
     private const int VpnServiceUnreachableThreshold = 1; // after this count we stop the service
     private readonly TimeSpan _requestVpnServiceTimeout = TimeSpan.FromSeconds(120).WhenNoDebugger();
     private readonly TimeSpan _startVpnServiceTimeout = TimeSpan.FromSeconds(20).WhenNoDebugger();
+    private readonly TimeSpan _startVpnServicePollInterval = TimeSpan.FromMilliseconds(200);
     private bool _disposed;
 
     private readonly TimeSpan _connectionInfoTimeSpan = TimeSpan.FromSeconds(1);
@@ -156,7 +157,7 @@ public class VpnServiceManager : IDisposable
             // wait for vpn service to start
             while (connectionInfo == null ||
                    connectionInfo.ClientState is ClientState.None or ClientState.Initializing) {
-                await Task.Delay(1000, localCts.Token).Vhc();
+                await Task.Delay(_startVpnServicePollInterval, localCts.Token).Vhc();
                 connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath);
             }
 
@@ -178,7 +179,9 @@ public class VpnServiceManager : IDisposable
     {
         VhLogger.Instance.LogInformation("Waiting for VpnService to establish a connection ...");
         while (true) {
-            var connectionInfo = ConnectionInfo;
+            // refresh and wait for the result; the ConnectionInfo property refreshes in fire-and-forget
+            // fashion and may return a stale state for an extra poll cycle
+            var connectionInfo = await TryRefreshConnectionInfo(force: true, cancellationToken).Vhc();
 
             // check for error
             if (connectionInfo.Error != null)

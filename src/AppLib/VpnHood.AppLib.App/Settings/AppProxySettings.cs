@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+﻿using VpnHood.Core.Proxies.Management.Abstractions.Options;
 
 namespace VpnHood.AppLib.Settings;
 

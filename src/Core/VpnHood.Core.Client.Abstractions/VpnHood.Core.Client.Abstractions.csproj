@@ -8,6 +8,6 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
 	  <ProjectReference Include="..\VpnHood.Core.Filtering.Abstractions\VpnHood.Core.Filtering.Abstractions.csproj" />
-	  <ProjectReference Include="..\VpnHood.Core.Proxies.EndPointManagement.Abstractions\VpnHood.Core.Proxies.EndPointManagement.Abstractions.csproj" />
+	  <ProjectReference Include="..\VpnHood.Core.Proxies.Management.Abstractions\VpnHood.Core.Proxies.Management.Abstractions.csproj" />
 	</ItemGroup>
 </Project>

@@ -4,7 +4,7 @@ using VpnHood.Core.Client;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Server;
 using VpnHood.Core.Server.Access.Managers.FileAccessManagement;
 using VpnHood.Core.Toolkit.Utils;

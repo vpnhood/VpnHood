@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Proxies.EndPointManagement;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
-using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+using VpnHood.Core.Proxies.Management;
+using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Core.Proxies.Management.Abstractions.Options;
+using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Socks5ProxyServers;
 using VpnHood.Test.Dom;

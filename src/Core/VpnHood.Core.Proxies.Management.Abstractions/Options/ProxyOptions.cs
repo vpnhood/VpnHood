@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+namespace VpnHood.Core.Proxies.Management.Abstractions.Options;
 
 public class ProxyOptions
 {

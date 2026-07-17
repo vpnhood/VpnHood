@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+using VpnHood.Core.Proxies.Management.Abstractions.Options;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
 

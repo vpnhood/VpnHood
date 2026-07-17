@@ -1,5 +1,5 @@
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
-using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Core.Proxies.Management.Sqlite;
 // ReSharper disable AccessToDisposedClosure
 
 namespace VpnHood.Test.Tests;

@@ -2,9 +2,9 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.IpLocations;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
-using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Core.Proxies.Management.Abstractions.Options;
+using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 

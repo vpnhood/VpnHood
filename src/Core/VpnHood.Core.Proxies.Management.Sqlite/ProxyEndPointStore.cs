@@ -1,11 +1,11 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+namespace VpnHood.Core.Proxies.Management.Sqlite;
 
 /// <summary>
 /// SQLite-backed shared proxy endpoint store. The db file lives in a folder both the app and the

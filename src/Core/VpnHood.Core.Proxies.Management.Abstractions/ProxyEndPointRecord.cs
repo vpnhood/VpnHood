@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+namespace VpnHood.Core.Proxies.Management.Abstractions;
 
 /// <summary>A proxy endpoint row in the endpoint store: identity + status + app-managed extras.</summary>
 public class ProxyEndPointRecord

@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+namespace VpnHood.Core.Proxies.Management.Abstractions;
 
 /// <summary>Filter, order and page options evaluated inside the endpoint store (SQL side).</summary>
 public class ProxyEndPointStoreListParams

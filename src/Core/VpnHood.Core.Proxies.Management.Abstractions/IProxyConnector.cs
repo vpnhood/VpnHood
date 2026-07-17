@@ -1,10 +1,10 @@
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
+using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Toolkit.Monitoring;
 using VpnHood.Core.Toolkit.Sockets;
 
-namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+namespace VpnHood.Core.Proxies.Management.Abstractions;
 
 /// <summary>
 /// Connect-path abstraction over proxies. Implementations range from a single static proxy

@@ -1,7 +1,7 @@
 using Microsoft.Data.Sqlite;
 using VpnHood.Core.Toolkit.Extensions;
 
-namespace VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+namespace VpnHood.Core.Proxies.Management.Sqlite;
 
 internal static class SqliteHelper
 {

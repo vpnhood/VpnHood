@@ -1,5 +1,5 @@
 ﻿using VpnHood.Core.Client.Abstractions;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Monitoring;
 

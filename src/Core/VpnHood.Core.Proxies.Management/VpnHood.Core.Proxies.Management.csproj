@@ -9,7 +9,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\VpnHood.Core.Proxies.EndPointManagement.Abstractions\VpnHood.Core.Proxies.EndPointManagement.Abstractions.csproj" />
+	  <ProjectReference Include="..\VpnHood.Core.Proxies.Management.Abstractions\VpnHood.Core.Proxies.Management.Abstractions.csproj" />
 	</ItemGroup>
 
 </Project>

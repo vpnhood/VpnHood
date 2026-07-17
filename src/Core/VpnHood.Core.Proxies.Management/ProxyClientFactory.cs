@@ -1,11 +1,11 @@
 ﻿using System.Net;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.HttpProxyClients;
 using VpnHood.Core.Proxies.Socks4ProxyClients;
 using VpnHood.Core.Proxies.Socks5ProxyClients;
 using VpnHood.Core.Toolkit.Extensions;
 
-namespace VpnHood.Core.Proxies.EndPointManagement;
+namespace VpnHood.Core.Proxies.Management;
 
 public static class ProxyClientFactory
 {

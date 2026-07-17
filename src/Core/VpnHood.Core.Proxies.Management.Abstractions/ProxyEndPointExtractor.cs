@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+namespace VpnHood.Core.Proxies.Management.Abstractions;
 
 // Vibe: Extract a single proxy URI from heterogeneous text.
 internal static partial class ProxyEndPointExtractor

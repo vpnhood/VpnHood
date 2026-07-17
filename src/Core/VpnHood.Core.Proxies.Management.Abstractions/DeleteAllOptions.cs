@@ -1,4 +1,4 @@
-namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+namespace VpnHood.Core.Proxies.Management.Abstractions;
 
 /// <summary>Selects which endpoint categories DeleteAll removes. Defaults delete everything.</summary>
 public class DeleteAllOptions

@@ -146,9 +146,9 @@
     <Project Path="src/Core/VpnHood.Core.IpLocations/VpnHood.Core.IpLocations.csproj" />
     <Project Path="src/Core/VpnHood.Core.Packets/VpnHood.Core.Packets.csproj" />
     <Project Path="src/Core/VpnHood.Core.PacketTransports/VpnHood.Core.PacketTransports.csproj" />
-    <Project Path="src/Core/VpnHood.Core.Proxies.EndPointManagement.Abstractions/VpnHood.Core.Proxies.EndPointManagement.Abstractions.csproj" />
-    <Project Path="src/Core/VpnHood.Core.Proxies.EndPointManagement.Sqlite/VpnHood.Core.Proxies.EndPointManagement.Sqlite.csproj" />
-    <Project Path="src/Core/VpnHood.Core.Proxies.EndPointManagement/VpnHood.Core.Proxies.EndPointManagement.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Proxies.Management.Abstractions/VpnHood.Core.Proxies.Management.Abstractions.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Proxies.Management.Sqlite/VpnHood.Core.Proxies.Management.Sqlite.csproj" />
+    <Project Path="src/Core/VpnHood.Core.Proxies.Management/VpnHood.Core.Proxies.Management.csproj" />
     <Project Path="src/Core/VpnHood.Core.Server.Access.FileAccessManager/VpnHood.Core.Server.Access.FileAccessManager.csproj" />
     <Project Path="src/Core/VpnHood.Core.Server.Access/VpnHood.Core.Server.Access.csproj" />
     <Project Path="src/Core/VpnHood.Core.Server/VpnHood.Core.Server.csproj" />

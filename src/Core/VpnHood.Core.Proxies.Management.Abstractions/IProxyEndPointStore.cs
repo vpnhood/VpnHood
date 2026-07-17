@@ -1,6 +1,6 @@
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+namespace VpnHood.Core.Proxies.Management.Abstractions;
 
 /// <summary>
 /// Shared persistent store for the managed proxy endpoint list. Implementations must be safe for

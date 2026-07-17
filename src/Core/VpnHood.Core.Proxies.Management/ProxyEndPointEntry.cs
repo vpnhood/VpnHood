@@ -1,10 +1,10 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
-namespace VpnHood.Core.Proxies.EndPointManagement;
+namespace VpnHood.Core.Proxies.Management;
 
 internal class ProxyEndPointEntry(ProxyEndPointInfo endPointInfo)
 {

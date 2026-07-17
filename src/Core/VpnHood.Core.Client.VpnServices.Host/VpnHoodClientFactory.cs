@@ -4,10 +4,10 @@ using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;
-using VpnHood.Core.Proxies.EndPointManagement;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
-using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
-using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+using VpnHood.Core.Proxies.Management;
+using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Core.Proxies.Management.Abstractions.Options;
+using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 

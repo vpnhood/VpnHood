@@ -1,4 +1,4 @@
-﻿using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
+﻿using VpnHood.Core.Proxies.Management.Abstractions;
 
 namespace VpnHood.Test.Tests;
 

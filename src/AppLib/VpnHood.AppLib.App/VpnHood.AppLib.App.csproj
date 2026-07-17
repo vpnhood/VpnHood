@@ -19,7 +19,7 @@
 		<ProjectReference Include="..\..\Core\VpnHood.Core.IpLocations\VpnHood.Core.IpLocations.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Manager\VpnHood.Core.Client.VpnServices.Manager.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
-		<ProjectReference Include="..\..\Core\VpnHood.Core.Proxies.EndPointManagement.Sqlite\VpnHood.Core.Proxies.EndPointManagement.Sqlite.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Proxies.Management.Sqlite\VpnHood.Core.Proxies.Management.Sqlite.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
 	</ItemGroup>
 

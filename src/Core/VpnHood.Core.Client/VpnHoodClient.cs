@@ -65,8 +65,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // build config
         Config = new VpnHoodClientConfig {
-            TcpProxyCatcherAddressIpV6 = options.TcpProxyCatcherAddressIpV6,
-            TcpProxyCatcherAddressIpV4 = options.TcpProxyCatcherAddressIpV4,
             AllowAnonymousTracker = options.AllowAnonymousTracker,
             MinPacketChannelLifespan = options.MinPacketChannelTimespan,
             MaxPacketChannelLifespan = options.MaxPacketChannelTimespan,
@@ -97,8 +95,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             TcpKernelBufferSize = options.TcpKernelBufferSize,
             UdpProxyBufferSize = options.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
             PacketChannelBufferSize = options.PacketChannelBufferSize,
-            UseWebSocket = options.DebugData1?.Contains("/disable-WebSocket", StringComparison.OrdinalIgnoreCase) is null or false,
-            UseOsTcpStack = options.DebugData1?.Contains("/os-tcp-stack", StringComparison.OrdinalIgnoreCase) is true
+            UseWebSocket = options.DebugData1?.Contains("/disable-WebSocket", StringComparison.OrdinalIgnoreCase) is null or false
         };
 
         Token = Token.FromAccessKey(options.AccessKey);

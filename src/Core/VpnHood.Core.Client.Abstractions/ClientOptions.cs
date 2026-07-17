@@ -23,14 +23,6 @@ public class ClientOptions
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }
 
-    // a never used IPv4 that must be outside the local network
-    [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress TcpProxyCatcherAddressIpV4 { get; set; } = IPAddress.Parse("11.0.0.0");
-
-    // a never used IPv6 ip that must be outside the machine
-    [JsonConverter(typeof(IPAddressConverter))]
-    public IPAddress TcpProxyCatcherAddressIpV6 { get; set; } = IPAddress.Parse("2000::");
-
     [JsonConverter(typeof(VersionConverter))]
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version ?? new Version();
 

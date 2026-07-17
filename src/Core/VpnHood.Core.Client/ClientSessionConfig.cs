@@ -10,8 +10,6 @@ public class ClientSessionConfig
     public required VpnAdapterOptions AdapterOptions { get; init; }
     public required ulong SessionId { get; init; }
     public required ReadOnlyMemory<byte> SessionKey { get; init; }
-    public required IPAddress TcpProxyCatcherAddressIpV4 { get; init; }
-    public required IPAddress TcpProxyCatcherAddressIpV6 { get; init; }
     public required TimeSpan TcpConnectTimeout { get; init; }
     public required TransferBufferSize? UdpProxyBufferSize { get; init; }
     public required TransferBufferSize StreamProxyBufferSize { get; init; }

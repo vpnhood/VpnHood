@@ -4,7 +4,6 @@ namespace VpnHood.Core.Tunneling;
 
 public static class GeneralEventId
 {
-    public static EventId Nat = new((int)EventCode.Nat, nameof(Nat));
     public static EventId Session = new((int)EventCode.Session, nameof(Session));
     public static EventId Request = new((int)EventCode.Request, nameof(Request));
     public static EventId Essential = new((int)EventCode.Essential, nameof(Essential));

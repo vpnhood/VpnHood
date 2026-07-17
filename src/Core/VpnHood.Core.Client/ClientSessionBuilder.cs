@@ -191,7 +191,6 @@ internal class ClientSessionBuilder(
                 includeIpRanges: serverIncludeIpRangesByDevice.Intersect(config.IncludeIpRangesByDevice),
                 canProtectSocket: vpnAdapter.CanProtectSocket,
                 includeLocalNetwork: config.IncludeLocalNetwork,
-                catcherIps: config.UseOsTcpStack ? [config.TcpProxyCatcherAddressIpV4, config.TcpProxyCatcherAddressIpV6] : [],
                 hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address);
 
             staticIpFilter.IncludeRanges = staticIpFilter.IncludeRanges
@@ -307,15 +306,12 @@ internal class ClientSessionBuilder(
                     ChannelProtocol = channelProtocol,
                     DropQuic = config.DropQuic,
                     DropUdp = config.DropUdp,
-                    UseTcpProxy = config.UseTcpProxy,
-                    UseOsTcpStack = config.UseOsTcpStack
+                    UseTcpProxy = config.UseTcpProxy
                 },
                 config: new ClientSessionConfig {
                     AdapterOptions = adapterOptions,
                     SessionId = sessionId,
                     SessionKey = sessionKey,
-                    TcpProxyCatcherAddressIpV4 = config.TcpProxyCatcherAddressIpV4,
-                    TcpProxyCatcherAddressIpV6 = config.TcpProxyCatcherAddressIpV6,
                     Mtu = mtu,
                     MaxSpeedMbps = helloResponse.AccessInfo?.MaxSpeedMbps,
                     MaxPacketChannelLifespan = config.MaxPacketChannelLifespan,

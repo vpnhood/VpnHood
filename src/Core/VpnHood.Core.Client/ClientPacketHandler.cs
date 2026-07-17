@@ -65,12 +65,6 @@ internal class ClientPacketHandler(
         if (filterAction == FilterAction.Default && netFilter.IpFilter != null)
             filterAction = netFilter.IpFilter.Process(ipPacket.Protocol, ipPacket.GetDestinationEndPoint());
 
-        // TcpHost has to manage its own packets
-        if (clientTcpHost.IsOwnPacket(ipPacket)) {
-            clientTcpHost.ProcessOutgoingPacket(ipPacket);
-            return;
-        }
-
         // block
         if (filterAction == FilterAction.Block)
             throw new NetFilterException("A packet has been dropped by the domain filter.");

@@ -141,7 +141,6 @@ internal static class ClientHelper
 
     public static IpRangeOrderedList BuildIncludeIpRangesByDevice(
         IpRangeOrderedList includeIpRanges,
-        IReadOnlyList<IPAddress> catcherIps,
         bool canProtectSocket,
         bool includeLocalNetwork,
         IPAddress hostIpAddress)
@@ -156,9 +155,6 @@ internal static class ClientHelper
                 .Exclude(IpNetwork.MulticastNetworks.ToIpRanges())
                 .Exclude(IPAddress.Broadcast);
         }
-
-        // Make sure CatcherAddress is included
-        includeIpRanges = includeIpRanges.Union(catcherIps.ToIpRanges());
 
         return includeIpRanges; //sort and unify
     }

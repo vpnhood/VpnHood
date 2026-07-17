@@ -22,5 +22,4 @@ internal class ClientSessionOptions
     public required bool DropUdp { get; init; }
     public required bool DropQuic { get; init; }
     public required bool UseTcpProxy { get; init; }
-    public required bool UseOsTcpStack { get; init; }
 }

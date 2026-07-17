@@ -19,9 +19,6 @@ internal class ClientTcpHost(ClientStreamHandler streamHandler)
     private ITcpStack? _tcpStack;
     private ITcpListener? _listener;
 
-    public IReadOnlyList<IPAddress> CatcherAddressIps => [];
-    public bool IsOwnPacket(IpPacket ipPacket) => false;
-
     public event EventHandler<IpPacket>? PacketReceived;
 
 

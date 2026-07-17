@@ -11,9 +11,9 @@
 # GitHub release note (Changelog_GetRecentSecion), and Google Play uses the same exclude-phrases pass.
 #
 # Usage:
-#   ./Bump.ps1                 # stable release bump (x.y.Z + 1)
-#   ./Bump.ps1 -bump 2         # prerelease bump
-#   ./Bump.ps1 -noPush         # bump only, no commit/push (dry run)
+#   ./Invoke-VersionBump.ps1                 # stable release bump (x.y.Z + 1)
+#   ./Invoke-VersionBump.ps1 -bump 2         # prerelease bump
+#   ./Invoke-VersionBump.ps1 -noPush         # bump only, no commit/push (dry run)
 
 param(
 	# 1 = stable release, 2 = prerelease. Any value > 0 increments the build number.
@@ -25,7 +25,7 @@ param(
 # The ONE version mutation: increment PubVersion.json + stamp src/Directory.Build.props. Done here
 # (not in Common.ps1) so Common stays a read-only environment load. Runs BEFORE Common so Common then
 # reads the freshly bumped version. A 0/absent $bump is a no-op (VersionBump only mutates when > 0).
-& "$PSScriptRoot/Lib/VersionBump.ps1" -versionFile "$PSScriptRoot/PubVersion.json" -bump $bump;
+& "$PSScriptRoot/Lib/Update-VersionFile.ps1" -versionFile "$PSScriptRoot/PubVersion.json" -bump $bump;
 
 . "$PSScriptRoot/Lib/Common.ps1"
 

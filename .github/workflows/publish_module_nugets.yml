@@ -12,7 +12,7 @@ name: publish_module_nugets (reusable)
 # publish_app.yml callers). This is NOT part of the forker/skeleton contract — forkers consume the
 # published NuGets and never call this.
 #
-# The logic lives in pub/Lib/PublishModuleNugets.ps1 (checked out from this repo):
+# The logic lives in pub/lib/Publish-ModuleNugetPackages.ps1 (checked out from this repo):
 #   - Version-sync: adopt the monorepo's develop version when it is ahead of the module's
 #     pub/PubVersion.json, otherwise bump the module's own build number; commit the bump back.
 #   - Pack every packable project in the caller repo and push to nuget.org — a STABLE X.Y.Z,
@@ -87,7 +87,7 @@ jobs:
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
-          & "$env:GITHUB_WORKSPACE/vh/pub/Lib/PublishModuleNugets.ps1" `
+          & "$env:GITHUB_WORKSPACE/vh/pub/lib/Publish-ModuleNugetPackages.ps1" `
             -moduleDir "$env:GITHUB_WORKSPACE/module" `
             -branch "${{ github.ref_name }}" `
             -prerelease:$("${{ inputs.prerelease }}" -eq "true")

@@ -49,7 +49,7 @@ jobs:
         shell: pwsh
         run: |
           $bump = if ("${{ github.event.inputs.prerelease }}" -eq "true") { 2 } else { 1 }
-          & "$env:GITHUB_WORKSPACE/pub/Bump.ps1" -bump $bump
+          & "$env:GITHUB_WORKSPACE/pub/Invoke-VersionBump.ps1" -bump $bump
       - name: Dispatch client publish
         if: ${{ github.event.inputs.then_publish == 'true' }}
         env:

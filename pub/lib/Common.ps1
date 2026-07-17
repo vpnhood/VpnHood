@@ -1,14 +1,14 @@
 $ErrorActionPreference = "Stop";
 
 $solutionDir = Split-Path -parent (Split-Path -parent $PSScriptRoot);
-$gitDir = "$solutionDir/.git";   # consumed by pub/Bump.ps1's git commit/push (dot-sources this)
+$gitDir = "$solutionDir/.git";   # consumed by pub/Invoke-VersionBump.ps1's git commit/push (dot-sources this)
 $pubDir = "$solutionDir/pub";
 if ($env:ProgramFiles) {
 	$msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe";
 }
 $userDir = "$solutionDir/../.user";
 # Secrets live as discrete files under .user/ (one value per file) so they map 1:1 to GitHub
-# secrets. Android keystores/passwords resolve per-app in PublishAndroidApp.ps1; here we only
+# secrets. Android keystores/passwords resolve per-app in Publish-AndroidApp.ps1; here we only
 # need the global NuGet token. Missing file -> empty (a fork without secrets still builds).
 # Wrap in "$(...)" so an empty file (Get-Content -Raw returns $null) coerces to "" instead of
 # throwing "cannot call a method on a null-valued expression" — keeps a keyless fork green.
@@ -17,8 +17,8 @@ $msverbosity = "minimal";
 
 # Version (READ-ONLY). Common never mutates the version — it only reads PubVersion.json and derives
 # $versionTag/$versionParam/$prerelease/$isLatest/$releaseFlag. The single place the version is
-# incremented is pub/Bump.ps1 (it calls VersionBump.ps1 -bump directly, before sourcing this).
-. "$PSScriptRoot/VersionBump.ps1" -versionFile "$pubDir/PubVersion.json" -bump 0;
+# incremented is pub/Invoke-VersionBump.ps1 (it calls Update-VersionFile.ps1 -bump directly, before sourcing this).
+. "$PSScriptRoot/Update-VersionFile.ps1" -versionFile "$pubDir/PubVersion.json" -bump 0;
 
 # Packages Directory
 $packagesRootDir = "$pubDir/bin/" + $versionTag;
@@ -30,8 +30,8 @@ $packageConnectDirName = "VpnHoodConnect";
 #   Resolve-PublishRepoSlug / Resolve-PublishRepoUrl [-Connect] — resolve the target repo (defaults to
 #     the current repo so a fork publishes to itself; override with VH_PUBLISH_REPO / VH_CONNECT_PUBLISH_REPO).
 #   Get-AppPublishConfig — per-app .user/<packageFileTitle>/ config lookups.
-# Callers invoke these directly (e.g. PublishToGithub gets its repo as a param resolved by the caller).
-. "$PSScriptRoot/ResolvePublishRepo.ps1";
+# Callers invoke these directly (e.g. Publish-GithubRelease gets its repo as a param resolved by the caller).
+. "$PSScriptRoot/Resolve-PublishRepo.ps1";
 . "$PSScriptRoot/AppPublishConfig.ps1";
 
 # Prepare the latest folder

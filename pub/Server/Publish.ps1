@@ -8,8 +8,8 @@ $docker = $docker -eq "1";
 # Build-only, for LOCAL smoke testing. Distribution (the GitHub release + the multi-arch docker push)
 # happens ONLY in CI via .github/workflows/server_publish.yml in the vpnhood/VpnHood.App.Server repo
 # (dispatched by pub/Server/PublishByGithub.ps1) — never from a developer machine. This mirrors
-# pub/Client/Publish.ps1. Version bumping is bump.yml's job (pub/Bump.ps1); this script never bumps.
-. "$PSScriptRoot/../Lib/Common.ps1"
+# pub/Client/Publish.ps1. Version bumping is bump.yml's job (pub/Invoke-VersionBump.ps1); this script never bumps.
+. "$PSScriptRoot/../lib/Common.ps1"
 
 # remove old release note
 Remove-Item "$packagesRootDir/$packageServerDirName/ReleaseNote.txt" -ErrorAction Ignore;

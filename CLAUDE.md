@@ -4,9 +4,14 @@ The shared coding conventions and working agreements for this repo. They are the
 truth — follow them, and when a new durable convention is agreed, update this file.
 
 ## Repo layout
-- Top-level directories are lowercase: `src/`, `tests/`, `samples/`, `docs/`, `pub/`. Deeper levels
-  keep their own casing (`pub/Lib`, `src/Apps`, …). Module repos (e.g. VpnHood.Core.Proxies) follow
+- Top-level directories are lowercase: `src/`, `tests/`, `samples/`, `docs/`, `pub/`. Shared
+  script folders are lowercase too (`pub/lib`, `pub/lib/utils`, `pub/lib/vh-installer`); project
+  folders keep their own casing (`src/Apps`, …). Module repos (e.g. VpnHood.Core.Proxies) follow
   the same convention (`pub/PubVersion.json`).
+- Shared PowerShell scripts under `pub/` are PascalCase Verb-Noun with approved verbs
+  (`Invoke-VersionBump.ps1`, `pub/lib/Publish-NugetPackages.ps1`). Dot-sourced libraries/config
+  keep noun names (`Common.ps1`, `AppPublishConfig.ps1`); per-app entry scripts keep their
+  folder-scoped names (`pub/Client/Publish.ps1`, `src/Apps/*/_publish.ps1`).
 
 ## UI
 - The UI/front-end is a separate SPA project (VpnHood.Client.WebUI), located at `..\VpnHood.Client.WebUI\`

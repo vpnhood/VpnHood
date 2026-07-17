@@ -88,7 +88,7 @@ jobs:
       - name: Prepare iOS signing
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/pub/Lib/PrepareCiIosSigning.ps1" -appFolder $env:PKG
+          & "$env:GITHUB_WORKSPACE/code/pub/lib/Initialize-CiIosSigning.ps1" -appFolder $env:PKG
       - name: Build iOS (.ipa)
         shell: pwsh
         run: |

@@ -7,7 +7,7 @@
     folder (each such module brings its own Directory.Build.props, which stops the upward search).
 
     The single product version lives in pub/PubVersion.json (the source of truth the bump edits) and
-    is mirrored into <Version> below by pub/Lib/VersionBump.ps1 on every bump — so apps and libraries
+    is mirrored into <Version> below by pub/lib/Update-VersionFile.ps1 on every bump — so apps and libraries
     always share one version. CI can still override per pack with -p:Version (e.g. the smoke test's
     X.Y.Z.<revision>-prerelease). This replaced the old per-csproj <Version> + UpdateProjectVersion
     stamping.

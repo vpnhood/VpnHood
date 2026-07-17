@@ -41,7 +41,7 @@ $ErrorActionPreference = "Stop";
 # gh authenticates the dispatch from its own login (gh auth login / keyring) or an ambient
 # GITHUB_TOKEN — no token file. Run `gh auth login` once if dispatch fails with a 401.
 
-. "$PSScriptRoot/../Lib/ResolvePublishRepo.ps1";
+. "$PSScriptRoot/../lib/Resolve-PublishRepo.ps1";
 if ([string]::IsNullOrWhiteSpace($monoRepo)) { $monoRepo = Resolve-PublishRepoSlug; }
 if ([string]::IsNullOrWhiteSpace($monoRepo)) {
 	throw "Could not resolve the monorepo. Set -monoRepo owner/name or VH_PUBLISH_REPO.";

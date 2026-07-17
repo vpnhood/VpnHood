@@ -29,7 +29,7 @@
     <MtouchExtraArgs>$(MtouchExtraArgs) --setenv=MONO_GC_PARAMS=soft-heap-limit=8m,nursery-size=2m</MtouchExtraArgs>
   </PropertyGroup>
 
-  <!-- App Store (manual) signing for the Network Extension. The App Store publish (PublishIosApp.ps1)
+  <!-- App Store (manual) signing for the Network Extension. The App Store publish (Publish-IosApp.ps1)
        turns AutomaticProvisioning off and passes the *app* profile via a global /p:CodesignProvision;
        that global would otherwise leak onto this .appex and fail codesign (its App ID is the
        ...networkextension one, not the app's). The parent Connect.Ios.csproj strips CodesignProvision

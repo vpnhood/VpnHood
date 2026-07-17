@@ -1,9 +1,9 @@
-# Materializes the per-key Android signing secrets into ../.user so PublishAndroidApp.ps1 runs
-# unchanged in CI. PublishAndroidApp reads per-store files under the app's .user folder:
+# Materializes the per-key Android signing secrets into ../.user so Publish-AndroidApp.ps1 runs
+# unchanged in CI. Publish-AndroidApp reads per-store files under the app's .user folder:
 #     .user/<app>/<store>/android_keystore_<store>.p12   and   .../android_keystore_<store>_password.txt
 #     (+ optional .user/<app>/<store>/android_keystore_<store>_alias.txt)
 # This script writes those files for every key. Only the keystore bytes and password are secret; the
-# alias is auto-detected from the keystore by PublishAndroidApp.ps1 (or read from publish.json /
+# alias is auto-detected from the keystore by Publish-AndroidApp.ps1 (or read from publish.json /
 # the optional _ALIAS secret). Ephemeral keystores below get a fixed alias that detection picks up.
 #
 # Which logical key writes into which .user app + store is read from android-signing.json (this dir).
@@ -35,7 +35,7 @@ $ErrorActionPreference = "Stop";
 $solutionDir = Split-Path -Parent -Path (Split-Path -Parent -Path $PSScriptRoot);
 $userDir = Join-Path (Split-Path -Parent $solutionDir) ".user";
 
-# Fixed alias for generated ephemeral keystores; PublishAndroidApp.ps1 auto-detects it.
+# Fixed alias for generated ephemeral keystores; Publish-AndroidApp.ps1 auto-detects it.
 $ephemeralAlias = "vpnhood";
 
 # logical key (GitHub-secret prefix) -> target .user app + store, loaded from the signing map.
@@ -49,7 +49,7 @@ $keys = (Get-Content $mapFile -Raw | ConvertFrom-Json).keys |
 function Get-Env([string]$name) { [Environment]::GetEnvironmentVariable($name) }
 
 # Returns the single PrivateKeyEntry alias in a keystore, or $null when there isn't exactly one
-# (only a key entry can sign). Same logic PublishAndroidApp.ps1 uses for auto-detection.
+# (only a key entry can sign). Same logic Publish-AndroidApp.ps1 uses for auto-detection.
 function Get-SingleKeyAlias([string]$ks, [string]$pass) {
     $aliases = @(); $current = $null;
     foreach ($line in (& keytool -list -v -keystore $ks -storepass $pass 2>&1)) {
@@ -98,7 +98,7 @@ foreach ($k in $keys) {
 
     # alias sidecar (non-secret): ephemeral uses the fixed alias; real uses ANDROID_KEYSTORE_<NAME>_ALIAS
     # when supplied (required for a multi-entry keystore), else auto-detects the single key entry.
-    # Left unwritten if a real keystore isn't single-key and no override — PublishAndroidApp then throws.
+    # Left unwritten if a real keystore isn't single-key and no override — Publish-AndroidApp then throws.
     $alias =
         if (-not $real) { $ephemeralAlias }
         elseif (-not [string]::IsNullOrWhiteSpace($aliasOverride)) { $aliasOverride.Trim() }

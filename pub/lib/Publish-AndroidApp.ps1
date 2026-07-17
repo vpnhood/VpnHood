@@ -68,7 +68,7 @@ $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
 # android signing — files live in .user/<appFolder>/<store>/, with the store in the filename too so they
 # map 1:1 to the GitHub secrets (android_keystore_<store>.p12 <-> ANDROID_KEYSTORE_<APP>_<STORE>_BASE64).
-# The store was derived above ($store). CI materializes the same files (PrepareCiAndroidSigning.ps1).
+# The store was derived above ($store). CI materializes the same files (Initialize-CiAndroidSigning.ps1).
 $storeDir = Join-Path $appUserDir $store
 $keystore = Join-Path $storeDir "android_keystore_$store.p12"
 $keystorePass = (Get-Content (Join-Path $storeDir "android_keystore_${store}_password.txt") -Raw).Trim()

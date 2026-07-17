@@ -24,10 +24,10 @@ Write-Host;
 Write-Host "*** Creating $assemblyName-$runtime Module ..." -BackgroundColor Blue -ForegroundColor White;
 
 # Init script
-. "$SolutionDir/pub/Lib/Common.ps1";
+. "$SolutionDir/pub/lib/Common.ps1";
 
 # Build the release URL only AFTER Common.ps1 is sourced: $versionTag is defined there (via
-# VersionBump.ps1). Computing it earlier leaves the version segment empty on the first call and
+# Update-VersionFile.ps1). Computing it earlier leaves the version segment empty on the first call and
 # stale on the second (both invocations share one dot-sourced scope), producing broken URLs like
 # ".../releases/download//VpnHoodServer-linux-x64.sh".
 $releaseUrl = "$repoBaseUrl/releases/download/$versionTag";

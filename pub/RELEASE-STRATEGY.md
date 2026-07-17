@@ -11,7 +11,7 @@ The repo is one large solution (~70 projects, ~60 of them NuGet libraries) plus 
 
 1. **One global version** ([pub/PubVersion.json](PubVersion.json)) is applied to *every* project
    at pack time (`dotnet pack -p:Version=…` in
-   [pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1)). Every release re-versions and re-pushes
+   [pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1)). Every release re-versions and re-pushes
    all ~60 NuGets even when they did not change — pure churn.
 2. **The bump ran on a developer's machine** (inside `Publish.ps1 -bump`), so two people releasing
    could collide on the version file.
@@ -38,18 +38,18 @@ Rule of thumb: **same repo = ProjectReference, third-party = PackageReference, r
 ## Target model (current direction, monorepo — no submodules)
 
 1. **CI owns the bump.** A dedicated `bump` action ([.github/workflows/bump.yml](../.github/workflows/bump.yml)
-   → [pub/Bump.ps1](Bump.ps1)) increments `PubVersion.json` (+ `Directory.Build.props`), commits,
+   → [pub/Invoke-VersionBump.ps1](Invoke-VersionBump.ps1)) increments `PubVersion.json` (+ `Directory.Build.props`), commits,
    and pushes to `develop` (a stable bump additionally fast-forwards `main`). The CHANGELOG is
    hand-maintained (leading `# Latest` section) and never rewritten by CI. Local machines never bump →
    no cross-developer conflicts. It can optionally chain straight into the client publish and/or NuGet publish. **(Done.)**
-2. **`develop` is the prerelease line; `main` is the stable/release line.** [pub/Bump.ps1](Bump.ps1)
+2. **`develop` is the prerelease line; `main` is the stable/release line.** [pub/Invoke-VersionBump.ps1](Invoke-VersionBump.ps1)
    always pushes `HEAD:develop`; on a **stable** bump it ALSO fast-forwards `HEAD:main` **without
    `--force`** (a **prerelease** bump leaves `main` untouched — prereleases ship to TestFlight / Play
    alpha, not the App Store / Play production). `main` only ever fast-forwards from `develop`, so it is
    a clean fast-forward; a rejection signals a real divergence to reconcile by hand rather than
    overwrite. Protects forkers. **(Done.)**
 3. **NuGet is always a stable Release version.** Packing is `-c Release`; the version does not get a
-   `-prerelease` suffix from the app flag ([pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1)).
+   `-prerelease` suffix from the app flag ([pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1)).
    One clean library version line, decoupled from app prereleases. (The `smoke` input is the only
    exception — see below.) **(Done.)**
 4. **One shared version for everything in `src/`.** All projects (apps + libraries) carry the
@@ -83,7 +83,7 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
     **publish their NuGets from this repo's `publish_nugets.yml`** (one publishing pipeline), but with
     **each submodule owning its own version scope** (its own `Directory.Build.props`/version),
     decoupled from the monorepo's `PubVersion.json`. Implementation note for that day:
-    [pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1) currently packs every discovered project
+    [pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1) currently packs every discovered project
     with a single `-p:Version` — it must **exclude submodule projects** (or pack them separately) so
     their independent versions are respected.
 - **Full per-package independent versioning.** "Bump only the changed package" in a monorepo
@@ -119,14 +119,14 @@ so every run is unique and monotonic — nuget.org never rejects a duplicate). T
 committed — that is why a 4th segment is used instead of bumping the real version. Consumers never
 pick these up unless they explicitly opt into prerelease.
 
-Locally: `pwsh pub/Lib/PublishNugets.ps1 -smoke` (revision defaults to an `MMddHHmm` timestamp;
+Locally: `pwsh pub/lib/Publish-NugetPackages.ps1 -smoke` (revision defaults to an `MMddHHmm` timestamp;
 override with `-revision <n>`). Implemented directly in
-[pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1): it packs with
+[pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1): it packs with
 `-p:Version=X.Y.Z.<revision>-prerelease` instead of the stable `X.Y.Z`.
 
 ### Which projects are published (packable discovery)
 
-[pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1) **discovers** the packages to publish
+[pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1) **discovers** the packages to publish
 instead of carrying a hand-maintained list: it globs `src/**/*.csproj` and packs every project that
 does **not** opt out with `<IsPackable>false</IsPackable>` — the standard .NET convention. Apps under
 `src/Apps` and the `VpnHood.AppLib.Swagger` stub declare `IsPackable=false`; every library under
@@ -134,7 +134,7 @@ does **not** opt out with `<IsPackable>false</IsPackable>` — the standard .NET
 edit. To keep one out, set `IsPackable=false` on it.
 
 This replaced ~48 identical per-project `_publish.ps1` forwarder scripts and the explicit list that
-lived in `PublishNugets.ps1`. That list had silently drifted (a trailing-dot path typo that only
+lived in `Publish-NugetPackages.ps1`. That list had silently drifted (a trailing-dot path typo that only
 failed on Linux CI *after* real packages had been pushed, and two packable libraries —
 `VpnHood.AppLib.Linux.Common` and `VpnHood.AppLib.Ios.Common` — that were never being published);
 discovery makes that class of bug impossible. Per-app build scripts (`src/Apps/*/_publish.ps1`) are
@@ -151,7 +151,7 @@ unrelated and remain — they are real build logic invoked directly by the app C
   repo root — git-ignored, removed in a `finally`) containing exactly the discovered packable
   projects, then runs a single `dotnet pack` on it: MSBuild builds shared dependencies once and packs
   the projects in parallel, after which every produced `.nupkg` (and its `.snupkg`) is pushed. This
-  replaced ~49 sequential per-project `dotnet pack` processes (and the old `pub/Lib/PublishNuget.ps1`),
+  replaced ~49 sequential per-project `dotnet pack` processes (and the old `pub/lib/PublishNuget.ps1`),
   cutting the pack phase from ~6 min to ~2.5 min. A build failure in any project fails the whole pack
   (it never half-publishes) and MSBuild names the culprit.
 - **Publishing is gated to the `vpnhood` org.** The publish job has `if:
@@ -164,7 +164,7 @@ The **server** releases to a **separate repo** (`vpnhood/VpnHood.App.Server`), t
 Connect: the server's code + version live here in the monorepo, but the release is produced by
 `server_publish.yml` **in that repo**, which checks out this monorepo at build time. Because the
 workflow runs inside the target repo it creates the release with the automatic `github.token` — no
-cross-repo PAT. It funnels through the shared `pub/Lib/PublishToGithub.ps1` (with `-assetSet server`
+cross-repo PAT. It funnels through the shared `pub/lib/Publish-GithubRelease.ps1` (with `-assetSet server`
 and `-changelogFileName CHANGELOG.Server.md`), so one release creator serves every product.
 
 - **Branches.** The server release repo has only a **`main`** branch — there is no code there, so a
@@ -193,7 +193,7 @@ They all publish through ONE shared cross-repo module in this repo, so the logic
   `permissions: contents: write`). Internal repos pin `@develop` (lockstep — same rationale as the
   `publish_app.yml` callers). This is **not** part of the forker/skeleton contract: forkers consume
   the published NuGets; they never call this.
-- [pub/Lib/PublishModuleNugets.ps1](Lib/PublishModuleNugets.ps1) — the logic. **Version rule:**
+- [pub/lib/Publish-ModuleNugetPackages.ps1](lib/Publish-ModuleNugetPackages.ps1) — the logic. **Version rule:**
   read the monorepo version — **always from `develop`** (develop always carries the highest
   version); if it is ahead of the module's own `pub/PubVersion.json`, **adopt** it, otherwise
   **bump the module's own build number** (the module may run ahead; the next monorepo bump
@@ -220,16 +220,16 @@ publish is a single local command; the CI still does all the real work.
 
 ## What changed in this pass
 
-- **CI-owned bump**: new [pub/Bump.ps1](Bump.ps1) + [.github/workflows/bump.yml](../.github/workflows/bump.yml).
+- **CI-owned bump**: new [pub/Invoke-VersionBump.ps1](Invoke-VersionBump.ps1) + [.github/workflows/bump.yml](../.github/workflows/bump.yml).
 - **Standalone NuGet publishing**: new [.github/workflows/publish_nugets.yml](../.github/workflows/publish_nugets.yml).
-- [pub/Lib/Common.ps1](Lib/Common.ps1) — the local commit-to-main helpers were removed; `pub/Bump.ps1`
+- [pub/lib/Common.ps1](lib/Common.ps1) — the local commit-to-main helpers were removed; `pub/Invoke-VersionBump.ps1`
   owns the push to `develop` (and the fast-forward to `main` on a stable bump, no `--force`).
-- **NuGet publish is one parallel pack pass** ([pub/Lib/PublishNugets.ps1](Lib/PublishNugets.ps1))
-  driven by `IsPackable` discovery; the old per-project `pub/Lib/PublishNuget.ps1` was removed. Version
+- **NuGet publish is one parallel pack pass** ([pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1))
+  driven by `IsPackable` discovery; the old per-project `pub/lib/PublishNuget.ps1` was removed. Version
   is stable `X.Y.Z` except under the `smoke` input.
 - [pub/Client/Publish.ps1](Client/Publish.ps1) — build-only (removed bump/distribute/push).
-- [pub/Client/PublishToGithub.ps1](Client/PublishToGithub.ps1) — no longer stamps the changelog or
+- [pub/Client/Publish-GithubRelease.ps1](Client/Publish-GithubRelease.ps1) — no longer stamps the changelog or
   commits/pushes (the bump step owns that); it only reads the changelog and creates the release.
-- **Renamed `pub/Core` → `pub/Lib`** (the shared publish-script library) and updated all references.
+- **Renamed `pub/Core` → `pub/lib`** (the shared publish-script library) and updated all references.
 - **Deleted `pub/Android.GooglePlay`** — the obsolete pre-Fastlane manual APK→release uploader.
 - This document.

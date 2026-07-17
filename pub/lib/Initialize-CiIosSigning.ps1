@@ -1,4 +1,4 @@
-# Materializes the iOS App Store signing secrets so PublishIosApp.ps1 can produce a signed .ipa in CI.
+# Materializes the iOS App Store signing secrets so Publish-IosApp.ps1 can produce a signed .ipa in CI.
 # macOS ONLY (uses `security` + PlistBuddy). Run on the iOS build runner BEFORE Client.Ios/_publish.ps1.
 #
 # Secrets (each independent; ALL three of the first group are needed for real signing):
@@ -12,7 +12,7 @@
 # UNLIKE Android there is NO ephemeral fallback: an App Store .ipa cannot be self-signed. When any
 # required secret is absent we DON'T fail — we write ios_signing.json { Signed: false } and warn. The
 # publish step then does a codesign-disabled compile check (no .ipa) and the App Store upload job skips.
-# Add the secrets to switch real signing on. Mirrors the gated design of PrepareCiAndroidSigning.ps1.
+# Add the secrets to switch real signing on. Mirrors the gated design of Initialize-CiAndroidSigning.ps1.
 #
 # Output: .user/<appFolder>/ios/ios_signing.json — { Signed, CodesignKey, AppProvision, ExtProvision }.
 

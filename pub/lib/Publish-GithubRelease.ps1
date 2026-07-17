@@ -1,7 +1,7 @@
 param(
 	# The three things that differ between a client and a connect release are passed IN, so this
-	# script stays generic (no client/connect knowledge baked in). The per-product entry points that
-	# supply them are pub/Client/PublishToGithub.ps1 and pub/Connect/PublishToGithub.ps1.
+	# script stays generic (no client/connect knowledge baked in). The caller that supplies them is
+	# .github/workflows/publish_app.yml (per-product values resolved there).
 	# Bin/module folder name + .user app-config key, e.g. "VpnHoodClient" / "VpnHoodConnect".
 	[Parameter(Mandatory = $true)] [string]$packageDirName,
 	# GitHub repo to release to (owner/name), already resolved by the caller (Resolve-PublishRepoSlug).
@@ -21,7 +21,7 @@ param(
 Write-Host "*** Publish $packageDirName release to GitHub" -BackgroundColor Blue
 
 . "$PSScriptRoot/Common.ps1"
-. "$PSScriptRoot/utils/changelog_utils.ps1"
+. "$PSScriptRoot/utils/ChangelogUtils.ps1"
 
 # gh reads its token from the environment: CI passes github.token as GITHUB_TOKEN; locally it uses
 # your `gh auth login` (keyring) or an ambient GITHUB_TOKEN. No token file.
@@ -35,7 +35,7 @@ $packageDir = "$releaseRootDir/$packageDirName";
 $packageLatestDir = "$releaseRootDir/$packageDirName";
 
 # Read the CHANGELOG for the release note. The version header is already stamped by the bump (bump.yml
-# via pub/Bump.ps1); this workflow only reads the changelog — it never rewrites or commits it.
+# via pub/Invoke-VersionBump.ps1); this workflow only reads the changelog — it never rewrites or commits it.
 $changeLog = Get-Content "$solutionDir/$changelogFileName" -Raw;
 
 # create release note (drop the other product's lines)
@@ -131,5 +131,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # NOTE: this workflow no longer commits/pushes or touches the changelog. The version bump is committed
-# once, up front, by the bump (bump.yml via pub/Bump.ps1); the changelog is hand-maintained and read
+# once, up front, by the bump (bump.yml via pub/Invoke-VersionBump.ps1); the changelog is hand-maintained and read
 # only (first "# Latest" section). See pub/RELEASE-STRATEGY.md.

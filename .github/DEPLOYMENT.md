@@ -129,7 +129,7 @@ Builds the Google AAB, the Web APK, and the Web arm64 APK on an `ubuntu-latest` 
 reusing the existing publish scripts. A JDK 17 and the `.NET` Android workload are set up
 on the runner, and the Android SDK is auto-provisioned.
 
-**Signing (optional):** signing config is built by `pub/Lib/PrepareCiAndroidSigning.ps1`.
+**Signing (optional):** signing config is built by `pub/lib/Initialize-CiAndroidSigning.ps1`.
 
 - Each keystore below is independent: set a key's group and its real keystore is used.
 - If a key's secrets are absent, an **ephemeral throwaway keystore** is generated so the build still
@@ -152,8 +152,8 @@ Connect publishing, when wired into CI, uses `ANDROID_KEYSTORE_CONNECT_GOOGLE_BA
 `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` — each with an optional `_ALIAS` — the same way. They
 are separate secrets even though you may load the **same** keystore bytes into both (Connect signs its
 Google and Web builds with one key); providing them separately keeps each store's keystore self-contained.
-`PrepareCiAndroidSigning.ps1` materializes each into `.user/<app>/<store>/android_keystore_<store>.p12`
-(+ `_password.txt`, optional `_alias.txt`) — see `pub/Lib/android-signing.json` for the secret→app/store map.
+`Initialize-CiAndroidSigning.ps1` materializes each into `.user/<app>/<store>/android_keystore_<store>.p12`
+(+ `_password.txt`, optional `_alias.txt`) — see `pub/lib/android-signing.json` for the secret→app/store map.
 
 > The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
 > CI builds fast. Re-enable it before shipping a production release.
@@ -212,8 +212,8 @@ every store leg it is **skip-with-warning** when its secrets are absent, but not
 Secrets: `APPLE_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE64`,
 `IOS_PROVISION_EXT_BASE64` (build/signing) and `APPSTORE_CONNECT_API_KEY` + `_API_KEY_ID` +
 `APPSTORE_CONNECT_ISSUER_ID` (upload). How to obtain and base64 each is documented step-by-step in
-`.user/VpnHoodClient/ios/README.md`. `pub/Lib/PrepareCiIosSigning.ps1` materializes the cert/profiles
-into a keychain at build time; `pub/Lib/PublishIosApp.ps1` produces the `.ipa` + `VpnHoodClient-ios.json`.
+`.user/VpnHoodClient/ios/README.md`. `pub/lib/Initialize-CiIosSigning.ps1` materializes the cert/profiles
+into a keychain at build time; `pub/lib/Publish-IosApp.ps1` produces the `.ipa` + `VpnHoodClient-ios.json`.
 
 ### Server (separate repo — `vpnhood/VpnHood.App.Server`)
 

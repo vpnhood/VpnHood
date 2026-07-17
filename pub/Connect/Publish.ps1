@@ -6,9 +6,9 @@ param(
 	);
 
 # Build-only orchestrator: builds the Connect platforms locally for testing. It does NOT bump the
-# version, distribute, or push. The version bump lives in CI (pub/Bump.ps1 via bump.yml) and the
+# version, distribute, or push. The version bump lives in CI (pub/Invoke-VersionBump.ps1 via bump.yml) and the
 # GitHub release is created by connect_publish.yml in the Connect release repo. See pub/RELEASE-STRATEGY.md.
-. "$PSScriptRoot/../Lib/Common.ps1"
+. "$PSScriptRoot/../lib/Common.ps1"
 
 $windows = $windows -eq "1";
 $linux = $linux -eq "1";

@@ -39,10 +39,10 @@ $ErrorActionPreference = "Stop";
 
 $moduleDir = (Resolve-Path $moduleDir).Path;
 $versionFile = Join-Path $moduleDir "pub/PubVersion.json";
-if (!(Test-Path $versionFile)) { throw "PublishModuleNugets: $versionFile not found — is $moduleDir an onboarded module repo?"; }
+if (!(Test-Path $versionFile)) { throw "Publish-ModuleNugetPackages: $versionFile not found — is $moduleDir an onboarded module repo?"; }
 
 if ([string]::IsNullOrWhiteSpace($branch)) { $branch = git -C $moduleDir branch --show-current; }
-if ([string]::IsNullOrWhiteSpace($branch)) { throw "PublishModuleNugets: cannot resolve the branch (detached HEAD?); pass -branch."; }
+if ([string]::IsNullOrWhiteSpace($branch)) { throw "Publish-ModuleNugetPackages: cannot resolve the branch (detached HEAD?); pass -branch."; }
 
 # Adopt the monorepo develop version when it is ahead; otherwise self-bump the build number.
 $vhVersionJson = if (Test-Path $vhVersionSource) { Get-Content $vhVersionSource | ConvertFrom-Json } else { Invoke-RestMethod $vhVersionSource };
@@ -58,7 +58,7 @@ $reason = if ($vhVersion -gt $moduleVersion) { "adopted monorepo $vhVersion" } e
 Write-Host "Module version: $moduleVersion -> $($version.ToString(3)) ($reason)" -ForegroundColor Blue;
 
 # Mirror into the module's root Directory.Build.props — the single <Version> its projects inherit
-# (same pattern as the monorepo's src/Directory.Build.props stamp in VersionBump.ps1).
+# (same pattern as the monorepo's src/Directory.Build.props stamp in Update-VersionFile.ps1).
 $propsFile = Join-Path $moduleDir "Directory.Build.props";
 if (Test-Path $propsFile) {
 	$props = Get-Content $propsFile -Raw;
@@ -87,13 +87,13 @@ else {
 }
 
 # Discover packable projects: a project IS a package unless it opts out with IsPackable=false —
-# the same convention as the monorepo's PublishNugets.ps1. Module repos are small (a handful of
+# the same convention as the monorepo's Publish-NugetPackages.ps1. Module repos are small (a handful of
 # projects), so a plain sequential pack loop replaces the monorepo's one-pass throwaway solution.
 $projectFiles = Get-ChildItem -Path $moduleDir -Recurse -File -Filter "*.csproj" |
 	Where-Object { $_.FullName -notmatch "[\\/](bin|obj)[\\/]" } |
 	Where-Object { [System.IO.File]::ReadAllText($_.FullName) -notmatch "(?i)<IsPackable>\s*false\s*</IsPackable>" } |
 	Sort-Object FullName;
-if (@($projectFiles).Count -eq 0) { throw "PublishModuleNugets: no packable project found under $moduleDir."; }
+if (@($projectFiles).Count -eq 0) { throw "Publish-ModuleNugetPackages: no packable project found under $moduleDir."; }
 
 $packDir = Join-Path $moduleDir "pub/bin/nuget";
 Remove-Item $packDir -Recurse -Force -ErrorAction Ignore;
@@ -114,7 +114,7 @@ if ($noPush) {
 # NuGet key: CI injects NUGET_API_KEY; locally fall back to the .user file beside the repos.
 $nugetApiKey = if ($env:NUGET_API_KEY) { $env:NUGET_API_KEY } elseif (Test-Path "$PSScriptRoot/../../../.user/nuget_api_key.txt") { "$(Get-Content "$PSScriptRoot/../../../.user/nuget_api_key.txt" -Raw)".Trim() } else { "" };
 if ([string]::IsNullOrWhiteSpace($nugetApiKey)) {
-	throw "PublishModuleNugets: NuGet API key is missing. Set the NUGET_API_KEY secret (CI) or .user/nuget_api_key.txt (local).";
+	throw "Publish-ModuleNugetPackages: NuGet API key is missing. Set the NUGET_API_KEY secret (CI) or .user/nuget_api_key.txt (local).";
 }
 
 # Push everything produced (pushing a .nupkg also pushes its adjacent .snupkg symbols).
@@ -123,6 +123,6 @@ foreach ($pkg in Get-ChildItem -Path $packDir -File -Filter "*.nupkg") {
 	dotnet nuget push $pkg.FullName --source "https://api.nuget.org/v3/index.json" --api-key $nugetApiKey --skip-duplicate;
 	if ($LASTEXITCODE -gt 0) { $failed += $pkg.Name; Write-Host "push failed: $($pkg.Name)" -ForegroundColor Red; }
 }
-if ($failed.Count -gt 0) { throw "PublishModuleNugets: $($failed.Count) package push(es) failed: $($failed -join ', ')"; }
+if ($failed.Count -gt 0) { throw "Publish-ModuleNugetPackages: $($failed.Count) package push(es) failed: $($failed -join ', ')"; }
 
 Write-Host "Published $versionTag" -ForegroundColor Green;

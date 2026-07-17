@@ -4,7 +4,7 @@
 # committed file. The app's runtime appsettings is a single SHARED file at the app root
 # (.user/<app>/appsettings.json), embedded across all distributions. Signing keys/passwords/access keys
 # stay as their own files in per-store subfolders (.user/<app>/<store>/) because each is its own GitHub
-# secret — see PublishAndroidApp.ps1 / PrepareCiAndroidSigning.ps1.
+# secret — see Publish-AndroidApp.ps1 / Initialize-CiAndroidSigning.ps1.
 #
 # ALL-OR-NOTHING (strict) by design — the presence of publish.json is the switch:
 #   * publish.json ABSENT  -> lenient: the build uses the committed built-in defaults (csproj

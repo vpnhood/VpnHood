@@ -1,0 +1,9 @@
+{
+  "// description": "Maps each logical Android signing key (the GitHub-secret prefix ANDROID_KEYSTORE_<name>_BASE64 / _PASSWORD / optional _ALIAS) to the .user app folder + store it materializes into. Initialize-CiAndroidSigning.ps1 writes flat files there: android_keystore_<store>.p12, android_keystore_<store>_password.txt (+ optional android_keystore_<store>_alias.txt). Each store is its own secret even when two stores share one physical key (e.g. Connect google/web). The alias is NOT required here — it is auto-detected from the keystore (or supplied via the optional _ALIAS secret / publish.json) at build time.",
+  "keys": [
+    { "name": "CLIENT_GOOGLE",  "app": "VpnHoodClient",  "store": "google" },
+    { "name": "CLIENT_WEB",     "app": "VpnHoodClient",  "store": "web" },
+    { "name": "CONNECT_GOOGLE", "app": "VpnHoodConnect", "store": "google" },
+    { "name": "CONNECT_WEB",    "app": "VpnHoodConnect", "store": "web" }
+  ]
+}

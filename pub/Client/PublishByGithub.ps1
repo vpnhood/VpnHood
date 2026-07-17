@@ -41,7 +41,7 @@ $workflowFile = "bump.yml";
 
 # Resolve the target repo the same way the build does (no side effects: this resolver does NOT bump
 # the version, unlike Common.ps1, so it is safe to dot-source here).
-. "$PSScriptRoot/../Lib/ResolvePublishRepo.ps1";
+. "$PSScriptRoot/../lib/Resolve-PublishRepo.ps1";
 if ([string]::IsNullOrWhiteSpace($repo)) {
 	$repo = Resolve-PublishRepoSlug;
 }

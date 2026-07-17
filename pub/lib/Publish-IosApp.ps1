@@ -2,16 +2,16 @@ param(
 	[Parameter(Mandatory=$true)] [String]$projectDir,
 	# The .user/<appFolder>/ config folder name. Also the bin module dir name and the default artifact
 	# title. packageFileTitle and repo-url are read from that folder's publish.json; each falls back to a
-	# committed default when publish.json is absent. Mirrors PublishAndroidApp.ps1.
+	# committed default when publish.json is absent. Mirrors Publish-AndroidApp.ps1.
 	[Parameter(Mandatory=$true)] [String]$appFolder,
 	[Parameter(Mandatory=$true)] [String]$distribution,   # "ios"
 	# Release repo for Connect (VH_CONNECT_PUBLISH_REPO) vs client; the URL itself is resolved below.
 	[switch]$connect)
 
-# iOS App Store publish, structured exactly like PublishAndroidApp.ps1 so the CI wiring and the
+# iOS App Store publish, structured exactly like Publish-AndroidApp.ps1 so the CI wiring and the
 # release job treat it the same way: build -> $packagesRootDir/$appFolder/ios/<title>-ios.{ipa,json}.
 #
-# SIGNING is read from a marker the CI signing step writes (PrepareCiIosSigning.ps1) at
+# SIGNING is read from a marker the CI signing step writes (Initialize-CiIosSigning.ps1) at
 #   .user/<appFolder>/ios/ios_signing.json  ->  { "Signed": bool, "CodesignKey": "...", "AppProvision": "...", "ExtProvision": "..." }
 # Unlike Android there is NO ephemeral fallback: an App Store .ipa cannot be self-signed. When the
 # marker says Signed=false (distribution cert / profiles absent) we do a codesign-DISABLED build as a
@@ -57,7 +57,7 @@ $module_packageFile = "$moduleDir/$module_baseFileName.ipa";
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-# ----- signing marker (written by PrepareCiIosSigning.ps1 in CI, or by hand locally) -----
+# ----- signing marker (written by Initialize-CiIosSigning.ps1 in CI, or by hand locally) -----
 $iosDir = Join-Path $appUserDir "ios";
 $signingFile = Join-Path $iosDir "ios_signing.json";
 $signed = $false; $codesignKey = ""; $appProvision = ""; $extProvision = "";
@@ -74,7 +74,7 @@ $rid = "ios-arm64";
 $outputPath = Join-Path $projectDir "bin/Release-ios/publish/";
 
 # iOS build number: App Store Connect requires a monotonically increasing CFBundleVersion. Reuse the
-# patch component of the SemVer (matches the Android VersionCode fallback in PublishAndroidApp.ps1).
+# patch component of the SemVer (matches the Android VersionCode fallback in Publish-AndroidApp.ps1).
 $buildNumber = if ($versionParam -match '^\d+\.\d+\.(\d+)$') { $Matches[1] } else { ($versionParam -replace '\D','') };
 
 Write-Host;
@@ -85,7 +85,7 @@ try {
 		Write-Host "iOS distribution signing: identity='$codesignKey' appProfile='$appProvision' extProfile='$extProvision'" -ForegroundColor Cyan;
 
 		# ArchiveOnBuild=true makes .NET-for-iOS produce an .xcarchive + .ipa. AutomaticProvisioning is
-		# turned OFF so the build uses the EXACT App Store profiles installed by PrepareCiIosSigning.ps1
+		# turned OFF so the build uses the EXACT App Store profiles installed by Initialize-CiIosSigning.ps1
 		# (a hosted CI runner isn't signed into an Apple account, so Xcode auto-signing can't run).
 		# NOTE (verify on first real CI run): the Network Extension (.appex) needs its OWN App Store
 		# profile. It is a ProjectReference, so if it doesn't pick up $extProvision here, set
@@ -120,7 +120,7 @@ try {
 	}
 
 	# publish info sidecar — MUST be "<title>-ios.json" (the app's update/deprecation check and the
-	# "<title>-<dist>.json" convention shared with Android; see PublishAndroidApp.ps1). The .ipa is
+	# "<title>-<dist>.json" convention shared with Android; see Publish-AndroidApp.ps1). The .ipa is
 	# attached to the GitHub release for archival/TestFlight; end users update through the App Store,
 	# so InstallationPageUrl points at the store/download page rather than the .ipa.
 	$json = [ordered]@{

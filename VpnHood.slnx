@@ -8,7 +8,7 @@
   </Configurations>
   <Folder Name="/pub/">
     <File Path="CHANGELOG.md" />
-    <File Path="pub/Bump.ps1" />
+    <File Path="pub/Invoke-VersionBump.ps1" />
     <File Path="pub/PubVersion.json" />
     <File Path="pub/RELEASE-STRATEGY.md" />
     <File Path="README.md" />
@@ -21,34 +21,34 @@
     <File Path="pub/Connect/Publish.ps1" />
     <File Path="pub/Connect/PublishByGithub.ps1" />
   </Folder>
-  <Folder Name="/pub/Lib/">
-    <File Path="pub/Lib/AppPublishConfig.ps1" />
-    <File Path="pub/Lib/Common.ps1" />
-    <File Path="pub/Lib/PrepareCiAndroidSigning.ps1" />
-    <File Path="pub/Lib/PublishAndroidApp.ps1" />
-    <File Path="pub/Lib/PublishNugets.ps1" />
-    <File Path="pub/Lib/PublishToGithub.ps1" />
-    <File Path="pub/Lib/PublishWinApp.ps1" />
-    <File Path="pub/Lib/ResolvePublishRepo.ps1" />
-    <File Path="pub/Lib/VersionBump.ps1" />
+  <Folder Name="/pub/lib/">
+    <File Path="pub/lib/AppPublishConfig.ps1" />
+    <File Path="pub/lib/Common.ps1" />
+    <File Path="pub/lib/Initialize-CiAndroidSigning.ps1" />
+    <File Path="pub/lib/Publish-AndroidApp.ps1" />
+    <File Path="pub/lib/Publish-NugetPackages.ps1" />
+    <File Path="pub/lib/Publish-GithubRelease.ps1" />
+    <File Path="pub/lib/Publish-WinApp.ps1" />
+    <File Path="pub/lib/Resolve-PublishRepo.ps1" />
+    <File Path="pub/lib/Update-VersionFile.ps1" />
   </Folder>
-  <Folder Name="/pub/Lib/utils/">
-    <File Path="pub/Lib/utils/changelog_utils.ps1" />
+  <Folder Name="/pub/lib/utils/">
+    <File Path="pub/lib/utils/ChangelogUtils.ps1" />
   </Folder>
-  <Folder Name="/pub/Lib/vh_installer/">
-    <File Path="pub/Lib/vh_installer/publish.ps1" />
-    <File Path="pub/Lib/vh_installer/publish_impl.ps1" />
+  <Folder Name="/pub/lib/vh-installer/">
+    <File Path="pub/lib/vh-installer/Publish-Installer.ps1" />
+    <File Path="pub/lib/vh-installer/Publish-InstallerImpl.ps1" />
   </Folder>
-  <Folder Name="/pub/Lib/vh_installer/linux/">
-    <File Path="pub/Lib/vh_installer/linux/install-any.sh" />
-    <File Path="pub/Lib/vh_installer/linux/install.sh" />
-    <File Path="pub/Lib/vh_installer/linux/updater.sh" />
-    <File Path="pub/Lib/vh_installer/linux/vhlauncher.sh" />
+  <Folder Name="/pub/lib/vh-installer/linux/">
+    <File Path="pub/lib/vh-installer/linux/install-any.sh" />
+    <File Path="pub/lib/vh-installer/linux/install.sh" />
+    <File Path="pub/lib/vh-installer/linux/updater.sh" />
+    <File Path="pub/lib/vh-installer/linux/vhlauncher.sh" />
   </Folder>
-  <Folder Name="/pub/Lib/vh_installer/win/">
-    <File Path="pub/Lib/vh_installer/win/install.ps1" />
-    <File Path="pub/Lib/vh_installer/win/updater.ps1" />
-    <File Path="pub/Lib/vh_installer/win/vhlauncher.ps1" />
+  <Folder Name="/pub/lib/vh-installer/win/">
+    <File Path="pub/lib/vh-installer/win/install.ps1" />
+    <File Path="pub/lib/vh-installer/win/updater.ps1" />
+    <File Path="pub/lib/vh-installer/win/vhlauncher.ps1" />
   </Folder>
   <Folder Name="/pub/FastLane/">
     <File Path="fastlane/Appfile" />

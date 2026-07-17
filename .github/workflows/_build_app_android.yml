@@ -85,7 +85,7 @@ jobs:
       - name: Credentials + Android signing config
         shell: pwsh
         run: |
-          & "$env:GITHUB_WORKSPACE/code/pub/Lib/PrepareCiAndroidSigning.ps1"
+          & "$env:GITHUB_WORKSPACE/code/pub/lib/Initialize-CiAndroidSigning.ps1"
       - name: Write default access keys (connect)
         if: inputs.app == 'connect'
         shell: pwsh

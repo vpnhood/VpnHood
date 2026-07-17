@@ -282,7 +282,7 @@ jobs:
     env:
       PKG: ${{ inputs.app == 'connect' && 'VpnHoodConnect' || 'VpnHoodClient' }}
       DROP_TAG: ${{ inputs.app == 'connect' && '#client' || '#connect' }}
-      # The release lands on the CALLER repo; ResolvePublishRepo reads whichever var matches the app.
+      # The release lands on the CALLER repo; Resolve-PublishRepo reads whichever var matches the app.
       VH_PUBLISH_REPO: ${{ inputs.app != 'connect' && github.repository || '' }}
       VH_CONNECT_PUBLISH_REPO: ${{ inputs.app == 'connect' && github.repository || '' }}
     steps:
@@ -297,7 +297,7 @@ jobs:
           $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
           "MODULE_DIR=code/pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
-      # Reassemble the code/pub/bin/<tag>/<pkg> layout PublishToGithub.ps1 expects. Windows/Android/iOS
+      # Reassemble the code/pub/bin/<tag>/<pkg> layout Publish-GithubRelease.ps1 expects. Windows/Android/iOS
       # are optional (skipped builds upload nothing), so those downloads are best-effort.
       - uses: actions/download-artifact@v8
         with:
@@ -338,9 +338,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          . "$env:GITHUB_WORKSPACE/code/pub/Lib/ResolvePublishRepo.ps1"
+          . "$env:GITHUB_WORKSPACE/code/pub/lib/Resolve-PublishRepo.ps1"
           $slug = if ("${{ inputs.app }}" -eq "connect") { Resolve-PublishRepoSlug -Connect } else { Resolve-PublishRepoSlug }
-          & "$env:GITHUB_WORKSPACE/code/pub/Lib/PublishToGithub.ps1" `
+          & "$env:GITHUB_WORKSPACE/code/pub/lib/Publish-GithubRelease.ps1" `
             -packageDirName "$env:PKG" `
             -repoName $slug `
             -dropChangelogTag "$env:DROP_TAG"

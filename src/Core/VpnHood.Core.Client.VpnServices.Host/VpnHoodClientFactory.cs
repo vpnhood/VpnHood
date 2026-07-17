@@ -8,8 +8,8 @@ using VpnHood.Core.Proxies.EndPointManagement;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Client.VpnServices.Host;
 

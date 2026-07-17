@@ -1,14 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Toolkit.Extensions;
 
 public static class AsyncDisposableExtensions
 {
-    public static async ValueTask SafeDisposeAsync(this IAsyncDisposable? disposable)
+    public static async ValueTask SafeDisposeAsync(this IAsyncDisposable disposable)
     {
-        if (disposable == null)
+        // Check if the disposable is null for safety
+        if (disposable == null!)
             return;
 
         // Attempt to dispose asynchronously

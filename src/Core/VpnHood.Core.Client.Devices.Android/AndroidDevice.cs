@@ -11,7 +11,7 @@ using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Quic.Droid;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.Devices.Droid;
 

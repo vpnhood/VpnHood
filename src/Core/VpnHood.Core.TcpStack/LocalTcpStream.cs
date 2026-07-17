@@ -1,4 +1,5 @@
 using System.Buffers;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 

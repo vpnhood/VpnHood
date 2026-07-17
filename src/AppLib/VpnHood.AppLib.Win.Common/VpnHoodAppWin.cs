@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Win.Common.WinNative;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Common;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Graphics;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;

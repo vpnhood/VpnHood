@@ -5,9 +5,9 @@ using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Quic.Ios;
 using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
-using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.IosTun;
 

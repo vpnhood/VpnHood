@@ -7,6 +7,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.GooglePlay.Exceptions;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 

@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using VpnHood.Core.IpLocations;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.Services.Proxies;
 

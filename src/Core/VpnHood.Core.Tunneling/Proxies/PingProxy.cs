@@ -4,8 +4,8 @@ using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Collections;
-using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 

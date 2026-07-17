@@ -7,6 +7,7 @@ using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;

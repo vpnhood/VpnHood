@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Toolkit.Utils;
 

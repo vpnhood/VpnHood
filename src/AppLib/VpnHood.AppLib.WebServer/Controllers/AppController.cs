@@ -8,7 +8,7 @@ using VpnHood.Core.Client.Devices;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;

@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Quic;
 using VpnHood.Core.Quic.Droid.Interop;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 using static Microsoft.Quic.MsQuic;
 
 namespace VpnHood.Core.Quic.Droid;

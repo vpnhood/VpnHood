@@ -1,5 +1,5 @@
 using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Store.Api;
 
 namespace VpnHood.AppLib.Store;

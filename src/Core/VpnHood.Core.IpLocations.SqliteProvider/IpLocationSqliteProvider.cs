@@ -3,8 +3,8 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.IpLocations.SqliteProvider;
 

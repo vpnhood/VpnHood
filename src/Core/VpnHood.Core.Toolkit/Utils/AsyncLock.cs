@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Toolkit.Utils;
 

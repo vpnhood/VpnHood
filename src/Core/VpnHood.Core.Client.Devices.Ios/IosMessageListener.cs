@@ -1,5 +1,5 @@
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.Devices.Ios;
 

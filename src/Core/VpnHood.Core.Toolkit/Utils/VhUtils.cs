@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 
@@ -561,6 +562,19 @@ public static class VhUtils
         catch (Exception ex) {
             LogInvokeError(ex, actionName);
         }
+    }
+
+    /// <summary>
+    /// Dispose every item, swallowing per-item failures so one throwing Dispose can not
+    /// leak the rest. Callers keep their own locks around the enumeration.
+    /// </summary>
+    public static void DisposeAll<T>(IEnumerable<T>? items) where T : IDisposable
+    {
+        if (items == null)
+            return;
+
+        foreach (var item in items)
+            item.SafeDispose();
     }
 
     public static T? TryInvoke<T>(Func<T> func, T? defaultValue = default)

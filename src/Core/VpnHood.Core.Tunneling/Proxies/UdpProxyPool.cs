@@ -209,7 +209,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
     protected override void DisposeManaged()
     {
         lock (_udpProxies)
-            _udpProxies.ForEach(udpWorker => udpWorker.Dispose());
+            VhUtils.DisposeAll(_udpProxies);
 
         _cleanupUdpWorkersJob.Dispose();
         _connectionMap.Dispose();

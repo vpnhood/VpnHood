@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Toolkit.Converters;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.IpLocations.Providers.Onlines;

@@ -1,7 +1,7 @@
 ﻿using Ga4.Trackers;
 using Ga4.Trackers.Ga4Tags;
 using VpnHood.Core.Common.Trackers;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 

@@ -4,9 +4,9 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.IpLocations.Providers.Offlines;
 

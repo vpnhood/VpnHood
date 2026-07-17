@@ -2,8 +2,8 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.IpLocations.Providers.Offlines;
 

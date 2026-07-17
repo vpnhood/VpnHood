@@ -8,6 +8,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;

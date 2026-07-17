@@ -3,10 +3,10 @@ using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Toolkit.Utils;
 using SystemQuicListenerOptions = System.Net.Quic.QuicListenerOptions;
 // disambiguate from System.Net.Quic.QuicListenerOptions, which `using System.Net.Quic` also imports
 using QuicListenerOptions = VpnHood.Core.Quic.Abstractions.QuicListenerOptions;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Quic.MsQuic;
 

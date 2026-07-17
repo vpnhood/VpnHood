@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Tunneling.Utils;
 

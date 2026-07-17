@@ -5,6 +5,7 @@ using CoreFoundation;
 using Network;
 using ObjCRuntime;
 using VpnHood.Core.Quic.Abstractions;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Quic.Ios;

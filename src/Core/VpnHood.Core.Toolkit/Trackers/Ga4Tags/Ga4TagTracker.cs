@@ -2,7 +2,8 @@
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
+
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers.Ga4Tags;

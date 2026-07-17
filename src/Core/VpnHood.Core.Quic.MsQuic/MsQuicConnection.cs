@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Quic;
 using VpnHood.Core.Quic.Abstractions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Quic.MsQuic;
 

@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using VpnHood.Core.TcpStack.Abstractions;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.TcpStack;
 

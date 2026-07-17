@@ -3,6 +3,7 @@ using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Tunneling.Channels;
@@ -164,8 +165,7 @@ public class ProxyManager : PassthroughPacketTransport
 
         // dispose channels
         lock (_streamProxyChannels)
-            foreach (var channel in _streamProxyChannels)
-                channel.Dispose();
+            VhUtils.DisposeAll(_streamProxyChannels);
 
         base.DisposeManaged();
     }

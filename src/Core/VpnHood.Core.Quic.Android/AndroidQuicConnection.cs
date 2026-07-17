@@ -7,8 +7,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Quic;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Quic.Droid.Interop;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Utils;
 using static Microsoft.Quic.MsQuic;
 
 namespace VpnHood.Core.Quic.Droid;

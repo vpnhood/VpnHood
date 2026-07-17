@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Buffers;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;

@@ -2,7 +2,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.Services.Accounts;
 

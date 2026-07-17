@@ -16,6 +16,7 @@ using VpnHood.Core.Server.Access.Managers;
 using VpnHood.Core.Server.SystemInformation;
 using VpnHood.Core.Server.Utils;
 using VpnHood.Core.Toolkit.ApiClients;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;

@@ -5,6 +5,7 @@ using VpnHood.Core.IpLocations;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Proxies.EndPointManagement.Abstractions.Options;
 using VpnHood.Core.Proxies.EndPointManagement.Sqlite;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Proxies;

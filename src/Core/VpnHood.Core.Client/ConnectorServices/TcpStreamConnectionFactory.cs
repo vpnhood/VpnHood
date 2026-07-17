@@ -6,7 +6,6 @@ using VpnHood.Core.Proxies.EndPointManagement.Abstractions;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
-using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Toolkit.Extensions;
 

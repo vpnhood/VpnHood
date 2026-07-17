@@ -33,10 +33,11 @@ using VpnHood.Core.IpLocations;
 using VpnHood.Core.IpLocations.Providers.Offlines;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Exceptions;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
-using TaskExtensions = VpnHood.Core.Toolkit.Utils.TaskExtensions;
+using TaskExtensions = VpnHood.Core.Toolkit.Extensions.TaskExtensions;
 
 namespace VpnHood.AppLib;
 

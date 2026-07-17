@@ -1,5 +1,6 @@
 ﻿using Ga4.Trackers;
 using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Utils;
 

@@ -1,7 +1,8 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Toolkit.Utils;
+using VpnHood.Core.Toolkit.Extensions;
+
 
 // ReSharper disable once CheckNamespace
 namespace Ga4.Trackers;

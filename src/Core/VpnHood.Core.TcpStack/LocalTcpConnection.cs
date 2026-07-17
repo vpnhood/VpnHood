@@ -1,10 +1,10 @@
- using System.Diagnostics;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.TcpStack.Primitives;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Toolkit.Utils;
 
 // ReSharper disable StringLiteralTypo
 // ReSharper disable IdentifierTypo

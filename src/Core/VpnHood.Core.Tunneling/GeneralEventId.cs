@@ -34,7 +34,6 @@ public static class GeneralEventId
         Essential = 10,
         Session,
         Sni,
-        Nat,
         Ping,
         Dns,
         Packet,

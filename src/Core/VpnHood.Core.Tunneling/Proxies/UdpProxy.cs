@@ -120,7 +120,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in UdpProxy receive loop.");
 
-                // a persistent synchronous error must not hot-spin the shared receive loop
+                // a persistent synchronous error must not hot-spin the shared the receive loop
                 if (++consecutiveErrors >= 10)
                     await Task.Delay(1000).Vhc();
             }

@@ -5,10 +5,10 @@ namespace VpnHood.Core.Toolkit.Extensions;
 
 public static class AsyncDisposableExtensions
 {
-    public static async ValueTask SafeDisposeAsync(this IAsyncDisposable disposable)
+    public static async ValueTask SafeDisposeAsync(this IAsyncDisposable? disposable)
     {
         // Check if the disposable is null for safety
-        if (disposable == null!)
+        if (disposable == null)
             return;
 
         // Attempt to dispose asynchronously

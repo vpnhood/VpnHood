@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Toolkit.Utils;
+// ReSharper disable AccessToDisposedClosure
 
 namespace VpnHood.Test.Tests;
 
@@ -286,8 +287,11 @@ public class TimeoutDictionaryTest
     {
         var dictionary = new TimeoutDictionary<int, TrackedItem>(LongTimeout);
         var items = new List<TrackedItem>();
-        for (var i = 0; i < 10; i++)
-            items.Add(dictionary.GetOrAdd(i, _ => i % 2 == 0 ? new ThrowingDisposeItem() : new TrackedItem()));
+        for (var i = 0; i < 10; i++) {
+            var j = i;
+            items.Add(dictionary.GetOrAdd(i, _ => j % 2 == 0 
+                ? new ThrowingDisposeItem() : new TrackedItem()));
+        }
 
         dictionary.Dispose(); // must neither throw nor stop at the first throwing value
         Assert.AreEqual(0, dictionary.Count);
@@ -342,12 +346,12 @@ public class TimeoutDictionaryTest
                         ledger.Add(item);
                         return item;
                     });
-                    if (value.DisposeCount > 0 && !value.WasBackdated)
+                    if (value is { DisposeCount: > 0, WasBackdated: false })
                         violations.Add("GetOrAdd returned a disposed value that was never backdated");
                     break;
 
                 case 1:
-                    if (dictionary.TryGetValue(key, out var live) && live.DisposeCount > 0 && !live.WasBackdated)
+                    if (dictionary.TryGetValue(key, out var live) && live is { DisposeCount: > 0, WasBackdated: false })
                         violations.Add("TryGetValue returned a disposed value that was never backdated");
                     break;
 

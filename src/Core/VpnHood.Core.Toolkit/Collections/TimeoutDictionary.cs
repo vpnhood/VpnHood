@@ -63,7 +63,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                     return FinishPublish(key, newEntry);
                 }
 
-                // lost the replace race; drop the orphan and re-observe the current state
+                // lost the replacement race; drop the orphan and re-observe the current state
                 if (!ReferenceEquals(entry.Value, created))
                     created.SafeDispose();
             }
@@ -96,12 +96,12 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
             // evict only the observed entry, and do not touch or return the expired value; a
             // concurrent replacer may already have disposed it
             if (TryRemoveEntry(key, entry)) {
-                value = default!;
+                value = null;
                 return false;
             }
         }
 
-        value = default!;
+        value = null;
         return false;
     }
 
@@ -162,7 +162,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     public bool TryRemove(TKey key, out TValue? value)
     {
         if (!_items.TryRemove(key, out var entry)) {
-            value = default;
+            value = null;
             return false;
         }
 
@@ -188,7 +188,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
     private bool TryRemoveEntry(TKey key, Entry entry)
     {
         // dictionary-initiated disposal uses SafeDispose and must never throw: an exception would
-        // abort a drain half-way, skip the publish handshake or propagate into packet threads
+        // abort a drain half-way, skip the publishing handshake or propagate into packet threads
         if (!_items.TryRemove(new KeyValuePair<TKey, Entry>(key, entry)))
             return false;
 

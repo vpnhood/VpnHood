@@ -6,6 +6,7 @@ using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 using VpnHood.Core.Proxies.Management.Sqlite;
 using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Core.Toolkit.Generics;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Proxies;
@@ -97,7 +98,7 @@ public class AppProxyEndPointService(
         };
     }
 
-    public async Task<PagedResult<AppProxyEndPointInfo>> ListProxies(
+    public async Task<ListResult<AppProxyEndPointInfo>> ListProxies(
         string? search = null,
         bool includeSucceeded = true,
         bool includeFailed = true,
@@ -117,7 +118,7 @@ public class AppProxyEndPointService(
             RecordCount = recordCount ?? int.MaxValue
         }).Vhc();
 
-        return new PagedResult<AppProxyEndPointInfo> {
+        return new ListResult<AppProxyEndPointInfo> {
             Items = result.Items.Select(ToAppInfo).ToArray(),
             TotalCount = result.TotalCount
         };

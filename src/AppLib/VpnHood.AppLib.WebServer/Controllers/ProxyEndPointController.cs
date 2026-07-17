@@ -1,7 +1,8 @@
-﻿using VpnHood.AppLib.Services.Proxies;
+using VpnHood.AppLib.Services.Proxies;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Core.Toolkit.Generics;
 using VpnHood.Core.Toolkit.Utils;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
@@ -133,7 +134,7 @@ internal class ProxyEndPointController : ControllerBase, IProxyEndPointControlle
         return Task.FromResult(result);
     }
 
-    public Task<PagedResult<AppProxyEndPointInfo>> List(
+    public Task<ListResult<AppProxyEndPointInfo>> List(
         string? search,
         bool includeSucceeded,
         bool includeFailed,

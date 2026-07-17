@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Toolkit.Utils;
+namespace VpnHood.Core.Toolkit.Generics;
 
 public class IdName<T>(T id, string name)
 {

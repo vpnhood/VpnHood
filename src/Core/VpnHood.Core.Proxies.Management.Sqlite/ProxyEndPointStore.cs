@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Generics;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Proxies.Management.Sqlite;
@@ -167,7 +168,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         return records;
     }
 
-    public async Task<PagedResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options)
+    public async Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options)
     {
         // build the WHERE clause; filtering, ordering and paging all run inside SQLite so only
         // the requested page is materialized
@@ -230,7 +231,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         while (await reader.ReadAsync().Vhc())
             records.Add(ReadRecord(reader));
 
-        return new PagedResult<ProxyEndPointRecord> {
+        return new ListResult<ProxyEndPointRecord> {
             Items = records,
             TotalCount = totalCount
         };

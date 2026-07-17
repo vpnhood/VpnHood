@@ -1,5 +1,6 @@
-﻿using VpnHood.AppLib.Services.Proxies;
+using VpnHood.AppLib.Services.Proxies;
 using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Core.Toolkit.Generics;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.WebServer.Api;
@@ -14,7 +15,7 @@ public interface IProxyEndPointController
     Task DisableAllFailed(CancellationToken cancellationToken);
     Task ResetStates(CancellationToken cancellationToken);
     Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken);
-    Task<PagedResult<AppProxyEndPointInfo>> List(
+    Task<ListResult<AppProxyEndPointInfo>> List(
         string? search,
         bool includeSucceeded,
         bool includeFailed,

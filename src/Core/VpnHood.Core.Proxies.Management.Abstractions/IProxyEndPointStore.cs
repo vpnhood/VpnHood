@@ -1,3 +1,4 @@
+using VpnHood.Core.Toolkit.Generics;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Proxies.Management.Abstractions;
@@ -14,7 +15,7 @@ public interface IProxyEndPointStore : IDisposable
 
     /// <summary>Filter, order (enabled desc, quality asc) and page inside the store, so callers
     /// never need to load the whole table.</summary>
-    Task<PagedResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options);
+    Task<ListResult<ProxyEndPointRecord>> List(ProxyEndPointStoreListParams options);
 
     /// <summary>Insert or update endpoints by id. Endpoint fields always overwrite;
     /// status columns are preserved on conflict when <paramref name="keepExistingStatus"/> is set,

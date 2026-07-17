@@ -3,6 +3,7 @@ using VpnHood.AppLib.Services.Proxies;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Core.Toolkit.Generics;
 using VpnHood.Core.Toolkit.Utils;
 // ReSharper disable InvalidXmlDocComment
 
@@ -25,7 +26,7 @@ public class ProxyEndPointController : ControllerBase, IProxyEndPointController
     /// List all proxy endpoints
     /// </summary>
     [HttpGet]
-    public Task<PagedResult<AppProxyEndPointInfo>> List(
+    public Task<ListResult<AppProxyEndPointInfo>> List(
         [FromQuery] string? search = null,
         [FromQuery] bool includeSucceeded = true,
         [FromQuery] bool includeFailed = true,

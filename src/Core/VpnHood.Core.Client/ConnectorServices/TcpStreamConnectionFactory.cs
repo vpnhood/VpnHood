@@ -66,7 +66,7 @@ internal class TcpStreamConnectionFactory(
             return tcpConnection;
         }
         catch {
-            await sslStream.SafeDisposeAsync();
+            await sslStream.TryDisposeAsync();
             throw;
         }
     }

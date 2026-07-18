@@ -106,7 +106,7 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
                 "Disposing all {Count} pooled connections to release native buffers.", items.Count);
 
             foreach (var item in items)
-                _ = item.SafeDisposeAsync();
+                _ = item.TryDisposeAsync();
         }
 
         PanicRecycled?.Invoke(this, EventArgs.Empty);
@@ -158,7 +158,7 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
                               (item.IsDead || item.ZeroActiveSince + IdleConnectionTimeout <= FastDateTime.Now);
                 if (item.IsJammed || drained) {
                     _items.Remove(item);
-                    disposeTasks.Add(item.SafeDisposeAsync().AsTask());
+                    disposeTasks.Add(item.TryDisposeAsync().AsTask());
                 }
             }
         }
@@ -178,6 +178,6 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
             _items.Clear();
         }
 
-        return new ValueTask(Task.WhenAll(connections.Select(c => c.SafeDisposeAsync().AsTask())));
+        return new ValueTask(Task.WhenAll(connections.Select(c => c.TryDisposeAsync().AsTask())));
     }
 }

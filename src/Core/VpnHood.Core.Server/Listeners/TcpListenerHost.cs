@@ -182,7 +182,7 @@ internal class TcpListenerHost(
             return tcpConnection;
         }
         catch (Exception) {
-            await sslStream.SafeDisposeAsync().Vhc();
+            await sslStream.TryDisposeAsync().Vhc();
             throw;
         }
     }

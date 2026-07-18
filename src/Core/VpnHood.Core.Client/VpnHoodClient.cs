@@ -258,7 +258,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
 
         // flush and dispose the proxy connector while we can still await; the sync Dispose
         // below then skips it (connector dispose is idempotent)
-        await ProxyConnector.SafeDisposeAsync();
+        await ProxyConnector.TryDisposeAsync();
 
         Dispose();
     }
@@ -288,7 +288,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // this sync path cannot await; the flush runs in the background and only touches the
         // endpoint db (no-op when DisposeAsync already disposed the connector)
         VhLogger.Instance.LogDebug("Disposing ProxyConnector...");
-        _ = ProxyConnector.SafeDisposeAsync();
+        _ = ProxyConnector.TryDisposeAsync();
 
         // disposing adapter
         if (Config.AutoDisposeVpnAdapter) {

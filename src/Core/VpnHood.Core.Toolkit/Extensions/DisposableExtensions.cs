@@ -5,7 +5,7 @@ namespace VpnHood.Core.Toolkit.Extensions;
 
 public static class DisposableExtensions
 {
-    public static void SafeDispose(this IDisposable disposable)
+    public static void TryDispose(this IDisposable disposable)
     {
         // Check if the disposable is null for safety
         if (disposable == null!)

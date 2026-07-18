@@ -207,7 +207,7 @@ internal class QuicListenerHost(
         public async ValueTask DisposeAsync()
         {
             await cts.TryCancelAsync().Vhc();
-            await Listener.SafeDisposeAsync().Vhc();
+            await Listener.TryDisposeAsync().Vhc();
             try { await listenerTask.Vhc(); }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Error in stopping QuicListener.");

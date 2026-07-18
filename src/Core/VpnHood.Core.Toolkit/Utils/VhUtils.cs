@@ -574,7 +574,7 @@ public static class VhUtils
             return;
 
         foreach (var item in items)
-            item.SafeDispose();
+            item.TryDispose();
     }
 
     public static T? TryInvoke<T>(Func<T> func, T? defaultValue = default)

@@ -97,7 +97,7 @@ public sealed class AndroidMessageListener : IMessageListener
         _disposed = true;
 
         _cancellationTokenSource.TryCancel();
-        _cancellationTokenSource.SafeDispose();
+        _cancellationTokenSource.TryDispose();
         _messageHandler = null;
     }
 

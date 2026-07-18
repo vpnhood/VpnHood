@@ -25,9 +25,9 @@ param(
 # The ONE version mutation: increment PubVersion.json + stamp the root Directory.Build.props. Done here
 # (not in Common.ps1) so Common stays a read-only environment load. Runs BEFORE Common so Common then
 # reads the freshly bumped version. A 0/absent $bump is a no-op (VersionBump only mutates when > 0).
-& "$PSScriptRoot/Lib/Update-VersionFile.ps1" -versionFile "$PSScriptRoot/PubVersion.json" -bump $bump;
+& "$PSScriptRoot/lib/Update-VersionFile.ps1" -versionFile "$PSScriptRoot/PubVersion.json" -bump $bump;
 
-. "$PSScriptRoot/Lib/Common.ps1"
+. "$PSScriptRoot/lib/Common.ps1"
 
 Write-Host "Bumped to v$versionParam (prerelease=$prerelease)" -ForegroundColor Green;
 

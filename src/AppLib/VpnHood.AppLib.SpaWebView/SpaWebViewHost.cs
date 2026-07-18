@@ -41,7 +41,7 @@ public sealed class SpaWebViewHost : IDisposable
         Task.Run(() => {
             try {
                 if (!VpnHoodAppWebServer.IsInit)
-                    VpnHoodAppWebServer.Init();
+                    VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
 
                 // Reload the view whenever the server self-heals a torn-down listener (subscribe once).
                 if (!_serverHooked) {

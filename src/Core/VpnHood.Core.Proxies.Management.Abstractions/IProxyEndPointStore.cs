@@ -1,5 +1,4 @@
 using VpnHood.Core.Toolkit.Generics;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.Core.Proxies.Management.Abstractions;
 

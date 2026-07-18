@@ -31,7 +31,7 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
 
             // initialize VpnHoodWinApp
             VpnHoodAppWin.Init(appOptions, args: args);
-            VpnHoodAppWebServer.Init(new WebServerOptions { Url = alternativeUrl });
+            VpnHoodAppWebServer.Init(VpnHoodApp.Instance, new WebServerOptions { Url = alternativeUrl });
 
             // initialize Win
             VpnHoodAppWin.Instance.ExitRequested += (_, _) => Exit();

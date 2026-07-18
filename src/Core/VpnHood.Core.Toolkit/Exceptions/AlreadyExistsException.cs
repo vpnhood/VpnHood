@@ -24,7 +24,12 @@ public sealed class AlreadyExistsException : Exception
         if (ex is AlreadyExistsException)
             return true;
 
+        // SQL Server: unique index / unique constraint violation
         if (ex.Data.Contains("HelpLink.EvtID") && ex.Data["HelpLink.EvtID"]?.ToString() is "2601" or "2627")
+            return true;
+
+        // SQLite: unique/primary-key violation (error 19)
+        if (ex.Message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase))
             return true;
 
         return ex.InnerException != null && Is(ex.InnerException);

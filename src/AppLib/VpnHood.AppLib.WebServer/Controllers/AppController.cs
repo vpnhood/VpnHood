@@ -13,10 +13,8 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class AppController : ControllerBase, IAppController
+internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
 {
-    private static VpnHoodApp App => VpnHoodApp.Instance;
-
     public override void AddRoutes(IRouteMapper mapper)
     {
         const string baseUrl = "/api/app/";
@@ -162,23 +160,23 @@ internal class AppController : ControllerBase, IAppController
 
     public async Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken)
     {
-        App.Services.CultureProvider.AvailableCultures = configParams.AvailableCultures;
+        app.Services.CultureProvider.AvailableCultures = configParams.AvailableCultures;
         if (configParams.Strings != null)
-            App.Resources.Strings = configParams.Strings;
+            app.Resources.Strings = configParams.Strings;
 
-        App.UpdateUi();
+        app.UpdateUi();
         return await GetConfig(cancellationToken).Vhc();
     }
 
     public Task<AppData> GetConfig(CancellationToken cancellationToken)
     {
         var ret = new AppData {
-            Features = App.Features,
-            IntentFeatures = new DeviceIntentFeatures(App.Services.DeviceUiProvider, App.Services.UserReviewProvider),
-            UserSettings = App.UserSettings,
-            ClientProfileInfos = App.ClientProfileService.List().Select(x => x.ToInfo(App.Features)).ToArray(),
-            State = App.State,
-            AvailableCultureInfos = App.Services.CultureProvider.AvailableCultures
+            Features = app.Features,
+            IntentFeatures = new DeviceIntentFeatures(app.Services.DeviceUiProvider, app.Services.UserReviewProvider),
+            UserSettings = app.UserSettings,
+            ClientProfileInfos = app.ClientProfileService.List().Select(x => x.ToInfo(app.Features)).ToArray(),
+            State = app.State,
+            AvailableCultureInfos = app.Services.CultureProvider.AvailableCultures
                 .Select(x => new UiCultureInfo(x))
                 .ToArray()
         };
@@ -189,11 +187,11 @@ internal class AppController : ControllerBase, IAppController
     public Task<SplitIps> GetSplitIps(CancellationToken cancellationToken)
     {
         var appIpFilters = new SplitIps {
-            DeviceIncludes = App.SettingsService.SplitIpSettings.DeviceIncludes,
-            DeviceExcludes = App.SettingsService.SplitIpSettings.DeviceExcludes,
-            AppIncludes = App.SettingsService.SplitIpSettings.AppIncludes,
-            AppExcludes = App.SettingsService.SplitIpSettings.AppExcludes,
-            AppBlocks = App.SettingsService.SplitIpSettings.AppBlocks
+            DeviceIncludes = app.SettingsService.SplitIpSettings.DeviceIncludes,
+            DeviceExcludes = app.SettingsService.SplitIpSettings.DeviceExcludes,
+            AppIncludes = app.SettingsService.SplitIpSettings.AppIncludes,
+            AppExcludes = app.SettingsService.SplitIpSettings.AppExcludes,
+            AppBlocks = app.SettingsService.SplitIpSettings.AppBlocks
         };
 
         return Task.FromResult(appIpFilters);
@@ -201,20 +199,20 @@ internal class AppController : ControllerBase, IAppController
 
     public Task SetSplitIps(SplitIps value, CancellationToken cancellationToken)
     {
-        App.SettingsService.SplitIpSettings.DeviceExcludes = value.DeviceExcludes;
-        App.SettingsService.SplitIpSettings.DeviceIncludes = value.DeviceIncludes;
-        App.SettingsService.SplitIpSettings.AppExcludes = value.AppExcludes;
-        App.SettingsService.SplitIpSettings.AppIncludes = value.AppIncludes;
-        App.SettingsService.SplitIpSettings.AppBlocks = value.AppBlocks;
+        app.SettingsService.SplitIpSettings.DeviceExcludes = value.DeviceExcludes;
+        app.SettingsService.SplitIpSettings.DeviceIncludes = value.DeviceIncludes;
+        app.SettingsService.SplitIpSettings.AppExcludes = value.AppExcludes;
+        app.SettingsService.SplitIpSettings.AppIncludes = value.AppIncludes;
+        app.SettingsService.SplitIpSettings.AppBlocks = value.AppBlocks;
         return Task.CompletedTask;
     }
 
     public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken)
     {
         var splitByDomains = new SplitDomains {
-            Includes = App.SettingsService.SplitDomainSettings.Includes,
-            Excludes = App.SettingsService.SplitDomainSettings.Excludes,
-            Blocks = App.SettingsService.SplitDomainSettings.Blocks
+            Includes = app.SettingsService.SplitDomainSettings.Includes,
+            Excludes = app.SettingsService.SplitDomainSettings.Excludes,
+            Blocks = app.SettingsService.SplitDomainSettings.Blocks
         };
 
         return Task.FromResult(splitByDomains);
@@ -222,21 +220,21 @@ internal class AppController : ControllerBase, IAppController
 
     public Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken)
     {
-        App.SettingsService.SplitDomainSettings.Includes = value.Includes;
-        App.SettingsService.SplitDomainSettings.Excludes = value.Excludes;
-        App.SettingsService.SplitDomainSettings.Blocks = value.Blocks;
+        app.SettingsService.SplitDomainSettings.Includes = value.Includes;
+        app.SettingsService.SplitDomainSettings.Excludes = value.Excludes;
+        app.SettingsService.SplitDomainSettings.Blocks = value.Blocks;
         return Task.CompletedTask;
     }
 
     public Task<AppState> GetState(CancellationToken cancellationToken)
     {
-        return Task.FromResult(App.State);
+        return Task.FromResult(app.State);
     }
 
     public Task Connect(Guid? clientProfileId,
         string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken)
     {
-        return App.Connect(
+        return app.Connect(
             new ConnectOptions {
                 ClientProfileId = clientProfileId,
                 ServerLocation = serverLocation,
@@ -247,7 +245,7 @@ internal class AppController : ControllerBase, IAppController
     public Task Diagnose(Guid? clientProfileId, string? serverLocation,
         ConnectPlanId planId, CancellationToken cancellationToken)
     {
-        return App.Connect(
+        return app.Connect(
             new ConnectOptions {
                 ClientProfileId = clientProfileId,
                 ServerLocation = serverLocation,
@@ -258,48 +256,48 @@ internal class AppController : ControllerBase, IAppController
 
     public Task Disconnect(CancellationToken cancellationToken)
     {
-        return App.Disconnect();
+        return app.Disconnect();
     }
 
     public Task VersionCheck(CancellationToken cancellationToken)
     {
-        if (App.Services.UpdaterService is null)
+        if (app.Services.UpdaterService is null)
             throw new NotSupportedException("App Updater is not supported.");
 
-        return App.Services.UpdaterService.CheckForUpdate(true, cancellationToken);
+        return app.Services.UpdaterService.CheckForUpdate(true, cancellationToken);
     }
 
     public Task VersionCheckPostpone(CancellationToken cancellationToken)
     {
-        if (App.Services.UpdaterService is null)
+        if (app.Services.UpdaterService is null)
             throw new NotSupportedException("App Updater is not supported.");
 
-        App.Services.UpdaterService.Postpone();
+        app.Services.UpdaterService.Postpone();
         return Task.CompletedTask;
     }
 
     public Task ClearLastError(CancellationToken cancellationToken)
     {
-        App.ClearLastError();
+        app.ClearLastError();
         return Task.CompletedTask;
     }
 
     public Task ExtendByRewardedAd(CancellationToken cancellationToken)
     {
-        return App.AdManager.ExtendByRewardedAd(cancellationToken);
+        return app.AdManager.ExtendByRewardedAd(cancellationToken);
     }
 
     public Task SetUserSettings(UserSettings userSettings, CancellationToken cancellationToken)
     {
-        App.SettingsService.Settings.UserSettings = userSettings;
-        App.SettingsService.Save();
+        app.SettingsService.Settings.UserSettings = userSettings;
+        app.SettingsService.Save();
         return Task.CompletedTask;
     }
 
     public async Task<string> Log(CancellationToken cancellationToken)
     {
         await using var ms = new MemoryStream();
-        await App.CopyLogToStream(ms).Vhc();
+        await app.CopyLogToStream(ms).Vhc();
         ms.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(ms);
         return await reader.ReadToEndAsync(cancellationToken);
@@ -307,16 +305,16 @@ internal class AppController : ControllerBase, IAppController
 
     public async Task<byte[]> PromotionImage(CancellationToken cancellationToken)
     {
-        if (App.SettingsService.PromotionImageFilePath is null ||
-            !File.Exists(App.SettingsService.PromotionImageFilePath))
+        if (app.SettingsService.PromotionImageFilePath is null ||
+            !File.Exists(app.SettingsService.PromotionImageFilePath))
             throw new NotExistsException();
 
-        return await File.ReadAllBytesAsync(App.SettingsService.PromotionImageFilePath, cancellationToken);
+        return await File.ReadAllBytesAsync(app.SettingsService.PromotionImageFilePath, cancellationToken);
     }
 
     public Task<DeviceAppInfo[]> GetInstalledApps(CancellationToken cancellationToken)
     {
-        return Task.FromResult(App.InstalledApps);
+        return Task.FromResult(app.InstalledApps);
     }
 
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken)
@@ -326,25 +324,25 @@ internal class AppController : ControllerBase, IAppController
 
     public Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken)
     {
-        App.SetUserReview(userReview.Rating, userReview.ReviewText);
+        app.SetUserReview(userReview.Rating, userReview.ReviewText);
         return Task.CompletedTask;
     }
 
     public Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken)
     {
-        App.AdManager.AdService.InternalAdDismiss(result);
+        app.AdManager.AdService.InternalAdDismiss(result);
         return Task.CompletedTask;
     }
 
     public Task InternalAdError(string errorMessage, CancellationToken cancellationToken)
     {
-        App.AdManager.AdService.InternalAdError(new Exception(errorMessage));
+        app.AdManager.AdService.InternalAdError(new Exception(errorMessage));
         return Task.CompletedTask;
     }
 
     public Task RemovePremium(Guid profileId, CancellationToken cancellationToken)
     {
-        App.RemovePremium(profileId);
+        app.RemovePremium(profileId);
         return Task.CompletedTask;
     }
 
@@ -356,6 +354,6 @@ internal class AppController : ControllerBase, IAppController
 
     public Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
-        return App.Services.SplitCountryService.GetSupportedSplitCountries(cancellationToken);
+        return app.Services.SplitCountryService.GetSupportedSplitCountries(cancellationToken);
     }
 }

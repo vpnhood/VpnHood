@@ -42,7 +42,7 @@ rm -rf src/Apps/Client.Ios/bin src/Apps/Client.Ios/obj \
   -p:SolutionDir="$(pwd)/"
 ```
 - `-p:SolutionDir="$(pwd)/"` (trailing slash **required**) is mandatory in Release — without it the core `.csproj`
-  files emit `CS8101: pathmap incorrectly formatted` (the `PathMap` in `src/Directory.Build.props` needs it).
+  files emit `CS8101: pathmap incorrectly formatted` (the `PathMap` in the root `Directory.Build.props` needs it).
 - Repo uses `.slnx`; build the host csproj directly. The host build also builds the Extension appex.
 - Output: `src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app`
   (contains `PlugIns/VpnHood.App.Client.Ios.Extension.appex`).

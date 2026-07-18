@@ -72,7 +72,7 @@ internal static class App
         }
 
         // init webserver
-        VpnHoodAppWebServer.Init(new WebServerOptions());
+        VpnHoodAppWebServer.Init(VpnHoodApp.Instance, new WebServerOptions());
         VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow(VpnHoodAppWebServer.Instance.Url);
 
         // write service url

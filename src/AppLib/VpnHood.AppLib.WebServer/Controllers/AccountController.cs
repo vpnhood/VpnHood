@@ -7,10 +7,10 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class AccountController : ControllerBase, IAccountController
+internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountController
 {
-    private static AppAccountService AccountService =>
-        VpnHoodApp.Instance.Services.AccountService ??
+    private AppAccountService AccountService =>
+        app.Services.AccountService ??
         throw new Exception("Account service is not available at this moment.");
 
     public override void AddRoutes(IRouteMapper mapper)
@@ -51,8 +51,8 @@ internal class AccountController : ControllerBase, IAccountController
 
     public Task<AppAccount?> Get(CancellationToken cancellationToken)
     {
-        return VpnHoodApp.Instance.Services.AccountService != null
-            ? VpnHoodApp.Instance.Services.AccountService.GetAccount(cancellationToken)
+        return app.Services.AccountService != null
+            ? app.Services.AccountService.GetAccount(cancellationToken)
             : Task.FromResult<AppAccount?>(null);
     }
 
@@ -63,7 +63,7 @@ internal class AccountController : ControllerBase, IAccountController
 
     public bool IsSigninWithGoogleSupported()
     {
-        return VpnHoodApp.Instance.Services.AccountService?.AuthenticationService.IsSignInWithGoogleSupported ?? false;
+        return app.Services.AccountService?.AuthenticationService.IsSignInWithGoogleSupported ?? false;
     }
 
     public Task SignInWithGoogle(CancellationToken cancellationToken)

@@ -3,14 +3,13 @@ using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Generics;
-using VpnHood.Core.Toolkit.Utils;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class ProxyEndPointController : ControllerBase, IProxyEndPointController
+internal class ProxyEndPointController(VpnHoodApp app) : ControllerBase, IProxyEndPointController
 {
-    private static AppProxyEndPointService ProxyEndPointService => VpnHoodApp.Instance.Services.ProxyEndPointService;
+    private AppProxyEndPointService ProxyEndPointService => app.Services.ProxyEndPointService;
 
     public override void AddRoutes(IRouteMapper mapper)
     {

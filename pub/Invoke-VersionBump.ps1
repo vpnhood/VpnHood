@@ -1,6 +1,6 @@
 # The ONE place the version is bumped.
 #
-# Increments pub/PubVersion.json (+ stamps src/Directory.Build.props), commits, and pushes to
+# Increments pub/PubVersion.json (+ stamps the root Directory.Build.props), commits, and pushes to
 # `develop` (the prerelease line). On a STABLE bump it ALSO fast-forwards `main` (the release line),
 # no --force; a prerelease bump leaves `main` untouched. Intended to run in CI (.github/workflows/bump.yml)
 # so the bump never happens on a developer's machine — that avoids version-file conflicts between developers.
@@ -22,7 +22,7 @@ param(
 	[switch]$noPush
 );
 
-# The ONE version mutation: increment PubVersion.json + stamp src/Directory.Build.props. Done here
+# The ONE version mutation: increment PubVersion.json + stamp the root Directory.Build.props. Done here
 # (not in Common.ps1) so Common stays a read-only environment load. Runs BEFORE Common so Common then
 # reads the freshly bumped version. A 0/absent $bump is a no-op (VersionBump only mutates when > 0).
 & "$PSScriptRoot/Lib/Update-VersionFile.ps1" -versionFile "$PSScriptRoot/PubVersion.json" -bump $bump;

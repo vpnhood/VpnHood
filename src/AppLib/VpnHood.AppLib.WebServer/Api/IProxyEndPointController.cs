@@ -1,7 +1,6 @@
 using VpnHood.AppLib.Services.Proxies;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Generics;
-using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.WebServer.Api;
 

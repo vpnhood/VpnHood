@@ -44,14 +44,17 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     // connections to the previous listener are now gone.
     public event EventHandler? Restarted;
 
-    private VpnHoodAppWebServer(WebServerOptions options)
+    private readonly VpnHoodApp _app;
+
+    private VpnHoodAppWebServer(VpnHoodApp app, WebServerOptions options)
     {
-        _isDebugMode = VpnHoodApp.Instance.Features.IsDebugMode;
-        var defaultPort = VpnHoodApp.Instance.Features.WebUiPort ?? 9090;
+        _app = app;
+        _isDebugMode = app.Features.IsDebugMode;
+        var defaultPort = app.Features.WebUiPort ?? 9090;
         var host = IPAddress.Loopback; // fallback safe default; adjust if you have AllowRemoteAccess
         var endPoint = VhUtils.GetFreeTcpEndPoint(host, defaultPort);
         Url = options.Url ?? new Uri($"http://{endPoint}");
-        VpnHoodApp.Instance.SettingsService.BeforeSave += SettingsServiceOnBeforeSave;
+        app.SettingsService.BeforeSave += SettingsServiceOnBeforeSave;
         // Self-heal when the app returns to the foreground: iOS (and, less often, other platforms)
         // can tear the loopback listener down while the app is in the background, with no notification.
         AppUiContext.OnResumed += AppUiContextOnResumed;
@@ -59,8 +62,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     private void SettingsServiceOnBeforeSave(object? sender, EventArgs e)
     {
-        if (VpnHoodApp.Instance.SettingsService.OldUserSettings.AllowRemoteAccess !=
-            VpnHoodApp.Instance.SettingsService.UserSettings.AllowRemoteAccess)
+        if (_app.SettingsService.OldUserSettings.AllowRemoteAccess !=
+            _app.SettingsService.UserSettings.AllowRemoteAccess)
             Restart();
     }
 
@@ -83,9 +86,9 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         base.Dispose(disposing);
     }
 
-    public static VpnHoodAppWebServer Init(WebServerOptions? options = null)
+    public static VpnHoodAppWebServer Init(VpnHoodApp app, WebServerOptions? options = null)
     {
-        var ret = new VpnHoodAppWebServer(options ?? new WebServerOptions());
+        var ret = new VpnHoodAppWebServer(app, options ?? new WebServerOptions());
         ret.Start();
         // Don't hand the URL to a web view until the accept loop is actually taking connections;
         // Start() can return inside that window and the first page load would be refused.
@@ -286,16 +289,16 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         if (_spaPath != null)
             return _spaPath; // do not extract in same instance
 
-        if (VpnHoodApp.Instance.Resources.SpaZipData is null)
+        if (_app.Resources.SpaZipData is null)
             throw new InvalidOperationException("SpaZipData resource is required to run web server for SPA.");
 
-        using var memZipStream = new MemoryStream(VpnHoodApp.Instance.Resources.SpaZipData);
+        using var memZipStream = new MemoryStream(_app.Resources.SpaZipData);
         memZipStream.Seek(0, SeekOrigin.Begin);
         using var md5 = MD5.Create();
         var hash = md5.ComputeHash(memZipStream);
         _spaHash = BitConverter.ToString(hash).Replace("-", "");
 
-        var spaFolderPath = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp", "SPA");
+        var spaFolderPath = Path.Combine(_app.StorageFolderPath, "Temp", "SPA");
         var spaPath = Path.Combine(spaFolderPath, _spaHash);
         var htmlPath = Path.Combine(spaPath, "index.html");
         if (!File.Exists(htmlPath)) {
@@ -315,19 +318,19 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var spaPath = GetSpaPath();
         _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
 
-        var host = VpnHoodApp.Instance.UserSettings.AllowRemoteAccess ? IPAddress.Any.ToString() : Url.Host;
+        var host = _app.UserSettings.AllowRemoteAccess ? IPAddress.Any.ToString() : Url.Host;
         var settings = new WebserverSettings(host, Url.Port);
         var server = new WebserverLite(settings, ctx => DefaultRoute(ctx, spaPath));
 
         // Initialize API routes through controllers - CORS is handled centrally in the route mapper
         server
             .AddRouteMapper(_isDebugMode)
-            .AddController(new AppController())
-            .AddController(new ClientProfileController())
-            .AddController(new AccountController())
-            .AddController(new BillingController())
-            .AddController(new IntentsController())
-            .AddController(new ProxyEndPointController());
+            .AddController(new AppController(_app))
+            .AddController(new ClientProfileController(_app))
+            .AddController(new AccountController(_app))
+            .AddController(new BillingController(_app))
+            .AddController(new IntentsController(_app))
+            .AddController(new ProxyEndPointController(_app));
 
         return server;
     }

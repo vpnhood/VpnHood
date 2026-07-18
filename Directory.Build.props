@@ -1,10 +1,10 @@
 <Project>
 
   <!--
-    Shared build/pack settings for every project under src/ (apps + libraries). MSBuild imports the
-    nearest Directory.Build.props walking up from each csproj, so this covers all of src/ but NOT the
-    tests/ projects (outside src/) and NOT any future self-contained module under a sibling modules/
-    folder (each such module brings its own Directory.Build.props, which stops the upward search).
+    Shared build/pack settings for every project in the repo (apps, libraries, tests). MSBuild imports
+    the nearest Directory.Build.props walking up from each csproj, so this covers src/ and tests/ but
+    NOT any future self-contained module (each such module brings its own Directory.Build.props, which
+    stops the upward search).
 
     The single product version lives in pub/PubVersion.json (the source of truth the bump edits) and
     is mirrored into <Version> below by pub/lib/Update-VersionFile.ps1 on every bump — so apps and libraries
@@ -51,7 +51,7 @@
 
   <!-- Pack the shared package icon (path is relative to this file, so it is depth-independent). -->
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)..\VpnHood.png" Link="Resources\VpnHood.png" Pack="true" PackagePath="" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)VpnHood.png" Link="Resources\VpnHood.png" Pack="true" PackagePath="" Visible="false" />
   </ItemGroup>
 
 </Project>

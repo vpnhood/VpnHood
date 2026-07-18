@@ -58,7 +58,7 @@ $reason = if ($vhVersion -gt $moduleVersion) { "adopted monorepo $vhVersion" } e
 Write-Host "Module version: $moduleVersion -> $($version.ToString(3)) ($reason)" -ForegroundColor Blue;
 
 # Mirror into the module's root Directory.Build.props — the single <Version> its projects inherit
-# (same pattern as the monorepo's src/Directory.Build.props stamp in Update-VersionFile.ps1).
+# (same pattern as the monorepo's root Directory.Build.props stamp in Update-VersionFile.ps1).
 $propsFile = Join-Path $moduleDir "Directory.Build.props";
 if (Test-Path $propsFile) {
 	$props = Get-Content $propsFile -Raw;

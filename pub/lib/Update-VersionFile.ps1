@@ -15,10 +15,10 @@ if ( $bump -gt 0 )
 	$versionJson.Prerelease = ($bump -eq 2);
 	$versionJson | ConvertTo-Json -depth 10 | Out-File $versionFile;
 
-	# Mirror the version into src/Directory.Build.props — the single <Version> every project (apps +
+	# Mirror the version into the root Directory.Build.props — the single <Version> every project (apps +
 	# libraries) inherits. This is the only place the version is stamped now (per-csproj <Version> and
 	# UpdateProjectVersion stamping were retired). CI can still override a pack with -p:Version.
-	$srcPropsFile = Join-Path (Split-Path -Parent (Split-Path -Parent $versionFile)) "src/Directory.Build.props";
+	$srcPropsFile = Join-Path (Split-Path -Parent (Split-Path -Parent $versionFile)) "Directory.Build.props";
 	if (Test-Path $srcPropsFile) {
 		$props = Get-Content $srcPropsFile -Raw;
 		$props = ([regex]"<Version>.*?</Version>").Replace($props, "<Version>$($versionJson.Version)</Version>", 1);

@@ -5,10 +5,8 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class IntentsController : ControllerBase, IIntentController
+internal class IntentsController(VpnHoodApp app) : ControllerBase, IIntentController
 {
-    private static VpnHoodApp App => VpnHoodApp.Instance;
-
     public override void AddRoutes(IRouteMapper mapper)
     {
         const string baseUrl = "/api/intents/";
@@ -56,50 +54,50 @@ internal class IntentsController : ControllerBase, IIntentController
 
     public Task<bool> RequestQuickLaunch(CancellationToken cancellationToken)
     {
-        return App.Services.DeviceUiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken);
+        return app.Services.DeviceUiProvider.RequestQuickLaunch(AppUiContext.RequiredContext, cancellationToken);
     }
 
     public Task<bool> RequestNotification(CancellationToken cancellationToken)
     {
-        return App.Services.DeviceUiProvider.RequestNotification(AppUiContext.RequiredContext, cancellationToken);
+        return app.Services.DeviceUiProvider.RequestNotification(AppUiContext.RequiredContext, cancellationToken);
     }
 
     public Task RequestUserReview(CancellationToken cancellationToken)
     {
-        if (App.Services.UserReviewProvider is null)
+        if (app.Services.UserReviewProvider is null)
             throw new NotSupportedException("User review is not supported.");
 
-        return App.Services.UserReviewProvider.RequestReview(AppUiContext.RequiredContext, cancellationToken);
+        return app.Services.UserReviewProvider.RequestReview(AppUiContext.RequiredContext, cancellationToken);
     }
 
     public Task OpenKillSwitchSettings(CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        App.Services.DeviceUiProvider.OpenKillSwitchSettings(AppUiContext.RequiredContext);
+        app.Services.DeviceUiProvider.OpenKillSwitchSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
     public Task OpenAlwaysOnSettings(CancellationToken cancellationToken)
     {
-        App.Services.DeviceUiProvider.OpenAlwaysOnSettings(AppUiContext.RequiredContext);
+        app.Services.DeviceUiProvider.OpenAlwaysOnSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
     public Task OpenSettings(CancellationToken cancellationToken)
     {
-        App.Services.DeviceUiProvider.OpenSettings(AppUiContext.RequiredContext);
+        app.Services.DeviceUiProvider.OpenSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
     public Task OpenAppSettings(CancellationToken cancellationToken)
     {
-        App.Services.DeviceUiProvider.OpenAppSettings(AppUiContext.RequiredContext);
+        app.Services.DeviceUiProvider.OpenAppSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 
     public Task OpenAppNotificationSettings(CancellationToken cancellationToken)
     {
-        App.Services.DeviceUiProvider.OpenAppNotificationSettings(AppUiContext.RequiredContext);
+        app.Services.DeviceUiProvider.OpenAppNotificationSettings(AppUiContext.RequiredContext);
         return Task.CompletedTask;
     }
 }

@@ -5,10 +5,8 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class ClientProfileController : ControllerBase, IClientProfileController
+internal class ClientProfileController(VpnHoodApp app) : ControllerBase, IClientProfileController
 {
-    private static VpnHoodApp App => VpnHoodApp.Instance;
-
     public override void AddRoutes(IRouteMapper mapper)
     {
         const string baseUrl = "/api/client-profiles/";
@@ -53,38 +51,38 @@ internal class ClientProfileController : ControllerBase, IClientProfileControlle
 
     public Task<ClientProfileInfo> AddByAccessKey(string accessKey, CancellationToken cancellationToken)
     {
-        var clientProfile = App.ClientProfileService.ImportAccessKey(accessKey);
-        return Task.FromResult(clientProfile.ToInfo(App.Features));
+        var clientProfile = app.ClientProfileService.ImportAccessKey(accessKey);
+        return Task.FromResult(clientProfile.ToInfo(app.Features));
     }
 
     public Task<ClientProfileInfo> Get(Guid clientProfileId, CancellationToken cancellationToken)
     {
-        var clientProfile = App.ClientProfileService.Get(clientProfileId);
-        return Task.FromResult(clientProfile.ToInfo(App.Features));
+        var clientProfile = app.ClientProfileService.Get(clientProfileId);
+        return Task.FromResult(clientProfile.ToInfo(app.Features));
     }
 
     public Task<string> GetAccessCode(Guid clientProfileId, CancellationToken cancellationToken)
     {
-        var clientProfile = App.ClientProfileService.Get(clientProfileId);
+        var clientProfile = app.ClientProfileService.Get(clientProfileId);
         return Task.FromResult(clientProfile.AccessCode ?? string.Empty);
     }
 
     public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams, CancellationToken cancellationToken)
     {
-        var clientProfile = App.ClientProfileService.Update(clientProfileId, updateParams);
-        return Task.FromResult(clientProfile.ToInfo(App.Features));
+        var clientProfile = app.ClientProfileService.Update(clientProfileId, updateParams);
+        return Task.FromResult(clientProfile.ToInfo(app.Features));
     }
 
     public async Task Delete(Guid clientProfileId, CancellationToken cancellationToken)
     {
-        if (!App.IsIdle && clientProfileId == App.CurrentClientProfileInfo?.ClientProfileId)
-            await App.Disconnect();
+        if (!app.IsIdle && clientProfileId == app.CurrentClientProfileInfo?.ClientProfileId)
+            await app.Disconnect();
 
-        App.ClientProfileService.Delete(clientProfileId);
+        app.ClientProfileService.Delete(clientProfileId);
     }
 
     public Task<AppPurchaseOptions> GetPurchaseOptions(Guid clientProfileId, CancellationToken cancellationToken)
     {
-        return App.GetPurchaseOptions(clientProfileId, cancellationToken);
+        return app.GetPurchaseOptions(clientProfileId, cancellationToken);
     }
 }

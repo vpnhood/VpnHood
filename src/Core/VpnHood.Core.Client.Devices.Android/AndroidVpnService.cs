@@ -5,9 +5,9 @@ using Android.Content.PM;
 using Android.Net;
 using Android.Runtime;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Client.Devices.Droid.Messaging;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
-using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Quic.Droid;
 using VpnHood.Core.Toolkit.Logging;
@@ -30,6 +30,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 {
     private VpnServiceHost? _vpnServiceHost;
     private AndroidVpnNotification? _notification;
+    private readonly AndroidMessageListener _messageListener = new();
     public const string ProcessName = ":vpnhood_process";
 
     public static string VpnServiceConfigFolder =>
@@ -64,6 +65,13 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         };
     }
 
+    // the message listener claims only its own bind action; everything else (especially the
+    // system's android.net.VpnService bind that establishes the VPN) goes to the base VpnService
+    public override Android.OS.IBinder? OnBind(Intent? intent)
+    {
+        return _messageListener.TryBind(intent) ?? base.OnBind(intent);
+    }
+
     private StartCommandResult ProcessConnectAction(bool forceReconnect, bool alwaysOn)
     {
         if (OperatingSystem.IsAndroidVersionAtLeast(29))
@@ -77,7 +85,7 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
                     configFolder: VpnServiceConfigFolder,
                     vpnServiceHandler: this,
                     socketFactory: new AndroidSocketFactory(),
-                    messageListener: new TcpMessageListener(VpnServiceConfigFolder));
+                    messageListener: _messageListener);
 
                 if (!await _vpnServiceHost.TryConnect(forceReconnect: forceReconnect, isAlwaysOn: alwaysOn))
                     StopSelf();
@@ -181,6 +189,10 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
         _vpnServiceHost?.Dispose();
         _vpnServiceHost = null;
+
+        // the host's ApiController disposes the listener; this covers the bind-only case
+        _messageListener.Dispose();
+
         base.OnDestroy();
     }
 }

@@ -5,6 +5,7 @@ using Android.OS;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
+using VpnHood.Core.Client.Devices.Droid.Messaging;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
@@ -206,7 +207,7 @@ public class AndroidDevice : IDevice
 
     public IMessageClient CreateMessageClient()
     {
-        return new TcpMessageClient(VpnServiceConfigFolder);
+        return new AndroidMessageClient();
     }
 
     private static IEnumerable<(Network, NetworkCapabilities)> GetNetworkWithCapabilities(

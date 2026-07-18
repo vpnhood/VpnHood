@@ -29,12 +29,27 @@ public class QuickLaunchTileService : TileService
         base.OnCreate();
 
         VhLogger.Instance.LogDebug("QuickLaunchTileService service is created...");
-        VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged!;
+        if (VpnHoodApp.IsInit) 
+            VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged!;
+
         Refresh();
+    }
+
+    public override void OnDestroy()
+    {
+        // VpnHoodApp outlives the tile-service instances created by Android, so leaving this
+        // subscription behind would keep every destroyed service instance alive.
+        if (VpnHoodApp.IsInit)
+            VpnHoodApp.Instance.ConnectionStateChanged -= ConnectionStateChanged!;
+
+        base.OnDestroy();
     }
 
     private void ConnectionStateChanged(object sender, EventArgs e)
     {
+        if (!VpnHoodApp.IsInit)
+            return;
+
         Refresh();
 
         // toast last error
@@ -99,6 +114,9 @@ public class QuickLaunchTileService : TileService
 
     private static void DisableQuickLaunchPrompt()
     {
+        if (!VpnHoodApp.IsInit)
+            return;
+
         // User already has interacted with the tile
         // Do not prompt for it again
         if (VpnHoodApp.Instance.Settings.UserSettings.IsQuickLaunchPrompted)
@@ -111,6 +129,8 @@ public class QuickLaunchTileService : TileService
     private void Refresh()
     {
         VhLogger.Instance.LogDebug("Refreshing tile state.");
+        if (!VpnHoodApp.IsInit)
+            return;
 
         if (QsTile == null)
             return;

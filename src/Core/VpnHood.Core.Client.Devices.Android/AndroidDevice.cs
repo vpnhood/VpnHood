@@ -155,13 +155,12 @@ public class AndroidDevice : IDevice
         var intent = new Intent(Application.Context, typeof(AndroidVpnService));
         intent.PutExtra("manual", true);
         var res = OperatingSystem.IsAndroidVersionAtLeast(26)
-            ? Application.Context.StartForegroundService(intent.SetAction("connect"))
-            : Application.Context.StartService(intent.SetAction("connect"));
+            ? Application.Context.StartForegroundService(intent.SetAction(AndroidVpnService.ActionConnect))
+            : Application.Context.StartService(intent.SetAction(AndroidVpnService.ActionConnect));
 
-        if (res == null)
-            throw new VpnServiceException("Could not start AndroidVpnService.");
-
-        return Task.CompletedTask;
+        return res != null 
+            ? Task.CompletedTask 
+            : throw new VpnServiceException("Could not start AndroidVpnService.");
     }
 
     private void Activity_OnActivityResult(object? sender, ActivityResultEventArgs e)
@@ -189,7 +188,7 @@ public class AndroidDevice : IDevice
         }
     }
 
-    private static string CurrentProcessName {
+    public static string CurrentProcessName {
         get {
             //if (OperatingSystem.IsAndroidVersionAtLeast(28))
             //return Application.ProcessName ?? "";

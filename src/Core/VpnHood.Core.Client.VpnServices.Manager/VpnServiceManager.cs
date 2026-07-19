@@ -110,8 +110,8 @@ public class VpnServiceManager : IDisposable
             _connectionInfo = SetConnectionInfo(ClientState.Initializing);
 
             // save vpn config
-            await File.WriteAllTextAsync(_vpnConfigFilePath, JsonSerializer.Serialize(serviceOptions),
-                cancellationToken).Vhc();
+            await File.WriteAllTextAsync(_vpnConfigFilePath, 
+                JsonSerializer.Serialize(serviceOptions), cancellationToken).Vhc();
 
             // prepare vpn service
             VhLogger.Instance.LogInformation("Requesting VpnService...");
@@ -141,6 +141,27 @@ public class VpnServiceManager : IDisposable
         // wait for connection or error
         await WaitForConnection(cancellationToken).Vhc();
     }
+
+    /// <summary>
+    /// True when a previous session has left a configuration the VPN service can start from.
+    /// </summary>
+    public bool IsConfigured => File.Exists(_vpnConfigFilePath);
+
+    /// <summary>
+    /// Start the VPN service from its last persisted configuration without touching it — the same
+    /// bootstrap always-on uses. Check IsConfigured before calling.
+    /// </summary>
+    public Task StartFromLastConfig(CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        // load the last configuration and start the service
+        var serviceOptions = JsonUtils.TryDeserializeFile<VpnServiceOptions>(_vpnConfigFilePath);
+        return serviceOptions != null 
+            ? Start(serviceOptions, cancellationToken) 
+            : throw new InvalidOperationException("There is no previous VPN configuration to start from.");
+    }
+
 
     private async Task WaitForVpnService(CancellationToken cancellationToken)
     {
@@ -355,8 +376,9 @@ public class VpnServiceManager : IDisposable
     /// Stop the VPN service and disconnect from the server if running. This method is idempotent.
     /// No exception will be thrown
     /// </summary>
-    private readonly AsyncLock _stopLock = new();
 
+    public bool IsStopping => _stopLock.IsLocked;
+    private readonly AsyncLock _stopLock = new();
     public async Task<bool> TryStop(TimeSpan? timeout = null)
     {
         // Initialize cll this method, so it must be finished to make sure the service is not interrupted

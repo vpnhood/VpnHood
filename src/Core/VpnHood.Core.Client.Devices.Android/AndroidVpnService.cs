@@ -32,6 +32,8 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
     private AndroidVpnNotification? _notification;
     private readonly AndroidMessageListener _messageListener = new();
     public const string ProcessName = ":vpnhood_process";
+    public const string ActionConnect = "connect";
+    public const string ActionDisconnect = "disconnect";
 
     public static string VpnServiceConfigFolder =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "vpn-service");
@@ -55,12 +57,12 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
         if (_notification is null)
             ShowNotification(VpnServiceHost.DefaultConnectionInfo);
 
-        // get "manual" in 
+        // get "manual" in
         return action switch {
             // signal start command
             null or "android.net.VpnService" => ProcessConnectAction(forceReconnect: false, alwaysOn: true),
-            "connect" => ProcessConnectAction(action == "connect", false),
-            "disconnect" => ProcessDisconnectAction(),
+            ActionConnect => ProcessConnectAction(forceReconnect: true, alwaysOn: false),
+            ActionDisconnect => ProcessDisconnectAction(),
             _ => ProcessUnknownAction(action)
         };
     }

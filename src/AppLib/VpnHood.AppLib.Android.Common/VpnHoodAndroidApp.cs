@@ -14,8 +14,8 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
         AndroidEnvironment.UnhandledExceptionRaiser += OnUnhandledExceptionRaiser;
 
 
-        // do not init again or in the vpn service process
-        if (VpnHoodApp.IsInit || AndroidDevice.IsVpnServiceProcess)
+        // do not init again or in the vpn service/tile processes
+        if (VpnHoodApp.IsInit || AndroidDevice.IsVpnServiceProcess || QuickLaunchTileService.IsTileProcess)
             return new VpnHoodAndroidApp();
 
         //app init

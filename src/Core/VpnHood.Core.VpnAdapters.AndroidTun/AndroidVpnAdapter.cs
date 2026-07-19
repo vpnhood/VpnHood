@@ -237,7 +237,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
     {
         while (true) {
             // a result of 0 (timeout) is fine; the caller re-checks its state and retries
-            var result = AndroidAPI.poll(pollFds, pollFds.Length, PollTimeoutMs);
+            var result = AndroidAPI.poll(pollFds, (nuint)pollFds.Length, PollTimeoutMs);
             if (result >= 0)
                 break; // Success, exit loop
 
@@ -260,7 +260,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
 
             // TUN is packet-oriented: write() accepts the whole packet or fails, so no partial-write loop
             while (true) {
-                var bytesWritten = AndroidAPI.write(tunFd, ref buffer[offset], length);
+                var bytesWritten = AndroidAPI.write(tunFd, ref buffer[offset], (nuint)length);
                 if (bytesWritten == length)
                     return true;
 
@@ -287,7 +287,7 @@ public class AndroidVpnAdapter(VpnService vpnService, AndroidVpnAdapterSettings 
                 throw new InvalidOperationException("Adapter is not open.");
 
             while (true) {
-                var bytesRead = AndroidAPI.read(tunFd, buffer, buffer.Length);
+                var bytesRead = AndroidAPI.read(tunFd, buffer, (nuint)buffer.Length);
                 if (bytesRead > 0)
                     return true;
 

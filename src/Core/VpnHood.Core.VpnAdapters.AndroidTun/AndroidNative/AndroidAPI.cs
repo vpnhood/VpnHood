@@ -20,11 +20,11 @@ internal static class AndroidAPI
     public static extern int fcntl(int fd, int cmd, int arg);
 
     [DllImport("libc", SetLastError = true)]
-    public static extern int poll([In] [Out] StructPollfd[] fds, int nfds, int timeout);
+    public static extern int poll([In] [Out] StructPollfd[] fds, nuint nfds, int timeout);
 
     [DllImport("libc", SetLastError = true)]
-    public static extern int read(int fd, byte[] buffer, int count);
+    public static extern nint read(int fd, [In] [Out] byte[] buffer, nuint count);
 
     [DllImport("libc", SetLastError = true)]
-    public static extern int write(int fd, ref byte buffer, int count);
+    public static extern nint write(int fd, ref byte buffer, nuint count);
 }

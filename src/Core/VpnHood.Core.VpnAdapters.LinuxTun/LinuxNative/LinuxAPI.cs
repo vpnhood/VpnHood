@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 
 namespace VpnHood.Core.VpnAdapters.LinuxTun.LinuxNative;
@@ -20,13 +20,13 @@ internal static class LinuxAPI
     public static extern int close(int fd);
 
     [DllImport("libc", SetLastError = true)]
-    public static extern int poll([In] [Out] StructPollfd[] fds, int nfds, int timeout);
+    public static extern int poll([In] [Out] StructPollfd[] fds, nuint nfds, int timeout);
 
     [DllImport("libc", SetLastError = true)]
-    public static extern int read(int fd, byte[] buffer, int count);
+    public static extern nint read(int fd, [In] [Out] byte[] buffer, nuint count);
 
     [DllImport("libc", SetLastError = true)]
-    public static extern int write(int fd, byte[] buffer, int count);
+    public static extern nint write(int fd, byte[] buffer, nuint count);
 
     [DllImport("libc", SetLastError = true)]
     public static extern int setsockopt(int sockfd, int level, int optname, byte[] optval, uint optlen);

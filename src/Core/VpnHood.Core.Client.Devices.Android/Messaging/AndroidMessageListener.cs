@@ -81,7 +81,7 @@ public sealed class AndroidMessageListener : IMessageListener
             replyBinder.Transact(AndroidMessageTransport.ReplyTransactionCode, data, null, 0);
         }
         catch (Exception ex) {
-            // the client process is gone; its pending request fails via its disconnect callbacks
+            // the client process is gone; So its pending request fails via its disconnect callbacks
             VhLogger.Instance.LogDebug(ex, "Could not deliver a VpnService message reply. RequestId: {RequestId}",
                 requestId);
         }

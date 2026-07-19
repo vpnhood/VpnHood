@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -281,7 +281,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private static void WaitForTun(StructPollfd[] pollFds)
     {
         while (true) {
-            var result = LinuxAPI.poll(pollFds, 1, -1);
+            var result = LinuxAPI.poll(pollFds, (nuint)1, -1);
             if (result >= 0)
                 break; // Success, exit loop
 
@@ -302,7 +302,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         var packetBytes = ipPacket.GetUnderlyingBufferUnsafe(_writeBuffer, out var bufferLength);
 
         // A TUN device writes a whole datagram or nothing, so there is no partial write to continue.
-        var bytesWritten = LinuxAPI.write(fd, packetBytes, bufferLength);
+        var bytesWritten = LinuxAPI.write(fd, packetBytes, (nuint)bufferLength);
         if (bytesWritten == bufferLength)
             return true;
 
@@ -330,7 +330,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
         if (fd == InvalidFd)
             throw new IOException("TUN adapter is closed.");
 
-        var bytesRead = LinuxAPI.read(fd, buffer, buffer.Length);
+        var bytesRead = LinuxAPI.read(fd, buffer, (nuint)buffer.Length);
         if (bytesRead > 0)
             return true;
 

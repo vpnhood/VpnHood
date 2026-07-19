@@ -21,6 +21,8 @@ namespace VpnHood.Core.Client.Devices.Droid.Messaging;
 // disconnect callbacks.
 public sealed class AndroidMessageClient : IMessageClient
 {
+    private const string BindingDiedMessage = "VpnService binding has died.";
+    private const string DisposedMessage = "VpnService message client has been disposed.";
     private static readonly TimeSpan BindTimeout = TimeSpan.FromSeconds(4);
     private readonly object _connectionLock = new();
     private readonly ConcurrentDictionary<int, TaskCompletionSource<Memory<byte>>> _pendingRequests = new();
@@ -40,6 +42,12 @@ public sealed class AndroidMessageClient : IMessageClient
     private static TaskCompletionSource<IBinder> NewBinderTcs() =>
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    private static void FailWaiter<T>(TaskCompletionSource<T> tcs, string message)
+    {
+        if (tcs.TrySetException(new VpnServiceUnreachableException(message)))
+            _ = tcs.Task.Exception; // observe faults left behind by detached or timed-out waiters
+    }
+
     public async Task<Memory<byte>> SendAsync(Memory<byte> request, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -49,7 +57,12 @@ public sealed class AndroidMessageClient : IMessageClient
         // register before sending so the reply can never race the registration
         var requestId = Interlocked.Increment(ref _lastRequestId);
         var tcs = new TaskCompletionSource<Memory<byte>>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pendingRequests[requestId] = tcs;
+        lock (_connectionLock) {
+            // Registration cannot happen after Dispose has marked the client as disposed.
+            if (_disposed)
+                throw new VpnServiceUnreachableException(DisposedMessage);
+            _pendingRequests[requestId] = tcs;
+        }
 
         try {
             SendRequest(binder, requestId, request);
@@ -89,7 +102,8 @@ public sealed class AndroidMessageClient : IMessageClient
         Task<IBinder> binderTask;
         lock (_connectionLock) {
             // recheck under the lock so a concurrent Dispose cannot leave a fresh binding behind
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_disposed)
+                throw new VpnServiceUnreachableException(DisposedMessage);
 
             // a completed-but-dead binder means the service died; wait for the reconnect
             if (_binderTcs.Task is { IsCompletedSuccessfully: true, Result.IsBinderAlive: false })
@@ -134,15 +148,17 @@ public sealed class AndroidMessageClient : IMessageClient
     {
         foreach (var requestId in _pendingRequests.Keys)
             if (_pendingRequests.TryRemove(requestId, out var tcs))
-                tcs.TrySetException(new VpnServiceUnreachableException(message));
+                FailWaiter(tcs, message);
     }
 
     public void Dispose()
     {
+        TaskCompletionSource<IBinder> binderTcs;
         lock (_connectionLock) {
             if (_disposed)
                 return;
             _disposed = true;
+            binderTcs = _binderTcs;
 
             if (_bindRequested) {
                 TryUnbind(Application.Context);
@@ -150,7 +166,8 @@ public sealed class AndroidMessageClient : IMessageClient
             }
         }
 
-        FailPendingRequests("VpnService message client has been disposed.");
+        FailWaiter(binderTcs, DisposedMessage);
+        FailPendingRequests(DisposedMessage);
         _replyBinder.Dispose();
         _serviceConnection.Dispose();
     }
@@ -178,7 +195,7 @@ public sealed class AndroidMessageClient : IMessageClient
 
             if (!success) {
                 var errorMessage = data.ReadString() ?? "VpnService could not process the message.";
-                tcs.TrySetException(new VpnServiceUnreachableException(errorMessage));
+                FailWaiter(tcs, errorMessage);
                 return true;
             }
 
@@ -186,7 +203,7 @@ public sealed class AndroidMessageClient : IMessageClient
             if (response != null)
                 tcs.TrySetResult(response);
             else
-                tcs.TrySetException(new VpnServiceUnreachableException("VpnService returned an empty response."));
+                FailWaiter(tcs, "VpnService returned an empty response.");
             return true;
         }
     }
@@ -200,6 +217,9 @@ public sealed class AndroidMessageClient : IMessageClient
                 return;
 
             lock (client._connectionLock) {
+                if (client._disposed)
+                    return;
+
                 if (client._binderTcs.Task.IsCompleted)
                     client._binderTcs = NewBinderTcs();
                 client._binderTcs.TrySetResult(service);
@@ -210,6 +230,9 @@ public sealed class AndroidMessageClient : IMessageClient
         {
             VhLogger.Instance.LogDebug("VpnService message channel has been disconnected.");
             lock (client._connectionLock) {
+                if (client._disposed)
+                    return;
+
                 if (client._binderTcs.Task.IsCompleted)
                     client._binderTcs = NewBinderTcs();
             }
@@ -220,28 +243,39 @@ public sealed class AndroidMessageClient : IMessageClient
         public void OnBindingDied(ComponentName? name)
         {
             // the binding is dead for good; release it so the next send creates a fresh one
+            if (!ResetBinding(BindingDiedMessage))
+                return;
+
             VhLogger.Instance.LogDebug("VpnService message channel binding has died.");
-            ResetBinding();
-            client.FailPendingRequests("VpnService binding has died.");
+            client.FailPendingRequests(BindingDiedMessage);
         }
 
         public void OnNullBinding(ComponentName? name)
         {
             // the service refused to hand out a binder; release the binding so the next send retries
+            if (!ResetBinding("VpnService returned a null binding."))
+                return;
+
             VhLogger.Instance.LogDebug("VpnService message channel returned a null binding.");
-            ResetBinding();
         }
 
-        private void ResetBinding()
+        private bool ResetBinding(string message)
         {
+            TaskCompletionSource<IBinder> binderTcs;
             lock (client._connectionLock) {
+                if (client._disposed)
+                    return false;
+
                 if (client._bindRequested)
                     client.TryUnbind(Application.Context);
                 client._bindRequested = false;
 
-                if (client._binderTcs.Task.IsCompleted)
-                    client._binderTcs = NewBinderTcs();
+                binderTcs = client._binderTcs;
+                client._binderTcs = NewBinderTcs();
             }
+
+            FailWaiter(binderTcs, message);
+            return true;
         }
     }
 }

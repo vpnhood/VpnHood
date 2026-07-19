@@ -16,7 +16,7 @@ namespace VpnHood.AppLib;
 public static class AppCountryInfo
 {
     private static readonly CountryProvider CountryProvider = new();
-    private static readonly TranslationProvider TranslationProvider = new();
+    private static TranslationProvider TranslationProvider => field ??= new TranslationProvider();
     private static readonly ConcurrentDictionary<(string CountryCode, string CultureName), CountryInfo?> Cache = new();
     private static bool _translatorHasError;
 

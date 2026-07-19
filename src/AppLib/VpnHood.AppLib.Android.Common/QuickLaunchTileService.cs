@@ -111,7 +111,7 @@ public class QuickLaunchTileService : TileService
 
     private void RefreshTile()
     {
-        if (Looper.MyLooper() != Looper.MainLooper) {
+        if (!ReferenceEquals(Looper.MyLooper(), Looper.MainLooper)) {
             _mainHandler.Post(RefreshTileCore);
             return;
         }
@@ -127,13 +127,11 @@ public class QuickLaunchTileService : TileService
 
         var connectionInfo = _vpnServiceManager.ConnectionInfo;
 
-        // override the client state if the service is stopping or started to effect immediate visual feedback;
+        // override the client state while the service is stopping to effect immediate visual feedback;
+        // otherwise report the real state so a dead or reconnecting session never reads as Connected
         var clientState = _overrideClientState ?? connectionInfo.ClientState;
         if (_vpnServiceManager.IsStopping)
             clientState = ClientState.Disconnecting;
-        else if (_vpnServiceManager.IsStarted)
-            clientState = ClientState.Connected;
-
         var qsStateDescription = clientState.ToString();
         var qsLabel = connectionInfo.SessionName ?? AndroidUtils.GetAppName(Application.Context);
         var qsState = clientState is ClientState.None or ClientState.Disposed or ClientState.Disconnecting

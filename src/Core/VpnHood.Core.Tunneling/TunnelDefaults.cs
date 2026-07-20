@@ -16,12 +16,17 @@ public static class TunnelDefaults
     public const int StreamSmallReadCacheSize = 512;
     public const int ProxyPacketQueueCapacity = 200;
     public const int TunnelPacketQueueCapacity = 200;
-    public const int MaxUdpClientCount = 500;
+    public const int MaxUdpClientCount = 100;
     // DNS workers are small (4 KB) and recycle every UdpDnsTimeout, so a session needs far fewer
     // of them than general UDP workers
-    public const int MaxUdpDnsClientCount = 50;
+    public const int MaxUdpDnsClientCount = 70;
     public const int MaxPingClientCount = 10;
     public const int PrefetchStreamBufferSize = 1024 * 4;
+    // Covers any response a real-world resolver exchanges over UDP (post-DNS-Flag-Day defaults are
+    // ~1232 bytes; 4096 is the common EDNS ceiling, though the protocol permits more). A rare larger
+    // reply is detected via MSG_TRUNC and dropped like packet loss — see UdpProxy.
+    public const int UdpDnsBufferSize = 4 * 1024;
+    public const int MaxUdpDatagramSize = 64 * 1024;
 
     public static TransferBufferSize ClientStreamProxyBufferSize { get; } =
         new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive
@@ -51,11 +56,6 @@ public static class TunnelDefaults
     // burst pin every pool slot (each concurrent query from a distinct source port to the same server
     // needs its own worker). DNS flows therefore run on segregated short-lived workers.
     public static TimeSpan UdpDnsTimeout { get; set; } = TimeSpan.FromSeconds(10);
-    // Covers any response a real-world resolver exchanges over UDP (post-DNS-Flag-Day defaults are
-    // ~1232 bytes; 4096 is the common EDNS ceiling, though the protocol permits more). A rare larger
-    // reply is detected via MSG_TRUNC and dropped like packet loss — see UdpProxy.
-    public const int UdpDnsBufferSize = 4096;
-    public const int MaxUdpDatagramSize = 0x10000;
     public static TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromMinutes(1); // it is for worker timeout
     public static TimeSpan TcpCheckInterval { get; set; } = TimeSpan.FromMinutes(15);
     public static TimeSpan TcpGracefulTimeout { get; set; } = TimeSpan.FromSeconds(15);

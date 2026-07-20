@@ -91,7 +91,7 @@ public class AppDelegate : UIApplicationDelegate
             // A post-kill reconnect opens one direct UdpClient per excluded UDP flow (exclude-country
             // sends carrier DNS + in-country UDP outside the tunnel): the 2026-07-17 capture died in
             // ~20 s at 222 proxies × 200-packet queues, all managed memory. The desktop-scale defaults
-            // (500 × 200) never engage before jetsam; bound the fleet and the per-proxy queue instead.
+            // (100 × 200) never engage before jetsam; bound the fleet and the per-proxy queue instead.
             MaxUdpClientCount = 50,
             // DNS workers are segregated, tiny (4 KB) and recycle every UdpDnsTimeout (10 s), so this
             // bounds a DNS storm without letting it starve the general pool above

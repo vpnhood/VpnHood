@@ -212,6 +212,10 @@ dispatcher — see `VpnHood.Core.Proxies` for the reference shape. Optionally a 
 one-shot trigger (commit pending work → pull → push → `gh workflow run publish_nugets.yml`) so a
 publish is a single local command; the CI still does all the real work.
 
+**Step-by-step runbook, including the version-rule table and the onboarding gotchas (per-csproj
+`<Version>` overriding the props stamp, the `IsPackable` regex not tolerating a `Condition`, the
+silent org gate, pwsh-7-only encoding): [pub/MODULE-REPOS.md](MODULE-REPOS.md).**
+
 ## Next steps (not yet implemented)
 
 1. **(Later) `modules/` folder** for any library that earns independent versioning/consumers — as

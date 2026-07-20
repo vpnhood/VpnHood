@@ -30,7 +30,7 @@ public class ClientAppTest : TestAppBase
 
         // ************
         // Test: With diagnose
-        await app.Connect(clientProfile1.ClientProfileId, diagnose: true);
+        await app.Connect(clientProfile1.ClientProfileId, diagnose: true, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected, 10000);
         await app.Disconnect();
         await app.WaitForState(AppConnectionState.None);
@@ -45,7 +45,7 @@ public class ClientAppTest : TestAppBase
 
         // ************
         // Test: Without diagnose
-        await app.Connect(clientProfile1.ClientProfileId);
+        await app.Connect(clientProfile1.ClientProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
         await app.Disconnect();
         await app.WaitForState(AppConnectionState.None);
@@ -66,7 +66,7 @@ public class ClientAppTest : TestAppBase
         // create app
         await using var app = TestAppHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await Assert.ThrowsExactlyAsync<UnreachableServerException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExactlyAsync<UnreachableServerException>(() => app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken));
 
         await app.WaitForState(AppConnectionState.None);
         Assert.IsTrue(app.State.LogExists);
@@ -93,7 +93,7 @@ public class ClientAppTest : TestAppBase
         appOptions.AutoWaitTimeout = TimeSpan.FromSeconds(2);
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
         // dispose server and wait for waiting state
@@ -102,14 +102,14 @@ public class ClientAppTest : TestAppBase
         await VhTestUtil.AssertEqualsWait(AppConnectionState.Waiting, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
             return app.State.ConnectionState;
-        });
+        }, cancellationToken: TestContext.CancellationToken);
 
         // start a new server & waiting for connected state
         await using var server2 = await TestHelper.CreateServer(accessManager);
         await VhTestUtil.AssertEqualsWait(AppConnectionState.Connected, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
             return app.State.ConnectionState;
-        });
+        }, cancellationToken: TestContext.CancellationToken);
     }
 
 
@@ -129,7 +129,7 @@ public class ClientAppTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions, testDevice);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
-        await Assert.ThrowsExactlyAsync<ConnectionTimeoutException>(() => app.Connect(clientProfile.ClientProfileId));
+        await Assert.ThrowsExactlyAsync<ConnectionTimeoutException>(() => app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken));
         await app.WaitForState(AppConnectionState.None);
         Assert.AreEqual(nameof(ConnectionTimeoutException), app.State.LastError?.TypeName);
     }
@@ -147,7 +147,7 @@ public class ClientAppTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(device: TestAppHelper.CreateDevice());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
-        await app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
         // get data through tunnel
@@ -182,7 +182,7 @@ public class ClientAppTest : TestAppBase
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // wait for connect
-        await app.Connect(clientProfile1.ClientProfileId);
+        await app.Connect(clientProfile1.ClientProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
         Assert.AreEqual(accessManager.ServerConfig.ServerTokenUrls.First(),
@@ -212,7 +212,7 @@ public class ClientAppTest : TestAppBase
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
         // wait for connect error
-        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(clientProfile1.ClientProfileId));
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(clientProfile1.ClientProfileId, cancellationToken: TestContext.CancellationToken));
         Assert.AreEqual(SessionErrorCode.AccessExpired, ex.SessionResponse.ErrorCode);
 
         // token name must be updated
@@ -239,7 +239,7 @@ public class ClientAppTest : TestAppBase
         await server1.DisposeAsync();
 
         // create server 2
-        await Task.Delay(1100); // wait for new CreatedTime
+        await Task.Delay(1100, TestContext.CancellationToken); // wait for new CreatedTime
         fileAccessManagerOptions1.TcpEndPoints = [TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback)];
         var accessManager2 = TestHelper.CreateAccessManager(storagePath: accessManager1.StoragePath,
             options: fileAccessManagerOptions1);
@@ -267,13 +267,13 @@ public class ClientAppTest : TestAppBase
                 await ctx.SendPlainText(token2.ServerToken.Encrypt());
             });
 
-        _ = webServer1.StartAsync();
-        _ = webServer2.StartAsync();
+        _ = webServer1.StartAsync(TestContext.CancellationToken);
+        _ = webServer2.StartAsync(TestContext.CancellationToken);
 
         // connect
         await using var app = TestAppHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
 
         Assert.IsTrue(isTokenRetrieved);
         Assert.AreNotEqual(token1.ServerToken.CreatedTime, token2.ServerToken.CreatedTime);
@@ -296,10 +296,10 @@ public class ClientAppTest : TestAppBase
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());
         var clientProfile2 = app.ClientProfileService.ImportAccessKey(token2.ToAccessKey());
 
-        await app.Connect(clientProfile1.ClientProfileId);
+        await app.Connect(clientProfile1.ClientProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
-        await app.Connect(clientProfile2.ClientProfileId);
+        await app.Connect(clientProfile2.ClientProfileId, cancellationToken: TestContext.CancellationToken);
         await app.WaitForState(AppConnectionState.Connected);
 
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
@@ -315,7 +315,7 @@ public class ClientAppTest : TestAppBase
 
         await using var app = TestAppHelper.CreateClientApp();
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId, diagnose: true);
+        await app.Connect(clientProfile.ClientProfileId, diagnose: true, cancellationToken: TestContext.CancellationToken);
 
 
         Assert.IsTrue(app.State.ClientProfile?.IsPremium);
@@ -342,7 +342,7 @@ public class ClientAppTest : TestAppBase
 
         // Connect
         try {
-            await clientApp.Connect(clientProfile.ClientProfileId);
+            await clientApp.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);
             Assert.Fail("SessionException was expected.");
         }
         catch (SessionException ex) {
@@ -375,7 +375,7 @@ public class ClientAppTest : TestAppBase
         appOptions.AllowRecommendUserReviewByServer = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
-        await app.Connect(clientProfile.ClientProfileId);
+        await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestCt);
 
         // access manager set UserReviewRecommended
         Assert.IsFalse(testUserReviewProvider.IsReviewRequested);
@@ -383,10 +383,10 @@ public class ClientAppTest : TestAppBase
 
         await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
         await VhTestUtil.AssertEqualsWait(1, () =>
-            server.SessionManager.Sync(true, TestCt));
+            server.SessionManager.Sync(true, TestCt), cancellationToken: TestContext.CancellationToken);
         await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
         await VhTestUtil.AssertEqualsWait(1,
-            () => server.SessionManager.Sync(true, TestCt));
+            () => server.SessionManager.Sync(true, TestCt), cancellationToken: TestContext.CancellationToken);
         await app.ForceUpdateState(TestCt);
 
         // after client disconnect it should see rating recommended
@@ -409,6 +409,6 @@ public class ClientAppTest : TestAppBase
         Assert.IsNotNull(accessManager.UserReview);
         Assert.AreEqual(3, accessManager.UserReview.Rating);
         Assert.AreEqual(app.Features.Version, accessManager.UserReview.AppVersion);
-        Assert.IsTrue(accessManager.UserReview.Time >= beforeSetRateTime);
+        Assert.IsGreaterThanOrEqualTo(beforeSetRateTime, accessManager.UserReview.Time);
     }
 }

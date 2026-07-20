@@ -72,6 +72,13 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // Low-memory clients (e.g. iOS Network Extension under the ~50 MB jetsam limit) can lower these.
     public TransferBufferSize? PacketChannelBufferSize { get; set; }
     public TransferBufferSize? UdpProxyBufferSize { get; set; }
+
+    // Optional per-platform UDP proxy scaling. Leave null to use the core defaults (500 clients /
+    // 200-packet queues). Low-memory clients cap the direct-UDP socket fleet and per-proxy packet
+    // queue so a post-kill reconnect flow-storm stays bounded.
+    public int? MaxUdpClientCount { get; set; }
+    public int? MaxUdpDnsClientCount { get; set; }
+    public int? UdpProxyQueueCapacity { get; set; }
     public TransferBufferSize? StreamProxyBufferSize { get; set; }
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
 }

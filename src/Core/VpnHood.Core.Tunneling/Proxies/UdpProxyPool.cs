@@ -27,10 +27,16 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
     private readonly TimeoutDictionary<ConnectionKey, TimeoutItem<(UdpProxy Proxy, TimeoutItem<IPEndPoint> Mapping)>>
         _connectionMap;
     private readonly List<UdpProxy> _udpProxies = [];
+    // DNS workers are segregated from general UDP workers: DNS is one round trip, so its workers use a
+    // small receive buffer and a short mapping life — neither must ever serve (or block) general flows.
+    // Both lists are guarded by lock (_udpProxies)
+    private readonly List<UdpProxy> _dnsProxies = [];
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly TimeSpan _udpTimeout;
+    private readonly TimeSpan _dnsTimeout = TunnelDefaults.UdpDnsTimeout;
     private readonly int _maxClientCount;
+    private readonly int _maxDnsClientCount;
     private readonly int _packetQueueCapacity;
     private readonly bool _autoDisposeSentPackets;
     private readonly Job _cleanupUdpWorkersJob;
@@ -39,7 +45,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
 
     public int ClientCount {
         get {
-            lock (_udpProxies) return _udpProxies.Count;
+            lock (_udpProxies) return _udpProxies.Count + _dnsProxies.Count;
         }
     }
 
@@ -51,13 +57,16 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         _packetQueueCapacity = options.PacketQueueCapacity;
         _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(options.UdpTimeout);
         _maxClientCount = options.MaxClientCount;
+        _maxDnsClientCount = options.MaxDnsClientCount;
         _bufferSize = options.BufferSize;
         _maxWorkerEventReporter = new EventReporter("Session has reached to Maximum local UDP ports.",
             GeneralEventId.NetProtect, logScope: options.LogScope);
 
         _connectionMap = new TimeoutDictionary<ConnectionKey, TimeoutItem<(UdpProxy, TimeoutItem<IPEndPoint>)>>(options.UdpTimeout);
         _udpTimeout = options.UdpTimeout;
-        _cleanupUdpWorkersJob = new Job(CleanupUdpWorkers, options.UdpTimeout, nameof(UdpProxyPool));
+        // short-lived DNS workers must not linger until the general timeout fires
+        var cleanupInterval = _dnsTimeout < _udpTimeout ? _dnsTimeout : _udpTimeout;
+        _cleanupUdpWorkersJob = new Job(CleanupUdpWorkers, cleanupInterval, nameof(UdpProxyPool));
     }
 
     protected override void SendPacket(IpPacket ipPacket)
@@ -129,12 +138,19 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         if (isNewRemoteEndPoint)
             _packetProxyCallbacks?.OnConnectionRequested(IpProtocol.Udp, destinationEndPoint.ToValue());
 
+        // DNS workers live in their own list with their own quota, so a DNS burst can neither occupy
+        // general workers nor be starved by them, and a general flow can never land on a small-buffer
+        // short-lived DNS worker
+        var isDns = udpPacket.DestinationPort == 53;
+        var proxies = isDns ? _dnsProxies : _udpProxies;
+        var proxyTimeout = isDns ? _dnsTimeout : _udpTimeout;
+
         // cleanup old workers
-        TimeoutItemUtil.CleanupTimeoutList(_udpProxies, _udpTimeout);
+        TimeoutItemUtil.CleanupTimeoutList(proxies, proxyTimeout);
 
         // find a worker that does not map the destinationEndPoint yet
         UdpProxy? udpProxy = null;
-        foreach (var proxy in _udpProxies) {
+        foreach (var proxy in proxies) {
             if (!proxy.IsDisposed && proxy.AddressFamily == addressFamily &&
                 !proxy.DestinationEndPointMap.TryGetValue(destinationEndPoint, out _)) {
                 udpProxy = proxy;
@@ -144,23 +160,31 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
 
         // create a new worker if not found
         if (udpProxy == null) {
-            // check WorkerMaxCount
-            if (_udpProxies.Count >= _maxClientCount) {
+            // check WorkerMaxCount; DNS and general workers have independent quotas
+            // (MaxDnsClientCount / MaxClientCount), so neither class can starve the other
+            var maxCount = isDns ? _maxDnsClientCount : _maxClientCount;
+            if (proxies.Count >= maxCount) {
                 _maxWorkerEventReporter.Raise();
-                throw new UdpClientQuotaException(_udpProxies.Count);
+                throw new UdpClientQuotaException(proxies.Count);
             }
 
             // create a new worker
-            udpProxy = new UdpProxy(CreateUdpClient(addressFamily), _udpTimeout, _packetQueueCapacity,
-                _autoDisposeSentPackets);
+            udpProxy = new UdpProxy(CreateUdpSocket(addressFamily), proxyTimeout, _packetQueueCapacity,
+                _autoDisposeSentPackets,
+                isDns ? TunnelDefaults.UdpDnsBufferSize : TunnelDefaults.MaxUdpDatagramSize);
             udpProxy.PacketReceived += UdpProxy_OnPacketReceived;
-            if (VhLogger.MinLogLevel <= LogLevel.Trace)
-                VhLogger.Instance.LogTrace(GeneralEventId.Udp,
-                    "Created a new UdpProxy. WorkerCount: {WorkerCount}, {SourceEp} => {DestinationEp}",
-                    _udpProxies.Count, VhLogger.Format(sourceEndPoint), VhLogger.Format(destinationEndPoint));
-
-            _udpProxies.Add(udpProxy);
+            proxies.Add(udpProxy);
             isNewLocalEndPoint = true;
+
+            // no event id on purpose: named event ids are dropped by the LogService event filter unless
+            // explicitly enabled, and this line must reach Console.app during live diagnostics
+            if (VhLogger.MinLogLevel <= LogLevel.Debug)
+                VhLogger.Instance.LogDebug(
+                    "[VH-UDP] Created UdpProxy. pool={Pool}, workers={WorkerCount}/{MaxWorkers}, footprint={Footprint:F1}MB, " +
+                    "dstPort={DstPort}, {SourceEp} => {DestinationEp}",
+                    isDns ? "dns" : "udp", proxies.Count, isDns ? _maxDnsClientCount : _maxClientCount,
+                    VpnHood.Core.Toolkit.Memory.VhMemory.Instance.GetInfo().ProcessFootprintMb ?? -1,
+                    destinationEndPoint.Port, VhLogger.Format(sourceEndPoint), VhLogger.Format(destinationEndPoint));
         }
 
         // Add destinationEndPoint; a UdpProxy can not map a destinationEndPoint to more than one source endpoint.
@@ -189,27 +213,31 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         OnPacketReceived(ipPacket);
     }
 
-    private UdpClient CreateUdpClient(AddressFamily addressFamily)
+    private Socket CreateUdpSocket(AddressFamily addressFamily)
     {
-        var udpClient = _socketFactory.CreateUdpClient(addressFamily);
-        if (_bufferSize?.Send > 0) udpClient.Client.SendBufferSize = _bufferSize.Value.Send;
-        if (_bufferSize?.Receive > 0) udpClient.Client.ReceiveBufferSize = _bufferSize.Value.Receive;
-        return udpClient;
+        var socket = _socketFactory.CreateUdpSocket(addressFamily);
+        if (_bufferSize?.Send > 0) socket.SendBufferSize = _bufferSize.Value.Send;
+        if (_bufferSize?.Receive > 0) socket.ReceiveBufferSize = _bufferSize.Value.Receive;
+        return socket;
     }
 
     private ValueTask CleanupUdpWorkers(CancellationToken cancellationToken)
     {
         // remove useless workers
-        lock (_udpProxies)
+        lock (_udpProxies) {
             TimeoutItemUtil.CleanupTimeoutList(_udpProxies, _udpTimeout);
+            TimeoutItemUtil.CleanupTimeoutList(_dnsProxies, _dnsTimeout);
+        }
 
         return default;
     }
 
     protected override void DisposeManaged()
     {
-        lock (_udpProxies)
+        lock (_udpProxies) {
             VhUtils.DisposeAll(_udpProxies);
+            VhUtils.DisposeAll(_dnsProxies);
+        }
 
         _cleanupUdpWorkersJob.Dispose();
         _connectionMap.Dispose();

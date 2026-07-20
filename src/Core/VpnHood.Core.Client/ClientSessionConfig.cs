@@ -12,6 +12,9 @@ public class ClientSessionConfig
     public required ReadOnlyMemory<byte> SessionKey { get; init; }
     public required TimeSpan TcpConnectTimeout { get; init; }
     public required TransferBufferSize? UdpProxyBufferSize { get; init; }
+    public required int MaxUdpClientCount { get; init; }
+    public required int MaxUdpDnsClientCount { get; init; }
+    public required int UdpProxyQueueCapacity { get; init; }
     public required TransferBufferSize StreamProxyBufferSize { get; init; }
     public required TransferBufferSize? TcpKernelBufferSize { get; init; }
     public required TransferBufferSize? PacketChannelBufferSize { get; init; }

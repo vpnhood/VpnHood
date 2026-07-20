@@ -31,6 +31,9 @@ public class VpnHoodClientConfig
     public required TransferBufferSize StreamProxyBufferSize { get; init; }
     public required TransferBufferSize? TcpKernelBufferSize { get; init; }
     public required TransferBufferSize? UdpProxyBufferSize { get; init; }
+    public required int MaxUdpClientCount { get; init; }
+    public required int MaxUdpDnsClientCount { get; init; }
+    public required int UdpProxyQueueCapacity { get; init; }
     public required TransferBufferSize? PacketChannelBufferSize { get; init; }
     public required string ClientId { get; init; }
     public required bool IncludeLocalNetwork { get; init; }

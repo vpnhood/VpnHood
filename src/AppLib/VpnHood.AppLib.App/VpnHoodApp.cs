@@ -61,6 +61,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly TransferBufferSize? _packetChannelBufferSize;
     private readonly TransferBufferSize? _udpProxyBufferSize;
     private readonly TransferBufferSize? _streamProxyBufferSize;
+    private readonly int? _maxUdpClientCount;
+    private readonly int? _maxUdpDnsClientCount;
+    private readonly int? _udpProxyQueueCapacity;
     private readonly TransferBufferSize? _tcpKernelBufferSize;
     private readonly LogService _logService;
     private readonly LogServiceOptions _logServiceOptions;
@@ -116,6 +119,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _packetChannelBufferSize = options.PacketChannelBufferSize;
         _udpProxyBufferSize = options.UdpProxyBufferSize;
         _streamProxyBufferSize = options.StreamProxyBufferSize;
+        _maxUdpClientCount = options.MaxUdpClientCount;
+        _maxUdpDnsClientCount = options.MaxUdpDnsClientCount;
+        _udpProxyQueueCapacity = options.UdpProxyQueueCapacity;
         _tcpKernelBufferSize = options.TcpKernelBufferSize;
         _autoDiagnose = options.AutoDiagnose;
         _serverQueryTimeout = options.ServerQueryTimeout;
@@ -790,6 +796,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 PacketChannelBufferSize = _packetChannelBufferSize,
                 UdpProxyBufferSize = _udpProxyBufferSize,
                 StreamProxyBufferSize = _streamProxyBufferSize,
+                MaxUdpClientCount = _maxUdpClientCount,
+                MaxUdpDnsClientCount = _maxUdpDnsClientCount,
+                UdpProxyQueueCapacity = _udpProxyQueueCapacity,
                 TcpKernelBufferSize = _tcpKernelBufferSize,
                 ConnectTimeout = _tcpTimeout,
                 ServerQueryTimeout = _serverQueryTimeout,

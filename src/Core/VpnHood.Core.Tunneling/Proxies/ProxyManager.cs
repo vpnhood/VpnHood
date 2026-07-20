@@ -52,6 +52,7 @@ public class ProxyManager : PassthroughPacketTransport
             SocketFactory = socketFactory,
             UdpTimeout = options.UdpTimeout,
             MaxClientCount = options.MaxUdpClientCount,
+            MaxDnsClientCount = options.MaxUdpDnsClientCount,
             LogScope = options.LogScope,
             PacketQueueCapacity = options.PacketQueueCapacity,
             BufferSize = options.UdpBufferSize,

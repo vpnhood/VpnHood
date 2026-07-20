@@ -88,6 +88,15 @@ public class AppDelegate : UIApplicationDelegate
             // throughput impact below ~200 Mbps.
             PacketChannelBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
             UdpProxyBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
+            // A post-kill reconnect opens one direct UdpClient per excluded UDP flow (exclude-country
+            // sends carrier DNS + in-country UDP outside the tunnel): the 2026-07-17 capture died in
+            // ~20 s at 222 proxies × 200-packet queues, all managed memory. The desktop-scale defaults
+            // (500 × 200) never engage before jetsam; bound the fleet and the per-proxy queue instead.
+            MaxUdpClientCount = 50,
+            // DNS workers are segregated, tiny (4 KB) and recycle every UdpDnsTimeout (10 s), so this
+            // bounds a DNS storm without letting it starve the general pool above
+            MaxUdpDnsClientCount = 100,
+            UdpProxyQueueCapacity = 16,
             // UPLOAD/DOWNLOAD SPEED: the proxy copy pump is a serial read→write→flush loop, so per-flow
             // throughput ≈ StreamProxyBufferSize / RTT. 2 KB capped it at ~2 Mbps. 32 KB lifts that ~16×.
             // (Memory is per-ACTIVE-flow: 2 buffers × 32 KB; the many-idle-flows case is bounded separately.)

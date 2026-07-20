@@ -18,6 +18,11 @@ public class SystemSocketFactory : ISocketFactory
         return udpClient;
     }
 
+    public virtual Socket CreateUdpSocket(AddressFamily addressFamily)
+    {
+        return new Socket(addressFamily, SocketType.Dgram, ProtocolType.Udp);
+    }
+
     public virtual bool IsQuicSupported => false;
      
     public virtual IQuicClient CreateQuicClient() =>

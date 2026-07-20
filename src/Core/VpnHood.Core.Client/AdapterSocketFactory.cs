@@ -22,6 +22,13 @@ public class AdapterSocketFactory(ISocketFactory socketFactory, IVpnAdapter vpnA
         return udpClient;
     }
 
+    public Socket CreateUdpSocket(AddressFamily addressFamily)
+    {
+        var socket = socketFactory.CreateUdpSocket(addressFamily);
+        vpnAdapter.ProtectSocket(socket);
+        return socket;
+    }
+
     public bool IsQuicSupported => socketFactory.IsQuicSupported;
     public IQuicClient CreateQuicClient() => socketFactory.CreateQuicClient();
 }

@@ -47,6 +47,11 @@ public class ConfiguringSocketFactory(ISocketFactory inner) : ISocketFactory
         return inner.CreateUdpClient(addressFamily);
     }
 
+    public Socket CreateUdpSocket(AddressFamily addressFamily)
+    {
+        return inner.CreateUdpSocket(addressFamily);
+    }
+
     public bool IsQuicSupported => inner.IsQuicSupported;
     public IQuicClient CreateQuicClient() => inner.CreateQuicClient();
 }

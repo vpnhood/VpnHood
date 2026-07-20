@@ -8,6 +8,8 @@ public class ProxyManagerOptions
     public required TimeSpan UdpTimeout { get; init; }
     public required TimeSpan IcmpTimeout { get; init; }
     public required int MaxUdpClientCount { get; init; }
+    // defaulted (not required) so existing callers keep the core default
+    public int MaxUdpDnsClientCount { get; init; } = TunnelDefaults.MaxUdpDnsClientCount;
     public required int MaxPingClientCount { get; init; }
     public required int PacketQueueCapacity { get; init; }
     public required TransferBufferSize? UdpBufferSize { get; init; }

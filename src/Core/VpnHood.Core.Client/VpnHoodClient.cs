@@ -94,6 +94,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             StreamProxyBufferSize = options.StreamProxyBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize,
             TcpKernelBufferSize = options.TcpKernelBufferSize,
             UdpProxyBufferSize = options.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
+            MaxUdpClientCount = options.MaxUdpClientCount ?? TunnelDefaults.MaxUdpClientCount,
+            MaxUdpDnsClientCount = options.MaxUdpDnsClientCount ?? TunnelDefaults.MaxUdpDnsClientCount,
+            UdpProxyQueueCapacity = options.UdpProxyQueueCapacity ?? TunnelDefaults.ProxyPacketQueueCapacity,
             PacketChannelBufferSize = options.PacketChannelBufferSize,
             UseWebSocket = options.DebugData1?.Contains("/disable-WebSocket", StringComparison.OrdinalIgnoreCase) is null or false
         };

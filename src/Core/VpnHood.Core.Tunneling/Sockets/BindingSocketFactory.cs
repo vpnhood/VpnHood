@@ -41,6 +41,19 @@ public class BindingSocketFactory(ISocketFactory socketFactory) : ISocketFactory
         return client;
     }
 
+    public Socket CreateUdpSocket(AddressFamily addressFamily)
+    {
+        var socket = socketFactory.CreateUdpSocket(addressFamily);
+        if (socket.IsBound)
+            return socket;
+
+        // If the inner factory already bound the socket,
+        // leave it as is. Otherwise, bind to an ephemeral port on all interfaces
+        var localEndPoint = new IPEndPoint(addressFamily.IsV4() ? IPAddress.Any : IPAddress.IPv6Any, 0);
+        socket.Bind(localEndPoint);
+        return socket;
+    }
+
     public bool IsQuicSupported => socketFactory.IsQuicSupported;
     public IQuicClient CreateQuicClient() => socketFactory.CreateQuicClient();
 }

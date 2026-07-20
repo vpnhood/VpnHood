@@ -85,6 +85,7 @@ public class ClientProfileTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // mutates the process-global AppRegionInfo
     public async Task ClientPolicy()
     {
         using var accessManager = TestHelper.CreateAccessManager();
@@ -528,6 +529,7 @@ public class ClientProfileTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // mutates the process-global AppRegionInfo
     public async Task ClientPolicy_PurchaseUrl()
     {
         using var accessManager = TestHelper.CreateAccessManager();

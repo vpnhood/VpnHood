@@ -41,6 +41,7 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task flexible_ad_should_close_session_if_display_ad_failed()
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper, adProviderAdType: AppAdType.InterstitialAd);
@@ -56,6 +57,7 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // clears the process-global AppUiContext; parallel tests restore it
     public async Task flexible_ad_should_not_be_displayed_on_trial()
     {
         // create server
@@ -76,6 +78,7 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // clears the process-global AppUiContext; parallel tests restore it
     public async Task Session_must_be_closed_after_few_minutes_if_ad_is_not_accepted()
     {
         // create server
@@ -104,6 +107,7 @@ public class AdTest : TestAppBase
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task RewardedAd_expiration_must_be_increased_by_plan_id(bool acceptAd)
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
@@ -127,6 +131,7 @@ public class AdTest : TestAppBase
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task NormalByRewardedAd_must_require_rewarded_ad(bool acceptAd)
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
@@ -256,6 +261,7 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task SplitAll_must_on_while_playing_ad_ex()
     {
         using var accessManager = TestAppHelper.CreateAccessManager();
@@ -307,6 +313,7 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Adblocker_exception()
     {
         // create client app

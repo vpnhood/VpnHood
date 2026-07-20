@@ -5,6 +5,7 @@ using VpnHood.Core.Toolkit.Utils;
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
+[DoNotParallelize] // timing-sensitive version checks; CPU contention shifts delays and stalls connects
 public class CheckNewVersionTest : TestAppBase
 {
     private void SetNewRelease(Version version, DateTime releaseDate, TimeSpan? notificationDelay = null,

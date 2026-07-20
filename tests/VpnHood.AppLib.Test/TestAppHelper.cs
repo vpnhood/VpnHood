@@ -20,6 +20,7 @@ public class TestAppHelper : TestHelper
     public AppOptions CreateAppOptions()
     {
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
+            IsSingleton = false, // tests run many concurrent apps in one process
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             DeviceUiProvider = new TestDeviceUiProvider(),
@@ -55,9 +56,8 @@ public class TestAppHelper : TestHelper
         appOptions ??= CreateAppOptions();
         device ??= new TestDevice(this, _ => new TestNullVpnAdapter());
 
-        //create app
-        VpnHoodApp.Init(device, appOptions);
-        var clientApp = VpnHoodApp.Instance;
+        //create app; not registered as the singleton, so keep the returned instance
+        var clientApp = VpnHoodApp.Init(device, appOptions);
         clientApp.Diagnoser.HttpTimeout = TimeSpan.FromSeconds(2);
         clientApp.Diagnoser.NsTimeout = TimeSpan.FromSeconds(2);
         clientApp.UserSettings.UseSplitIpViaDevice = true;

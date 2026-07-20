@@ -76,6 +76,7 @@ public class ClientAppTest : TestAppBase
 
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task State_Waiting()
     {
         // create Access Manager and token
@@ -135,6 +136,7 @@ public class ClientAppTest : TestAppBase
 
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Connected_Disconnected_success()
     {
         // create server
@@ -353,6 +355,7 @@ public class ClientAppTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task User_review_flow()
     {
         // create manager

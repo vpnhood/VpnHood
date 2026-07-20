@@ -26,6 +26,10 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
 
     public string AppId => appId;
     public bool IsDebugMode => isDebugMode;
+
+    // Tests run many concurrent apps in one process, so they opt out of the singleton
+    // registration; production keeps the single-instance guarantee and VpnHoodApp.Instance.
+    internal bool IsSingleton { get; set; } = true;
     public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);
     public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
     public AppUpdaterOptions? UpdaterOptions { get; set; }

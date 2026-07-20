@@ -103,6 +103,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppAdManager AdManager { get; }
 
     private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options)
+        : base(register: options.IsSingletonMode)
     {
         var appVersion = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version();
         Resources = options.Resources;
@@ -564,7 +565,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Task.Run(() => ConnectionStateChanged?.Invoke(this, EventArgs.Empty));
     }
 
-    public static void Init(IDevice device, AppOptions options)
+    public static VpnHoodApp Init(IDevice device, AppOptions options)
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
         var settingsService =
@@ -574,8 +575,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),
             deleteOldReport: false);
 
-        // initialize the singleton instance
-        _ = new VpnHoodApp(device, settingsService, logService, options);
+        // registers as the singleton instance unless options opt out (tests run many concurrent apps)
+        return new VpnHoodApp(device, settingsService, logService, options);
     }
 
     public void ClearLastError()

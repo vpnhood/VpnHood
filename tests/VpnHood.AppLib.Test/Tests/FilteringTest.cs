@@ -7,6 +7,7 @@ using VpnHood.Test;
 namespace VpnHood.AppLib.Test.Tests;
 
 [TestClass]
+[DoNotParallelize] // uses the machine-wide WinDivert adapter
 public class FilteringTest : TestAppBase
 {
     [TestMethod]

@@ -76,15 +76,15 @@ internal class ClientServerDom : IAsyncDisposable
             var testSocketFactory = testHelper.CreateTestSocketFactory(clientVpnAdapter);
 
             // Create Server
-            var serverEp = VhUtils.GetFreeTcpEndPoint(IPAddress.IPv6Loopback);
+            var serverEp = TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.IPv6Loopback);
             var fileAccessManagerOptions = testHelper.CreateFileAccessManagerOptions();
             fileAccessManagerOptions.TcpEndPoints = [serverEp];
             fileAccessManagerOptions.PublicEndPoints = [serverEp];
-            fileAccessManagerOptions.UdpEndPoints = [VhUtils.GetFreeUdpEndPoint(IPAddress.IPv6Loopback)];
+            fileAccessManagerOptions.UdpEndPoints = [TestWebServerLocalEps.AllocateFreeUdpEndPoint(IPAddress.IPv6Loopback)];
             if (QuicListener.IsSupported && QuicConnection.IsSupported)
                 fileAccessManagerOptions.QuicEndPoints = [
-                    VhUtils.GetFreeUdpEndPoint(IPAddress.Any),
-                    VhUtils.GetFreeUdpEndPoint(IPAddress.IPv6Any)
+                    TestWebServerLocalEps.AllocateFreeUdpEndPoint(IPAddress.Any),
+                    TestWebServerLocalEps.AllocateFreeUdpEndPoint(IPAddress.IPv6Any)
                 ];
 
             accessManager = testHelper.CreateAccessManager(fileAccessManagerOptions);

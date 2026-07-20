@@ -28,7 +28,7 @@ public class TestHttpAccessManagerServer : IDisposable
     }
 
     public IAccessManager BaseAccessManager { get; }
-    public Uri BaseUri { get; } = new($"http://{VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback)}");
+    public Uri BaseUri { get; } = new($"http://{TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback)}");
     public HttpStatusCode? HttpExceptionStatusCode { get; set; }
 
     private WebserverLite CreateServer(Uri url)

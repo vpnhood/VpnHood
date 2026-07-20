@@ -223,12 +223,12 @@ public class ClientAppTest : TestAppBase
     [TestMethod]
     public async Task update_server_token_from_server_token_url()
     {
-        // create update webserver  
-        var endPoint1 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
-        var endPoint2 = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
+        // create update webserver
+        var endPoint1 = TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback);
+        var endPoint2 = TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback);
 
         // create server1
-        var tcpEndPoint = VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback);
+        var tcpEndPoint = TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback);
         var fileAccessManagerOptions1 = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions1.TcpEndPoints = [tcpEndPoint];
         fileAccessManagerOptions1.ServerTokenUrls = [$"http://{endPoint1}/accesskey", $"http://{endPoint2}/accesskey"];
@@ -240,7 +240,7 @@ public class ClientAppTest : TestAppBase
 
         // create server 2
         await Task.Delay(1100); // wait for new CreatedTime
-        fileAccessManagerOptions1.TcpEndPoints = [VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback, tcpEndPoint.Port + 1)];
+        fileAccessManagerOptions1.TcpEndPoints = [TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback)];
         var accessManager2 = TestHelper.CreateAccessManager(storagePath: accessManager1.StoragePath,
             options: fileAccessManagerOptions1);
         await using var server2 = await TestHelper.CreateServer(accessManager2);

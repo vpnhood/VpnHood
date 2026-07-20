@@ -103,7 +103,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppAdManager AdManager { get; }
 
     private VpnHoodApp(IDevice device, AppSettingsService settingsService, LogService logService, AppOptions options)
-        : base(register: options.IsSingletonMode)
+        : base(register: options.IsSingleton)
     {
         var appVersion = typeof(VpnHoodApp).Assembly.GetName().Version ?? new Version();
         Resources = options.Resources;

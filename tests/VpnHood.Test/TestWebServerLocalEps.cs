@@ -42,8 +42,10 @@ public class TestWebServerLocalEps(TestIps testIps)
     public Uri QuicUrl2 => new($"https://{QuicEndPoint2}/file2");
 
     // machine-wide counters so parallel test hosts never allocate the same port; the free check
-    // alone is not enough because ports are bound after allocation, not at allocation time
-    private static IPEndPoint AllocateFreeTcpEndPoint(IPAddress address)
+    // alone is not enough because ports are bound after allocation, not at allocation time.
+    // Counter ports also stay below the OS ephemeral range, so outgoing connections can never
+    // steal an allocated-but-not-yet-bound port.
+    public static IPEndPoint AllocateFreeTcpEndPoint(IPAddress address)
     {
         while (true) {
             var port = CrossProcessCounter.Next("TcpPort", first: 15000, last: 45000);
@@ -52,7 +54,7 @@ public class TestWebServerLocalEps(TestIps testIps)
         }
     }
 
-    private static IPEndPoint AllocateFreeUdpEndPoint(IPAddress address)
+    public static IPEndPoint AllocateFreeUdpEndPoint(IPAddress address)
     {
         while (true) {
             var port = CrossProcessCounter.Next("UdpPort", first: 25000, last: 49000);

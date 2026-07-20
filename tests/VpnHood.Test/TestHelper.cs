@@ -140,8 +140,8 @@ public class TestHelper : IDisposable
         var options = new FileAccessManagerOptions {
             IsUnitTest = true,
             PublicEndPoints = null, // use TcpEndPoints
-            TcpEndPoints = [VhUtils.GetFreeTcpEndPoint(IPAddress.Loopback)],
-            QuicEndPoints = [VhUtils.GetFreeUdpEndPoint(IPAddress.Loopback)],
+            TcpEndPoints = [TestWebServerLocalEps.AllocateFreeTcpEndPoint(IPAddress.Loopback)],
+            QuicEndPoints = [TestWebServerLocalEps.AllocateFreeUdpEndPoint(IPAddress.Loopback)],
             UdpEndPoints = [new IPEndPoint(IPAddress.Loopback, 0)],
             TrackingOptions = new TrackingOptions {
                 TrackClientIp = true,

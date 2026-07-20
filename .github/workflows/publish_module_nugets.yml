@@ -46,6 +46,11 @@ on:
         type: boolean
         required: false
         default: false
+      independent_version:
+        description: "Keep the module on its OWN version line: never adopt the monorepo version, always self-bump. For modules outside the VPN product's release train (standalone tools)."
+        type: boolean
+        required: false
+        default: false
     secrets:
       NUGET_API_KEY:
         required: true
@@ -90,4 +95,5 @@ jobs:
           & "$env:GITHUB_WORKSPACE/vh/pub/lib/Publish-ModuleNugetPackages.ps1" `
             -moduleDir "$env:GITHUB_WORKSPACE/module" `
             -branch "${{ github.ref_name }}" `
-            -prerelease:$("${{ inputs.prerelease }}" -eq "true")
+            -prerelease:$("${{ inputs.prerelease }}" -eq "true") `
+            -independentVersion:$("${{ inputs.independent_version }}" -eq "true")

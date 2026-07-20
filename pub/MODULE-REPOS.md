@@ -41,7 +41,7 @@ Consequences worth internalising:
   That's intended: the family shares a version line.
 - **Major/Minor never self-bump.** Only `Build` increments locally. A module can only reach `9.0.x`
   by adopting it from the monorepo. If a module needs an independent major, this model is the wrong
-  fit — give it a real independent version line instead.
+  fit — give it a real independent version line with `-independentVersion` (see below).
 - The monorepo version is **always read from `develop`**, hardcoded as the script's default
   (`https://raw.githubusercontent.com/vpnhood/VpnHood/develop/pub/PubVersion.json`), deliberately
   independent of the `code_ref` input — so pinning `code_ref` can never silently freeze the version
@@ -50,6 +50,17 @@ Consequences worth internalising:
   (`git push origin HEAD:$branch`).
 - The bump is **committed before packing**, on purpose: a failed pack burns a cheap version number,
   whereas an unrecorded bump would make the next run silently `--skip-duplicate` into a no-op.
+
+### Opting out: independent version lines
+
+A module that is **not part of the VPN product's release train** — a standalone developer tool rather
+than a library the apps consume — should not have its version leap to `8.0.x`. Pass
+`-independentVersion` to the script (or `independent_version: true` to the reusable workflow) and the
+monorepo version is never read: the module always self-bumps its own build number. Everything else is
+unchanged, including "only `Build` self-bumps", so a minor/major there is still a deliberate hand edit
+of `pub/PubVersion.json` and `Directory.Build.props` in the same commit.
+
+Reference implementation: **`VpnHood.Tools.ResourceTranslator`** (its own `1.x` line).
 
 ### Prerelease
 
@@ -95,7 +106,7 @@ this file is missing.
 > **Put `<Version>` in its own leading `PropertyGroup`.** The stamper does a regex replace on the
 > **first** `<Version>` in the file (`.Replace(..., 1)`). If some other `<Version>`-ish element
 > precedes it, the wrong one gets rewritten.
-
+>
 > **Delete every per-csproj `<Version>`.** A csproj-level `<Version>` overrides the props file, so the
 > stamp is silently ignored and the package ships the stale hardcoded number. This is the single most
 > common onboarding mistake.
@@ -137,6 +148,73 @@ is not enough.
 the last run's bump commit) → `git push` → `gh workflow run publish_nugets.yml`. CI still does all the
 real work; this is only ergonomics. Copy `VpnHood.Core.Proxies/_publish.ps1` verbatim.
 
+## Variant: modules whose payload is generated
+
+The checklist above assumes the package content is committed. Some modules generate it at publish
+time — `VpnHood.AppLib.Assets.ClassicSpa` builds its `Resources/spa.zip` from the
+`VpnHood.Client.WebUI` repo on every publish. Those repos **cannot use the reusable workflow**, for
+two independent reasons:
+
+- A job that calls `uses:` cannot run steps before it, so there is no slot to build the payload in.
+- The reusable workflow's checkout is pinned to the triggering SHA, so even building the payload in
+  an earlier job and committing it would not be visible to the pack.
+
+Instead, write the module's own workflow with its own steps and call the **shared script** directly.
+Reproduce these three things from `publish_module_nugets.yml`, then add your payload step before the
+publish step:
+
+```yaml
+- uses: actions/checkout@v5
+  with: { path: module, persist-credentials: true }   # module under module/, never the root
+- uses: actions/checkout@v5                            # the shared scripts only
+  with: { repository: vpnhood/VpnHood, ref: develop, path: vh, sparse-checkout: pub }
+- run: |                                               # bump commits need an identity
+    git -C module config user.name "github-actions[bot]"
+    git -C module config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+```
+
+Then `& vh/pub/lib/Publish-ModuleNugetPackages.ps1 -moduleDir module -branch <branch> [-prerelease]`.
+
+Two rules for the payload step: run it **before** the publish step (the script bumps and commits the
+version before packing, so a payload failure afterwards would burn a version number), and do **not**
+commit what it generates — the script's bump commit only stages `pub/PubVersion.json` and
+`Directory.Build.props`, which is what keeps a large generated artifact out of git history.
+
+Keeping `module/` out of the workspace root matters here too: the packable-project discovery is a
+recursive `*.csproj` glob, so a monorepo checkout at the root would get packed as well.
+
+## Variant: modules publishing with Trusted Publishing
+
+A module can publish with [nuget.org Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
+(OIDC, no long-lived key) instead of the org `NUGET_API_KEY` — but **not through the reusable
+workflow**. The OIDC token's `job_workflow_ref` identifies the workflow that *requests* the token, so
+requesting it from inside `publish_module_nugets.yml` makes nuget.org see `vpnhood/VpnHood` and reject
+the exchange with `401: No matching trust policy`. The `NuGet/login` step has to live in the module
+repo, and a `uses:` job cannot have steps.
+
+So use the same escape hatch as generated-payload modules — own steps, shared script — plus:
+
+```yaml
+permissions:
+  contents: write
+  id-token: write        # OIDC token for the token exchange
+
+# ...after the checkouts and git identity, before the publish step:
+- uses: NuGet/login@v1
+  id: nuget-login
+  with: { user: "${{ secrets.NUGET_USER }}" }   # nuget.org profile name, not an email
+```
+
+then pass the short-lived key into the script as `env: NUGET_API_KEY:
+${{ steps.nuget-login.outputs.NUGET_API_KEY }}` — the script already prefers that env var, so nothing
+in it changes.
+
+The nuget.org policy must match owner, repository, and the module workflow's **file name**; renaming
+that file breaks publishing until the policy is updated. The key is valid one hour and single-use, so
+request it immediately before the publish step.
+
+Reference implementation: **`VpnHood.Tools.ResourceTranslator`**.
+
 ## Requirements and gotchas
 
 - **The repo must live under the `vpnhood` org.** Both the reusable job and the monorepo's own publish
@@ -144,7 +222,8 @@ real work; this is only ergonomics. Copy `VpnHood.Core.Proxies/_publish.ps1` ver
   silently and the run goes green** — it does not fail loudly. A fork that expects packages will get
   none and no error.
 - **`NUGET_API_KEY` must be exposed to the repo** (org-level secret + `secrets: inherit`). Inside the
-  org a missing key is a hard throw, not a warn-and-skip.
+  org a missing key is a hard throw, not a warn-and-skip. Modules on Trusted Publishing supply it as
+  a short-lived key from `NuGet/login` instead — see the variant above.
 - **`@develop` is a mutable pin.** Module repos ride the monorepo's `develop`, so a change there can
   break your publish without warning. That is the accepted trade for internal lockstep. This is
   explicitly **not** part of the forker/skeleton contract — forkers consume published NuGets and never

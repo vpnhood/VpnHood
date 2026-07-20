@@ -10,6 +10,9 @@
 #   2. Monorepo ahead of the module's pub/PubVersion.json -> ADOPT the monorepo version (keeps the
 #      family aligned). Otherwise -> bump the module's own build number (the module ran ahead; the
 #      next monorepo bump leapfrogs it and re-syncs).
+#      -independentVersion opts out of steps 1-2 entirely: the monorepo is never read and the
+#      module always self-bumps, for repos outside the VPN product's release train whose version
+#      should not leap to the monorepo's (e.g. standalone tools).
 #   3. The published version is a stable `X.Y.Z` — the same rule as the monorepo's NuGets
 #      (RELEASE-STRATEGY.md: "NuGet is always a stable Release version"; prerelease lines are an
 #      APP concept). The -prerelease switch below is a MANUAL-ONLY escape hatch; nothing in the
@@ -31,6 +34,11 @@ param(
 	# Monorepo version source. The raw develop URL keeps "always read develop" true no matter where
 	# this runs (publishing needs network anyway); a local file path also works (tests/offline).
 	[string]$vhVersionSource = "https://raw.githubusercontent.com/vpnhood/VpnHood/develop/pub/PubVersion.json",
+	# Opt out of monorepo version alignment: keep the module on its OWN version line and always
+	# self-bump. For modules that are not part of the VPN product's release train (standalone tools
+	# whose version should not jump to the monorepo's), where adopting 8.0.x would be meaningless.
+	# The monorepo version is then never read, so this also makes the run fully offline-safe.
+	[switch]$independentVersion,
 	# Dry run: stamp the local version files and pack, but no commit/push and no nuget push.
 	[switch]$noPush
 );
@@ -45,16 +53,27 @@ if ([string]::IsNullOrWhiteSpace($branch)) { $branch = git -C $moduleDir branch 
 if ([string]::IsNullOrWhiteSpace($branch)) { throw "Publish-ModuleNugetPackages: cannot resolve the branch (detached HEAD?); pass -branch."; }
 
 # Adopt the monorepo develop version when it is ahead; otherwise self-bump the build number.
-$vhVersionJson = if (Test-Path $vhVersionSource) { Get-Content $vhVersionSource | ConvertFrom-Json } else { Invoke-RestMethod $vhVersionSource };
-$vhVersion = [version]$vhVersionJson.Version;
+# With -independentVersion the monorepo is never consulted and the module always self-bumps.
 $versionJson = Get-Content $versionFile | ConvertFrom-Json;
 $moduleVersion = [version]$versionJson.Version;
-$version = if ($vhVersion -gt $moduleVersion) { $vhVersion } else { [version]::new($moduleVersion.Major, $moduleVersion.Minor, $moduleVersion.Build + 1) };
+
+$vhVersion = if ($independentVersion) {
+	$null;
+}
+else {
+	$vhVersionJson = if (Test-Path $vhVersionSource) { Get-Content $vhVersionSource | ConvertFrom-Json } else { Invoke-RestMethod $vhVersionSource };
+	[version]$vhVersionJson.Version;
+}
+
+$adoptMonorepo = $null -ne $vhVersion -and $vhVersion -gt $moduleVersion;
+$version = if ($adoptMonorepo) { $vhVersion } else { [version]::new($moduleVersion.Major, $moduleVersion.Minor, $moduleVersion.Build + 1) };
 $versionJson.Version = $version.ToString(3);
 $versionJson.BumpTime = [datetime]::UtcNow.ToString("o");
 $versionJson | ConvertTo-Json -Depth 10 | Out-File $versionFile;
 
-$reason = if ($vhVersion -gt $moduleVersion) { "adopted monorepo $vhVersion" } else { "self-bump; monorepo develop is $vhVersion" };
+$reason = if ($adoptMonorepo) { "adopted monorepo $vhVersion" }
+	elseif ($independentVersion) { "self-bump; independent version line" }
+	else { "self-bump; monorepo develop is $vhVersion" };
 Write-Host "Module version: $moduleVersion -> $($version.ToString(3)) ($reason)" -ForegroundColor Blue;
 
 # Mirror into the module's root Directory.Build.props — the single <Version> its projects inherit

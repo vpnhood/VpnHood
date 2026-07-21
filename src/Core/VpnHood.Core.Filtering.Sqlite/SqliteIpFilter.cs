@@ -1,8 +1,8 @@
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Data.Sqlite;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Filtering.Sqlite;
@@ -15,9 +15,11 @@ namespace VpnHood.Core.Filtering.Sqlite;
 //   exclude set: member ⇒ Exclude (bypass the tunnel)
 //   include set: non-empty and NOT a member ⇒ Exclude (chained include gates compose as intersection)
 // The db is immutable at runtime (built once, opened read-only): which sets are populated is probed once
-// at construction, so absent concerns cost nothing on the hot path. Each thread gets its own read-only
-// connection with lazily prepared point queries; CachedIpFilter shields this from all but the first packet
-// to a new endpoint.
+// at construction, so absent concerns cost nothing on the hot path. All threads share ONE read-only
+// connection with lazily prepared point queries, serialized by a lock: lookups are microsecond index
+// seeks and CachedIpFilter shields this from all but the first packet to a new endpoint, so contention is
+// negligible — while a reader-per-thread design pins one native SQLite connection (fd + page cache) per
+// pool thread for the whole session, which on iOS grew without bound as the ThreadPool churned workers.
 public sealed class SqliteIpFilter : IIpFilter
 {
     private readonly IIpFilter? _next;
@@ -25,8 +27,9 @@ public sealed class SqliteIpFilter : IIpFilter
     private readonly bool _hasIncludes;
     private readonly bool _hasExcludes;
     private readonly bool _hasBlocks;
-    private readonly ThreadLocal<Reader> _reader;
-    private readonly ConcurrentBag<Reader> _allReaders = [];
+    private readonly string _connectionString;
+    private readonly Lock _readerLock = new();
+    private Reader? _sharedReader;
     private volatile bool _disposed;
 
     public SqliteIpFilter(IIpFilter? next, string dbPath, bool autoDisposeNextFilter = true)
@@ -34,7 +37,7 @@ public sealed class SqliteIpFilter : IIpFilter
         SplitSqlite.EnsureInitialized();
         _next = next;
         _autoDisposeNextFilter = autoDisposeNextFilter;
-        var connectionString = new SqliteConnectionStringBuilder {
+        _connectionString = new SqliteConnectionStringBuilder {
             DataSource = dbPath,
             Mode = SqliteOpenMode.ReadOnly,
             Cache = SqliteCacheMode.Private,
@@ -42,17 +45,11 @@ public sealed class SqliteIpFilter : IIpFilter
         }.ToString();
 
         // a set is one logical list spanning both families (only-v4 includes still constrain v6 addresses)
-        using var connection = new SqliteConnection(connectionString);
+        using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         _hasIncludes = HasRows(connection, FilterAction.Include);
         _hasExcludes = HasRows(connection, FilterAction.Exclude);
         _hasBlocks = HasRows(connection, FilterAction.Block);
-
-        _reader = new ThreadLocal<Reader>(() => {
-            var reader = new Reader(connectionString);
-            _allReaders.Add(reader);
-            return reader;
-        });
     }
 
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
@@ -79,26 +76,40 @@ public sealed class SqliteIpFilter : IIpFilter
 
     private bool Contains(FilterAction action, IPAddress address)
     {
-        var reader = _reader.Value!;
-        if (address.AddressFamily == AddressFamily.InterNetwork) {
-            Span<byte> bytes = stackalloc byte[4];
-            address.TryWriteBytes(bytes, out _);
-            var key = SplitIpDb.ToV4Key(bytes);
-            var command = reader.GetCommand(action, isV4: true);
-            command.Parameters[0].Value = key;
-            using var row = command.ExecuteReader();
-            return row.Read() && row.GetInt64(0) >= key; // start_ip <= key already; check end_ip
-        }
-        else {
-            var bytes = address.GetAddressBytes(); // 16-byte big-endian
-            var command = reader.GetCommand(action, isV4: false);
-            command.Parameters[0].Value = bytes;
-            using var row = command.ExecuteReader();
-            if (!row.Read())
+        lock (_readerLock) {
+            // teardown race: a lookup that loses the race to Dispose answers "not a member" instead of
+            // resurrecting a connection that nobody would ever close
+            if (_disposed)
                 return false;
-            var end = (byte[])row.GetValue(0);
-            return end.AsSpan().SequenceCompareTo(bytes) >= 0; // memcmp: end_ip >= addr
+
+            var reader = _sharedReader ??= CreateReader();
+            if (address.AddressFamily == AddressFamily.InterNetwork) {
+                Span<byte> bytes = stackalloc byte[4];
+                address.TryWriteBytes(bytes, out _);
+                var key = SplitIpDb.ToV4Key(bytes);
+                var command = reader.GetCommand(action, isV4: true);
+                command.Parameters[0].Value = key;
+                using var row = command.ExecuteReader();
+                return row.Read() && row.GetInt64(0) >= key; // start_ip <= key already; check end_ip
+            }
+            else {
+                var bytes = address.GetAddressBytes(); // 16-byte big-endian
+                var command = reader.GetCommand(action, isV4: false);
+                command.Parameters[0].Value = bytes;
+                using var row = command.ExecuteReader();
+                if (!row.Read())
+                    return false;
+                var end = (byte[])row.GetValue(0);
+                return end.AsSpan().SequenceCompareTo(bytes) >= 0; // memcmp: end_ip >= addr
+            }
         }
+    }
+
+    private Reader CreateReader()
+    {
+        var reader = new Reader(_connectionString);
+        VhTypeTracker.Track(reader, "SqliteIpFilter.Reader");
+        return reader;
     }
 
     private static bool HasRows(SqliteConnection connection, FilterAction action)
@@ -116,14 +127,19 @@ public sealed class SqliteIpFilter : IIpFilter
             return;
         _disposed = true;
 
-        _reader.Dispose();
-        while (_allReaders.TryTake(out var reader))
-            reader.Dispose();
+        lock (_readerLock) {
+            if (_sharedReader != null) {
+                _sharedReader.Dispose();
+                _sharedReader = null;
+                VhTypeTracker.Record("SqliteIpFilter.Reader.disposed");
+            }
+        }
+
         if (_autoDisposeNextFilter)
             _next?.Dispose();
     }
 
-    // Per-thread read-only connection with lazily prepared point-query statements (one per set + family).
+    // The shared read-only connection with lazily prepared point-query statements (one per set + family).
     private sealed class Reader : IDisposable
     {
         private readonly SqliteConnection _connection;

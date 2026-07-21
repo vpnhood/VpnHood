@@ -14,19 +14,7 @@ internal class VpnServiceContext(string configFolder)
     public string LogFilePath => Path.Combine(configFolder, ClientOptions.VpnLogFileName);
     public string ConfigFolder => configFolder;
 
-    public static ConnectionInfo DefaultConnectionInfo { get; } = new() {
-        ProxyConnectorStatus = null,
-        ClientState = ClientState.Initializing,
-        ClientStateProgress = null,
-        ClientStateChangedTime = null,
-        CreatedTime = FastDateTime.UtcNow,
-        Error = null,
-        SessionInfo = null,
-        SessionName = null,
-        SessionStatus = null
-    };
-
-    public ConnectionInfo ConnectionInfo { get; private set; } = DefaultConnectionInfo;
+    public ConnectionInfo ConnectionInfo { get; private set; } = ConnectionInfo.Default;
 
     public VpnServiceOptions? TryReadServiceOptions()
     {

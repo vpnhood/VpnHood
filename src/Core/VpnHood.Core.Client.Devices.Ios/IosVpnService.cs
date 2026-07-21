@@ -2,13 +2,10 @@ using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using ObjCRuntime;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Quic.Ios;
-using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.IosTun;
 
@@ -135,43 +132,9 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // blocking on ProcessMessageAsync with .GetAwaiter().GetResult() (sync-over-async) can
         // deadlock when the continuation needs that same thread. The completion handler then never
         // fires, so every App<->Extension RPC (status refresh, disconnect) times out — which shows up
-        // as a permanent "Connecting" state and broken disconnect/reconnect. Process asynchronously
-        // and invoke the completion handler from the continuation (it is safe from any thread).
-        _ = HandleAppMessageAsync(messageData, completionHandler);
-    }
-
-    private async Task HandleAppMessageAsync(NSData? messageData, Action<NSData>? completionHandler)
-    {
-        NSData responseData;
-        try {
-            if (_vpnServiceHost == null || messageData == null) {
-                responseData = BuildApiErrorResponse(new InvalidOperationException("VpnServiceHost is not ready."));
-            }
-            else {
-                var responseBytes = await _messageListener
-                    .ProcessMessageAsync(messageData.ToArray(), CancellationToken.None)
-                    .Vhc();
-                responseData = NSData.FromArray(responseBytes);
-            }
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not process an app message.");
-            responseData = BuildApiErrorResponse(ex);
-        }
-
-        using (responseData) {
-            try { completionHandler?.Invoke(responseData); } catch { /* ignore */ }
-        }
-    }
-
-    private static NSData BuildApiErrorResponse(Exception ex)
-    {
-        var response = new ApiResponse<object> {
-            ConnectionInfo = VpnServiceHost.DefaultConnectionInfo,
-            ApiError = ex.ToApiError(),
-            Result = null
-        };
-        return NSData.FromArray(StreamUtils.ObjectToJsonBuffer(response).ToArray());
+        // as a permanent "Connecting" state and broken disconnect/reconnect. The listener processes
+        // asynchronously and invokes the completion handler from the continuation.
+        _ = _messageListener.ProcessAppMessage(messageData, completionHandler);
     }
 
     public override void StopTunnel(NEProviderStopReason reason, Action completionHandler)

@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Logging;
+using System.Runtime.InteropServices;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
@@ -36,6 +38,7 @@ public class ProxyChannel : IProxyChannel
         _tunnelStreamConnection = tunnelStreamConnection;
         _tunnelBufferSize = tunnelBufferSize;
         _trafficMeter = trafficMeter;
+        VhTypeTracker.Track(this);
 
         if (_tunnelBufferSize.Receive is < BufferSizeMin or > BufferSizeMax)
             throw new ArgumentOutOfRangeException(
@@ -74,21 +77,25 @@ public class ProxyChannel : IProxyChannel
         if (_started)
             throw new InvalidOperationException("ProxyChannel is already started.");
 
-        _ = StartInternal(_cancellationTokenSource.Token);
+        var startTask = StartInternal(_cancellationTokenSource.Token);
+        VhTypeTracker.Track(startTask, "ProxyChannel.StartTask");
     }
 
     private async Task StartInternal(CancellationToken cancellationToken)
     {
+        VhTypeTracker.Record("ProxyChannel.StartInternal.started");
         try {
             _started = true;
 
             var tunnelReadTask = CopyFromTunnelAsync(
                 _tunnelStreamConnection.Stream, _hostStreamConnection.Stream, _tunnelBufferSize.Receive,
                 cancellationToken, cancellationToken); // tunnel => host
+            VhTypeTracker.Track(tunnelReadTask, "ProxyChannel.ReadPumpTask");
 
             var tunnelWriteTask = CopyToTunnelAsync(
                 _hostStreamConnection.Stream, _tunnelStreamConnection.Stream, _tunnelBufferSize.Send,
                 cancellationToken, cancellationToken); // host => tunnel
+            VhTypeTracker.Track(tunnelWriteTask, "ProxyChannel.WritePumpTask");
 
             var completedTask = await Task.WhenAny(tunnelReadTask, tunnelWriteTask).Vhc();
             _isTunnelReadTaskFinished = completedTask == tunnelReadTask;
@@ -116,6 +123,7 @@ public class ProxyChannel : IProxyChannel
                 ChannelId, IsDisposed);
         }
         finally {
+            VhTypeTracker.Record("ProxyChannel.StartInternal.completed");
             Dispose();
         }
     }
@@ -123,9 +131,12 @@ public class ProxyChannel : IProxyChannel
     private async Task CopyFromTunnelAsync(Stream source, Stream destination, int bufferSize,
         CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
     {
+        VhTypeTracker.Record("ProxyChannel.ReadPump.started");
         try {
-            await CopyToInternalAsync(source, destination, false, bufferSize,
-                sourceCancellationToken, destinationCancellationToken).Vhc();
+            var copyTask = CopyToInternalAsync(source, destination, false, bufferSize,
+                sourceCancellationToken, destinationCancellationToken);
+            VhTypeTracker.Track(copyTask, "ProxyChannel.ReadCopyTask");
+            await copyTask.Vhc();
         }
         catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it
@@ -136,14 +147,20 @@ public class ProxyChannel : IProxyChannel
                 , ChannelId, IsDisposed);
             throw;
         }
+        finally {
+            VhTypeTracker.Record("ProxyChannel.ReadPump.completed");
+        }
     }
 
     private async Task CopyToTunnelAsync(Stream source, Stream destination, int bufferSize,
         CancellationToken sourceCancellationToken, CancellationToken destinationCancellationToken)
     {
+        VhTypeTracker.Record("ProxyChannel.WritePump.started");
         try {
-            await CopyToInternalAsync(source, destination, true, bufferSize,
-                sourceCancellationToken, destinationCancellationToken).Vhc();
+            var copyTask = CopyToInternalAsync(source, destination, true, bufferSize,
+                sourceCancellationToken, destinationCancellationToken);
+            VhTypeTracker.Track(copyTask, "ProxyChannel.WriteCopyTask");
+            await copyTask.Vhc();
         }
         catch (Exception ex) when (IsDisposed && VhLogger.IsSocketCloseException(ex)) {
             // this is normal shutdown for host stream, no need to log it
@@ -157,6 +174,9 @@ public class ProxyChannel : IProxyChannel
             VhLogger.Instance.LogDebug(ex,
                 "ProxyChannel: Error while copying to tunnel. ChannelId: {ChannelId}", ChannelId);
             throw;
+        }
+        finally {
+            VhTypeTracker.Record("ProxyChannel.WritePump.completed");
         }
     }
 
@@ -181,6 +201,9 @@ public class ProxyChannel : IProxyChannel
         // is negligible; Rent may return a larger buffer, so slice to the requested size.
         using var readBufferOwner = System.Buffers.MemoryPool<byte>.Shared.Rent(bufferSize);
         var readBuffer = readBufferOwner.Memory[..bufferSize];
+        VhTypeTracker.Track(readBufferOwner);
+        if (MemoryMarshal.TryGetArray<byte>(readBufferOwner.Memory, out var segment) && segment.Array != null)
+            VhTypeTracker.Track(segment.Array);
         while (!sourceCt.IsCancellationRequested && !destinationCt.IsCancellationRequested) {
             // read from source
             var bytesRead = await source
@@ -258,5 +281,6 @@ public class ProxyChannel : IProxyChannel
         _started = false;
         _hostStreamConnection.Dispose();
         _tunnelStreamConnection.Dispose();
+        VhTypeTracker.Record("ProxyChannel.disposed");
     }
 }

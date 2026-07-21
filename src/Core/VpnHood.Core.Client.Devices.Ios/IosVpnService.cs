@@ -1,3 +1,6 @@
+using CoreFoundation;
+using Microsoft.Extensions.Logging;
+using Network;
 using NetworkExtension;
 using ObjCRuntime;
 using VpnHood.Core.Client.VpnServices.Abstractions;
@@ -18,6 +21,12 @@ namespace VpnHood.Core.Client.Devices.Ios;
 [Register("IosVpnService")]
 public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 {
+    private static long _appMessageStarted;
+    private static long _appMessageCompleted;
+
+    internal static long AppMessageStarted => Interlocked.Read(ref _appMessageStarted);
+    internal static long AppMessageCompleted => Interlocked.Read(ref _appMessageCompleted);
+
     // Created in StartTunnel once the config folder is resolved from ProviderConfiguration.
     private VpnServiceHost? _vpnServiceHost;
 
@@ -29,6 +38,9 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     // (iOS terminates the extension if the completion handler runs before SetTunnelNetworkSettings).
     private Action<NSError>? _startTunnelCompletionHandler;
     private bool _completionFired;
+    private NWPathMonitor? _pathMonitor;
+    private DispatchQueue? _pathMonitorQueue;
+    private string _lastPath = "not-started";
 
     // os_log subsystem for the host LogService's device sink (IosDeviceLoggerProvider). Read from the running
     // bundle's identifier (inside an extension process, MainBundle is the .appex, so this is the extension's
@@ -46,6 +58,9 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     {
         if (Interlocked.Exchange(ref _completionFired, true))
             return;
+        IosMemoryMonitor.AppendLifecycleLog(
+            $"START_TUNNEL completion error={FormatError(error)} path={_lastPath} " +
+            IosMemoryMonitor.GetLifecycleSnapshot());
         var handler = _startTunnelCompletionHandler;
         _startTunnelCompletionHandler = null;
         try { handler?.Invoke(error!); } catch { /* ignore */ }
@@ -96,6 +111,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // live phys_footprint. These are NOT diagnostics — they run regardless of the diagnostics gates.
         IosMemoryGuard.Start();
         IosMemory.Install();
+        IosMemoryMonitor.RegisterCrashLog();
+        StartPathMonitor();
+        IosMemoryMonitor.AppendLifecycleLog(
+            $"START_TUNNEL entered pid={Environment.ProcessId} options={options?.Count ?? 0} " +
+            IosMemoryMonitor.GetLifecycleSnapshot());
 
         // NOTE: the iOS diagnostics gates (IosQuicDiagnostics/IosTunDiagnostics/IosMemoryMonitor.Enabled)
         // are read-only, computed from VhLogger.MinLogLevel — which the host's LogService sets from
@@ -129,9 +149,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
                     withLogger: true, messageListener: _messageListener,
                     deviceLoggerProviderFactory: includeScopes => new IosDeviceLoggerProvider(
                         OsLogSubsystem, includeScopes));
-                _ = _vpnServiceHost.TryConnect(true);
+                IosMemoryMonitor.AppendLifecycleLog("HOST_CREATED connect-started");
+                _ = ObserveConnectAsync(_vpnServiceHost.TryConnect(true));
             }
             catch (Exception ex) {
+                IosMemoryMonitor.AppendLifecycleLog($"HOST_INIT_FAILED exception={ex}");
                 CompleteStartTunnel(new NSError(new NSString("VpnHood"), 1,
                     NSDictionary.FromObjectAndKey((NSString)($"VpnHood init failed: {ex.Message}"), NSError.LocalizedDescriptionKey)));
             }
@@ -146,28 +168,39 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // fires, so every App<->Extension RPC (status refresh, disconnect) times out — which shows up
         // as a permanent "Connecting" state and broken disconnect/reconnect. Process asynchronously
         // and invoke the completion handler from the continuation (it is safe from any thread).
+        Interlocked.Increment(ref _appMessageStarted);
         _ = HandleAppMessageAsync(messageData, completionHandler);
     }
 
     private async Task HandleAppMessageAsync(NSData? messageData, Action<NSData>? completionHandler)
     {
-        NSData responseData;
         try {
-            if (_vpnServiceHost == null || messageData == null) {
-                responseData = BuildApiErrorResponse(new InvalidOperationException("VpnServiceHost is not ready."));
+            NSData responseData;
+            try {
+                if (_vpnServiceHost == null || messageData == null) {
+                    responseData = BuildApiErrorResponse(new InvalidOperationException("VpnServiceHost is not ready."));
+                }
+                else {
+                    var responseBytes = await _messageListener
+                        .ProcessMessageAsync(messageData.ToArray(), CancellationToken.None)
+                        .Vhc();
+                    responseData = NSData.FromArray(responseBytes);
+                }
             }
-            else {
-                var responseBytes = await _messageListener
-                    .ProcessMessageAsync(messageData.ToArray(), CancellationToken.None)
-                    .Vhc();
-                responseData = NSData.FromArray(responseBytes);
+            catch (Exception ex) {
+                IosMemoryMonitor.AppendLifecycleLog(
+                    $"APP_MESSAGE_FAILED exception={ex} path={_lastPath} " +
+                    IosMemoryMonitor.GetLifecycleSnapshot());
+                responseData = BuildApiErrorResponse(ex);
             }
-        }
-        catch (Exception ex) {
-            responseData = BuildApiErrorResponse(ex);
-        }
 
-        try { completionHandler?.Invoke(responseData); } catch { /* ignore */ }
+            using (responseData) {
+                try { completionHandler?.Invoke(responseData); } catch { /* ignore */ }
+            }
+        }
+        finally {
+            Interlocked.Increment(ref _appMessageCompleted);
+        }
     }
 
     private static NSData BuildApiErrorResponse(Exception ex)
@@ -182,8 +215,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
 
     public override void StopTunnel(NEProviderStopReason reason, Action completionHandler)
     {
-        _ = _vpnServiceHost?.TryDisconnect();
-        completionHandler();
+        IosMemoryMonitor.AppendLifecycleLog(
+            $"STOP_TUNNEL entered reason={reason} path={_lastPath} " +
+            IosMemoryMonitor.GetLifecycleSnapshot());
+        VhLogger.Instance.LogWarning("iOS requested StopTunnel. Reason: {Reason}", reason);
+        _ = StopTunnelAsync(completionHandler);
     }
 
     public VpnHoodClientFactory CreateClientFactory()
@@ -191,8 +227,86 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         return new VpnHoodClientFactory();
     }
 
+    private async Task StopTunnelAsync(Action completionHandler)
+    {
+        try {
+            if (_vpnServiceHost != null)
+                await _vpnServiceHost.TryDisconnect().Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not cleanly stop the iOS VPN tunnel.");
+        }
+        finally {
+            StopPathMonitor();
+            IosMemoryMonitor.AppendLifecycleLog(
+                $"STOP_TUNNEL cleanup-complete path={_lastPath} " +
+                IosMemoryMonitor.GetLifecycleSnapshot());
+            try { completionHandler(); } catch { /* ignore */ }
+        }
+    }
+
+    private async Task ObserveConnectAsync(Task<bool> connectTask)
+    {
+        try {
+            var connected = await connectTask.Vhc();
+            IosMemoryMonitor.AppendLifecycleLog(
+                $"CONNECT_COMPLETED connected={connected} tcpProxy={_vpnServiceHost?.IsTcpProxy} path={_lastPath} " +
+                IosMemoryMonitor.GetLifecycleSnapshot());
+        }
+        catch (Exception ex) {
+            IosMemoryMonitor.AppendLifecycleLog(
+                $"CONNECT_FAILED exception={ex} path={_lastPath} " +
+                IosMemoryMonitor.GetLifecycleSnapshot());
+        }
+    }
+
+    private void StartPathMonitor()
+    {
+        try {
+            StopPathMonitor();
+            var monitor = new NWPathMonitor();
+            var queue = new DispatchQueue("com.vpnhood.ios.lifecycle-path-monitor");
+            monitor.SnapshotHandler = path => {
+                var interfaces = new List<string>();
+                path.EnumerateInterfaces(item => {
+                    interfaces.Add($"{item.InterfaceType}:{item.Name}");
+                    return true;
+                });
+                _lastPath = $"status={path.Status},expensive={path.IsExpensive},ipv4={path.HasIPV4}," +
+                            $"ipv6={path.HasIPV6},dns={path.HasDns},interfaces=[{string.Join(',', interfaces)}]";
+                IosMemoryMonitor.AppendLifecycleLog($"PATH_CHANGED {_lastPath}");
+            };
+            monitor.SetMonitorCanceledHandler(() =>
+                IosMemoryMonitor.AppendLifecycleLog("PATH_MONITOR canceled"));
+            monitor.SetQueue(queue);
+            _pathMonitor = monitor;
+            _pathMonitorQueue = queue;
+            monitor.Start();
+        }
+        catch (Exception ex) {
+            IosMemoryMonitor.AppendLifecycleLog($"PATH_MONITOR_FAILED exception={ex}");
+        }
+    }
+
+    private void StopPathMonitor()
+    {
+        var monitor = Interlocked.Exchange(ref _pathMonitor, null);
+        var queue = Interlocked.Exchange(ref _pathMonitorQueue, null);
+        try { monitor?.Cancel(); } catch { /* best-effort */ }
+        try { monitor?.Dispose(); } catch { /* best-effort */ }
+        try { queue?.Dispose(); } catch { /* best-effort */ }
+    }
+
+    private static string FormatError(NSError? error) => error == null
+        ? "none"
+        : $"domain={error.Domain},code={error.Code},description={error.LocalizedDescription}";
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
+        // The effective log level is known here, after the host loaded vpn.config. Start/reset the object
+        // census before creating the adapter and any of its tracked TCP/QUIC objects.
+        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Enabled = IosMemoryMonitor.Enabled;
+
         // Start the memory probe — a no-op unless diagnostics are on (IosMemoryMonitor.Enabled follows
         // VhLogger.MinLogLevel, set by the host's LogService from ClientOptions.LogServiceOptions just
         // before this call). Called per (re)connect so a "/log:debug" reconnect can start it later.

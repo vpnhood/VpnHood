@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Utils;
 
@@ -30,6 +31,7 @@ public sealed class QuicStreamConnection : IStreamConnection
         ConnectionName = connectionName;
         IsServer = isServer;
         ConnectionId = connectionId ?? UniqueIdFactory.Create();
+        VhTypeTracker.Track(this);
     }
 
     public string ConnectionId {
@@ -56,6 +58,7 @@ public sealed class QuicStreamConnection : IStreamConnection
         if (Interlocked.Exchange(ref _disposed, true)) return;
         Connected = false;
         _stream.Dispose();
+        VhTypeTracker.Record("QuicStreamConnection.disposed");
         Disposed?.Invoke(this, EventArgs.Empty);
 
         VhLogger.Instance.LogTrace(GeneralEventId.Stream,
@@ -67,6 +70,7 @@ public sealed class QuicStreamConnection : IStreamConnection
         if (Interlocked.Exchange(ref _disposed, true)) return;
         Connected = false;
         await Stream.DisposeAsync();
+        VhTypeTracker.Record("QuicStreamConnection.disposed");
         Disposed?.Invoke(this, EventArgs.Empty);
 
         VhLogger.Instance.LogTrace(GeneralEventId.Stream,

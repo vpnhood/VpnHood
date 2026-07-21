@@ -1,3 +1,4 @@
+using System;
 using Network;
 
 namespace VpnHood.Core.Quic.Ios;
@@ -5,18 +6,30 @@ namespace VpnHood.Core.Quic.Ios;
 internal sealed class IosQuicStreamWriteOperation
 {
     private int _outstandingDisposed;
+    private IosQuicStream? _owner;
 
     public IosQuicStreamWriteOperation(IosQuicStream owner, int count, CancellationToken cancellationToken)
     {
-        Owner = owner;
+        _owner = owner;
         CancellationToken = cancellationToken;
         Count = count;
-        Callback = error => owner.OnWriteCompleted(this, error);
+        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Track(this);
+        Callback = error => {
+            var liveOwner = _owner;
+            if (liveOwner != null) {
+                VpnHood.Core.Toolkit.Memory.VhTypeTracker.Record("IosQuicStreamWriteOperation.callback");
+                liveOwner.OnWriteCompleted(this, error);
+            }
+            else {
+                VpnHood.Core.Toolkit.Memory.VhTypeTracker.Record("IosQuicStreamWriteOperation.callbackAfterClear");
+                error?.Dispose();
+            }
+        };
         // Diagnostic in-flight-send counter (sendQ=), maintained only when IosQuicDiagnostics.Enabled.
         IosQuicDiagnostics.AddOutstandingSend(Count);
     }
 
-    public IosQuicStream Owner { get; }
+    public IosQuicStream? Owner => _owner;
     public int Count { get; }
     public CancellationToken CancellationToken { get; }
     public ReusableValueTaskSource Source { get; } = new();
@@ -29,5 +42,11 @@ internal sealed class IosQuicStreamWriteOperation
             return;
 
         IosQuicDiagnostics.SubtractOutstandingSend(Count);
+    }
+
+    public void Clear()
+    {
+        _owner = null;
+        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Record("IosQuicStreamWriteOperation.cleared");
     }
 }

@@ -28,6 +28,9 @@ public static class IosTunDiagnostics
     private static long _lastReadTicks;
     private static long _lastWriteTicks;
     private static long _maxTunWriteMs;
+    private static long _readCallbackCount;
+    private static long _readPacketCount;
+    private static long _maxReadBatchSize;
 
     // ---- public state ----------------------------------------------------------------------------
     /// <summary>Read-only master gate: on whenever the effective log level is below Information.</summary>
@@ -41,6 +44,10 @@ public static class IosTunDiagnostics
     public static long LastReadTicks => Volatile.Read(ref _lastReadTicks);
     /// <summary><c>Environment.TickCount64</c> after the last completed TUN write drain (0 = never).</summary>
     public static long LastWriteTicks => Volatile.Read(ref _lastWriteTicks);
+    /// <summary>Cumulative native TUN read callbacks received.</summary>
+    public static long ReadCallbackCount => Interlocked.Read(ref _readCallbackCount);
+    /// <summary>Cumulative packets delivered by native TUN read callbacks.</summary>
+    public static long ReadPacketCount => Interlocked.Read(ref _readPacketCount);
 
     // ---- traffic counters ------------------------------------------------------------------------
     /// <summary>Adds to the inbound (download) byte counter. No-op unless <see cref="Enabled"/>.</summary>
@@ -58,12 +65,23 @@ public static class IosTunDiagnostics
     }
 
     // ---- freeze locator --------------------------------------------------------------------------
-    /// <summary>Stamps the last outbound-read-callback time. No-op unless <see cref="Enabled"/>.</summary>
-    public static void MarkTunReadCallback()
+    /// <summary>Records an outbound native read callback and its batch size.</summary>
+    public static void MarkTunReadCallback(int packetCount)
     {
-        if (Enabled)
-            Volatile.Write(ref _lastReadTicks, Environment.TickCount64);
+        if (!Enabled)
+            return;
+
+        Volatile.Write(ref _lastReadTicks, Environment.TickCount64);
+        Interlocked.Increment(ref _readCallbackCount);
+        Interlocked.Add(ref _readPacketCount, packetCount);
+
+        long previous;
+        while (packetCount > (previous = Volatile.Read(ref _maxReadBatchSize)) &&
+               Interlocked.CompareExchange(ref _maxReadBatchSize, packetCount, previous) != previous) { }
     }
+
+    /// <summary>Largest native read batch since the last call; reading resets it to 0.</summary>
+    public static long TakeMaxReadBatchSize() => Interlocked.Exchange(ref _maxReadBatchSize, 0);
 
     /// <summary>
     /// Returns a start timestamp for bracketing the native write drain, or 0 when disabled so the paired

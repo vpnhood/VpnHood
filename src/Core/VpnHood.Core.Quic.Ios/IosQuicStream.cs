@@ -1,6 +1,5 @@
+using CoreFoundation;
 using Network;
-using System.Buffers;
-using System.Runtime.InteropServices;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -35,12 +34,12 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
 
     private static readonly Action<object?> CancelReadCallback = static state => {
         var op = (IosQuicStreamReadOperation)state!;
-        op.Owner.CancelRead(op);
+        op.Owner?.CancelRead(op);
     };
 
     private static readonly Action<object?> CancelWriteCallback = static state => {
         var op = (IosQuicStreamWriteOperation)state!;
-        op.Owner.CancelWrite(op);
+        op.Owner?.CancelWrite(op);
     };
 
     public override bool CanRead => !_disposed && !_aborted;
@@ -91,7 +90,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
 
             var maximumLength = (uint)Math.Min(buffer.Length, MaxReceiveLength);
             using var pool = new NSAutoreleasePool();
-            connection.ReceiveReadOnlyData(minimumIncompleteLength: 1, maximumLength: maximumLength, op.Callback);
+            connection.ReceiveData(minimumIncompleteLength: 1, maximumLength: maximumLength, op.Callback);
         }
         catch (Exception ex) {
             Interlocked.CompareExchange(ref _activeRead, null, op);
@@ -104,7 +103,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
     }
 
     internal void OnReadCompleted(
-        IosQuicStreamReadOperation op, ReadOnlySpan<byte> data, NWContentContext? context, bool isComplete, NWError? error)
+        IosQuicStreamReadOperation op, DispatchData? data, NWContentContext? context, bool isComplete, NWError? error)
     {
         using var pool = new NSAutoreleasePool();
         Interlocked.CompareExchange(ref _activeRead, null, op);
@@ -130,9 +129,12 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
             // returned here; the NEXT read arms a receive that returns empty -> 0, i.e. standard EOF.
             var n = 0;
             var buffer = op.Buffer;
-            if (!data.IsEmpty && !buffer.IsEmpty) {
-                n = Math.Min(data.Length, buffer.Length);
-                data[..n].CopyTo(buffer.Span);
+            if (data != null && data.Size > 0 && !buffer.IsEmpty) {
+                using var mappedData = data.CreateMap(out var dataPointer, out var dataLength);
+                n = Math.Min(checked((int)dataLength), buffer.Length);
+                unsafe {
+                    new ReadOnlySpan<byte>((void*)dataPointer, n).CopyTo(buffer.Span);
+                }
             }
             op.Source.SetReservedResult(n);
         }
@@ -173,22 +175,10 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
             }
 
             using var pool = new NSAutoreleasePool();
-            if (MemoryMarshal.TryGetArray(buffer, out var segment)) {
-                // isComplete: false -> more data may follow on this stream (do not signal FIN).
-                connection.Send(segment.Array!, segment.Offset, segment.Count, NWContentContext.DefaultMessage,
-                    isComplete: false, op.Callback);
-            }
-            else {
-                var rented = ArrayPool<byte>.Shared.Rent(buffer.Length);
-                try {
-                    buffer.CopyTo(rented);
-                    connection.Send(rented, 0, buffer.Length, NWContentContext.DefaultMessage,
-                        isComplete: false, op.Callback);
-                }
-                finally {
-                    ArrayPool<byte>.Shared.Return(rented);
-                }
-            }
+            // DispatchData copies the span into native-owned storage. Network.framework retains that
+            // storage for the asynchronous send, so release our wrapper immediately after Send returns.
+            using var dispatchData = DispatchData.FromReadOnlySpan(buffer.Span);
+            connection.Send(dispatchData, NWContentContext.DefaultMessage, isComplete: false, op.Callback);
         }
         catch (Exception ex) {
             Interlocked.CompareExchange(ref _activeWrite, null, op);
@@ -254,6 +244,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
 
         // Stream lifecycle instrumentation (diagnostics only). Paired with OnStreamOpened in the ctor.
         IosQuicDiagnostics.OnStreamClosed(_id);
+        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Record("IosQuicStream.disposed");
 
         if (disposing) {
             // Time the native teardown (diagnostics only); the Cancel()/Dispose() themselves are
@@ -268,6 +259,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
             // may never fire after Cancel()). Safe no-ops if default/already disposed.
             var readOp = Interlocked.Exchange(ref _activeRead, null);
             readOp?.Registration.Dispose();
+            readOp?.Clear();
 
             var writeOp = Interlocked.Exchange(ref _activeWrite, null);
             writeOp?.Registration.Dispose();
@@ -282,6 +274,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
             // The completion may never fire after Cancel(); settle the diagnostic in-flight counter
             // (no-op unless IosQuicDiagnostics.Enabled).
             writeOp?.DisposeOutstandingSend();
+            writeOp?.Clear();
             writeOp?.Source.TrySetException(new ObjectDisposedException(nameof(IosQuicStream)));
         }
         base.Dispose(disposing);

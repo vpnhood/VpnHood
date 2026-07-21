@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Memory;
+using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels.Streams;
 
 namespace VpnHood.Core.Tunneling.Connections;
@@ -17,6 +19,7 @@ public class ReusableStreamConnection : StreamConnectionDecorator
         : base(streamConnection)
     {
         _reuseConnectionCallback = reuseConnectionCallback;
+        VhTypeTracker.Track(this);
 
         VhLogger.Instance.LogDebug(GeneralEventId.Stream,
             "A ReusableConnection has been created. ConnectionId: {ConnectionId}, StreamType: {StreamType}, LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
@@ -64,6 +67,7 @@ public class ReusableStreamConnection : StreamConnectionDecorator
     private async Task Reuse(ChunkStream chunkStream, ReuseConnectionCallback reuseConnectionCallback)
     {
         var newStream = await chunkStream.CreateReuse().Vhc();
+        VhTypeTracker.Track(newStream, $"ReusableStreamConnection.{newStream.GetType().Name}");
         lock (_reuseLock) {
             ObjectDisposedException.ThrowIf(Disposed, this);
 
@@ -77,6 +81,7 @@ public class ReusableStreamConnection : StreamConnectionDecorator
                     TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
             
             Disposed = true;
+            VhTypeTracker.Record("ReusableStreamConnection.reused");
         }
     }
 
@@ -107,6 +112,7 @@ public class ReusableStreamConnection : StreamConnectionDecorator
             // close stream and let cancel reuse if it is in progress
             base.Dispose();
             Disposed = true;
+            VhTypeTracker.Record("ReusableStreamConnection.disposed");
         }
     }
 

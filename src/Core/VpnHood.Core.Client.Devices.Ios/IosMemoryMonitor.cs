@@ -267,8 +267,7 @@ internal static class IosMemoryMonitor
                $"tcpEstablished={tcp?.EstablishedConnections ?? 0} " +
                $"quicConnections={IosQuicDiagnostics.LiveConnectionCount} " +
                $"quicStreams={IosQuicDiagnostics.LiveStreamCount} " +
-               $"tunReadAgeMs={readAge} tunWriteAgeMs={writeAge} " +
-               $"appMessages={IosVpnService.AppMessageCompleted}/{IosVpnService.AppMessageStarted}";
+               $"tunReadAgeMs={readAge} tunWriteAgeMs={writeAge}";
     }
 
     // Formats and appends one ext-mem.log line. Reads the PUBLIC snapshots owned by each subsystem's
@@ -321,8 +320,6 @@ internal static class IosMemoryMonitor
         var rdCallbacks = IosTunDiagnostics.ReadCallbackCount;
         var rdPackets = IosTunDiagnostics.ReadPacketCount;
         var cancelMax = IosQuicDiagnostics.TakeMaxStreamCancelMs();
-        var appMsgStarted = IosVpnService.AppMessageStarted;
-        var appMsgCompleted = IosVpnService.AppMessageCompleted;
         var fileDescriptors = IosMemory.TryReadFileDescriptorCount();
         var availBytes = IosMemory.TryReadAvailableMemory();
         var availMb = availBytes < 0 ? -1 : availBytes / Mib;
@@ -426,10 +423,9 @@ internal static class IosMemoryMonitor
             "[VH-MEM-5S] footprint={Footprint:F1}MB peak={Peak:F1}MB gcLive={GcLive:F1}MB " +
             "gcCommit={GcCommit:F1}MB anon={Anon:F1}MB comp={Compressed:F1}MB " +
             "conn={Connections} fds={FileDescriptors} qConnections={QuicConnections} qStreams={QuicStreams} rdBatchMax={ReadBatchMax} " +
-            "appMsg={AppMessageStarted}/{AppMessageCompleted} dn={Download:F1}MB up={Upload:F1}MB " +
-            "rate={Rate:F1}KB/s",
+            "dn={Download:F1}MB up={Upload:F1}MB rate={Rate:F1}KB/s",
             mb, peakMb, gcLive, gcCommit, anon, comp, conn, fileDescriptors, qConnections, qStreams, rdBatchMax,
-            appMsgStarted, appMsgCompleted, dnMb, upMb, trafficBytesPerSecond / 1024);
+            dnMb, upMb, trafficBytesPerSecond / 1024);
 
         File.AppendAllText(logPath,
             $"{DateTime.UtcNow:HH:mm:ss.fff} footprint={mb:F1}MB peak={peakMb:F1}MB avail={availMb:F1} " +
@@ -439,7 +435,6 @@ internal static class IosMemoryMonitor
             $"conn={conn} est={est} peakConn={peakConn} fds={fileDescriptors} qConnections={qConnections} qStreams={qStreams} sendQ={sendQ:F2}MB pipeBuf={pipeBuf:F1}MB win={winKb}KB maxC={maxC} " +
             $"rdAge={rdAge} rdCallbacks={rdCallbacks} rdPackets={rdPackets} rdBatchMax={rdBatchMax} " +
             $"wrAge={wrAge} wrMax={wrMax} cancelMax={cancelMax} " +
-            $"appMsg={appMsgStarted}/{appMsgCompleted} " +
             $"dn={dnMb:F1}MB up={upMb:F1}MB rate={trafficBytesPerSecond / 1024:F1}KB/s " +
             $"tracker={tracker}" +
             (mb >= 50 ? " <<< NEAR 52MB JETSAM" : "") + "\n");

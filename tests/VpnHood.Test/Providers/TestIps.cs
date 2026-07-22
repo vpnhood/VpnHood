@@ -6,11 +6,11 @@ namespace VpnHood.Test.Providers;
 
 public class TestIps
 {
-    public IPAddress RemoteTestIpV6 { get; } = IPAddress.Parse("2001:db8::1");
+    public IPAddress RemoteTestIpV6 { get; }
     public IPAddress LocalTestIpV6 => IPAddress.IPv6Loopback;
-    public IReadOnlyList<IPAddress> RemoteTestIps { get; } 
+    public IReadOnlyList<IPAddress> RemoteTestIps { get; }
     public IReadOnlyList<IPAddress> LocalTestIps { get; }
-    public IPAddress RemoteInvalidTestIpV4 { get; } = IPAddress.Parse("198.18.12.1");
+    public IPAddress RemoteInvalidTestIpV4 { get; }
     public IPAddress LocalBlockedClientIpAddress { get; }
     public IPAddress LocalBlockedServerIpAddress { get; }
     public IPAddress LocalNsTestIp { get; }
@@ -42,11 +42,21 @@ public class TestIps
 
     public TestIps()
     {
+        // Each instance gets its own machine-wide-unique /24 of the 198.18.0.0/15 benchmarking
+        // range. WinDivert is a machine-wide driver, but its capture filter is built from these
+        // IPs, so disjoint blocks let WinDivert tests run in parallel — within a test host and
+        // across the parallel test hosts — without stealing each other's packets. The counter
+        // wraps at 512 blocks, long after the block's previous owner has finished its test.
+        var block = CrossProcessCounter.Next("RemoteIpBlock", first: 0, last: 511);
+        var blockStartIp = new IPAddress([198, (byte)(18 + block / 256), (byte)(block % 256), 0]);
+        RemoteTestIpV6 = IPAddress.Parse($"2001:db8::{block:x}:1");
+        RemoteInvalidTestIpV4 = new IPAddress([198, (byte)(18 + block / 256), (byte)(block % 256), 200]);
+
         // test addresses
         var remoteIpV4S = new List<IPAddress>();
         var localIpV4S = new List<IPAddress>();
-        
-        var remoteStartIp = IPAddress.Parse("198.18.11.1");
+
+        var remoteStartIp = blockStartIp;
         var localStartIp = IPAddressUtil.Decrement(IPAddress.Loopback);
 
         for (var i = 0; i < 100; i++) {

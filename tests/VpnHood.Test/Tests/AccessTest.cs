@@ -16,7 +16,6 @@ public class AccessTest : TestBase
 
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_reject_invalid_requests()
     {
         await using var server = await TestHelper.CreateServer();
@@ -47,7 +46,6 @@ public class AccessTest : TestBase
     }
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_reject_expired_access_hello()
     {
         await using var server = await TestHelper.CreateServer();
@@ -62,7 +60,6 @@ public class AccessTest : TestBase
     }
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_reject_expired_access_at_runtime()
     {
         var managerOptions = TestHelper.CreateFileAccessManagerOptions();
@@ -94,7 +91,6 @@ public class AccessTest : TestBase
     }
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Server_reject_trafficOverflow_access()
     {
         // create server

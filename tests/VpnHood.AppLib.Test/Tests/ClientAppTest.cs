@@ -76,7 +76,6 @@ public class ClientAppTest : TestAppBase
 
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task State_Waiting()
     {
         // create Access Manager and token
@@ -97,19 +96,23 @@ public class ClientAppTest : TestAppBase
         await app.WaitForState(AppConnectionState.Connected);
 
         // dispose server and wait for waiting state
+        // UnstableTimeout only lower-bounds the Waiting transition: it fires on the next request
+        // failure after the timeout, and that cadence is paced by the retry backoff — measured ~5s
+        // from server loss to app-side observation, so the default 5s assert window is too tight
         // ReSharper disable once DisposeOnUsingVariable
         await server1.DisposeAsync();
         await VhTestUtil.AssertEqualsWait(AppConnectionState.Waiting, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
             return app.State.ConnectionState;
-        }, cancellationToken: TestContext.CancellationToken);
+        }, timeout: 15_000, cancellationToken: TestContext.CancellationToken);
 
         // start a new server & waiting for connected state
+        // reconnect waits out AutoWaitTimeout pause cycles and the retry backoff before it can succeed
         await using var server2 = await TestHelper.CreateServer(accessManager);
         await VhTestUtil.AssertEqualsWait(AppConnectionState.Connected, async () => {
             await TestHelper.Test_Https(throwError: false, timeout: TimeSpan.FromMilliseconds(100));
             return app.State.ConnectionState;
-        }, cancellationToken: TestContext.CancellationToken);
+        }, timeout: 15_000, cancellationToken: TestContext.CancellationToken);
     }
 
 
@@ -136,7 +139,6 @@ public class ClientAppTest : TestAppBase
 
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Connected_Disconnected_success()
     {
         // create server
@@ -355,7 +357,6 @@ public class ClientAppTest : TestAppBase
     }
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task User_review_flow()
     {
         // create manager

@@ -11,7 +11,6 @@ using VpnHood.Test.Dom;
 namespace VpnHood.Test.Tests;
 
 [TestClass]
-[DoNotParallelize] // uses the machine-wide WinDivert adapter
 public class ClientTunnelTest : TestBase
 {
     [TestMethod]

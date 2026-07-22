@@ -10,7 +10,6 @@ namespace VpnHood.Test.Tests;
 public class NetScanTest : TestBase
 {
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Reject_by_server()
     {
         // create server

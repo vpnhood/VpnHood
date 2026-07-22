@@ -216,6 +216,9 @@ publish is a single local command; the CI still does all the real work.
 `<Version>` overriding the props stamp, the `IsPackable` regex not tolerating a `Condition`, the
 silent org gate, pwsh-7-only encoding): [pub/MODULE-REPOS.md](MODULE-REPOS.md).**
 
+**Shipping an executable instead of a library — a `VpnHood.Tools.*` .NET tool on its own version
+line, published with Trusted Publishing: [pub/TOOL-REPOS.md](TOOL-REPOS.md).**
+
 ## Next steps (not yet implemented)
 
 1. **(Later) `modules/` folder** for any library that earns independent versioning/consumers — as

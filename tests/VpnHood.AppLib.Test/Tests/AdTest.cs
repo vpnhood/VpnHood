@@ -41,7 +41,6 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task flexible_ad_should_close_session_if_display_ad_failed()
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper, adProviderAdType: AppAdType.InterstitialAd);
@@ -107,7 +106,6 @@ public class AdTest : TestAppBase
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task RewardedAd_expiration_must_be_increased_by_plan_id(bool acceptAd)
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
@@ -131,7 +129,6 @@ public class AdTest : TestAppBase
     [TestMethod]
     [DataRow(true)]
     [DataRow(false)]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task NormalByRewardedAd_must_require_rewarded_ad(bool acceptAd)
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
@@ -261,7 +258,6 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task SplitAll_must_on_while_playing_ad_ex()
     {
         using var accessManager = TestAppHelper.CreateAccessManager();
@@ -302,10 +298,12 @@ public class AdTest : TestAppBase
         await FilteringTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, null);
 
         // finish showing ad
+        // the app deliberately reports Connected during the ad post-delay while the client is still
+        // in ad-split mode, so Connected + a fixed delay is not enough; wait for the post-delay to
+        // actually end — AdManager clears the flag only after AdOk has been sent to the service
         showAdCompletionSource.SetResult(ShowAdResult.Closed);
         await app.WaitForState(AppConnectionState.Connected);
-        await Task.Delay(appOptions.AdOptions.ShowAdPostDelay, TestCt); // make sure ad post delay is finished
-        await Task.Delay(200, TestCt); // make sure ad post delay is finished
+        await AssertEqualsWait(false, () => app.AdManager.IsWaitingForPostDelay);
 
         // all included ips should not be split now
         await FilteringTest.IpFilters_AssertInclude(TestHelper, app, MockEps.UdpNsEchoEndPoint1, MockEps.HttpsUrl1);
@@ -313,7 +311,6 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Adblocker_exception()
     {
         // create client app

@@ -6,6 +6,9 @@ How to give a vpnhood library its own repo and its own NuGet cadence while keepi
 
 Reference implementation: **`VpnHood.Core.Proxies`**. Copy its shape.
 
+> Shipping an **executable** rather than a library? See [TOOL-REPOS.md](TOOL-REPOS.md) — tools reuse
+> this machinery but keep an independent version line and publish with Trusted Publishing.
+
 ## When a library earns a module repo
 
 Move a library out of the monorepo only when it has a genuinely independent life:

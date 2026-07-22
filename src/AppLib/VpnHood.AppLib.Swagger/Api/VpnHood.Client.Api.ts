@@ -2477,7 +2477,7 @@ export class ProxyEndPointClient {
         return Promise.resolve<AppProxyEndPointInfo>(null as any);
     }
 
-    list(search?: string | null | undefined, includeSucceeded?: boolean | undefined, includeFailed?: boolean | undefined, includeUnknown?: boolean | undefined, includeDisabled?: boolean | undefined, recordIndex?: number | null | undefined, recordCount?: number | null | undefined, cancelToken?: CancelToken): Promise<PagedResultOfAppProxyEndPointInfo> {
+    list(search?: string | null | undefined, includeSucceeded?: boolean | undefined, includeFailed?: boolean | undefined, includeUnknown?: boolean | undefined, includeDisabled?: boolean | undefined, recordIndex?: number | null | undefined, recordCount?: number | null | undefined, cancelToken?: CancelToken): Promise<ListResultOfAppProxyEndPointInfo> {
         let url_ = this.baseUrl + "/api/proxy-endpoints?";
         if (search !== undefined && search !== null)
             url_ += "search=" + encodeURIComponent("" + search) + "&";
@@ -2523,7 +2523,7 @@ export class ProxyEndPointClient {
         });
     }
 
-    protected processList(response: AxiosResponse): Promise<PagedResultOfAppProxyEndPointInfo> {
+    protected processList(response: AxiosResponse): Promise<ListResultOfAppProxyEndPointInfo> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -2537,14 +2537,14 @@ export class ProxyEndPointClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = PagedResultOfAppProxyEndPointInfo.fromJS(resultData200);
-            return Promise.resolve<PagedResultOfAppProxyEndPointInfo>(result200);
+            result200 = ListResultOfAppProxyEndPointInfo.fromJS(resultData200);
+            return Promise.resolve<ListResultOfAppProxyEndPointInfo>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<PagedResultOfAppProxyEndPointInfo>(null as any);
+        return Promise.resolve<ListResultOfAppProxyEndPointInfo>(null as any);
     }
 
     add(proxyEndPoint: ProxyEndPoint, cancelToken?: CancelToken): Promise<AppProxyEndPointInfo> {
@@ -6547,11 +6547,11 @@ export enum StatusQuality {
     Failed = "Failed",
 }
 
-export class PagedResultOfAppProxyEndPointInfo implements IPagedResultOfAppProxyEndPointInfo {
+export class ListResultOfAppProxyEndPointInfo implements IListResultOfAppProxyEndPointInfo {
     items!: AppProxyEndPointInfo[];
     totalCount!: number;
 
-    constructor(data?: IPagedResultOfAppProxyEndPointInfo) {
+    constructor(data?: IListResultOfAppProxyEndPointInfo) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -6577,9 +6577,9 @@ export class PagedResultOfAppProxyEndPointInfo implements IPagedResultOfAppProxy
         }
     }
 
-    static fromJS(data: any): PagedResultOfAppProxyEndPointInfo {
+    static fromJS(data: any): ListResultOfAppProxyEndPointInfo {
         data = typeof data === 'object' ? data : {};
-        let result = new PagedResultOfAppProxyEndPointInfo();
+        let result = new ListResultOfAppProxyEndPointInfo();
         result.init(data);
         return result;
     }
@@ -6596,7 +6596,7 @@ export class PagedResultOfAppProxyEndPointInfo implements IPagedResultOfAppProxy
     }
 }
 
-export interface IPagedResultOfAppProxyEndPointInfo {
+export interface IListResultOfAppProxyEndPointInfo {
     items: AppProxyEndPointInfo[];
     totalCount: number;
 }

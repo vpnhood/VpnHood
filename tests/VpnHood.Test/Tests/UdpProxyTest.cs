@@ -244,7 +244,6 @@ public class UdpProxyTest : TestBase
     }
 
     [TestMethod]
-    [DoNotParallelize] // uses the machine-wide WinDivert adapter
     public async Task Max_UdpClients()
     {
         const int maxUdpCount = 3;

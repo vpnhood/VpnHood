@@ -41,6 +41,7 @@ public class AdTest : TestAppBase
     }
 
     [TestMethod]
+    [DoNotParallelize] // clears the process-global AppUiContext; parallel tests restore it
     public async Task flexible_ad_should_close_session_if_display_ad_failed()
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper, adProviderAdType: AppAdType.InterstitialAd);

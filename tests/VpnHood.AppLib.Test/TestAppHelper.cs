@@ -43,7 +43,11 @@ public class TestAppHelper : TestHelper
             },
             LogServiceOptions = {
                 MinLogLevel = VhLogger.MinLogLevel,
-                SingleLineConsole = false
+                SingleLineConsole = false,
+                // parallel apps share the process-wide VhLogger, so per-app log files would
+                // interleave all concurrent tests (and AutoFlush every line to disk); tests
+                // that assert State.LogExists opt back in
+                LogToFile = false
             }
         };
 

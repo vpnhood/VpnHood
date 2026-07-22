@@ -43,7 +43,7 @@ public class VpnServiceHost : IDisposable
     }
 
     internal VpnServiceContext Context { get; }
-    public static ConnectionInfo DefaultConnectionInfo => VpnServiceContext.DefaultConnectionInfo;
+    public static ConnectionInfo DefaultConnectionInfo => ConnectionInfo.Default;
 
     public VpnServiceHost(string configFolder,
         IVpnServiceHandler vpnServiceHandler,

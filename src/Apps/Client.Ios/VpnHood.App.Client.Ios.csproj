@@ -14,10 +14,6 @@
     <AutomaticProvisioning>true</AutomaticProvisioning>
     <CodesignKey>Apple Development</CodesignKey>
 
-    <!-- Build against a newer Xcode than the pinned net11 preview.5 workload (Xcode 26.5). The SDK only
-         validates Xcode major.minor and 26.5 -> 26.6 is forward-compatible. The target below warns
-         (VPNHOOD0001) when this override can be removed. -->
-    <ValidateXcodeVersion>false</ValidateXcodeVersion>
   </PropertyGroup>
 
   <!-- Optional private app settings (from the external ".user" folder, sibling to the solution) embedded as
@@ -56,23 +52,4 @@
     </ProjectReference>
   </ItemGroup>
 
-  <!--
-    Self-clearing reminder for the ValidateXcodeVersion override above (mirrors the SDK's own
-    _ValidateXcodeVersion major.minor check). The instant the installed workload *recommends* the Xcode
-    you have, every build prints warning VPNHOOD0001 telling you to remove the override. Silent until then.
-    Set -p:VpnHoodXcodeCheckVerbose=true to print the detected versions.
-  -->
-  <Target Name="_VpnHoodWarnXcodeOverrideStale"
-          AfterTargets="_DetectSdkLocations"
-          Condition="'$(ValidateXcodeVersion)' == 'false' And '$(_CanOutputAppBundle)' == 'true' And '$(IsMacEnabled)' == 'true' And '$(_XcodeVersion)' != '' And '$(_RecommendedXcodeVersion)' != ''">
-    <PropertyGroup>
-      <_VpnHoodXcodeMM>$([System.Version]::Parse('$(_XcodeVersion)').Major).$([System.Version]::Parse('$(_XcodeVersion)').Minor)</_VpnHoodXcodeMM>
-      <_VpnHoodRecXcodeMM>$([System.Version]::Parse('$(_RecommendedXcodeVersion)').Major).$([System.Version]::Parse('$(_RecommendedXcodeVersion)').Minor)</_VpnHoodRecXcodeMM>
-    </PropertyGroup>
-    <Message Condition="'$(VpnHoodXcodeCheckVerbose)' == 'true'" Importance="high"
-             Text="[VpnHood] Xcode override check: installed=$(_XcodeVersion) ($(_VpnHoodXcodeMM)), workload-recommended=$(_RecommendedXcodeVersion) ($(_VpnHoodRecXcodeMM))" />
-    <Warning Code="VPNHOOD0001"
-             Condition="'$(_VpnHoodXcodeMM)' == '$(_VpnHoodRecXcodeMM)'"
-             Text="The .NET for iOS workload now recommends Xcode $(_RecommendedXcodeVersion), which matches the installed Xcode $(_XcodeVersion). The ValidateXcodeVersion=false override in this project is no longer needed — remove it." />
-  </Target>
 </Project>

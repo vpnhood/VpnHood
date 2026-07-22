@@ -23,7 +23,6 @@ namespace VpnHood.Core.Client.Devices.Ios;
 internal static class IosMemoryGuard
 {
     private static bool _started;
-
     /// <summary>Starts the GC heartbeat (idempotent). Call once from <see cref="IosVpnService.StartTunnel"/>.</summary>
     public static void Start()
     {
@@ -39,6 +38,7 @@ internal static class IosMemoryGuard
                         GC.Collect();
                         GC.WaitForPendingFinalizers();
                         GC.Collect();
+
                     }
                 }
                 catch { /* ignore */ }

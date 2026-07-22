@@ -25,6 +25,8 @@ public static class IosQuicDiagnostics
     // ---- backing fields --------------------------------------------------------------------------
     private static int _streamSeq;
     private static int _liveStreamCount;
+    private static int _connectionSeq;
+    private static int _liveConnectionCount;
     private static long _outstandingSendBytes;
     private static long _maxStreamCancelMs;
 
@@ -34,6 +36,8 @@ public static class IosQuicDiagnostics
 
     /// <summary>Live count of open QUIC streams (= native NWConnections).</summary>
     public static int LiveStreamCount => Volatile.Read(ref _liveStreamCount);
+    /// <summary>Live count of underlying QUIC connection groups.</summary>
+    public static int LiveConnectionCount => Volatile.Read(ref _liveConnectionCount);
     /// <summary>Bytes handed to <c>nw_connection_send</c> whose completion callback has not yet fired.</summary>
     public static long OutstandingSendBytes => Interlocked.Read(ref _outstandingSendBytes);
 
@@ -57,6 +61,28 @@ public static class IosQuicDiagnostics
         if (!Enabled) return;
         var live = Interlocked.Decrement(ref _liveStreamCount);
         LogConn("-CONN", live, id);
+    }
+
+    /// <summary>Records creation of an underlying QUIC connection group.</summary>
+    public static int OnConnectionOpened()
+    {
+        if (!Enabled) return 0;
+        var id = Interlocked.Increment(ref _connectionSeq);
+        var live = Interlocked.Increment(ref _liveConnectionCount);
+        VhLogger.Instance.LogDebug(IosQuicEventIds.Quic,
+            "[VHQUIC] +GROUP live={Live} mem={Memory}MB id={Id}",
+            live.ToString("D3"), FootprintFixed(), id);
+        return id;
+    }
+
+    /// <summary>Records disposal of an underlying QUIC connection group.</summary>
+    public static void OnConnectionClosed(int id)
+    {
+        if (!Enabled || id == 0) return;
+        var live = Interlocked.Decrement(ref _liveConnectionCount);
+        VhLogger.Instance.LogDebug(IosQuicEventIds.Quic,
+            "[VHQUIC] -GROUP live={Live} mem={Memory}MB id={Id}",
+            live.ToString("D3"), FootprintFixed(), id);
     }
 
     // Logs one stream-lifecycle line: "[VHQUIC] ±CONN live=NNN mem=MM.MMB id=N". Fixed-width live/mem

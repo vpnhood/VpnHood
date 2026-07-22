@@ -182,10 +182,26 @@ TFM `net11.0-ios` on App + Extension + the 3 iOS core libs (Devices.Ios, IosTun,
 ## Diagnostic probe — `Documents/ext-mem.log`
 ```
 HH:mm:ss.fff footprint=MB peak=MB gcLive=MB gcHeap=MB native=MB anon=MB comp=MB code=MB \
-  conn=N est=N peakConn=N pipeBuf=MB win=KB maxC=N dn=MB up=MB
+  conn=N est=N peakConn=N pipeBuf=MB win=KB maxC=N dn=MB up=MB \
+  tracker=live=[IosQuicStream:X LocalTcpConnection:Y] events=[IosQuicStream.created:A IosQuicStream.disposed:B ...]
 ```
 `footprint ≈ anon + comp`. `conn/est/peakConn` = live/established/peak proxy connections. `pipeBuf` = total
-reassembly backlog (Mode-B signal). `up`/`dn` cumulative MB (compute rate from deltas).
+reassembly backlog (Mode-B signal). `up`/`dn` cumulative MB and `rate` is their sampled aggregate rate. `tracker.live` is the post-GC weak census (including proxy channels and rented buffer owners/arrays); `tracker.events` contains cumulative lifecycle totals. Persistent connections are expected, so idle is traffic-based: after the rate remains below 32 KB/s for 10 seconds, `BASELINE` and per-cycle `IDLE_CHECKPOINT` records use the minimum footprint observed during the next 30-second idle window. Each checkpoint also records managed bytes and process footprint immediately after a forced compacting collection. File/census writes are capped at 2 Hz near the memory limit while the 100 ms sampler still retains the true peak.
+
+---
+
+## Part 6 — NWConnection Callback Retention Investigation (July 2026)
+
+During speed tests, memory gradually drifted up under idle periods. One candidate is a callback retention cycle in the iOS QUIC stream wrapper (`IosQuicStream`):
+- `IosQuicStream` strongly owned the `NWConnection`.
+- The native connection owned the callbacks (e.g., `NWConnectionReceiveReadOnlySpanCompletion`) registered during read/write operations.
+- The callback delegates strongly captured the `owner` (`IosQuicStream`) instance, completing the circular root:
+  `IosQuicStream` ➔ `NWConnection` ➔ Native Closure ➔ Callback Delegate ➔ `IosQuicStream`
+- When connections/streams closed, if native read/write callbacks had not fired, the native runtime retained the blocks, leaking the C# `IosQuicStream` instances.
+
+**Candidate fix under test**: `IosQuicStreamReadOperation` and `IosQuicStreamWriteOperation` keep their owner while I/O is active, then clear that reference during deterministic stream disposal after pending tasks are completed. The diagnostic probe records 30-second idle minima, tracked live objects, and created/closed/callback/clear totals. Repeated work/idle cycles must show whether the footprint and object census return to baseline before this is considered resolved.
+
+The next A/B also detaches `QuicStreamConnection._stream` during disposal. Device census showed disposed `QuicStreamConnection` and `IosQuicStream` pairs surviving forced collections together after read/write operations had recovered; clearing the outer wrapper's stream reference determines whether that wrapper is the retaining owner without changing active I/O.
 
 ---
 
@@ -193,4 +209,4 @@ reassembly backlog (Mode-B signal). `up`/`dn` cumulative MB (compute rate from d
 `memory = per-flow-cost × concurrent-flows`; `throughput = window/RTT` **but only if the window keeps
 re-opening.** On a 52 MB budget with concurrent flows the strategy is: **global budgets** (few active
 flows get big windows = full speed; many flows bounded in aggregate) + **a correct window re-open** (proactive
-window-update so senders never stall) + **fast idle reaping + a connection cap** + **cascading memory gates (41 MB / 42 MB / 44 MB) to prevent Jetsam kills.** CoreCLR provides the baseline headroom that makes it all fit.
+window-update so senders never stall) + **fast idle reaping + a connection cap** + **cascading memory gates (41 MB / 42 MB / 44 MB) to prevent Jetsam kills.** Callback retention remains under measurement; it is not yet treated as proven. CoreCLR provides the baseline headroom that makes it all fit.

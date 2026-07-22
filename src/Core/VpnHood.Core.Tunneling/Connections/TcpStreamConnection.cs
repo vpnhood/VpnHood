@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels.Streams;
@@ -22,6 +23,9 @@ public sealed class TcpStreamConnection : IStreamConnection
         IsServer = isServer;
         Stream = tcpClient.GetStream();
         ConnectionId = connectionId ?? UniqueIdFactory.Create();
+        VhTypeTracker.Track(this, $"TcpStreamConnection.{connectionName}");
+        VhTypeTracker.Track(tcpClient, $"TcpClient.{connectionName}");
+        VhTypeTracker.Track(Stream, $"NetworkStream.{connectionName}");
     }
 
     public TcpStreamConnection(TcpClient tcpClient, Stream stream,
@@ -29,6 +33,7 @@ public sealed class TcpStreamConnection : IStreamConnection
         : this(tcpClient, connectionName: connectionName, isServer: isServer, connectionId: connectionId)
     {
         Stream = stream;
+        VhTypeTracker.Track(stream, $"{stream.GetType().Name}.{connectionName}");
     }
 
     public string ConnectionName { get; }
@@ -65,6 +70,7 @@ public sealed class TcpStreamConnection : IStreamConnection
 
         Stream.Dispose();
         _tcpClient.Dispose();
+        VhTypeTracker.Record($"TcpStreamConnection.{ConnectionName}.disposed");
 
         VhLogger.Instance.LogTrace(GeneralEventId.Stream,
             "Connection has been disposed. ConnectionId: {ConnectionId}",
@@ -77,6 +83,7 @@ public sealed class TcpStreamConnection : IStreamConnection
 
         await Stream.DisposeAsync();
         _tcpClient.Dispose();
+        VhTypeTracker.Record($"TcpStreamConnection.{ConnectionName}.disposed");
 
         VhLogger.Instance.LogTrace(GeneralEventId.Stream, 
             "Connection has been disposed asynchronously. ConnectionId: {ConnectionId}",

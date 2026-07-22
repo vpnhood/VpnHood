@@ -48,15 +48,21 @@ internal static class IosQuicTls
         if (certificates is not { Length: > 0 })
             return false;
 
-        using var leaf = certificates[0].ToX509Certificate2();
+        try {
+            using var leaf = certificates[0].ToX509Certificate2();
 
-        // Run the system trust evaluation so the callback receives meaningful SslPolicyErrors
-        // (None when the chain is system-trusted, RemoteCertificateChainErrors otherwise). VpnHood's
-        // own callback then falls back to the pinned-hash comparison for self-signed servers.
-        var policyErrors = trust.Evaluate(out _)
-            ? SslPolicyErrors.None
-            : SslPolicyErrors.RemoteCertificateChainErrors;
+            // Run the system trust evaluation so the callback receives meaningful SslPolicyErrors
+            // (None when the chain is system-trusted, RemoteCertificateChainErrors otherwise). VpnHood's
+            // own callback then falls back to the pinned-hash comparison for self-signed servers.
+            var policyErrors = trust.Evaluate(out _)
+                ? SslPolicyErrors.None
+                : SslPolicyErrors.RemoteCertificateChainErrors;
 
-        return callback(sender: secTrust2, certificate: leaf, chain: null, sslPolicyErrors: policyErrors);
+            return callback(sender: secTrust2, certificate: leaf, chain: null, sslPolicyErrors: policyErrors);
+        }
+        finally {
+            foreach (var certificate in certificates)
+                certificate.Dispose();
+        }
     }
 }

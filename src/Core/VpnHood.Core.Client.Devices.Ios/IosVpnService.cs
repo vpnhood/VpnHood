@@ -1,13 +1,11 @@
+using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using ObjCRuntime;
 using VpnHood.Core.Client.VpnServices.Abstractions;
-using VpnHood.Core.Client.VpnServices.Abstractions.Requests;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Quic.Ios;
-using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.IosTun;
 
@@ -90,25 +88,15 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     public override void StartTunnel(
         NSDictionary<NSString, NSObject>? options, Action<NSError> startTunnelCompletionHandler)
     {
-        // Active memory systems — REQUIRED, always on (device-measured 2026-06-14): the GC guard keeps the
-        // extension under the ~52 MB jetsam limit (without it, it crashes IMMEDIATELY on tunnel start), and
-        // installing the memory reader as VhMemory.Instance lets the QUIC download brake read this process's
-        // live phys_footprint. These are NOT diagnostics — they run regardless of the diagnostics gates.
+        // Required memory systems, always on (device-measured 2026-06-14): the GC guard keeps the
+        // extension under the ~52 MB jetsam limit — without it, it crashes immediately on tunnel start —
+        // and VhMemory.Instance lets the QUIC download brake read this process's live phys_footprint.
         IosMemoryGuard.Start();
         IosMemory.Install();
-
-        // NOTE: the iOS diagnostics gates (IosQuicDiagnostics/IosTunDiagnostics/IosMemoryMonitor.Enabled)
-        // are read-only, computed from VhLogger.MinLogLevel — which the host's LogService sets from
-        // ClientOptions.LogServiceOptions once it loads vpn.config. Nothing to wire up here.
+        IosMemoryMonitor.RegisterCrashLog();
 
         _startTunnelCompletionHandler = startTunnelCompletionHandler;
         _completionFired = false;
-
-        // NOTE (memory): the iOS-specific small packet/UDP buffer sizes (64 KB) are no longer set
-        // here as TunnelDefaults statics. They now flow from the host app via AppOptions →
-        // ClientOptions (PacketChannelBufferSize / UdpProxyBufferSize / StreamProxyBufferSize),
-        // written into vpn.config and consumed by the client. Keeping these out of the extension
-        // means the desktop/Android defaults remain untouched.
 
         // Resolve the config folder — ProviderConfiguration set by App takes priority.
         var configFolder = ResolveConfigFolder();
@@ -144,46 +132,15 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         // blocking on ProcessMessageAsync with .GetAwaiter().GetResult() (sync-over-async) can
         // deadlock when the continuation needs that same thread. The completion handler then never
         // fires, so every App<->Extension RPC (status refresh, disconnect) times out — which shows up
-        // as a permanent "Connecting" state and broken disconnect/reconnect. Process asynchronously
-        // and invoke the completion handler from the continuation (it is safe from any thread).
-        _ = HandleAppMessageAsync(messageData, completionHandler);
-    }
-
-    private async Task HandleAppMessageAsync(NSData? messageData, Action<NSData>? completionHandler)
-    {
-        NSData responseData;
-        try {
-            if (_vpnServiceHost == null || messageData == null) {
-                responseData = BuildApiErrorResponse(new InvalidOperationException("VpnServiceHost is not ready."));
-            }
-            else {
-                var responseBytes = await _messageListener
-                    .ProcessMessageAsync(messageData.ToArray(), CancellationToken.None)
-                    .Vhc();
-                responseData = NSData.FromArray(responseBytes);
-            }
-        }
-        catch (Exception ex) {
-            responseData = BuildApiErrorResponse(ex);
-        }
-
-        try { completionHandler?.Invoke(responseData); } catch { /* ignore */ }
-    }
-
-    private static NSData BuildApiErrorResponse(Exception ex)
-    {
-        var response = new ApiResponse<object> {
-            ConnectionInfo = VpnServiceHost.DefaultConnectionInfo,
-            ApiError = ex.ToApiError(),
-            Result = null
-        };
-        return NSData.FromArray(StreamUtils.ObjectToJsonBuffer(response).ToArray());
+        // as a permanent "Connecting" state and broken disconnect/reconnect. The listener processes
+        // asynchronously and invokes the completion handler from the continuation.
+        _ = _messageListener.ProcessAppMessage(messageData, completionHandler);
     }
 
     public override void StopTunnel(NEProviderStopReason reason, Action completionHandler)
     {
-        _ = _vpnServiceHost?.TryDisconnect();
-        completionHandler();
+        VhLogger.Instance.LogWarning("iOS requested StopTunnel. Reason: {Reason}", reason);
+        _ = StopTunnelAsync(completionHandler);
     }
 
     public VpnHoodClientFactory CreateClientFactory()
@@ -191,11 +148,25 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         return new VpnHoodClientFactory();
     }
 
+    private async Task StopTunnelAsync(Action completionHandler)
+    {
+        try {
+            if (_vpnServiceHost != null)
+                await _vpnServiceHost.TryDisconnect().Vhc();
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not cleanly stop the iOS VPN tunnel.");
+        }
+        finally {
+            try { completionHandler(); } catch { /* ignore */ }
+        }
+    }
+
     public IVpnAdapter CreateAdapter(VpnAdapterSettings adapterSettings, string? debugData)
     {
-        // Start the memory probe — a no-op unless diagnostics are on (IosMemoryMonitor.Enabled follows
-        // VhLogger.MinLogLevel, set by the host's LogService from ClientOptions.LogServiceOptions just
-        // before this call). Called per (re)connect so a "/log:debug" reconnect can start it later.
+        // Diagnostics hooks — no-ops unless debug logging is on (the gates follow VhLogger.MinLogLevel,
+        // set by the host's LogService from vpn.config just before this per-(re)connect call).
+        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Enabled = IosMemoryMonitor.Enabled;
         IosMemoryMonitor.Start();
 
         return new IosVpnAdapter(this, new IosVpnAdapterSettings {

@@ -1,6 +1,6 @@
-using System.Collections.Concurrent;
 using Microsoft.Data.Sqlite;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Toolkit.Memory;
 
 namespace VpnHood.Core.Filtering.Sqlite;
 
@@ -17,8 +17,10 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // probes the inverted domain and each of its label ancestors with exact point queries — a single
 // greatest-prefix seek would miss an ancestor hiding behind a more specific sibling entry.
 // The db is immutable at runtime (built once, opened read-only): which sets are populated is probed once
-// at construction, so absent sets cost nothing. Each thread gets its own read-only connection with lazily
-// prepared queries; CachedDomainFilter shields this from all but the first lookup of a domain.
+// at construction, so absent sets cost nothing. All threads share ONE read-only connection with lazily
+// prepared queries, serialized by a lock (same rationale as SqliteIpFilter: lookups are microsecond index
+// seeks, CachedDomainFilter absorbs repeats, and a reader-per-thread design leaked one native SQLite
+// connection per pool thread for the session lifetime).
 public sealed class SqliteDomainFilter : IDomainFilter
 {
     private readonly IDomainFilter? _next;
@@ -26,8 +28,9 @@ public sealed class SqliteDomainFilter : IDomainFilter
     private readonly bool _hasIncludes;
     private readonly bool _hasExcludes;
     private readonly bool _hasBlocks;
-    private readonly ThreadLocal<Reader> _reader;
-    private readonly ConcurrentBag<Reader> _allReaders = [];
+    private readonly string _connectionString;
+    private readonly Lock _readerLock = new();
+    private Reader? _sharedReader;
     private volatile bool _disposed;
 
     public SqliteDomainFilter(IDomainFilter? next, string dbPath, bool autoDisposeNextFilter = true)
@@ -35,24 +38,18 @@ public sealed class SqliteDomainFilter : IDomainFilter
         SplitSqlite.EnsureInitialized();
         _next = next;
         _autoDisposeNextFilter = autoDisposeNextFilter;
-        var connectionString = new SqliteConnectionStringBuilder {
+        _connectionString = new SqliteConnectionStringBuilder {
             DataSource = dbPath,
             Mode = SqliteOpenMode.ReadOnly,
             Cache = SqliteCacheMode.Private,
             Pooling = false
         }.ToString();
 
-        using var connection = new SqliteConnection(connectionString);
+        using var connection = new SqliteConnection(_connectionString);
         connection.Open();
         _hasIncludes = HasRows(connection, FilterAction.Include);
         _hasExcludes = HasRows(connection, FilterAction.Exclude);
         _hasBlocks = HasRows(connection, FilterAction.Block);
-
-        _reader = new ThreadLocal<Reader>(() => {
-            var reader = new Reader(connectionString);
-            _allReaders.Add(reader);
-            return reader;
-        });
     }
 
     // all sets empty ⇒ the gate can never decide; lets the client skip enabling SNI extraction for it
@@ -80,17 +77,32 @@ public sealed class SqliteDomainFilter : IDomainFilter
 
     private bool Contains(FilterAction action, string invertedDomain)
     {
-        var command = _reader.Value!.GetCommand(action);
+        lock (_readerLock) {
+            // teardown race: a lookup that loses the race to Dispose answers "not a member" instead of
+            // resurrecting a connection that nobody would ever close
+            if (_disposed)
+                return false;
 
-        // probe the domain itself and every label ancestor ("com.google.www" → "com.google" → "com");
-        // each candidate is one index seek, and the walk is as deep as the domain has labels
-        for (var length = invertedDomain.Length; length > 0; length = invertedDomain.LastIndexOf('.', length - 1)) {
-            command.Parameters[0].Value = invertedDomain[..length];
-            if ((long)command.ExecuteScalar()! == 1)
-                return true;
+            var reader = _sharedReader ??= CreateReader();
+            var command = reader.GetCommand(action);
+
+            // probe the domain itself and every label ancestor ("com.google.www" → "com.google" → "com");
+            // each candidate is one index seek, and the walk is as deep as the domain has labels
+            for (var length = invertedDomain.Length; length > 0; length = invertedDomain.LastIndexOf('.', length - 1)) {
+                command.Parameters[0].Value = invertedDomain[..length];
+                if ((long)command.ExecuteScalar()! == 1)
+                    return true;
+            }
+
+            return false;
         }
+    }
 
-        return false;
+    private Reader CreateReader()
+    {
+        var reader = new Reader(_connectionString);
+        VhTypeTracker.Track(reader, "SqliteDomainFilter.Reader");
+        return reader;
     }
 
     private static bool HasRows(SqliteConnection connection, FilterAction action)
@@ -106,14 +118,19 @@ public sealed class SqliteDomainFilter : IDomainFilter
             return;
         _disposed = true;
 
-        _reader.Dispose();
-        while (_allReaders.TryTake(out var reader))
-            reader.Dispose();
+        lock (_readerLock) {
+            if (_sharedReader != null) {
+                _sharedReader.Dispose();
+                _sharedReader = null;
+                VhTypeTracker.Record("SqliteDomainFilter.Reader.disposed");
+            }
+        }
+
         if (_autoDisposeNextFilter)
             _next?.Dispose();
     }
 
-    // Per-thread read-only connection with lazily prepared point-query statements (one per set).
+    // The shared read-only connection with lazily prepared point-query statements (one per set).
     private sealed class Reader : IDisposable
     {
         private readonly SqliteConnection _connection;

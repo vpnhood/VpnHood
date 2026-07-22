@@ -16,4 +16,23 @@ public static class SplitSqlite
             _initialized = true;
         }
     }
+
+    /// <summary>
+    /// Live bytes currently held by the native SQLite allocator across ALL connections in the process
+    /// (<c>sqlite3_memory_used</c>). -1 when the provider is not initialized or the call fails.
+    /// </summary>
+    public static long MemoryUsed()
+    {
+        try {
+            lock (InitLock) {
+                if (!_initialized)
+                    return -1;
+            }
+
+            return SQLitePCL.raw.sqlite3_memory_used();
+        }
+        catch {
+            return -1;
+        }
+    }
 }

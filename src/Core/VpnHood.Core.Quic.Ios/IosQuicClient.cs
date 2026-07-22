@@ -49,7 +49,7 @@ public sealed class IosQuicClient(
 
         // QUIC parameters: ALPN "h3" (the desktop uses SslApplicationProtocol.Http3 purely as the ALPN
         // token — our QUIC is a custom transport, not HTTP/3) and the pinned-certificate verify bridge.
-        var parameters = NWParameters.CreateQuic(quicOptions => {
+        using var parameters = NWParameters.CreateQuic(quicOptions => {
             // The .NET Network binding types this callback's argument as the base NWProtocolOptions even
             // though the underlying native object is a QUIC options block. A direct C# cast to
             // NWProtocolQuicOptions throws InvalidCastException (the managed wrapper is literally
@@ -73,7 +73,8 @@ public sealed class IosQuicClient(
             if (initialMaxData.HasValue)
                 quic.InitialMaxData = initialMaxData.Value;
 
-            IosQuicTls.Configure(quic.SecProtocolOptions, options.TargetHost,
+            using var secProtocolOptions = quic.SecProtocolOptions;
+            IosQuicTls.Configure(secProtocolOptions, options.TargetHost,
                 options.CertificateValidationCallback, queue);
         });
 

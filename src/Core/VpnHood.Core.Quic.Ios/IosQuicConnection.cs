@@ -41,7 +41,9 @@ internal sealed class IosQuicConnection(
     // QUIC stream" bursts during a 37 s tunnel-wide stall). While in backoff, opens fail fast without
     // touching the native group; flows retry after the window with fresh credit odds.
     private const int OpenFailBackoffMs = 500;
+    private readonly int _diagnosticId = IosQuicDiagnostics.OnConnectionOpened();
     private long _openFailBackoffUntilTick;
+    private bool _disposed;
 
     public async ValueTask<Stream> OpenOutboundStreamAsync(CancellationToken cancellationToken)
     {
@@ -86,15 +88,20 @@ internal sealed class IosQuicConnection(
             await using var reg = cancellationToken.Register(() => tcs.TrySetCanceled());
 
             stream.SetStateChangeHandler((state, error) => {
-                switch (state) {
-                    case NWConnectionState.Ready:
-                        tcs.TrySetResult();
-                        break;
-                    case NWConnectionState.Failed:
-                    case NWConnectionState.Cancelled:
-                        tcs.TrySetException(new IOException(
-                            $"QUIC stream failed to start: state={state} domain={error?.ErrorDomain} code={error?.ErrorCode}"));
-                        break;
+                try {
+                    switch (state) {
+                        case NWConnectionState.Ready:
+                            tcs.TrySetResult();
+                            break;
+                        case NWConnectionState.Failed:
+                        case NWConnectionState.Cancelled:
+                            tcs.TrySetException(new IOException(
+                                $"QUIC stream failed to start: state={state} domain={error?.ErrorDomain} code={error?.ErrorCode}"));
+                            break;
+                    }
+                }
+                finally {
+                    error?.Dispose();
                 }
             });
 
@@ -103,7 +110,9 @@ internal sealed class IosQuicConnection(
 
             await tcs.Task.Vhc();
             stream.SetStateChangeHandler(null!);
-            return new IosQuicStream(stream);
+            var iosQuicStream = new IosQuicStream(stream);
+            VpnHood.Core.Toolkit.Memory.VhTypeTracker.Track(iosQuicStream);
+            return iosQuicStream;
         }
         catch {
             stream.TrySetStateChangeHandler(null);
@@ -122,6 +131,9 @@ internal sealed class IosQuicConnection(
 
     public ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, true))
+            return ValueTask.CompletedTask;
+
         // Stop accepting, then drain and discard any inbound streams that were never accepted.
         inboundStreams.Writer.TryComplete();
         while (inboundStreams.Reader.TryRead(out var pending)) {
@@ -136,6 +148,7 @@ internal sealed class IosQuicConnection(
         multiplexGroup.Dispose();
         endpoint.Dispose();
         VhUtils.TryInvoke(queue.Dispose);
+        IosQuicDiagnostics.OnConnectionClosed(_diagnosticId);
         return ValueTask.CompletedTask;
     }
 }

@@ -94,18 +94,26 @@ public class IosVpnAdapter(
         if (serverAddress != null && IPAddress.TryParse(serverAddress, out var parsedAddress))
             remoteAddress = parsedAddress;
 
-        var networkSettings = new NEPacketTunnelNetworkSettings(remoteAddress.ToString());
+        using var networkSettings = new NEPacketTunnelNetworkSettings(remoteAddress.ToString());
 
         // Set the default gateway for IPv4 and IPv6
         if (_ipv4Networks.Count > 0)
         {
-            networkSettings.IPv4Settings = new NEIPv4Settings(  
+            using var ipv4Settings = new NEIPv4Settings(  
                 _ipv4Networks.Select(x => x.Prefix.ToString()).ToArray(),
                 _ipv4Networks.Select(x => x.SubnetMask.ToString()).ToArray());
 
-            networkSettings.IPv4Settings.IncludedRoutes = _ipv4Routes
+            var includedRoutes = _ipv4Routes
                 .Select(r => new NEIPv4Route(r.Prefix.ToString(), r.SubnetMask.ToString()))
                 .ToArray();
+            try {
+                ipv4Settings.IncludedRoutes = includedRoutes;
+                networkSettings.IPv4Settings = ipv4Settings;
+            }
+            finally {
+                foreach (var route in includedRoutes)
+                    route.Dispose();
+            }
             
             VhLogger.Instance.LogDebug( 
                 "iOS: Configured IPv4 with {Count} routes from core (server IP excluded by omission).",
@@ -115,9 +123,17 @@ public class IosVpnAdapter(
         // Set the default gateway for IPv6
         if (_ipv6Networks.Count > 0)
         {
-            networkSettings.IPv6Settings = new NEIPv6Settings(
-                _ipv6Networks.Select(x => x.Prefix.ToString()).ToArray(),
-                _ipv6Networks.Select(x => NSNumber.FromInt32(x.PrefixLength)).ToArray());
+            var prefixLengths = _ipv6Networks.Select(x => NSNumber.FromInt32(x.PrefixLength)).ToArray();
+            NEIPv6Settings ipv6Settings;
+            try {
+                ipv6Settings = new NEIPv6Settings(
+                    _ipv6Networks.Select(x => x.Prefix.ToString()).ToArray(), prefixLengths);
+            }
+            finally {
+                foreach (var prefixLength in prefixLengths)
+                    prefixLength.Dispose();
+            }
+            using (ipv6Settings) {
 
             // iOS requires a global default IPv6 route (::/0) in IncludedRoutes to convince the
             // routing engine that general IPv6 internet access is available when the
@@ -144,21 +160,34 @@ public class IosVpnAdapter(
                     .ToArray()
                 : _ipv6Routes;
             
-            networkSettings.IPv6Settings.IncludedRoutes = includes
+            var includedRoutes = includes
                 .Select(r => new NEIPv6Route(r.Prefix.ToString(), r.PrefixLength))
                 .ToArray();
+            try {
+                ipv6Settings.IncludedRoutes = includedRoutes;
+                networkSettings.IPv6Settings = ipv6Settings;
+            }
+            finally {
+                foreach (var route in includedRoutes)
+                    route.Dispose();
+            }
            
             VhLogger.Instance.LogDebug(
                 "iOS: Configured IPv6 with {Count} routes. GlobalV6RoutesInjected: {GlobalV6RoutesInjected}",
                 includes.Count, injectGlobalV6);
+            }
         }
 
         // Set DNS servers if any are provided
-        if (_dnsServers.Count > 0)
-            networkSettings.DnsSettings = new NEDnsSettings(_dnsServers.Select(x=>x.ToString()) .ToArray());
+        if (_dnsServers.Count > 0) {
+            using var dnsSettings = new NEDnsSettings(_dnsServers.Select(x => x.ToString()).ToArray());
+            networkSettings.DnsSettings = dnsSettings;
+        }
 
-        if (_mtu.HasValue)
-            networkSettings.Mtu = NSNumber.FromInt32(_mtu.Value);
+        if (_mtu.HasValue) {
+            using var mtu = NSNumber.FromInt32(_mtu.Value);
+            networkSettings.Mtu = mtu;
+        }
 
         // DIAGNOSTIC PROBE (no-op unless IosTunDiagnostics.Enabled): dump the routes/addresses/DNS we are
         // about to install so the host extension can verify what actually reaches iOS ("connected but no
@@ -386,7 +415,7 @@ public class IosVpnAdapter(
             // null-conditional is required: this runs in a finally block, and a mid-batch fill
             // failure (garbled packet) leaves the remaining slots null — a plain Dispose would
             // replace the real exception with a NullReferenceException.
-            _writeDataBatch[i].Dispose();
+            _writeDataBatch[i]?.Dispose();
             _writeDataBatch[i] = null!;
             _writeProtocolBatch[i] = null!;
         }
@@ -426,16 +455,21 @@ public class IosVpnAdapter(
     private void OnPacketsReceived(NSData[] packets, NSNumber[] protocols)
     {
         // Freeze locator (diagnostics only): stamp the outbound-read callback time.
-        IosTunDiagnostics.MarkTunReadCallback();
-
-        // Bail out if the adapter is closed. AdapterClose may null the flow at any point;
-        // the re-arm at the end re-checks it so a closing adapter ends the read chain.
-        if (_packetFlow == null)
-            return;
+        IosTunDiagnostics.MarkTunReadCallback(packets.Length);
 
         // Drain native autorelease temporaries created while parsing this batch so they do
         // not accumulate and push the extension past the ~50 MB jetsam limit.
         using var pool = new NSAutoreleasePool();
+
+        // AdapterClose may race a callback that iOS already queued. The batch still belongs to this
+        // callback and must be released even though it must no longer be delivered or re-armed.
+        if (_packetFlow == null) {
+            foreach (var packetBuffer in packets)
+                packetBuffer.Dispose();
+            foreach (var protocol in protocols)
+                protocol.Dispose();
+            return;
+        }
 
         foreach (var packetBuffer in packets)
         {

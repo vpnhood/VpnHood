@@ -38,8 +38,12 @@ jobs:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v5
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
+      # net11.0-ios needs the .NET 11 preview SDK. Track the preview channel (matches publish_nugets.yml)
+      # rather than pinning an exact build, so each new preview (currently preview 6) is picked up automatically.
       - uses: actions/setup-dotnet@v5
-        with: { dotnet-version: "11.0.100-preview.5.26302.115" }
+        with:
+          dotnet-version: "11.0"
+          dotnet-quality: preview
       - name: Install .NET iOS workload
         shell: pwsh
         run: dotnet workload install ios

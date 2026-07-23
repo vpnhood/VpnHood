@@ -67,11 +67,11 @@ public static class SpaResourcesFactory
         // System-tray icons come from the theme folder; badge icons keep the Abstractions defaults.
         if (manifest.Icons is { } icons) {
             if (icons.SystemTrayConnected != null)
-                resources.Icons.SystemTrayConnectedIcon = new AppResources.IconData(ReadIcon(zip, folder, icons.SystemTrayConnected));
+                resources.Icons.SystemTrayConnectedIconData = ReadIcon(zip, folder, icons.SystemTrayConnected);
             if (icons.SystemTrayConnecting != null)
-                resources.Icons.SystemTrayConnectingIcon = new AppResources.IconData(ReadIcon(zip, folder, icons.SystemTrayConnecting));
+                resources.Icons.SystemTrayConnectingIconData = ReadIcon(zip, folder, icons.SystemTrayConnecting);
             if (icons.SystemTrayDisconnected != null)
-                resources.Icons.SystemTrayDisconnectedIcon = new AppResources.IconData(ReadIcon(zip, folder, icons.SystemTrayDisconnected));
+                resources.Icons.SystemTrayDisconnectedIconData = ReadIcon(zip, folder, icons.SystemTrayDisconnected);
         }
 
         return resources;

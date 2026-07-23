@@ -78,9 +78,9 @@ public partial class VpnHoodWpfSpaMainWindow : Window
     {
         // update icon and text
         var icon = VpnHoodApp.Instance.State.ConnectionState switch {
-            AppConnectionState.Connected => VpnHoodApp.Instance.Resources.Icons.BadgeConnectedIcon,
+            AppConnectionState.Connected => VpnHoodApp.Instance.Resources.Icons.BadgeConnectedIconData,
             AppConnectionState.None => null,
-            _ => VpnHoodApp.Instance.Resources.Icons.BadgeConnectingIcon
+            _ => VpnHoodApp.Instance.Resources.Icons.BadgeConnectingIconData
         };
 
         // remove overlay
@@ -90,7 +90,7 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         }
 
         // set overlay
-        using var memStream = new MemoryStream(icon.Data);
+        using var memStream = new MemoryStream(icon);
         var bitmapImage = new BitmapImage();
         bitmapImage.BeginInit();
         bitmapImage.StreamSource = memStream;

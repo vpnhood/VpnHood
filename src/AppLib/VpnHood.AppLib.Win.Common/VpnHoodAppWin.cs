@@ -162,17 +162,17 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         _sysTray.ContextMenu.AddMenuItem(VpnHoodApp.Instance.Resources.Strings.Exit, (_, _) => Exit());
 
         // initialize icons from icon data (byte arrays)
-        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon != null)
+        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIconData != null)
             _connectingIcon =
-                WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIcon.Data);
+                WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectingIconData);
 
-        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon != null)
+        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIconData != null)
             _connectedIcon =
-                WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIcon.Data);
+                WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayConnectedIconData);
 
-        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon != null)
+        if (VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIconData != null)
             _disconnectedIcon =
-                WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIcon.Data);
+                WinIcon.LoadIconFromBytes(VpnHoodApp.Instance.Resources.Icons.SystemTrayDisconnectedIconData);
     }
 
     private void UpdateNotifyIcon()

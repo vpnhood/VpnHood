@@ -9,17 +9,24 @@
 	<ItemGroup>
 		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.740" />
 	</ItemGroup>
+	<!-- Production: reference the zip-only package. It ships no DLL — its build/*.targets embeds
+	     spa.zip into THIS assembly as 'VpnHood.App.Client.spa.zip' (see SpaAsset). -->
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==false">
 		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="7.7.828" />
 	</ItemGroup>
+	<!-- Local dev: embed the freshly built zip directly, under the same LogicalName the package uses,
+	     so SpaAsset reads it identically. No DLL to build — run _build-local.ps1 then create the
+	     switch file <Vh>/.user/use-local-spa.txt. -->
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==true">
-		<Reference Include="VpnHood.AppLib.Assets.ClassicSpa">
-			<HintPath>..\..\..\..\VpnHood.Client.WebUI\nuget\VpnHood.AppLib.Assets.ClassicSpa\bin\Release\netstandard2.1\VpnHood.AppLib.Assets.ClassicSpa.dll</HintPath>
-		</Reference>	
+		<EmbeddedResource Include="..\..\..\..\VpnHood.Client.WebUI\nuget\VpnHood.AppLib.Assets.ClassicSpa\Resources\spa.zip">
+			<LogicalName>VpnHood.App.Client.spa.zip</LogicalName>
+			<Visible>false</Visible>
+		</EmbeddedResource>
 	</ItemGroup>
 	
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.SpaWebView\VpnHood.AppLib.SpaWebView.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
 	</ItemGroup>
 

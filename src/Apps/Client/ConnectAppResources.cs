@@ -1,27 +1,21 @@
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Assets.ClassicSpa;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
-using VpnHood.Core.Toolkit.Graphics;
+using VpnHood.AppLib.SpaWebView;
 
 namespace VpnHood.App.Client;
 
 public static class ConnectAppResources
 {
-    public static AppResources Resources => field ??= new AppResources {
-        IpLocationZipData = Ip2LocationLiteDb.ZipData,
-        SpaZipData = ConnectSpaResources.SpaZipData,
-        Colors = new AppResources.AppColors {
-            NavigationBarColor = VhColor.Parse(ConnectSpaResources.NavigationBarColor),
-            WindowBackgroundColor = VhColor.Parse(ConnectSpaResources.WindowBackgroundColor),
-            ProgressBarColor = VhColor.Parse(ConnectSpaResources.ProgressBarColor)
-        },
-        Icons = new AppResources.AppIcons {
-            SystemTrayConnectedIcon = new AppResources.IconData(ConnectSpaResources.SystemTrayConnectedIcon),
-            SystemTrayConnectingIcon = new AppResources.IconData(ConnectSpaResources.SystemTrayConnectingIcon),
-            SystemTrayDisconnectedIcon = new AppResources.IconData(ConnectSpaResources.SystemTrayDisconnectedIcon)
-        }
-    };
+    // Same SPA zip as Client, but the 'connect' branding theme (see SpaResourcesFactory).
+    public static AppResources Resources => field ??= Create();
+
+    private static AppResources Create()
+    {
+        var resources = SpaResourcesFactory.FromSpaZip(typeof(ConnectAppResources).Assembly, "VpnHood.App.Client.spa.zip", "connect");
+        resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
+        return resources;
+    }
 
     public static AppFeature[] PremiumFeatures { get; } = [
         AppFeature.CustomDns,

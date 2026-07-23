@@ -1,24 +1,19 @@
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Assets.ClassicSpa;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
-using VpnHood.Core.Toolkit.Graphics;
+using VpnHood.AppLib.SpaWebView;
 
 namespace VpnHood.App.Client;
 
 public static class ClientAppResources
 {
-    public static AppResources Resources => field ??= new AppResources {
-        IpLocationZipData = Ip2LocationLiteDb.ZipData,
-        SpaZipData = ClassicSpaResources.SpaZipData,
-        Colors = new AppResources.AppColors {
-            NavigationBarColor = VhColor.Parse(ClassicSpaResources.NavigationBarColor),
-            WindowBackgroundColor = VhColor.Parse(ClassicSpaResources.WindowBackgroundColor),
-            ProgressBarColor = VhColor.Parse(ClassicSpaResources.ProgressBarColor)
-        },
-        Icons = new AppResources.AppIcons {
-            SystemTrayConnectedIcon = new AppResources.IconData(ClassicSpaResources.SystemTrayConnectedIcon),
-            SystemTrayConnectingIcon = new AppResources.IconData(ClassicSpaResources.SystemTrayConnectingIcon),
-            SystemTrayDisconnectedIcon = new AppResources.IconData(ClassicSpaResources.SystemTrayDisconnectedIcon)
-        }
-    };
+    // Colors + system-tray icons come from the SPA zip's branding/default manifest (see
+    // SpaResourcesFactory) — the SPA package owns the whole visual identity.
+    public static AppResources Resources => field ??= Create();
+
+    private static AppResources Create()
+    {
+        var resources = SpaResourcesFactory.FromSpaZip(typeof(ClientAppResources).Assembly, "VpnHood.App.Client.spa.zip");
+        resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
+        return resources;
+    }
 }

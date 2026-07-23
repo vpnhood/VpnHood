@@ -26,7 +26,12 @@ public class LogService(
     public void Start(LogServiceOptions options, bool deleteOldReport = true)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+
+        // Stop is a no-op unless a previous cycle actually started, so when this service is
+        // disabled (or fresh) it does not reset the process-wide VhLogger here
         Stop();
+        if (!options.Enabled)
+            return;
 
         VhLogger.IsAnonymousMode = options.LogAnonymous is null or true;
         VhLogger.Instance = _logger = CreateLogger(options, deleteOldReport);
@@ -46,6 +51,11 @@ public class LogService(
     public void Stop()
     {
         lock (_isStoppingLock) {
+            // not started (or already stopped): nothing to tear down, and VhLogger must be
+            // left untouched — this service never installed a logger to restore from
+            if (_logger == null)
+                return;
+
             VhLogger.Instance.LogDebug("LogService is stopping...");
 
             VhLogger.Instance = VhLogger.CreateConsoleLogger();

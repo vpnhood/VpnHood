@@ -42,12 +42,8 @@ public class TestAppHelper : TestHelper
                 AllowedPrivateDnsProviders = ["dns.google", "dns.test"]
             },
             LogServiceOptions = {
-                MinLogLevel = VhLogger.MinLogLevel,
-                SingleLineConsole = false,
-                // parallel apps share the process-wide VhLogger, so per-app log files would
-                // interleave all concurrent tests (and AutoFlush every line to disk); tests
-                // that assert State.LogExists opt back in
-                LogToFile = false
+                // apps would fight over the process-wide VhLogger; tests asserting State.LogExists opt back in
+                Enabled = false,
             }
         };
 

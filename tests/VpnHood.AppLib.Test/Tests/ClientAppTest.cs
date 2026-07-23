@@ -24,9 +24,9 @@ public class ClientAppTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        // create app; this test asserts State.LogExists, so it keeps the file log enabled
+        // create app; this test asserts State.LogExists, so it keeps the log service enabled
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.LogServiceOptions.LogToFile = true;
+        appOptions.LogServiceOptions.Enabled = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         var clientProfile1 = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 
@@ -65,9 +65,9 @@ public class ClientAppTest : TestAppBase
         var token = TestHelper.CreateAccessToken(server);
         token.ServerToken.HostEndPoints = [IPEndPoint.Parse("10.10.10.99:443")];
 
-        // create app; this test asserts State.LogExists, so it keeps the file log enabled
+        // create app; this test asserts State.LogExists, so it keeps the log service enabled
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.LogServiceOptions.LogToFile = true;
+        appOptions.LogServiceOptions.Enabled = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await Assert.ThrowsExactlyAsync<UnreachableServerException>(() => app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken));
@@ -149,9 +149,9 @@ public class ClientAppTest : TestAppBase
         await using var server = await TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
-        // create app; this test asserts State.LogExists, so it keeps the file log enabled
+        // create app; this test asserts State.LogExists, so it keeps the log service enabled
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.LogServiceOptions.LogToFile = true;
+        appOptions.LogServiceOptions.Enabled = true;
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestAppHelper.CreateDevice());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
 

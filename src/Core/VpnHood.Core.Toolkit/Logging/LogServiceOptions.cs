@@ -5,6 +5,9 @@ namespace VpnHood.Core.Toolkit.Logging;
 
 public class LogServiceOptions
 {
+    // When false, Start is a no-op: no sinks are created and the process-wide VhLogger is left
+    // untouched. Used when many components share one process (e.g. tests running many apps).
+    public bool Enabled { get; set; } = true;
     public bool LogToConsole { get; set; } = true;
     public bool LogToDevice { get; set; } = true;
     public bool LogToFile { get; set; } = true;

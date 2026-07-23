@@ -281,7 +281,7 @@ public class LinuxTunVpnAdapter(LinuxVpnAdapterSettings adapterSettings)
     private static void WaitForTun(StructPollfd[] pollFds)
     {
         while (true) {
-            var result = LinuxAPI.poll(pollFds, (nuint)1, -1);
+            var result = LinuxAPI.poll(pollFds, 1, -1);
             if (result >= 0)
                 break; // Success, exit loop
 

@@ -1,5 +1,3 @@
-using CoreFoundation;
-using System;
 using Network;
 
 namespace VpnHood.Core.Quic.Ios;
@@ -13,15 +11,15 @@ internal sealed class IosQuicStreamReadOperation
         _owner = owner;
         Buffer = buffer;
         CancellationToken = cancellationToken;
-        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Track(this);
+        Toolkit.Memory.VhTypeTracker.Track(this);
         Callback = (data, context, isComplete, error) => {
             var liveOwner = _owner;
             if (liveOwner != null) {
-                VpnHood.Core.Toolkit.Memory.VhTypeTracker.Record("IosQuicStreamReadOperation.callback");
+                Toolkit.Memory.VhTypeTracker.Record("IosQuicStreamReadOperation.callback");
                 liveOwner.OnReadCompleted(this, data, context, isComplete, error);
             }
             else {
-                VpnHood.Core.Toolkit.Memory.VhTypeTracker.Record("IosQuicStreamReadOperation.callbackAfterClear");
+                Toolkit.Memory.VhTypeTracker.Record("IosQuicStreamReadOperation.callbackAfterClear");
                 context?.Dispose();
                 error?.Dispose();
             }
@@ -38,6 +36,6 @@ internal sealed class IosQuicStreamReadOperation
     public void Clear()
     {
         _owner = null;
-        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Record("IosQuicStreamReadOperation.cleared");
+        Toolkit.Memory.VhTypeTracker.Record("IosQuicStreamReadOperation.cleared");
     }
 }

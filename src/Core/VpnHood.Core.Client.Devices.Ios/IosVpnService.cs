@@ -166,7 +166,7 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     {
         // Diagnostics hooks — no-ops unless debug logging is on (the gates follow VhLogger.MinLogLevel,
         // set by the host's LogService from vpn.config just before this per-(re)connect call).
-        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Enabled = IosMemoryMonitor.Enabled;
+        Toolkit.Memory.VhTypeTracker.Enabled = IosMemoryMonitor.Enabled;
         IosMemoryMonitor.Start();
 
         return new IosVpnAdapter(this, new IosVpnAdapterSettings {

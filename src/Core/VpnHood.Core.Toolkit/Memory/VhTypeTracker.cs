@@ -1,33 +1,28 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace VpnHood.Core.Toolkit.Memory;
 
 public static class VhTypeTracker
 {
     private sealed record TrackedReference(WeakReference Reference, string Name);
 
-    private static readonly List<TrackedReference> TrackedObjects = new();
+    private static readonly List<TrackedReference> TrackedObjects = [];
     private static readonly Dictionary<string, long> Counters = new(StringComparer.Ordinal);
     private static int _addedCount;
-    private static bool _enabled;
 
     public static bool Enabled
     {
-        get => Volatile.Read(ref _enabled);
+        get => Volatile.Read(ref field);
         set
         {
             lock (TrackedObjects)
             {
-                if (value && !_enabled)
+                if (value && !field)
                 {
                     TrackedObjects.Clear();
                     Counters.Clear();
                     _addedCount = 0;
                 }
 
-                Volatile.Write(ref _enabled, value);
+                Volatile.Write(ref field, value);
             }
         }
     }
@@ -37,7 +32,7 @@ public static class VhTypeTracker
         return Track(obj, obj.GetType().Name);
     }
 
-    public static bool Track(object obj, string diagnosticName)
+    public static bool Track(object? obj, string diagnosticName)
     {
         if (!Enabled || obj == null) return false;
         lock (TrackedObjects)
@@ -68,7 +63,7 @@ public static class VhTypeTracker
         {
             TrackedObjects.RemoveAll(r => !r.Reference.IsAlive);
             var summary = TrackedObjects
-                .Select(r => (r.Name, Target: r.Reference.Target))
+                .Select(r => (r.Name, r.Reference.Target))
                 .Where(x => x.Target != null)
                 .GroupBy(x => x.Target is Task task
                     ? $"{x.Name}.{(task.IsCompleted ? "Completed" : "Active")}" 

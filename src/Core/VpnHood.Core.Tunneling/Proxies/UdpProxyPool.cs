@@ -183,7 +183,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
                     "[VH-UDP] Created UdpProxy. pool={Pool}, workers={WorkerCount}/{MaxWorkers}, footprint={Footprint:F1}MB, " +
                     "dstPort={DstPort}, {SourceEp} => {DestinationEp}",
                     isDns ? "dns" : "udp", proxies.Count, isDns ? _maxDnsClientCount : _maxClientCount,
-                    VpnHood.Core.Toolkit.Memory.VhMemory.Instance.GetInfo().ProcessFootprintMb ?? -1,
+                    Toolkit.Memory.VhMemory.Instance.GetInfo().ProcessFootprintMb ?? -1,
                     destinationEndPoint.Port, VhLogger.Format(sourceEndPoint), VhLogger.Format(destinationEndPoint));
         }
 

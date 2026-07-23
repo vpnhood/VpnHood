@@ -1,5 +1,8 @@
 using System.Runtime.InteropServices;
 using VpnHood.Core.Toolkit.Memory;
+// ReSharper disable CommentTypo
+// ReSharper disable StringLiteralTypo
+// ReSharper disable IdentifierTypo
 
 namespace VpnHood.Core.Client.Devices.Ios;
 
@@ -122,7 +125,7 @@ internal sealed class IosMemory : VhMemory
 
     /// <summary>
     /// Buckets the open file descriptors by type (sock/vnode/kqueue/pipe/...), highest count first.
-    /// Names an fd leak's owner class at a glance (e.g. leaked SQLite connections are vnodes, leaked
+    /// Names a fd leak's owner class at a glance (e.g. leaked SQLite connections are vnodes, leaked
     /// sockets are sock). Returns "?" on failure.
     /// </summary>
     public static string TryReadFileDescriptorSummary()

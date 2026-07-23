@@ -11,8 +11,8 @@ using VpnHood.Core.VpnAdapters.IosTun.Utils;
 namespace VpnHood.Core.VpnAdapters.IosTun;
 
 public class IosVpnAdapter(
-    NEPacketTunnelProvider tunnelProvider, 
-    IosVpnAdapterSettings settings, 
+    NEPacketTunnelProvider tunnelProvider,
+    IosVpnAdapterSettings settings,
     Action<NSError?> completeStartTunnel)
     : TunVpnAdapter(settings)
 {
@@ -97,9 +97,8 @@ public class IosVpnAdapter(
         using var networkSettings = new NEPacketTunnelNetworkSettings(remoteAddress.ToString());
 
         // Set the default gateway for IPv4 and IPv6
-        if (_ipv4Networks.Count > 0)
-        {
-            using var ipv4Settings = new NEIPv4Settings(  
+        if (_ipv4Networks.Count > 0) {
+            using var ipv4Settings = new NEIPv4Settings(
                 _ipv4Networks.Select(x => x.Prefix.ToString()).ToArray(),
                 _ipv4Networks.Select(x => x.SubnetMask.ToString()).ToArray());
 
@@ -114,15 +113,14 @@ public class IosVpnAdapter(
                 foreach (var route in includedRoutes)
                     route.Dispose();
             }
-            
-            VhLogger.Instance.LogDebug( 
+
+            VhLogger.Instance.LogDebug(
                 "iOS: Configured IPv4 with {Count} routes from core (server IP excluded by omission).",
                 _ipv4Routes.Count);
         }
 
         // Set the default gateway for IPv6
-        if (_ipv6Networks.Count > 0)
-        {
+        if (_ipv6Networks.Count > 0) {
             var prefixLengths = _ipv6Networks.Select(x => NSNumber.FromInt32(x.PrefixLength)).ToArray();
             NEIPv6Settings ipv6Settings;
             try {
@@ -133,48 +131,49 @@ public class IosVpnAdapter(
                 foreach (var prefixLength in prefixLengths)
                     prefixLength.Dispose();
             }
+
             using (ipv6Settings) {
 
-            // iOS requires a global default IPv6 route (::/0) in IncludedRoutes to convince the
-            // routing engine that general IPv6 internet access is available when the
-            // host physical link is IPv4-only. Without ::/0, iOS throttles or disables AAAA lookups.
-            // So we need to ignore our include list
-            // NOTE: On iOS, when there is no native IPv6, the default route ::/0 alone is not enough to convince the routing stack
-            // to send IPv6 traffic to the tunnel. We must also explicitly include a specific global unicast route (2000::/3).
-            // SPLIT-TUNNEL FIX (device-measured 2026-06-10): only inject the global v6 routes when core
-            // actually asked for BROAD IPv6 coverage (a non-host include route). In route-level split
-            // mode the include list is just host routes (e.g. DNS /128s) — injecting ::/0 there silently
-            // dragged ALL IPv6 traffic (Safari prefers v6) into the tunnel, defeating the split.
-            // KNOWN CONSTRAINT: a /64-or-narrower include does not trigger injection, so on an
-            // IPv4-only link iOS may suppress AAAA and hostname-based connections into that subnet
-            // never try v6 (literal-IP connections still route). Do not "fix" this by loosening the
-            // threshold — that re-breaks the split; if it ever bites, core must signal broad-v6
-            // intent explicitly instead of the adapter inferring it from prefix lengths.
-            var wantsBroadV6 = _ipv6Routes.Any(r => r.PrefixLength < 64);
-            var injectGlobalV6 = !IsIpVersionSupported(IpVersion.IPv6) && wantsBroadV6;
-            IReadOnlyList<IpNetwork> includes = injectGlobalV6
-                ? new[] { IpNetwork.AllV6, IpNetwork.AllGlobalUnicastV6 }
-                    .Where(inj => !_ipv6Routes.Any(r =>
-                        r.PrefixLength == inj.PrefixLength && r.Prefix.Equals(inj.Prefix)))
-                    .Concat(_ipv6Routes)
-                    .ToArray()
-                : _ipv6Routes;
-            
-            var includedRoutes = includes
-                .Select(r => new NEIPv6Route(r.Prefix.ToString(), r.PrefixLength))
-                .ToArray();
-            try {
-                ipv6Settings.IncludedRoutes = includedRoutes;
-                networkSettings.IPv6Settings = ipv6Settings;
-            }
-            finally {
-                foreach (var route in includedRoutes)
-                    route.Dispose();
-            }
-           
-            VhLogger.Instance.LogDebug(
-                "iOS: Configured IPv6 with {Count} routes. GlobalV6RoutesInjected: {GlobalV6RoutesInjected}",
-                includes.Count, injectGlobalV6);
+                // iOS requires a global default IPv6 route (::/0) in IncludedRoutes to convince the
+                // routing engine that general IPv6 internet access is available when the
+                // host physical link is IPv4-only. Without ::/0, iOS throttles or disables AAAA lookups.
+                // So we need to ignore our include list
+                // NOTE: On iOS, when there is no native IPv6, the default route ::/0 alone is not enough to convince the routing stack
+                // to send IPv6 traffic to the tunnel. We must also explicitly include a specific global unicast route (2000::/3).
+                // SPLIT-TUNNEL FIX (device-measured 2026-06-10): only inject the global v6 routes when core
+                // actually asked for BROAD IPv6 coverage (a non-host include route). In route-level split
+                // mode the include list is just host routes (e.g. DNS /128s) — injecting ::/0 there silently
+                // dragged ALL IPv6 traffic (Safari prefers v6) into the tunnel, defeating the split.
+                // KNOWN CONSTRAINT: a /64-or-narrower include does not trigger injection, so on an
+                // IPv4-only link iOS may suppress AAAA and hostname-based connections into that subnet
+                // never try v6 (literal-IP connections still route). Do not "fix" this by loosening the
+                // threshold — that re-breaks the split; if it ever bites, core must signal broad-v6
+                // intent explicitly instead of the adapter inferring it from prefix lengths.
+                var wantsBroadV6 = _ipv6Routes.Any(r => r.PrefixLength < 64);
+                var injectGlobalV6 = !IsIpVersionSupported(IpVersion.IPv6) && wantsBroadV6;
+                IReadOnlyList<IpNetwork> includes = injectGlobalV6
+                    ? new[] { IpNetwork.AllV6, IpNetwork.AllGlobalUnicastV6 }
+                        .Where(inj => !_ipv6Routes.Any(r =>
+                            r.PrefixLength == inj.PrefixLength && r.Prefix.Equals(inj.Prefix)))
+                        .Concat(_ipv6Routes)
+                        .ToArray()
+                    : _ipv6Routes;
+
+                var includedRoutes = includes
+                    .Select(r => new NEIPv6Route(r.Prefix.ToString(), r.PrefixLength))
+                    .ToArray();
+                try {
+                    ipv6Settings.IncludedRoutes = includedRoutes;
+                    networkSettings.IPv6Settings = ipv6Settings;
+                }
+                finally {
+                    foreach (var route in includedRoutes)
+                        route.Dispose();
+                }
+
+                VhLogger.Instance.LogDebug(
+                    "iOS: Configured IPv6 with {Count} routes. GlobalV6RoutesInjected: {GlobalV6RoutesInjected}",
+                    includes.Count, injectGlobalV6);
             }
         }
 
@@ -203,16 +202,14 @@ public class IosVpnAdapter(
         // The binding auto-generates SetTunnelNetworkSettingsAsync from the completion-handler
         // overload: it throws NSErrorException when iOS reports a non-null NSError. iOS has no
         // native cancellation for this call, so WaitAsync only abandons the await on cancel.
-        try
-        {
+        try {
             await tunnelProvider.SetTunnelNetworkSettingsAsync(networkSettings).WaitAsync(cancellationToken);
         }
         catch (NSErrorException ex) {
             completeStartTunnel(ex.Error);
             throw;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             // Signal the deferred start-tunnel completion handler with the error so iOS
             // surfaces a failure instead of killing us silently.
             completeStartTunnel(ex.ToNsExceptionError());
@@ -415,7 +412,7 @@ public class IosVpnAdapter(
             // null-conditional is required: this runs in a finally block, and a mid-batch fill
             // failure (garbled packet) leaves the remaining slots null — a plain Dispose would
             // replace the real exception with a NullReferenceException.
-            _writeDataBatch[i]?.Dispose();
+            _writeDataBatch[i].Dispose();
             _writeDataBatch[i] = null!;
             _writeProtocolBatch[i] = null!;
         }
@@ -471,10 +468,8 @@ public class IosVpnAdapter(
             return;
         }
 
-        foreach (var packetBuffer in packets)
-        {
-            try
-            {
+        foreach (var packetBuffer in packets) {
+            try {
                 // MEMORY (jetsam spike fix): parse straight from the native NSData bytes via a
                 // ReadOnlySpan instead of NSData.ToArray(). ToArray allocated a throwaway managed
                 // byte[] PER PACKET — pure gen0 garbage ON TOP OF the pooled copy PacketBuilder.Parse
@@ -491,12 +486,10 @@ public class IosVpnAdapter(
                 }
                 OnPacketReceived(ipPacket);
             }
-            catch
-            {
+            catch {
                 // ignore malformed packet so a single bad packet never breaks the read loop
             }
-            finally
-            {
+            finally {
                 // Release the native NSData peer now instead of waiting for GC finalization.
                 packetBuffer.Dispose();
             }

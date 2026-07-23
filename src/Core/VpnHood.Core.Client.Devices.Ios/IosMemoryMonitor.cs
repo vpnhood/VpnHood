@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Core.Quic.Ios;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.VpnAdapters.IosTun;
+// ReSharper disable CommentTypo
 
 namespace VpnHood.Core.Client.Devices.Ios;
 
@@ -44,7 +45,7 @@ internal static class IosMemoryMonitor
     private static long _lastTrafficBytes;
     private static long _lastTrafficSampleTicks;
     private static long _lastBusyTicks;
-    private static double _lastCensusNative = double.MinValue;
+    private static double? _lastCensusNative; // null until the first region census runs
     private static long _lastCensusTicks;
     // ReSharper disable once NotAccessedField.Local — kept alive so the dispatch source isn't collected.
     private static DispatchSource.MemoryPressure? _pressureSource;
@@ -326,7 +327,7 @@ internal static class IosMemoryMonitor
         // sqlite3_memory_used: live native SQLite allocator bytes, answers "how big is the
         // exclude-country layer" exactly (expected ~a hundred KB with the shared-reader fix)
         var sqliteKb = Filtering.Sqlite.SplitSqlite.MemoryUsed() / 1024.0;
-        var tracker = VpnHood.Core.Toolkit.Memory.VhTypeTracker.GetSnapshotString();
+        var tracker = Toolkit.Memory.VhTypeTracker.GetSnapshotString();
 
         var trafficBytes = inboundBytes + outboundBytes;
         var trafficElapsedMs = _lastTrafficSampleTicks == 0 ? 0 : nowTicks - _lastTrafficSampleTicks;
@@ -368,7 +369,7 @@ internal static class IosMemoryMonitor
                 var footprintAfterGc = IosMemory.TryRead(out var afterGcVm) && afterGcVm.Footprint > 0
                     ? afterGcVm.Footprint / Mib
                     : mb;
-                tracker = VpnHood.Core.Toolkit.Memory.VhTypeTracker.GetSnapshotString();
+                tracker = Toolkit.Memory.VhTypeTracker.GetSnapshotString();
 
                 var phase = "IDLE_CHECKPOINT";
                 if (!_baselineFootprint.HasValue || !_baselineNative.HasValue) {
@@ -393,7 +394,7 @@ internal static class IosMemoryMonitor
                 // Region census at the baseline and at every +2 MB ratchet of the idle native floor —
                 // IOS-MEM-002: names the owner (malloc size-class / skywalk / libnetwork / stack / tag0)
                 // of the 14.6 -> ~35 MB creep that per-object tracking cannot see.
-                if (_lastCensusNative == double.MinValue || _idleMinNative - _lastCensusNative >= 2.0) {
+                if (_lastCensusNative is null || _idleMinNative - _lastCensusNative.Value >= 2.0) {
                     _lastCensusNative = _idleMinNative;
                     _lastCensusTicks = nowTicks;
                     File.AppendAllText(logPath,

@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.SpaWebView;
 
-// Builds an AppResources from a SPA zip. Native branding (window/tray colors + system-tray icons)
+// Builds an AppResources from an SPA zip. Native branding (window/tray colors + system-tray icons)
 // is read from a manifest baked into the zip at build time (branding/<theme>/manifest.json — see
 // VpnHood.Client.WebUI), so the SPA package is the single source of the whole visual identity: a
 // rebranded SPA rebrands the native chrome too, with no .NET change.
@@ -77,8 +77,8 @@ public static class SpaResourcesFactory
         return resources;
     }
 
-    private static VhColor? ParseColor(string? hex) =>
-        string.IsNullOrWhiteSpace(hex) ? null : VhColor.Parse(hex!);
+    private static VhColor? ParseColor(string? hex) => 
+        VhColor.TryParse(hex, out var color) ? color : null;
 
     private static byte[] ReadIcon(ZipArchive zip, string folder, string fileName)
     {
@@ -99,24 +99,4 @@ public static class SpaResourcesFactory
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private sealed class SpaBrandingManifest
-    {
-        public int SchemaVersion { get; set; }
-        public SpaBrandingColors? Colors { get; set; }
-        public SpaBrandingIcons? Icons { get; set; }
-    }
-
-    private sealed class SpaBrandingColors
-    {
-        public string? WindowBackground { get; set; }
-        public string? NavigationBar { get; set; }
-        public string? ProgressBar { get; set; }
-    }
-
-    private sealed class SpaBrandingIcons
-    {
-        public string? SystemTrayConnected { get; set; }
-        public string? SystemTrayConnecting { get; set; }
-        public string? SystemTrayDisconnected { get; set; }
-    }
 }

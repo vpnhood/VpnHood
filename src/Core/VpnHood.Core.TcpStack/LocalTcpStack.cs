@@ -264,7 +264,7 @@ public sealed class LocalTcpStack : ITcpStack
         var peerWsShift = ParseWindowScaleOption(tcpPacket.Options.Span);
         var connection = new LocalTcpConnection(
             ipEndPointPair, isnLocal, tcpPacket.SequenceNumber, peerMss, listener, peerWsShift, _options, _pipeOptions, Diagnostics);
-        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Track(connection);
+        VhTypeTracker.Track(connection);
         connection.OnClosed += OnConnectionClosed;
 
         if (!_connections.TryAdd(ipEndPointPair, connection)) {
@@ -410,7 +410,7 @@ public sealed class LocalTcpStack : ITcpStack
 
     private void OnConnectionClosed(LocalTcpConnection conn)
     {
-        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Record("LocalTcpConnection.closed");
+        VhTypeTracker.Record("LocalTcpConnection.closed");
         if (_connections.TryRemove(conn.IpEndPointPair, out _))
             Diagnostics.SetConnectionCount(Interlocked.Decrement(ref _connectionCount));
     }

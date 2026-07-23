@@ -6,7 +6,6 @@ using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices;
 using VpnHood.Core.Client.Devices.UiContexts;
-using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Test;

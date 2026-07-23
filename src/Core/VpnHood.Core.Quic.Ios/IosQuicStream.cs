@@ -244,7 +244,7 @@ internal sealed class IosQuicStream(NWConnection connection) : AsyncStream
 
         // Stream lifecycle instrumentation (diagnostics only). Paired with OnStreamOpened in the ctor.
         IosQuicDiagnostics.OnStreamClosed(_id);
-        VpnHood.Core.Toolkit.Memory.VhTypeTracker.Record("IosQuicStream.disposed");
+        Toolkit.Memory.VhTypeTracker.Record("IosQuicStream.disposed");
 
         if (disposing) {
             // Time the native teardown (diagnostics only); the Cancel()/Dispose() themselves are

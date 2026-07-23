@@ -111,7 +111,7 @@ internal sealed class IosQuicConnection(
             await tcs.Task.Vhc();
             stream.SetStateChangeHandler(null!);
             var iosQuicStream = new IosQuicStream(stream);
-            VpnHood.Core.Toolkit.Memory.VhTypeTracker.Track(iosQuicStream);
+            Toolkit.Memory.VhTypeTracker.Track(iosQuicStream);
             return iosQuicStream;
         }
         catch {

@@ -13,7 +13,7 @@ public static class ClientAppResources
     private static AppResources Create()
     {
         var resources = SpaResourcesFactory.FromSpaZip(typeof(ClientAppResources).Assembly, "VpnHood.App.Client.spa.zip");
-        resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
+        resources.IpLocationZipData = new Lazy<byte[]>(() => Ip2LocationLiteDb.ZipData);
         return resources;
     }
 }

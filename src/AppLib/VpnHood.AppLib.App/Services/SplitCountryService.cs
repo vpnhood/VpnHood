@@ -17,7 +17,7 @@ namespace VpnHood.AppLib.Services;
 public class SplitCountryService(
     AppSettingsService settingsService,
     IIpRangeLocationProvider? ipRangeLocationProvider,
-    byte[]? ipLocationZipData)
+    Lazy<byte[]>? ipLocationZipData)
 {
     private string? _ipLocationAssetHash;
     public event EventHandler? StateChanged;
@@ -79,7 +79,7 @@ public class SplitCountryService(
                 splitCountryMode, action, string.Join(',', storedCodes));
 
             var dbBuilder = new SplitCountryDbBuilder(
-                () => new ZipArchive(new MemoryStream(ipLocationZipData)),
+                () => new ZipArchive(new MemoryStream(ipLocationZipData.Value)),
                 storedCodes, GetIpLocationAssetHash(), action);
             await dbBuilder.EnsureAsync(dbPath, cancellationToken).Vhc();
 
@@ -139,14 +139,16 @@ public class SplitCountryService(
         if (_ipLocationAssetHash != null)
             return _ipLocationAssetHash;
 
-        using var zip = new ZipArchive(new MemoryStream(ipLocationZipData!));
+        var ipLocationData = ipLocationZipData?.Value
+            ?? throw new InvalidOperationException("The ip-location asset is not provided.");
+        using var zip = new ZipArchive(new MemoryStream(ipLocationData));
         var entry = zip.GetEntry("_checksum.txt");
         if (entry != null) {
             using var reader = new StreamReader(entry.Open());
             _ipLocationAssetHash = reader.ReadToEnd().Trim();
         }
         else {
-            _ipLocationAssetHash = Convert.ToHexString(MD5.HashData(ipLocationZipData!));
+            _ipLocationAssetHash = Convert.ToHexString(MD5.HashData(ipLocationData));
         }
 
         return _ipLocationAssetHash;

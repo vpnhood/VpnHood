@@ -4,7 +4,10 @@ namespace VpnHood.AppLib.Abstractions;
 
 public class AppResources
 {
-    public byte[]? IpLocationZipData { get; set; }
+    // Lazy: the ~14 MB IP-location db is materialized only on first .Value — i.e. when a country
+    // split or location lookup actually runs (see VpnHoodApp / SplitCountryService), not at startup.
+    // The null-vs-non-null check still tells "provided" from "not provided" without loading it.
+    public Lazy<byte[]>? IpLocationZipData { get; set; }
     public byte[]? SpaZipData { get; set; }
     public VhSize WindowSize { get; set; } = new(400, 700);
     public AppStrings Strings { get; set; } = new();
@@ -36,19 +39,17 @@ public class AppResources
 
     public class AppIcons
     {
-        public IconData? BadgeConnectedIcon { get; set; } = new(Resources.BadgeConnectedIcon);
-        public IconData? BadgeConnectingIcon { get; set; } = new(Resources.BadgeConnectingIcon);
-        public IconData? SystemTrayConnectedIcon { get; set; } = new(Resources.VpnConnectedIcon);
-        public IconData? SystemTrayConnectingIcon { get; set; } = new(Resources.VpnConnectingIcon);
-        public IconData? SystemTrayDisconnectedIcon { get; set; } = new(Resources.VpnDisconnectedIcon);
+        // Lazy: the default bytes are pulled from the embedded resource only on first access, so an app
+        // that never shows a given icon (or that the SPA overrides via SpaResourcesFactory) pays nothing
+        // for it at startup. A caller-assigned value wins; setting null re-arms the default on next read.
+        public IconData? BadgeConnectedIcon { get => field ??= new IconData(Resources.BadgeConnectedIcon); set; }
+        public IconData? BadgeConnectingIcon { get => field ??= new IconData(Resources.BadgeConnectingIcon); set; }
+        public IconData? SystemTrayConnectedIcon { get => field ??= new IconData(Resources.VpnConnectedIcon); set; }
+        public IconData? SystemTrayConnectingIcon { get => field ??= new IconData(Resources.VpnConnectingIcon); set; }
+        public IconData? SystemTrayDisconnectedIcon { get => field ??= new IconData(Resources.VpnDisconnectedIcon); set; }
     }
 
     public class IconData(byte[] data)
-    {
-        public byte[] Data { get; } = data;
-    }
-
-    public class ImageData(byte[] data)
     {
         public byte[] Data { get; } = data;
     }

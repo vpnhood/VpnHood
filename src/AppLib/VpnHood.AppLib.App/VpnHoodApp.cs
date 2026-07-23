@@ -138,7 +138,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         _ipRangeLocationProvider = options.Resources.IpLocationZipData is { } ipLocationZipData
             ? new LocalIpRangeLocationProvider(
-                () => new ZipArchive(new MemoryStream(ipLocationZipData)),
+                () => new ZipArchive(new MemoryStream(ipLocationZipData.Value)),
                 () => AppRegionInfo.CurrentRegion.Name)
             : null;
 

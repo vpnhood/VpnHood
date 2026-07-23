@@ -47,7 +47,7 @@ public class TestAppHelper : TestHelper
             }
         };
 
-        appOptions.Resources.IpLocationZipData = Ip2LocationLiteDb.ZipData;
+        appOptions.Resources.IpLocationZipData = new Lazy<byte[]>(() => Ip2LocationLiteDb.ZipData);
         return appOptions;
     }
 

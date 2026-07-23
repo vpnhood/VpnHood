@@ -1,8 +1,10 @@
 using System.IO.Compression;
 using System.Reflection;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Toolkit.Graphics;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.SpaWebView;
 
@@ -51,14 +53,16 @@ public static class SpaResourcesFactory
                 "was not found in the SPA zip. The SPA build is missing its branding output.");
 
         var manifest = ReadJson<SpaBrandingManifest>(manifestEntry);
-        if (manifest.Colors == null)
-            throw new InvalidOperationException($"SPA branding manifest '{folder}/manifest.json' has no 'colors' section.");
-
-        resources.Colors = new AppResources.AppColors {
-            WindowBackgroundColor = ParseColor(manifest.Colors.WindowBackground),
-            NavigationBarColor = ParseColor(manifest.Colors.NavigationBar),
-            ProgressBarColor = ParseColor(manifest.Colors.ProgressBar)
-        };
+        if (manifest.Colors != null) {
+            resources.Colors = new AppResources.AppColors {
+                WindowBackgroundColor = ParseColor(manifest.Colors.WindowBackground),
+                NavigationBarColor = ParseColor(manifest.Colors.NavigationBar),
+                ProgressBarColor = ParseColor(manifest.Colors.ProgressBar)
+            };
+        }
+        else {
+            VhLogger.Instance.LogWarning("SPA branding manifest has no colors section; native chrome will use defaults.");
+        }
 
         // System-tray icons come from the theme folder; badge icons keep the Abstractions defaults.
         if (manifest.Icons is { } icons) {

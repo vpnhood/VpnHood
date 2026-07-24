@@ -29,7 +29,6 @@ using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.IpLocations.Providers.Offlines;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -43,7 +42,7 @@ using TaskExtensions = VpnHood.Core.Toolkit.Extensions.TaskExtensions;
 namespace VpnHood.AppLib;
 
 public class VpnHoodApp : Singleton<VpnHoodApp>,
-    IDisposable, IAsyncDisposable
+    IPremiumFeatureChecker, IDisposable, IAsyncDisposable
 {
     private const string FileNameLog = "app.log";
     private const string FileNamePersistState = "state.json";
@@ -143,15 +142,27 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 () => AppRegionInfo.CurrentRegion.Name)
             : null;
 
-        var splitCountryService = new SplitCountryService(settingsService, _ipRangeLocationProvider,
+        // each split service owns its whole activity decision: its settings gate + the premium plan
+        // (this app implements IPremiumFeatureChecker)
+        var splitCountryService = new SplitCountryService(settingsService, this, _ipRangeLocationProvider,
             ipLocationZipData: options.Resources.IpLocationZipData);
         splitCountryService.StateChanged += LocationService_StateChanged;
 
-        var splitIpViaAppService = new SplitIpViaAppService(settingsService);
+        var splitIpViaAppService = new SplitIpViaAppService(settingsService, this);
         splitIpViaAppService.StateChanged += LocationService_StateChanged;
 
-        var splitDomainService = new SplitDomainService(settingsService);
+        var splitDomainService = new SplitDomainService(settingsService, this);
         splitDomainService.StateChanged += LocationService_StateChanged;
+
+        // The split text-file settings live outside UserSettings, so their session business wires
+        // here — the counterpart of ApplySettings for a UserSettings save. The via-app/domain lists
+        // feed the split dbs and live-apply through a reconfigure; the via-device lists shape the vpn
+        // adapter (applied at connect only), so a change just flags the running session for a reconnect.
+        settingsService.SplitIpViaDeviceSettings.Changed += (_, _) => SetReconnectRequired();
+        settingsService.SplitIpViaAppSettings.Changed += (_, _) =>
+            _ = VhUtils.TryInvokeAsync("Reconfigure after split-ip change", () => ReconfigureVpnService(CancellationToken.None));
+        settingsService.SplitDomainSettings.Changed += (_, _) =>
+            _ = VhUtils.TryInvokeAsync("Reconfigure after split-domain change", () => ReconfigureVpnService(CancellationToken.None));
 
         var protocols = new List<ChannelProtocol> { ChannelProtocol.Tcp, ChannelProtocol.Udp };
         if (_device.IsQuicSupported)
@@ -239,6 +250,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             SplitCountryService = splitCountryService,
             SplitIpViaAppService = splitIpViaAppService,
             SplitDomainService = splitDomainService,
+            SplitDbPublisherService = new SplitDbPublisherService(device.VpnServiceConfigFolder,
+                splitCountryService, splitIpViaAppService, splitDomainService),
             AccountService = options.AccountProvider is null
                 ? null
                 : new AppAccountService(
@@ -326,17 +339,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 HasDebugCommand(DebugCommands.RemoteAccess) || Features.IsDebugMode;
 
             // reconfigure if connected
-            var state = State;
-            var disconnectRequired = false;
             if (ConnectionInfo.IsStarted()) {
                 // it is not important to take effect immediately
                 // clear all services pending state after reconfigure
-                _ = VhUtils.TryInvokeAsync("Reconfigure after settings change", ReconfigureVpnService);
+                _ = VhUtils.TryInvokeAsync("Reconfigure after settings change", () => ReconfigureVpnService(CancellationToken.None));
 
-                // check is disconnect required. The app-level splits (country, via-app ip, domain) are
-                // NOT here: they live-apply through the reconfigure above (the split dbs are rebuilt and
-                // the service swaps its filter gates mid-session)
-                disconnectRequired =
+                // Settings that only apply at connect. The app-level splits (country, via-app ip,
+                // domain) are NOT here: they live-apply through the reconfigure above (the split dbs
+                // are rebuilt and the service swaps its filter gates mid-session). Nothing is forced:
+                // the flag just lets the UI offer a reconnect for the running session.
+                var reconnectRequired =
                     UserSettings.UseSplitLocalNetwork != oldUserSettings.UseSplitLocalNetwork ||
                     UserSettings.UseSplitIpViaDevice != oldUserSettings.UseSplitIpViaDevice ||
                     UserSettings.SplitAppMode != oldUserSettings.SplitAppMode ||
@@ -344,6 +356,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.DnsMode != oldUserSettings.DnsMode ||
                     !VhUtils.SequenceEquals(UserSettings.DnsServers, oldUserSettings.DnsServers);
+                if (reconnectRequired)
+                    SetReconnectRequired();
             }
 
             // set default ContinueOnCapturedContext
@@ -363,30 +377,38 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UserSettings.CultureCode != null ? [UserSettings.CultureCode] : [];
 
             InitCulture();
-
-            // disconnect
-            if (state.CanDisconnect && disconnectRequired) {
-                VhLogger.Instance.LogInformation("Disconnecting due to the settings change...");
-                _ = TryDisconnect();
-            }
         }
         catch (Exception ex) {
             ReportError(ex, "Could not apply settings.");
         }
     }
 
+    // A change happened that only applies at connect while a session is running (e.g. device-level
+    // split ranges, split apps, DNS, profile). The session is NOT interrupted: the flag tells the UI
+    // to show its "reconnect to apply" bar. It survives an app restart (the VpnService session may
+    // outlive the app process) and clears on the next connect or disconnect. No-op while idle — a
+    // change made while disconnected simply applies at the next connect.
+    public void SetReconnectRequired()
+    {
+        if (ConnectionInfo.IsStarted())
+            _appPersistState.IsReconnectRequired = true;
+    }
+
+    // The user acknowledged the pending change (dismissed the UI's reconnect bar) — same pattern as
+    // ClearLastError. A later connect-only change simply raises the flag again.
+    public void ClearReconnectRequired() => _appPersistState.IsReconnectRequired = false;
+
     // Live-apply reconfigurable settings to the running session, including the split filters: the dbs
     // are rebuilt (or reused) under signature-versioned names, published through the folder manifests,
-    // and the service swaps its gates to them without disconnecting. Public because split filter SOURCES
-    // can change outside a UserSettings save (the WebUI writes the ip/domain text files directly).
-    public async Task ReconfigureVpnService()
+    // and the service swaps its gates to them without disconnecting. Triggered by a UserSettings save
+    // (ApplySettings) and by the split text-file settings' change events (wired in the ctor).
+    public async Task ReconfigureVpnService(CancellationToken cancellationToken)
     {
         if (!ConnectionInfo.IsStarted())
             return;
 
         // publish the current db set BEFORE signaling: the service reads the manifests, not the request
-        await PrepareSplitIpDbs(CancellationToken.None).Vhc();
-        await PrepareSplitDomainDbs(CancellationToken.None).Vhc();
+        await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
 
         var reconfigureParams = new ClientReconfigureParams {
             ChannelProtocol = UserSettings.ChannelProtocol,
@@ -398,7 +420,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // the split db manifests are already on disk (the app writes them before calling this),
         // so the request only signals; the service's filter chains re-read the manifests
-        await _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None).Vhc();
+        await _vpnServiceManager.Reconfigure(reconfigureParams, cancellationToken).Vhc();
     }
 
     private void ActiveUiContext_OnChanged(object? sender, EventArgs e)
@@ -464,6 +486,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 LogExists = _logService.Exists,
                 IsDiagnosing = _appPersistState.HasDiagnoseRequested && !IsIdle,
                 HasDiagnoseRequested = _appPersistState.HasDiagnoseRequested,
+                IsReconnectRequired = _appPersistState.IsReconnectRequired,
                 ClientCountryInfo = AppCountryInfo.TryGet(AppRegionInfo.CurrentRegion.Name),
                 ConnectRequestTime = _appPersistState.ConnectRequestTime,
                 CurrentUiCultureInfo = new UiCultureInfo(CultureInfo.DefaultThreadCurrentUICulture ?? SystemUiCulture),
@@ -658,6 +681,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _isConnecting = true; //must be after checking IsIdle
             _userReviewRecommended = 0; // UI may call ClearLastError, so it my close immediately
             ClearLastError();
+            _appPersistState.IsReconnectRequired = false; // this connect applies every pending change
             await ConnectInternal1(connectOptions, linkedCts.Token);
         }
         catch (Exception ex) {
@@ -778,9 +802,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
             if (UserSettings.UseSplitIpViaDevice && CheckPremiumFeature(AppFeature.SplitIpViaDevice)) {
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
-                    IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpSettings.DeviceIncludes));
+                    IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpViaDeviceSettings.Includes));
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
-                    IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpSettings.DeviceExcludes));
+                    IpRangeTextFileParser.ParseExcludes(SettingsService.SplitIpViaDeviceSettings.Excludes));
             }
 
             // use default DNS servers if not premium account
@@ -794,8 +818,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // split filters: build or reuse the on-disk dbs and publish them through the folder
             // manifests the VpnService reads; the manifest write also sweeps superseded files (free
             // here — the previous session fully released them at TryStop)
-            await PrepareSplitIpDbs(cancellationToken).Vhc();
-            await PrepareSplitDomainDbs(cancellationToken).Vhc();
+            await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
 
             // create clientOptions
             var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
@@ -1126,6 +1149,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         try {
             // set _isDisconnecting
             VhLogger.Instance.LogInformation("Disconnect has been requested.");
+            _appPersistState.IsReconnectRequired = false; // the flag only describes a running session
 
             // store states before setting _isDisconnecting
             var state = State;
@@ -1162,44 +1186,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             _isDisconnecting = false;
             FireConnectionStateChanged();
         }
-    }
-
-    // Build or reuse the on-disk split-ip dbs (split-country + split-ip-via-app) and publish the active
-    // set through the folder's manifest — the source of truth the VpnService's filter chains read, at
-    // connect and on every reconfigure; nothing travels through vpn.config. The dbs are self-describing
-    // (include/exclude/block sets) and the services version each file name by its source signature, so a
-    // change builds a NEW file the running VpnService can live-swap to; the manifest write also sweeps
-    // superseded files. The dbs live in VpnServiceConfigFolder because that is the only folder the
-    // VpnService process is guaranteed to read (on iOS it is the shared app-group container).
-    private async Task PrepareSplitIpDbs(CancellationToken cancellationToken)
-    {
-        var dbPaths = new List<string>();
-        var dbFolder = Path.Combine(_device.VpnServiceConfigFolder, SplitDbManifest.IpFiltersFolderName);
-
-        if (SettingsService.Settings.UserSettings.SplitCountryMode is not SplitCountryMode.IncludeAll &&
-            CheckPremiumFeature(AppFeature.SplitCountry)) {
-            var countryDbPath = await Services.SplitCountryService.EnsureSplitIpDb(dbFolder, cancellationToken).Vhc();
-            if (countryDbPath != null)
-                dbPaths.Add(countryDbPath);
-        }
-
-        if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp))
-            dbPaths.Add(await Services.SplitIpViaAppService.EnsureSplitIpDb(dbFolder, cancellationToken).Vhc());
-
-        SplitDbManifest.Write(dbFolder, dbPaths.ToArray());
-    }
-
-    // the domain twin of PrepareSplitIpDbs; an inactive feature publishes an EMPTY manifest — off is the
-    // empty case of the same flow, never inferred from files on disk
-    private async Task PrepareSplitDomainDbs(CancellationToken cancellationToken)
-    {
-        var dbFolder = Path.Combine(_device.VpnServiceConfigFolder, SplitDbManifest.DomainFiltersFolderName);
-        var isActive = UserSettings.UseSplitDomain && CheckPremiumFeature(AppFeature.SplitDomain);
-        var dbPath = isActive
-            ? await Services.SplitDomainService.EnsureSplitDomainDb(dbFolder, cancellationToken).Vhc()
-            : null;
-
-        SplitDbManifest.Write(dbFolder, dbPath != null ? [dbPath] : []);
     }
 
     public async Task CopyLogToStream(Stream destination)

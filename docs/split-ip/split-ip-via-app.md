@@ -12,17 +12,17 @@ adapter at all. It has nothing to do with splitting *applications* — that is t
 
 ## Sources
 
-Three user-edited text files under `<storage>/ip_filters/` (managed by `SplitIpSettings`, validated on
-write, premium-gated by `AppFeature.SplitIpViaApp`):
+Three user-edited text files under `<storage>/splits/ips_via_app/` (managed by
+`SplitIpViaAppSettings`, validated on write, premium-gated by `AppFeature.SplitIpViaApp`):
 
 | File | Meaning when non-empty |
 | --- | --- |
-| `app_includes.txt` | Only these ranges are tunnel-eligible (empty ⇒ no constraint). |
-| `app_excludes.txt` | These ranges bypass the tunnel (empty ⇒ None). |
-| `app_blocks.txt` | These ranges are dropped entirely at app level (empty ⇒ None). |
+| `includes.txt` | Only these ranges are tunnel-eligible (empty ⇒ no constraint). |
+| `excludes.txt` | These ranges bypass the tunnel (empty ⇒ None). |
+| `blocks.txt` | These ranges are dropped entirely at app level (empty ⇒ None). |
 
-The on/off gate is `UserSettings.UseSplitIpViaApp` (checked together with the premium feature by
-`VpnHoodApp.PrepareSplitIpDbs`) — the service has no emptiness short path. Missing files count as
+The on/off gate is `UserSettings.UseSplitIpViaApp`, checked together with the premium feature by the
+service itself (it returns null when inactive) — there is no emptiness short path. Missing files count as
 empty, and empty sources leave the db's sets empty, which is a no-op gate that routes identically to
 no filter.
 
@@ -47,7 +47,7 @@ row count is proportional to what the user wrote, nothing more.
 ## Change detection
 
 `source_signature` = mtime + length of all three source files
-(`app_includes:<ticks>:<len>,app_excludes:…,app_blocks:…`). This is stat-only: ordinary connects never
+(`includes:<ticks>:<len>,excludes:…,blocks:…`). This is stat-only: ordinary connects never
 read — let alone parse — the text files; the parse runs only on the rare rebuild path
 (`IpRangeListDbBuilder` takes every set as a *factory*). Every settings write rewrites the file, so
 the signature always moves with the content; a spurious touch just costs one fast rebuild.

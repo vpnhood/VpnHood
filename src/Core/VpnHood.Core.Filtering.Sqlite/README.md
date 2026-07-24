@@ -11,7 +11,7 @@ It is context-agnostic infrastructure: it stores sets and knows nothing about wh
 context plugs in by deriving from `SplitIpDbBuilder` / `SplitDomainDbBuilder` (or instantiating the
 generic `IpRangeListDbBuilder` / `DomainListDbBuilder`) and supplying two things: a cheap source
 signature and the sets. Current consumers: **split-country** (`split-country.db` — its
-`SplitCountryDbBuilder`, which owns the ip-location zip layout, lives in AppLib next to
+`SplitCountryDbBuilder`, which owns the ip-location zip layout, lives in AppLib nested inside
 `SplitCountryService`), **split-ip-via-app** (`split-ip-via-app.db`, the user's include/exclude/block
 IP files stored as three sets via `IpRangeListDbBuilder`) and **split-domain** (`split-domain.db`, the
 user's include/exclude/block domain files stored as three sets via `DomainListDbBuilder`). Each db gets

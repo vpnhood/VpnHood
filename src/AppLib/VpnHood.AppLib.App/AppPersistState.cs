@@ -21,6 +21,7 @@ internal class AppPersistState(string filePath)
         public DateTime? ConnectRequestTime { get; set; }
         public bool HasDiagnoseRequested { get; set; }
         public int SuccessfulConnectionsCount { get; set; }
+        public bool IsReconnectRequired { get; set; }
     }
 
     public int SuccessfulConnectionsCount {
@@ -73,6 +74,19 @@ internal class AppPersistState(string filePath)
                 return;
 
             Data.UpdateIgnoreTime = value;
+            Save();
+        }
+    }
+
+    // Persisted (not in-memory): the running VpnService session may outlive this app process, and the
+    // "reconnect to apply your change" state must survive an app restart with it
+    public bool IsReconnectRequired {
+        get => Data.IsReconnectRequired;
+        set {
+            if (Data.IsReconnectRequired == value)
+                return;
+
+            Data.IsReconnectRequired = value;
             Save();
         }
     }

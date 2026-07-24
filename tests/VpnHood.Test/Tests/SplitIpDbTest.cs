@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Net;
 using Microsoft.Data.Sqlite;
+using VpnHood.AppLib;
 using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Abstractions;
@@ -26,7 +27,7 @@ public class SplitIpDbTest : TestBase
         return ms.ToArray();
     }
 
-    private static SplitCountryDbBuilder CreateCountryBuilder(byte[] zipBytes, string[] countryCodes,
+    private static SplitCountryService.SplitCountryDbBuilder CreateCountryBuilder(byte[] zipBytes, string[] countryCodes,
         string assetHash, FilterAction action = FilterAction.Include) =>
         new(() => new ZipArchive(new MemoryStream(zipBytes)), countryCodes, assetHash, action);
 
@@ -376,11 +377,15 @@ public class SplitIpDbTest : TestBase
         var storagePath = Path.Combine(TestHelper.WorkingPath, "split-ip-via-app-service");
         Directory.CreateDirectory(storagePath);
         var settingsService = new AppSettingsService(storagePath, remoteSettingsUrl: null, debugMode: true);
-        var service = new SplitIpViaAppService(settingsService);
+        var service = new SplitIpViaAppService(settingsService, new AllowAllPremiumFeatures());
 
-        // the UseSplitIpViaApp gate lives in the caller; empty/missing sources leave every set empty,
-        // which is a no-op gate (routes identically to no filter)
+        // the service owns its whole activity decision: toggle off ⇒ inactive, nothing built
+        Assert.IsNull(await service.EnsureSplitIpDb(storagePath, TestCt));
+        settingsService.UserSettings.UseSplitIpViaApp = true;
+
+        // empty/missing sources leave every set empty, which is a no-op gate (routes identically to no filter)
         var dbPath = await service.EnsureSplitIpDb(storagePath, TestCt);
+        Assert.IsNotNull(dbPath);
         StringAssert.Contains(Path.GetFileName(dbPath), "split-ip-via-app.",
             "the file name must carry the context and its source signature");
         using (var filter = new SqliteIpFilter(next: null, dbPath))
@@ -392,10 +397,11 @@ public class SplitIpDbTest : TestBase
 
         // the sets mirror the source files: includes veto non-members, excludes bypass, blocks drop.
         // A changed source gets a NEW file name, so a running service could keep the old db open.
-        settingsService.SplitIpSettings.AppIncludes = "1.0.0.0 - 1.0.0.255";
-        settingsService.SplitIpSettings.AppExcludes = "1.0.0.128 - 1.0.0.255";
-        settingsService.SplitIpSettings.AppBlocks = "5.0.0.5";
+        settingsService.SplitIpViaAppSettings.Includes = "1.0.0.0 - 1.0.0.255";
+        settingsService.SplitIpViaAppSettings.Excludes = "1.0.0.128 - 1.0.0.255";
+        settingsService.SplitIpViaAppSettings.Blocks = "5.0.0.5";
         var dbPath2 = await service.EnsureSplitIpDb(storagePath, TestCt);
+        Assert.IsNotNull(dbPath2);
         Assert.AreNotEqual(dbPath, dbPath2, "a changed source must build under a new versioned file name");
 
         using (var filter = new SqliteIpFilter(next: null, dbPath2)) {
@@ -410,10 +416,16 @@ public class SplitIpDbTest : TestBase
         }
 
         // source file change → signature change → rebuild with the new sets
-        settingsService.SplitIpSettings.AppExcludes = string.Empty;
+        settingsService.SplitIpViaAppSettings.Excludes = string.Empty;
         var dbPath3 = await service.EnsureSplitIpDb(storagePath, TestCt);
+        Assert.IsNotNull(dbPath3);
         using (var filter = new SqliteIpFilter(next: null, dbPath3))
             Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("1.0.0.200")));
+    }
+
+    private sealed class AllowAllPremiumFeatures : IPremiumFeatureChecker
+    {
+        public bool CheckPremiumFeature(AppFeature feature) => true;
     }
 
     [TestMethod]

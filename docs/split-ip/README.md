@@ -23,7 +23,7 @@ The db format, meta/rebuild rules, and filter semantics are the contract of the
 ```text
 App process (VpnHoodApp / AppLib)                    VpnService process (VpnHoodClient)
 ─────────────────────────────────                    ──────────────────────────────────
-VpnHoodApp.PrepareSplitIpDbs                         SplitDbManifest.Read(folder)
+SplitDbPublisherService.Publish                             SplitDbManifest.Read(folder)
   ├─ SplitCountryService.EnsureSplitIpDb               └─ one SqliteIpFilter per listed db
   ├─ SplitIpViaAppService.EnsureSplitIpDb                     (read-only, per-packet)
   └─ SplitDbManifest.Write(folder, dbPaths)                 owned by the SqliteIpFilterChain stage
@@ -31,13 +31,16 @@ VpnHoodApp.PrepareSplitIpDbs                         SplitDbManifest.Read(folder
             └─ rebuild only if meta says stale
 ```
 
-1. **Before connecting**, `VpnHoodApp.PrepareSplitIpDbs` / `PrepareSplitDomainDbs` ask each context's
-   service to build or reuse its db, gated by that context's user setting (`SplitCountryMode` ≠
-   `IncludeAll`; `UseSplitIpViaApp`; `UseSplitDomain`), then publish the active set through the
-   folder's **manifest** (`SplitDbManifest`). A context that is off contributes no entry — off is the
-   empty case of the same flow, and a stale db file lying in the folder means nothing (presence on
-   disk is never policy). Failures propagate and fail the connect (fail-closed): a split the user
-   configured is enforced or the connection does not proceed, never silently skipped.
+1. **Before connecting**, `SplitDbPublisherService.Publish` asks each context's service for its db and
+   publishes the active set through the folder's **manifest** (`SplitDbManifest`). Each service owns
+   its WHOLE activity decision — its user setting (`SplitCountryMode` ≠ `IncludeAll`;
+   `UseSplitIpViaApp`; `UseSplitDomain`) and the premium plan (`IPremiumFeatureChecker`) — and answers
+   with a path or null. An inactive context contributes no entry — off is the empty case of the same
+   flow, and a stale db file lying in the folder means nothing (presence on disk is never policy). The
+   manifests are written only by the publisher: the ip folder is shared by two services, and a
+   one-service write would sweep its sibling's db. Failures propagate and fail the connect
+   (fail-closed): a split the user configured is enforced or the connection does not proceed, never
+   silently skipped.
 
 2. **Nothing travels cross-process.** Each db is **self-describing** — it stores up to three sets
    (include, exclude, block) and which sets are populated *is* its semantic — and each filter folder's
@@ -111,9 +114,11 @@ immutable; what changes is which files are current:
    timeout); new lookups see the new rules.
 
 Triggers: any UserSettings save while connected (country mode/selection, via-app and domain toggles),
-and the WebUI's split text-file writes (they call `VpnHoodApp.ReconfigureVpnService` explicitly since
-the files are outside UserSettings). The device-level splits (`UseSplitIpViaDevice`,
-`UseSplitLocalNetwork`, per-app split) still require a reconnect — they configure the OS adapter.
+and the split text-file settings (`SplitIpViaAppSettings.Set` / `SplitDomainSettings.Set` raise change
+events that `VpnHoodApp` answers with a reconfigure — the files are outside UserSettings). The
+device-level splits (`UseSplitIpViaDevice`, `UseSplitLocalNetwork`, per-app split) still require a
+reconnect — they configure the OS adapter — so a change while connected only flags the session
+(`AppState.IsReconnectRequired`) and the UI offers a reconnect.
 
 ## Storage layout
 

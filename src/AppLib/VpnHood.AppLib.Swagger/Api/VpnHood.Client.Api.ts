@@ -424,8 +424,8 @@ export class AppClient {
         return Promise.resolve<AppData>(null as any);
     }
 
-    getSplitIps( cancelToken?: CancelToken): Promise<SplitIps> {
-        let url_ = this.baseUrl + "/api/app/split-by-ips";
+    getSplitIpsViaApp( cancelToken?: CancelToken): Promise<SplitIpsViaApp> {
+        let url_ = this.baseUrl + "/api/app/split-by-ips-via-app";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: AxiosRequestConfig = {
@@ -444,11 +444,11 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processGetSplitIps(_response);
+            return this.processGetSplitIpsViaApp(_response);
         });
     }
 
-    protected processGetSplitIps(response: AxiosResponse): Promise<SplitIps> {
+    protected processGetSplitIpsViaApp(response: AxiosResponse): Promise<SplitIpsViaApp> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -462,18 +462,18 @@ export class AppClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = SplitIps.fromJS(resultData200);
-            return Promise.resolve<SplitIps>(result200);
+            result200 = SplitIpsViaApp.fromJS(resultData200);
+            return Promise.resolve<SplitIpsViaApp>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<SplitIps>(null as any);
+        return Promise.resolve<SplitIpsViaApp>(null as any);
     }
 
-    setSplitIps(value: SplitIps, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/split-by-ips";
+    setSplitIpsViaApp(value: SplitIpsViaApp, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/split-by-ips-via-app";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(value);
@@ -495,11 +495,107 @@ export class AppClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processSetSplitIps(_response);
+            return this.processSetSplitIpsViaApp(_response);
         });
     }
 
-    protected processSetSplitIps(response: AxiosResponse): Promise<void> {
+    protected processSetSplitIpsViaApp(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    getSplitIpsViaDevice( cancelToken?: CancelToken): Promise<SplitIpsViaDevice> {
+        let url_ = this.baseUrl + "/api/app/split-by-ips-via-device";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetSplitIpsViaDevice(_response);
+        });
+    }
+
+    protected processGetSplitIpsViaDevice(response: AxiosResponse): Promise<SplitIpsViaDevice> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = SplitIpsViaDevice.fromJS(resultData200);
+            return Promise.resolve<SplitIpsViaDevice>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<SplitIpsViaDevice>(null as any);
+    }
+
+    setSplitIpsViaDevice(value: SplitIpsViaDevice, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/split-by-ips-via-device";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(value);
+
+        let options_: AxiosRequestConfig = {
+            data: content_,
+            method: "PUT",
+            url: url_,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processSetSplitIpsViaDevice(_response);
+        });
+    }
+
+    protected processSetSplitIpsViaDevice(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -836,6 +932,50 @@ export class AppClient {
     }
 
     protected processClearLastError(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
+
+    clearReconnectRequired( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/clear-reconnect-required";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processClearReconnectRequired(_response);
+        });
+    }
+
+    protected processClearReconnectRequired(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -3499,6 +3639,7 @@ export class AppState implements IAppState {
     promptForLog!: boolean;
     logExists!: boolean;
     hasDiagnoseRequested!: boolean;
+    isReconnectRequired!: boolean;
     updaterStatus?: AppUpdaterStatus | null;
     canDisconnect!: boolean;
     canConnect!: boolean;
@@ -3549,6 +3690,7 @@ export class AppState implements IAppState {
             this.promptForLog = _data["promptForLog"] !== undefined ? _data["promptForLog"] : null as any;
             this.logExists = _data["logExists"] !== undefined ? _data["logExists"] : null as any;
             this.hasDiagnoseRequested = _data["hasDiagnoseRequested"] !== undefined ? _data["hasDiagnoseRequested"] : null as any;
+            this.isReconnectRequired = _data["isReconnectRequired"] !== undefined ? _data["isReconnectRequired"] : null as any;
             this.updaterStatus = _data["updaterStatus"] ? AppUpdaterStatus.fromJS(_data["updaterStatus"]) : null as any;
             this.canDisconnect = _data["canDisconnect"] !== undefined ? _data["canDisconnect"] : null as any;
             this.canConnect = _data["canConnect"] !== undefined ? _data["canConnect"] : null as any;
@@ -3594,6 +3736,7 @@ export class AppState implements IAppState {
         data["promptForLog"] = this.promptForLog !== undefined ? this.promptForLog : null as any;
         data["logExists"] = this.logExists !== undefined ? this.logExists : null as any;
         data["hasDiagnoseRequested"] = this.hasDiagnoseRequested !== undefined ? this.hasDiagnoseRequested : null as any;
+        data["isReconnectRequired"] = this.isReconnectRequired !== undefined ? this.isReconnectRequired : null as any;
         data["updaterStatus"] = this.updaterStatus ? this.updaterStatus.toJSON() : null as any;
         data["canDisconnect"] = this.canDisconnect !== undefined ? this.canDisconnect : null as any;
         data["canConnect"] = this.canConnect !== undefined ? this.canConnect : null as any;
@@ -3632,6 +3775,7 @@ export interface IAppState {
     promptForLog: boolean;
     logExists: boolean;
     hasDiagnoseRequested: boolean;
+    isReconnectRequired: boolean;
     updaterStatus?: AppUpdaterStatus | null;
     canDisconnect: boolean;
     canConnect: boolean;
@@ -5732,14 +5876,12 @@ export interface IAppStrings {
     openInBrowser: string;
 }
 
-export class SplitIps implements ISplitIps {
-    deviceIncludes!: string;
-    deviceExcludes!: string;
-    appIncludes!: string;
-    appExcludes!: string;
-    appBlocks!: string;
+export class SplitIpsViaApp implements ISplitIpsViaApp {
+    includes!: string;
+    excludes!: string;
+    blocks!: string;
 
-    constructor(data?: ISplitIps) {
+    constructor(data?: ISplitIpsViaApp) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -5750,38 +5892,72 @@ export class SplitIps implements ISplitIps {
 
     init(_data?: any) {
         if (_data) {
-            this.deviceIncludes = _data["deviceIncludes"] !== undefined ? _data["deviceIncludes"] : null as any;
-            this.deviceExcludes = _data["deviceExcludes"] !== undefined ? _data["deviceExcludes"] : null as any;
-            this.appIncludes = _data["appIncludes"] !== undefined ? _data["appIncludes"] : null as any;
-            this.appExcludes = _data["appExcludes"] !== undefined ? _data["appExcludes"] : null as any;
-            this.appBlocks = _data["appBlocks"] !== undefined ? _data["appBlocks"] : null as any;
+            this.includes = _data["includes"] !== undefined ? _data["includes"] : null as any;
+            this.excludes = _data["excludes"] !== undefined ? _data["excludes"] : null as any;
+            this.blocks = _data["blocks"] !== undefined ? _data["blocks"] : null as any;
         }
     }
 
-    static fromJS(data: any): SplitIps {
+    static fromJS(data: any): SplitIpsViaApp {
         data = typeof data === 'object' ? data : {};
-        let result = new SplitIps();
+        let result = new SplitIpsViaApp();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["deviceIncludes"] = this.deviceIncludes !== undefined ? this.deviceIncludes : null as any;
-        data["deviceExcludes"] = this.deviceExcludes !== undefined ? this.deviceExcludes : null as any;
-        data["appIncludes"] = this.appIncludes !== undefined ? this.appIncludes : null as any;
-        data["appExcludes"] = this.appExcludes !== undefined ? this.appExcludes : null as any;
-        data["appBlocks"] = this.appBlocks !== undefined ? this.appBlocks : null as any;
+        data["includes"] = this.includes !== undefined ? this.includes : null as any;
+        data["excludes"] = this.excludes !== undefined ? this.excludes : null as any;
+        data["blocks"] = this.blocks !== undefined ? this.blocks : null as any;
         return data;
     }
 }
 
-export interface ISplitIps {
-    deviceIncludes: string;
-    deviceExcludes: string;
-    appIncludes: string;
-    appExcludes: string;
-    appBlocks: string;
+export interface ISplitIpsViaApp {
+    includes: string;
+    excludes: string;
+    blocks: string;
+}
+
+export class SplitIpsViaDevice implements ISplitIpsViaDevice {
+    includes!: string;
+    excludes!: string;
+
+    constructor(data?: ISplitIpsViaDevice) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.includes = _data["includes"] !== undefined ? _data["includes"] : null as any;
+            this.excludes = _data["excludes"] !== undefined ? _data["excludes"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): SplitIpsViaDevice {
+        data = typeof data === 'object' ? data : {};
+        let result = new SplitIpsViaDevice();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["includes"] = this.includes !== undefined ? this.includes : null as any;
+        data["excludes"] = this.excludes !== undefined ? this.excludes : null as any;
+        return data;
+    }
+}
+
+export interface ISplitIpsViaDevice {
+    includes: string;
+    excludes: string;
 }
 
 export class SplitDomains implements ISplitDomains {

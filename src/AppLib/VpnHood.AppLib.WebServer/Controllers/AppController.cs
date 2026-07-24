@@ -9,7 +9,6 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Toolkit.Utils;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
@@ -31,14 +30,25 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.GET, baseUrl + "split-by-ips", async ctx => {
-            var res = await GetSplitIps(ctx.Token);
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "split-by-ips-via-app", async ctx => {
+            var res = await GetSplitIpsViaApp(ctx.Token);
             await ctx.SendJson(res);
         });
 
-        mapper.AddStatic(HttpMethod.PUT, baseUrl + "split-by-ips", async ctx => {
-            var body = ctx.ReadJson<SplitIps>();
-            await SetSplitIps(body, ctx.Token);
+        mapper.AddStatic(HttpMethod.PUT, baseUrl + "split-by-ips-via-app", async ctx => {
+            var body = ctx.ReadJson<SplitIpsViaApp>();
+            await SetSplitIpsViaApp(body, ctx.Token);
+            await ctx.SendNoContent();
+        });
+
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "split-by-ips-via-device", async ctx => {
+            var res = await GetSplitIpsViaDevice(ctx.Token);
+            await ctx.SendJson(res);
+        });
+
+        mapper.AddStatic(HttpMethod.PUT, baseUrl + "split-by-ips-via-device", async ctx => {
+            var body = ctx.ReadJson<SplitIpsViaDevice>();
+            await SetSplitIpsViaDevice(body, ctx.Token);
             await ctx.SendNoContent();
         });
 
@@ -93,6 +103,11 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "clear-last-error", async ctx => {
             await ClearLastError(ctx.Token);
+            await ctx.SendNoContent();
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "clear-reconnect-required", async ctx => {
+            await ClearReconnectRequired(ctx.Token);
             await ctx.SendNoContent();
         });
 
@@ -185,51 +200,36 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
         return Task.FromResult(ret);
     }
 
-    public Task<SplitIps> GetSplitIps(CancellationToken cancellationToken)
+    public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken)
     {
-        var appIpFilters = new SplitIps {
-            DeviceIncludes = app.SettingsService.SplitIpSettings.DeviceIncludes,
-            DeviceExcludes = app.SettingsService.SplitIpSettings.DeviceExcludes,
-            AppIncludes = app.SettingsService.SplitIpSettings.AppIncludes,
-            AppExcludes = app.SettingsService.SplitIpSettings.AppExcludes,
-            AppBlocks = app.SettingsService.SplitIpSettings.AppBlocks
-        };
-
-        return Task.FromResult(appIpFilters);
+        return Task.FromResult(app.SettingsService.SplitIpViaAppSettings.Get());
     }
 
-    public Task SetSplitIps(SplitIps value, CancellationToken cancellationToken)
+    public Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken)
     {
-        app.SettingsService.SplitIpSettings.DeviceExcludes = value.DeviceExcludes;
-        app.SettingsService.SplitIpSettings.DeviceIncludes = value.DeviceIncludes;
-        app.SettingsService.SplitIpSettings.AppExcludes = value.AppExcludes;
-        app.SettingsService.SplitIpSettings.AppIncludes = value.AppIncludes;
-        app.SettingsService.SplitIpSettings.AppBlocks = value.AppBlocks;
+        app.SettingsService.SplitIpViaAppSettings.Set(value);
+        return Task.CompletedTask;
+    }
 
-        // the text files are not part of UserSettings, so live-apply to a running session explicitly
-        _ = VhUtils.TryInvokeAsync("Reconfigure after split-ip change", app.ReconfigureVpnService);
+    public Task<SplitIpsViaDevice> GetSplitIpsViaDevice(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(app.SettingsService.SplitIpViaDeviceSettings.Get());
+    }
+
+    public Task SetSplitIpsViaDevice(SplitIpsViaDevice value, CancellationToken cancellationToken)
+    {
+        app.SettingsService.SplitIpViaDeviceSettings.Set(value);
         return Task.CompletedTask;
     }
 
     public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken)
     {
-        var splitByDomains = new SplitDomains {
-            Includes = app.SettingsService.SplitDomainSettings.Includes,
-            Excludes = app.SettingsService.SplitDomainSettings.Excludes,
-            Blocks = app.SettingsService.SplitDomainSettings.Blocks
-        };
-
-        return Task.FromResult(splitByDomains);
+        return Task.FromResult(app.SettingsService.SplitDomainSettings.Get());
     }
 
     public Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken)
     {
-        app.SettingsService.SplitDomainSettings.Includes = value.Includes;
-        app.SettingsService.SplitDomainSettings.Excludes = value.Excludes;
-        app.SettingsService.SplitDomainSettings.Blocks = value.Blocks;
-
-        // the text files are not part of UserSettings, so live-apply to a running session explicitly
-        _ = VhUtils.TryInvokeAsync("Reconfigure after split-domain change", app.ReconfigureVpnService);
+        app.SettingsService.SplitDomainSettings.Set(value);
         return Task.CompletedTask;
     }
 
@@ -286,6 +286,12 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
     public Task ClearLastError(CancellationToken cancellationToken)
     {
         app.ClearLastError();
+        return Task.CompletedTask;
+    }
+
+    public Task ClearReconnectRequired(CancellationToken cancellationToken)
+    {
+        app.ClearReconnectRequired();
         return Task.CompletedTask;
     }
 

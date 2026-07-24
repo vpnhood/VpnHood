@@ -1,6 +1,6 @@
-namespace VpnHood.AppLib.WebServer.Api;
+namespace VpnHood.AppLib.Dtos;
 
-public class SplitDomains
+public class SplitIpsViaApp
 {
     public required string Includes { get; set; }
     public required string Excludes { get; set; }

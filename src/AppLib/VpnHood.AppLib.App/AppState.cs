@@ -22,6 +22,7 @@ public class AppState
     public required bool PromptForLog { get; init; }
     public required bool LogExists { get; init; }
     public required bool HasDiagnoseRequested { get; init; }
+    public required bool IsReconnectRequired { get; init; }
     public required AppUpdaterStatus? UpdaterStatus { get; init; }
     public required bool CanDisconnect { get; init; }
     public required bool CanConnect { get; init; }

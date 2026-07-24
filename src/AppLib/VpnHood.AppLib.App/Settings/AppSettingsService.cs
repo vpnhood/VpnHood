@@ -19,7 +19,8 @@ public class AppSettingsService
     public UserSettings UserSettings => Settings.UserSettings;
     public UserSettings OldUserSettings { get; private set; }
     public RemoteSettings? RemoteSettings { get; private set; }
-    public SplitIpSettings SplitIpSettings { get; }
+    public SplitIpViaAppSettings SplitIpViaAppSettings { get; }
+    public SplitIpViaDeviceSettings SplitIpViaDeviceSettings { get; }
     public SplitDomainSettings SplitDomainSettings { get; }
 
     public AppSettingsService(string storagePath, Uri? remoteSettingsUrl, bool debugMode)
@@ -27,8 +28,9 @@ public class AppSettingsService
         _storagePath = storagePath;
         Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? GetDefaultSettings(debugMode);
         Settings.AppSettingsService = this;
-        SplitIpSettings = new SplitIpSettings(Path.Combine(storagePath, "ip_filters"));
-        SplitDomainSettings = new SplitDomainSettings(Path.Combine(storagePath, "domain_filters"));
+        SplitIpViaAppSettings = new SplitIpViaAppSettings(Path.Combine(storagePath, "splits", "ips_via_app"));
+        SplitIpViaDeviceSettings = new SplitIpViaDeviceSettings(Path.Combine(storagePath, "splits", "ips_via_device"));
+        SplitDomainSettings = new SplitDomainSettings(Path.Combine(storagePath, "splits", "domains"));
         OldUserSettings = Settings.UserSettings;
 
         // load remote settings

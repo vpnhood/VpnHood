@@ -5,9 +5,11 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Abstractions;
+using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services;
@@ -17,6 +19,7 @@ namespace VpnHood.AppLib.Services;
 // AppCountryInfo; nothing is discovered here.
 public class SplitCountryService(
     AppSettingsService settingsService,
+    IPremiumFeatureChecker premiumFeatureChecker,
     IIpRangeLocationProvider? ipRangeLocationProvider,
     Lazy<byte[]>? ipLocationZipData)
 {
@@ -39,18 +42,20 @@ public class SplitCountryService(
         return countryInfos;
     }
 
-    // Build or reuse the on-disk split-country db for the current SplitCountryMode and return its path,
-    // or null when there is no country split (IncludeAll). The selected countries' ranges are written into
-    // the db's include or exclude set — the db self-describes what membership means, so only its path
-    // travels. The file name carries the source signature, so a changed selection builds a NEW file and a
-    // running VpnService can keep the superseded db open until it live-swaps to the returned path.
-    // Failures propagate and fail to connect: a split the user configured is enforced or the connection
-    // does not proceed — never silently skipped.
+    // Build or reuse the on-disk split-country db and return its path, or null when the feature is
+    // inactive — this service owns its whole activity decision (SplitCountryMode + premium plan). The
+    // selected countries' ranges are written into the db's include or exclude set — the db
+    // self-describes what membership means, so only its path travels. The file name carries the source
+    // signature, so a changed selection builds a NEW file and a running VpnService can keep the
+    // superseded db open until it live-swaps to the returned path. Failures propagate and fail to
+    // connect: a split the user configured is enforced or the connection does not proceed — never
+    // silently skipped.
     // The (potentially huge) country ranges never enter memory — they stream from the zip into SQLite.
     public async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
     {
         var splitCountryMode = settingsService.Settings.UserSettings.SplitCountryMode;
-        if (splitCountryMode is SplitCountryMode.IncludeAll)
+        if (splitCountryMode is SplitCountryMode.IncludeAll ||
+            !premiumFeatureChecker.CheckPremiumFeature(AppFeature.SplitCountry))
             return null;
 
         try {
@@ -158,5 +163,42 @@ public class SplitCountryService(
         }
 
         return _ipLocationAssetHash;
+    }
+
+    // Split-country source for the split-ip db: streams the selected countries' serialized ranges from
+    // the ip-location zip ({code}.ips entries, already sorted+unified) into the db's include or exclude
+    // set — the db self-describes what membership means, nothing travels but its path. The zip layout
+    // and the asset-hash signature are split-country business, so the builder lives inside the service
+    // that owns them (internal: only this service constructs it; tests see it as a friend) — the
+    // Filtering.Sqlite infrastructure stays context-agnostic.
+    internal class SplitCountryDbBuilder(
+        Func<ZipArchive> zipArchiveFactory,
+        IReadOnlyCollection<string> countryCodes,
+        string assetHash,
+        FilterAction action)
+        : SplitIpDbBuilder
+    {
+        // Asset build id + target set + distinct, upper-cased, ordinal-sorted codes. The action IS part
+        // of the signature: the same codes stored as include vs exclude are different db contents.
+        public override string GetSourceSignature() =>
+            assetHash + "|" + action + "|" + string.Join(',', countryCodes
+                .Select(c => c.ToUpperInvariant())
+                .Distinct()
+                .OrderBy(c => c, StringComparer.Ordinal));
+
+        protected override async Task InsertRangesAsync(SplitIpDbInserter inserter, CancellationToken cancellationToken)
+        {
+            // the factory (not an open archive) keeps the zip unopened on the common ensure-up-to-date path
+            await using var zip = zipArchiveFactory();
+            foreach (var countryCode in countryCodes) {
+                var entry = zip.GetEntry($"{countryCode.ToLowerInvariant()}.ips");
+                if (entry is null)
+                    continue; // unknown country code → nothing to add
+
+                await using var stream = await entry.OpenAsync(cancellationToken);
+                foreach (var (start, end) in IpRangeOrderedList.DeserializeRaw(stream))
+                    inserter.Insert(action, start, end);
+            }
+        }
     }
 }

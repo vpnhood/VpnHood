@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
@@ -62,7 +62,7 @@ public class TestAppHelper : TestHelper
         clientApp.UserSettings.UseSplitIpViaDevice = true;
         clientApp.UserSettings.UseSplitIpViaApp = true;
         clientApp.UserSettings.UseTcpProxy = true;
-        clientApp.SettingsService.SplitIpSettings.DeviceIncludes = TestIps.AllRemoteTestIps.ToOrderedIpRanges().ToText();
+        clientApp.SettingsService.SplitIpViaDeviceSettings.Includes = TestIps.AllRemoteTestIps.ToOrderedIpRanges().ToText();
         clientApp.UserSettings.LogAnonymous = false;
 
         AppUiContext.Context = new TestAppUiContext();

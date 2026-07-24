@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Quic;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.Core.Toolkit.Net;
@@ -20,7 +20,7 @@ public class FilteringTest : TestAppBase
 
         // domain filter should have upper hand.
         // Here we force IpFilter to include HttpsUrl2 and exclude HttpsUrl1
-        app.SettingsService.SplitIpSettings.AppIncludes = MockEps.HttpsV4EndPoint2.Address.ToString();
+        app.SettingsService.SplitIpViaAppSettings.Includes = MockEps.HttpsV4EndPoint2.Address.ToString();
 
         // connect
         await appDom.Connect(cancellationToken: TestCt);
@@ -52,7 +52,7 @@ public class FilteringTest : TestAppBase
 
         // domain filter should have upper hand.
         // Here we force IpFilter to include QuicUrl2 and exclude QuicUrl1
-        app.SettingsService.SplitIpSettings.AppIncludes = MockEps.QuicEndPoint2.Address.ToString();
+        app.SettingsService.SplitIpViaAppSettings.Includes = MockEps.QuicEndPoint2.Address.ToString();
 
         // connect
         await appDom.Connect(cancellationToken: TestCt);
@@ -148,8 +148,8 @@ public class FilteringTest : TestAppBase
 
         // ************
         // *** TEST ***: Test Include ip filter
-        app.SettingsService.SplitIpSettings.AppIncludes = targetIps1.ToText();
-        app.SettingsService.SplitIpSettings.AppExcludes = targetIps2.ToText();
+        app.SettingsService.SplitIpViaAppSettings.Includes = targetIps1.ToText();
+        app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps2.ToText();
         await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
         await TestHelper.Test_Ping(ipAddress: MockEps.PingV4Address1);
@@ -161,8 +161,8 @@ public class FilteringTest : TestAppBase
 
         // ************
         // *** TEST ***: Reverse include/exclude list, then target1 should be excluded and target2 should be included.
-        app.SettingsService.SplitIpSettings.AppIncludes = targetIps2.ToText();
-        app.SettingsService.SplitIpSettings.AppExcludes = targetIps1.ToText();
+        app.SettingsService.SplitIpViaAppSettings.Includes = targetIps2.ToText();
+        app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps1.ToText();
         await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
@@ -189,7 +189,7 @@ public class FilteringTest : TestAppBase
 
         // ************
         // *** TEST ***: Block target1 IPs via AppBlocks
-        app.SettingsService.SplitIpSettings.AppBlocks = blockedIps.ToText();
+        app.SettingsService.SplitIpViaAppSettings.Blocks = blockedIps.ToText();
         await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
@@ -226,8 +226,8 @@ public class FilteringTest : TestAppBase
         var targetIps2 = new[] { new IpRange(IPAddress.Parse(MockEps.HttpUrl2.Host)), new IpRange(udpEchoEndPoint2.Address) };
 
         // connect with target1 included, target2 excluded
-        app.SettingsService.SplitIpSettings.AppIncludes = targetIps1.ToText();
-        app.SettingsService.SplitIpSettings.AppExcludes = targetIps2.ToText();
+        app.SettingsService.SplitIpViaAppSettings.Includes = targetIps1.ToText();
+        app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps2.ToText();
         await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);
 
@@ -238,9 +238,9 @@ public class FilteringTest : TestAppBase
         // *** TEST ***: swap the lists WITHOUT disconnecting — the reconfigure rebuilds the split dbs
         // under new signature-versioned names and the service live-swaps its gates (with cache flush)
         Log("Updating the filters on the fly...");
-        app.SettingsService.SplitIpSettings.AppIncludes = targetIps2.ToText();
-        app.SettingsService.SplitIpSettings.AppExcludes = targetIps1.ToText();
-        await app.ReconfigureVpnService();
+        app.SettingsService.SplitIpViaAppSettings.Includes = targetIps2.ToText();
+        app.SettingsService.SplitIpViaAppSettings.Excludes = targetIps1.ToText();
+        await app.ReconfigureVpnService(TestCt);
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
             "the session must survive a live filter update");
 
@@ -274,7 +274,7 @@ public class FilteringTest : TestAppBase
         Log("Updating the domain filters on the fly...");
         app.SettingsService.SplitDomainSettings.Includes = MockEps.HttpsUrl2.Host;
         app.SettingsService.SplitDomainSettings.Excludes = MockEps.HttpsUrl1.Host;
-        await app.ReconfigureVpnService();
+        await app.ReconfigureVpnService(TestCt);
         Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
             "the session must survive a live filter update");
 

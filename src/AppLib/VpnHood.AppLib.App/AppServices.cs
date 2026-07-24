@@ -15,6 +15,7 @@ public class AppServices : IDisposable
     public required SplitCountryService SplitCountryService { get; init; }
     public required SplitIpViaAppService SplitIpViaAppService { get; init; }
     public required SplitDomainService SplitDomainService { get; init; }
+    public required SplitDbPublisherService SplitDbPublisherService { get; init; }
     public required IDeviceUiProvider DeviceUiProvider { get; init; }
     public required IAppCultureProvider CultureProvider { get; init; }
     public required IAppUserReviewProvider? UserReviewProvider { get; init; }

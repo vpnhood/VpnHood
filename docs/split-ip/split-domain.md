@@ -11,7 +11,7 @@ connections) returns `Default` from the domain pipe and is decided by the IP gat
 
 ## Sources
 
-Three user-edited text files under `<storage>/domain_filters/` (managed by `SplitDomainSettings`,
+Three user-edited text files under `<storage>/splits/domains/` (managed by `SplitDomainSettings`,
 validated on write, premium-gated by `AppFeature.SplitDomain`):
 
 | File | Meaning when non-empty |
@@ -23,8 +23,8 @@ validated on write, premium-gated by `AppFeature.SplitDomain`):
 Entries match themselves and their subdomains (`google.com` matches `mail.google.com`; the `*.` spelling
 is accepted and equivalent). Comments (`#`, `;`) and blank lines are ignored by `DomainTextFileParser`.
 
-The on/off gate is `UserSettings.UseSplitDomain` (checked together with the premium feature by
-`VpnHoodApp.PrepareSplitDomainDbs`) — the service has no emptiness short path. Missing files count as
+The on/off gate is `UserSettings.UseSplitDomain`, checked together with the premium feature by the
+service itself (it returns null when inactive) — there is no emptiness short path. Missing files count as
 empty, and empty sources leave the db's sets empty, which is a no-op gate; the client then skips SNI
 extraction entirely (`SqliteDomainFilter.IsEmpty`).
 

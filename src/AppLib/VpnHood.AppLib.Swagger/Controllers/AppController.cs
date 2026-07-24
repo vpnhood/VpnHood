@@ -27,14 +27,26 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpGet("split-by-ips")]
-    public Task<SplitIps> GetSplitIps(CancellationToken cancellationToken)
+    [HttpGet("split-by-ips-via-app")]
+    public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
-    [HttpPut("split-by-ips")]
-    public Task SetSplitIps(SplitIps value, CancellationToken cancellationToken)
+    [HttpPut("split-by-ips-via-app")]
+    public Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("split-by-ips-via-device")]
+    public Task<SplitIpsViaDevice> GetSplitIpsViaDevice(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPut("split-by-ips-via-device")]
+    public Task SetSplitIpsViaDevice(SplitIpsViaDevice value, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -79,6 +91,12 @@ public class AppController : ControllerBase, IAppController
 
     [HttpPost("clear-last-error")]
     public Task ClearLastError(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("clear-reconnect-required")]
+    public Task ClearReconnectRequired(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

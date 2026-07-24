@@ -14,8 +14,10 @@ public interface IAppController
     Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken);
     Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken);
     Task<AppData> GetConfig(CancellationToken cancellationToken);
-    Task<SplitIps> GetSplitIps(CancellationToken cancellationToken);
-    Task SetSplitIps(SplitIps value, CancellationToken cancellationToken);
+    Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken);
+    Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken);
+    Task<SplitIpsViaDevice> GetSplitIpsViaDevice(CancellationToken cancellationToken);
+    Task SetSplitIpsViaDevice(SplitIpsViaDevice value, CancellationToken cancellationToken);
     Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken);
     Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken);
     Task<AppState> GetState(CancellationToken cancellationToken);
@@ -23,6 +25,7 @@ public interface IAppController
     Task Diagnose(Guid? clientProfileId, string? serverLocation, ConnectPlanId planId, CancellationToken cancellationToken);
     Task Disconnect(CancellationToken cancellationToken);
     Task ClearLastError(CancellationToken cancellationToken);
+    Task ClearReconnectRequired(CancellationToken cancellationToken);
     Task SetUserSettings(UserSettings userSettings, CancellationToken cancellationToken);
     Task<string> Log(CancellationToken cancellationToken);
     Task<byte[]> PromotionImage(CancellationToken cancellationToken);

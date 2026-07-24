@@ -8,8 +8,8 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // provider — so nothing travels through vpn.config or the reconfigure request, and a stale db file
 // lying in the folder means nothing (presence on disk is never policy, the manifest is).
 // Writing also sweeps: this class owns the folder's db inventory, so any db-family file it does not
-// list is superseded and gets deleted (best effort — a file still open elsewhere survives and is
-// retried on the next write).
+// list is superseded and gets deleted on a best-effort basis — a file still open elsewhere survives
+// the sweep and is retried on the next write.
 public static class SplitDbManifest
 {
     // the filter folders under IDevice.VpnServiceConfigFolder — the one location both processes read
@@ -64,6 +64,6 @@ public static class SplitDbManifest
 
     private sealed class ManifestData
     {
-        public string[] DbFiles { get; set; } = [];
+        public string[] DbFiles { get; init; } = [];
     }
 }

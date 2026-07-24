@@ -22,8 +22,8 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // absorbs repeats, and a reader-per-thread design leaked one native SQLite connection per pool thread
 // for the session lifetime). The connection is opened EAGERLY and held for the gate's lifetime: it pins
 // the db while the app's manifest sweep runs — a locked file survives the sweep on Windows, and an
-// already-open fd keeps working through the unlink on unix — so a live gate can never lose its db
-// underneath itself.
+// already-open fd keeps working after the file is unlinked on unix — so a live gate can never lose
+// its db underneath itself.
 public sealed class SqliteDomainFilter : IDomainFilter
 {
     private readonly IDomainFilter? _next;

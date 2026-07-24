@@ -49,13 +49,13 @@ public class TcpMessageTest
             }, CancellationToken.None);
 
             var sendTask = client.SendAsync(new byte[] { 1 }, requestCts.Token);
-            await requestReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            requestCts.Cancel();
+            await requestReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), requestCts.Token);
+            await requestCts.CancelAsync();
 
             await Assert.ThrowsAsync<OperationCanceledException>(() => sendTask);
 
             listener.Dispose();
-            await listenerTask.WaitAsync(TimeSpan.FromSeconds(5));
+            await listenerTask.WaitAsync(TimeSpan.FromSeconds(5), requestCts.Token);
         }
         finally {
             Directory.Delete(configFolder, recursive: true);

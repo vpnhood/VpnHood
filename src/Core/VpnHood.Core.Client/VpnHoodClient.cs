@@ -30,7 +30,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly AsyncLock _disposeLock = new();
     private readonly DomainFilteringService _domainFilteringService;
     private readonly StaticIpFilter _staticIpFilter;
-    private readonly bool _forceLogSni;
     private ClientSession? _session;
 
     public DomainObserver DomainObserver => _domainFilteringService.DomainObserver;
@@ -154,10 +153,10 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             NetFilter.DomainFilter,
             sniEventId: GeneralEventId.Sni,
             tlsBufferSize: TunnelDefaults.PrefetchStreamBufferSize);
-        _forceLogSni = options.ForceLogSni;
-        _domainFilteringService.IsEnabled = _forceLogSni || !NetFilter.DomainFilter.IsEmpty;
+        var forceLogSni = options.ForceLogSni;
+        _domainFilteringService.IsEnabled = forceLogSni || !NetFilter.DomainFilter.IsEmpty;
         NetFilter.DomainFilter.Changed += (_, _) =>
-            _domainFilteringService.IsEnabled = _forceLogSni || !NetFilter.DomainFilter.IsEmpty;
+            _domainFilteringService.IsEnabled = forceLogSni || !NetFilter.DomainFilter.IsEmpty;
 
         // init vpnAdapter events
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();

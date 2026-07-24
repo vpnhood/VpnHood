@@ -87,7 +87,7 @@ public class SqliteFilterChainTest : TestBase
     }
 
     [TestMethod]
-    public async Task SqliteIpFilterChain_reconfigure_noops_when_manifest_unchanged()
+    public async Task SqliteIpFilterChain_reconfigure_is_a_no_op_when_manifest_unchanged()
     {
         var folder = CreateDbFolder("ip-noop");
         var dbPath = await BuildIpDb(folder, "ip-noop.1.db", "1.0.0.1");
@@ -219,17 +219,19 @@ public class SqliteFilterChainTest : TestBase
         using var filter = new SqliteDomainFilterChain(next: null, folder);
 
         using var stopCts = new CancellationTokenSource();
-        var firstError = (Exception?)null;
+        Exception? firstError = null;
         var workers = Enumerable.Range(0, 8).Select(_ => Task.Run(() => {
             while (!stopCts.IsCancellationRequested)
                 try {
+                    // ReSharper disable once AccessToDisposedClosure
                     filter.Process("stress.com");
+                    // ReSharper disable once AccessToDisposedClosure
                     filter.Process("other.com");
                 }
                 catch (Exception ex) {
                     firstError ??= ex;
                 }
-        })).ToArray();
+        }, stopCts.Token)).ToArray();
 
         // each round publishes a NEW file (the real versioned flow); the manifest sweep cannot delete
         // the previous db (the chain holds it open) — the swap disposes and deletes it
@@ -240,7 +242,7 @@ public class SqliteFilterChainTest : TestBase
             filter.Reconfigure();
         }
 
-        stopCts.Cancel();
+        await stopCts.CancelAsync();
         await Task.WhenAll(workers);
         Assert.IsNull(firstError, $"a lookup raced a swap: {firstError}");
         Assert.AreEqual(FilterAction.Block, filter.Process("stress.com"));

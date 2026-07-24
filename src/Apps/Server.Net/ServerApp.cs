@@ -77,8 +77,9 @@ public class ServerApp : IDisposable
             : new AppSettings();
 
         // set downloads path for diagnose
-        // do not create by default to prevent fingerprinting the server
         _downloadsPath = AppSettings.DownloadsPath ?? Path.Combine(storagePath, "downloads");
+        if (!string.IsNullOrWhiteSpace(_downloadsPath))
+            Directory.CreateDirectory(_downloadsPath);
 
         // Init File Logger before starting server
         VhLogger.MinLogLevel = AppSettings.LogLevel;

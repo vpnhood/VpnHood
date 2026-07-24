@@ -14,6 +14,8 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 // and API key are discovered from the bootstrap file written by the listener.
 public sealed class TcpMessageClient(string configFolder) : IMessageClient
 {
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
+
     private readonly string _apiFilePath = TcpMessageTransport.GetApiFilePath(configFolder);
     private readonly AsyncLock _sendLock = new();
     private TcpClient? _tcpClient;
@@ -25,11 +27,17 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
 
         using var scopeLock = await _sendLock.LockAsync(cancellationToken).Vhc();
 
-        // try to reuse the live connection
+        if (_tcpClient != null && !IsReusable(_tcpClient))
+            DisposeConnection();
+
         var tcpClient = _tcpClient;
-        if (tcpClient is { Connected: true }) {
+        if (tcpClient != null) {
             try {
                 return await SendCore(tcpClient, request, cancellationToken).Vhc();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+                DisposeConnection();
+                throw;
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(ex,
@@ -39,15 +47,29 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
             }
         }
 
-        // (re)connect and send
         tcpClient = await Connect(cancellationToken).Vhc();
         _tcpClient = tcpClient;
         try {
             return await SendCore(tcpClient, request, cancellationToken).Vhc();
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            DisposeConnection();
+            throw;
+        }
         catch (Exception ex) {
             DisposeConnection();
             throw new VpnServiceUnreachableException("VpnService is unreachable.", ex);
+        }
+    }
+
+    private static bool IsReusable(TcpClient tcpClient)
+    {
+        try {
+            // No data is expected between requests. A readable idle socket is closed or out of sync.
+            return tcpClient.Connected && !tcpClient.Client.Poll(0, SelectMode.SelectRead);
+        }
+        catch {
+            return false;
         }
     }
 
@@ -62,15 +84,18 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
 
     private async Task<TcpClient> Connect(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var bootstrap = ReadBootstrap();
 
         VhLogger.Instance.LogDebug("Connecting to VpnService Host... EndPoint: {EndPoint}", bootstrap.ApiEndPoint);
+        using var timeoutCts = new CancellationTokenSource(ConnectTimeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
         var tcpClient = new TcpClient { NoDelay = true };
         try {
-            await tcpClient.ConnectAsync(bootstrap.ApiEndPoint, cancellationToken).Vhc();
+            await tcpClient.ConnectAsync(bootstrap.ApiEndPoint, linkedCts.Token).Vhc();
 
             // authenticate with the API key frame
-            await TcpMessageTransport.WriteFrameAsync(tcpClient.GetStream(), bootstrap.ApiKey, cancellationToken)
+            await TcpMessageTransport.WriteFrameAsync(tcpClient.GetStream(), bootstrap.ApiKey, linkedCts.Token)
                 .Vhc();
 
             VhLogger.Instance.LogDebug("Connected to VpnService Host. LocalEp: {LocalEp}, RemoteEp: {RemoteEp}",
@@ -79,6 +104,8 @@ public sealed class TcpMessageClient(string configFolder) : IMessageClient
         }
         catch (Exception ex) {
             tcpClient.Dispose();
+
+            cancellationToken.ThrowIfCancellationRequested();
             throw new VpnServiceUnreachableException(
                 $"VpnService is unreachable. EndPoint: {bootstrap.ApiEndPoint}", ex);
         }

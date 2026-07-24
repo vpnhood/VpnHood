@@ -14,14 +14,18 @@ namespace VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
 // TcpMessageClient can discover and authenticate against it.
 public sealed class TcpMessageListener : IMessageListener
 {
+    private const int MaxConsecutiveAcceptErrors = 5;
+    private static readonly TimeSpan AcceptErrorDelay = TimeSpan.FromMilliseconds(100);
+
     private readonly string _apiFilePath;
     private readonly TcpListener _tcpListener;
     private readonly byte[] _apiKey;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private MessageHandler? _messageHandler;
-    private bool _disposed;
+    private int _disposed;
 
-    public IPEndPoint ApiEndPoint { get; }
+    public IPEndPoint ApiEndPoint { get; private set; }
+    private bool IsDisposed => Volatile.Read(ref _disposed) != 0;
 
     public TcpMessageListener(string configFolder)
     {
@@ -30,46 +34,100 @@ public sealed class TcpMessageListener : IMessageListener
 
         // bind immediately so the endpoint is available right away
         _tcpListener = new TcpListener(IPAddress.Loopback, 0);
-        _tcpListener.Start();
-        ApiEndPoint = (IPEndPoint)_tcpListener.LocalEndpoint;
-
-        // publish the bootstrap info so the client can discover and authenticate
-        WriteBootstrapFile();
+        ApiEndPoint = Bind();
 
         VhLogger.Instance.LogDebug("TcpMessageListener has been created. EndPoint: {EndPoint}", ApiEndPoint);
     }
 
-    private void WriteBootstrapFile()
+    private IPEndPoint Bind()
     {
-        var bootstrap = new TcpApiBootstrap {
-            ApiEndPoint = ApiEndPoint,
-            ApiKey = _apiKey
-        };
-        var json = JsonSerializer.Serialize(bootstrap);
-        File.WriteAllText(_apiFilePath, json);
+        _tcpListener.Start();
+        try {
+            var apiEndPoint = (IPEndPoint)_tcpListener.LocalEndpoint;
+            WriteBootstrapFile(apiEndPoint);
+            return apiEndPoint;
+        }
+        catch {
+            // Never leave a listener running on an endpoint that was not published.
+            _tcpListener.Stop();
+            throw;
+        }
     }
 
-    public Task Start(MessageHandler messageHandler, CancellationToken cancellationToken)
+    private void WriteBootstrapFile(IPEndPoint apiEndPoint)
+    {
+        var bootstrap = new TcpApiBootstrap {
+            ApiEndPoint = apiEndPoint,
+            ApiKey = _apiKey
+        };
+
+        var json = JsonSerializer.Serialize(bootstrap);
+        var tempPath = _apiFilePath + ".tmp";
+        File.WriteAllText(tempPath, json);
+        File.Move(tempPath, _apiFilePath, overwrite: true);
+    }
+
+    public async Task Start(MessageHandler messageHandler, CancellationToken cancellationToken)
     {
         _messageHandler = messageHandler;
-        return AcceptLoop(_cancellationTokenSource.Token);
+        using var linkedCts =
+            CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken);
+        await AcceptLoop(linkedCts.Token).Vhc();
     }
 
     private async Task AcceptLoop(CancellationToken cancellationToken)
     {
+        var errorCount = 0;
         try {
             while (!cancellationToken.IsCancellationRequested) {
-                var client = await _tcpListener.AcceptTcpClientAsync(cancellationToken).Vhc();
-                _ = ProcessClientAsync(client, cancellationToken);
+                try {
+                    var client = await _tcpListener.AcceptTcpClientAsync(cancellationToken).Vhc();
+                    errorCount = 0;
+                    _ = ProcessClientAsync(client, cancellationToken);
+                }
+                catch (Exception ex) when (!IsDisposed && !cancellationToken.IsCancellationRequested) {
+                    errorCount++;
+                    VhLogger.Instance.LogDebug(ex,
+                        "Could not accept an API connection. ErrorCount: {ErrorCount}", errorCount);
+
+                    if (errorCount >= MaxConsecutiveAcceptErrors && Rebind())
+                        errorCount = 0;
+
+                    await Task.Delay(AcceptErrorDelay, cancellationToken).Vhc();
+                }
             }
         }
         catch (Exception ex) {
-            if (!_disposed)
+            if (!IsDisposed && !cancellationToken.IsCancellationRequested)
                 VhLogger.Instance.LogError(ex, "TcpMessageListener accept loop has stopped.");
         }
         finally {
             _tcpListener.Stop();
             VhLogger.Instance.LogDebug("TcpMessageListener has been stopped. EndPoint: {EndPoint}", ApiEndPoint);
+        }
+    }
+
+    private bool Rebind()
+    {
+        try {
+            if (IsDisposed)
+                return false;
+
+            _tcpListener.Stop();
+            ApiEndPoint = Bind();
+
+            if (IsDisposed) {
+                _tcpListener.Stop();
+                VhUtils.TryDeleteFile(_apiFilePath);
+                return false;
+            }
+
+            VhLogger.Instance.LogWarning("TcpMessageListener has been rebound. EndPoint: {EndPoint}", ApiEndPoint);
+            return true;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogDebug(ex, "Could not rebind the TcpMessageListener.");
+            return false;
         }
     }
 
@@ -95,7 +153,7 @@ public sealed class TcpMessageListener : IMessageListener
                 await TcpMessageTransport.WriteFrameAsync(stream, response, cancellationToken).Vhc();
             }
         }
-        catch (Exception ex) when (!_disposed) {
+        catch (Exception ex) when (!IsDisposed) {
             VhLogger.Instance.LogDebug(ex, "Could not handle API connection. ClientEp: {ClientEp}", clientEp);
         }
         finally {
@@ -105,7 +163,7 @@ public sealed class TcpMessageListener : IMessageListener
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref _disposed, true))
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
         _cancellationTokenSource.Cancel();

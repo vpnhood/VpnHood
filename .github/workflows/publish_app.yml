@@ -333,6 +333,26 @@ jobs:
         with:
           name: ${{ inputs.app }}-ios
           path: ${{ env.MODULE_DIR }}/ios
+      # Resolve the exact commit the version tag will be pinned to. The tag is created in the CALLER
+      # repo, so --target MUST name a commit that exists THERE; left unset, GitHub silently falls back
+      # to that repo's default-branch tip, which is not the released code (and changes meaning whenever
+      # the default branch does).
+      - name: Resolve release target commit
+        shell: bash
+        run: |
+          set -e
+          CODE_COMMIT=$(git -C code rev-parse HEAD)
+          if [ "${{ github.repository }}" = "${{ env.CODE_REPO }}" ]; then
+            # Releasing to the monorepo itself: tag the code commit that was actually built.
+            RELEASE_TARGET="$CODE_COMMIT"
+          else
+            # Releasing to a thin caller repo (connect): it holds no source, so tag its own commit —
+            # the one carrying the fastlane/config used. The built code commit goes in the release note.
+            RELEASE_TARGET="${{ github.sha }}"
+          fi
+          echo "CODE_COMMIT=$CODE_COMMIT" >> $GITHUB_ENV
+          echo "RELEASE_TARGET=$RELEASE_TARGET" >> $GITHUB_ENV
+          echo "✅ tag target=$RELEASE_TARGET (built from ${{ env.CODE_REPO }}@$CODE_COMMIT)"
       - name: Create GitHub release (caller repo)
         shell: pwsh
         env:
@@ -343,7 +363,9 @@ jobs:
           & "$env:GITHUB_WORKSPACE/code/pub/lib/Publish-GithubRelease.ps1" `
             -packageDirName "$env:PKG" `
             -repoName $slug `
-            -dropChangelogTag "$env:DROP_TAG"
+            -dropChangelogTag "$env:DROP_TAG" `
+            -targetCommitish "$env:RELEASE_TARGET" `
+            -codeCommit "$env:CODE_COMMIT"
       - name: Delete this run's artifacts
         if: always()
         env:

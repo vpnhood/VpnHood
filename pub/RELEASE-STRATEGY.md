@@ -52,7 +52,20 @@ Rule of thumb: **same repo = ProjectReference, third-party = PackageReference, r
    `-prerelease` suffix from the app flag ([pub/lib/Publish-NugetPackages.ps1](lib/Publish-NugetPackages.ps1)).
    One clean library version line, decoupled from app prereleases. (The `smoke` input is the only
    exception — see below.) **(Done.)**
-4. **One shared version for everything in `src/`.** All projects (apps + libraries) carry the
+4. **Release tags are immutable, and pinned to an exact commit.**
+   [pub/lib/Publish-GithubRelease.ps1](lib/Publish-GithubRelease.ps1) replaces the *release object* on a
+   re-publish but never the *tag* — no `--cleanup-tag` — and creates a new tag with an explicit
+   `--target <sha>` supplied by [.github/workflows/publish_app.yml](../.github/workflows/publish_app.yml).
+   Deleting a tag to recreate it is a history rewrite by another name: `gh release create` re-cuts it at
+   the target repo's **default-branch tip**, so the tag silently walks forward on every re-publish, stops
+   identifying the released code (once Connect's default branch became `develop`, its tags landed on
+   commits unreachable from `main`), and leaves every clone that already fetched it unable to push tags
+   (`! [rejected] … already exists`) until it re-syncs with `git fetch --tags --force`. `target_commitish`
+   is *unused when the tag already exists*, so the pin applies at creation and the tag is frozen after.
+   Same principle as `main` never being force-pushed: published refs are not rewritten. **(Done.)**
+   - A thin caller repo carries no source, so its tag pins its *own* commit (the fastlane/config used) and
+     the built monorepo commit is recorded in the release note instead. **(Done.)**
+5. **One shared version for everything in `src/`.** All projects (apps + libraries) carry the
    single `PubVersion.json` version and bump together on a release — the standard, lowest-maintenance
    model. We accept that unchanged libraries get a new version number on a release; chasing
    per-library churn is not worth the machinery. Genuine per-component independence is deferred to a

@@ -15,7 +15,15 @@ param(
 	# Which asset layout to attach: "app" = the Client/Connect set (Android/Linux/Windows-MSI),
 	# "server" = the Server set (Linux tar.gz + Windows-x64 zip + docker compose files). Keeping one
 	# release creator for every product (see pub/RELEASE-STRATEGY.md) instead of a per-product script.
-	[Parameter(Mandatory = $false)] [ValidateSet("app", "server")] [string]$assetSet = "app"
+	[Parameter(Mandatory = $false)] [ValidateSet("app", "server")] [string]$assetSet = "app",
+	# Exact commit the version tag must point at. It has to be a commit that EXISTS in $repoName, so only
+	# the caller can resolve it (.github/workflows/publish_app.yml does). Empty = let GitHub choose, which
+	# means its default-branch tip — acceptable only for a manual desktop run.
+	[Parameter(Mandatory = $false)] [string]$targetCommitish = "",
+	# Commit of the vpnhood/VpnHood code these binaries were built from, recorded in the release note.
+	# A thin caller repo (Connect) carries no source, so its tag CANNOT point at the built code; this
+	# line is then the only link between the release and the code that produced it.
+	[Parameter(Mandatory = $false)] [string]$codeCommit = ""
 )
 
 Write-Host "*** Publish $packageDirName release to GitHub" -BackgroundColor Blue
@@ -31,8 +39,10 @@ $packageFileTitle = $packageDirName;
 # match what the build produced. The package DIR stays keyed by the stable folder name.
 $titleOverride = (Get-AppPublishConfig $packageDirName).packageFileTitle;
 if ($titleOverride) { $packageFileTitle = $titleOverride; }
+# $releaseRootDir already resolves to pub/bin/latest on a stable release and pub/bin/<tag> on a
+# prerelease (pub/lib/Common.ps1), so this one path covers both — there is no separate "latest" dir to
+# mirror into here, unlike the per-platform publishers that write pub/bin/<tag> and pub/bin/latest.
 $packageDir = "$releaseRootDir/$packageDirName";
-$packageLatestDir = "$releaseRootDir/$packageDirName";
 
 # Read the CHANGELOG for the release note. The version header is already stamped by the bump (bump.yml
 # via pub/Invoke-VersionBump.ps1); this workflow only reads the changelog — it never rewrites or commits it.
@@ -40,16 +50,32 @@ $changeLog = Get-Content "$solutionDir/$changelogFileName" -Raw;
 
 # create release note (drop the other product's lines)
 $releaseNote = Changelog_GetRecentSecion $changeLog @($dropChangelogTag);
-$releaseNote | Out-File -FilePath "$packageDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
-if ($isLatest) {
-	$releaseNote | Out-File -FilePath "$packageLatestDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
+
+# Stamp the provenance of the binaries. The tag can only ever pin a commit in $repoName, and a thin
+# caller repo (Connect) has no source of its own, so without this footer nothing on the release
+# identifies which monorepo commit was actually built.
+if ($codeCommit) {
+	$releaseNote = $releaseNote.TrimEnd() + "`n`n---`nBuilt from vpnhood/VpnHood@$codeCommit`n";
 }
 
-# delete old release if exists
-Write-Host "delete old release if exists: $versionTag";
+$releaseNote | Out-File -FilePath "$packageDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
+
+# Replace a previous release for this version, but NEVER its tag — note the absence of --cleanup-tag.
+# A version tag is immutable: once cut it keeps pointing at the commit it was cut from, forever.
+# --cleanup-tag deleted the tag along with the release, and the `gh release create` below then recreated
+# it at $repoName's DEFAULT BRANCH tip — so every re-publish silently MOVED the tag onto whatever was
+# on that branch at that moment. Two things broke: the tag stopped identifying the released code (after
+# Connect's default branch became `develop`, its tags landed on commits not even reachable from `main`),
+# and it rewrote already-published history, leaving every clone that had fetched the old tag unable to
+# push tags at all ("! [rejected] ... already exists"). Keeping the tag makes a re-publish idempotent:
+# gh reuses the existing tag and only the release object is replaced.
+Write-Host "delete old release if exists (its tag is kept): $versionTag";
 $null = gh release view "$versionTag" --repo $repoName 2>&1;
 if ($LASTEXITCODE -eq 0) {
-	gh release delete "$versionTag" --repo $repoName --cleanup-tag --yes;
+	gh release delete "$versionTag" --repo $repoName --yes;
+	if ($LASTEXITCODE -ne 0) {
+		throw "Failed to delete the existing $versionTag release. Exit code: $LASTEXITCODE";
+	}
 }
 
 # publish new release
@@ -118,10 +144,17 @@ if ($assets.Count -eq 0) {
 	throw "No release assets were produced; aborting release creation.";
 }
 
+# --target pins a NEW tag to an exact commit; without it GitHub creates the tag at $repoName's
+# default-branch tip, i.e. wherever that branch happened to be rather than what was released. GitHub
+# ignores it when the tag already exists, which is precisely what keeps an existing tag immutable
+# across re-publishes (see the delete note above).
+$targetArgs = if ($targetCommitish) { @("--target", $targetCommitish) } else { @() };
+
 gh release create "$versionTag" `
 	--repo $repoName `
 	--title "$versionTag" `
 	-F $packageDir/ReleaseNote.txt `
+	@targetArgs `
 	$releaseFlag `
 	$assets;
 

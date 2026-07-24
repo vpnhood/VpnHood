@@ -2,15 +2,43 @@
 
 namespace VpnHood.Core.Filtering.Abstractions;
 
-public class StaticIpFilter(IIpFilter? nextFilter, bool autoDisposeNextFilter = true) : IIpFilter
+public class StaticIpFilter : IIpFilter
 {
-    public IpRangeOrderedList BlockedRanges { get; set; } = [];
-    public IpRangeOrderedList ExcludeRanges { get; set; } = [];
-    public IpRangeOrderedList IncludeRanges { get; set; } = [];
+    private readonly IIpFilter? _nextFilter;
+    private readonly bool _autoDisposeNextFilter;
+
+    public event EventHandler? Changed;
+
+    public StaticIpFilter(IIpFilter? nextFilter, bool autoDisposeNextFilter = true)
+    {
+        _nextFilter = nextFilter;
+        _autoDisposeNextFilter = autoDisposeNextFilter;
+
+        // roll a change announced below this stage up the pipe (this stage's own sets are unaffected)
+        if (nextFilter != null)
+            nextFilter.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    // the setters raise Changed: the ranges are set/replaced at runtime (e.g. the server∩device allow
+    // set arrives with the session), and the caches above must not serve verdicts of the old sets
+    public IpRangeOrderedList BlockedRanges {
+        get;
+        set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
+    } = [];
+
+    public IpRangeOrderedList ExcludeRanges {
+        get;
+        set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
+    } = [];
+
+    public IpRangeOrderedList IncludeRanges {
+        get;
+        set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
+    } = [];
 
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
-        var result = nextFilter?.Process(protocol, endPoint) ?? FilterAction.Default;
+        var result = _nextFilter?.Process(protocol, endPoint) ?? FilterAction.Default;
         if (result != FilterAction.Default)
             return result;
 
@@ -31,9 +59,18 @@ public class StaticIpFilter(IIpFilter? nextFilter, bool autoDisposeNextFilter = 
         return FilterAction.Default;
     }
 
+    // this stage's own sets are program state, not external configuration; just forward the command
+    public void Reconfigure() => _nextFilter?.Reconfigure();
+
+    public bool IsEmpty =>
+        BlockedRanges.Count == 0 &&
+        ExcludeRanges.Count == 0 &&
+        IncludeRanges.Count == 0 &&
+        (_nextFilter?.IsEmpty ?? true);
+
     public void Dispose()
     {
-        if (autoDisposeNextFilter)
-            nextFilter?.Dispose();
+        if (_autoDisposeNextFilter)
+            _nextFilter?.Dispose();
     }
 }

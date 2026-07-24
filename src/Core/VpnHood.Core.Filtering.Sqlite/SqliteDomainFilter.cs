@@ -17,10 +17,13 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // probes the inverted domain and each of its label ancestors with exact point queries — a single
 // greatest-prefix seek would miss an ancestor hiding behind a more specific sibling entry.
 // The db is immutable at runtime (built once, opened read-only): which sets are populated is probed once
-// at construction, so absent sets cost nothing. All threads share ONE read-only connection with lazily
-// prepared queries, serialized by a lock (same rationale as SqliteIpFilter: lookups are microsecond index
-// seeks, CachedDomainFilter absorbs repeats, and a reader-per-thread design leaked one native SQLite
-// connection per pool thread for the session lifetime).
+// at construction, so absent sets cost nothing. All threads share ONE read-only connection, serialized
+// by a lock (same rationale as SqliteIpFilter: lookups are microsecond index seeks, CachedDomainFilter
+// absorbs repeats, and a reader-per-thread design leaked one native SQLite connection per pool thread
+// for the session lifetime). The connection is opened EAGERLY and held for the gate's lifetime: it pins
+// the db while the app's manifest sweep runs — a locked file survives the sweep on Windows, and an
+// already-open fd keeps working through the unlink on unix — so a live gate can never lose its db
+// underneath itself.
 public sealed class SqliteDomainFilter : IDomainFilter
 {
     private readonly IDomainFilter? _next;
@@ -28,32 +31,36 @@ public sealed class SqliteDomainFilter : IDomainFilter
     private readonly bool _hasIncludes;
     private readonly bool _hasExcludes;
     private readonly bool _hasBlocks;
-    private readonly string _connectionString;
     private readonly Lock _readerLock = new();
-    private Reader? _sharedReader;
+    private readonly Reader _sharedReader;
     private volatile bool _disposed;
+
+    public event EventHandler? Changed;
 
     public SqliteDomainFilter(IDomainFilter? next, string dbPath, bool autoDisposeNextFilter = true)
     {
         SplitSqlite.EnsureInitialized();
         _next = next;
         _autoDisposeNextFilter = autoDisposeNextFilter;
-        _connectionString = new SqliteConnectionStringBuilder {
+
+        // this gate's own db is immutable; roll a change announced below it up the pipe
+        if (next != null)
+            next.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
+        var connectionString = new SqliteConnectionStringBuilder {
             DataSource = dbPath,
             Mode = SqliteOpenMode.ReadOnly,
             Cache = SqliteCacheMode.Private,
             Pooling = false
         }.ToString();
 
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-        _hasIncludes = HasRows(connection, FilterAction.Include);
-        _hasExcludes = HasRows(connection, FilterAction.Exclude);
-        _hasBlocks = HasRows(connection, FilterAction.Block);
+        _sharedReader = CreateReader(connectionString);
+        _hasIncludes = HasRows(_sharedReader.Connection, FilterAction.Include);
+        _hasExcludes = HasRows(_sharedReader.Connection, FilterAction.Exclude);
+        _hasBlocks = HasRows(_sharedReader.Connection, FilterAction.Block);
     }
 
-    // all sets empty ⇒ the gate can never decide; lets the client skip enabling SNI extraction for it
-    public bool IsEmpty => !(_hasIncludes || _hasExcludes || _hasBlocks);
+    // all sets empty and nothing below ⇒ the pipe can never decide; lets the client skip SNI extraction
+    public bool IsEmpty => !(_hasIncludes || _hasExcludes || _hasBlocks) && (_next?.IsEmpty ?? true);
 
     public FilterAction Process(string? domain)
     {
@@ -79,12 +86,11 @@ public sealed class SqliteDomainFilter : IDomainFilter
     {
         lock (_readerLock) {
             // teardown race: a lookup that loses the race to Dispose answers "not a member" instead of
-            // resurrecting a connection that nobody would ever close
+            // touching the disposed connection
             if (_disposed)
                 return false;
 
-            var reader = _sharedReader ??= CreateReader();
-            var command = reader.GetCommand(action);
+            var command = _sharedReader.GetCommand(action);
 
             // probe the domain itself and every label ancestor ("com.google.www" → "com.google" → "com");
             // each candidate is one index seek, and the walk is as deep as the domain has labels
@@ -98,9 +104,9 @@ public sealed class SqliteDomainFilter : IDomainFilter
         }
     }
 
-    private Reader CreateReader()
+    private static Reader CreateReader(string connectionString)
     {
-        var reader = new Reader(_connectionString);
+        var reader = new Reader(connectionString);
         VhTypeTracker.Track(reader, "SqliteDomainFilter.Reader");
         return reader;
     }
@@ -112,6 +118,9 @@ public sealed class SqliteDomainFilter : IDomainFilter
         return (long)command.ExecuteScalar()! == 1;
     }
 
+    // this gate's own db is immutable (a new db means a new gate); just forward the command
+    public void Reconfigure() => _next?.Reconfigure();
+
     public void Dispose()
     {
         if (_disposed)
@@ -119,11 +128,8 @@ public sealed class SqliteDomainFilter : IDomainFilter
         _disposed = true;
 
         lock (_readerLock) {
-            if (_sharedReader != null) {
-                _sharedReader.Dispose();
-                _sharedReader = null;
-                VhTypeTracker.Record("SqliteDomainFilter.Reader.disposed");
-            }
+            _sharedReader.Dispose();
+            VhTypeTracker.Record("SqliteDomainFilter.Reader.disposed");
         }
 
         if (_autoDisposeNextFilter)
@@ -135,6 +141,8 @@ public sealed class SqliteDomainFilter : IDomainFilter
     {
         private readonly SqliteConnection _connection;
         private readonly SqliteCommand?[] _commands = new SqliteCommand?[4];
+
+        public SqliteConnection Connection => _connection;
 
         public Reader(string connectionString)
         {

@@ -50,11 +50,6 @@ public class ClientOptions
     public string? ServerLocation { get; set; }
     public ConnectPlanId PlanId { get; set; }
     public bool ForceLogSni { get; set; }
-
-    // Turns on domain (SNI/QUIC) extraction. It is not free — it also forces TcpProxy mode — so the owner
-    // states it explicitly rather than the client guessing from the filters: a domain gate may hold no rules
-    // yet and still be filled later (e.g. by a proxy/list auto-update) without rebuilding the client.
-    public bool UseDomainFilter { get; set; }
     public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(5);
     public string? AccessCode { get; set; }
     public string? SessionName { get; set; }

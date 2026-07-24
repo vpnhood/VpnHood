@@ -19,7 +19,7 @@ public class SplitCountryDbBuilder(
 {
     // Asset build id + target set + distinct, upper-cased, ordinal-sorted codes. The action IS part of the
     // signature: the same codes stored as include vs exclude are different db contents.
-    protected override string BuildSourceSignature() =>
+    public override string GetSourceSignature() =>
         assetHash + "|" + action + "|" + string.Join(',', countryCodes
             .Select(c => c.ToUpperInvariant())
             .Distinct()

@@ -14,7 +14,7 @@ public class DomainListDbBuilder(
     Func<IReadOnlyList<string>>? blocksFactory = null)
     : SplitDomainDbBuilder
 {
-    protected override string BuildSourceSignature() => sourceSignatureFactory();
+    public override string GetSourceSignature() => sourceSignatureFactory();
 
     protected override Task InsertDomainsAsync(SplitDomainDbInserter inserter, CancellationToken cancellationToken)
     {

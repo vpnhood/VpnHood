@@ -74,11 +74,13 @@ public class SplitIpSettings(string folderPath)
 
     // Stat-only change signature of the app split-ip sources, stored as the db's source_signature meta
     // so SplitIpDbBuilder.EnsureAsync detects stale dbs without parsing the text files. Every setting
-    // write rewrites its file, so the signature always changes with the content.
+    // write rewrites its file, so the signature always changes with the content. GetFilePath (not a raw
+    // Path.Combine) so missing files are created FIRST — reading a source auto-creates it, and a
+    // signature taken before that creation would not describe the files the build actually reads.
     public string GetSplitIpViaAppSignature() => AppUtils.BuildFileSignature(
-        Path.Combine(folderPath, "app_includes.txt"),
-        Path.Combine(folderPath, "app_excludes.txt"),
-        Path.Combine(folderPath, "app_blocks.txt"));
+        GetFilePath("app_includes"),
+        GetFilePath("app_excludes"),
+        GetFilePath("app_blocks"));
 
     private string Read(string fileTitle)
     {

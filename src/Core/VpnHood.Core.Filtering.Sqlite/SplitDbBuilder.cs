@@ -6,7 +6,7 @@ namespace VpnHood.Core.Filtering.Sqlite;
 // Shared one-shot build core for split dbs (ip and domain): schema creation, bulk-insert transaction,
 // meta, index-after-insert, atomic replace, and the staleness check. Schema subclasses (SplitIpDbBuilder,
 // SplitDomainDbBuilder) supply the table SQL and the row inserter; their derived classes supply the
-// context's business: what identifies the source (BuildSourceSignature) and what rows to stream. Builds
+// context's business: what identifies the source (GetSourceSignature) and what rows to stream. Builds
 // run in the app process (memory is fine there); the resulting file is opened read-only by the VpnService.
 // A crash never leaves a half-built db in place — the build targets a temp file that atomically replaces
 // the target (VPN connections are exclusive, so the target is never in use).
@@ -14,7 +14,9 @@ public abstract class SplitDbBuilder
 {
     // Context identity, stored as the db's source_signature meta: must change iff the stored sets would
     // change. Invoked on every EnsureAsync, so it must be cheap (compose of hashes/stat, never parse).
-    protected abstract string BuildSourceSignature();
+    // Public so callers can derive signature-versioned file names (a changed source gets a NEW file, so
+    // a running VpnService can keep the old db open until it swaps); same value EnsureAsync compares.
+    public abstract string GetSourceSignature();
 
     protected abstract int SchemaVersion { get; }
     protected abstract string CreateTablesSql { get; }
@@ -29,7 +31,7 @@ public abstract class SplitDbBuilder
     // the meta check without touching the source at all.
     public async Task EnsureAsync(string dbPath, CancellationToken cancellationToken)
     {
-        if (IsUpToDate(dbPath, BuildSourceSignature()))
+        if (IsUpToDate(dbPath, GetSourceSignature()))
             return;
 
         await BuildAsync(dbPath, cancellationToken).Vhc();
@@ -74,7 +76,7 @@ public abstract class SplitDbBuilder
 
         // meta written in the data transaction, EXCEPT built_complete (set only after indexes exist)
         SplitDb.SetMeta(connection, transaction, SplitDb.KeySchemaVersion, SchemaVersion.ToString());
-        SplitDb.SetMeta(connection, transaction, SplitDb.KeySourceSignature, BuildSourceSignature());
+        SplitDb.SetMeta(connection, transaction, SplitDb.KeySourceSignature, GetSourceSignature());
 
         // the transaction ends HERE; index creation is deliberately outside it (index-after-bulk-insert)
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);

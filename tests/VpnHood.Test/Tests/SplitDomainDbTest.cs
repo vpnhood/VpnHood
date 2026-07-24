@@ -266,7 +266,10 @@ public class SplitDomainDbTest : TestBase
 
     private sealed class StubFilter(FilterAction action) : IDomainFilter
     {
+        public event EventHandler? Changed { add { } remove { } } // verdicts never change
+        public bool IsEmpty => false; // always has a verdict
         public FilterAction Process(string? domain) => action;
+        public void Reconfigure() { } // nothing external to re-read
         public void Dispose() { }
     }
 
@@ -301,21 +304,28 @@ public class SplitDomainDbTest : TestBase
         Directory.CreateDirectory(storagePath);
         var settingsService = new AppSettingsService(storagePath, remoteSettingsUrl: null, debugMode: true);
         var service = new SplitDomainService(settingsService);
-        var dbPath = Path.Combine(storagePath, "split-domain.db");
 
         // the UseSplitDomain gate lives in the caller; empty/missing sources leave every set empty,
         // which is a no-op gate (routes identically to no filter)
-        await service.EnsureSplitDomainDb(dbPath, TestCt);
+        var dbPath = await service.EnsureSplitDomainDb(storagePath, TestCt);
+        StringAssert.Contains(Path.GetFileName(dbPath), "split-domain.",
+            "the file name must carry the context and its source signature");
         using (var filter = new SqliteDomainFilter(next: null, dbPath))
             Assert.IsTrue(filter.IsEmpty);
 
-        // the sets mirror the source files (comments stripped by the parser)
+        // unchanged sources → same signature → SAME file (reused, not rebuilt)
+        Assert.AreEqual(dbPath, await service.EnsureSplitDomainDb(storagePath, TestCt),
+            "an unchanged source must keep the same versioned file name");
+
+        // the sets mirror the source files (comments stripped by the parser). A changed source gets a
+        // NEW file name, so a running service could keep the old db open until it swaps.
         settingsService.SplitDomainSettings.Includes = "include.com # tunnel me";
         settingsService.SplitDomainSettings.Excludes = "exclude.com\n; a comment line\n*.exclude.org";
         settingsService.SplitDomainSettings.Blocks = "block.com";
-        await service.EnsureSplitDomainDb(dbPath, TestCt);
+        var dbPath2 = await service.EnsureSplitDomainDb(storagePath, TestCt);
+        Assert.AreNotEqual(dbPath, dbPath2, "a changed source must build under a new versioned file name");
 
-        using (var filter = new SqliteDomainFilter(next: null, dbPath)) {
+        using (var filter = new SqliteDomainFilter(next: null, dbPath2)) {
             Assert.AreEqual(FilterAction.Include, filter.Process("include.com"));
             Assert.AreEqual(FilterAction.Exclude, filter.Process("exclude.com"));
             Assert.AreEqual(FilterAction.Exclude, filter.Process("www.exclude.org"));
@@ -325,8 +335,8 @@ public class SplitDomainDbTest : TestBase
 
         // source file change → signature change → rebuild with the new sets
         settingsService.SplitDomainSettings.Blocks = string.Empty;
-        await service.EnsureSplitDomainDb(dbPath, TestCt);
-        using (var filter = new SqliteDomainFilter(next: null, dbPath))
+        var dbPath3 = await service.EnsureSplitDomainDb(storagePath, TestCt);
+        using (var filter = new SqliteDomainFilter(next: null, dbPath3))
             Assert.AreEqual(FilterAction.Default, filter.Process("block.com"));
     }
 }

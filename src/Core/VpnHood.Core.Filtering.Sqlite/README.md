@@ -23,11 +23,13 @@ context's policy in its sibling `split-country.md` / `split-ip-via-app.md` / `sp
 | Class | Role |
 | --- | --- |
 | `SplitDbBuilder` | Abstract base: shared build core (schema, bulk-insert transaction, meta, index-after-insert, atomic replace) + `EnsureAsync` staleness check. |
-| `SplitIpDbBuilder` / `SplitDomainDbBuilder` | Schema flavors of the base: bind the ip/domain tables and hand derived classes the matching inserter. Derived classes supply `BuildSourceSignature()` and `InsertRangesAsync()` / `InsertDomainsAsync()`. |
+| `SplitIpDbBuilder` / `SplitDomainDbBuilder` | Schema flavors of the base: bind the ip/domain tables and hand derived classes the matching inserter. Derived classes supply `GetSourceSignature()` and `InsertRangesAsync()` / `InsertDomainsAsync()`. |
 | `IpRangeListDbBuilder` / `DomainListDbBuilder` | Generic concrete builders: store plain lists into the per-action sets; every input is a lazy factory. |
 | `SplitIpDbInserter` / `SplitDomainDbInserter` | The raw-statement insert hot loops; target a set by action. |
 | `SqliteIpFilter` | Runtime `IIpFilter`: read-only per-packet veto gate — the db itself says what membership means. |
 | `SqliteDomainFilter` | Runtime `IDomainFilter`: read-only per-SNI gate; its include set is the Include override lane. |
+| `SqliteIpFilterChain` / `SqliteDomainFilterChain` | The permanent pipe stage owning the gates: resolves its db paths from a provider, and on `Reconfigure()` swaps the gates (draining in-flight lookups), deletes the superseded db files it had open and raises `Changed`. |
+| `SplitDbManifest` | The per-folder source of truth for which dbs are active: atomic write by the app, read by the split filter stages' providers; writing sweeps unlisted db-family files. Presence on disk is never policy — the manifest is. |
 | `SplitIpDb` / `SplitDomainDb` | Schema, table naming, key conversion (internal). |
 | `SplitDb` | Shared meta table keys/accessors (internal). |
 | `SplitSqlite` | One-time `SQLitePCL.Batteries_V2.Init()` (required by `Microsoft.Data.Sqlite.Core`). |
@@ -86,7 +88,7 @@ requires ALL of:
 | `built_complete` | `"1"` only after indexes exist; a crash mid-build can never be mistaken for a valid db. |
 
 What goes into `source_signature` is the context's choice — the base only compares strings; each
-builder's `BuildSourceSignature()` composes it so it changes iff the stored sets would change (asset
+builder's `GetSourceSignature()` composes it so it changes iff the stored sets would change (asset
 hash + target set + selection for split-country, source-file mtime + length for split-ip-via-app and
 split-domain — see the docs in `docs/split-ip/`). It runs on every ensure, so it must stay cheap:
 hashes and stat, never a parse.

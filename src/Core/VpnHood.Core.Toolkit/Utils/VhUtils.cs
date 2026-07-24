@@ -251,6 +251,14 @@ public static class VhUtils
         return BitConverter.ToString(hash).Replace("-", "");
     }
 
+    // Stable content id (change detection, not security), as lowercase hex, optionally truncated —
+    // e.g. 16 chars (64 bits) already keep accidental collisions out of reach for file-name ids.
+    public static string GetHexStringSha256(string value, int? length = null)
+    {
+        var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+        return length is null ? hash : hash[..length.Value];
+    }
+
     public static string RedactHostName(string hostName)
     {
         return hostName.Length <= 8

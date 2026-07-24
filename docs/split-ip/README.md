@@ -23,37 +23,42 @@ The db format, meta/rebuild rules, and filter semantics are the contract of the
 ```text
 App process (VpnHoodApp / AppLib)                    VpnService process (VpnHoodClient)
 ─────────────────────────────────                    ──────────────────────────────────
-VpnHoodApp.PrepareSplitIpDbs                         ClientOptions.SplitIpDbPaths[]
-  ├─ SplitCountryService.EnsureSplitIpDb               └─ one SqliteIpFilter per path
+VpnHoodApp.PrepareSplitIpDbs                         SplitDbManifest.Read(folder)
+  ├─ SplitCountryService.EnsureSplitIpDb               └─ one SqliteIpFilter per listed db
   ├─ SplitIpViaAppService.EnsureSplitIpDb                     (read-only, per-packet)
-  └─ each: SplitIpDbBuilder.EnsureAsync                     chained into the filter pipe
-       └─ rebuild only if meta says stale
+  └─ SplitDbManifest.Write(folder, dbPaths)                 owned by the SqliteIpFilterChain stage
+       └─ each: SplitIpDbBuilder.EnsureAsync
+            └─ rebuild only if meta says stale
 ```
 
 1. **Before connecting**, `VpnHoodApp.PrepareSplitIpDbs` / `PrepareSplitDomainDbs` ask each context's
    service to build or reuse its db, gated by that context's user setting (`SplitCountryMode` ≠
-   `IncludeAll`; `UseSplitIpViaApp`; `UseSplitDomain`). A context that is off contributes no path and
-   its db is skipped entirely. Failures propagate and fail the connect (fail-closed): a split the user
+   `IncludeAll`; `UseSplitIpViaApp`; `UseSplitDomain`), then publish the active set through the
+   folder's **manifest** (`SplitDbManifest`). A context that is off contributes no entry — off is the
+   empty case of the same flow, and a stale db file lying in the folder means nothing (presence on
+   disk is never policy). Failures propagate and fail the connect (fail-closed): a split the user
    configured is enforced or the connection does not proceed, never silently skipped.
 
-2. **Only paths travel, not the ranges.** Each db is **self-describing** — it stores up to three sets
-   (include, exclude, block) and which sets are populated *is* its semantic — so `ClientOptions`
-   carries only `SplitIpDbPaths` and `SplitDomainDbPaths`; the cross-process payload is file paths
-   instead of megabytes of ranges (and no per-db action, either).
+2. **Nothing travels cross-process.** Each db is **self-describing** — it stores up to three sets
+   (include, exclude, block) and which sets are populated *is* its semantic — and each filter folder's
+   manifest says which dbs are current, so vpn.config and the reconfigure request carry no filter
+   payload at all: the service resolves everything from the folders it already reads.
 
-3. **At runtime**, `VpnHoodClient` chains one `SqliteIpFilter` / `SqliteDomainFilter` per path into
-   its two filter pipes. Pipe order (outermost first):
+3. **At runtime**, the filter pipes hold one `SqliteIpFilter` / `SqliteDomainFilter` gate per listed
+   db, owned by a self-updating stage (`SqliteIpFilterChain` / `SqliteDomainFilterChain`) whose paths provider
+   re-reads the folder's manifest. Pipe order (outermost first):
 
    ```text
    CachedIpFilter (60-min per-endpoint memo)
      └─ StaticIpFilter (server ∩ device allow set)
-          └─ SqliteIpFilter (split-ip-via-app: include/exclude/block sets)
-               └─ SqliteIpFilter (split-country: include or exclude set)
-                    └─ platform NetFilter (optional)
+          └─ SqliteIpFilterChain (owns the gates; swaps them on Reconfigure)
+               ├─ platform NetFilter (optional, permanent — runs first, survives swaps)
+               └─ gates: SqliteIpFilter (split-country) → SqliteIpFilter (split-ip-via-app)
 
    CachedDomainFilter (60-min per-domain memo)
-     └─ SqliteDomainFilter (split-domain: include/exclude/block sets)
-          └─ platform DomainFilter (optional)
+     └─ SqliteDomainFilterChain (owns the gates; swaps them on Reconfigure)
+          ├─ gates: SqliteDomainFilter (split-domain) — run first (Include override lane)
+          └─ platform DomainFilter (optional, permanent — survives swaps)
    ```
 
    The domain pipe runs first (on the extracted SNI); any non-`Default` domain verdict preempts the IP
@@ -81,21 +86,55 @@ stored sets would change (see the context docs for what goes into it). Ordinary 
 and never touch the source (zip or text files). Source changes trigger a one-shot rebuild in the app
 process — build to temp file, atomic rename, so no torn db and no orphans.
 
+## Live updates (no reconnect)
+
+Split changes apply to a RUNNING session through the existing reconfigure flow — the dbs stay
+immutable; what changes is which files are current:
+
+1. The app rebuilds (or reuses) the dbs and rewrites each folder's manifest. File names carry the
+   source-signature hash, so a changed source builds a **new** file while the service still holds the
+   old one open; the manifest write is atomic (temp + rename) and also sweeps superseded files the
+   service no longer holds. An always-on restart starts from the same manifests.
+2. `VpnServiceManager.Reconfigure` only signals the service — the request carries no filter payload.
+3. The service host rolls the `Reconfigure()` command down the filter pipes — the command twin of
+   `Changed`: **Reconfigure rolls down, Changed rolls up**. Wrapping stages just forward it; the
+   split filter stage re-reads its folder's manifest through its paths provider, no-ops when its own
+   paths are unchanged, and otherwise swaps its gates: in-flight lookups drain on the old gates (the
+   guarantee is the stage's own, independent of what the gates are made of), the superseded gates are
+   disposed and the stage deletes their db files (it was the process holding them open). The
+   permanent inner (platform) filter is never recreated. The swap raises `Changed`, each wrapping
+   stage rolls it up the pipe, and the cached stages drop their memoized verdicts by themselves — no
+   verdict outlives the gates that produced it. Nobody re-toggles SNI extraction either: the client
+   re-derives it from its own pipe (`IDomainFilter.IsEmpty`) on every `Changed`, so rules appearing
+   or vanishing switch extraction on and off with no outside caller.
+4. Flows already decided keep their verdict (open connections, the QUIC flow cache until its
+   timeout); new lookups see the new rules.
+
+Triggers: any UserSettings save while connected (country mode/selection, via-app and domain toggles),
+and the WebUI's split text-file writes (they call `VpnHoodApp.ReconfigureVpnService` explicitly since
+the files are outside UserSettings). The device-level splits (`UseSplitIpViaDevice`,
+`UseSplitLocalNetwork`, per-app split) still require a reconnect — they configure the OS adapter.
+
 ## Storage layout
 
 ```text
-<IDevice.VpnServiceConfigFolder>/ip-filters/split-country.db
-<IDevice.VpnServiceConfigFolder>/ip-filters/split-ip-via-app.db
-<IDevice.VpnServiceConfigFolder>/domain-filters/split-domain.db
+<IDevice.VpnServiceConfigFolder>/ip-filters/manifest.json          ← which dbs are active (the policy)
+<IDevice.VpnServiceConfigFolder>/ip-filters/split-country.<sig-hash>.db
+<IDevice.VpnServiceConfigFolder>/ip-filters/split-ip-via-app.<sig-hash>.db
+<IDevice.VpnServiceConfigFolder>/domain-filters/manifest.json
+<IDevice.VpnServiceConfigFolder>/domain-filters/split-domain.<sig-hash>.db
 ```
 
 `VpnServiceConfigFolder` is the folder the VpnService already reads its config from — the one location
 guaranteed readable by both processes. On iOS it lives inside the shared app-group container (the only
-path a Network Extension can read). Filenames are static and per context, not versioned and not per
-selection: connections are exclusive, so the file is never in use at rebuild time. A schema change
-rebuilds each db in place (its `schema_version` meta no longer matches); if a db file is ever RENAMED,
-deleting the old file is the renamer's responsibility — the builder only manages the file it is asked
-about.
+path a Network Extension can read). Filenames are per context and **versioned by the source-signature
+hash**: an unchanged source keeps its file (reuse), a changed one builds a sibling the running service
+can swap to. Each folder's `manifest.json` (written by `SplitDbManifest`) is the only statement of
+which dbs apply — a db file not listed there is inert garbage, never policy. Deletion is split by who
+held what: on a live swap the service's chain stage deletes the files it just closed (nobody else
+could — it had them open); the app's manifest write sweeps the rest (crash remnants, files superseded
+while disconnected). The builder only manages the file it is asked about. A schema change rebuilds
+each db in place (its `schema_version` meta no longer matches).
 
 ## Future work
 

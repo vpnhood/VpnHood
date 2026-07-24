@@ -29,6 +29,7 @@ using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
+using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.IpLocations.Providers.Offlines;
 using VpnHood.Core.Toolkit.ApiClients;
@@ -332,15 +333,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 // clear all services pending state after reconfigure
                 _ = VhUtils.TryInvokeAsync("Reconfigure after settings change", ReconfigureVpnService);
 
-                // check is disconnect required
+                // check is disconnect required. The app-level splits (country, via-app ip, domain) are
+                // NOT here: they live-apply through the reconfigure above (the split dbs are rebuilt and
+                // the service swaps its filter gates mid-session)
                 disconnectRequired =
                     UserSettings.UseSplitLocalNetwork != oldUserSettings.UseSplitLocalNetwork ||
                     UserSettings.UseSplitIpViaDevice != oldUserSettings.UseSplitIpViaDevice ||
-                    UserSettings.UseSplitIpViaApp != oldUserSettings.UseSplitIpViaApp ||
-                    UserSettings.SplitCountryMode != oldUserSettings.SplitCountryMode ||
                     UserSettings.SplitAppMode != oldUserSettings.SplitAppMode ||
                     !UserSettings.SplitApps.SequenceEqual(oldUserSettings.SplitApps) ||
-                    !UserSettings.SplitCountries.SequenceEqual(oldUserSettings.SplitCountries) ||
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.DnsMode != oldUserSettings.DnsMode ||
                     !VhUtils.SequenceEquals(UserSettings.DnsServers, oldUserSettings.DnsServers);
@@ -375,8 +375,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task ReconfigureVpnService()
+    // Live-apply reconfigurable settings to the running session, including the split filters: the dbs
+    // are rebuilt (or reused) under signature-versioned names, published through the folder manifests,
+    // and the service swaps its gates to them without disconnecting. Public because split filter SOURCES
+    // can change outside a UserSettings save (the WebUI writes the ip/domain text files directly).
+    public async Task ReconfigureVpnService()
     {
+        if (!ConnectionInfo.IsStarted())
+            return;
+
+        // publish the current db set BEFORE signaling: the service reads the manifests, not the request
+        await PrepareSplitIpDbs(CancellationToken.None).Vhc();
+        await PrepareSplitDomainDbs(CancellationToken.None).Vhc();
+
         var reconfigureParams = new ClientReconfigureParams {
             ChannelProtocol = UserSettings.ChannelProtocol,
             DropQuic = UserSettings.DropQuic,
@@ -385,6 +396,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             ProxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc()
         };
 
+        // the split db manifests are already on disk (the app writes them before calling this),
+        // so the request only signals; the service's filter chains re-read the manifests
         await _vpnServiceManager.Reconfigure(reconfigureParams, CancellationToken.None).Vhc();
     }
 
@@ -778,9 +791,11 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     ? UserSettings.DnsServers
                     : null;
 
-            // split-ip (country + app): build or reuse the on-disk filter dbs and pass their paths
-            var splitIpDbPaths = await PrepareSplitIpDbs(cancellationToken).Vhc();
-            var splitDomainDbPaths = await PrepareSplitDomainDbs(cancellationToken).Vhc();
+            // split filters: build or reuse the on-disk dbs and publish them through the folder
+            // manifests the VpnService reads; the manifest write also sweeps superseded files (free
+            // here — the previous session fully released them at TryStop)
+            await PrepareSplitIpDbs(cancellationToken).Vhc();
+            await PrepareSplitDomainDbs(cancellationToken).Vhc();
 
             // create clientOptions
             var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
@@ -792,7 +807,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 UnstableTimeout = _unstableTimeout,
                 AutoWaitTimeout = _autoWaitTimeout,
                 SplitLocalNetwork = UserSettings.UseSplitLocalNetwork,
-                UseDomainFilter = splitDomainDbPaths.Any(),
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 PacketChannelBufferSize = _packetChannelBufferSize,
@@ -836,10 +850,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             };
 
             // what the VpnService must resolve into services itself; the client only gets ClientOptions
+            // (the split filter dbs travel through the folder manifests, not here)
             var serviceOptions = new VpnServiceOptions {
                 ClientOptions = clientOptions,
-                SplitIpDbPaths = splitIpDbPaths,
-                SplitDomainDbPaths = splitDomainDbPaths,
                 ProxyOptions = proxyOptions
             };
 
@@ -1151,42 +1164,42 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    // Build or reuse the on-disk split-ip dbs (split-country + split-ip-via-app) and return the path of each
-    // active one — the dbs are self-describing (include/exclude/block sets), so nothing else travels. They
-    // live in VpnServiceConfigFolder because that is the only folder the VpnService process is guaranteed to
-    // read (on iOS it is the shared app-group container).
-    private async Task<string[]> PrepareSplitIpDbs(CancellationToken cancellationToken)
+    // Build or reuse the on-disk split-ip dbs (split-country + split-ip-via-app) and publish the active
+    // set through the folder's manifest — the source of truth the VpnService's filter chains read, at
+    // connect and on every reconfigure; nothing travels through vpn.config. The dbs are self-describing
+    // (include/exclude/block sets) and the services version each file name by its source signature, so a
+    // change builds a NEW file the running VpnService can live-swap to; the manifest write also sweeps
+    // superseded files. The dbs live in VpnServiceConfigFolder because that is the only folder the
+    // VpnService process is guaranteed to read (on iOS it is the shared app-group container).
+    private async Task PrepareSplitIpDbs(CancellationToken cancellationToken)
     {
         var dbPaths = new List<string>();
-        var dbFolder = Path.Combine(_device.VpnServiceConfigFolder, "ip-filters");
+        var dbFolder = Path.Combine(_device.VpnServiceConfigFolder, SplitDbManifest.IpFiltersFolderName);
 
         if (SettingsService.Settings.UserSettings.SplitCountryMode is not SplitCountryMode.IncludeAll &&
             CheckPremiumFeature(AppFeature.SplitCountry)) {
-            var countryDbPath = Path.Combine(dbFolder, "split-country.db");
-            if (await Services.SplitCountryService.EnsureSplitIpDb(countryDbPath, cancellationToken).Vhc())
+            var countryDbPath = await Services.SplitCountryService.EnsureSplitIpDb(dbFolder, cancellationToken).Vhc();
+            if (countryDbPath != null)
                 dbPaths.Add(countryDbPath);
         }
 
-        if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp)) {
-            var viaAppDbPath = Path.Combine(dbFolder, "split-ip-via-app.db");
-            await Services.SplitIpViaAppService.EnsureSplitIpDb(viaAppDbPath, cancellationToken).Vhc();
-            dbPaths.Add(viaAppDbPath);
-        }
+        if (UserSettings.UseSplitIpViaApp && CheckPremiumFeature(AppFeature.SplitIpViaApp))
+            dbPaths.Add(await Services.SplitIpViaAppService.EnsureSplitIpDb(dbFolder, cancellationToken).Vhc());
 
-        return dbPaths.ToArray();
+        SplitDbManifest.Write(dbFolder, dbPaths.ToArray());
     }
 
-    // Build or reuse the on-disk split-domain db and return its path when the split-domain feature is
-    // active — like the split-ip dbs it is self-describing (include/exclude/block domain sets), so only
-    // the path travels cross-process.
-    private async Task<string[]> PrepareSplitDomainDbs(CancellationToken cancellationToken)
+    // the domain twin of PrepareSplitIpDbs; an inactive feature publishes an EMPTY manifest — off is the
+    // empty case of the same flow, never inferred from files on disk
+    private async Task PrepareSplitDomainDbs(CancellationToken cancellationToken)
     {
-        if (!UserSettings.UseSplitDomain || !CheckPremiumFeature(AppFeature.SplitDomain))
-            return [];
+        var dbFolder = Path.Combine(_device.VpnServiceConfigFolder, SplitDbManifest.DomainFiltersFolderName);
+        var isActive = UserSettings.UseSplitDomain && CheckPremiumFeature(AppFeature.SplitDomain);
+        var dbPath = isActive
+            ? await Services.SplitDomainService.EnsureSplitDomainDb(dbFolder, cancellationToken).Vhc()
+            : null;
 
-        var dbPath = Path.Combine(_device.VpnServiceConfigFolder, "domain-filters", "split-domain.db");
-        await Services.SplitDomainService.EnsureSplitDomainDb(dbPath, cancellationToken).Vhc();
-        return [dbPath];
+        SplitDbManifest.Write(dbFolder, dbPath != null ? [dbPath] : []);
     }
 
     public async Task CopyLogToStream(Stream destination)

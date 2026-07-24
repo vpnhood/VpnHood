@@ -4,6 +4,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Messaging;
+using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
@@ -195,16 +196,31 @@ public class VpnServiceHost : IDisposable
 
             // assign Client member to monitor states while connecting, even if the client is not connected yet.
             // This is important to update the connection info file and notification correctly.
+            var clientFactory = _vpnServiceHandler.CreateClientFactory();
+            var clientParams = new VpnHoodClientParams {
+                ServiceOptions = serviceOptions,
+                VpnAdapter = vpnAdapter,
+                SocketFactory = _socketFactory,
+                ConfigFolder = Context.ConfigFolder
+            };
+
+            // the filter pipes are self-updating: their split filter stages re-read the folder
+            // manifests when the Reconfigure command rolls down them, so a live filter update needs no
+            // wiring here and the client stays blind to the swap (its caches self-invalidate via the
+            // rolled-up change event)
+            var netFilter = new NetFilter {
+                IpFilter = clientFactory.CreateIpFilter(clientParams),
+                DomainFilter = clientFactory.CreateDomainFilter(clientParams),
+                IpMapper = clientFactory.CreateIpMapper(clientParams)
+            };
+
             try {
-                Client = await _vpnServiceHandler.CreateClientFactory().Create(new VpnHoodClientParams {
-                    ServiceOptions = serviceOptions,
-                    VpnAdapter = vpnAdapter,
-                    SocketFactory = _socketFactory,
-                    ConfigFolder = Context.ConfigFolder
-                }, cancellationToken).Vhc();
+                Client = await clientFactory.Create(clientParams, netFilter, cancellationToken).Vhc();
             }
             catch {
-                vpnAdapter.Dispose(); // the client owns the adapter only once constructed
+                // the client owns the adapter and the filters only once constructed
+                netFilter.Dispose();
+                vpnAdapter.Dispose();
                 throw;
             }
 

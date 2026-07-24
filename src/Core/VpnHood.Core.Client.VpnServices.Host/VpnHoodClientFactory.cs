@@ -18,21 +18,19 @@ namespace VpnHood.Core.Client.VpnServices.Host;
 /// client needs (split-db filter gates, proxy connector, tracker) and constructs the client.
 /// <see cref="Create"/> is the skeleton and each step is virtual, so a derived factory replaces a single
 /// piece and inherits the rest. The host obtains the factory per connection via
-/// <see cref="IVpnServiceHandler.CreateClientFactory"/> and keeps ownership of the created client.
+/// <see cref="IVpnServiceHandler.CreateClientFactory"/>, composes the NetFilter and keeps ownership of
+/// the created client. The filter pipes are self-updating (their stages re-read the filter folder
+/// manifests when Reconfigure rolls down them), so nothing here is retained for live updates.
 /// </summary>
 public class VpnHoodClientFactory
 {
-    public virtual async Task<VpnHoodClient> Create(VpnHoodClientParams clientParams,
+    public virtual async Task<VpnHoodClient> Create(VpnHoodClientParams clientParams, NetFilter netFilter,
         CancellationToken cancellationToken)
     {
         return new VpnHoodClient(
             vpnAdapter: clientParams.VpnAdapter,
             socketFactory: clientParams.SocketFactory,
-            netFilter: new NetFilter {
-                IpFilter = CreateIpFilter(clientParams),
-                DomainFilter = CreateDomainFilter(clientParams),
-                IpMapper = CreateIpMapper(clientParams)
-            },
+            netFilter: netFilter,
             proxyConnector: await CreateProxyConnector(clientParams, cancellationToken).Vhc(),
             tracker: CreateTracker(clientParams),
             options: clientParams.ServiceOptions.ClientOptions);
@@ -46,26 +44,24 @@ public class VpnHoodClientFactory
     protected virtual IDomainFilter? CreateInnerDomainFilter(VpnHoodClientParams clientParams) => null;
 
     // no default mapper; an injection point for derived factories (e.g. tests map fake ips to mock servers)
-    protected virtual IIpMapper? CreateIpMapper(VpnHoodClientParams clientParams) => null;
+    public virtual IIpMapper? CreateIpMapper(VpnHoodClientParams clientParams) => null;
 
-    // Builds the ip gate chain the client filters with. Each split-ip db (country, via-app) is a lean
-    // self-describing read-only SQLite gate chained over the inner filter, so the (former ~97MB) split
-    // ranges never enter memory. A gate holding no rules yet is still chained: it may be filled later,
-    // and it simply defers to the next filter until then.
-    private IIpFilter? CreateIpFilter(VpnHoodClientParams clientParams)
+    // Builds the ip filter pipe the client filters with. Each split-ip db (country, via-app) is a lean
+    // self-describing read-only SQLite gate, so the (former ~97MB) split ranges never enter memory. The
+    // gates live inside the self-updating SqliteIpFilterChain stage: it re-reads its filter folder's
+    // manifest (the app rewrites it before signaling a reconfigure), so when the Reconfigure command
+    // rolls down the pipe the stage finds the current signature-versioned dbs there and swaps its own
+    // gates — no db path ever travels through vpn.config or the reconfigure request.
+    public IIpFilter CreateIpFilter(VpnHoodClientParams clientParams)
     {
-        var ipFilter = CreateInnerIpFilter(clientParams);
-        foreach (var splitIpDbPath in clientParams.ServiceOptions.SplitIpDbPaths)
-            ipFilter = new SqliteIpFilter(ipFilter, splitIpDbPath);
-        return ipFilter;
+        return new SqliteIpFilterChain(CreateInnerIpFilter(clientParams),
+            Path.Combine(clientParams.ConfigFolder, SplitDbManifest.IpFiltersFolderName));
     }
 
-    private IDomainFilter? CreateDomainFilter(VpnHoodClientParams clientParams)
+    public IDomainFilter CreateDomainFilter(VpnHoodClientParams clientParams)
     {
-        var domainFilter = CreateInnerDomainFilter(clientParams);
-        foreach (var splitDomainDbPath in clientParams.ServiceOptions.SplitDomainDbPaths)
-            domainFilter = new SqliteDomainFilter(domainFilter, splitDomainDbPath);
-        return domainFilter;
+        return new SqliteDomainFilterChain(CreateInnerDomainFilter(clientParams),
+            Path.Combine(clientParams.ConfigFolder, SplitDbManifest.DomainFiltersFolderName));
     }
 
     // External proxies. Simple mode is the lightweight path (no store); Managed mode uses the shared SQLite

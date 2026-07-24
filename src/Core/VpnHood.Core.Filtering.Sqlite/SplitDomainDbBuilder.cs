@@ -5,7 +5,7 @@ namespace VpnHood.Core.Filtering.Sqlite;
 
 // Split-domain flavor of the shared build core: binds the domain schema and hands derived classes a
 // domain inserter. Derived classes supply only the context's business: what identifies the source
-// (BuildSourceSignature) and how to stream its domains (InsertDomainsAsync).
+// (GetSourceSignature) and how to stream its domains (InsertDomainsAsync).
 public abstract class SplitDomainDbBuilder : SplitDbBuilder
 {
     // Stream the context's domains into the db. Invoked only on the rebuild path.

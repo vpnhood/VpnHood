@@ -2,6 +2,7 @@ using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Sqlite;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services;
 
@@ -17,11 +18,13 @@ public class SplitIpViaAppService(AppSettingsService settingsService)
 
     public bool IsBusy { get; private set; }
 
-    // Build or reuse the db for the current app filter files. The UseSplitIpViaApp gate lives in the caller
-    // (VpnHoodApp.PrepareSplitIpDbs); missing files count as empty, and empty sources leave their sets empty
-    // (a no-op gate). Failures propagate and fail to connect: a split the user configured is enforced or
-    // the connection does not proceed — never silently skipped.
-    public async Task EnsureSplitIpDb(string dbPath, CancellationToken cancellationToken)
+    // Build or reuse the db for the current app filter files and return its path. The file name carries
+    // the source signature, so a changed source builds a NEW file and a running VpnService can keep the
+    // superseded db open until it live-swaps to the returned path. The UseSplitIpViaApp gate lives in the
+    // caller (VpnHoodApp.PrepareSplitIpDbs); missing files count as empty, and empty sources leave their
+    // sets empty (a no-op gate). Failures propagate and fail to connect: a split the user configured is
+    // enforced or the connection does not proceed — never silently skipped.
+    public async Task<string> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
     {
         var splitIpSettings = settingsService.SplitIpSettings;
 
@@ -30,13 +33,18 @@ public class SplitIpViaAppService(AppSettingsService settingsService)
             IsBusy = true;
             StateChanged?.Invoke(this, EventArgs.Empty);
 
-            // the signature is stat-only (modified time + length); the text files are parsed only on rebuild
+            // the signature is stat-only (modified time + length); the text files are parsed only on
+            // rebuild. It is captured once so the file name and the stored meta describe the same source.
+            var signature = splitIpSettings.GetSplitIpViaAppSignature();
             var dbBuilder = new IpRangeListDbBuilder(
-                splitIpSettings.GetSplitIpViaAppSignature,
+                () => signature,
                 includesFactory: () => ParseRanges(splitIpSettings.AppIncludes),
                 excludesFactory: () => ParseRanges(splitIpSettings.AppExcludes),
                 blocksFactory: () => ParseRanges(splitIpSettings.AppBlocks));
+
+            var dbPath = Path.Combine(dbFolder, $"split-ip-via-app.{VhUtils.GetHexStringSha256(signature, 16)}.db");
             await dbBuilder.EnsureAsync(dbPath, cancellationToken).Vhc();
+            return dbPath;
         }
         finally {
             IsBusy = false;

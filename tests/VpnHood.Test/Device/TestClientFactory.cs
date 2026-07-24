@@ -17,7 +17,7 @@ internal sealed class TestClientFactory(NetFilter netFilter) : VpnHoodClientFact
         return netFilter.DomainFilter;
     }
 
-    protected override IIpMapper? CreateIpMapper(VpnHoodClientParams clientParams)
+    public override IIpMapper? CreateIpMapper(VpnHoodClientParams clientParams)
     {
         return netFilter.IpMapper;
     }

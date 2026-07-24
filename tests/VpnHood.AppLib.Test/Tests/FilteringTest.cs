@@ -209,6 +209,88 @@ public class FilteringTest : TestAppBase
         await app.Disconnect();
     }
 
+    [TestMethod]
+    public async Task Ips_UpdateOnFly()
+    {
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        var app = appDom.App;
+
+        // target1
+        var httpsUrl1 = MockEps.HttpsUrl1;
+        var udpEchoEndPoint1 = MockEps.UdpV4EndPoint1;
+        var targetIps1 = new[] { new IpRange(IPAddress.Parse(MockEps.HttpUrl1.Host)), new IpRange(udpEchoEndPoint1.Address) };
+
+        // target2
+        var httpsUrl2 = MockEps.HttpsUrl2;
+        var udpEchoEndPoint2 = MockEps.UdpV4EndPoint2;
+        var targetIps2 = new[] { new IpRange(IPAddress.Parse(MockEps.HttpUrl2.Host)), new IpRange(udpEchoEndPoint2.Address) };
+
+        // connect with target1 included, target2 excluded
+        app.SettingsService.SplitIpSettings.AppIncludes = targetIps1.ToText();
+        app.SettingsService.SplitIpSettings.AppExcludes = targetIps2.ToText();
+        await app.Connect(appDom.ClientProfile.ClientProfileId, cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+
+        Log("Asserting the initial filters...");
+        await IpFilters_AssertInclude(TestHelper, app, udpEchoEndPoint1, httpsUrl1);
+        await IpFilters_AssertExclude(TestHelper, app, udpEchoEndPoint2, httpsUrl2);
+
+        // *** TEST ***: swap the lists WITHOUT disconnecting — the reconfigure rebuilds the split dbs
+        // under new signature-versioned names and the service live-swaps its gates (with cache flush)
+        Log("Updating the filters on the fly...");
+        app.SettingsService.SplitIpSettings.AppIncludes = targetIps2.ToText();
+        app.SettingsService.SplitIpSettings.AppExcludes = targetIps1.ToText();
+        await app.ReconfigureVpnService();
+        Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
+            "the session must survive a live filter update");
+
+        Log("Asserting the swapped filters...");
+        await IpFilters_AssertInclude(TestHelper, app, udpEchoEndPoint2, httpsUrl2);
+        await IpFilters_AssertExclude(TestHelper, app, udpEchoEndPoint1, httpsUrl1);
+    }
+
+    [TestMethod]
+    public async Task Domains_UpdateOnFly()
+    {
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper);
+        var app = appDom.App;
+        app.UserSettings.UseSplitDomain = true;
+        app.SettingsService.SplitDomainSettings.Includes = MockEps.HttpsUrl1.Host;
+        app.SettingsService.SplitDomainSettings.Excludes = MockEps.HttpsUrl2.Host;
+
+        // connect
+        await appDom.Connect(cancellationToken: TestCt);
+        await app.WaitForState(AppConnectionState.Connected);
+
+        // initial: url1 tunnels, url2 bypasses
+        var oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        await TestHelper.Test_Https(uri: MockEps.HttpsUrl1);
+        await TestHelper.Test_Https(uri: MockEps.HttpsUrl2);
+        var newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        Assert.AreEqual(oldStat.StreamTunnelledCount + 1, newStat.StreamTunnelledCount);
+        Assert.AreEqual(oldStat.StreamPassthruCount + 1, newStat.StreamPassthruCount);
+
+        // *** TEST ***: swap the domain lists WITHOUT disconnecting
+        Log("Updating the domain filters on the fly...");
+        app.SettingsService.SplitDomainSettings.Includes = MockEps.HttpsUrl2.Host;
+        app.SettingsService.SplitDomainSettings.Excludes = MockEps.HttpsUrl1.Host;
+        await app.ReconfigureVpnService();
+        Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
+            "the session must survive a live filter update");
+
+        // swapped: url1 bypasses, url2 tunnels — the cached domain verdicts must not survive the swap
+        oldStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        await TestHelper.Test_Https(uri: MockEps.HttpsUrl1);
+        var midStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        Assert.AreEqual(oldStat.StreamPassthruCount + 1, midStat.StreamPassthruCount,
+            "the previously included domain must now bypass");
+
+        await TestHelper.Test_Https(uri: MockEps.HttpsUrl2);
+        newStat = await app.GetSessionStatusAsync(cancellationToken: TestCt);
+        Assert.AreEqual(midStat.StreamTunnelledCount + 1, newStat.StreamTunnelledCount,
+            "the previously excluded domain must now tunnel");
+    }
+
     public static async Task IpFilters_AssertInclude(TestHelper testHelper, VpnHoodApp app,
         IPEndPoint? udpEchoEndPint, Uri? url, int receiveDelta = 1000)
     {

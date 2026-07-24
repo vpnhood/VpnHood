@@ -363,7 +363,10 @@ public class SplitIpDbTest : TestBase
 
     private sealed class StubFilter(FilterAction action) : IIpFilter
     {
+        public event EventHandler? Changed { add { } remove { } } // verdicts never change
+        public bool IsEmpty => false; // always has a verdict
         public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint) => action;
+        public void Reconfigure() { } // nothing external to re-read
         public void Dispose() { }
     }
 
@@ -374,21 +377,28 @@ public class SplitIpDbTest : TestBase
         Directory.CreateDirectory(storagePath);
         var settingsService = new AppSettingsService(storagePath, remoteSettingsUrl: null, debugMode: true);
         var service = new SplitIpViaAppService(settingsService);
-        var dbPath = Path.Combine(storagePath, "split-ip-via-app.db");
 
         // the UseSplitIpViaApp gate lives in the caller; empty/missing sources leave every set empty,
         // which is a no-op gate (routes identically to no filter)
-        await service.EnsureSplitIpDb(dbPath, TestCt);
+        var dbPath = await service.EnsureSplitIpDb(storagePath, TestCt);
+        StringAssert.Contains(Path.GetFileName(dbPath), "split-ip-via-app.",
+            "the file name must carry the context and its source signature");
         using (var filter = new SqliteIpFilter(next: null, dbPath))
             Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("9.9.9.9")));
 
-        // the sets mirror the source files: includes veto non-members, excludes bypass, blocks drop
+        // unchanged sources → same signature → SAME file (reused, not rebuilt)
+        Assert.AreEqual(dbPath, await service.EnsureSplitIpDb(storagePath, TestCt),
+            "an unchanged source must keep the same versioned file name");
+
+        // the sets mirror the source files: includes veto non-members, excludes bypass, blocks drop.
+        // A changed source gets a NEW file name, so a running service could keep the old db open.
         settingsService.SplitIpSettings.AppIncludes = "1.0.0.0 - 1.0.0.255";
         settingsService.SplitIpSettings.AppExcludes = "1.0.0.128 - 1.0.0.255";
         settingsService.SplitIpSettings.AppBlocks = "5.0.0.5";
-        await service.EnsureSplitIpDb(dbPath, TestCt);
+        var dbPath2 = await service.EnsureSplitIpDb(storagePath, TestCt);
+        Assert.AreNotEqual(dbPath, dbPath2, "a changed source must build under a new versioned file name");
 
-        using (var filter = new SqliteIpFilter(next: null, dbPath)) {
+        using (var filter = new SqliteIpFilter(next: null, dbPath2)) {
             Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("1.0.0.10")));
             Assert.AreEqual(FilterAction.Exclude, filter.Process(IpProtocol.Tcp, Ep("1.0.0.200")),
                 "the exclude set must win over the include set");
@@ -401,8 +411,8 @@ public class SplitIpDbTest : TestBase
 
         // source file change → signature change → rebuild with the new sets
         settingsService.SplitIpSettings.AppExcludes = string.Empty;
-        await service.EnsureSplitIpDb(dbPath, TestCt);
-        using (var filter = new SqliteIpFilter(next: null, dbPath))
+        var dbPath3 = await service.EnsureSplitIpDb(storagePath, TestCt);
+        using (var filter = new SqliteIpFilter(next: null, dbPath3))
             Assert.AreEqual(FilterAction.Default, filter.Process(IpProtocol.Tcp, Ep("1.0.0.200")));
     }
 

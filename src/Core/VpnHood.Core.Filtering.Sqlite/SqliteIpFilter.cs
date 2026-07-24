@@ -16,10 +16,13 @@ namespace VpnHood.Core.Filtering.Sqlite;
 //   include set: non-empty and NOT a member ⇒ Exclude (chained include gates compose as intersection)
 // The db is immutable at runtime (built once, opened read-only): which sets are populated is probed once
 // at construction, so absent concerns cost nothing on the hot path. All threads share ONE read-only
-// connection with lazily prepared point queries, serialized by a lock: lookups are microsecond index
-// seeks and CachedIpFilter shields this from all but the first packet to a new endpoint, so contention is
-// negligible — while a reader-per-thread design pins one native SQLite connection (fd + page cache) per
-// pool thread for the whole session, which on iOS grew without bound as the ThreadPool churned workers.
+// connection, serialized by a lock: lookups are microsecond index seeks and CachedIpFilter shields this
+// from all but the first packet to a new endpoint, so contention is negligible — while a
+// reader-per-thread design pins one native SQLite connection (fd + page cache) per pool thread for the
+// whole session, which on iOS grew without bound as the ThreadPool churned workers. The connection is
+// opened EAGERLY and held for the gate's lifetime: it pins the db while the app's manifest sweep runs —
+// a locked file survives the sweep on Windows, and an already-open fd keeps working through the unlink
+// on unix — so a live gate can never lose its db underneath itself.
 public sealed class SqliteIpFilter : IIpFilter
 {
     private readonly IIpFilter? _next;
@@ -27,29 +30,34 @@ public sealed class SqliteIpFilter : IIpFilter
     private readonly bool _hasIncludes;
     private readonly bool _hasExcludes;
     private readonly bool _hasBlocks;
-    private readonly string _connectionString;
     private readonly Lock _readerLock = new();
-    private Reader? _sharedReader;
+    private readonly Reader _sharedReader;
     private volatile bool _disposed;
+
+    public event EventHandler? Changed;
 
     public SqliteIpFilter(IIpFilter? next, string dbPath, bool autoDisposeNextFilter = true)
     {
         SplitSqlite.EnsureInitialized();
         _next = next;
         _autoDisposeNextFilter = autoDisposeNextFilter;
-        _connectionString = new SqliteConnectionStringBuilder {
+
+        // this gate's own db is immutable; roll a change announced below it up the pipe
+        if (next != null)
+            next.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
+        var connectionString = new SqliteConnectionStringBuilder {
             DataSource = dbPath,
             Mode = SqliteOpenMode.ReadOnly,
             Cache = SqliteCacheMode.Private,
             Pooling = false
         }.ToString();
 
+        _sharedReader = CreateReader(connectionString);
+
         // a set is one logical list spanning both families (only-v4 includes still constrain v6 addresses)
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-        _hasIncludes = HasRows(connection, FilterAction.Include);
-        _hasExcludes = HasRows(connection, FilterAction.Exclude);
-        _hasBlocks = HasRows(connection, FilterAction.Block);
+        _hasIncludes = HasRows(_sharedReader.Connection, FilterAction.Include);
+        _hasExcludes = HasRows(_sharedReader.Connection, FilterAction.Exclude);
+        _hasBlocks = HasRows(_sharedReader.Connection, FilterAction.Block);
     }
 
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
@@ -78,11 +86,11 @@ public sealed class SqliteIpFilter : IIpFilter
     {
         lock (_readerLock) {
             // teardown race: a lookup that loses the race to Dispose answers "not a member" instead of
-            // resurrecting a connection that nobody would ever close
+            // touching the disposed connection
             if (_disposed)
                 return false;
 
-            var reader = _sharedReader ??= CreateReader();
+            var reader = _sharedReader;
             if (address.AddressFamily == AddressFamily.InterNetwork) {
                 Span<byte> bytes = stackalloc byte[4];
                 address.TryWriteBytes(bytes, out _);
@@ -105,9 +113,9 @@ public sealed class SqliteIpFilter : IIpFilter
         }
     }
 
-    private Reader CreateReader()
+    private static Reader CreateReader(string connectionString)
     {
-        var reader = new Reader(_connectionString);
+        var reader = new Reader(connectionString);
         VhTypeTracker.Track(reader, "SqliteIpFilter.Reader");
         return reader;
     }
@@ -121,6 +129,12 @@ public sealed class SqliteIpFilter : IIpFilter
         return (long)command.ExecuteScalar()! == 1;
     }
 
+    // this gate's own db is immutable (a new db means a new gate); just forward the command
+    public void Reconfigure() => _next?.Reconfigure();
+
+    // all sets empty and nothing below ⇒ the pipe can never decide
+    public bool IsEmpty => !(_hasIncludes || _hasExcludes || _hasBlocks) && (_next?.IsEmpty ?? true);
+
     public void Dispose()
     {
         if (_disposed)
@@ -128,11 +142,8 @@ public sealed class SqliteIpFilter : IIpFilter
         _disposed = true;
 
         lock (_readerLock) {
-            if (_sharedReader != null) {
-                _sharedReader.Dispose();
-                _sharedReader = null;
-                VhTypeTracker.Record("SqliteIpFilter.Reader.disposed");
-            }
+            _sharedReader.Dispose();
+            VhTypeTracker.Record("SqliteIpFilter.Reader.disposed");
         }
 
         if (_autoDisposeNextFilter)
@@ -144,6 +155,8 @@ public sealed class SqliteIpFilter : IIpFilter
     {
         private readonly SqliteConnection _connection;
         private readonly SqliteCommand?[] _commands = new SqliteCommand?[8];
+
+        public SqliteConnection Connection => _connection;
 
         public Reader(string connectionString)
         {

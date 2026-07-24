@@ -6,6 +6,7 @@
 * Fix: A stray UDP packet could permanently stop unrelated UDP flows sharing the same server port
 * Fix: UDP flows sending without replies for over a minute could no longer receive responses
 * Update: Removed the legacy UDP proxy and the server's UseUdpProxy2 option; the shared UDP proxy is now always used and behaves as a port-restricted NAT
+* Update: Changing split-country, split-ip and split-domain filters no longer needs a reconnect
 
 # v7.9.811
 * Update: Huge performance improvement in Cloak Mode

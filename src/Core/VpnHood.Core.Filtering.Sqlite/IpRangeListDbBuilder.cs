@@ -15,7 +15,7 @@ public class IpRangeListDbBuilder(
     Func<IpRangeOrderedList>? blocksFactory = null)
     : SplitIpDbBuilder
 {
-    protected override string BuildSourceSignature() => sourceSignatureFactory();
+    public override string GetSourceSignature() => sourceSignatureFactory();
 
     protected override Task InsertRangesAsync(SplitIpDbInserter inserter, CancellationToken cancellationToken)
     {

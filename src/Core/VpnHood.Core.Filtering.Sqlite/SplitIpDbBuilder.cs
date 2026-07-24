@@ -5,7 +5,7 @@ namespace VpnHood.Core.Filtering.Sqlite;
 
 // Split-ip flavor of the shared build core: binds the ip schema and hands derived classes a range
 // inserter. Derived classes supply only the context's business: what identifies the source
-// (BuildSourceSignature) and how to stream its ranges (InsertRangesAsync).
+// (GetSourceSignature) and how to stream its ranges (InsertRangesAsync).
 public abstract class SplitIpDbBuilder : SplitDbBuilder
 {
     // Stream the context's ranges into the db. Invoked only on the rebuild path.

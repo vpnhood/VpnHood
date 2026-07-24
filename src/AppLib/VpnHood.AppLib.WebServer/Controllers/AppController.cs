@@ -9,6 +9,7 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Core.Toolkit.Utils;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
@@ -204,6 +205,9 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
         app.SettingsService.SplitIpSettings.AppExcludes = value.AppExcludes;
         app.SettingsService.SplitIpSettings.AppIncludes = value.AppIncludes;
         app.SettingsService.SplitIpSettings.AppBlocks = value.AppBlocks;
+
+        // the text files are not part of UserSettings, so live-apply to a running session explicitly
+        _ = VhUtils.TryInvokeAsync("Reconfigure after split-ip change", app.ReconfigureVpnService);
         return Task.CompletedTask;
     }
 
@@ -223,6 +227,9 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
         app.SettingsService.SplitDomainSettings.Includes = value.Includes;
         app.SettingsService.SplitDomainSettings.Excludes = value.Excludes;
         app.SettingsService.SplitDomainSettings.Blocks = value.Blocks;
+
+        // the text files are not part of UserSettings, so live-apply to a running session explicitly
+        _ = VhUtils.TryInvokeAsync("Reconfigure after split-domain change", app.ReconfigureVpnService);
         return Task.CompletedTask;
     }
 

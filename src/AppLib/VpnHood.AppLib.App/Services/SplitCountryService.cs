@@ -8,6 +8,7 @@ using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.IpLocations;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services;
 
@@ -38,17 +39,19 @@ public class SplitCountryService(
         return countryInfos;
     }
 
-    // Build or reuse the on-disk split-country db for the current SplitCountryMode. The selected countries'
-    // ranges are written into the db's include or exclude set — the db self-describes what membership means,
-    // so only its path travels. Returns false when there is no country split (IncludeAll). Failures propagate
-    // and fail to connect: a split the user configured is enforced or the connection does not proceed —
-    // never silently skipped.
+    // Build or reuse the on-disk split-country db for the current SplitCountryMode and return its path,
+    // or null when there is no country split (IncludeAll). The selected countries' ranges are written into
+    // the db's include or exclude set — the db self-describes what membership means, so only its path
+    // travels. The file name carries the source signature, so a changed selection builds a NEW file and a
+    // running VpnService can keep the superseded db open until it live-swaps to the returned path.
+    // Failures propagate and fail to connect: a split the user configured is enforced or the connection
+    // does not proceed — never silently skipped.
     // The (potentially huge) country ranges never enter memory — they stream from the zip into SQLite.
-    public async Task<bool> EnsureSplitIpDb(string dbPath, CancellationToken cancellationToken)
+    public async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
     {
         var splitCountryMode = settingsService.Settings.UserSettings.SplitCountryMode;
         if (splitCountryMode is SplitCountryMode.IncludeAll)
-            return false;
+            return null;
 
         try {
             // set loading state
@@ -81,9 +84,12 @@ public class SplitCountryService(
             var dbBuilder = new SplitCountryDbBuilder(
                 () => new ZipArchive(new MemoryStream(ipLocationZipData.Value)),
                 storedCodes, GetIpLocationAssetHash(), action);
+
+            var dbPath = Path.Combine(dbFolder,
+                $"split-country.{VhUtils.GetHexStringSha256(dbBuilder.GetSourceSignature(), 16)}.db");
             await dbBuilder.EnsureAsync(dbPath, cancellationToken).Vhc();
 
-            return true;
+            return dbPath;
         }
         finally {
             IsBusy = false;

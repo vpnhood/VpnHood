@@ -28,9 +28,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly Lock _stateEventLock = new();
     private readonly ServerFinder _serverFinder;
     private readonly AsyncLock _disposeLock = new();
-    private readonly NetFilter _netFilter;
     private readonly DomainFilteringService _domainFilteringService;
     private readonly StaticIpFilter _staticIpFilter;
+    private readonly bool _forceLogSni;
     private ClientSession? _session;
 
     public DomainObserver DomainObserver => _domainFilteringService.DomainObserver;
@@ -49,6 +49,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public bool DropQuic { get; set { field = value; _session?.DropQuic = value; } }
     public ChannelProtocol ChannelProtocol { get; set { field = value; _session?.ChannelProtocol = value; } }
     public Exception? LastException { get => field ?? _session?.LastException; private set; }
+
+    // This client's filter pipes (outermost stages). Exposed so the owner can roll the Reconfigure
+    // command down them (see IIpFilter.Reconfigure); the client neither knows nor cares what reacts:
+    // stages that own external configuration re-read it, the Changed event rolls back up, and the
+    // caches and SNI extraction re-derive themselves.
+    public NetFilter NetFilter { get; }
 
     public VpnHoodClient(
         IVpnAdapter vpnAdapter,
@@ -118,11 +124,13 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // Every stage is a veto gate: it may Exclude (bypass) or Block (drop); Default means "no objection"
         // and undecided traffic tunnels (fail-closed: a missing gate keeps traffic inside the VPN, it never
         // leaks around it). The StaticIpFilter vetoes non-members of the server∩device allow set.
+        // The handed-in chains may change at runtime (the host live-swaps the split gates on reconfigure);
+        // the change event rolls up the pipe and the cached stages invalidate themselves — the client
+        // never needs to know a swap happened.
         _staticIpFilter = new StaticIpFilter(netFilter?.IpFilter);
-
         // Domain gates preempt the IP gates, and their include set is the override lane — a member domain is
         // forced through the tunnel past any IP-gate veto (domains are more specific knowledge than IPs).
-        _netFilter = new NetFilter {
+        NetFilter = new NetFilter {
             IpFilter = new CachedIpFilter(_staticIpFilter, TimeSpan.FromMinutes(60)),
             DomainFilter = new CachedDomainFilter(netFilter?.DomainFilter, TimeSpan.FromMinutes(60)),
             IpMapper = netFilter?.IpMapper
@@ -138,13 +146,18 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             proxyConnector: ProxyConnector,
             includeIpV6: _vpnAdapter.IsIpVersionSupported(IpVersion.IPv6));
 
-
-        // SNI is sensitive, must be explicitly enabled
+        // SNI extraction is sensitive and costly, so it runs only while a domain rule could consume it
+        // (or SNI logging is forced). Nobody tells the client: it derives the answer from its own pipe
+        // (IsEmpty) and re-derives whenever the pipe announces a change — rules appearing or vanishing
+        // in a live gate swap toggle extraction with no outside caller.
         _domainFilteringService = new DomainFilteringService(
-            _netFilter.DomainFilter,
+            NetFilter.DomainFilter,
             sniEventId: GeneralEventId.Sni,
             tlsBufferSize: TunnelDefaults.PrefetchStreamBufferSize);
-        _domainFilteringService.IsEnabled |= options.ForceLogSni || options.UseDomainFilter;
+        _forceLogSni = options.ForceLogSni;
+        _domainFilteringService.IsEnabled = _forceLogSni || !NetFilter.DomainFilter.IsEmpty;
+        NetFilter.DomainFilter.Changed += (_, _) =>
+            _domainFilteringService.IsEnabled = _forceLogSni || !NetFilter.DomainFilter.IsEmpty;
 
         // init vpnAdapter events
         vpnAdapter.Disposed += (_, _) => _ = DisposeAsync();
@@ -221,7 +234,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             serverFinder: _serverFinder,
             proxyConnector: ProxyConnector,
             domainFilteringService: _domainFilteringService,
-            netFilter: _netFilter,
+            netFilter: NetFilter,
             staticIpFilter: _staticIpFilter,
             channelProtocol: ChannelProtocol,
             setState: state => State = state);
@@ -282,7 +295,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _session?.Dispose();
         _session?.StateChanged -= Session_StateChanged;
 
-        _netFilter.Dispose();
+        NetFilter.Dispose();
 
         // dispose ConnectorService before ProxyConnector as it uses ProxyConnector
         VhLogger.Instance.LogDebug("Disposing ConnectorService...");

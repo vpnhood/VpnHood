@@ -141,12 +141,19 @@ internal class ApiController : IDisposable
     {
         _ = cancellationToken;
 
-        VpnHoodClient.UseTcpProxy = request.Params.UseTcpProxy;
-        VpnHoodClient.DropUdp = request.Params.DropUdp;
-        VpnHoodClient.DropQuic = request.Params.DropQuic;
-        VpnHoodClient.ChannelProtocol = request.Params.ChannelProtocol;
-        if (VpnHoodClient.ProxyConnector != null)
-            await VpnHoodClient.ProxyConnector.UpdateOptions(request.Params.ProxyOptions).Vhc();
+        // capture once: every touch below lands on the same client even if it is replaced mid-request
+        var client = VpnHoodClient;
+        client.UseTcpProxy = request.Params.UseTcpProxy;
+        client.DropUdp = request.Params.DropUdp;
+        client.DropQuic = request.Params.DropQuic;
+        client.ChannelProtocol = request.Params.ChannelProtocol;
+
+        // live-swap the split filter gates to the current folder manifests (rewritten by the app before
+        // this request); no-op when the db paths did not change
+        client.NetFilter.Reconfigure();
+
+        if (client.ProxyConnector != null)
+            await client.ProxyConnector.UpdateOptions(request.Params.ProxyOptions).Vhc();
     }
 
     private Task SetWaitForAd(ApiSetWaitForAdRequest request, CancellationToken cancellationToken)

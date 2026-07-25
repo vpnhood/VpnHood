@@ -12,10 +12,12 @@ public static class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
-        builder.Services.AddSwaggerDocument(configure => {
+        // OpenApi3 (not Swagger2) so that nullability of required-but-nullable members survives into the client
+        builder.Services.AddOpenApiDocument(configure => {
             configure.Title = "VpnHood.Core.Client.Api";
             configure.RequireParametersWithoutDefault = true;
             configure.SchemaSettings.IgnoreObsoleteProperties = true;
+            configure.SchemaSettings.SchemaProcessors.Add(new RequireNonNullablePropertiesSchemaProcessor());
             configure.SchemaSettings.TypeMappers = new List<ITypeMapper> {
                 new PrimitiveTypeMapper(typeof(IPAddress), s => { s.Type = JsonObjectType.String; }),
                 new PrimitiveTypeMapper(typeof(IPEndPoint), s => { s.Type = JsonObjectType.String; }),

@@ -11,9 +11,9 @@ $noBuild = $false;
 # calculated
 $outputFile = "$curDir/Api/$outBaseFile.ts";
 
-# run; nswag is a local dotnet tool, so it must run from the manifest root
+# run; nswag is a local dotnet tool, so it must run from the manifest root (./.config)
 $variables="/variables:namespace=$namespace,apiBaseFile=$outBaseFile,projectFile=$projectFile,nobuid=$noBuild";
-Push-Location $SolutionDir;
+Push-Location $curDir;
 try {
 	dotnet tool restore;
 	if ($LASTEXITCODE -ne 0) { throw "dotnet tool restore failed."; }

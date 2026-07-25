@@ -11,10 +11,18 @@ $noBuild = $false;
 # calculated
 $outputFile = "$curDir/Api/$outBaseFile.ts";
 
-# run
-$nswagExe = "${Env:ProgramFiles(x86)}/Rico Suter/NSwagStudio/Net100/dotnet-nswag.exe";
+# run; nswag is a local dotnet tool, so it must run from the manifest root
 $variables="/variables:namespace=$namespace,apiBaseFile=$outBaseFile,projectFile=$projectFile,nobuid=$noBuild";
-& "$nswagExe" run $nswagFile $variables;
+Push-Location $SolutionDir;
+try {
+	dotnet tool restore;
+	if ($LASTEXITCODE -ne 0) { throw "dotnet tool restore failed."; }
+	dotnet tool run nswag run $nswagFile $variables;
+	if ($LASTEXITCODE -ne 0) { throw "nswag generation failed."; }
+}
+finally {
+	Pop-Location;
+}
 # "/* eslint-disable */" + [Environment]::NewLine + (Get-Content $outputFile -Raw) | Set-Content $outputFile;
 
 #copy to UI project if exists

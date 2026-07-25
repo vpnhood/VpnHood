@@ -8,6 +8,7 @@
 
 	<ItemGroup>
 		<!--Waiting for this issue: https://github.com/RicoSuter/NSwag/issues/5359-->
+		<!--Keep in sync with NSwag.ConsoleCore in /.config/dotnet-tools.json-->
 		<PackageReference Include="NSwag.AspNetCore" Version="[14.6.3]" />
 	</ItemGroup>
 

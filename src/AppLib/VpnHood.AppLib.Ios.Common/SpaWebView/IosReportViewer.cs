@@ -58,10 +58,7 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
         view.BackgroundColor = backgroundColor;
 
         var webView = new WKWebView(CGRect.Empty, new WKWebViewConfiguration()) {
-            TranslatesAutoresizingMaskIntoConstraints = false,
-            // The delegate exists only to land the viewer at the end of the report once a load completes
-            // (see ScrollToEndAsync).
-            NavigationDelegate = new PageLoadedDelegate()
+            TranslatesAutoresizingMaskIntoConstraints = false
         };
         // Native Safari-style find-on-page (iOS 16+). External Safari can't search the log because it lives on
         // the app's loopback report server, so we give the same find bar in-app instead.
@@ -87,7 +84,6 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
         // Refresh: re-fetch the report from its (loopback) source and reload, so the user can pull the
         // latest log without closing and reopening the viewer. Disabled while a fetch is in flight. The
         // Clicked handler runs on the main thread and the awaits resume there, so the UI calls are safe.
-        // The reload finishes like any other navigation, so it also lands at the end of the refreshed report.
         var refreshButton = new UIBarButtonItem(UIBarButtonSystemItem.Refresh);
         refreshButton.Clicked += async (_, _) => {
             refreshButton.Enabled = false;
@@ -108,15 +104,25 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
             }
         };
 
-        // Show a Search button that opens the find bar, alongside Share + Refresh. (First item sits at
-        // the far right.)
+        // Jump to the end of the report. UIKit has no system bar-button item for this, so it uses the SF
+        // Symbol (iOS 13+), falling back to a text button on the off chance the symbol can't be loaded.
+        var jumpToEndIcon = UIImage.GetSystemImage("arrow.down.to.line");
+        var jumpToEndButton = new UIBarButtonItem {
+            Style = UIBarButtonItemStyle.Plain,
+            Image = jumpToEndIcon,
+            Title = jumpToEndIcon is null ? "End" : null
+        };
+        jumpToEndButton.Clicked += (_, _) => ScrollToEnd(webView);
+
+        // Show a Search button that opens the find bar, alongside Share + Jump-to-end + Refresh. (First item
+        // sits at the far right.)
         if (OperatingSystem.IsIOSVersionAtLeast(16)) {
             var searchButton = new UIBarButtonItem(UIBarButtonSystemItem.Search);
             searchButton.Clicked += (_, _) => webView.FindInteraction?.PresentFindNavigatorShowingReplace(false);
-            viewer.NavigationItem.RightBarButtonItems = [shareButton, searchButton, refreshButton];
+            viewer.NavigationItem.RightBarButtonItems = [shareButton, searchButton, jumpToEndButton, refreshButton];
         }
         else {
-            viewer.NavigationItem.RightBarButtonItems = [shareButton, refreshButton];
+            viewer.NavigationItem.RightBarButtonItems = [shareButton, jumpToEndButton, refreshButton];
         }
 
         // This is a modal sheet, so the dismissal is a Close (✕) button — the iOS-idiomatic control for
@@ -130,36 +136,18 @@ internal sealed class IosReportViewer(UIViewController hostController, UIColor b
         hostController.PresentViewController(nav, animated: true, completionHandler: null);
     }
 
-    // Land at the end of the report after every load — opening it and each Refresh — because a log's newest
-    // lines are its last ones, and scrolling a long log by hand to reach them is the whole complaint. WebKit
-    // publishes the rendered content height asynchronously, so the height can still be growing when the
-    // navigation reports itself finished; the jump is repeated until that height stops changing. Called on
-    // the main thread, where the awaits also resume, so the UIKit calls are safe.
-    private static async Task ScrollToEndAsync(WKWebView webView)
+    // Scroll to the end of the report: a log's newest lines are its last ones, and dragging through a long log
+    // to reach them is tedious. The bottom offset of a scroll view is its content height minus the visible
+    // height, plus the inset iOS keeps for the home indicator; a non-positive result means the report already
+    // fits on one screen and there is nothing to scroll.
+    private static void ScrollToEnd(WKWebView webView)
     {
         var scrollView = webView.ScrollView;
-        double lastContentHeight = -1;
-        while (Math.Abs(scrollView.ContentSize.Height - lastContentHeight) > double.Epsilon) {
-            lastContentHeight = scrollView.ContentSize.Height;
+        double maxOffsetY = scrollView.ContentSize.Height - scrollView.Bounds.Height +
+                            scrollView.ContentInset.Bottom;
 
-            // The bottom of a scroll view is its content height minus the visible height, plus the inset
-            // iOS keeps for the home indicator. Non-positive means the report already fits on one screen.
-            var maxOffsetY = lastContentHeight - scrollView.Bounds.Height + scrollView.ContentInset.Bottom;
-            if (maxOffsetY > 0)
-                scrollView.SetContentOffset(new CGPoint(0, maxOffsetY), animated: false);
-
-            await Task.Delay(TimeSpan.FromMilliseconds(100));
-        }
-    }
-
-    // Bridges WebKit's navigation-finished callback to the jump-to-end. Fires for the initial load and for
-    // every reload triggered by the Refresh button.
-    private sealed class PageLoadedDelegate : WKNavigationDelegate
-    {
-        public override void DidFinishNavigation(WKWebView webView, WKNavigation navigation)
-        {
-            _ = ScrollToEndAsync(webView);
-        }
+        if (maxOffsetY > 0)
+            scrollView.SetContentOffset(new CGPoint(0, maxOffsetY), animated: true);
     }
 
     private static void PresentShareSheet(string filePath, Uri sourceUri, UIViewController presenter,

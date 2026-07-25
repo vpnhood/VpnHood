@@ -28,9 +28,6 @@ internal sealed class AndroidReportViewer
         _webView = new WebView(activity);
         _webView.Settings.JavaScriptEnabled = false; // the report is plain text; no JS needed
         _webView.SetFindListener(new FindListener(OnFindResult));
-        // The client exists only to learn when a load completed, so the viewer can land at the end of the
-        // report (see ScrollToEnd); the report is plain text, so there are no links to intercept.
-        _webView.SetWebViewClient(new PageFinishedClient(() => ScrollToEnd(lastContentHeight: -1)));
 
         _matchCountView = new TextView(activity);
         _findBar = BuildFindBar();
@@ -69,10 +66,18 @@ internal sealed class AndroidReportViewer
         var searchBtn = IconButton(Android.Resource.Drawable.IcMenuSearch);
         searchBtn.Click += (_, _) => ToggleFindBar();
 
+        // Jump to the end of the report: a log's newest lines are its last ones, and dragging through a long
+        // log to reach them is tedious. PageDown(bottom: true) is the WebView's own jump-to-end, so it needs
+        // no JavaScript (which stays disabled here). The framework has no "go to end" drawable, so the
+        // skip-to-next media icon (a triangle resting on a bar) is turned a quarter turn into a downward
+        // jump-to-the-end arrow — keeping the bar on stock icons of one style instead of a stray legacy one.
+        var jumpToEndBtn = IconButton(Android.Resource.Drawable.IcMediaNext);
+        jumpToEndBtn.Rotation = 90f;
+        jumpToEndBtn.Click += (_, _) => _webView.PageDown(bottom: true);
+
         // Re-fetch the report from its (loopback) source and reload, so the user can pull the latest log
         // without closing and reopening the viewer. The WebView loads straight from the URL, so a fresh
-        // LoadUrl re-requests it — no separate download step is needed (unlike the iOS viewer). The reload
-        // finishes like any other load, so it also lands at the end of the refreshed report.
+        // LoadUrl re-requests it — no separate download step is needed (unlike the iOS viewer).
         var refreshBtn = IconButton(Android.Resource.Drawable.IcPopupSync);
         refreshBtn.Click += (_, _) => _webView.LoadUrl(_reportUri.ToString());
 
@@ -84,6 +89,7 @@ internal sealed class AndroidReportViewer
         bar.AddView(new Space(_activity),
             new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent) { Weight = 1 });
         bar.AddView(searchBtn);
+        bar.AddView(jumpToEndBtn);
         bar.AddView(refreshBtn);
         bar.AddView(shareBtn);
         return bar;
@@ -135,20 +141,6 @@ internal sealed class AndroidReportViewer
     private void OnFindResult(int activeMatchOrdinal, int numberOfMatches)
     {
         _matchCountView.Text = numberOfMatches > 0 ? $"{activeMatchOrdinal + 1}/{numberOfMatches}" : "0/0";
-    }
-
-    // Land at the end of the report after every load — opening it and each Refresh — because a log's newest
-    // lines are its last ones, and scrolling a long log by hand to reach them is the whole complaint.
-    // PageDown(bottom: true) is the WebView's own "jump to the end" and needs no JavaScript (disabled here).
-    // Chromium publishes the rendered document height asynchronously, so the height can still be growing when
-    // the page reports itself finished; the jump is repeated until that height stops changing.
-    private void ScrollToEnd(int lastContentHeight)
-    {
-        _webView.PageDown(bottom: true);
-
-        var contentHeight = _webView.ContentHeight;
-        if (contentHeight != lastContentHeight)
-            _webView.PostDelayed(() => ScrollToEnd(contentHeight), 100);
     }
 
     // Browsers that can open the live log page. Mirrors the iOS viewer's browser list; used to give only these
@@ -222,17 +214,6 @@ internal sealed class AndroidReportViewer
 
     private static LinearLayout.LayoutParams MatchWrap() =>
         new(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent);
-
-    // Bridges the WebView's page-load callback to the jump-to-end. Fires for the initial load and for every
-    // reload triggered by the Refresh button.
-    private sealed class PageFinishedClient(Action onPageFinished) : WebViewClient
-    {
-        public override void OnPageFinished(WebView? view, string? url)
-        {
-            base.OnPageFinished(view, url);
-            onPageFinished();
-        }
-    }
 
     // Bridges the WebView's native find callback to the match-count label.
     private sealed class FindListener(Action<int, int> onResult) : Java.Lang.Object, WebView.IFindListener

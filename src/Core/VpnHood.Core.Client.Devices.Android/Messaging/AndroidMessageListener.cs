@@ -18,7 +18,9 @@ public sealed class AndroidMessageListener : IMessageListener
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private MessageHandler? _messageHandler;
-    private bool _disposed;
+
+    // written by Dispose, read on binder threads
+    private volatile bool _disposed;
 
     private readonly IBinder _binder;
 
@@ -54,16 +56,37 @@ public sealed class AndroidMessageListener : IMessageListener
                 throw new InvalidOperationException("VpnService message listener is not started.");
 
             var response = await handler(request, _cancellationTokenSource.Token).Vhc();
-            SendReply(replyBinder, requestId, response, errorMessage: null);
+            SendReply(replyBinder, requestId, response);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogDebug(ex, "Could not handle a VpnService message. RequestId: {RequestId}",
                 requestId);
-            SendReply(replyBinder, requestId, response: default, errorMessage: ex.Message);
+            SendError(replyBinder, requestId, ex.Message);
         }
     }
 
-    private static void SendReply(IBinder replyBinder, int requestId, Memory<byte> response, string? errorMessage)
+    private static void SendReply(IBinder replyBinder, int requestId, Memory<byte> response)
+    {
+        if (response.Length > AndroidMessageTransport.MaxBlobLength) {
+            SendError(replyBinder, requestId,
+                $"VpnService response is too large for the message channel. Length: {response.Length}");
+            return;
+        }
+
+        if (!TryTransactReply(replyBinder, requestId, response, errorMessage: null))
+            SendError(replyBinder, requestId, "VpnService could not deliver its response.");
+    }
+
+    private static void SendError(IBinder replyBinder, int requestId, string errorMessage)
+    {
+        if (errorMessage.Length > AndroidMessageTransport.MaxErrorMessageLength)
+            errorMessage = errorMessage[..AndroidMessageTransport.MaxErrorMessageLength];
+
+        TryTransactReply(replyBinder, requestId, response: default, errorMessage);
+    }
+
+    private static bool TryTransactReply(IBinder replyBinder, int requestId, Memory<byte> response,
+        string? errorMessage)
     {
         var data = Parcel.Obtain();
         try {
@@ -75,15 +98,15 @@ public sealed class AndroidMessageListener : IMessageListener
             else
                 data.WriteString(errorMessage);
 
-            // confirmed (non-oneway) transact: the client only completes a TaskCompletionSource,
-            // so the wait is negligible, and a delivery failure surfaces here instead of leaving
-            // the client waiting for a reply that never arrives
-            replyBinder.Transact(AndroidMessageTransport.ReplyTransactionCode, data, null, 0);
+            // A oneway reply is buffered while the app process is frozen.
+            return replyBinder.Transact(AndroidMessageTransport.ReplyTransactionCode, data, null,
+                TransactionFlags.Oneway);
         }
         catch (Exception ex) {
-            // the client process is gone; So its pending request fails via its disconnect callbacks
+            // the client process is gone; its pending request fails via its disconnect callbacks
             VhLogger.Instance.LogDebug(ex, "Could not deliver a VpnService message reply. RequestId: {RequestId}",
                 requestId);
+            return false;
         }
         finally {
             data.Recycle();
@@ -108,16 +131,18 @@ public sealed class AndroidMessageListener : IMessageListener
             if (code != AndroidMessageTransport.RequestTransactionCode)
                 return base.OnTransact(code, data, reply, flags);
 
+            var requestId = 0;
+            IBinder? replyBinder = null;
             try {
                 // reject any caller that is not this app, regardless of manifest configuration
                 if (CallingUid != Process.MyUid())
                     throw new Java.Lang.SecurityException("VpnService messages are not accepted from other apps.");
 
                 data.EnforceInterface(AndroidMessageTransport.InterfaceToken);
-                var requestId = data.ReadInt();
-                var replyBinder = data.ReadStrongBinder() ??
-                                  throw new Java.Lang.IllegalArgumentException(
-                                      "VpnService message has no reply binder.");
+                requestId = data.ReadInt();
+                replyBinder = data.ReadStrongBinder() ??
+                              throw new Java.Lang.IllegalArgumentException(
+                                  "VpnService message has no reply binder.");
                 var request = data.CreateByteArray() ??
                               throw new Java.Lang.IllegalArgumentException("VpnService message has no payload.");
 
@@ -126,8 +151,11 @@ public sealed class AndroidMessageListener : IMessageListener
                 return true;
             }
             catch (Exception ex) {
-                // oneway transaction: there is no reply parcel to report into; log and drop
+                // oneway transaction: there is no reply parcel to report into, so answer through the
+                // reply binder once we have one. Dropping it would leave the client waiting forever.
                 VhLogger.Instance.LogDebug(ex, "Could not accept a VpnService message transaction.");
+                if (replyBinder != null)
+                    SendError(replyBinder, requestId, ex.Message);
                 return true;
             }
         }

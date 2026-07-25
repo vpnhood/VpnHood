@@ -14,10 +14,12 @@ namespace VpnHood.Core.Client.Devices.Droid.Messaging;
 // connects whenever the service is started and reconnects automatically after a restart.
 // Discovery, endpoints and API keys do not exist here — the binder is obtained by component.
 //
-// Requests are oneway transactions correlated by requestId; the response arrives on our reply
-// binder as a confirmed transaction, so no thread blocks while a request handler runs. The
-// transport imposes no request deadline — request duration belongs to the caller's token; only
-// connection establishment has a timeout, and service death fails pending requests through the
+// Requests are oneway transactions correlated by requestId, and the response arrives on our reply
+// binder as another oneway transaction, so no thread blocks while a request handler runs and the
+// service never transacts synchronously into this process (which the system would kill while it is
+// frozen). The transport imposes no request deadline — request duration belongs to the caller's
+// token; only connection establishment has a timeout. Nothing is left pending: the service answers
+// every request it accepts, even when it fails, and service death fails the rest through the
 // disconnect callbacks.
 public sealed class AndroidMessageClient : IMessageClient
 {
@@ -67,8 +69,8 @@ public sealed class AndroidMessageClient : IMessageClient
         try {
             SendRequest(binder, requestId, request);
 
-            // no transport deadline: replies are confirmed transactions and service death fails
-            // pending requests via the disconnect callbacks, so the caller's token rules the wait
+            // No transport deadline: service death fails pending requests through the disconnect
+            // callbacks, and otherwise the caller's token controls the wait.
             return await tcs.Task.WaitAsync(cancellationToken).Vhc();
         }
         finally {
@@ -78,6 +80,12 @@ public sealed class AndroidMessageClient : IMessageClient
 
     private void SendRequest(IBinder binder, int requestId, Memory<byte> request)
     {
+        // reject before transacting: TransactionTooLargeException would surface as an unreachable
+        // service, which is a misleading diagnosis for a payload that simply does not fit
+        if (request.Length > AndroidMessageTransport.MaxBlobLength)
+            throw new InvalidOperationException(
+                $"VpnService request is too large for the message channel. Length: {request.Length}");
+
         var data = Parcel.Obtain();
         try {
             data.WriteInterfaceToken(AndroidMessageTransport.InterfaceToken);

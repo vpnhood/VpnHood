@@ -7,10 +7,11 @@ using VpnHood.Core.Toolkit.Net;
 namespace VpnHood.Test.Tests;
 
 // SplitDnsMode: whether DNS is kept inside the tunnel. Selection (GetDnsServers) partitions the user's
-// resolvers into tunnelable (server routes them, filters pass) and outside-only (everything else — the
-// runtime already routes those outside via the allow set or by never capturing them). DefaultRoute honors
-// either kind; IncludeAll only accepts tunnelable ones and throws when nothing is. An in-tunnel plan is then
-// made true by construction: BuildIncludeIpRangesByDevice widens the device set so the adapter captures its resolvers.
+// resolvers into tunnelable (the session's filter pipe has no objection) and outside-only (everything
+// else — the runtime already routes those outside, bypassed by a client exclusion or never captured).
+// DefaultRoute honors either kind; IncludeAll only accepts tunnelable ones and throws when nothing is. An
+// in-tunnel plan is then made true by construction: BuildIncludeIpRangesByDevice widens the device set so
+// the adapter captures its resolvers.
 [TestClass]
 public class SplitDnsTest : TestBase
 {
@@ -26,6 +27,17 @@ public class SplitDnsTest : TestBase
             IsUserSuppressed = false,
             DnsServers = dnsServers
         };
+    }
+
+    // the session's pipe exactly as VpnHoodClient wires it: the client's gates (via-app splits) below,
+    // the server layer with its routing declaration on top
+    private static ServerIpFilter CreateServerIpFilter(IpRangeOrderedList serverIncludeIpRanges,
+        IpRangeOrderedList? clientExcludeRanges = null)
+    {
+        var clientGates = clientExcludeRanges is null
+            ? null
+            : new StaticIpFilter(null) { ExcludeRanges = clientExcludeRanges };
+        return new ServerIpFilter(clientGates) { IncludeRanges = serverIncludeIpRanges };
     }
 
     [TestMethod]
@@ -82,15 +94,14 @@ public class SplitDnsTest : TestBase
     {
         // the user's split excludes their own resolver — a deliberate out-of-tunnel choice, but IncludeAll
         // keeps DNS inside, so the exclusion is overridden and the resolver is used through the tunnel
-        using var ipFilter = new StaticIpFilter(null) {
-            ExcludeRanges = new[] { new IpRange(PublicDns) }.ToOrderedList()
-        };
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpNetwork.All.ToIpRanges(),
+            clientExcludeRanges: new[] { new IpRange(PublicDns) }.ToOrderedList());
 
         var dnsConfig = ClientHelper.GetDnsServers(
             userDnsAddresses: [PublicDns],
             serverDnsAddresses: [IPAddress.Parse("9.9.9.9")],
-            serverIncludeIpRanges: IpNetwork.All.ToIpRanges(),
-            ipFilter: ipFilter,
+            serverIpFilter: serverIpFilter,
             splitDnsMode: SplitDnsMode.IncludeAll);
 
         Assert.IsTrue(dnsConfig.IsIncludedInVpn);
@@ -101,15 +112,14 @@ public class SplitDnsTest : TestBase
     [TestMethod]
     public void DefaultRoute_honors_an_out_of_tunnel_user_resolver()
     {
-        using var ipFilter = new StaticIpFilter(null) {
-            ExcludeRanges = new[] { new IpRange(PublicDns) }.ToOrderedList()
-        };
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpNetwork.All.ToIpRanges(),
+            clientExcludeRanges: new[] { new IpRange(PublicDns) }.ToOrderedList());
 
         var dnsConfig = ClientHelper.GetDnsServers(
             userDnsAddresses: [PublicDns],
             serverDnsAddresses: [IPAddress.Parse("9.9.9.9")],
-            serverIncludeIpRanges: IpNetwork.All.ToIpRanges(),
-            ipFilter: ipFilter,
+            serverIpFilter: serverIpFilter,
             splitDnsMode: SplitDnsMode.DefaultRoute);
 
         Assert.IsFalse(dnsConfig.IsIncludedInVpn, "the user's exclusion is a deliberate out-of-tunnel choice");
@@ -123,13 +133,13 @@ public class SplitDnsTest : TestBase
         // the Pi-hole case: a default server does not route local networks, so the resolver can only work
         // outside the tunnel — and the runtime already sends it there (never captured by the adapter).
         // Honoring it beats suppressing it: the user's ad-blocker keeps working.
-        using var ipFilter = new StaticIpFilter(null); // no app-level exclusion
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpNetwork.All.ToIpRanges().Exclude(IpNetwork.LocalNetworks.ToIpRanges()));
 
         var dnsConfig = ClientHelper.GetDnsServers(
             userDnsAddresses: [LanDns],
             serverDnsAddresses: [IPAddress.Parse("9.9.9.9")],
-            serverIncludeIpRanges: IpNetwork.All.ToIpRanges().Exclude(IpNetwork.LocalNetworks.ToIpRanges()),
-            ipFilter: ipFilter,
+            serverIpFilter: serverIpFilter,
             splitDnsMode: SplitDnsMode.DefaultRoute);
 
         Assert.IsFalse(dnsConfig.IsIncludedInVpn);
@@ -143,14 +153,14 @@ public class SplitDnsTest : TestBase
     {
         // same Pi-hole, opposite mode: outside is not allowed and the server does not route local networks,
         // so the server's resolver is used instead of a claim the session can not keep
-        using var ipFilter = new StaticIpFilter(null);
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpNetwork.All.ToIpRanges().Exclude(IpNetwork.LocalNetworks.ToIpRanges()));
         var serverDns = IPAddress.Parse("9.9.9.9");
 
         var dnsConfig = ClientHelper.GetDnsServers(
             userDnsAddresses: [LanDns],
             serverDnsAddresses: [serverDns],
-            serverIncludeIpRanges: IpNetwork.All.ToIpRanges().Exclude(IpNetwork.LocalNetworks.ToIpRanges()),
-            ipFilter: ipFilter,
+            serverIpFilter: serverIpFilter,
             splitDnsMode: SplitDnsMode.IncludeAll);
 
         Assert.IsTrue(dnsConfig.IsUserSuppressed);
@@ -164,14 +174,14 @@ public class SplitDnsTest : TestBase
         // the flip side of the LAN rejection: a server that DELIBERATELY routes its internal ranges (e.g. a
         // corporate resolver behind the tunnel) advertised them, so its word makes the resolver tunnelable —
         // a client-side "private address" heuristic would have wrongly rejected it
-        using var ipFilter = new StaticIpFilter(null);
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpNetwork.All.ToIpRanges()); // this server routes its internal ranges too
         var internalDns = IPAddress.Parse("10.0.0.53");
 
         var dnsConfig = ClientHelper.GetDnsServers(
             userDnsAddresses: [internalDns],
             serverDnsAddresses: [IPAddress.Parse("9.9.9.9")],
-            serverIncludeIpRanges: IpNetwork.All.ToIpRanges(), // this server routes its internal ranges too
-            ipFilter: ipFilter,
+            serverIpFilter: serverIpFilter,
             splitDnsMode: SplitDnsMode.IncludeAll);
 
         Assert.IsTrue(dnsConfig.IsIncludedInVpn);
@@ -182,16 +192,15 @@ public class SplitDnsTest : TestBase
     [TestMethod]
     public void IncludeAll_falls_back_to_server_dns_when_the_user_resolver_is_not_routable()
     {
-        using var ipFilter = new StaticIpFilter(null) {
-            ExcludeRanges = new[] { new IpRange(PublicDns) }.ToOrderedList()
-        };
         var serverDns = IPAddress.Parse("9.9.9.9");
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: new[] { new IpRange(serverDns) }.ToOrderedList(), // server does not route PublicDns
+            clientExcludeRanges: new[] { new IpRange(PublicDns) }.ToOrderedList());
 
         var dnsConfig = ClientHelper.GetDnsServers(
             userDnsAddresses: [PublicDns],
             serverDnsAddresses: [serverDns],
-            serverIncludeIpRanges: new[] { new IpRange(serverDns) }.ToOrderedList(), // server does not route PublicDns
-            ipFilter: ipFilter,
+            serverIpFilter: serverIpFilter,
             splitDnsMode: SplitDnsMode.IncludeAll);
 
         Assert.IsTrue(dnsConfig.IsUserSuppressed, "the user's resolver could not be used at all");
@@ -202,17 +211,16 @@ public class SplitDnsTest : TestBase
     [TestMethod]
     public void IncludeAll_throws_when_no_dns_can_be_tunneled()
     {
-        // every candidate is vetoed by the filter and the server routes nothing: under IncludeAll an
-        // out-of-tunnel resolver may never be used, so the connect fails loud instead of leaking silently
-        using var ipFilter = new StaticIpFilter(null) {
-            ExcludeRanges = IpNetwork.All.ToIpRanges()
-        };
+        // every candidate is vetoed by the client's gates and the server routes nothing: under IncludeAll
+        // an out-of-tunnel resolver may never be used, so the connect fails loud instead of leaking silently
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpRangeOrderedList.Empty,
+            clientExcludeRanges: IpNetwork.All.ToIpRanges());
 
         Assert.ThrowsExactly<InvalidOperationException>(() => ClientHelper.GetDnsServers(
             userDnsAddresses: [PublicDns],
             serverDnsAddresses: [IPAddress.Parse("9.9.9.9")],
-            serverIncludeIpRanges: IpRangeOrderedList.Empty,
-            ipFilter: ipFilter,
+            serverIpFilter: serverIpFilter,
             splitDnsMode: SplitDnsMode.IncludeAll));
     }
 
@@ -221,15 +229,14 @@ public class SplitDnsTest : TestBase
     {
         // same hopeless setup, but DefaultRoute has no in-tunnel promise to keep — the session still gets
         // working DNS, outside the tunnel, and reports it truthfully
-        using var ipFilter = new StaticIpFilter(null) {
-            ExcludeRanges = IpNetwork.All.ToIpRanges()
-        };
+        using var serverIpFilter = CreateServerIpFilter(
+            serverIncludeIpRanges: IpRangeOrderedList.Empty,
+            clientExcludeRanges: IpNetwork.All.ToIpRanges());
 
         var dnsConfig = ClientHelper.GetDnsServers(
             userDnsAddresses: null,
             serverDnsAddresses: [],
-            serverIncludeIpRanges: IpRangeOrderedList.Empty,
-            ipFilter: ipFilter,
+            serverIpFilter: serverIpFilter,
             splitDnsMode: SplitDnsMode.DefaultRoute);
 
         Assert.IsFalse(dnsConfig.IsIncludedInVpn);

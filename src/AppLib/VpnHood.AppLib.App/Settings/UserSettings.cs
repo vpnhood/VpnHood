@@ -26,6 +26,7 @@ public class UserSettings
     public bool UseSplitDomain { get; set; }
     public bool UseSplitLocalNetwork { get; set; }
     public SplitDnsMode SplitDnsMode { get; set; } = SplitDnsMode.IncludeAll;
+    public UnsupportedIpMode UnsupportedIpMode { get; set; } = UnsupportedIpMode.Exclude;
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;
     public bool UseTcpProxy { get; set; }

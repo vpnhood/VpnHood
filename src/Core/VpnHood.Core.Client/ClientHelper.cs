@@ -43,15 +43,13 @@ internal static class ClientHelper
     /// </summary>
     /// <param name="userDnsAddresses">DNS servers specified by the user</param>
     /// <param name="serverDnsAddresses">DNS servers provided by the VPN server</param>
-    /// <param name="serverIncludeIpRanges">IP ranges the session can route through the tunnel: the server's full routing declaration (app ∩ adapter ranges), which by default excludes local networks</param>
-    /// <param name="ipFilter">IP filter to determine if a DNS server is routable by the client</param>
+    /// <param name="serverIpFilter">the session's filter pipe, headed by the server layer: one Process verdict answers "can the session tunnel this address" (client gates first, then the server's ranges), while its IncludeRanges expose the server's own word alone for the in-tunnel preference</param>
     /// <param name="splitDnsMode">IncludeAll refuses an out-of-tunnel resolver: a user server the splits exclude is not honored, and when nothing is tunnelable at all it throws instead of leaking</param>
     /// <returns>Selected DNS server addresses</returns>
     public static DnsConfig GetDnsServers(
         IReadOnlyList<IPAddress>? userDnsAddresses,
         IReadOnlyList<IPAddress> serverDnsAddresses,
-        IpRangeOrderedList serverIncludeIpRanges,
-        IIpFilter ipFilter,
+        ServerIpFilter serverIpFilter,
         SplitDnsMode splitDnsMode)
     {
         IEnumerable<IPAddress>? results;
@@ -59,15 +57,16 @@ internal static class ClientHelper
 
         // Try to use user DNS servers
         if (userDnsAddresses?.Any() == true) {
-            // Servers the session can not carry through the tunnel — vetoed by the IP filters (via-app
-            // splits) or not routed by the server (which covers a LAN resolver such as a Pi-hole: default
-            // servers do not route local networks) — can only work OUTSIDE it, and the runtime already
-            // routes them there (bypassed by the allow set, or simply never captured). Honor that only when
-            // SplitDnsMode lets DNS travel outside: IncludeAll keeps every query inside, so these are
+            // Servers the session can not carry through the tunnel — vetoed by the client's own gates
+            // (via-app splits) or refused by the server layer (which covers a LAN resolver such as a
+            // Pi-hole: default servers do not route local networks) — can only work OUTSIDE it, and the
+            // runtime routes them there (bypassed by a client exclusion, or simply never captured; a
+            // captured one under Block dies visibly — SplitDnsMode alone owns DNS policy). Honor that only
+            // when SplitDnsMode lets DNS travel outside: IncludeAll keeps every query inside, so these are
             // skipped and selection continues with the tunnelable candidates. The device set is not
-            // consulted: an in-tunnel plan is made capturable afterwards by unioning its resolvers into the
-            // device set (BuildIncludeIpRangesByDevice).
-            results = userDnsAddresses.Where(x => !IsIncluded(ipFilter, x) || !serverIncludeIpRanges.Contains(x));
+            // consulted: an in-tunnel plan is made capturable afterwards by unioning its resolvers into
+            // the device set (BuildIncludeIpRangesByDevice).
+            results = userDnsAddresses.Where(x => !IsIncluded(serverIpFilter, x));
             if (results.Any()) {
                 if (splitDnsMode is SplitDnsMode.IncludeAll) {
                     VhLogger.Instance.LogWarning(
@@ -87,11 +86,12 @@ internal static class ClientHelper
                 }
             }
 
-            // Use user DNS servers if the session can route them. serverIncludeIpRanges carries the server's
-            // FULL routing declaration (app ∩ adapter ranges), which by default already excludes local
-            // networks — so a home-LAN resolver is rejected here by the server's own word, no LAN heuristic
-            // needed, while a server that deliberately routes its internal ranges keeps them usable.
-            results = userDnsAddresses.Where(serverIncludeIpRanges.Contains);
+            // Use user DNS servers if the SERVER routes them — deliberately the server's word alone, not
+            // the full pipe: under IncludeAll the user's resolver is preferred even past their own split
+            // (the packet-level force carries it through). The declaration by default excludes local
+            // networks — a home-LAN resolver is rejected by the server's own word, no LAN heuristic
+            // needed — while a server that deliberately routes its internal ranges keeps them usable.
+            results = userDnsAddresses.Where(x => serverIpFilter.IncludeRanges.Contains(x));
             if (results.Any()) {
                 VhLogger.Instance.LogInformation(
                     "Using User's DNS servers. DnsServers: {DnsServers}",
@@ -112,9 +112,11 @@ internal static class ClientHelper
                 "User's DNS servers have been ignored because they can not be tunneled to the VPN server.");
         }
 
-        // Use server default DNS servers if they are routable by the client
+        // Use server default DNS servers if the session can route them. The server's own DNS gets no free
+        // pass: a server advertising a resolver outside its own declared ranges contradicts itself, and
+        // selection moves on rather than vouching for it.
         if (serverDnsAddresses.Any()) {
-            results = serverDnsAddresses.Where(x => IsIncluded(ipFilter, x));
+            results = serverDnsAddresses.Where(x => IsIncluded(serverIpFilter, x));
             if (results.Any()) {
                 VhLogger.Instance.LogInformation(
                     "Using Server default DNS servers. DnsServers: {DnsServers}",
@@ -129,10 +131,9 @@ internal static class ClientHelper
             }
         }
 
-        // Use Google DNS as last resort if they are routable by both client and server
+        // Use Google DNS as last resort if the session can route them
         results = IPAddressUtil.GoogleDnsServers
-            .Where(x => IsIncluded(ipFilter, x))
-            .Where(serverIncludeIpRanges.Contains);
+            .Where(x => IsIncluded(serverIpFilter, x));
         if (results.Any()) {
             VhLogger.Instance.LogInformation(
                 "Using Google DNS servers as default. DnsServers: {DnsServers}",
@@ -151,8 +152,8 @@ internal static class ClientHelper
         // every DNS query around the tunnel. A failed connect is visible; a leak is not.
         if (splitDnsMode is SplitDnsMode.IncludeAll)
             throw new InvalidOperationException(
-                "No DNS server can be tunneled to the VPN server while DNS routing keeps DNS inside the tunnel. " +
-                "Check the DNS settings or set DNS routing to Default Route.");
+                "No DNS server can be tunneled to the VPN server while Split DNS keeps DNS inside the tunnel. " +
+                "Check the DNS settings or set Split DNS to Default Route.");
 
         // Fallback: use Google DNS even if not routable
         results = IPAddressUtil.GoogleDnsServers;

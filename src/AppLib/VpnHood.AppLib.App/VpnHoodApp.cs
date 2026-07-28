@@ -356,6 +356,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.DnsMode != oldUserSettings.DnsMode ||
                     UserSettings.SplitDnsMode != oldUserSettings.SplitDnsMode ||
+                    UserSettings.UnsupportedIpMode != oldUserSettings.UnsupportedIpMode ||
                     !VhUtils.SequenceEquals(UserSettings.DnsServers, oldUserSettings.DnsServers);
                 if (reconnectRequired)
                     SetReconnectRequired();
@@ -832,6 +833,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AutoWaitTimeout = _autoWaitTimeout,
                 SplitLocalNetwork = UserSettings.UseSplitLocalNetwork,
                 SplitDnsMode = UserSettings.SplitDnsMode,
+                UnsupportedIpMode = UserSettings.UnsupportedIpMode,
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 PacketChannelBufferSize = _packetChannelBufferSize,

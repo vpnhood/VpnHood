@@ -39,6 +39,7 @@ public class VpnHoodClientConfig
     public required string ClientId { get; init; }
     public required bool IncludeLocalNetwork { get; init; }
     public required SplitDnsMode SplitDnsMode { get; init; }
+    public required UnsupportedIpMode UnsupportedIpMode { get; init; }
     public required string? SessionName { get; init; }
     public required string UserAgent { get; init; }
     public required bool AllowStreamReuse { get; init; }

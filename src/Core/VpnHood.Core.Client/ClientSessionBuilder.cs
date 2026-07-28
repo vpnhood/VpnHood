@@ -36,7 +36,7 @@ internal class ClientSessionBuilder(
     IProxyConnector? proxyConnector,
     DomainFilteringService domainFilteringService,
     NetFilter netFilter,
-    StaticIpFilter sessionFilter,
+    ServerIpFilter serverIpFilter,
     ChannelProtocol channelProtocol,
     Action<ClientState> setState)
 {
@@ -177,32 +177,33 @@ internal class ClientSessionBuilder(
                 useQuic: channelProtocol == ChannelProtocol.Quic && hostQuicEndPoint != null,
                 quicEndPoint: hostQuicEndPoint);
 
-            // the include veto starts from All and is narrowed to the server∩device allow set below;
-            // app/country splits and app blocks are inner SqliteIpFilter gates
-            sessionFilter.IncludeRanges = IpNetwork.All.ToIpRanges();
+            // Give the server layer its word before anything consults the pipe: the full routing
+            // declaration (app ∩ adapter — by default the adapter ranges already exclude local networks,
+            // so the server's own word rejects a home-LAN resolver, no client-side LAN heuristic involved)
+            // and the fate of what it does not route. From here one Process call answers for the whole
+            // session: client gates first, then the server's ranges.
+            serverIpFilter.IncludeRanges = serverIncludeIpRanges;
+            serverIpFilter.UnsupportedIpMode = config.UnsupportedIpMode;
 
             var dnsConfig = ClientHelper.GetDnsServers(
                 config.DnsServers,
                 serverDnsAddresses: helloResponse.DnsServers ?? [],
-                // the full app ∩ adapter declaration: only what BOTH server sets carry is tunnelable, and by
-                // default the adapter ranges already exclude local networks — the server's own word rejects
-                // a home-LAN resolver, no client-side LAN heuristic involved
-                serverIncludeIpRanges: serverIncludeIpRanges,
-                ipFilter: sessionFilter,
+                serverIpFilter: serverIpFilter,
                 splitDnsMode: config.SplitDnsMode);
 
             // what the adapter routes into the tunnel; the settled DNS plan is part of the calculation (an
-            // in-tunnel plan's resolvers survive every exclusion, an out-of-tunnel plan stays outside)
+            // in-tunnel plan's resolvers survive every exclusion, an out-of-tunnel plan stays outside).
+            // Under Block the server's adapter ranges are ignored on purpose: an unsupported destination
+            // must be CAPTURED to be blocked — an uncaptured packet is routed by the OS and leaks.
             var sessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
-                includeIpRanges: serverIncludeIpRangesByDevice.Intersect(config.IncludeIpRangesByDevice),
+                includeIpRanges: config.UnsupportedIpMode is UnsupportedIpMode.Block
+                    ? config.IncludeIpRangesByDevice.ToOrderedList()
+                    : serverIncludeIpRangesByDevice.Intersect(config.IncludeIpRangesByDevice),
                 canProtectSocket: vpnAdapter.CanProtectSocket,
                 includeLocalNetwork: config.IncludeLocalNetwork,
                 hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address,
                 dnsConfig: dnsConfig);
 
-            sessionFilter.IncludeRanges = sessionFilter.IncludeRanges
-                .Intersect(serverIncludeIpRanges)
-                .Intersect(sessionIncludeIpRangesByDevice);
 
             if (helloResponse.SuppressedTo == SessionSuppressType.YourSelf)
                 VhLogger.Instance.LogWarning("You suppressed a session of yourself!");

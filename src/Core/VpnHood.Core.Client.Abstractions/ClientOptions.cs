@@ -39,6 +39,7 @@ public class ClientOptions
     public TimeSpan UnstableTimeout { get; set; } = TimeSpan.FromSeconds(60); // connect timeout before pause
     public TimeSpan AutoWaitTimeout { get; set; } = TimeSpan.FromSeconds(30); // auto resume after pause
     public bool SplitLocalNetwork { get; set; }
+    public SplitDnsMode SplitDnsMode { get; set; }
     public int MaxPacketChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
     public TimeSpan MinPacketChannelTimespan { get; set; } = TimeSpan.FromMinutes(5);

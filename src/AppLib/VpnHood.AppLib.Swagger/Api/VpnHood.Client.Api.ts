@@ -5182,6 +5182,7 @@ export class UserSettings implements IUserSettings {
     useSplitIpViaDevice!: boolean;
     useSplitDomain!: boolean;
     useSplitLocalNetwork!: boolean;
+    splitDnsMode!: SplitDnsMode;
     channelProtocol!: ChannelProtocol;
     dropUdp!: boolean;
     useTcpProxy!: boolean;
@@ -5243,6 +5244,7 @@ export class UserSettings implements IUserSettings {
             this.useSplitIpViaDevice = _data["useSplitIpViaDevice"] !== undefined ? _data["useSplitIpViaDevice"] : null as any;
             this.useSplitDomain = _data["useSplitDomain"] !== undefined ? _data["useSplitDomain"] : null as any;
             this.useSplitLocalNetwork = _data["useSplitLocalNetwork"] !== undefined ? _data["useSplitLocalNetwork"] : null as any;
+            this.splitDnsMode = _data["splitDnsMode"] !== undefined ? _data["splitDnsMode"] : null as any;
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
             this.dropUdp = _data["dropUdp"] !== undefined ? _data["dropUdp"] : null as any;
             this.useTcpProxy = _data["useTcpProxy"] !== undefined ? _data["useTcpProxy"] : null as any;
@@ -5299,6 +5301,7 @@ export class UserSettings implements IUserSettings {
         data["useSplitIpViaDevice"] = this.useSplitIpViaDevice !== undefined ? this.useSplitIpViaDevice : null as any;
         data["useSplitDomain"] = this.useSplitDomain !== undefined ? this.useSplitDomain : null as any;
         data["useSplitLocalNetwork"] = this.useSplitLocalNetwork !== undefined ? this.useSplitLocalNetwork : null as any;
+        data["splitDnsMode"] = this.splitDnsMode !== undefined ? this.splitDnsMode : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
         data["dropUdp"] = this.dropUdp !== undefined ? this.dropUdp : null as any;
         data["useTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : null as any;
@@ -5337,6 +5340,7 @@ export interface IUserSettings {
     useSplitIpViaDevice: boolean;
     useSplitDomain: boolean;
     useSplitLocalNetwork: boolean;
+    splitDnsMode: SplitDnsMode;
     channelProtocol: ChannelProtocol;
     dropUdp: boolean;
     useTcpProxy: boolean;
@@ -5364,6 +5368,11 @@ export enum SplitCountryMode {
     ExcludeMyCountry = "ExcludeMyCountry",
     ExcludeList = "ExcludeList",
     IncludeList = "IncludeList",
+}
+
+export enum SplitDnsMode {
+    IncludeAll = "IncludeAll",
+    DefaultRoute = "DefaultRoute",
 }
 
 export enum EndPointStrategy {

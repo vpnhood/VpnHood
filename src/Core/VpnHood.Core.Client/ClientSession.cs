@@ -143,6 +143,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             proxyManager: _proxyManager,
             dnsServers: Config.DnsConfig.DnsServers,
             isIpV6SupportedByServer: Config.IsIpV6SupportedByServer,
+            splitDnsMode: options.SplitDnsMode,
             passthroughState: PassthroughState);
 
         _status = new ClientSessionStatus(

@@ -51,8 +51,8 @@ public class IpNetwork
         Parse("169.254.0.0/16")
     ];
 
-    public static IpNetwork MulticastNetworkV4 => field ??= new(IPAddress.Parse("224.0.0.0"), 4);
-    public static IpNetwork MulticastNetworkV6 => field ??= new(IPAddress.Parse("ff00::"), 8);
+    public static IpNetwork MulticastNetworkV4 => field ??= new IpNetwork(IPAddress.Parse("224.0.0.0"), 4);
+    public static IpNetwork MulticastNetworkV6 => field ??= new IpNetwork(IPAddress.Parse("ff00::"), 8);
     public static IReadOnlyList<IpNetwork> MulticastNetworks => field ??= [MulticastNetworkV4, MulticastNetworkV6];
     public static IpNetwork LoopbackNetworkV4 => field ??= Parse("127.0.0.0/8");
     public static IpNetwork LoopbackNetworkV6 => field ??= Parse("::1/128");

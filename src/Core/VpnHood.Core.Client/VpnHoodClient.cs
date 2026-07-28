@@ -29,7 +29,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly ServerFinder _serverFinder;
     private readonly AsyncLock _disposeLock = new();
     private readonly DomainFilteringService _domainFilteringService;
-    private readonly StaticIpFilter _staticIpFilter;
+    // the session's filter; its include ranges hold the allow set (server ∩ device), assigned when the
+    // session is built, then only read.
+    private readonly StaticIpFilter _sessionFilter;
     private ClientSession? _session;
 
     public DomainObserver DomainObserver => _domainFilteringService.DomainObserver;
@@ -41,7 +43,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IClientSession? Session => _session;
     public IClientSession RequiredSession => _session ?? throw new InvalidOperationException("Session is not created yet.");
     public ITracker? Tracker { get; }
-    public IpRangeOrderedList SessionIncludeIpRangesByApp => _staticIpFilter.IncludeRanges;
+    public IpRangeOrderedList SessionIncludeIpRanges => _sessionFilter.IncludeRanges;
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
     public bool UseTcpProxy { get; set { field = value; _session?.UseTcpProxy = value; } }
     public bool DropUdp { get; set { field = value; _session?.DropUdp = value; } }
@@ -91,6 +93,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             ClientId = options.ClientId,
             SessionTimeout = options.SessionTimeout,
             IncludeLocalNetwork = options.SplitLocalNetwork,
+            SplitDnsMode = options.SplitDnsMode,
             IsTcpProxySupported = options.IsTcpProxySupported,
             UseTcpProxy = options.UseTcpProxy,
             DropUdp = options.DropUdp,
@@ -126,11 +129,11 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // The handed-in chains may change at runtime (the host live-swaps the split gates on reconfigure);
         // the change event rolls up the pipe and the cached stages invalidate themselves — the client
         // never needs to know a swap happened.
-        _staticIpFilter = new StaticIpFilter(netFilter?.IpFilter);
+        _sessionFilter = new StaticIpFilter(netFilter?.IpFilter);
         // Domain gates preempt the IP gates, and their include set is the override lane — a member domain is
         // forced through the tunnel past any IP-gate veto (domains are more specific knowledge than IPs).
         NetFilter = new NetFilter {
-            IpFilter = new CachedIpFilter(_staticIpFilter, TimeSpan.FromMinutes(60)),
+            IpFilter = new CachedIpFilter(_sessionFilter, TimeSpan.FromMinutes(60)),
             DomainFilter = new CachedDomainFilter(netFilter?.DomainFilter, TimeSpan.FromMinutes(60)),
             IpMapper = netFilter?.IpMapper
         };
@@ -234,7 +237,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             proxyConnector: ProxyConnector,
             domainFilteringService: _domainFilteringService,
             netFilter: NetFilter,
-            staticIpFilter: _staticIpFilter,
+            sessionFilter: _sessionFilter,
             channelProtocol: ChannelProtocol,
             setState: state => State = state);
 

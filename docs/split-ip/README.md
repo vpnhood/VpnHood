@@ -76,8 +76,9 @@ SplitDbPublisherService.Publish                             SplitDbManifest.Read
    include-veto.
 
    `FilterAction.Include` is never returned by IP gates. It survives only as an explicit override
-   lane: the **domain include set** and the ICMP force use it to push traffic through the tunnel past
-   every gate. Domain gates therefore consult their own sets before `next` (an include override must
+   lane: the **domain include set**, the ICMP force, and the DNS force (`SplitDnsMode`, which keeps
+   resolvers inside the tunnel and drops the ones the session can not route rather than letting them
+   leak) use it to push traffic through the tunnel past every gate. Domain gates therefore consult their own sets before `next` (an include override must
    not be second-guessed), and "tunnel nothing except aaa.com" is expressed as domain-include
    `aaa.com` + via-app IP-exclude `0.0.0.0/0, ::/0` — see [split-domain.md](split-domain.md).
 

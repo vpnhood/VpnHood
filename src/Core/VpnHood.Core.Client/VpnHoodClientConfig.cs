@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Net;
@@ -37,6 +38,7 @@ public class VpnHoodClientConfig
     public required TransferBufferSize? PacketChannelBufferSize { get; init; }
     public required string ClientId { get; init; }
     public required bool IncludeLocalNetwork { get; init; }
+    public required SplitDnsMode SplitDnsMode { get; init; }
     public required string? SessionName { get; init; }
     public required string UserAgent { get; init; }
     public required bool AllowStreamReuse { get; init; }

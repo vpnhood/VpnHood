@@ -3,6 +3,7 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 
@@ -19,6 +20,7 @@ internal class ClientSessionOptions
     public required DomainFilteringService DomainFilteringService { get; init; }
     public required NetFilter NetFilter { get; init; }
     public required ChannelProtocol ChannelProtocol { get; init; }
+    public required SplitDnsMode SplitDnsMode { get; init; }
     public required bool DropUdp { get; init; }
     public required bool DropQuic { get; init; }
     public required bool UseTcpProxy { get; init; }

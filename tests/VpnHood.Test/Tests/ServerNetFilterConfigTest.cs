@@ -121,10 +121,10 @@ public class ServerNetFilterConfigTest : TestBase
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 
-        Assert.IsFalse(client.SessionIncludeIpRangesByApp.Contains(IPAddress.Parse("130.0.0.110")), "Excludes failed");
-        Assert.IsTrue(client.SessionIncludeIpRangesByApp.Contains(IPAddress.Parse("130.0.0.50")), "Includes failed");
-        Assert.IsFalse(client.SessionIncludeIpRangesByApp.Contains(IPAddress.Parse("130.0.0.240")), "Includes failed");
-        Assert.IsFalse(client.SessionIncludeIpRangesByApp.Contains(IPAddress.Parse("130.0.0.254")), "Includes & Excludes failed");
+        Assert.IsFalse(client.SessionIncludeIpRanges.Contains(IPAddress.Parse("130.0.0.110")), "Excludes failed");
+        Assert.IsTrue(client.SessionIncludeIpRanges.Contains(IPAddress.Parse("130.0.0.50")), "Includes failed");
+        Assert.IsFalse(client.SessionIncludeIpRanges.Contains(IPAddress.Parse("130.0.0.240")), "Includes failed");
+        Assert.IsFalse(client.SessionIncludeIpRanges.Contains(IPAddress.Parse("130.0.0.254")), "Includes & Excludes failed");
 
         Assert.IsTrue(server.SessionManager.NetFilter.IsIpBlocked("130.0.0.110"));
         Assert.IsFalse(server.SessionManager.NetFilter.IsIpBlocked("130.0.0.50"));

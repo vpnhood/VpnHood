@@ -36,7 +36,7 @@ internal class ClientSessionBuilder(
     IProxyConnector? proxyConnector,
     DomainFilteringService domainFilteringService,
     NetFilter netFilter,
-    StaticIpFilter staticIpFilter,
+    StaticIpFilter sessionFilter,
     ChannelProtocol channelProtocol,
     Action<ClientState> setState)
 {
@@ -179,21 +179,28 @@ internal class ClientSessionBuilder(
 
             // the include veto starts from All and is narrowed to the server∩device allow set below;
             // app/country splits and app blocks are inner SqliteIpFilter gates
-            staticIpFilter.IncludeRanges = IpNetwork.All.ToIpRanges();
+            sessionFilter.IncludeRanges = IpNetwork.All.ToIpRanges();
 
             var dnsConfig = ClientHelper.GetDnsServers(
                 config.DnsServers,
                 serverDnsAddresses: helloResponse.DnsServers ?? [],
-                serverIncludeIpRanges: serverIncludeIpRangesByApp,
-                ipFilter: staticIpFilter);
+                // the full app ∩ adapter declaration: only what BOTH server sets carry is tunnelable, and by
+                // default the adapter ranges already exclude local networks — the server's own word rejects
+                // a home-LAN resolver, no client-side LAN heuristic involved
+                serverIncludeIpRanges: serverIncludeIpRanges,
+                ipFilter: sessionFilter,
+                splitDnsMode: config.SplitDnsMode);
 
+            // what the adapter routes into the tunnel; the settled DNS plan is part of the calculation (an
+            // in-tunnel plan's resolvers survive every exclusion, an out-of-tunnel plan stays outside)
             var sessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
                 includeIpRanges: serverIncludeIpRangesByDevice.Intersect(config.IncludeIpRangesByDevice),
                 canProtectSocket: vpnAdapter.CanProtectSocket,
                 includeLocalNetwork: config.IncludeLocalNetwork,
-                hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address);
+                hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address,
+                dnsConfig: dnsConfig);
 
-            staticIpFilter.IncludeRanges = staticIpFilter.IncludeRanges
+            sessionFilter.IncludeRanges = sessionFilter.IncludeRanges
                 .Intersect(serverIncludeIpRanges)
                 .Intersect(sessionIncludeIpRangesByDevice);
 
@@ -304,6 +311,7 @@ internal class ClientSessionBuilder(
                     DomainFilteringService = domainFilteringService,
                     NetFilter = netFilter,
                     ChannelProtocol = channelProtocol,
+                    SplitDnsMode = config.SplitDnsMode,
                     DropQuic = config.DropQuic,
                     DropUdp = config.DropUdp,
                     UseTcpProxy = config.UseTcpProxy

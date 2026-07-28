@@ -22,7 +22,7 @@ internal class ClientPacketHandler(
     SplitDnsMode splitDnsMode,
     PassthroughState passthroughState)
 {
-    public bool IsDnsOverTlsDetected { get; private set; }
+    public bool IsSecureDnsDetected { get; private set; }
     public bool DropQuic { get; set; }
     public bool DropUdp { get; set; }
     public bool UseTcpProxy { get; set; }
@@ -94,9 +94,8 @@ internal class ClientPacketHandler(
         if (ipPacket.IsIcmpEcho())
             filterAction = FilterAction.Include;
 
-        // detect DoT
-        IsDnsOverTlsDetected |= ipPacket.Protocol is IpProtocol.Tcp &&
-                                ipPacket.ExtractTcp().DestinationPort == DnsPorts.DnsOverTls;
+        // detect secure DNS (DoT/DoQ)
+        IsSecureDnsDetected |= DnsPorts.IsSecureDns(ipPacket.Protocol, destinationEndPoint.Port);
 
         // tunnel unless a gate vetoed: Default means "no objection" and stays inside the tunnel (fail-closed)
         if (filterAction is FilterAction.Exclude)

@@ -43,4 +43,5 @@ public class AppState
     public required bool IsProxyEndPointActive { get; init; }
     public required bool PromotionExists { get; init; }
     public required TcpProxyUsageReason TcpProxyUsageReason { get; init; }
+    public required IReadOnlyList<AppLeakCause> LeakCauses { get; init; }
 }

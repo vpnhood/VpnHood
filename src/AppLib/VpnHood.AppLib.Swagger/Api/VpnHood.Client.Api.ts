@@ -3660,6 +3660,7 @@ export class AppState implements IAppState {
     isProxyEndPointActive!: boolean;
     promotionExists!: boolean;
     tcpProxyUsageReason!: TcpProxyUsageReason;
+    leakCauses!: AppLeakCause[];
 
     constructor(data?: IAppState) {
         if (data) {
@@ -3672,6 +3673,7 @@ export class AppState implements IAppState {
             this.currentUiCultureInfo = new UiCultureInfo();
             this.systemUiCultureInfo = new UiCultureInfo();
             this.systemBarsInfo = new SystemBarsInfo();
+            this.leakCauses = [];
         }
     }
 
@@ -3711,6 +3713,14 @@ export class AppState implements IAppState {
             this.isProxyEndPointActive = _data["isProxyEndPointActive"] !== undefined ? _data["isProxyEndPointActive"] : null as any;
             this.promotionExists = _data["promotionExists"] !== undefined ? _data["promotionExists"] : null as any;
             this.tcpProxyUsageReason = _data["tcpProxyUsageReason"] !== undefined ? _data["tcpProxyUsageReason"] : null as any;
+            if (Array.isArray(_data["leakCauses"])) {
+                this.leakCauses = [] as any;
+                for (let item of _data["leakCauses"])
+                    this.leakCauses!.push(item);
+            }
+            else {
+                this.leakCauses = null as any;
+            }
         }
     }
 
@@ -3757,6 +3767,11 @@ export class AppState implements IAppState {
         data["isProxyEndPointActive"] = this.isProxyEndPointActive !== undefined ? this.isProxyEndPointActive : null as any;
         data["promotionExists"] = this.promotionExists !== undefined ? this.promotionExists : null as any;
         data["tcpProxyUsageReason"] = this.tcpProxyUsageReason !== undefined ? this.tcpProxyUsageReason : null as any;
+        if (Array.isArray(this.leakCauses)) {
+            data["leakCauses"] = [];
+            for (let item of this.leakCauses)
+                data["leakCauses"].push(item);
+        }
         return data;
     }
 }
@@ -3796,6 +3811,7 @@ export interface IAppState {
     isProxyEndPointActive: boolean;
     promotionExists: boolean;
     tcpProxyUsageReason: TcpProxyUsageReason;
+    leakCauses: AppLeakCause[];
 }
 
 export enum AppConnectionState {
@@ -3817,6 +3833,7 @@ export class AppSessionInfo implements IAppSessionInfo {
     accessInfo!: AccessInfo | null;
     dnsConfig!: DnsConfig;
     isLocalNetworkAllowed!: boolean;
+    isTrafficSplitByServer!: boolean;
     serverLocationInfo!: AppServerLocationInfo | null;
     isPremiumSession!: boolean;
     suppressedTo!: SessionSuppressType;
@@ -3845,6 +3862,7 @@ export class AppSessionInfo implements IAppSessionInfo {
             this.accessInfo = _data["accessInfo"] ? AccessInfo.fromJS(_data["accessInfo"]) : null as any;
             this.dnsConfig = _data["dnsConfig"] ? DnsConfig.fromJS(_data["dnsConfig"]) : new DnsConfig();
             this.isLocalNetworkAllowed = _data["isLocalNetworkAllowed"] !== undefined ? _data["isLocalNetworkAllowed"] : null as any;
+            this.isTrafficSplitByServer = _data["isTrafficSplitByServer"] !== undefined ? _data["isTrafficSplitByServer"] : null as any;
             this.serverLocationInfo = _data["serverLocationInfo"] ? AppServerLocationInfo.fromJS(_data["serverLocationInfo"]) : null as any;
             this.isPremiumSession = _data["isPremiumSession"] !== undefined ? _data["isPremiumSession"] : null as any;
             this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : null as any;
@@ -3876,6 +3894,7 @@ export class AppSessionInfo implements IAppSessionInfo {
         data["accessInfo"] = this.accessInfo ? this.accessInfo.toJSON() : null as any;
         data["dnsConfig"] = this.dnsConfig ? this.dnsConfig.toJSON() : null as any;
         data["isLocalNetworkAllowed"] = this.isLocalNetworkAllowed !== undefined ? this.isLocalNetworkAllowed : null as any;
+        data["isTrafficSplitByServer"] = this.isTrafficSplitByServer !== undefined ? this.isTrafficSplitByServer : null as any;
         data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : null as any;
         data["isPremiumSession"] = this.isPremiumSession !== undefined ? this.isPremiumSession : null as any;
         data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : null as any;
@@ -3897,6 +3916,7 @@ export interface IAppSessionInfo {
     accessInfo: AccessInfo | null;
     dnsConfig: DnsConfig;
     isLocalNetworkAllowed: boolean;
+    isTrafficSplitByServer: boolean;
     serverLocationInfo: AppServerLocationInfo | null;
     isPremiumSession: boolean;
     suppressedTo: SessionSuppressType;
@@ -5164,6 +5184,16 @@ export enum TcpProxyUsageReason {
     ServerRequiredOn = "ServerRequiredOn",
     ServerRequiredOff = "ServerRequiredOff",
     SplitDomainRequiredOn = "SplitDomainRequiredOn",
+}
+
+export enum AppLeakCause {
+    SplitApps = "SplitApps",
+    SplitCountry = "SplitCountry",
+    SplitIpViaApp = "SplitIpViaApp",
+    SplitIpViaDevice = "SplitIpViaDevice",
+    SplitDomain = "SplitDomain",
+    SplitLocalNetwork = "SplitLocalNetwork",
+    ServerSplitTraffic = "ServerSplitTraffic",
 }
 
 export class UserSettings implements IUserSettings {

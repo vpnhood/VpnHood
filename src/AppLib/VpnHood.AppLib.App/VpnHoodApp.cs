@@ -10,6 +10,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
+using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services;
@@ -504,6 +505,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
                 PromotionExists = PromotionExists(),
                 TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo),
+                LeakCauses = StateHelper.GetLeakCauses(UserSettings, connectionInfo?.SessionInfo),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.DeviceUiProvider.GetBarsInfo(uiContext)
                     : SystemBarsInfo.Default

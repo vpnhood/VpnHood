@@ -27,7 +27,7 @@ public interface ISessionStatus
     long SessionMaxTraffic { get; }
     DateTime? SessionExpirationTime { get; }
     int? ActiveClientCount { get; }
-    bool IsDnsOverTlsDetected { get; }
+    bool IsSecureDnsDetected { get; }
     bool IsIpV6SupportedByServer { get; }
     bool IsIpV6SupportedByClient { get; }
     ApiError? Error { get; }

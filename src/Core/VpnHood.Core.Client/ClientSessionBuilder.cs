@@ -234,6 +234,7 @@ internal class ClientSessionBuilder(
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
                 IsLocalNetworkAllowed = serverAllowedLocalNetworks.Any(),
                 DnsConfig = dnsConfig,
+                IsTrafficSplitByServer = !serverIncludeIpRangesByApp.IsAll() || !serverIncludeIpRangesByDevice.IsAll(),
                 IsPremiumSession = helloResponse.AccessUsage?.IsPremium ?? false,
                 IsUdpChannelSupported = hostUdpEndPoint != null,
                 AccessKey = helloResponse.AccessKey,

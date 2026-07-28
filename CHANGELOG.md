@@ -1,5 +1,7 @@
 # Latest
 * Feature: Support QUIC on Windows and Linux
+* Improve: Leak protection
+* Improve: Split tunneling
 * Improve: Initialization speed when using split tunneling by country
 * Improve: SOCKS & HTTP proxies stability
 * Improve: Memory usage & stability

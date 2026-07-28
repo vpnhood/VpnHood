@@ -31,12 +31,17 @@ internal class ServerIpFilter : IIpFilter
             nextFilter.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    // the setters raise Changed: the server's declaration arrives with the session, and the caches above
-    // must not serve verdicts of the old rules
+    // The setters raise Changed: the server's declaration arrives with the session, and the caches above
+    // must not serve verdicts of the old rules. An empty declaration means "no restriction" and is
+    // converted to All at the door, so Process never needs an empty special-case and "before the session"
+    // and "server routes everything" are one honest state.
     public IpRangeOrderedList IncludeRanges {
         get;
-        set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
-    } = [];
+        set {
+            field = value.Count > 0 ? value : IpNetwork.All.ToIpRanges();
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+    } = IpNetwork.All.ToIpRanges();
 
     public UnsupportedIpMode UnsupportedIpMode {
         get;
@@ -50,12 +55,11 @@ internal class ServerIpFilter : IIpFilter
         if (result is FilterAction.Block or FilterAction.Exclude)
             return result;
 
-        // the server's word: an empty declaration means "not established yet" and vetoes nothing; once set,
-        // a member passes unchanged (Default, or a preserved inner Include from an override lane) and a
-        // non-member takes the mode's action — except a refused Include, which is blocked under either
-        // mode: it promised to travel inside, so letting it out would leak it
-        if (IncludeRanges.Count > 0 && !IncludeRanges.Contains(endPoint.Address)) {
-            
+        // the server's word: a member passes unchanged (Default, or a preserved inner Include from an
+        // override lane) and a non-member takes the mode's action — except a refused Include, which is
+        // blocked under either mode: it promised to travel inside, so letting it out would leak it
+        if (!IncludeRanges.Contains(endPoint.Address)) {
+
             // block if server refused an Include
             if (UnsupportedIpMode is UnsupportedIpMode.Block)
                 return FilterAction.Block;
@@ -73,7 +77,7 @@ internal class ServerIpFilter : IIpFilter
     public void Reconfigure() => _nextFilter?.Reconfigure();
 
     public bool IsEmpty =>
-        IncludeRanges.Count == 0 &&
+        IncludeRanges.IsAll() &&
         (_nextFilter?.IsEmpty ?? true);
 
     public void Dispose()

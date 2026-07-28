@@ -148,7 +148,7 @@ internal static class ClientHelper
         }
 
         // Under IncludeAll an out-of-tunnel resolver may never be used, and reaching this point means no
-        // in-tunnel candidate exists at all — fail the connect (fail-closed) instead of silently leaking
+        // in-tunnel candidate exists at all — fail to connect (fail-closed) instead of silently leaking
         // every DNS query around the tunnel. A failed connect is visible; a leak is not.
         if (splitDnsMode is SplitDnsMode.IncludeAll)
             throw new InvalidOperationException(

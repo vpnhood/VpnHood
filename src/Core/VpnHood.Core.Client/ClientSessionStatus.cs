@@ -52,7 +52,7 @@ internal class ClientSessionStatus(
     public long SessionMaxTraffic => _accessUsage.MaxTraffic;
     public DateTime? SessionExpirationTime => _accessUsage.ExpirationTime;
     public int? ActiveClientCount => _accessUsage.ActiveClientCount;
-    public bool IsDnsOverTlsDetected => packetHandler.IsDnsOverTlsDetected;
+    public bool IsSecureDnsDetected => packetHandler.IsSecureDnsDetected;
     public bool IsIpV6SupportedByServer => packetHandler.IsIpV6SupportedByServer;
     public bool IsIpV6SupportedByClient => packetHandler.IsIpV6SupportedByClient;
     public bool IsAdapterStarted => session.IsAdapterStarted;

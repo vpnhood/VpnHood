@@ -11,6 +11,7 @@ public class AppSessionInfo
     public required AccessInfo? AccessInfo { get; init; }
     public required DnsConfig DnsConfig { get; init; }
     public required bool IsLocalNetworkAllowed { get; set; }
+    public required bool IsTrafficSplitByServer { get; init; }
     public required AppServerLocationInfo? ServerLocationInfo { get; init; }
     public required bool IsPremiumSession { get; init; }
     public required SessionSuppressType SuppressedTo { get; init; }

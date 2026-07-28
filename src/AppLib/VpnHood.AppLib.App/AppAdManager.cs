@@ -177,12 +177,12 @@ public class AppAdManager(
         await vpnServiceManager.RefreshState(cancellationToken);
         var connectionInfo = vpnServiceManager.ConnectionInfo;
 
-        // ignore ad blocker if DNS over TLS is not detected or if the adapter is not started yet.
+        // ignore ad blocker if secure DNS (DoT/DoQ) is not detected or if the adapter is not started yet.
         // We don't count network and default dns as ad blocker because they can be set by network admin
         // WaitingForAdEx means adapter is started and network DNS is set to VPN DNS servers.
-        if (connectionInfo.SessionStatus is null || 
+        if (connectionInfo.SessionStatus is null ||
             !connectionInfo.SessionStatus.IsAdapterStarted ||
-            !connectionInfo.SessionStatus.IsDnsOverTlsDetected)
+            !connectionInfo.SessionStatus.IsSecureDnsDetected)
             return false;
 
         // we just check if the exception is LoadAdException
@@ -190,11 +190,11 @@ public class AppAdManager(
             return false;
 
         // NoFill usually means the network simply had no inventory.
-        // Because DoT is detected, we double-check via DNS to rule out blocking.
+        // Because secure DNS is detected, we double-check via DNS to rule out blocking.
         if (ex is NoFillAdException)
             return await CheckAdBlockerByDnsQuery(cancellationToken).Vhc();
 
-        // IsDnsOverTlsDetected exists and exception is LoadAdException so we can assume that ad blocker exists
+        // secure DNS is detected and exception is LoadAdException so we can assume that ad blocker exists
         return true;
     }
 

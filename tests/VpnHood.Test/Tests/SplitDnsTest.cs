@@ -211,10 +211,11 @@ public class SplitDnsTest : TestBase
     [TestMethod]
     public void IncludeAll_throws_when_no_dns_can_be_tunneled()
     {
-        // every candidate is vetoed by the client's gates and the server routes nothing: under IncludeAll
-        // an out-of-tunnel resolver may never be used, so the connect fails loud instead of leaking silently
+        // every candidate is vetoed by the client's gates and the server routes an unrelated corner of the
+        // internet: under IncludeAll an out-of-tunnel resolver may never be used, so the connect fails loud
+        // instead of leaking silently
         using var serverIpFilter = CreateServerIpFilter(
-            serverIncludeIpRanges: IpRangeOrderedList.Empty,
+            serverIncludeIpRanges: new[] { IpRange.Parse("1.2.3.0-1.2.3.255") }.ToOrderedList(),
             clientExcludeRanges: IpNetwork.All.ToIpRanges());
 
         Assert.ThrowsExactly<InvalidOperationException>(() => ClientHelper.GetDnsServers(
@@ -230,7 +231,7 @@ public class SplitDnsTest : TestBase
         // same hopeless setup, but DefaultRoute has no in-tunnel promise to keep — the session still gets
         // working DNS, outside the tunnel, and reports it truthfully
         using var serverIpFilter = CreateServerIpFilter(
-            serverIncludeIpRanges: IpRangeOrderedList.Empty,
+            serverIncludeIpRanges: new[] { IpRange.Parse("1.2.3.0-1.2.3.255") }.ToOrderedList(),
             clientExcludeRanges: IpNetwork.All.ToIpRanges());
 
         var dnsConfig = ClientHelper.GetDnsServers(

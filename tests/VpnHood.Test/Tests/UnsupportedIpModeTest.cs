@@ -97,14 +97,18 @@ public class UnsupportedIpModeTest : TestBase
     }
 
     [TestMethod]
-    public void An_empty_declaration_vetoes_nothing()
+    public void An_empty_declaration_means_no_restriction()
     {
-        // before the session settles the server's word, the stage must not turn every address into a miss
+        // "no declaration yet" and "server routes everything" are one honest state: All. An empty
+        // assignment is converted at the door, so the stage can never accidentally turn every address
+        // into a miss.
         using var serverIpFilter = new ServerIpFilter(null) {
             UnsupportedIpMode = UnsupportedIpMode.Block
         };
+        Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "the default is All");
 
-        Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp));
+        serverIpFilter.IncludeRanges = IpRangeOrderedList.Empty;
+        Assert.IsTrue(serverIpFilter.IncludeRanges.IsAll(), "an empty declaration is converted to All");
         Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, UnroutedIp));
     }
 }

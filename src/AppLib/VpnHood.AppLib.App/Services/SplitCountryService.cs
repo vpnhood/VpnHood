@@ -53,7 +53,7 @@ public class SplitCountryService(
     // The (potentially huge) country ranges never enter memory — they stream from the zip into SQLite.
     public async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
     {
-        var splitCountryMode = settingsService.Settings.UserSettings.SplitCountryMode;
+        var splitCountryMode = settingsService.Settings.UserSettings.SplitTunneling.CountryMode;
         if (splitCountryMode is SplitCountryMode.IncludeAll ||
             !premiumFeatureChecker.CheckPremiumFeature(AppFeature.SplitCountry))
             return null;
@@ -69,7 +69,7 @@ public class SplitCountryService(
             // resolve the selected countries
             string[] countryCodes = splitCountryMode is SplitCountryMode.ExcludeMyCountry
                 ? [GetSplitMyCountryCode()]
-                : settingsService.UserSettings.SplitCountries;
+                : settingsService.UserSettings.SplitTunneling.Countries;
 
             // short path: store whichever of (selected, complement) is smaller in the matching set,
             // so an "everything except one" selection builds a one-country db

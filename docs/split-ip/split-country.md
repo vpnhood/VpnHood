@@ -7,14 +7,14 @@ what membership means. The shared architecture (filter pipe, storage, rebuild me
 
 ## Selection
 
-`SplitCountryService.EnsureSplitIpDb` maps the user's `SplitCountryMode` to a country set and the
+`SplitCountryService.EnsureSplitIpDb` maps the user's `SplitTunneling.CountryMode` to a country set and the
 db set that stores it (the db self-describes — only its path travels):
 
 | SplitCountryMode | Countries | Target set |
 | --- | --- | --- |
 | `IncludeAll` | — | none (no db, filter not created) |
-| `IncludeList` | `UserSettings.SplitCountries` | include |
-| `ExcludeList` | `UserSettings.SplitCountries` | exclude |
+| `IncludeList` | `UserSettings.SplitTunneling.Countries` | include |
+| `ExcludeList` | `UserSettings.SplitTunneling.Countries` | exclude |
 | `ExcludeMyCountry` | client country (fresh lookup, no cache/server hint) | exclude |
 
 The country ranges never enter memory — `SplitCountryDbBuilder` streams them from the ip-location zip

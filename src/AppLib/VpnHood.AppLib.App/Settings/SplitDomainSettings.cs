@@ -3,7 +3,7 @@ using VpnHood.AppLib.Utils;
 
 namespace VpnHood.AppLib.Settings;
 
-// The split-domain source lists (see UseSplitDomain). They feed the split-domain db, which
+// The split-domain source lists (see SplitTunneling.UseDomain). They feed the split-domain db, which
 // live-applies to a running session through a reconfigure.
 public class SplitDomainSettings(string folderPath) : SplitFileSettings(folderPath)
 {

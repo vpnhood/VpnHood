@@ -5204,16 +5204,7 @@ export class UserSettings implements IUserSettings {
     countryCode?: string | null;
     clientProfileId?: string | null;
     maxPacketChannelCount!: number;
-    splitAppMode!: SplitAppMode;
-    splitApps!: string[];
-    splitCountryMode!: SplitCountryMode;
-    splitCountries!: string[];
-    useSplitIpViaApp!: boolean;
-    useSplitIpViaDevice!: boolean;
-    useSplitDomain!: boolean;
-    useSplitLocalNetwork!: boolean;
-    splitDnsMode!: SplitDnsMode;
-    unsupportedIpMode!: UnsupportedIpMode;
+    splitTunneling!: SplitTunnelingSettings;
     channelProtocol!: ChannelProtocol;
     dropUdp!: boolean;
     useTcpProxy!: boolean;
@@ -5237,8 +5228,7 @@ export class UserSettings implements IUserSettings {
             }
         }
         if (!data) {
-            this.splitApps = [];
-            this.splitCountries = [];
+            this.splitTunneling = new SplitTunnelingSettings();
             this.proxySettings = new AppProxySettings();
             this.dnsServers = [];
         }
@@ -5253,30 +5243,7 @@ export class UserSettings implements IUserSettings {
             this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : null as any;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : null as any;
             this.maxPacketChannelCount = _data["maxPacketChannelCount"] !== undefined ? _data["maxPacketChannelCount"] : null as any;
-            this.splitAppMode = _data["splitAppMode"] !== undefined ? _data["splitAppMode"] : null as any;
-            if (Array.isArray(_data["splitApps"])) {
-                this.splitApps = [] as any;
-                for (let item of _data["splitApps"])
-                    this.splitApps!.push(item);
-            }
-            else {
-                this.splitApps = null as any;
-            }
-            this.splitCountryMode = _data["splitCountryMode"] !== undefined ? _data["splitCountryMode"] : null as any;
-            if (Array.isArray(_data["splitCountries"])) {
-                this.splitCountries = [] as any;
-                for (let item of _data["splitCountries"])
-                    this.splitCountries!.push(item);
-            }
-            else {
-                this.splitCountries = null as any;
-            }
-            this.useSplitIpViaApp = _data["useSplitIpViaApp"] !== undefined ? _data["useSplitIpViaApp"] : null as any;
-            this.useSplitIpViaDevice = _data["useSplitIpViaDevice"] !== undefined ? _data["useSplitIpViaDevice"] : null as any;
-            this.useSplitDomain = _data["useSplitDomain"] !== undefined ? _data["useSplitDomain"] : null as any;
-            this.useSplitLocalNetwork = _data["useSplitLocalNetwork"] !== undefined ? _data["useSplitLocalNetwork"] : null as any;
-            this.splitDnsMode = _data["splitDnsMode"] !== undefined ? _data["splitDnsMode"] : null as any;
-            this.unsupportedIpMode = _data["unsupportedIpMode"] !== undefined ? _data["unsupportedIpMode"] : null as any;
+            this.splitTunneling = _data["splitTunneling"] ? SplitTunnelingSettings.fromJS(_data["splitTunneling"]) : new SplitTunnelingSettings();
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
             this.dropUdp = _data["dropUdp"] !== undefined ? _data["dropUdp"] : null as any;
             this.useTcpProxy = _data["useTcpProxy"] !== undefined ? _data["useTcpProxy"] : null as any;
@@ -5317,24 +5284,7 @@ export class UserSettings implements IUserSettings {
         data["countryCode"] = this.countryCode !== undefined ? this.countryCode : null as any;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : null as any;
         data["maxPacketChannelCount"] = this.maxPacketChannelCount !== undefined ? this.maxPacketChannelCount : null as any;
-        data["splitAppMode"] = this.splitAppMode !== undefined ? this.splitAppMode : null as any;
-        if (Array.isArray(this.splitApps)) {
-            data["splitApps"] = [];
-            for (let item of this.splitApps)
-                data["splitApps"].push(item);
-        }
-        data["splitCountryMode"] = this.splitCountryMode !== undefined ? this.splitCountryMode : null as any;
-        if (Array.isArray(this.splitCountries)) {
-            data["splitCountries"] = [];
-            for (let item of this.splitCountries)
-                data["splitCountries"].push(item);
-        }
-        data["useSplitIpViaApp"] = this.useSplitIpViaApp !== undefined ? this.useSplitIpViaApp : null as any;
-        data["useSplitIpViaDevice"] = this.useSplitIpViaDevice !== undefined ? this.useSplitIpViaDevice : null as any;
-        data["useSplitDomain"] = this.useSplitDomain !== undefined ? this.useSplitDomain : null as any;
-        data["useSplitLocalNetwork"] = this.useSplitLocalNetwork !== undefined ? this.useSplitLocalNetwork : null as any;
-        data["splitDnsMode"] = this.splitDnsMode !== undefined ? this.splitDnsMode : null as any;
-        data["unsupportedIpMode"] = this.unsupportedIpMode !== undefined ? this.unsupportedIpMode : null as any;
+        data["splitTunneling"] = this.splitTunneling ? this.splitTunneling.toJSON() : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
         data["dropUdp"] = this.dropUdp !== undefined ? this.dropUdp : null as any;
         data["useTcpProxy"] = this.useTcpProxy !== undefined ? this.useTcpProxy : null as any;
@@ -5365,16 +5315,7 @@ export interface IUserSettings {
     countryCode?: string | null;
     clientProfileId?: string | null;
     maxPacketChannelCount: number;
-    splitAppMode: SplitAppMode;
-    splitApps: string[];
-    splitCountryMode: SplitCountryMode;
-    splitCountries: string[];
-    useSplitIpViaApp: boolean;
-    useSplitIpViaDevice: boolean;
-    useSplitDomain: boolean;
-    useSplitLocalNetwork: boolean;
-    splitDnsMode: SplitDnsMode;
-    unsupportedIpMode: UnsupportedIpMode;
+    splitTunneling: SplitTunnelingSettings;
     channelProtocol: ChannelProtocol;
     dropUdp: boolean;
     useTcpProxy: boolean;
@@ -5389,6 +5330,104 @@ export interface IUserSettings {
     allowRemoteAccess: boolean;
     customData?: any | null;
     dnsServers: string[];
+}
+
+export class SplitTunnelingSettings implements ISplitTunnelingSettings {
+    appMode!: SplitAppMode;
+    apps!: string[];
+    countryMode!: SplitCountryMode;
+    countries!: string[];
+    useIpViaApp!: boolean;
+    useIpViaDevice!: boolean;
+    useDomain!: boolean;
+    useLocalNetwork!: boolean;
+    dnsMode!: SplitDnsMode;
+    unsupportedIpMode!: SplitUnsupportedIpMode;
+
+    constructor(data?: ISplitTunnelingSettings) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.apps = [];
+            this.countries = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.appMode = _data["appMode"] !== undefined ? _data["appMode"] : null as any;
+            if (Array.isArray(_data["apps"])) {
+                this.apps = [] as any;
+                for (let item of _data["apps"])
+                    this.apps!.push(item);
+            }
+            else {
+                this.apps = null as any;
+            }
+            this.countryMode = _data["countryMode"] !== undefined ? _data["countryMode"] : null as any;
+            if (Array.isArray(_data["countries"])) {
+                this.countries = [] as any;
+                for (let item of _data["countries"])
+                    this.countries!.push(item);
+            }
+            else {
+                this.countries = null as any;
+            }
+            this.useIpViaApp = _data["useIpViaApp"] !== undefined ? _data["useIpViaApp"] : null as any;
+            this.useIpViaDevice = _data["useIpViaDevice"] !== undefined ? _data["useIpViaDevice"] : null as any;
+            this.useDomain = _data["useDomain"] !== undefined ? _data["useDomain"] : null as any;
+            this.useLocalNetwork = _data["useLocalNetwork"] !== undefined ? _data["useLocalNetwork"] : null as any;
+            this.dnsMode = _data["dnsMode"] !== undefined ? _data["dnsMode"] : null as any;
+            this.unsupportedIpMode = _data["unsupportedIpMode"] !== undefined ? _data["unsupportedIpMode"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): SplitTunnelingSettings {
+        data = typeof data === 'object' ? data : {};
+        let result = new SplitTunnelingSettings();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["appMode"] = this.appMode !== undefined ? this.appMode : null as any;
+        if (Array.isArray(this.apps)) {
+            data["apps"] = [];
+            for (let item of this.apps)
+                data["apps"].push(item);
+        }
+        data["countryMode"] = this.countryMode !== undefined ? this.countryMode : null as any;
+        if (Array.isArray(this.countries)) {
+            data["countries"] = [];
+            for (let item of this.countries)
+                data["countries"].push(item);
+        }
+        data["useIpViaApp"] = this.useIpViaApp !== undefined ? this.useIpViaApp : null as any;
+        data["useIpViaDevice"] = this.useIpViaDevice !== undefined ? this.useIpViaDevice : null as any;
+        data["useDomain"] = this.useDomain !== undefined ? this.useDomain : null as any;
+        data["useLocalNetwork"] = this.useLocalNetwork !== undefined ? this.useLocalNetwork : null as any;
+        data["dnsMode"] = this.dnsMode !== undefined ? this.dnsMode : null as any;
+        data["unsupportedIpMode"] = this.unsupportedIpMode !== undefined ? this.unsupportedIpMode : null as any;
+        return data;
+    }
+}
+
+export interface ISplitTunnelingSettings {
+    appMode: SplitAppMode;
+    apps: string[];
+    countryMode: SplitCountryMode;
+    countries: string[];
+    useIpViaApp: boolean;
+    useIpViaDevice: boolean;
+    useDomain: boolean;
+    useLocalNetwork: boolean;
+    dnsMode: SplitDnsMode;
+    unsupportedIpMode: SplitUnsupportedIpMode;
 }
 
 export enum SplitAppMode {
@@ -5409,7 +5448,7 @@ export enum SplitDnsMode {
     DefaultRoute = "DefaultRoute",
 }
 
-export enum UnsupportedIpMode {
+export enum SplitUnsupportedIpMode {
     Exclude = "Exclude",
     Block = "Block",
 }

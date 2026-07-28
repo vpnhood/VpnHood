@@ -29,7 +29,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private readonly ServerFinder _serverFinder;
     private readonly AsyncLock _disposeLock = new();
     private readonly DomainFilteringService _domainFilteringService;
-    // the filter stage that speaks for the server; its rules (routing declaration + UnsupportedIpMode) are
+    // the filter stage that speaks for the server; its rules (routing declaration + SplitUnsupportedIpMode) are
     // assigned when the session is built, then only read — the device's word lives in the capture set.
     private readonly ServerIpFilter _serverIpFilter;
     private ClientSession? _session;

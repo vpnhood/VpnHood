@@ -27,7 +27,7 @@ public class SessionInfo
 
     // True when the server's own configuration leaves destinations outside the tunnel — either of its
     // declarations (app or adapter ranges) covers less than everything. That is precisely what
-    // UnsupportedIpMode decides the fate of, so the app can tell a real leak from a harmless setting.
+    // SplitUnsupportedIpMode decides the fate of, so the app can tell a real leak from a harmless setting.
     public required bool IsTrafficSplitByServer { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]

@@ -2,7 +2,7 @@ using VpnHood.AppLib.Dtos;
 
 namespace VpnHood.AppLib.Settings;
 
-// The split-ip-via-device source lists (see UseSplitIpViaDevice). They shape the vpn adapter's
+// The split-ip-via-device source lists (see SplitTunneling.UseIpViaDevice). They shape the vpn adapter's
 // ranges, which are applied at connect only — a change while connected flags the session for a
 // reconnect instead of live-applying.
 public class SplitIpViaDeviceSettings(string folderPath) : SplitFileSettings(folderPath)

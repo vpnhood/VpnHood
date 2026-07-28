@@ -6,13 +6,13 @@ using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Test.Tests;
 
-// UnsupportedIpMode: the fate of a destination the server does not route when no client split already
+// SplitUnsupportedIpMode: the fate of a destination the server does not route when no client split already
 // excluded it. ServerIpFilter holds the server's declaration and nothing else — it has no exclude or block
 // lists, so no rule of that stage can route traffic around the tunnel behind the mode's back — while the
 // client's own verdicts keep their power: Exclude and Block always win, and a forced Include can never push
 // traffic onto a server that refused it.
 [TestClass]
-public class UnsupportedIpModeTest : TestBase
+public class SplitUnsupportedIpModeTest : TestBase
 {
     private static readonly IPAddress RoutedIp = IPAddress.Parse("8.8.8.8");
     private static readonly IPAddress UnroutedIp = IPAddress.Parse("130.0.0.10");
@@ -37,13 +37,13 @@ public class UnsupportedIpModeTest : TestBase
     {
         using var serverIpFilter = new ServerIpFilter(null) {
             IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnsupportedIpMode = UnsupportedIpMode.Block
+            UnsupportedIpMode = SplitUnsupportedIpMode.Block
         };
 
         Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "a routed destination passes");
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, UnroutedIp), "an unrouted one takes the mode's action");
 
-        serverIpFilter.UnsupportedIpMode = UnsupportedIpMode.Exclude;
+        serverIpFilter.UnsupportedIpMode = SplitUnsupportedIpMode.Exclude;
         Assert.AreEqual(FilterAction.Exclude, Process(serverIpFilter, UnroutedIp), "Exclude mode bypasses instead");
     }
 
@@ -57,7 +57,7 @@ public class UnsupportedIpModeTest : TestBase
         };
         using var serverIpFilter = new ServerIpFilter(clientGates) {
             IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnsupportedIpMode = UnsupportedIpMode.Block
+            UnsupportedIpMode = SplitUnsupportedIpMode.Block
         };
 
         Assert.AreEqual(FilterAction.Exclude, Process(serverIpFilter, UnroutedIp));
@@ -71,7 +71,7 @@ public class UnsupportedIpModeTest : TestBase
         };
         using var serverIpFilter = new ServerIpFilter(clientGates) {
             IncludeRanges = IpNetwork.All.ToIpRanges(),
-            UnsupportedIpMode = UnsupportedIpMode.Exclude
+            UnsupportedIpMode = SplitUnsupportedIpMode.Exclude
         };
 
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, RoutedIp));
@@ -85,13 +85,13 @@ public class UnsupportedIpModeTest : TestBase
         // excluding it would leak the very traffic the promise covers.
         using var serverIpFilter = new ServerIpFilter(new FixedActionFilter(FilterAction.Include)) {
             IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnsupportedIpMode = UnsupportedIpMode.Block
+            UnsupportedIpMode = SplitUnsupportedIpMode.Block
         };
 
         Assert.AreEqual(FilterAction.Include, Process(serverIpFilter, RoutedIp), "the override lane is preserved on a hit");
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, UnroutedIp), "and refused on a miss");
 
-        serverIpFilter.UnsupportedIpMode = UnsupportedIpMode.Exclude;
+        serverIpFilter.UnsupportedIpMode = SplitUnsupportedIpMode.Exclude;
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, UnroutedIp),
             "a refused promise never falls back to Exclude — that would be the leak");
     }
@@ -103,7 +103,7 @@ public class UnsupportedIpModeTest : TestBase
         // assignment is converted at the door, so the stage can never accidentally turn every address
         // into a miss.
         using var serverIpFilter = new ServerIpFilter(null) {
-            UnsupportedIpMode = UnsupportedIpMode.Block
+            UnsupportedIpMode = SplitUnsupportedIpMode.Block
         };
         Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "the default is All");
 

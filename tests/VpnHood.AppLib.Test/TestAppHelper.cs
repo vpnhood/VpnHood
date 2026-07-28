@@ -59,8 +59,8 @@ public class TestAppHelper : TestHelper
         var clientApp = VpnHoodApp.Init(device, appOptions);
         clientApp.Diagnoser.HttpTimeout = TimeSpan.FromSeconds(2);
         clientApp.Diagnoser.NsTimeout = TimeSpan.FromSeconds(2);
-        clientApp.UserSettings.UseSplitIpViaDevice = true;
-        clientApp.UserSettings.UseSplitIpViaApp = true;
+        clientApp.UserSettings.SplitTunneling.UseIpViaDevice = true;
+        clientApp.UserSettings.SplitTunneling.UseIpViaApp = true;
         clientApp.UserSettings.UseTcpProxy = true;
         clientApp.SettingsService.SplitIpViaDeviceSettings.Includes = TestIps.AllRemoteTestIps.ToOrderedIpRanges().ToText();
         clientApp.UserSettings.LogAnonymous = false;

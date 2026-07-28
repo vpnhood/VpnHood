@@ -7,7 +7,7 @@ namespace VpnHood.Core.Client;
 /// <summary>
 /// The filter stage that speaks for the SERVER: its include ranges hold the server's routing declaration
 /// (app ∩ adapter ranges) and nothing else — deliberately no exclude or block lists, so no rule of this
-/// stage can ever route traffic around the tunnel behind UnsupportedIpMode's back. A destination the server
+/// stage can ever route traffic around the tunnel behind SplitUnsupportedIpMode's back. A destination the server
 /// does not route becomes the mode's action: Exclude (bypass) or Block (fail-closed).
 /// The client's word keeps its power in one direction only: an inner Exclude or Block is final (the user's
 /// own splits bypass even under Block), while an inner Include is preserved only for destinations the
@@ -43,10 +43,10 @@ internal class ServerIpFilter : IIpFilter
         }
     } = IpNetwork.All.ToIpRanges();
 
-    public UnsupportedIpMode UnsupportedIpMode {
+    public SplitUnsupportedIpMode UnsupportedIpMode {
         get;
         set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
-    } = UnsupportedIpMode.Exclude;
+    } = SplitUnsupportedIpMode.Exclude;
 
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
@@ -61,7 +61,7 @@ internal class ServerIpFilter : IIpFilter
         if (!IncludeRanges.Contains(endPoint.Address)) {
 
             // block if server refused an Include
-            if (UnsupportedIpMode is UnsupportedIpMode.Block)
+            if (UnsupportedIpMode is SplitUnsupportedIpMode.Block)
                 return FilterAction.Block;
 
             // default to Exclude if server refused an Include

@@ -19,7 +19,7 @@ public class SplitIpViaAppService(AppSettingsService settingsService, IPremiumFe
     public bool IsBusy { get; private set; }
 
     // Build or reuse the db for the current source files and return its path, or null when the feature
-    // is inactive — this service owns its whole activity decision (UseSplitIpViaApp + premium plan).
+    // is inactive — this service owns its whole activity decision (SplitTunneling.UseIpViaApp + premium plan).
     // The file name carries the source signature, so a changed source builds a NEW file and a running
     // VpnService can keep the superseded db open until it live-swaps to the returned path. Missing
     // files count as empty, and empty sources leave their sets empty (a no-op gate). Failures propagate
@@ -27,7 +27,7 @@ public class SplitIpViaAppService(AppSettingsService settingsService, IPremiumFe
     // never silently skipped.
     public async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
     {
-        if (!settingsService.UserSettings.UseSplitIpViaApp ||
+        if (!settingsService.UserSettings.SplitTunneling.UseIpViaApp ||
             !premiumFeatureChecker.CheckPremiumFeature(AppFeature.SplitIpViaApp))
             return null;
 

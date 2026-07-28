@@ -33,8 +33,8 @@ SplitDbPublisherService.Publish                             SplitDbManifest.Read
 
 1. **Before connecting**, `SplitDbPublisherService.Publish` asks each context's service for its db and
    publishes the active set through the folder's **manifest** (`SplitDbManifest`). Each service owns
-   its WHOLE activity decision — its user setting (`SplitCountryMode` ≠ `IncludeAll`;
-   `UseSplitIpViaApp`; `UseSplitDomain`) and the premium plan (`IPremiumFeatureChecker`) — and answers
+   its WHOLE activity decision — its user setting (`SplitTunneling.CountryMode` ≠ `IncludeAll`;
+   `SplitTunneling.UseIpViaApp`; `SplitTunneling.UseDomain`) and the premium plan (`IPremiumFeatureChecker`) — and answers
    with a path or null. An inactive context contributes no entry — off is the empty case of the same
    flow, and a stale db file lying in the folder means nothing (presence on disk is never policy). The
    manifests are written only by the publisher: the ip folder is shared by two services, and a
@@ -117,7 +117,7 @@ immutable; what changes is which files are current:
 Triggers: any UserSettings save while connected (country mode/selection, via-app and domain toggles),
 and the split text-file settings (`SplitIpViaAppSettings.Set` / `SplitDomainSettings.Set` raise change
 events that `VpnHoodApp` answers with a reconfigure — the files are outside UserSettings). The
-device-level splits (`UseSplitIpViaDevice`, `UseSplitLocalNetwork`, per-app split) still require a
+device-level splits (`SplitTunneling.UseIpViaDevice`, `SplitTunneling.UseLocalNetwork`, per-app split) still require a
 reconnect — they configure the OS adapter — so a change while connected only flags the session
 (`AppState.IsReconnectRequired`) and the UI offers a reconnect.
 

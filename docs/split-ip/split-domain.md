@@ -1,6 +1,6 @@
 # Split-domain filtering
 
-Policy of the **split-domain** context (`UseSplitDomain`): how the user's domain filter text files
+Policy of the **split-domain** context (`SplitTunneling.UseDomain`): how the user's domain filter text files
 become `split-domain.db` and what membership means. The shared architecture (filter pipes, storage,
 rebuild mechanics) is in [README.md](README.md); the db format is in the
 [Filtering.Sqlite README](../../src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
@@ -23,7 +23,7 @@ validated on write, premium-gated by `AppFeature.SplitDomain`):
 Entries match themselves and their subdomains (`google.com` matches `mail.google.com`; the `*.` spelling
 is accepted and equivalent). Comments (`#`, `;`) and blank lines are ignored by `DomainTextFileParser`.
 
-The on/off gate is `UserSettings.UseSplitDomain`, checked together with the premium feature by the
+The on/off gate is `UserSettings.SplitTunneling.UseDomain`, checked together with the premium feature by the
 service itself (it returns null when inactive) — there is no emptiness short path. Missing files count as
 empty, and empty sources leave the db's sets empty, which is a no-op gate; the client then skips SNI
 extraction entirely (`SqliteDomainFilter.IsEmpty`).

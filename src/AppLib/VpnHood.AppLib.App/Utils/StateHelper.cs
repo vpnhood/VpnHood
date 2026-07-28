@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Services.Ads;
@@ -75,7 +75,7 @@ public static class StateHelper
             return TcpProxyUsageReason.ServerRequiredOff;
 
         // split-by-domain requires TcpProxy for SNI stream interception
-        if (userSettings.UseSplitDomain)
+        if (userSettings.SplitTunneling.UseDomain)
             return TcpProxyUsageReason.SplitDomainRequiredOn;
 
         return TcpProxyUsageReason.None;
@@ -88,39 +88,40 @@ public static class StateHelper
     public static IReadOnlyList<AppLeakCause> GetLeakCauses(UserSettings userSettings, SessionInfo? sessionInfo)
     {
         var causes = new List<AppLeakCause>();
+        var splitTunneling = userSettings.SplitTunneling;
 
         // an empty exclude list excludes nothing; an include list leaves everything else outside
-        var isAppSplit = userSettings.SplitAppMode switch {
-            SplitAppMode.Exclude => userSettings.SplitApps.Length > 0,
+        var isAppSplit = splitTunneling.AppMode switch {
+            SplitAppMode.Exclude => splitTunneling.Apps.Length > 0,
             SplitAppMode.Include => true,
             _ => false
         };
         if (isAppSplit)
             causes.Add(AppLeakCause.SplitApps);
 
-        var isCountrySplit = userSettings.SplitCountryMode switch {
+        var isCountrySplit = splitTunneling.CountryMode switch {
             SplitCountryMode.ExcludeMyCountry => true,
-            SplitCountryMode.ExcludeList => userSettings.SplitCountries.Length > 0,
+            SplitCountryMode.ExcludeList => splitTunneling.Countries.Length > 0,
             SplitCountryMode.IncludeList => true,
             _ => false
         };
         if (isCountrySplit)
             causes.Add(AppLeakCause.SplitCountry);
 
-        if (userSettings.UseSplitIpViaApp)
+        if (splitTunneling.UseIpViaApp)
             causes.Add(AppLeakCause.SplitIpViaApp);
 
-        if (userSettings.UseSplitIpViaDevice)
+        if (splitTunneling.UseIpViaDevice)
             causes.Add(AppLeakCause.SplitIpViaDevice);
 
-        if (userSettings.UseSplitDomain)
+        if (splitTunneling.UseDomain)
             causes.Add(AppLeakCause.SplitDomain);
 
-        if (userSettings.UseSplitLocalNetwork)
+        if (splitTunneling.UseLocalNetwork)
             causes.Add(AppLeakCause.SplitLocalNetwork);
 
         // the server's word only leaks while the user lets unsupported destinations out
-        if (userSettings.UnsupportedIpMode is UnsupportedIpMode.Exclude &&
+        if (splitTunneling.UnsupportedIpMode is SplitUnsupportedIpMode.Exclude &&
             sessionInfo?.IsTrafficSplitByServer == true)
             causes.Add(AppLeakCause.ServerSplitTraffic);
 

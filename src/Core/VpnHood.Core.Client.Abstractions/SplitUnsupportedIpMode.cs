@@ -8,8 +8,8 @@ namespace VpnHood.Core.Client.Abstractions;
 // refused by the server's word.
 // Serialized by name (settings.json and vpn.config): the stored value stays readable and adding a mode can
 // never reinterpret a saved one.
-[JsonConverter(typeof(JsonStringEnumConverter<UnsupportedIpMode>))]
-public enum UnsupportedIpMode
+[JsonConverter(typeof(JsonStringEnumConverter<SplitUnsupportedIpMode>))]
+public enum SplitUnsupportedIpMode
 {
     // Unsupported destinations connect directly, outside the VPN. Keeps everything working (the classic
     // behavior) at the cost of a leak: an observer sees the traffic the server declined. This is the default.

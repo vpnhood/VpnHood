@@ -18,7 +18,7 @@ public enum AppLeakCause
     SplitDomain,
     SplitLocalNetwork,
 
-    // the server's own configuration leaves destinations outside the tunnel and UnsupportedIpMode lets
+    // the server's own configuration leaves destinations outside the tunnel and SplitUnsupportedIpMode lets
     // them go there; one cause, because which of the server's two declarations is narrow makes no
     // difference to the user, who can only decide the fate of what the server refuses
     ServerSplitTraffic

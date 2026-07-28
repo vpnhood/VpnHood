@@ -196,7 +196,7 @@ internal class ClientSessionBuilder(
             // Under Block the server's adapter ranges are ignored on purpose: an unsupported destination
             // must be CAPTURED to be blocked — an uncaptured packet is routed by the OS and leaks.
             var sessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
-                includeIpRanges: config.UnsupportedIpMode is UnsupportedIpMode.Block
+                includeIpRanges: config.UnsupportedIpMode is SplitUnsupportedIpMode.Block
                     ? config.IncludeIpRangesByDevice.ToOrderedList()
                     : serverIncludeIpRangesByDevice.Intersect(config.IncludeIpRangesByDevice),
                 canProtectSocket: vpnAdapter.CanProtectSocket,

@@ -18,7 +18,7 @@ public class SplitDomainService(AppSettingsService settingsService, IPremiumFeat
     public bool IsBusy { get; private set; }
 
     // Build or reuse the db for the current source files and return its path, or null when the feature
-    // is inactive — this service owns its whole activity decision (UseSplitDomain + premium plan). The
+    // is inactive — this service owns its whole activity decision (SplitTunneling.UseDomain + premium plan). The
     // file name carries the source signature, so a changed source builds a NEW file and a running
     // VpnService can keep the superseded db open until it live-swaps to the returned path. Missing
     // files count as empty, and empty sources leave their sets empty (a no-op gate). Failures propagate
@@ -26,7 +26,7 @@ public class SplitDomainService(AppSettingsService settingsService, IPremiumFeat
     // never silently skipped.
     public async Task<string?> EnsureSplitDomainDb(string dbFolder, CancellationToken cancellationToken)
     {
-        if (!settingsService.UserSettings.UseSplitDomain ||
+        if (!settingsService.UserSettings.SplitTunneling.UseDomain ||
             !premiumFeatureChecker.CheckPremiumFeature(AppFeature.SplitDomain))
             return null;
 

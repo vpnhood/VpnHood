@@ -14,7 +14,7 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.UseSplitDomain = true;
+        app.UserSettings.SplitTunneling.UseDomain = true;
         app.SettingsService.SplitDomainSettings.Includes = MockEps.HttpsUrl1.Host;
         app.SettingsService.SplitDomainSettings.Excludes = MockEps.HttpsUrl2.Host;
 
@@ -46,7 +46,7 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.UseSplitDomain = true;
+        app.UserSettings.SplitTunneling.UseDomain = true;
         app.SettingsService.SplitDomainSettings.Includes = MockEps.QuicUrl1.Host;
         app.SettingsService.SplitDomainSettings.Excludes = MockEps.QuicUrl2.Host;
 
@@ -79,7 +79,7 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.UseSplitDomain = true;
+        app.UserSettings.SplitTunneling.UseDomain = true;
 
         // block domain1
         app.SettingsService.SplitDomainSettings.Blocks = MockEps.HttpsUrl1.Host;
@@ -106,7 +106,7 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.UseSplitDomain = true;
+        app.UserSettings.SplitTunneling.UseDomain = true;
 
         // block domain1
         app.SettingsService.SplitDomainSettings.Blocks = MockEps.QuicUrl1.Host;
@@ -254,7 +254,7 @@ public class FilteringTest : TestAppBase
     {
         await using var appDom = await AppClientServerDom.Create(TestAppHelper);
         var app = appDom.App;
-        app.UserSettings.UseSplitDomain = true;
+        app.UserSettings.SplitTunneling.UseDomain = true;
         app.SettingsService.SplitDomainSettings.Includes = MockEps.HttpsUrl1.Host;
         app.SettingsService.SplitDomainSettings.Excludes = MockEps.HttpsUrl2.Host;
 

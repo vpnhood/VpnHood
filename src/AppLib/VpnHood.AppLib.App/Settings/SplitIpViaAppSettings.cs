@@ -3,7 +3,7 @@ using VpnHood.AppLib.Utils;
 
 namespace VpnHood.AppLib.Settings;
 
-// The split-ip-via-app source lists (see UseSplitIpViaApp). They feed the split-ip db, which
+// The split-ip-via-app source lists (see SplitTunneling.UseIpViaApp). They feed the split-ip db, which
 // live-applies to a running session through a reconfigure.
 public class SplitIpViaAppSettings(string folderPath) : SplitFileSettings(folderPath)
 {

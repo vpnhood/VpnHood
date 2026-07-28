@@ -308,7 +308,7 @@ public class SplitDomainDbTest : TestBase
 
         // the service owns its whole activity decision: toggle off ⇒ inactive, nothing built
         Assert.IsNull(await service.EnsureSplitDomainDb(storagePath, TestCt));
-        settingsService.UserSettings.UseSplitDomain = true;
+        settingsService.UserSettings.SplitTunneling.UseDomain = true;
 
         // empty/missing sources leave every set empty, which is a no-op gate (routes identically to no filter)
         var dbPath = await service.EnsureSplitDomainDb(storagePath, TestCt);

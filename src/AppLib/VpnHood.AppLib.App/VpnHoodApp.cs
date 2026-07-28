@@ -350,14 +350,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 // are rebuilt and the service swaps its filter gates mid-session). Nothing is forced:
                 // the flag just lets the UI offer a reconnect for the running session.
                 var reconnectRequired =
-                    UserSettings.UseSplitLocalNetwork != oldUserSettings.UseSplitLocalNetwork ||
-                    UserSettings.UseSplitIpViaDevice != oldUserSettings.UseSplitIpViaDevice ||
-                    UserSettings.SplitAppMode != oldUserSettings.SplitAppMode ||
-                    !UserSettings.SplitApps.SequenceEqual(oldUserSettings.SplitApps) ||
+                    UserSettings.SplitTunneling.UseLocalNetwork != oldUserSettings.SplitTunneling.UseLocalNetwork ||
+                    UserSettings.SplitTunneling.UseIpViaDevice != oldUserSettings.SplitTunneling.UseIpViaDevice ||
+                    UserSettings.SplitTunneling.AppMode != oldUserSettings.SplitTunneling.AppMode ||
+                    !UserSettings.SplitTunneling.Apps.SequenceEqual(oldUserSettings.SplitTunneling.Apps) ||
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.DnsMode != oldUserSettings.DnsMode ||
-                    UserSettings.SplitDnsMode != oldUserSettings.SplitDnsMode ||
-                    UserSettings.UnsupportedIpMode != oldUserSettings.UnsupportedIpMode ||
+                    UserSettings.SplitTunneling.DnsMode != oldUserSettings.SplitTunneling.DnsMode ||
+                    UserSettings.SplitTunneling.UnsupportedIpMode != oldUserSettings.SplitTunneling.UnsupportedIpMode ||
                     !VhUtils.SequenceEquals(UserSettings.DnsServers, oldUserSettings.DnsServers);
                 if (reconnectRequired)
                     SetReconnectRequired();
@@ -804,7 +804,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // calculate vpnAdapterIpRanges
             var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
-            if (UserSettings.UseSplitIpViaDevice && CheckPremiumFeature(AppFeature.SplitIpViaDevice)) {
+            if (UserSettings.SplitTunneling.UseIpViaDevice && CheckPremiumFeature(AppFeature.SplitIpViaDevice)) {
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
                     IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpViaDeviceSettings.Includes));
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
@@ -833,9 +833,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionTimeout = _sessionTimeout,
                 UnstableTimeout = _unstableTimeout,
                 AutoWaitTimeout = _autoWaitTimeout,
-                SplitLocalNetwork = UserSettings.UseSplitLocalNetwork,
-                SplitDnsMode = UserSettings.SplitDnsMode,
-                UnsupportedIpMode = UserSettings.UnsupportedIpMode,
+                SplitLocalNetwork = UserSettings.SplitTunneling.UseLocalNetwork,
+                SplitDnsMode = UserSettings.SplitTunneling.DnsMode,
+                UnsupportedIpMode = UserSettings.SplitTunneling.UnsupportedIpMode,
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 PacketChannelBufferSize = _packetChannelBufferSize,
@@ -859,8 +859,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
                 AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
                 AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
-                ExcludeApps = UserSettings.SplitAppMode == SplitAppMode.Exclude ? UserSettings.SplitApps : null,
-                IncludeApps = UserSettings.SplitAppMode == SplitAppMode.Include ? UserSettings.SplitApps : null,
+                ExcludeApps = UserSettings.SplitTunneling.AppMode == SplitAppMode.Exclude ? UserSettings.SplitTunneling.Apps : null,
+                IncludeApps = UserSettings.SplitTunneling.AppMode == SplitAppMode.Include ? UserSettings.SplitTunneling.Apps : null,
                 DnsServers = dnsServers,
                 LogServiceOptions = GetLogOptions(),
                 Ga4MeasurementId = _ga4MeasurementId,

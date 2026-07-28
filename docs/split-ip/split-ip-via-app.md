@@ -1,14 +1,14 @@
 # Split-IP-via-app filtering
 
-Policy of the **split-ip-via-app** context (`UseSplitIpViaApp`): how the user's IP filter text files
+Policy of the **split-ip-via-app** context (`SplitTunneling.UseIpViaApp`): how the user's IP filter text files
 become `split-ip-via-app.db` and what membership means. The shared architecture (filter pipe, storage,
 rebuild mechanics) is in [README.md](README.md); the db format is in the
 [Filtering.Sqlite README](../../src/Core/VpnHood.Core.Filtering.Sqlite/README.md).
 
 Naming: "via app" says WHERE the IP split is enforced — by the app's own filter pipe inside the tunnel,
-as opposed to `UseSplitIpViaDevice`, where the split decides which ranges the OS routes into the VPN
-adapter at all. It has nothing to do with splitting *applications* — that is the separate `SplitApps` /
-`SplitAppMode` feature (per-application tunneling).
+as opposed to `SplitTunneling.UseIpViaDevice`, where the split decides which ranges the OS routes into the VPN
+adapter at all. It has nothing to do with splitting *applications* — that is the separate
+`SplitTunneling.Apps` / `SplitTunneling.AppMode` feature (per-application tunneling).
 
 ## Sources
 
@@ -21,7 +21,7 @@ Three user-edited text files under `<storage>/splits/ips_via_app/` (managed by
 | `excludes.txt` | These ranges bypass the tunnel (empty ⇒ None). |
 | `blocks.txt` | These ranges are dropped entirely at app level (empty ⇒ None). |
 
-The on/off gate is `UserSettings.UseSplitIpViaApp`, checked together with the premium feature by the
+The on/off gate is `UserSettings.SplitTunneling.UseIpViaApp`, checked together with the premium feature by the
 service itself (it returns null when inactive) — there is no emptiness short path. Missing files count as
 empty, and empty sources leave the db's sets empty, which is a no-op gate that routes identically to
 no filter.

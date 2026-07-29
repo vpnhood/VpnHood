@@ -50,7 +50,8 @@ internal class ServerIpFilter : IIpFilter
 
     // The fate of IPv6 when the server cannot carry the family at all; a v6 miss inside a SUPPORTED
     // family's narrow ranges takes the regular UnroutedIpMode like any other destination.
-    // Arrives resolved by the app: UnroutedIpMode is superior, so a general Block is set here too.
+    // UnroutedIpMode is superior and Process enforces it: a general Block kills the family even if
+    // this mode says Exclude (the app additionally passes the pair resolved).
     public SplitUnsupportedIpMode UnsupportedIpV6Mode {
         get;
         set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
@@ -75,9 +76,15 @@ internal class ServerIpFilter : IIpFilter
         // blocked under either mode: it promised to travel inside, so letting it out would leak it
         var isFamilyUnsupported = !IsIpV6SupportedByServer && endPoint.IsV6();
         if (isFamilyUnsupported || !IncludeRanges.Contains(endPoint.Address)) {
-            // an unrouted destination takes the general mode; an unsupported family takes its own
-            // (arriving resolved, so a general Block already covers it)
+            // the same two steps as BuildIncludeIpRangesByDevice: an unrouted destination takes the
+            // general mode and an unsupported family takes its own...
             var missMode = isFamilyUnsupported ? UnsupportedIpV6Mode : UnroutedIpMode;
+
+            // ...and UnroutedIpMode is superior: its Block kills the family even when the v6 mode
+            // says Exclude, so the rule holds no matter how the values arrived
+            if (UnroutedIpMode is SplitUnsupportedIpMode.Block)
+                missMode = SplitUnsupportedIpMode.Block;
+
             if (missMode is SplitUnsupportedIpMode.Block)
                 return FilterAction.Block;
 

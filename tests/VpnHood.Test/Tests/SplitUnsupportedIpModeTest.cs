@@ -120,6 +120,28 @@ public class SplitUnsupportedIpModeTest : TestBase
     }
 
     [TestMethod]
+    public void A_general_block_is_superior_over_the_v6_bypass()
+    {
+        // the app resolves the pair before it gets here, but the rule must hold for raw values too:
+        // a general Block kills the unsupported family even when its own mode chose bypass
+        var globalV6 = IPAddress.Parse("2600::1");
+        using var serverIpFilter = new ServerIpFilter(null) {
+            IncludeRanges = IpNetwork.All.ToIpRanges(),
+            UnroutedIpMode = SplitUnsupportedIpMode.Block,
+            UnsupportedIpV6Mode = SplitUnsupportedIpMode.Exclude,
+            IsIpV6SupportedByServer = false
+        };
+
+        Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "IPv4 members still pass");
+        Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, globalV6),
+            "the superior Block covers the unsupported family");
+
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Exclude;
+        Assert.AreEqual(FilterAction.Exclude, Process(serverIpFilter, globalV6),
+            "only under a general Exclude does the family's own mode speak");
+    }
+
+    [TestMethod]
     public void A_v6_miss_inside_a_supported_family_takes_the_general_mode()
     {
         // the v6 mode owns only the family-unsupported case; narrow v6 ranges are ordinary misses

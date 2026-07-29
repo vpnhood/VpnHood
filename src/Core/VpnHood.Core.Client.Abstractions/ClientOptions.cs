@@ -45,8 +45,8 @@ public class ClientOptions
     // The fate of IPv6 when the server cannot carry that family at all (a v4-only server), as opposed to
     // UnroutedIpMode which judges destinations outside a supported family's declared ranges. Block is
     // the safe default: dead IPv6 cannot whisper the real address to a WebRTC/STUN probe.
-    // Pass this resolved: UnroutedIpMode is superior, so set Block here whenever it is Block — the
-    // client acts on these values as given and does not re-derive the superiority.
+    // UnroutedIpMode is superior: its Block covers IPv6 too. The client's filter enforces the rule
+    // itself, so even a raw (Block, Exclude) pair blocks — the app additionally passes it resolved.
     public SplitUnsupportedIpMode UnsupportedIpV6Mode { get; set; } = SplitUnsupportedIpMode.Block;
     public int MaxPacketChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();

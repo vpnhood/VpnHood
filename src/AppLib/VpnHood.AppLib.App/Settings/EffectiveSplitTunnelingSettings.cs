@@ -23,6 +23,7 @@ public class EffectiveSplitTunnelingSettings
     public required SplitUnsupportedIpMode UnroutedIpMode { get; init; }
 
     // arrives resolved: never Exclude while UnroutedIpMode is Block — the general mode is superior
-    // and its Block covers IPv6 too, so core and state read one truth without re-deriving it
+    // and its Block covers IPv6 too, so state and the reconnect diff read one truth (the core
+    // filter enforces the same rule on its own for raw callers)
     public required SplitUnsupportedIpMode UnsupportedIpV6Mode { get; init; }
 }

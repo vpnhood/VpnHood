@@ -1,4 +1,5 @@
-﻿using VpnHood.Core.Common.Messaging;
+﻿using VpnHood.Core.Client.Abstractions;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
 
 namespace VpnHood.Core.Client.VpnServices.Abstractions;
@@ -9,5 +10,7 @@ public class ClientReconfigureParams
     public required bool DropUdp { get; set; }
     public required bool UseTcpProxy { get; set; }
     public required ChannelProtocol ChannelProtocol { get; set; }
+    public required SplitUnsupportedIpMode UnsupportedIpMode { get; set; }
+    public required SplitUnsupportedIpMode UnsupportedIpV6Mode { get; set; }
     public required ProxyOptions ProxyOptions { get; set; } = new();
 }

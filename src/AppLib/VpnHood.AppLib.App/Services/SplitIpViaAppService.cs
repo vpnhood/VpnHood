@@ -27,8 +27,9 @@ public class SplitIpViaAppService(AppSettingsService settingsService, IPremiumFe
     // never silently skipped.
     public async Task<string?> EnsureSplitIpDb(string dbFolder, CancellationToken cancellationToken)
     {
-        if (!settingsService.UserSettings.SplitTunneling.UseIpViaApp ||
-            !premiumFeatureChecker.CheckPremiumFeature(AppFeature.SplitIpViaApp))
+        // effective: the super toggle and the premium plan are both resolved here, so an inactive
+        // feature is simply a false flag — no second gate to keep in sync
+        if (!settingsService.UserSettings.SplitTunneling.ToEffective(premiumFeatureChecker).UseIpViaApp)
             return null;
 
         var settings = settingsService.SplitIpViaAppSettings;

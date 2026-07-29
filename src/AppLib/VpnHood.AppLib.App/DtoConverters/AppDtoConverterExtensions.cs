@@ -28,6 +28,7 @@ public static class AppDtoConverterExtensions
             DnsConfig = sessionInfo.DnsConfig,
             IsLocalNetworkAllowed = sessionInfo.IsLocalNetworkAllowed,
             IsTrafficSplitByServer = sessionInfo.IsTrafficSplitByServer,
+            IsIpV6SupportedByServer = sessionInfo.IsIpV6SupportedByServer,
             ServerLocationInfo = sessionInfo.ServerLocationInfo?.ToAppDto(),
             ServerVersion = sessionInfo.ServerVersion,
             IsPremiumSession = sessionInfo.IsPremiumSession,

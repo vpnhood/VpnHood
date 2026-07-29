@@ -168,19 +168,42 @@ internal static class ClientHelper
         };
     }
 
-    // Builds the adapter's include set — what the device routes into the tunnel. The DNS plan is part of the
-    // calculation, not a caller ritual: an in-tunnel DnsConfig is a promise this set must keep (under
-    // IncludeAll the packet-level force additionally relies on the capture), so its resolvers are unioned
-    // back AFTER the exclusions where no split can strip them, while an out-of-tunnel plan leaves the set
-    // untouched — its resolvers stay outside on purpose. The host address is excluded LAST: the tunnel is
-    // built over it, and routing it inside itself would loop, even when the user points DNS at the server.
+    // Builds the adapter's include set — what the device routes into the tunnel — from the capture
+    // policy down to the last mechanical exclusion.
+    // The policy first, per family: under Block the server's adapter ranges are ignored on purpose,
+    // because an unsupported destination must be CAPTURED to be blocked — an uncaptured packet is
+    // routed by the OS and leaks; under Exclude only what the server routes is claimed. For a family
+    // the server cannot carry at all, its own mode decides: Block claims the family to kill it and
+    // Exclude claims none of it so the OS routes it natively.
+    // The DNS plan is part of the calculation, not a caller ritual: an in-tunnel DnsConfig is a
+    // promise this set must keep (under IncludeAll the packet-level force additionally relies on the
+    // capture), so its resolvers are unioned back AFTER the policy and the exclusions where nothing
+    // can strip them, while an out-of-tunnel plan leaves the set untouched — its resolvers stay
+    // outside on purpose. The host address is excluded LAST: the tunnel is built over it, and routing
+    // it inside itself would loop, even when the user points DNS at the server.
     public static IpRangeOrderedList BuildIncludeIpRangesByDevice(
-        IpRangeOrderedList includeIpRanges,
-        bool canProtectSocket,
+        IpRangeOrderedList clientIncludeIpRanges,
+        IpRangeOrderedList serverIncludeIpRanges,
+        SplitUnsupportedIpMode unsupportedIpMode,
+        SplitUnsupportedIpMode unsupportedIpV6Mode,
+        bool isIpV6SupportedByServer,
         bool includeLocalNetwork,
         IPAddress hostIpAddress,
         DnsConfig dnsConfig)
     {
+        var includeIpRanges = clientIncludeIpRanges;
+
+        // Include all IPv6 if the server does not support it and the user wants to block it, so we can capture it and kill it.
+        if (!isIpV6SupportedByServer)
+            serverIncludeIpRanges = unsupportedIpV6Mode is SplitUnsupportedIpMode.Block
+                ? serverIncludeIpRanges.Union(IpNetwork.AllV6.ToIpRange())
+                : serverIncludeIpRanges.Exclude(IpNetwork.AllV6.ToIpRange());
+                
+        // effect server ranges on the include set only under Exclude: Block captures everything to kill it
+        // unsupportedIpMode is superior to unsupportedIpV6Mode, so if it is Block it captures the family the server cannot carry at all
+        if (unsupportedIpMode is SplitUnsupportedIpMode.Exclude) 
+                includeIpRanges = includeIpRanges.Intersect(serverIncludeIpRanges);
+   
         // exclude local networks
         if (!includeLocalNetwork) {
             includeIpRanges = includeIpRanges

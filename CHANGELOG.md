@@ -1,5 +1,7 @@
 # Latest
 * Feature: Support QUIC on Windows and Linux
+* Feature: Split tunneling master switch — one tap keeps all traffic inside the VPN and blocks what the server cannot carry
+* Feature: IPv6 option to block or bypass IPv6 when the server does not support it
 * Improve: Leak protection
 * Improve: Split tunneling
 * Improve: Initialization speed when using split tunneling by country

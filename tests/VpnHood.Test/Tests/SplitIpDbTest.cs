@@ -425,7 +425,7 @@ public class SplitIpDbTest : TestBase
 
     private sealed class AllowAllPremiumFeatures : IPremiumFeatureChecker
     {
-        public bool CheckPremiumFeature(AppFeature feature) => true;
+        public bool IsPremiumFeatureAllowed(AppFeature feature) => true;
     }
 
     [TestMethod]

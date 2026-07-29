@@ -44,12 +44,26 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public IClientSession RequiredSession => _session ?? throw new InvalidOperationException("Session is not created yet.");
     public ITracker? Tracker { get; }
     internal ServerIpFilter ServerIpFilter => _serverIpFilter;
+
     public DateTime StateChangedTime { get; private set; } = DateTime.Now;
     public bool UseTcpProxy { get; set { field = value; _session?.UseTcpProxy = value; } }
     public bool DropUdp { get; set { field = value; _session?.DropUdp = value; } }
     public bool DropQuic { get; set { field = value; _session?.DropQuic = value; } }
     public ChannelProtocol ChannelProtocol { get; set { field = value; _session?.ChannelProtocol = value; } }
     public Exception? LastException { get => field ?? _session?.LastException; private set; }
+
+    // Live-apply the app's decision for server-unrouted destinations (both families). Only the filter's
+    // verdict changes: the adapter keeps its connect-time capture shape, so a flip that needs different
+    // capture (Exclude→Block against a splitting server) still asks for a reconnect at the app layer.
+    public SplitUnsupportedIpMode UnsupportedIpMode {
+        get => _serverIpFilter.UnsupportedIpMode;
+        set => _serverIpFilter.UnsupportedIpMode = value;
+    }
+
+    public SplitUnsupportedIpMode UnsupportedIpV6Mode {
+        get => _serverIpFilter.UnsupportedIpV6Mode;
+        set => _serverIpFilter.UnsupportedIpV6Mode = value;
+    }
 
     // This client's filter pipes (outermost stages). Exposed so the owner can roll the Reconfigure
     // command down them (see IIpFilter.Reconfigure); the client neither knows nor cares what reacts:
@@ -95,6 +109,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             IncludeLocalNetwork = options.SplitLocalNetwork,
             SplitDnsMode = options.SplitDnsMode,
             UnsupportedIpMode = options.UnsupportedIpMode,
+            UnsupportedIpV6Mode = options.UnsupportedIpV6Mode,
             IsTcpProxySupported = options.IsTcpProxySupported,
             UseTcpProxy = options.UseTcpProxy,
             DropUdp = options.DropUdp,

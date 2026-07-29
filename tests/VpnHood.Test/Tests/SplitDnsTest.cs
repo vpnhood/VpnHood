@@ -29,6 +29,22 @@ public class SplitDnsTest : TestBase
         };
     }
 
+    // the DNS story only: a neutral capture policy (server routes everything, IPv6 supported) so these
+    // tests exercise the plan/exclusion interplay, not the per-family policy
+    private static IpRangeOrderedList BuildIncludeIpRangesByDevice(
+        IpRangeOrderedList includeIpRanges, bool includeLocalNetwork, DnsConfig dnsConfig)
+    {
+        return ClientHelper.BuildIncludeIpRangesByDevice(
+            clientIncludeIpRanges: includeIpRanges,
+            serverIncludeIpRanges: IpNetwork.All.ToIpRanges(),
+            unsupportedIpMode: SplitUnsupportedIpMode.Exclude,
+            unsupportedIpV6Mode: SplitUnsupportedIpMode.Block,
+            isIpV6SupportedByServer: true,
+            includeLocalNetwork: includeLocalNetwork,
+            hostIpAddress: HostIp,
+            dnsConfig: dnsConfig);
+    }
+
     // the session's pipe exactly as VpnHoodClient wires it: the client's gates (via-app splits) below,
     // the server layer with its routing declaration on top
     private static ServerIpFilter CreateServerIpFilter(IpRangeOrderedList serverIncludeIpRanges,
@@ -45,11 +61,9 @@ public class SplitDnsTest : TestBase
     {
         // the user's via-device split does not cover the resolver; without the union the adapter would never
         // route it, and the in-tunnel plan could not be kept
-        var includeIpRanges = ClientHelper.BuildIncludeIpRangesByDevice(
+        var includeIpRanges = BuildIncludeIpRangesByDevice(
             includeIpRanges: new[] { IpRange.Parse("20.0.0.0-20.255.255.255") }.ToOrderedList(),
-            canProtectSocket: true,
             includeLocalNetwork: false,
-            hostIpAddress: HostIp,
             dnsConfig: CreateDnsConfig(isIncludedInVpn: true, PublicDns));
 
         Assert.IsTrue(includeIpRanges.Contains(PublicDns), "the plan's resolver must be routed by the adapter");
@@ -63,11 +77,9 @@ public class SplitDnsTest : TestBase
     {
         // an honored out-of-tunnel resolver (e.g. the Pi-hole) must stay outside: adding it would capture
         // its queries and tunnel them to a server that can not reach it
-        var includeIpRanges = ClientHelper.BuildIncludeIpRangesByDevice(
+        var includeIpRanges = BuildIncludeIpRangesByDevice(
             includeIpRanges: IpNetwork.All.ToIpRanges(),
-            canProtectSocket: true,
             includeLocalNetwork: false,
-            hostIpAddress: HostIp,
             dnsConfig: CreateDnsConfig(isIncludedInVpn: false, LanDns));
 
         Assert.IsFalse(includeIpRanges.Contains(LanDns));
@@ -78,11 +90,9 @@ public class SplitDnsTest : TestBase
     {
         // the tunnel is built over the host address; routing it inside itself would loop, so it wins over the
         // DNS union even when the user points DNS at the server itself
-        var includeIpRanges = ClientHelper.BuildIncludeIpRangesByDevice(
+        var includeIpRanges = BuildIncludeIpRangesByDevice(
             includeIpRanges: IpNetwork.All.ToIpRanges(),
-            canProtectSocket: true,
             includeLocalNetwork: true,
-            hostIpAddress: HostIp,
             dnsConfig: CreateDnsConfig(isIncludedInVpn: true, HostIp, PublicDns));
 
         Assert.IsFalse(includeIpRanges.Contains(HostIp));

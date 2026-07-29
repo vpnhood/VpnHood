@@ -25,10 +25,16 @@ public class SessionInfo
     public required string? ClientCountry { get; init; }
     public required DnsConfig DnsConfig { get; init; }
 
-    // True when the server's own configuration leaves destinations outside the tunnel — either of its
-    // declarations (app or adapter ranges) covers less than everything. That is precisely what
-    // SplitUnsupportedIpMode decides the fate of, so the app can tell a real leak from a harmless setting.
+    // True when the server's own configuration leaves PUBLIC destinations outside the tunnel — either of
+    // its declarations (app or adapter ranges) covers less than the public internet. Carve-outs of
+    // local/special ranges (the usual LAN skip) do not count: they cannot expose the public IP, and
+    // counting them would light the split indicator on nearly every server. A family the server cannot
+    // carry at all is not counted either — IPv6 absence is reported via IsIpV6SupportedByServer and judged
+    // by UnsupportedIpV6Mode, not as server splitting.
     public required bool IsTrafficSplitByServer { get; init; }
+
+    // False for a v4-only server: the client then blocks or bypasses IPv6 per UnsupportedIpV6Mode.
+    public required bool IsIpV6SupportedByServer { get; init; }
 
     [JsonConverter(typeof(VersionConverter))]
     public required Version ServerVersion { get; init; }

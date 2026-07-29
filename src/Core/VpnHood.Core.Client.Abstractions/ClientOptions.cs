@@ -41,6 +41,11 @@ public class ClientOptions
     public bool SplitLocalNetwork { get; set; }
     public SplitDnsMode SplitDnsMode { get; set; }
     public SplitUnsupportedIpMode UnsupportedIpMode { get; set; }
+
+    // The fate of IPv6 when the server cannot carry that family at all (a v4-only server), as opposed to
+    // UnsupportedIpMode which judges destinations outside a supported family's declared ranges. Block is
+    // the safe default: dead IPv6 cannot whisper the real address to a WebRTC/STUN probe.
+    public SplitUnsupportedIpMode UnsupportedIpV6Mode { get; set; } = SplitUnsupportedIpMode.Block;
     public int MaxPacketChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
     public TimeSpan MinPacketChannelTimespan { get; set; } = TimeSpan.FromMinutes(5);

@@ -1,15 +1,17 @@
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Utils;
 
-public static class StateHelper
+internal static class StateHelper
 {
     public static bool IsLongRunningState([NotNullWhen(true)] ConnectionInfo? connectionInfo)
     {
@@ -57,10 +59,42 @@ public static class StateHelper
                  clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode));
     }
 
+    // The one place that says why a configured feature is not in effect. The gate itself is silent —
+    // it runs on every state poll and every settings resolution — so this line, written once per
+    // connection, is the whole story in the log.
+    public static void LogPlanDroppedFeatures(UserSettings userSettings, IPremiumFeatureChecker premiumFeatureChecker)
+    {
+        var splitTunneling = userSettings.SplitTunneling;
+        var dropped = new List<AppFeature>();
+
+        if (splitTunneling.UseIpViaApp && !premiumFeatureChecker.IsPremiumFeatureAllowed(AppFeature.SplitIpViaApp))
+            dropped.Add(AppFeature.SplitIpViaApp);
+
+        if (splitTunneling.UseIpViaDevice && !premiumFeatureChecker.IsPremiumFeatureAllowed(AppFeature.SplitIpViaDevice))
+            dropped.Add(AppFeature.SplitIpViaDevice);
+
+        if (splitTunneling.UseDomain && !premiumFeatureChecker.IsPremiumFeatureAllowed(AppFeature.SplitDomain))
+            dropped.Add(AppFeature.SplitDomain);
+
+        if (splitTunneling.CountryMode is not SplitCountryMode.IncludeAll &&
+            !premiumFeatureChecker.IsPremiumFeatureAllowed(AppFeature.SplitCountry))
+            dropped.Add(AppFeature.SplitCountry);
+
+        if (userSettings.DnsMode is DnsMode.AdapterDns && !VhUtils.IsNullOrEmpty(userSettings.DnsServers) &&
+            !premiumFeatureChecker.IsPremiumFeatureAllowed(AppFeature.CustomDns))
+            dropped.Add(AppFeature.CustomDns);
+
+        if (dropped.Count > 0)
+            VhLogger.Instance.LogWarning(
+                "Some features are configured but not applied, because the current plan does not include them. Features: {Features}",
+                string.Join(", ", dropped));
+    }
+
     public static TcpProxyUsageReason GetTcpProxyUsageReason(
         AppFeatures appFeatures,
         UserSettings userSettings,
-        SessionInfo? sessionInfo)
+        SessionInfo? sessionInfo,
+        IPremiumFeatureChecker premiumFeatureChecker)
     {
         // client platform does not support TcpProxy at all
         if (!appFeatures.IsTcpProxySupported)
@@ -74,21 +108,27 @@ public static class StateHelper
         if (sessionInfo is { IsTcpProxySupported: false })
             return TcpProxyUsageReason.ServerRequiredOff;
 
-        // split-by-domain requires TcpProxy for SNI stream interception
-        if (userSettings.SplitTunneling.UseDomain)
+        // split-by-domain requires TcpProxy for SNI stream interception (effective: a split the
+        // toggle silenced or the plan withheld is never applied, so it must not force the proxy path)
+        if (userSettings.SplitTunneling.ToEffective(premiumFeatureChecker).UseDomain)
             return TcpProxyUsageReason.SplitDomainRequiredOn;
 
         return TcpProxyUsageReason.None;
     }
 
-    // Every option that can push traffic outside the VPN in the CURRENT state — the user's own splits
-    // included, since each is an open door worth seeing in one list. Options that can not actually leak
-    // right now are left out: the server's declaration counts only while unsupported IPs are excluded
-    // rather than blocked, only when it leaves something out, and only when a session has revealed it.
-    public static IReadOnlyList<AppLeakCause> GetLeakCauses(UserSettings userSettings, SessionInfo? sessionInfo)
+    // The EFFECTIVE split picture: every flag answers "is this split actually open in the CURRENT
+    // state", which ToEffective already decides — the super toggle silences them all (except the
+    // exempt pair) and the plan withholds what it does not include, so the UI holds no logic and
+    // this method adds no gate of its own. The server's word counts only while the effective
+    // unsupported-ip mode lets destinations out, and only when a session has revealed a declaration
+    // that leaves public destinations out.
+    public static SplitTunnelingState GetSplitTunnelingState(
+        UserSettings userSettings,
+        SessionInfo? sessionInfo,
+        IPremiumFeatureChecker premiumFeatureChecker)
     {
-        var causes = new List<AppLeakCause>();
-        var splitTunneling = userSettings.SplitTunneling;
+        // both gates are already resolved here, so every flag below is a plain read
+        var splitTunneling = userSettings.SplitTunneling.ToEffective(premiumFeatureChecker);
 
         // an empty exclude list excludes nothing; an include list leaves everything else outside
         var isAppSplit = splitTunneling.AppMode switch {
@@ -96,8 +136,6 @@ public static class StateHelper
             SplitAppMode.Include => true,
             _ => false
         };
-        if (isAppSplit)
-            causes.Add(AppLeakCause.SplitApps);
 
         var isCountrySplit = splitTunneling.CountryMode switch {
             SplitCountryMode.ExcludeMyCountry => true,
@@ -105,29 +143,34 @@ public static class StateHelper
             SplitCountryMode.IncludeList => true,
             _ => false
         };
-        if (isCountrySplit)
-            causes.Add(AppLeakCause.SplitCountry);
 
-        if (splitTunneling.UseIpViaApp)
-            causes.Add(AppLeakCause.SplitIpViaApp);
+        var isIpV6Split = splitTunneling.UnsupportedIpV6Mode is SplitUnsupportedIpMode.Exclude &&
+                          sessionInfo?.IsIpV6SupportedByServer == false;
 
-        if (splitTunneling.UseIpViaDevice)
-            causes.Add(AppLeakCause.SplitIpViaDevice);
+        // the server's word only splits while the effective mode lets unsupported destinations out —
+        // the toggle forces Block, and a power user may have chosen Block even while splitting is allowed
+        var isSplitByServer = splitTunneling.UnsupportedIpMode is SplitUnsupportedIpMode.Exclude &&
+                              sessionInfo?.IsTrafficSplitByServer == true;
 
-        if (splitTunneling.UseDomain)
-            causes.Add(AppLeakCause.SplitDomain);
-
-        if (splitTunneling.UseLocalNetwork)
-            causes.Add(AppLeakCause.SplitLocalNetwork);
-
-        // the server's word only leaks while the user lets unsupported destinations out
-        if (splitTunneling.UnsupportedIpMode is SplitUnsupportedIpMode.Exclude &&
-            sessionInfo?.IsTrafficSplitByServer == true)
-            causes.Add(AppLeakCause.ServerSplitTraffic);
-
-        // SplitDnsMode is deliberately not a cause of its own: DefaultRoute only lets DNS follow the
-        // splits, so it can never leak unless one of the causes above is already open — and each of those
-        // reports the leak, DNS included.
-        return causes;
+        // SplitDnsMode is deliberately not a split of its own: DefaultRoute only lets DNS follow the
+        // splits, so it can never leak unless one of the splits below is already open — and each of
+        // those reports itself, DNS included. Two flags are reported for their pages but never join
+        // IsSplittingTraffic, because neither exposes the public IP of the traffic that stays inside:
+        // IsLocalNetworkSplit (LAN traffic stays on-link) and IsAppSplit (a per-app opt-out the user
+        // chose app by app, leaving every other app's traffic in the tunnel).
+        return new SplitTunnelingState {
+            IsEnabled = splitTunneling.Enabled,
+            IsAppSplit = isAppSplit,
+            IsCountrySplit = isCountrySplit,
+            IsIpViaAppSplit = splitTunneling.UseIpViaApp,
+            IsIpViaDeviceSplit = splitTunneling.UseIpViaDevice,
+            IsDomainSplit = splitTunneling.UseDomain,
+            IsLocalNetworkSplit = splitTunneling.UseLocalNetwork,
+            IsIpV6Split = isIpV6Split,
+            IsSplitByServer = isSplitByServer,
+            IsSplittingTraffic = isCountrySplit ||
+                                 splitTunneling.UseIpViaApp || splitTunneling.UseIpViaDevice ||
+                                 splitTunneling.UseDomain || isIpV6Split || isSplitByServer
+        };
     }
 }

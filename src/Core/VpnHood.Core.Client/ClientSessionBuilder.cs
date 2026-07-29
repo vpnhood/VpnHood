@@ -180,10 +180,13 @@ internal class ClientSessionBuilder(
             // Give the server layer its word before anything consults the pipe: the full routing
             // declaration (app ∩ adapter — by default the adapter ranges already exclude local networks,
             // so the server's own word rejects a home-LAN resolver, no client-side LAN heuristic involved)
-            // and the fate of what it does not route. From here one Process call answers for the whole
-            // session: client gates first, then the server's ranges.
+            // and the fate of what it does not route — per family: a v4-only server leaves every IPv6
+            // destination to UnsupportedIpV6Mode regardless of its declared ranges. From here one Process
+            // call answers for the whole session: client gates first, then the server's ranges.
             serverIpFilter.IncludeRanges = serverIncludeIpRanges;
             serverIpFilter.UnsupportedIpMode = config.UnsupportedIpMode;
+            serverIpFilter.UnsupportedIpV6Mode = config.UnsupportedIpV6Mode;
+            serverIpFilter.IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
             var dnsConfig = ClientHelper.GetDnsServers(
                 config.DnsServers,
@@ -191,15 +194,16 @@ internal class ClientSessionBuilder(
                 serverIpFilter: serverIpFilter,
                 splitDnsMode: config.SplitDnsMode);
 
-            // what the adapter routes into the tunnel; the settled DNS plan is part of the calculation (an
-            // in-tunnel plan's resolvers survive every exclusion, an out-of-tunnel plan stays outside).
-            // Under Block the server's adapter ranges are ignored on purpose: an unsupported destination
-            // must be CAPTURED to be blocked — an uncaptured packet is routed by the OS and leaks.
+            // What the adapter routes into the tunnel: the whole story — the per-family capture policy
+            // (the unsupported-ip modes against the server's adapter declaration), the settled DNS plan
+            // (an in-tunnel plan's resolvers survive every exclusion, an out-of-tunnel plan stays
+            // outside) and the mechanical exclusions — lives in BuildIncludeIpRangesByDevice.
             var sessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
-                includeIpRanges: config.UnsupportedIpMode is SplitUnsupportedIpMode.Block
-                    ? config.IncludeIpRangesByDevice.ToOrderedList()
-                    : serverIncludeIpRangesByDevice.Intersect(config.IncludeIpRangesByDevice),
-                canProtectSocket: vpnAdapter.CanProtectSocket,
+                clientIncludeIpRanges: config.IncludeIpRangesByDevice.ToOrderedList(),
+                serverIncludeIpRanges: serverIncludeIpRangesByDevice,
+                unsupportedIpMode: config.UnsupportedIpMode,
+                unsupportedIpV6Mode: config.UnsupportedIpV6Mode,
+                isIpV6SupportedByServer: helloResponse.IsIpV6Supported,
                 includeLocalNetwork: config.IncludeLocalNetwork,
                 hostIpAddress: connectorService.VpnEndPoint.TcpEndPoint.Address,
                 dnsConfig: dnsConfig);
@@ -227,6 +231,17 @@ internal class ClientSessionBuilder(
             if (!helloResponse.IsTcpProxySupported && config.UseTcpProxy)
                 VhLogger.Instance.LogWarning("TCP Proxy disabled because the server does not support it.");
 
+            // Server splitting the user should hear about: public space the declarations leave out.
+            // Local/special carve-outs (the usual LAN skip) cannot expose the public IP, and an entirely
+            // unsupported family is IsIpV6SupportedByServer's story — both stay out of this flag, or it
+            // would light the app's split indicator on nearly every server.
+            var publicIpRanges = IpNetwork.All.ToIpRanges()
+                .Exclude(IpNetwork.LocalNetworks.ToIpRanges())
+                .Exclude(IpNetwork.MulticastNetworks.ToIpRanges())
+                .Exclude(IpNetwork.LoopbackNetworks.ToIpRanges());
+            if (!helloResponse.IsIpV6Supported)
+                publicIpRanges = publicIpRanges.Exclude(IpNetwork.AllV6.ToIpRange());
+
             var sessionInfo = new SessionInfo {
                 SessionId = helloResponse.SessionId.ToString(),
                 ClientPublicIpAddress = helloResponse.ClientPublicAddress,
@@ -234,7 +249,9 @@ internal class ClientSessionBuilder(
                 AccessInfo = helloResponse.AccessInfo ?? new AccessInfo(),
                 IsLocalNetworkAllowed = serverAllowedLocalNetworks.Any(),
                 DnsConfig = dnsConfig,
-                IsTrafficSplitByServer = !serverIncludeIpRangesByApp.IsAll() || !serverIncludeIpRangesByDevice.IsAll(),
+                IsTrafficSplitByServer = publicIpRanges.Exclude(serverIncludeIpRangesByApp).Any() ||
+                                         publicIpRanges.Exclude(serverIncludeIpRangesByDevice).Any(),
+                IsIpV6SupportedByServer = helloResponse.IsIpV6Supported,
                 IsPremiumSession = helloResponse.AccessUsage?.IsPremium ?? false,
                 IsUdpChannelSupported = hostUdpEndPoint != null,
                 AccessKey = helloResponse.AccessKey,

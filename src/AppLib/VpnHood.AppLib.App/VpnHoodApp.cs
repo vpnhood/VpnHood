@@ -345,19 +345,29 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 // clear all services pending state after reconfigure
                 _ = VhUtils.TryInvokeAsync("Reconfigure after settings change", () => ReconfigureVpnService(CancellationToken.None));
 
-                // Settings that only apply at connect. The app-level splits (country, via-app ip,
-                // domain) are NOT here: they live-apply through the reconfigure above (the split dbs
-                // are rebuilt and the service swaps its filter gates mid-session). Nothing is forced:
-                // the flag just lets the UI offer a reconnect for the running session.
+                // Settings that only apply at connect, judged on EFFECTIVE split values so flipping the
+                // split-tunneling toggle asks for a reconnect only when it changes something the adapter
+                // enforces. The app-level splits (country, via-app ip, domain) are NOT here: they
+                // live-apply through the reconfigure above (the split dbs are rebuilt and the service
+                // swaps its filter gates mid-session). The unsupported-ip modes live-apply to the filter
+                // too, but the adapter's CAPTURE shape is connect-time — a mode flip matters only when
+                // the session says the server actually leaves something out for the mode to decide.
+                // Nothing is forced: the flag just lets the UI offer a reconnect for the running session.
+                var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
+                var oldSplitTunneling = oldUserSettings.SplitTunneling.ToEffective(this);
+                var sessionInfo = ConnectionInfo?.SessionInfo;
                 var reconnectRequired =
-                    UserSettings.SplitTunneling.UseLocalNetwork != oldUserSettings.SplitTunneling.UseLocalNetwork ||
-                    UserSettings.SplitTunneling.UseIpViaDevice != oldUserSettings.SplitTunneling.UseIpViaDevice ||
-                    UserSettings.SplitTunneling.AppMode != oldUserSettings.SplitTunneling.AppMode ||
-                    !UserSettings.SplitTunneling.Apps.SequenceEqual(oldUserSettings.SplitTunneling.Apps) ||
+                    splitTunneling.UseLocalNetwork != oldSplitTunneling.UseLocalNetwork ||
+                    splitTunneling.UseIpViaDevice != oldSplitTunneling.UseIpViaDevice ||
+                    splitTunneling.AppMode != oldSplitTunneling.AppMode ||
+                    !splitTunneling.Apps.SequenceEqual(oldSplitTunneling.Apps) ||
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.DnsMode != oldUserSettings.DnsMode ||
-                    UserSettings.SplitTunneling.DnsMode != oldUserSettings.SplitTunneling.DnsMode ||
-                    UserSettings.SplitTunneling.UnsupportedIpMode != oldUserSettings.SplitTunneling.UnsupportedIpMode ||
+                    splitTunneling.DnsMode != oldSplitTunneling.DnsMode ||
+                    (splitTunneling.UnsupportedIpMode != oldSplitTunneling.UnsupportedIpMode &&
+                     sessionInfo?.IsTrafficSplitByServer == true) ||
+                    (splitTunneling.UnsupportedIpV6Mode != oldSplitTunneling.UnsupportedIpV6Mode &&
+                     sessionInfo?.IsIpV6SupportedByServer == false) ||
                     !VhUtils.SequenceEquals(UserSettings.DnsServers, oldUserSettings.DnsServers);
                 if (reconnectRequired)
                     SetReconnectRequired();
@@ -413,11 +423,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // publish the current db set BEFORE signaling: the service reads the manifests, not the request
         await Services.SplitDbPublisherService.Publish(cancellationToken).Vhc();
 
+        var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
         var reconfigureParams = new ClientReconfigureParams {
             ChannelProtocol = UserSettings.ChannelProtocol,
             DropQuic = UserSettings.DropQuic,
             UseTcpProxy = UserSettings.UseTcpProxy,
             DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
+            UnsupportedIpMode = splitTunneling.UnsupportedIpMode,
+            UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
             ProxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc()
         };
 
@@ -504,8 +517,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 StateProgress = StateHelper.GetProgress(connectionInfo, AdManager.AdService),
                 IsProxyEndPointActive = Services.ProxyEndPointService.IsProxyEndPointActive,
                 PromotionExists = PromotionExists(),
-                TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo),
-                LeakCauses = StateHelper.GetLeakCauses(UserSettings, connectionInfo?.SessionInfo),
+                TcpProxyUsageReason = StateHelper.GetTcpProxyUsageReason(Features, UserSettings, connectionInfo?.SessionInfo, this),
+                SplitTunnelingState = StateHelper.GetSplitTunnelingState(UserSettings, connectionInfo?.SessionInfo, this),
                 SystemBarsInfo = !Features.AdjustForSystemBars && uiContext != null
                     ? Services.DeviceUiProvider.GetBarsInfo(uiContext)
                     : SystemBarsInfo.Default
@@ -802,9 +815,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogInformation("TokenId: {TokenId}, SupportId: {SupportId}",
                 VhLogger.FormatId(token.TokenId), VhLogger.FormatId(token.SupportId));
 
+            // all split decisions act on the effective copy: the super toggle and the premium plan
+            // are both resolved here, once, for everything below
+            var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
+            StateHelper.LogPlanDroppedFeatures(UserSettings, this);
+
             // calculate vpnAdapterIpRanges
             var vpnAdapterIpRanges = IpNetwork.All.ToIpRanges();
-            if (UserSettings.SplitTunneling.UseIpViaDevice && CheckPremiumFeature(AppFeature.SplitIpViaDevice)) {
+            if (splitTunneling.UseIpViaDevice) {
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Intersect(
                     IpRangeTextFileParser.ParseIncludes(SettingsService.SplitIpViaDeviceSettings.Includes));
                 vpnAdapterIpRanges = vpnAdapterIpRanges.Exclude(
@@ -815,7 +833,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             var dnsServers =
                 UserSettings.DnsMode is DnsMode.AdapterDns &&
                 !VhUtils.IsNullOrEmpty(UserSettings.DnsServers) &&
-                CheckPremiumFeature(AppFeature.CustomDns)
+                IsPremiumFeatureAllowed(AppFeature.CustomDns)
                     ? UserSettings.DnsServers
                     : null;
 
@@ -833,9 +851,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 SessionTimeout = _sessionTimeout,
                 UnstableTimeout = _unstableTimeout,
                 AutoWaitTimeout = _autoWaitTimeout,
-                SplitLocalNetwork = UserSettings.SplitTunneling.UseLocalNetwork,
-                SplitDnsMode = UserSettings.SplitTunneling.DnsMode,
-                UnsupportedIpMode = UserSettings.SplitTunneling.UnsupportedIpMode,
+                SplitLocalNetwork = splitTunneling.UseLocalNetwork,
+                SplitDnsMode = splitTunneling.DnsMode,
+                UnsupportedIpMode = splitTunneling.UnsupportedIpMode,
+                UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
                 PacketChannelBufferSize = _packetChannelBufferSize,
@@ -859,8 +878,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
                 AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
                 AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
-                ExcludeApps = UserSettings.SplitTunneling.AppMode == SplitAppMode.Exclude ? UserSettings.SplitTunneling.Apps : null,
-                IncludeApps = UserSettings.SplitTunneling.AppMode == SplitAppMode.Include ? UserSettings.SplitTunneling.Apps : null,
+                ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude ? splitTunneling.Apps : null,
+                IncludeApps = splitTunneling.AppMode == SplitAppMode.Include ? splitTunneling.Apps : null,
                 DnsServers = dnsServers,
                 LogServiceOptions = GetLogOptions(),
                 Ga4MeasurementId = _ga4MeasurementId,
@@ -1309,21 +1328,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // check if the current profile is premium
         return CurrentClientProfileInfo?.IsPremium == true;
-    }
-
-    public bool CheckPremiumFeature(AppFeature feature)
-    {
-        if (IsPremiumFeatureAllowed(feature))
-            return true;
-
-        VhLogger.Instance.LogWarning("{Feature} is premium feature and can not be used with current plan.", feature);
-        return false;
-    }
-
-    public void VerifyPremiumFeature(AppFeature feature)
-    {
-        if (!IsPremiumFeatureAllowed(feature))
-            throw PremiumOnlyException.Create(feature);
     }
 
     public void UpdateUi()

@@ -32,10 +32,11 @@ SplitDbPublisherService.Publish                             SplitDbManifest.Read
 ```
 
 1. **Before connecting**, `SplitDbPublisherService.Publish` asks each context's service for its db and
-   publishes the active set through the folder's **manifest** (`SplitDbManifest`). Each service owns
-   its WHOLE activity decision — its user setting (`SplitTunneling.CountryMode` ≠ `IncludeAll`;
-   `SplitTunneling.UseIpViaApp`; `SplitTunneling.UseDomain`) and the premium plan (`IPremiumFeatureChecker`) — and answers
-   with a path or null. An inactive context contributes no entry — off is the empty case of the same
+   publishes the active set through the folder's **manifest** (`SplitDbManifest`). Each service reads its
+   own flag off the RESOLVED settings — `SplitTunnelingSettings.ToEffective(IPremiumFeatureChecker)`, where
+   the split-tunneling master switch and the premium plan are both applied once (`CountryMode` ≠ `IncludeAll`;
+   `UseIpViaApp`; `UseDomain`) — and answers with a path or null, so a feature the switch silenced or the plan
+   withholds is simply a false flag. An inactive context contributes no entry — off is the empty case of the same
    flow, and a stale db file lying in the folder means nothing (presence on disk is never policy). The
    manifests are written only by the publisher: the ip folder is shared by two services, and a
    one-service write would sweep its sibling's db. Failures propagate and fail the connect

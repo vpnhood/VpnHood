@@ -3660,7 +3660,7 @@ export class AppState implements IAppState {
     isProxyEndPointActive!: boolean;
     promotionExists!: boolean;
     tcpProxyUsageReason!: TcpProxyUsageReason;
-    leakCauses!: AppLeakCause[];
+    splitTunnelingState!: SplitTunnelingState;
 
     constructor(data?: IAppState) {
         if (data) {
@@ -3673,7 +3673,7 @@ export class AppState implements IAppState {
             this.currentUiCultureInfo = new UiCultureInfo();
             this.systemUiCultureInfo = new UiCultureInfo();
             this.systemBarsInfo = new SystemBarsInfo();
-            this.leakCauses = [];
+            this.splitTunnelingState = new SplitTunnelingState();
         }
     }
 
@@ -3713,14 +3713,7 @@ export class AppState implements IAppState {
             this.isProxyEndPointActive = _data["isProxyEndPointActive"] !== undefined ? _data["isProxyEndPointActive"] : null as any;
             this.promotionExists = _data["promotionExists"] !== undefined ? _data["promotionExists"] : null as any;
             this.tcpProxyUsageReason = _data["tcpProxyUsageReason"] !== undefined ? _data["tcpProxyUsageReason"] : null as any;
-            if (Array.isArray(_data["leakCauses"])) {
-                this.leakCauses = [] as any;
-                for (let item of _data["leakCauses"])
-                    this.leakCauses!.push(item);
-            }
-            else {
-                this.leakCauses = null as any;
-            }
+            this.splitTunnelingState = _data["splitTunnelingState"] ? SplitTunnelingState.fromJS(_data["splitTunnelingState"]) : new SplitTunnelingState();
         }
     }
 
@@ -3767,11 +3760,7 @@ export class AppState implements IAppState {
         data["isProxyEndPointActive"] = this.isProxyEndPointActive !== undefined ? this.isProxyEndPointActive : null as any;
         data["promotionExists"] = this.promotionExists !== undefined ? this.promotionExists : null as any;
         data["tcpProxyUsageReason"] = this.tcpProxyUsageReason !== undefined ? this.tcpProxyUsageReason : null as any;
-        if (Array.isArray(this.leakCauses)) {
-            data["leakCauses"] = [];
-            for (let item of this.leakCauses)
-                data["leakCauses"].push(item);
-        }
+        data["splitTunnelingState"] = this.splitTunnelingState ? this.splitTunnelingState.toJSON() : null as any;
         return data;
     }
 }
@@ -3811,7 +3800,7 @@ export interface IAppState {
     isProxyEndPointActive: boolean;
     promotionExists: boolean;
     tcpProxyUsageReason: TcpProxyUsageReason;
-    leakCauses: AppLeakCause[];
+    splitTunnelingState: SplitTunnelingState;
 }
 
 export enum AppConnectionState {
@@ -3834,6 +3823,7 @@ export class AppSessionInfo implements IAppSessionInfo {
     dnsConfig!: DnsConfig;
     isLocalNetworkAllowed!: boolean;
     isTrafficSplitByServer!: boolean;
+    isIpV6SupportedByServer!: boolean;
     serverLocationInfo!: AppServerLocationInfo | null;
     isPremiumSession!: boolean;
     suppressedTo!: SessionSuppressType;
@@ -3863,6 +3853,7 @@ export class AppSessionInfo implements IAppSessionInfo {
             this.dnsConfig = _data["dnsConfig"] ? DnsConfig.fromJS(_data["dnsConfig"]) : new DnsConfig();
             this.isLocalNetworkAllowed = _data["isLocalNetworkAllowed"] !== undefined ? _data["isLocalNetworkAllowed"] : null as any;
             this.isTrafficSplitByServer = _data["isTrafficSplitByServer"] !== undefined ? _data["isTrafficSplitByServer"] : null as any;
+            this.isIpV6SupportedByServer = _data["isIpV6SupportedByServer"] !== undefined ? _data["isIpV6SupportedByServer"] : null as any;
             this.serverLocationInfo = _data["serverLocationInfo"] ? AppServerLocationInfo.fromJS(_data["serverLocationInfo"]) : null as any;
             this.isPremiumSession = _data["isPremiumSession"] !== undefined ? _data["isPremiumSession"] : null as any;
             this.suppressedTo = _data["suppressedTo"] !== undefined ? _data["suppressedTo"] : null as any;
@@ -3895,6 +3886,7 @@ export class AppSessionInfo implements IAppSessionInfo {
         data["dnsConfig"] = this.dnsConfig ? this.dnsConfig.toJSON() : null as any;
         data["isLocalNetworkAllowed"] = this.isLocalNetworkAllowed !== undefined ? this.isLocalNetworkAllowed : null as any;
         data["isTrafficSplitByServer"] = this.isTrafficSplitByServer !== undefined ? this.isTrafficSplitByServer : null as any;
+        data["isIpV6SupportedByServer"] = this.isIpV6SupportedByServer !== undefined ? this.isIpV6SupportedByServer : null as any;
         data["serverLocationInfo"] = this.serverLocationInfo ? this.serverLocationInfo.toJSON() : null as any;
         data["isPremiumSession"] = this.isPremiumSession !== undefined ? this.isPremiumSession : null as any;
         data["suppressedTo"] = this.suppressedTo !== undefined ? this.suppressedTo : null as any;
@@ -3917,6 +3909,7 @@ export interface IAppSessionInfo {
     dnsConfig: DnsConfig;
     isLocalNetworkAllowed: boolean;
     isTrafficSplitByServer: boolean;
+    isIpV6SupportedByServer: boolean;
     serverLocationInfo: AppServerLocationInfo | null;
     isPremiumSession: boolean;
     suppressedTo: SessionSuppressType;
@@ -5186,14 +5179,76 @@ export enum TcpProxyUsageReason {
     SplitDomainRequiredOn = "SplitDomainRequiredOn",
 }
 
-export enum AppLeakCause {
-    SplitApps = "SplitApps",
-    SplitCountry = "SplitCountry",
-    SplitIpViaApp = "SplitIpViaApp",
-    SplitIpViaDevice = "SplitIpViaDevice",
-    SplitDomain = "SplitDomain",
-    SplitLocalNetwork = "SplitLocalNetwork",
-    ServerSplitTraffic = "ServerSplitTraffic",
+export class SplitTunnelingState implements ISplitTunnelingState {
+    isEnabled!: boolean;
+    isSplittingTraffic!: boolean;
+    isAppSplit!: boolean;
+    isCountrySplit!: boolean;
+    isIpViaAppSplit!: boolean;
+    isIpViaDeviceSplit!: boolean;
+    isDomainSplit!: boolean;
+    isLocalNetworkSplit!: boolean;
+    isIpV6Split!: boolean;
+    isSplitByServer!: boolean;
+
+    constructor(data?: ISplitTunnelingState) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.isEnabled = _data["isEnabled"] !== undefined ? _data["isEnabled"] : null as any;
+            this.isSplittingTraffic = _data["isSplittingTraffic"] !== undefined ? _data["isSplittingTraffic"] : null as any;
+            this.isAppSplit = _data["isAppSplit"] !== undefined ? _data["isAppSplit"] : null as any;
+            this.isCountrySplit = _data["isCountrySplit"] !== undefined ? _data["isCountrySplit"] : null as any;
+            this.isIpViaAppSplit = _data["isIpViaAppSplit"] !== undefined ? _data["isIpViaAppSplit"] : null as any;
+            this.isIpViaDeviceSplit = _data["isIpViaDeviceSplit"] !== undefined ? _data["isIpViaDeviceSplit"] : null as any;
+            this.isDomainSplit = _data["isDomainSplit"] !== undefined ? _data["isDomainSplit"] : null as any;
+            this.isLocalNetworkSplit = _data["isLocalNetworkSplit"] !== undefined ? _data["isLocalNetworkSplit"] : null as any;
+            this.isIpV6Split = _data["isIpV6Split"] !== undefined ? _data["isIpV6Split"] : null as any;
+            this.isSplitByServer = _data["isSplitByServer"] !== undefined ? _data["isSplitByServer"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): SplitTunnelingState {
+        data = typeof data === 'object' ? data : {};
+        let result = new SplitTunnelingState();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["isEnabled"] = this.isEnabled !== undefined ? this.isEnabled : null as any;
+        data["isSplittingTraffic"] = this.isSplittingTraffic !== undefined ? this.isSplittingTraffic : null as any;
+        data["isAppSplit"] = this.isAppSplit !== undefined ? this.isAppSplit : null as any;
+        data["isCountrySplit"] = this.isCountrySplit !== undefined ? this.isCountrySplit : null as any;
+        data["isIpViaAppSplit"] = this.isIpViaAppSplit !== undefined ? this.isIpViaAppSplit : null as any;
+        data["isIpViaDeviceSplit"] = this.isIpViaDeviceSplit !== undefined ? this.isIpViaDeviceSplit : null as any;
+        data["isDomainSplit"] = this.isDomainSplit !== undefined ? this.isDomainSplit : null as any;
+        data["isLocalNetworkSplit"] = this.isLocalNetworkSplit !== undefined ? this.isLocalNetworkSplit : null as any;
+        data["isIpV6Split"] = this.isIpV6Split !== undefined ? this.isIpV6Split : null as any;
+        data["isSplitByServer"] = this.isSplitByServer !== undefined ? this.isSplitByServer : null as any;
+        return data;
+    }
+}
+
+export interface ISplitTunnelingState {
+    isEnabled: boolean;
+    isSplittingTraffic: boolean;
+    isAppSplit: boolean;
+    isCountrySplit: boolean;
+    isIpViaAppSplit: boolean;
+    isIpViaDeviceSplit: boolean;
+    isDomainSplit: boolean;
+    isLocalNetworkSplit: boolean;
+    isIpV6Split: boolean;
+    isSplitByServer: boolean;
 }
 
 export class UserSettings implements IUserSettings {
@@ -5333,6 +5388,7 @@ export interface IUserSettings {
 }
 
 export class SplitTunnelingSettings implements ISplitTunnelingSettings {
+    enabled!: boolean;
     appMode!: SplitAppMode;
     apps!: string[];
     countryMode!: SplitCountryMode;
@@ -5343,6 +5399,7 @@ export class SplitTunnelingSettings implements ISplitTunnelingSettings {
     useLocalNetwork!: boolean;
     dnsMode!: SplitDnsMode;
     unsupportedIpMode!: SplitUnsupportedIpMode;
+    unsupportedIpV6Mode!: SplitUnsupportedIpMode;
 
     constructor(data?: ISplitTunnelingSettings) {
         if (data) {
@@ -5359,6 +5416,7 @@ export class SplitTunnelingSettings implements ISplitTunnelingSettings {
 
     init(_data?: any) {
         if (_data) {
+            this.enabled = _data["enabled"] !== undefined ? _data["enabled"] : null as any;
             this.appMode = _data["appMode"] !== undefined ? _data["appMode"] : null as any;
             if (Array.isArray(_data["apps"])) {
                 this.apps = [] as any;
@@ -5383,6 +5441,7 @@ export class SplitTunnelingSettings implements ISplitTunnelingSettings {
             this.useLocalNetwork = _data["useLocalNetwork"] !== undefined ? _data["useLocalNetwork"] : null as any;
             this.dnsMode = _data["dnsMode"] !== undefined ? _data["dnsMode"] : null as any;
             this.unsupportedIpMode = _data["unsupportedIpMode"] !== undefined ? _data["unsupportedIpMode"] : null as any;
+            this.unsupportedIpV6Mode = _data["unsupportedIpV6Mode"] !== undefined ? _data["unsupportedIpV6Mode"] : null as any;
         }
     }
 
@@ -5395,6 +5454,7 @@ export class SplitTunnelingSettings implements ISplitTunnelingSettings {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
+        data["enabled"] = this.enabled !== undefined ? this.enabled : null as any;
         data["appMode"] = this.appMode !== undefined ? this.appMode : null as any;
         if (Array.isArray(this.apps)) {
             data["apps"] = [];
@@ -5413,11 +5473,13 @@ export class SplitTunnelingSettings implements ISplitTunnelingSettings {
         data["useLocalNetwork"] = this.useLocalNetwork !== undefined ? this.useLocalNetwork : null as any;
         data["dnsMode"] = this.dnsMode !== undefined ? this.dnsMode : null as any;
         data["unsupportedIpMode"] = this.unsupportedIpMode !== undefined ? this.unsupportedIpMode : null as any;
+        data["unsupportedIpV6Mode"] = this.unsupportedIpV6Mode !== undefined ? this.unsupportedIpV6Mode : null as any;
         return data;
     }
 }
 
 export interface ISplitTunnelingSettings {
+    enabled: boolean;
     appMode: SplitAppMode;
     apps: string[];
     countryMode: SplitCountryMode;
@@ -5428,6 +5490,7 @@ export interface ISplitTunnelingSettings {
     useLocalNetwork: boolean;
     dnsMode: SplitDnsMode;
     unsupportedIpMode: SplitUnsupportedIpMode;
+    unsupportedIpV6Mode: SplitUnsupportedIpMode;
 }
 
 export enum SplitAppMode {

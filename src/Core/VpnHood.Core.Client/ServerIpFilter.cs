@@ -48,6 +48,20 @@ internal class ServerIpFilter : IIpFilter
         set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
     } = SplitUnsupportedIpMode.Exclude;
 
+    // The fate of IPv6 when the server cannot carry the family at all; a v6 miss inside a SUPPORTED
+    // family's narrow ranges takes the regular UnsupportedIpMode like any other destination.
+    public SplitUnsupportedIpMode UnsupportedIpV6Mode {
+        get;
+        set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
+    } = SplitUnsupportedIpMode.Block;
+
+    // When false, every IPv6 destination is a miss regardless of IncludeRanges (a server that cannot
+    // carry the family may still have declared no restriction), judged by UnsupportedIpV6Mode.
+    public bool IsIpV6SupportedByServer {
+        get;
+        set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
+    } = true;
+
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {
         // the stages below speak for the client (the user's splits and blocks); their veto is final
@@ -58,10 +72,12 @@ internal class ServerIpFilter : IIpFilter
         // the server's word: a member passes unchanged (Default, or a preserved inner Include from an
         // override lane) and a non-member takes the mode's action — except a refused Include, which is
         // blocked under either mode: it promised to travel inside, so letting it out would leak it
-        if (!IncludeRanges.Contains(endPoint.Address)) {
+        var isFamilyUnsupported = !IsIpV6SupportedByServer && endPoint.IsV6();
+        if (isFamilyUnsupported || !IncludeRanges.Contains(endPoint.Address)) {
+            var unsupportedIpMode = isFamilyUnsupported ? UnsupportedIpV6Mode : UnsupportedIpMode;
 
             // block if server refused an Include
-            if (UnsupportedIpMode is SplitUnsupportedIpMode.Block)
+            if (unsupportedIpMode is SplitUnsupportedIpMode.Block)
                 return FilterAction.Block;
 
             // default to Exclude if server refused an Include
@@ -78,6 +94,7 @@ internal class ServerIpFilter : IIpFilter
 
     public bool IsEmpty =>
         IncludeRanges.IsAll() &&
+        IsIpV6SupportedByServer &&
         (_nextFilter?.IsEmpty ?? true);
 
     public void Dispose()

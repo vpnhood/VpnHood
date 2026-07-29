@@ -26,8 +26,9 @@ public class SplitDomainService(AppSettingsService settingsService, IPremiumFeat
     // never silently skipped.
     public async Task<string?> EnsureSplitDomainDb(string dbFolder, CancellationToken cancellationToken)
     {
-        if (!settingsService.UserSettings.SplitTunneling.UseDomain ||
-            !premiumFeatureChecker.CheckPremiumFeature(AppFeature.SplitDomain))
+        // effective: the super toggle and the premium plan are both resolved here, so an inactive
+        // feature is simply a false flag — no second gate to keep in sync
+        if (!settingsService.UserSettings.SplitTunneling.ToEffective(premiumFeatureChecker).UseDomain)
             return null;
 
         var splitDomainSettings = settingsService.SplitDomainSettings;

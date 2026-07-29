@@ -1,9 +1,13 @@
+using VpnHood.AppLib.Settings;
+using VpnHood.Core.Client.Abstractions;
+
 namespace VpnHood.AppLib.Dtos;
 
 // The EFFECTIVE split picture, computed from settings and the live session so the UI never holds
-// business logic: list items bind their on/off display to these flags (stored values survive in
-// UserSettings), and the home screen shows a split badge on IsSplittingTraffic alone. When the
-// super toggle is off every flag but IsLocalNetworkSplit is false, so the badge dies by itself.
+// business logic: list items bind their on/off display to these flags and their mode labels to the
+// effective modes below (stored values survive in UserSettings), and the home screen shows a split
+// badge on IsSplittingTraffic alone. When the super toggle is off every flag but IsLocalNetworkSplit
+// is false, so the badge dies by itself.
 public class SplitTunnelingState
 {
     // echo of the super toggle, for enabling/disabling the split pages' items
@@ -25,4 +29,11 @@ public class SplitTunnelingState
 
     // the server's declarations leave public destinations out while splitting is allowed
     public required bool IsSplitByServer { get; init; }
+
+    // label detail for the split pages' items: the EFFECTIVE modes, so a silenced item shows what
+    // is actually in force — the toggle off shows Block/IncludeAll no matter what is stored
+    public required SplitCountryMode CountryMode { get; init; }
+    public required IReadOnlyList<string> Countries { get; init; }
+    public required SplitDnsMode DnsMode { get; init; }
+    public required SplitUnsupportedIpMode UnsupportedIpV6Mode { get; init; }
 }

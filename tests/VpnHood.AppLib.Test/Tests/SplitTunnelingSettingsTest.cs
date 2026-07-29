@@ -47,7 +47,7 @@ public class SplitTunnelingSettingsTest
         // the two exempt splits: neither can expose the IP of the traffic that stays in the tunnel
         Assert.IsTrue(effective.UseLocalNetwork, "LAN traffic never reaches the internet");
         Assert.AreEqual(SplitAppMode.Exclude, effective.AppMode, "a per-app opt-out survives the toggle");
-        CollectionAssert.AreEqual(settings.Apps, effective.Apps);
+        CollectionAssert.AreEqual(settings.Apps, effective.Apps.ToArray());
 
         // the stored values must survive untouched for re-enabling
         Assert.AreEqual(SplitCountryMode.ExcludeMyCountry, settings.CountryMode);
@@ -67,7 +67,7 @@ public class SplitTunnelingSettingsTest
         Assert.IsFalse(effective.UseIpViaDevice);
         Assert.IsFalse(effective.UseDomain);
         Assert.AreEqual(SplitCountryMode.IncludeAll, effective.CountryMode);
-        Assert.AreEqual(0, effective.Countries.Length);
+        Assert.AreEqual(0, effective.Countries.Count);
 
         // features no plan can withhold (they have no AppFeature of their own) are untouched
         Assert.AreEqual(SplitAppMode.Exclude, effective.AppMode);
@@ -118,7 +118,7 @@ public class SplitTunnelingSettingsTest
         Assert.AreEqual(SplitUnsupportedIpMode.Exclude, effective.UnsupportedIpV6Mode);
         Assert.AreEqual(SplitAppMode.Exclude, effective.AppMode);
         Assert.AreEqual(SplitDnsMode.DefaultRoute, effective.DnsMode);
-        CollectionAssert.AreEqual(settings.Apps, effective.Apps);
+        CollectionAssert.AreEqual(settings.Apps, effective.Apps.ToArray());
     }
 
     // the plan's answer, without the app: allowed everywhere, or refused everywhere
@@ -225,6 +225,8 @@ public class SplitTunnelingSettingsTest
             CreateSessionInfo(isIpV6SupportedByServer: false), PremiumFeatureChecker.AllowAll);
         Assert.IsFalse(state.IsIpV6Split);
         Assert.IsFalse(state.IsSplittingTraffic);
+        Assert.AreEqual(SplitUnsupportedIpMode.Block, state.UnsupportedIpV6Mode,
+            "the item's label shows the resolved Block, not the stored bypass");
     }
 
     [TestMethod]
@@ -245,6 +247,12 @@ public class SplitTunnelingSettingsTest
         // the exempt pair stays on for its pages, and neither ever joins the badge
         Assert.IsTrue(state.IsLocalNetworkSplit);
         Assert.IsTrue(state.IsAppSplit);
+
+        // the items' mode labels show what is actually in force, not the stored choices
+        Assert.AreEqual(SplitCountryMode.IncludeAll, state.CountryMode);
+        Assert.AreEqual(0, state.Countries.Count);
+        Assert.AreEqual(SplitDnsMode.IncludeAll, state.DnsMode);
+        Assert.AreEqual(SplitUnsupportedIpMode.Block, state.UnsupportedIpV6Mode);
     }
 
     [TestMethod]

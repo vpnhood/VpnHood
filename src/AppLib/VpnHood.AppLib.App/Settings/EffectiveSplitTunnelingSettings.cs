@@ -12,9 +12,9 @@ public class EffectiveSplitTunnelingSettings
 {
     public required bool Enabled { get; init; }
     public required SplitAppMode AppMode { get; init; }
-    public required string[] Apps { get; init; }
+    public required IReadOnlyList<string> Apps { get; init; }
     public required SplitCountryMode CountryMode { get; init; }
-    public required string[] Countries { get; init; }
+    public required IReadOnlyList<string> Countries { get; init; }
     public required bool UseIpViaApp { get; init; }
     public required bool UseIpViaDevice { get; init; }
     public required bool UseDomain { get; init; }

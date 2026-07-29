@@ -5190,6 +5190,10 @@ export class SplitTunnelingState implements ISplitTunnelingState {
     isLocalNetworkSplit!: boolean;
     isIpV6Split!: boolean;
     isSplitByServer!: boolean;
+    countryMode!: SplitCountryMode;
+    countries!: string[];
+    dnsMode!: SplitDnsMode;
+    unsupportedIpV6Mode!: SplitUnsupportedIpMode;
 
     constructor(data?: ISplitTunnelingState) {
         if (data) {
@@ -5197,6 +5201,9 @@ export class SplitTunnelingState implements ISplitTunnelingState {
                 if (data.hasOwnProperty(property))
                     (this as any)[property] = (data as any)[property];
             }
+        }
+        if (!data) {
+            this.countries = [];
         }
     }
 
@@ -5212,6 +5219,17 @@ export class SplitTunnelingState implements ISplitTunnelingState {
             this.isLocalNetworkSplit = _data["isLocalNetworkSplit"] !== undefined ? _data["isLocalNetworkSplit"] : null as any;
             this.isIpV6Split = _data["isIpV6Split"] !== undefined ? _data["isIpV6Split"] : null as any;
             this.isSplitByServer = _data["isSplitByServer"] !== undefined ? _data["isSplitByServer"] : null as any;
+            this.countryMode = _data["countryMode"] !== undefined ? _data["countryMode"] : null as any;
+            if (Array.isArray(_data["countries"])) {
+                this.countries = [] as any;
+                for (let item of _data["countries"])
+                    this.countries!.push(item);
+            }
+            else {
+                this.countries = null as any;
+            }
+            this.dnsMode = _data["dnsMode"] !== undefined ? _data["dnsMode"] : null as any;
+            this.unsupportedIpV6Mode = _data["unsupportedIpV6Mode"] !== undefined ? _data["unsupportedIpV6Mode"] : null as any;
         }
     }
 
@@ -5234,6 +5252,14 @@ export class SplitTunnelingState implements ISplitTunnelingState {
         data["isLocalNetworkSplit"] = this.isLocalNetworkSplit !== undefined ? this.isLocalNetworkSplit : null as any;
         data["isIpV6Split"] = this.isIpV6Split !== undefined ? this.isIpV6Split : null as any;
         data["isSplitByServer"] = this.isSplitByServer !== undefined ? this.isSplitByServer : null as any;
+        data["countryMode"] = this.countryMode !== undefined ? this.countryMode : null as any;
+        if (Array.isArray(this.countries)) {
+            data["countries"] = [];
+            for (let item of this.countries)
+                data["countries"].push(item);
+        }
+        data["dnsMode"] = this.dnsMode !== undefined ? this.dnsMode : null as any;
+        data["unsupportedIpV6Mode"] = this.unsupportedIpV6Mode !== undefined ? this.unsupportedIpV6Mode : null as any;
         return data;
     }
 }
@@ -5249,6 +5275,27 @@ export interface ISplitTunnelingState {
     isLocalNetworkSplit: boolean;
     isIpV6Split: boolean;
     isSplitByServer: boolean;
+    countryMode: SplitCountryMode;
+    countries: string[];
+    dnsMode: SplitDnsMode;
+    unsupportedIpV6Mode: SplitUnsupportedIpMode;
+}
+
+export enum SplitCountryMode {
+    IncludeAll = "IncludeAll",
+    ExcludeMyCountry = "ExcludeMyCountry",
+    ExcludeList = "ExcludeList",
+    IncludeList = "IncludeList",
+}
+
+export enum SplitDnsMode {
+    IncludeAll = "IncludeAll",
+    DefaultRoute = "DefaultRoute",
+}
+
+export enum SplitUnsupportedIpMode {
+    Exclude = "Exclude",
+    Block = "Block",
 }
 
 export class UserSettings implements IUserSettings {
@@ -5497,23 +5544,6 @@ export enum SplitAppMode {
     All = "All",
     Exclude = "Exclude",
     Include = "Include",
-}
-
-export enum SplitCountryMode {
-    IncludeAll = "IncludeAll",
-    ExcludeMyCountry = "ExcludeMyCountry",
-    ExcludeList = "ExcludeList",
-    IncludeList = "IncludeList",
-}
-
-export enum SplitDnsMode {
-    IncludeAll = "IncludeAll",
-    DefaultRoute = "DefaultRoute",
-}
-
-export enum SplitUnsupportedIpMode {
-    Exclude = "Exclude",
-    Block = "Block",
 }
 
 export enum EndPointStrategy {

@@ -132,14 +132,14 @@ internal static class StateHelper
 
         // an empty exclude list excludes nothing; an include list leaves everything else outside
         var isAppSplit = splitTunneling.AppMode switch {
-            SplitAppMode.Exclude => splitTunneling.Apps.Length > 0,
+            SplitAppMode.Exclude => splitTunneling.Apps.Count > 0,
             SplitAppMode.Include => true,
             _ => false
         };
 
         var isCountrySplit = splitTunneling.CountryMode switch {
             SplitCountryMode.ExcludeMyCountry => true,
-            SplitCountryMode.ExcludeList => splitTunneling.Countries.Length > 0,
+            SplitCountryMode.ExcludeList => splitTunneling.Countries.Count > 0,
             SplitCountryMode.IncludeList => true,
             _ => false
         };
@@ -168,6 +168,10 @@ internal static class StateHelper
             IsLocalNetworkSplit = splitTunneling.UseLocalNetwork,
             IsIpV6Split = isIpV6Split,
             IsSplitByServer = isSplitByServer,
+            CountryMode = splitTunneling.CountryMode,
+            Countries = splitTunneling.Countries,
+            DnsMode = splitTunneling.DnsMode,
+            UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
             IsSplittingTraffic = isCountrySplit ||
                                  splitTunneling.UseIpViaApp || splitTunneling.UseIpViaDevice ||
                                  splitTunneling.UseDomain || isIpV6Split || isSplitByServer

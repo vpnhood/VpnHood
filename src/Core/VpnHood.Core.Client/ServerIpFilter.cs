@@ -43,13 +43,14 @@ internal class ServerIpFilter : IIpFilter
         }
     } = IpNetwork.All.ToIpRanges();
 
-    public SplitUnsupportedIpMode UnsupportedIpMode {
+    public SplitUnsupportedIpMode UnroutedIpMode {
         get;
         set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
     } = SplitUnsupportedIpMode.Exclude;
 
     // The fate of IPv6 when the server cannot carry the family at all; a v6 miss inside a SUPPORTED
-    // family's narrow ranges takes the regular UnsupportedIpMode like any other destination.
+    // family's narrow ranges takes the regular UnroutedIpMode like any other destination.
+    // Arrives resolved by the app: UnroutedIpMode is superior, so a general Block is set here too.
     public SplitUnsupportedIpMode UnsupportedIpV6Mode {
         get;
         set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
@@ -74,13 +75,13 @@ internal class ServerIpFilter : IIpFilter
         // blocked under either mode: it promised to travel inside, so letting it out would leak it
         var isFamilyUnsupported = !IsIpV6SupportedByServer && endPoint.IsV6();
         if (isFamilyUnsupported || !IncludeRanges.Contains(endPoint.Address)) {
-            var unsupportedIpMode = isFamilyUnsupported ? UnsupportedIpV6Mode : UnsupportedIpMode;
-
-            // block if server refused an Include
-            if (unsupportedIpMode is SplitUnsupportedIpMode.Block)
+            // an unrouted destination takes the general mode; an unsupported family takes its own
+            // (arriving resolved, so a general Block already covers it)
+            var missMode = isFamilyUnsupported ? UnsupportedIpV6Mode : UnroutedIpMode;
+            if (missMode is SplitUnsupportedIpMode.Block)
                 return FilterAction.Block;
 
-            // default to Exclude if server refused an Include
+            // a refused Include is blocked even under Exclude: it promised to travel inside
             return result is FilterAction.Include
                 ? FilterAction.Block
                 : FilterAction.Exclude;

@@ -55,9 +55,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     // Live-apply the app's decision for server-unrouted destinations (both families). Only the filter's
     // verdict changes: the adapter keeps its connect-time capture shape, so a flip that needs different
     // capture (Exclude→Block against a splitting server) still asks for a reconnect at the app layer.
-    public SplitUnsupportedIpMode UnsupportedIpMode {
-        get => _serverIpFilter.UnsupportedIpMode;
-        set => _serverIpFilter.UnsupportedIpMode = value;
+    public SplitUnsupportedIpMode UnroutedIpMode {
+        get => _serverIpFilter.UnroutedIpMode;
+        set => _serverIpFilter.UnroutedIpMode = value;
     }
 
     public SplitUnsupportedIpMode UnsupportedIpV6Mode {
@@ -108,7 +108,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             SessionTimeout = options.SessionTimeout,
             IncludeLocalNetwork = options.SplitLocalNetwork,
             SplitDnsMode = options.SplitDnsMode,
-            UnsupportedIpMode = options.UnsupportedIpMode,
+            UnroutedIpMode = options.UnroutedIpMode,
             UnsupportedIpV6Mode = options.UnsupportedIpV6Mode,
             IsTcpProxySupported = options.IsTcpProxySupported,
             UseTcpProxy = options.UseTcpProxy,

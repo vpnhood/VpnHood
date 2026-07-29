@@ -37,7 +37,7 @@ public class SplitDnsTest : TestBase
         return ClientHelper.BuildIncludeIpRangesByDevice(
             clientIncludeIpRanges: includeIpRanges,
             serverIncludeIpRanges: IpNetwork.All.ToIpRanges(),
-            unsupportedIpMode: SplitUnsupportedIpMode.Exclude,
+            unroutedIpMode: SplitUnsupportedIpMode.Exclude,
             unsupportedIpV6Mode: SplitUnsupportedIpMode.Block,
             isIpV6SupportedByServer: true,
             includeLocalNetwork: includeLocalNetwork,

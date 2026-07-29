@@ -20,6 +20,9 @@ public class EffectiveSplitTunnelingSettings
     public required bool UseDomain { get; init; }
     public required bool UseLocalNetwork { get; init; }
     public required SplitDnsMode DnsMode { get; init; }
-    public required SplitUnsupportedIpMode UnsupportedIpMode { get; init; }
+    public required SplitUnsupportedIpMode UnroutedIpMode { get; init; }
+
+    // arrives resolved: never Exclude while UnroutedIpMode is Block — the general mode is superior
+    // and its Block covers IPv6 too, so core and state read one truth without re-deriving it
     public required SplitUnsupportedIpMode UnsupportedIpV6Mode { get; init; }
 }

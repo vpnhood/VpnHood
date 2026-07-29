@@ -184,7 +184,7 @@ internal class ClientSessionBuilder(
             // destination to UnsupportedIpV6Mode regardless of its declared ranges. From here one Process
             // call answers for the whole session: client gates first, then the server's ranges.
             serverIpFilter.IncludeRanges = serverIncludeIpRanges;
-            serverIpFilter.UnsupportedIpMode = config.UnsupportedIpMode;
+            serverIpFilter.UnroutedIpMode = config.UnroutedIpMode;
             serverIpFilter.UnsupportedIpV6Mode = config.UnsupportedIpV6Mode;
             serverIpFilter.IsIpV6SupportedByServer = helloResponse.IsIpV6Supported;
 
@@ -201,7 +201,7 @@ internal class ClientSessionBuilder(
             var sessionIncludeIpRangesByDevice = ClientHelper.BuildIncludeIpRangesByDevice(
                 clientIncludeIpRanges: config.IncludeIpRangesByDevice.ToOrderedList(),
                 serverIncludeIpRanges: serverIncludeIpRangesByDevice,
-                unsupportedIpMode: config.UnsupportedIpMode,
+                unroutedIpMode: config.UnroutedIpMode,
                 unsupportedIpV6Mode: config.UnsupportedIpV6Mode,
                 isIpV6SupportedByServer: helloResponse.IsIpV6Supported,
                 includeLocalNetwork: config.IncludeLocalNetwork,

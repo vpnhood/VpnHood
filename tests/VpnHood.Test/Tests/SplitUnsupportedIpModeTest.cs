@@ -37,13 +37,13 @@ public class SplitUnsupportedIpModeTest : TestBase
     {
         using var serverIpFilter = new ServerIpFilter(null) {
             IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnsupportedIpMode = SplitUnsupportedIpMode.Block
+            UnroutedIpMode = SplitUnsupportedIpMode.Block
         };
 
         Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "a routed destination passes");
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, UnroutedIp), "an unrouted one takes the mode's action");
 
-        serverIpFilter.UnsupportedIpMode = SplitUnsupportedIpMode.Exclude;
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Exclude;
         Assert.AreEqual(FilterAction.Exclude, Process(serverIpFilter, UnroutedIp), "Exclude mode bypasses instead");
     }
 
@@ -57,7 +57,7 @@ public class SplitUnsupportedIpModeTest : TestBase
         };
         using var serverIpFilter = new ServerIpFilter(clientGates) {
             IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnsupportedIpMode = SplitUnsupportedIpMode.Block
+            UnroutedIpMode = SplitUnsupportedIpMode.Block
         };
 
         Assert.AreEqual(FilterAction.Exclude, Process(serverIpFilter, UnroutedIp));
@@ -71,7 +71,7 @@ public class SplitUnsupportedIpModeTest : TestBase
         };
         using var serverIpFilter = new ServerIpFilter(clientGates) {
             IncludeRanges = IpNetwork.All.ToIpRanges(),
-            UnsupportedIpMode = SplitUnsupportedIpMode.Exclude
+            UnroutedIpMode = SplitUnsupportedIpMode.Exclude
         };
 
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, RoutedIp));
@@ -85,13 +85,13 @@ public class SplitUnsupportedIpModeTest : TestBase
         // excluding it would leak the very traffic the promise covers.
         using var serverIpFilter = new ServerIpFilter(new FixedActionFilter(FilterAction.Include)) {
             IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnsupportedIpMode = SplitUnsupportedIpMode.Block
+            UnroutedIpMode = SplitUnsupportedIpMode.Block
         };
 
         Assert.AreEqual(FilterAction.Include, Process(serverIpFilter, RoutedIp), "the override lane is preserved on a hit");
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, UnroutedIp), "and refused on a miss");
 
-        serverIpFilter.UnsupportedIpMode = SplitUnsupportedIpMode.Exclude;
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Exclude;
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, UnroutedIp),
             "a refused promise never falls back to Exclude — that would be the leak");
     }
@@ -103,7 +103,7 @@ public class SplitUnsupportedIpModeTest : TestBase
         var routedIpV6 = IPAddress.Parse("2001:4860:4860::8888");
         using var serverIpFilter = new ServerIpFilter(null) {
             IncludeRanges = IpNetwork.All.ToIpRanges(),
-            UnsupportedIpMode = SplitUnsupportedIpMode.Exclude,
+            UnroutedIpMode = SplitUnsupportedIpMode.Exclude,
             UnsupportedIpV6Mode = SplitUnsupportedIpMode.Block,
             IsIpV6SupportedByServer = false
         };
@@ -126,7 +126,7 @@ public class SplitUnsupportedIpModeTest : TestBase
         var unroutedIpV6 = IPAddress.Parse("2001:db8::1");
         using var serverIpFilter = new ServerIpFilter(null) {
             IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnsupportedIpMode = SplitUnsupportedIpMode.Exclude,
+            UnroutedIpMode = SplitUnsupportedIpMode.Exclude,
             UnsupportedIpV6Mode = SplitUnsupportedIpMode.Block,
             IsIpV6SupportedByServer = true
         };
@@ -154,7 +154,7 @@ public class SplitUnsupportedIpModeTest : TestBase
             ClientHelper.BuildIncludeIpRangesByDevice(
                 clientIncludeIpRanges: IpNetwork.All.ToIpRanges(),
                 serverIncludeIpRanges: serverRanges,
-                unsupportedIpMode: mode,
+                unroutedIpMode: mode,
                 unsupportedIpV6Mode: v6Mode,
                 isIpV6SupportedByServer: serverV6,
                 includeLocalNetwork: false,
@@ -167,10 +167,12 @@ public class SplitUnsupportedIpModeTest : TestBase
         Assert.IsFalse(capture.Contains(IPAddress.Parse("2.0.0.10")), "an unrouted destination stays with the OS");
         Assert.IsFalse(capture.Contains(globalV6), "an unsupported family stays with the OS");
 
-        // Block ignores the server's declaration: a miss must be CAPTURED to be killed
-        capture = Build(SplitUnsupportedIpMode.Block, SplitUnsupportedIpMode.Exclude, serverV6: false);
+        // Block ignores the server's declaration: a miss must be CAPTURED to be killed. The general
+        // mode is superior and the app passes it resolved — a general Block arrives with the v6 mode
+        // already Block — so the unsupported family is claimed with everything else
+        capture = Build(SplitUnsupportedIpMode.Block, SplitUnsupportedIpMode.Block, serverV6: false);
         Assert.IsTrue(capture.Contains(IPAddress.Parse("2.0.0.10")), "Block captures the miss to kill it");
-        Assert.IsFalse(capture.Contains(globalV6), "the unsupported family keeps ITS OWN mode");
+        Assert.IsTrue(capture.Contains(globalV6), "a general Block claims the unsupported family too");
 
         // the unsupported family under Block is claimed so it dies inside instead of leaking outside
         capture = Build(SplitUnsupportedIpMode.Exclude, SplitUnsupportedIpMode.Block, serverV6: false);
@@ -189,7 +191,7 @@ public class SplitUnsupportedIpModeTest : TestBase
         // assignment is converted at the door, so the stage can never accidentally turn every address
         // into a miss.
         using var serverIpFilter = new ServerIpFilter(null) {
-            UnsupportedIpMode = SplitUnsupportedIpMode.Block
+            UnroutedIpMode = SplitUnsupportedIpMode.Block
         };
         Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "the default is All");
 

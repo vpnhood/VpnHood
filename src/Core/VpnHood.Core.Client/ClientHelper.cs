@@ -184,7 +184,7 @@ internal static class ClientHelper
     public static IpRangeOrderedList BuildIncludeIpRangesByDevice(
         IpRangeOrderedList clientIncludeIpRanges,
         IpRangeOrderedList serverIncludeIpRanges,
-        SplitUnsupportedIpMode unsupportedIpMode,
+        SplitUnsupportedIpMode unroutedIpMode,
         SplitUnsupportedIpMode unsupportedIpV6Mode,
         bool isIpV6SupportedByServer,
         bool includeLocalNetwork,
@@ -200,8 +200,8 @@ internal static class ClientHelper
                 : serverIncludeIpRanges.Exclude(IpNetwork.AllV6.ToIpRange());
                 
         // effect server ranges on the include set only under Exclude: Block captures everything to kill it
-        // unsupportedIpMode is superior to unsupportedIpV6Mode, so if it is Block it captures the family the server cannot carry at all
-        if (unsupportedIpMode is SplitUnsupportedIpMode.Exclude) 
+        // unroutedIpMode is superior to unsupportedIpV6Mode, so if it is Block it captures the family the server cannot carry at all
+        if (unroutedIpMode is SplitUnsupportedIpMode.Exclude)
                 includeIpRanges = includeIpRanges.Intersect(serverIncludeIpRanges);
    
         // exclude local networks

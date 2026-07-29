@@ -5398,7 +5398,7 @@ export class SplitTunnelingSettings implements ISplitTunnelingSettings {
     useDomain!: boolean;
     useLocalNetwork!: boolean;
     dnsMode!: SplitDnsMode;
-    unsupportedIpMode!: SplitUnsupportedIpMode;
+    unroutedIpMode!: SplitUnsupportedIpMode;
     unsupportedIpV6Mode!: SplitUnsupportedIpMode;
 
     constructor(data?: ISplitTunnelingSettings) {
@@ -5440,7 +5440,7 @@ export class SplitTunnelingSettings implements ISplitTunnelingSettings {
             this.useDomain = _data["useDomain"] !== undefined ? _data["useDomain"] : null as any;
             this.useLocalNetwork = _data["useLocalNetwork"] !== undefined ? _data["useLocalNetwork"] : null as any;
             this.dnsMode = _data["dnsMode"] !== undefined ? _data["dnsMode"] : null as any;
-            this.unsupportedIpMode = _data["unsupportedIpMode"] !== undefined ? _data["unsupportedIpMode"] : null as any;
+            this.unroutedIpMode = _data["unroutedIpMode"] !== undefined ? _data["unroutedIpMode"] : null as any;
             this.unsupportedIpV6Mode = _data["unsupportedIpV6Mode"] !== undefined ? _data["unsupportedIpV6Mode"] : null as any;
         }
     }
@@ -5472,7 +5472,7 @@ export class SplitTunnelingSettings implements ISplitTunnelingSettings {
         data["useDomain"] = this.useDomain !== undefined ? this.useDomain : null as any;
         data["useLocalNetwork"] = this.useLocalNetwork !== undefined ? this.useLocalNetwork : null as any;
         data["dnsMode"] = this.dnsMode !== undefined ? this.dnsMode : null as any;
-        data["unsupportedIpMode"] = this.unsupportedIpMode !== undefined ? this.unsupportedIpMode : null as any;
+        data["unroutedIpMode"] = this.unroutedIpMode !== undefined ? this.unroutedIpMode : null as any;
         data["unsupportedIpV6Mode"] = this.unsupportedIpV6Mode !== undefined ? this.unsupportedIpV6Mode : null as any;
         return data;
     }
@@ -5489,7 +5489,7 @@ export interface ISplitTunnelingSettings {
     useDomain: boolean;
     useLocalNetwork: boolean;
     dnsMode: SplitDnsMode;
-    unsupportedIpMode: SplitUnsupportedIpMode;
+    unroutedIpMode: SplitUnsupportedIpMode;
     unsupportedIpV6Mode: SplitUnsupportedIpMode;
 }
 

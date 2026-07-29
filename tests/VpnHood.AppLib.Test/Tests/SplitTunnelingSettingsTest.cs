@@ -25,7 +25,7 @@ public class SplitTunnelingSettingsTest
             UseDomain = true,
             UseLocalNetwork = true,
             DnsMode = SplitDnsMode.DefaultRoute,
-            UnsupportedIpMode = SplitUnsupportedIpMode.Exclude,
+            UnroutedIpMode = SplitUnsupportedIpMode.Exclude,
             UnsupportedIpV6Mode = SplitUnsupportedIpMode.Exclude
         };
     }
@@ -36,7 +36,7 @@ public class SplitTunnelingSettingsTest
         var settings = CreateFullySplitSettings(enabled: false);
         var effective = settings.ToEffective(PremiumFeatureChecker.AllowAll);
 
-        Assert.AreEqual(SplitUnsupportedIpMode.Block, effective.UnsupportedIpMode, "server misses fail closed");
+        Assert.AreEqual(SplitUnsupportedIpMode.Block, effective.UnroutedIpMode, "server misses fail closed");
         Assert.AreEqual(SplitUnsupportedIpMode.Block, effective.UnsupportedIpV6Mode, "IPv6 fails closed too");
         Assert.AreEqual(SplitCountryMode.IncludeAll, effective.CountryMode);
         Assert.IsFalse(effective.UseIpViaApp);
@@ -51,7 +51,7 @@ public class SplitTunnelingSettingsTest
 
         // the stored values must survive untouched for re-enabling
         Assert.AreEqual(SplitCountryMode.ExcludeMyCountry, settings.CountryMode);
-        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, settings.UnsupportedIpMode);
+        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, settings.UnroutedIpMode);
         Assert.AreEqual(SplitUnsupportedIpMode.Exclude, settings.UnsupportedIpV6Mode);
     }
 
@@ -73,7 +73,7 @@ public class SplitTunnelingSettingsTest
         Assert.AreEqual(SplitAppMode.Exclude, effective.AppMode);
         Assert.IsTrue(effective.UseLocalNetwork);
         Assert.AreEqual(SplitDnsMode.DefaultRoute, effective.DnsMode);
-        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, effective.UnsupportedIpMode);
+        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, effective.UnroutedIpMode);
 
         // and the stored values survive for the day the plan allows them again
         Assert.IsTrue(settings.UseDomain);
@@ -114,7 +114,7 @@ public class SplitTunnelingSettingsTest
         var settings = CreateFullySplitSettings(enabled: true);
         var effective = settings.ToEffective(PremiumFeatureChecker.AllowAll);
 
-        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, effective.UnsupportedIpMode);
+        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, effective.UnroutedIpMode);
         Assert.AreEqual(SplitUnsupportedIpMode.Exclude, effective.UnsupportedIpV6Mode);
         Assert.AreEqual(SplitAppMode.Exclude, effective.AppMode);
         Assert.AreEqual(SplitDnsMode.DefaultRoute, effective.DnsMode);
@@ -199,6 +199,32 @@ public class SplitTunnelingSettingsTest
             CreateSessionInfo(isIpV6SupportedByServer: false), PremiumFeatureChecker.AllowAll);
         Assert.IsFalse(disabledState.IsIpV6Split);
         Assert.IsFalse(disabledState.IsSplittingTraffic);
+    }
+
+    [TestMethod]
+    public void A_general_block_is_superior_and_covers_ipv6()
+    {
+        // UnroutedIpMode is the super flag of the pair: its Block must kill unsupported IPv6 too,
+        // so ToEffective resolves the v6 mode to Block and every consumer — core options, state,
+        // reconnect diff — reads that one truth instead of re-deriving the rule
+        var settings = new SplitTunnelingSettings {
+            Enabled = true,
+            UnroutedIpMode = SplitUnsupportedIpMode.Block,
+            UnsupportedIpV6Mode = SplitUnsupportedIpMode.Exclude
+        };
+
+        var effective = settings.ToEffective(PremiumFeatureChecker.AllowAll);
+        Assert.AreEqual(SplitUnsupportedIpMode.Block, effective.UnsupportedIpV6Mode,
+            "the general Block overrides the stored bypass");
+        Assert.AreEqual(SplitUnsupportedIpMode.Exclude, settings.UnsupportedIpV6Mode,
+            "the stored value survives for the day the general mode relaxes");
+
+        // no bypass actually happens, so a v4-only server must not raise the v6 split badge
+        var userSettings = new UserSettings { SplitTunneling = settings };
+        var state = StateHelper.GetSplitTunnelingState(userSettings,
+            CreateSessionInfo(isIpV6SupportedByServer: false), PremiumFeatureChecker.AllowAll);
+        Assert.IsFalse(state.IsIpV6Split);
+        Assert.IsFalse(state.IsSplittingTraffic);
     }
 
     [TestMethod]

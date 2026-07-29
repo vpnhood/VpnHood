@@ -147,7 +147,7 @@ internal class ApiController : IDisposable
         client.DropUdp = request.Params.DropUdp;
         client.DropQuic = request.Params.DropQuic;
         client.ChannelProtocol = request.Params.ChannelProtocol;
-        client.UnsupportedIpMode = request.Params.UnsupportedIpMode;
+        client.UnroutedIpMode = request.Params.UnroutedIpMode;
         client.UnsupportedIpV6Mode = request.Params.UnsupportedIpV6Mode;
 
         // live-swap the split filter gates to the current folder manifests (rewritten by the app before

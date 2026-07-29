@@ -364,7 +364,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     UserSettings.ClientProfileId != oldUserSettings.ClientProfileId ||
                     UserSettings.DnsMode != oldUserSettings.DnsMode ||
                     splitTunneling.DnsMode != oldSplitTunneling.DnsMode ||
-                    (splitTunneling.UnsupportedIpMode != oldSplitTunneling.UnsupportedIpMode &&
+                    (splitTunneling.UnroutedIpMode != oldSplitTunneling.UnroutedIpMode &&
                      sessionInfo?.IsTrafficSplitByServer == true) ||
                     (splitTunneling.UnsupportedIpV6Mode != oldSplitTunneling.UnsupportedIpV6Mode &&
                      sessionInfo?.IsIpV6SupportedByServer == false) ||
@@ -429,7 +429,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DropQuic = UserSettings.DropQuic,
             UseTcpProxy = UserSettings.UseTcpProxy,
             DropUdp = HasDebugCommand(DebugCommands.DropUdp) || UserSettings.DropUdp,
-            UnsupportedIpMode = splitTunneling.UnsupportedIpMode,
+            UnroutedIpMode = splitTunneling.UnroutedIpMode,
             UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
             ProxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc()
         };
@@ -853,7 +853,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AutoWaitTimeout = _autoWaitTimeout,
                 SplitLocalNetwork = splitTunneling.UseLocalNetwork,
                 SplitDnsMode = splitTunneling.DnsMode,
-                UnsupportedIpMode = splitTunneling.UnsupportedIpMode,
+                UnroutedIpMode = splitTunneling.UnroutedIpMode,
                 UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
                 IncludeIpRangesByDevice = vpnAdapterIpRanges.ToArray(),
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,

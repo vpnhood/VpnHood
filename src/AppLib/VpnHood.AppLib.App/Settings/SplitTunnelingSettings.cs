@@ -24,10 +24,11 @@ public class SplitTunnelingSettings
     // The fate of a destination the server does not route: Exclude bypasses it, Block fails closed.
     // Not shown in the UI (the toggle speaks for ordinary users), but kept as a real option so the
     // API can still choose Block while splitting is allowed.
-    public SplitUnsupportedIpMode UnsupportedIpMode { get; set; } = SplitUnsupportedIpMode.Exclude;
+    public SplitUnsupportedIpMode UnroutedIpMode { get; set; } = SplitUnsupportedIpMode.Exclude;
 
     // The fate of IPv6 when the server cannot carry the family at all: Block keeps it inside (dead but
     // private), Exclude lets the OS route it natively (working but visible to WebRTC/STUN probes).
+    // UnroutedIpMode is superior: its Block covers IPv6 too, overriding a stored Exclude here.
     public SplitUnsupportedIpMode UnsupportedIpV6Mode { get; set; } = SplitUnsupportedIpMode.Block;
 
     // The single place BOTH gates are applied — the super toggle and the plan — so no consumer can
@@ -52,7 +53,7 @@ public class SplitTunnelingSettings
                 UseDomain = false,
                 UseLocalNetwork = UseLocalNetwork,
                 DnsMode = SplitDnsMode.IncludeAll,
-                UnsupportedIpMode = SplitUnsupportedIpMode.Block,
+                UnroutedIpMode = SplitUnsupportedIpMode.Block,
                 UnsupportedIpV6Mode = SplitUnsupportedIpMode.Block
             };
 
@@ -70,8 +71,13 @@ public class SplitTunnelingSettings
             UseDomain = UseDomain && premiumFeatureChecker.IsPremiumFeatureAllowed(AppFeature.SplitDomain),
             UseLocalNetwork = UseLocalNetwork,
             DnsMode = DnsMode,
-            UnsupportedIpMode = UnsupportedIpMode,
-            UnsupportedIpV6Mode = UnsupportedIpV6Mode
+            UnroutedIpMode = UnroutedIpMode,
+            // the general mode is superior: its Block kills unsupported IPv6 too, so the effective
+            // copy never says "bypass IPv6" while the general mode fails closed — the state and the
+            // reconnect diff read the resolved truth
+            UnsupportedIpV6Mode = UnroutedIpMode is SplitUnsupportedIpMode.Block
+                ? SplitUnsupportedIpMode.Block
+                : UnsupportedIpV6Mode
         };
     }
 }

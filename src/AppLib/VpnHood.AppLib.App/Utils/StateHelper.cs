@@ -149,7 +149,7 @@ internal static class StateHelper
 
         // the server's word only splits while the effective mode lets unsupported destinations out —
         // the toggle forces Block, and a power user may have chosen Block even while splitting is allowed
-        var isSplitByServer = splitTunneling.UnsupportedIpMode is SplitUnsupportedIpMode.Exclude &&
+        var isSplitByServer = splitTunneling.UnroutedIpMode is SplitUnsupportedIpMode.Exclude &&
                               sessionInfo?.IsTrafficSplitByServer == true;
 
         // SplitDnsMode is deliberately not a split of its own: DefaultRoute only lets DNS follow the

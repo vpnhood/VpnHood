@@ -291,12 +291,17 @@ jobs:
         with: { repository: "${{ env.CODE_REPO }}", ref: "${{ inputs.code_ref }}", path: code }
       - uses: actions/setup-dotnet@v5
         with: { global-json-file: code/global.json }
+      # Stage the artifacts in the EXACT dir Publish-GithubRelease.ps1 reads. pub/lib/Common.ps1 resolves
+      # $releaseRootDir to pub/bin/<tag> on a prerelease but pub/bin/latest on a STABLE release (the local
+      # per-platform publishers write both dirs; CI's artifacts only ever land in one). Deriving it from
+      # Common keeps ONE source of truth for that layout — rebuilding the tag here instead sent every
+      # stable release's assets to pub/bin/v<version>, where the script never looks, so it aborted with
+      # "No release assets were produced".
       - name: Resolve module dir
         shell: pwsh
         run: |
-          $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
-          $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
-          "MODULE_DIR=code/pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+          . "$env:GITHUB_WORKSPACE/code/pub/lib/Common.ps1"
+          "MODULE_DIR=$releaseRootDir/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
       # Reassemble the code/pub/bin/<tag>/<pkg> layout Publish-GithubRelease.ps1 expects. Windows/Android/iOS
       # are optional (skipped builds upload nothing), so those downloads are best-effort.
       - uses: actions/download-artifact@v8

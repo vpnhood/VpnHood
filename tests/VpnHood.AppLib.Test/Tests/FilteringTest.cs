@@ -275,10 +275,6 @@ public class FilteringTest : TestAppBase
         app.SettingsService.SplitDomainSettings.Includes = MockEps.HttpsUrl1.Host;
         app.SettingsService.SplitDomainSettings.Excludes = MockEps.HttpsUrl2.Host;
 
-        // never tunnel a public DNS ip; it captures parallel tests' DNS traffic
-        // and breaks the exact stream-count assertions
-        app.UserSettings.SplitTunneling.DnsMode = SplitDnsMode.DefaultRoute;
-
         // connect
         await appDom.Connect(cancellationToken: TestCt);
         await app.WaitForState(AppConnectionState.Connected);

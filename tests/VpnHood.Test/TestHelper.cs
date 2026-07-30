@@ -152,6 +152,10 @@ public class TestHelper : IDisposable
             NetFilterOptions = new NetFilterOptions {
                 IncludeLocalNetwork = false
             },
+            // the test-unique NS echo IP, never a public resolver: the WinDivert capture filter is
+            // built from the adapter include ranges, and tunneling a public DNS ip would steal the
+            // machine's and parallel tests' DNS traffic into this test's session
+            DnsServers = [TestIps.RemoteNsTestIp],
             SessionOptions = {
                 SyncCacheSize = 50
             },

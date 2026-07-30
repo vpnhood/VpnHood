@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Quic;
 using VpnHood.AppLib.Test.Dom;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Test;
 
@@ -21,6 +22,10 @@ public class FilteringTest : TestAppBase
         // domain filter should have upper hand.
         // Here we force IpFilter to include HttpsUrl2 and exclude HttpsUrl1
         app.SettingsService.SplitIpViaAppSettings.Includes = MockEps.HttpsV4EndPoint2.Address.ToString();
+
+        // the include list leaves no tunnelable DNS candidate; IncludeAll would refuse to connect,
+        // and forcing a public DNS ip into this tunnel could capture parallel tests' traffic
+        app.UserSettings.SplitTunneling.DnsMode = SplitDnsMode.DefaultRoute;
 
         // connect
         await appDom.Connect(cancellationToken: TestCt);
@@ -53,6 +58,10 @@ public class FilteringTest : TestAppBase
         // domain filter should have upper hand.
         // Here we force IpFilter to include QuicUrl2 and exclude QuicUrl1
         app.SettingsService.SplitIpViaAppSettings.Includes = MockEps.QuicEndPoint2.Address.ToString();
+
+        // the include list leaves no tunnelable DNS candidate; IncludeAll would refuse to connect,
+        // and forcing a public DNS ip into this tunnel could capture parallel tests' traffic
+        app.UserSettings.SplitTunneling.DnsMode = SplitDnsMode.DefaultRoute;
 
         // connect
         await appDom.Connect(cancellationToken: TestCt);
@@ -146,6 +155,10 @@ public class FilteringTest : TestAppBase
         var udpEchoEndPoint2 = MockEps.UdpV4EndPoint2;
         var targetIps2 = new[] { new IpRange(IPAddress.Parse(MockEps.HttpUrl2.Host)), new IpRange(udpEchoEndPoint2.Address) };
 
+        // the include list leaves no tunnelable DNS candidate; IncludeAll would refuse to connect,
+        // and forcing a public DNS ip into this tunnel could capture parallel tests' traffic
+        app.UserSettings.SplitTunneling.DnsMode = SplitDnsMode.DefaultRoute;
+
         // ************
         // *** TEST ***: Test Include ip filter
         app.SettingsService.SplitIpViaAppSettings.Includes = targetIps1.ToText();
@@ -224,6 +237,10 @@ public class FilteringTest : TestAppBase
         var httpsUrl2 = MockEps.HttpsUrl2;
         var udpEchoEndPoint2 = MockEps.UdpV4EndPoint2;
         var targetIps2 = new[] { new IpRange(IPAddress.Parse(MockEps.HttpUrl2.Host)), new IpRange(udpEchoEndPoint2.Address) };
+
+        // the include list leaves no tunnelable DNS candidate; IncludeAll would refuse to connect,
+        // and forcing a public DNS ip into this tunnel could capture parallel tests' traffic
+        app.UserSettings.SplitTunneling.DnsMode = SplitDnsMode.DefaultRoute;
 
         // connect with target1 included, target2 excluded
         app.SettingsService.SplitIpViaAppSettings.Includes = targetIps1.ToText();

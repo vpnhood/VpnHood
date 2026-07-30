@@ -335,19 +335,20 @@ public class ClientServerTest : TestBase
     {
         VhLogger.MinLogLevel = LogLevel.Trace;
 
-        var httpsExternalUri = new Uri("https://ip4.me/"); //make sure always return same ips
-        var httpsExternalUriIps = await Dns.GetHostAddressesAsync(httpsExternalUri.Host);
+        // a fixed anycast endpoint that always accepts tcp on 443 — a literal ip, so this test never
+        // depends on a DNS lookup that a concurrently running tunnel test may capture
+        var httpsExternalEndPoint = IPEndPoint.Parse("1.1.1.1:443");
 
         // connect to a host
         using TcpClient tcpClient = new();
         using var connectCts = new CancellationTokenSource(2000);
-        await tcpClient.ConnectAsync(httpsExternalUriIps[0], 443, connectCts.Token);
+        await tcpClient.ConnectAsync(httpsExternalEndPoint, connectCts.Token);
         await using var stream = tcpClient.GetStream();
 
         // make sure the client routes the external host through the vpn by adding the host ip to allowed list
         var clientOptions = TestHelper.CreateClientOptions();
         clientOptions.IncludeIpRangesByDevice = clientOptions.IncludeIpRangesByDevice
-            .Union(httpsExternalUriIps.ToIpRanges()).ToArray();
+            .Union(new[] { httpsExternalEndPoint.Address }.ToIpRanges()).ToArray();
         await using var dom = await ClientServerDom.Create(TestHelper, clientOptions: clientOptions);
 
         using var cts2 = new CancellationTokenSource(2000);

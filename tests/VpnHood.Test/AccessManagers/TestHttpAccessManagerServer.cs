@@ -35,6 +35,19 @@ public class TestHttpAccessManagerServer : IDisposable
         var settings = new WebserverSettings(url.Host, url.Port);
         var server = new WebserverLite(settings, DefaultRoute);
 
+        // Answer every agent route with HttpExceptionStatusCode while it is set: this is how a real
+        // access manager reports maintenance (503/403), and it answers instantly. Stopping the listener
+        // simulates the other maintenance signal - an unreachable manager - but every call then pays a
+        // refused-connection timeout, so tests use it only where that path is what they mean to cover.
+        // Sending the response here short-circuits routing, so no mapped route runs.
+        server.Routes.PreRouting = async ctx => {
+            if (HttpExceptionStatusCode is null)
+                return;
+
+            ctx.Response.StatusCode = (int)HttpExceptionStatusCode.Value;
+            await ctx.Response.Send();
+        };
+
         server
             .AddRouteMapper(isDebugMode: true)
             .AddController(new ApiController(this));
@@ -42,14 +55,8 @@ public class TestHttpAccessManagerServer : IDisposable
         return server;
     }
 
-    private async Task DefaultRoute(HttpContextBase ctx)
+    private static async Task DefaultRoute(HttpContextBase ctx)
     {
-        if (HttpExceptionStatusCode != null) {
-            ctx.Response.StatusCode = (int)HttpExceptionStatusCode.Value;
-            await ctx.Response.Send();
-            return;
-        }
-
         ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
         await ctx.Response.Send();
     }

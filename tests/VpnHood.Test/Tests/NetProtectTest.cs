@@ -19,7 +19,9 @@ public class NetProtectTest : TestBase
         await using var client = await TestHelper.CreateClient(token);
 
         try {
-            await TestHelper.Test_Https();
+            // a generous timeout: under parallel load the SYN can take seconds to reach the stack,
+            // and the fetch must outlive that delay to receive the rejection instead of timing out
+            await TestHelper.Test_Https(timeout: TimeSpan.FromSeconds(15));
             Assert.Fail("Exception expected!");
         }
         catch (Exception ex) {

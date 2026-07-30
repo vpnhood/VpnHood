@@ -2,7 +2,7 @@ name: _build_app_ios (reusable)
 
 # Builds the iOS .ipa from the vpnhood/VpnHood monorepo (checked out into code/). Called by
 # publish_app.yml (client only today — connect has no iOS project). Runs on the GitHub-hosted
-# macos-26 image (Xcode 26.5 + .NET 11). Signing secrets arrive via `secrets: inherit`; when absent
+# macos-26 image (Xcode 26.6 + .NET 11). Signing secrets arrive via `secrets: inherit`; when absent
 # the build is UNSIGNED (no .ipa, a warning) and the job stays green. Uploads `<app>-ios`.
 
 on:
@@ -47,9 +47,14 @@ jobs:
       - name: Install .NET iOS workload
         shell: pwsh
         run: dotnet workload install ios
-      - name: Select Xcode 26.5
+      # Pin the Xcode the CURRENT .NET-for-iOS preview demands — the SDK hard-errors when Xcode is older
+      # ("requires Xcode 26.6 ... current is 26.5"), and nothing suppresses that check (no
+      # ValidateXcodeVersion anywhere in the repo). Because the SDK above floats on the preview channel,
+      # this pin has to move with it: when a new preview raises the requirement, that error names the
+      # version to put here. The macos-26 image carries 26.0–26.6 side by side, so only this line changes.
+      - name: Select Xcode 26.6
         uses: maxim-lobanov/setup-xcode@v1
-        with: { xcode-version: "26.5" }
+        with: { xcode-version: "26.6" }
       - name: Resolve module dir
         shell: pwsh
         run: |

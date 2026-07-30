@@ -19,7 +19,9 @@ param(
 # the App Store upload job simply finds no .ipa to send. Add the secrets to turn signing on.
 #
 # Requires the net11 iOS toolchain on PATH (this repo targets net11.0-ios): the .NET 11 SDK + `ios`
-# workload and Xcode 26.5+. The csproj already sets ValidateXcodeVersion=false so Xcode 26.6 is accepted.
+# workload and the exact Xcode that workload demands (currently 26.6). Nothing bypasses that check —
+# there is no ValidateXcodeVersion=false in this repo — so an older Xcode fails the build outright,
+# naming the version it wants. CI selects it in .github/workflows/_build_app_ios.yml.
 
 . "$PSScriptRoot/Common.ps1"
 

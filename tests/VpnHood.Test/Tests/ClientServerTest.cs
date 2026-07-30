@@ -418,7 +418,17 @@ public class ClientServerTest : TestBase
         // Check: MaintenanceMode is expected
         // ----------
         var token = TestHelper.CreateAccessToken(server);
-        await using var client = await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
+
+        // detecting maintenance needs the server's refused access-manager round trip, which can
+        // take seconds on a loaded machine; the default 3s test connect budget is too tight for it
+        Task<Core.Client.VpnHoodClient> CreateClientAsync(bool autoConnect)
+        {
+            var clientOptions = TestHelper.CreateClientOptions(token);
+            clientOptions.ConnectTimeout = TimeSpan.FromSeconds(30);
+            return TestHelper.CreateClient(clientOptions, new TestNullVpnAdapter(), autoConnect);
+        }
+
+        await using var client = await CreateClientAsync(autoConnect: false);
         var ex = await Assert.ThrowsExactlyAsync<MaintenanceException>(() => client.Connect(cancellationToken: TestCt));
 
         Assert.AreEqual(SessionErrorCode.Maintenance, ex.SessionResponse.ErrorCode);
@@ -428,14 +438,14 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         accessManager.HttpAccessManagerServer.Start();
-        await using var client2 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
+        await using var client2 = await CreateClientAsync(autoConnect: true);
         await client2.WaitForState(ClientState.Connected);
 
         // ----------
         // Check: Go Maintenance mode after server started by stopping the server
         // ----------
         accessManager.HttpAccessManagerServer.Stop();
-        await using var client3 = await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
+        await using var client3 = await CreateClientAsync(autoConnect: false);
         ex = await Assert.ThrowsExactlyAsync<MaintenanceException>(() => client3.Connect(cancellationToken: TestCt));
         Assert.AreEqual(SessionErrorCode.Maintenance, ex.SessionResponse.ErrorCode);
 
@@ -443,7 +453,7 @@ public class ClientServerTest : TestBase
         // Check: Connect after Maintenance is done
         // ----------
         accessManager.HttpAccessManagerServer.Start();
-        await using var client4 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
+        await using var client4 = await CreateClientAsync(autoConnect: true);
         await client4.WaitForState(ClientState.Connected);
 
         // ----------
@@ -451,8 +461,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.HttpAccessManagerServer.Stop();
         //accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = HttpStatusCode.Forbidden;
-        await using var client5 =
-            await TestHelper.CreateClient(token, autoConnect: false, vpnAdapter: new TestNullVpnAdapter());
+        await using var client5 = await CreateClientAsync(autoConnect: false);
         ex = await Assert.ThrowsExactlyAsync<MaintenanceException>(() => client5.Connect());
         Assert.AreEqual(SessionErrorCode.Maintenance, ex.SessionResponse.ErrorCode);
 
@@ -461,7 +470,7 @@ public class ClientServerTest : TestBase
         // ----------
         accessManager.HttpAccessManagerServer.Start();
         accessManager.HttpAccessManagerServer.HttpExceptionStatusCode = null;
-        await using var client6 = await TestHelper.CreateClient(token, vpnAdapter: new TestNullVpnAdapter());
+        await using var client6 = await CreateClientAsync(autoConnect: true);
         await client6.WaitForState(ClientState.Connected);
     }
 

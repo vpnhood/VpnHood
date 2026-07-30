@@ -1,3 +1,4 @@
+using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Toolkit.Net;
@@ -63,6 +64,20 @@ internal class ServerIpFilter : IIpFilter
         get;
         set { field = value; Changed?.Invoke(this, EventArgs.Empty); }
     } = true;
+
+    /// <summary>
+    /// The server's word alone — no client gate consulted. An address is routable when the server can
+    /// carry its family and declares it in its ranges. The family is checked first because it overrides
+    /// the declaration: a server that cannot carry IPv6 may still have declared no restriction, and an
+    /// unrestricted declaration covers both families.
+    /// </summary>
+    public bool CanServerRoute(IPAddress ipAddress)
+    {
+        if (ipAddress.IsV6() && !IsIpV6SupportedByServer)
+            return false;
+
+        return IncludeRanges.Contains(ipAddress);
+    }
 
     public FilterAction Process(IpProtocol protocol, IpEndPointValue endPoint)
     {

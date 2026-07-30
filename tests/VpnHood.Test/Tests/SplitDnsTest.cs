@@ -219,6 +219,27 @@ public class SplitDnsTest : TestBase
     }
 
     [TestMethod]
+    public void IncludeAll_suppresses_a_v6_user_resolver_on_a_v4_only_server()
+    {
+        // the server declares no restriction (All covers both families) but cannot carry IPv6 at all;
+        // preferring the v6 resolver would capture its queries and tunnel them to their death, so the
+        // family word wins and selection falls back to the server's working v4 resolver
+        using var serverIpFilter = CreateServerIpFilter(serverIncludeIpRanges: IpNetwork.All.ToIpRanges());
+        serverIpFilter.IsIpV6SupportedByServer = false;
+        var serverDns = IPAddress.Parse("9.9.9.9");
+
+        var dnsConfig = ClientHelper.GetDnsServers(
+            userDnsAddresses: [IPAddress.Parse("2001:4860:4860::8888")],
+            serverDnsAddresses: [serverDns],
+            serverIpFilter: serverIpFilter,
+            splitDnsMode: SplitDnsMode.IncludeAll);
+
+        Assert.IsTrue(dnsConfig.IsUserSuppressed, "this session can not use the v6 resolver at all");
+        Assert.AreEqual(DnsSelection.ServerDns, dnsConfig.DnsSelection);
+        CollectionAssert.AreEquivalent(new[] { serverDns }, dnsConfig.DnsServers);
+    }
+
+    [TestMethod]
     public void IncludeAll_throws_when_no_dns_can_be_tunneled()
     {
         // every candidate is vetoed by the client's gates and the server routes an unrelated corner of the

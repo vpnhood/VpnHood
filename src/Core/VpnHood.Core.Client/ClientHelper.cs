@@ -43,7 +43,7 @@ internal static class ClientHelper
     /// </summary>
     /// <param name="userDnsAddresses">DNS servers specified by the user</param>
     /// <param name="serverDnsAddresses">DNS servers provided by the VPN server</param>
-    /// <param name="serverIpFilter">the session's filter pipe, headed by the server layer: one Process verdict answers "can the session tunnel this address" (client gates first, then the server's ranges), while its IncludeRanges expose the server's own word alone for the in-tunnel preference</param>
+    /// <param name="serverIpFilter">the session's filter pipe, headed by the server layer: one Process verdict answers "can the session tunnel this address" (client gates first, then the server's ranges), while CanServerRoute exposes the server's own word alone for the in-tunnel preference</param>
     /// <param name="splitDnsMode">IncludeAll refuses an out-of-tunnel resolver: a user server the splits exclude is not honored, and when nothing is tunnelable at all it throws instead of leaking</param>
     /// <returns>Selected DNS server addresses</returns>
     public static DnsConfig GetDnsServers(
@@ -86,12 +86,15 @@ internal static class ClientHelper
                 }
             }
 
-            // Use user DNS servers if the SERVER routes them — deliberately the server's word alone, not
-            // the full pipe: under IncludeAll the user's resolver is preferred even past their own split
-            // (the packet-level force carries it through). The declaration by default excludes local
-            // networks — a home-LAN resolver is rejected by the server's own word, no LAN heuristic
-            // needed — while a server that deliberately routes its internal ranges keeps them usable.
-            results = userDnsAddresses.Where(x => serverIpFilter.IncludeRanges.Contains(x));
+            // Use user DNS servers if the SERVER can route them — deliberately the server's word alone
+            // (declared ranges plus family support), not the full pipe: under IncludeAll the user's
+            // resolver is preferred even past their own split (the packet-level force carries it
+            // through), but never past the server itself — a v6 resolver on a v4-only server would be
+            // captured and its queries would die in the tunnel, so it is suppressed toward a working
+            // fallback instead. The declaration by default excludes local networks — a home-LAN resolver
+            // is rejected by the server's own word, no LAN heuristic needed — while a server that
+            // deliberately routes its internal ranges keeps them usable.
+            results = userDnsAddresses.Where(serverIpFilter.CanServerRoute);
             if (results.Any()) {
                 VhLogger.Instance.LogInformation(
                     "Using User's DNS servers. DnsServers: {DnsServers}",

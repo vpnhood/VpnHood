@@ -1,6 +1,6 @@
-# 🚀 Publishing the app on Google Play with Fastlane
+# 🚀 Publishing the app with Fastlane
 
-This document outlines the steps required to set up your environment, manage dependencies, and deploy the application (AAB) to the Google Play Store using **Fastlane**.
+This document outlines the steps required to set up your environment, manage dependencies, and deploy the application (AAB) to the Google Play Store using **Fastlane**, plus the rules for the App Store listing.
 
 ---
 
@@ -47,5 +47,59 @@ This single command performs the following critical tasks:
 > ./pub/Android.GooglePlay/apk/VpnHoodClient-android.apk
 
 ---
+
+## 🍏 Publishing the App Store listing with Fastlane
+
+The App Store listing is pushed by the `ios upload_metadata` lane (deliver), **without** a binary — the
+build ships via `publish_client.yml`. Run it from the *Publish Metadata · App Store* workflow, or locally:
+
+```bash
+fastlane ios upload_metadata
+```
+
+Text lives in `fastlane/metadata/ios/en-US/**`, screenshots in `fastlane/screenshots/ios/en-US/**`
+(deliver treats every subdirectory of either path as a locale, so the two must stay separate).
+
+### The iOS listing is NOT a copy of the Android one
+
+The Android and iOS clients do not expose the same features, and the App Store listing must show only
+what the iOS build actually does. Anything the listing claims but the app cannot do is a
+[Guideline 2.3](https://developer.apple.com/app-store/review/guidelines/#accurate-metadata) rejection;
+naming or showing another mobile platform is a Guideline 2.3.10 rejection.
+
+Not available on iOS — keep them out of `metadata/ios/**` and out of every screenshot:
+
+| Feature | Why it is absent on iOS | Flag |
+| --- | --- | --- |
+| Split tunneling **by app** (Apps Filter page) | A regular iOS VPN app cannot enumerate or filter per-app traffic (`IosDevice.InstalledApps` throws) | `features.isExcludeAppsSupported` / `isIncludeAppsSupported` = `false` |
+| **Private DNS** | No iOS settings intent for it | `intentFeatures.isPrivateDnsSettingsSupported` = `false` |
+| **Kill switch** | No iOS settings intent for it | `intentFeatures.isKillSwitchSettingsSupported` = `false` |
+| **Always-on VPN** | Not a user-facing iOS setting | `intentFeatures.isAlwaysOnSettingsSupported` / `IosDevice.IsAlwaysOnSupported` = `false` |
+| **Quick Launch** | Android-only shortcut | `intentFeatures.isQuickLaunchSupported` = `false` |
+| Any mention of **Android / Android TV / Windows** | Guideline 2.3.10 | — |
+
+Available on iOS and safe to promote: Cloak Mode (`IosDevice.IsTcpProxySupported` = `true`), split
+tunneling by country / domain / IP address / local network, custom (adapter) DNS, TCP & UDP channel
+protocols, IPv4 + IPv6, and adding server keys (`IsAddAccessKeySupported` = `true`).
+
+### Screenshots
+
+Apple requires 6.9" iPhone captures (**1290 × 2796**), up to 10 per locale, numbered `1_en-US.png` …
+
+The current four are Android captures rescaled to the iPhone frame, kept only because the screens they
+show render identically on iOS. **They still need to be re-captured on an iPhone (or the iOS Simulator)
+running the iOS build** — a rescaled Android frame is not a screenshot of this app.
+
+Screens to capture, in listing order:
+
+1. **Home, connected** — must be shot on iOS: the Android capture shows a `SPLIT APPS` row that the iOS
+   build hides. This is the hero screenshot and the listing is currently missing it.
+2. **Servers** — profiles + *Add server*.
+3. **Protocols** — Cloak Mode / Block QUIC / TCP · UDP.
+4. **Cloak Mode** — the feature explainer page.
+5. **Split Tunneling** — the split-tunneling index (the shipped page, redesigned since the current capture).
+6. **DNS** — must be shot on iOS: the Android capture shows the *Private DNS* card, which the iOS build hides.
+
+---
 ## Further Information
-For a comprehensive understanding of the Fastlane toolchain, its configuration, and how lanes are defined, please refer to the official documentation [Fastlane Android Setup Guide](https://docs.fastlane.tools/getting-started/android/setup/) website.
+For a comprehensive understanding of the Fastlane toolchain, its configuration, and how lanes are defined, please refer to the official documentation [Fastlane Android Setup Guide](https://docs.fastlane.tools/getting-started/android/setup/) and [Fastlane deliver](https://docs.fastlane.tools/actions/deliver/) websites.

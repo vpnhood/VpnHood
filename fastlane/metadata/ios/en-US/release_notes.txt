@@ -1,8 +1,10 @@
-Feature: Allow setting custom DNS servers
-Feature: Add French & Italian languages
-Feature: Detect when another VPN app disconnects the VPN
-Feature: Show more progress details while connecting
-Feature: Add Badge Information Page on home screen
-Fix: Unable to close the Quick Launch pop-up on Android
-Fix: Negative speed issue
-Fix: Access to the local network when IncludeLocalNetwork is enabled
+This is the first release of VpnHood! CLIENT on the App Store.
+
+• Connect to your own VpnHood server with a single tap, using your server key
+• Cloak Mode: disguises VPN traffic as regular web traffic to overcome VPN blocks
+• Split tunneling by country, domain, IP address, and local network
+• Custom DNS servers
+• TCP and UDP channel protocols
+• IPv4 and IPv6 support
+
+Questions or problems? We are here 24/7 at support@vpnhood.com

@@ -17,7 +17,7 @@ Key Features:
 
 • Free with No Ads: VpnHood! is open-source, completely free, and contains no ads.
 
-• Easy to Use: You can connect to VpnHood! with a simple click of the connect button.
+• Easy to Use: You can connect to VpnHood! with a simple tap of the connect button.
 
 • Fast and Secure (The speed may vary depending on the server provider and your Internet connection.)
 
@@ -25,18 +25,22 @@ Key Features:
 
 • First VPN in .NET: VpnHood! is the first VPN app in the world to be developed with the .NET platform—showcasing innovation and technical excellence.
 
-• Broad Compatibility: Supports Android 6 and above, including Android TV and Windows.
-
 • IPv4 & IPv6 Support: Ensures maximum compatibility and performance.
 
 
 Customizable Options:
 
-• Split Tunneling for App: Choose which apps use VpnHood! with flexible filter options. You can exclude, include, or select all apps.
+• Cloak Mode: Disguises your VPN traffic as regular web traffic, making it resistant to deep packet inspection so the connection stays reliable on restricted networks.
 
 • Split Tunneling for Country: This allows you to exclude your own country, ensuring that traffic to servers within your country does not pass through the VPN tunnel. This eliminates the need to disconnect VpnHood! when accessing services in your country that do not accept foreign IPs and improves connection speeds to local servers.
 
+• Split Tunneling for Domains: Choose which website addresses travel through the VPN tunnel and which stay outside it.
+
+• Split Tunneling for IP Addresses: Include or exclude specific host IP addresses from VPN traffic.
+
 • Split Tunneling for Local Network: Exclude your local network to maintain access to local resources while using VpnHood!.
+
+• Custom DNS: Change the default DNS server by specifying your own.
 
 • UDP / TCP Protocol: Choose whether to enable or disable the UDP protocol based on your needs.
 
@@ -49,9 +53,9 @@ Why Choose VpnHood!?
 
 ▶ Powered by VpnHood Engine: VpnHood! is powered by its own open-source VPN engine, ensuring transparency and reliability.
 
-▶ User-Friendly: VpnHood! is designed with simplicity in mind—connect with just one click.
+▶ User-Friendly: VpnHood! is designed with simplicity in mind—connect with just one tap.
 
-▶ Customizable: With options for Split Tunneling by App, Country, and Local Network, plus UDP/TCP protocol switching, you have full control over your VPN usage.
+▶ Customizable: With options for Split Tunneling by Country, Domain, IP address, and Local Network, plus Custom DNS and UDP/TCP protocol switching, you have full control over your VPN usage.
 
 ▶ Constantly Evolving: VpnHood! is committed to continuous improvement and innovation, ensuring you enjoy unrestricted and censorship-free internet access. Try VpnHood! today and experience the true freedom of the web!
 

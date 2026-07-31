@@ -1,7 +1,7 @@
 # Latest
+* Feature: Support QUIC on Windows and Linux
 * Feature: Split DNS — DNS queries now follow your split tunneling rules, so bypassed apps and sites resolve outside the tunnel
 * Feature: Unrouted IP protection — choose to block or bypass destinations the server cannot route, so traffic never leaks silently
-* Feature: Support QUIC on Windows and Linux
 * Feature: Split tunneling master switch — one tap keeps all traffic inside the VPN and blocks what the server cannot carry
 * Feature: IPv6 option to block or bypass IPv6 when the server does not support it
 * Feature: Built-in report viewer — view and share diagnostic reports right inside the app

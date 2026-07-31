@@ -1,95 +1,121 @@
 # Upcoming
+
 * Fix: QUIC server stops after some errors
 
 # v8.0.815
+
 * Feature: Support QUIC on Windows and Linux
 * Fix: Exceeding the 7-day threshold error
 
 # v7.9.813
+
 * Feature: Pause zombie servers for a while to save resources
 * Feature: Traffic throttling
 
 # v7.8.801
+
 * Fix: IPv6 UDP listener may stop working after a while
 
 # v7.7.796
+
 * Fix: UDP protocol on some networks and devices
 * Update: Detect when UDP protocol is not available due to reverse proxy
 
 # v7.7.795
+
 * Fix: Auto public IP resolution returning 104.18.0.0
 
 # v7.7.792
+
 * Fix: Reconnection required after network failure when using the TCP protocol
 
 # v7.5.777
+
 * Update: Upgrade to .NET 10
 * Update: Update HTTP01 handling for valid SSL certs
 
 # v7.3.766
+
 Fix: Set DNS on some Linux distros
 
 # v7.3.762
+
 * Fix: Access to local network when IncludeLocalNetwork is enabled
 
 # v7.3.751
+
 * Fix: Negative speed issue
 
 # v7.3.742
+
 * Feature: Extract Client IP from reserve proxies
 * Feature: Add AllowTcpProxy option
 * Feature: Add AllowTcpPacket option
 * Fix: Block Stream Proxy requests by NetFilter
 
 # v7.3.739
+
 * Feature: Handle UserReview recommendation
 
 # v7.2.732
+
 * Fix: Reconnecting especially when using torrent clients
 * Update: Tune memory usage
 
 # v7.2.729
+
 * Fix: Memory Leak!
 
 # v7.1.725
+
 * Feature: Support reserve proxies like Cloudflare
 
 # v7.1.724
+
 * Improve: Speed and stability
 * Update: Improve session management
 * Update: Move libraries to .NET 8.0
 
 # v7.1.716
+
 * Fix: IPv6
 * Fix: Memory leak
 * Improve: Drastically improve performance and stability
 * Improve: Drastically reduce memory usage
 
 # v6.0.696
+
 * Improve: Watching media streaming
 * Improve: Performance and stability
 * Fix: Network Isolation
 * Fix: Some Android devices could not open websites after connecting
 
 # v6.0.689
+
 * Fix: Calculate UDP checksum and DNS response
 
 # v6.0.680
+
 * Fix: Pause server while configuring swap file on Linux
 * Feature: Use TunAdapter on Linux, improve performance
 
 # v6.0.656
+
 * Update: Improve virtual IP allocation
 * Fix: Some Android devices could not open website after connect
 
 # v5.1.647
+
 * Fix: Ping IPv6 
 
 # v5.1.642
+
 * Update: Improve ping performance
 
 # v5.0.629
+
 * Update: Move releases repo from https://github.com/vpnhood/VpnHood/releases
 
 # v5.0.629
+
 Old log: https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md

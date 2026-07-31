@@ -5,6 +5,12 @@
 	<string>VpnHood! Connect</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.vpnhood.connect.ios</string>
+	<!-- false = "no encryption requiring Apple export-compliance documentation" — NOT "no encryption".
+	     Standards-body crypto only (AES-GCM/CTR, RSA, SHA-2, HMAC, TLS), nothing proprietary, no French
+	     store. Skips the per-build TestFlight compliance question. NEVER set true (true-without-code is
+	     rejected at upload, error 90592). See docs/legal/APP_STORE_EXPORT_COMPLIANCE.md. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- CFBundleShortVersionString / CFBundleVersion are injected by the .NET iOS SDK from
 	     ApplicationDisplayVersion / ApplicationVersion (set by pub/lib/Publish-IosApp.ps1 from
 	     PubVersion.json). Do NOT hardcode them here: a literal value OVERRIDES the MSBuild props and

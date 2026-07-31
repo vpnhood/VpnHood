@@ -5,11 +5,16 @@
 	<string>VpnHood! Client</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.vpnhood.client.ios</string>
-	<!-- NO ITSAppUsesNonExemptEncryption here — deliberate. Declaring true requires an Apple-issued
-	     ITSEncryptionExportComplianceCode in the binary, and the non-France App Encryption
-	     Documentation flow never issues one, so true-without-code makes altool reject every upload
-	     (error 90592). Compliance is declared on the App Store Connect app record instead.
-	     See docs/legal/APP_STORE_EXPORT_COMPLIANCE.md before adding any ITS* key. -->
+	<!-- false = "no encryption requiring Apple export-compliance documentation" — NOT "no encryption".
+	     The app uses only standards-body cryptography (AES-GCM/CTR, RSA, SHA-2, HMAC, TLS — NIST/IETF/
+	     ISO), nothing proprietary, no French store: Apple's App Encryption Documentation wizard concludes
+	     "no documents needed" for exactly these answers and prescribes this value to skip the per-build
+	     compliance questions. NEVER set true — true requires an Apple-issued
+	     ITSEncryptionExportComplianceCode in the binary, the non-France flow issues none, and altool then
+	     rejects every upload (error 90592). The real export-law duty is the annual BIS self-classification
+	     report (5D992.c). See docs/legal/APP_STORE_EXPORT_COMPLIANCE.md. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- CFBundleShortVersionString / CFBundleVersion are injected by the .NET iOS SDK from
 	     ApplicationDisplayVersion / ApplicationVersion (set by pub/lib/Publish-IosApp.ps1 from
 	     PubVersion.json). Do NOT hardcode them here: a literal value OVERRIDES the MSBuild props and

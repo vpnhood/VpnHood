@@ -24,28 +24,33 @@ A VPN built from this repo is **mass-market encryption software, ECCN 5D992.c** 
 is needed, but the two obligations above both apply. Filing with BIS does **not** update Apple, and
 answering Apple's questionnaire does **not** file with BIS.
 
-## A VPN is non-exempt — but the plists carry NO encryption keys (deliberate)
+## The plists declare `ITSAppUsesNonExemptEncryption = false` — what that means
 
-Two statements that sound contradictory and are both true:
+`false` does **not** claim "this app has no cryptography". It is Apple's machine-readable form of
+"this app uses no encryption **that requires Apple export-compliance documentation**". Apple's own
+wizard (below), given the honest answers — uses encryption: yes; **standard** algorithms
+(AES-GCM/CTR, RSA, SHA-2, HMAC, TLS — all NIST/IETF/ISO); nothing proprietary; not on the French
+store — concludes: *"Based on your answers, you don't need to upload any documents. You can specify
+that you don't use encryption in the Info.plist to avoid answering encryption questions with each
+app submission."* That plist value is `false`. So `false` is the Apple-prescribed encoding of
+exactly those answers, and it makes every upload pass with **no per-build compliance questions**.
 
-1. **The app's encryption is non-exempt.** Apple's exemptions cover encryption limited to
-   authentication/digital signatures, DRM, and a few niche categories. A VPN's core function is
-   encrypting arbitrary user traffic — the textbook non-exempt case. "It only uses OS-provided
-   crypto libraries" does **not** make an app exempt; it only makes the classification mass-market
-   (5D992.c instead of a licensable ECCN). Every answer given to Apple must say non-exempt, and
-   `ITSAppUsesNonExemptEncryption=false` in a plist would be a false statement — never do that.
-2. **The plists must not carry `ITSAppUsesNonExemptEncryption` at all.** Declaring `true` in the
-   binary obliges altool to find a matching Apple-issued `ITSEncryptionExportComplianceCode` next to
-   it, and the non-France App Encryption Documentation flow (below) **never issues a code** — codes
-   only exist on the France/uploaded-documentation branches. `true` without a code is therefore
-   rejected with error 90592 on **every** upload, unconditionally (verified twice on 2026-07-30;
-   the error fires identically whether or not the app record has documentation).
+Do not confuse this with the EAR meaning of "exempt": under U.S. export law the app is mass-market
+**5D992.c** — authorized without a license, but still owing the annual BIS self-classification
+report (below). The plist key is an Apple-documentation question; the BIS report is the legal duty.
+The two are independent, and `false` changes nothing about the BIS obligation.
 
-So the honest, working configuration is: **no `ITS*` keys in either plist** (host app + Network
-Extension), and the non-exempt declaration made **on the App Store Connect app record** via the
-one-time wizard below. Both plists carry a comment saying exactly this — read it before "fixing"
-the absence of the key. Every build that has ever successfully uploaded (Client 826, Connect 830)
-shipped without the key; the only uploads that ever failed were the ones that carried it.
+**Never set the key to `true`.** `true` obliges altool to find a matching Apple-issued
+`ITSEncryptionExportComplianceCode` in the binary, and the non-France flow **never issues a code**
+(codes exist only on the proprietary-algorithms / France branches). `true` without a code is
+rejected with error 90592 on every upload, unconditionally — verified twice on 2026-07-30, with and
+without documentation on the app record. That misconfiguration silently blocked all Client iOS
+uploads between 2026-07-06 and 2026-07-31.
+
+The key + explanatory comment lives in **all four** plists (Client + Connect, host app + Network
+Extension). "Proprietary or not accepted as standard" means self-designed/unpublished ciphers; this
+codebase implements none — AES is FIPS 197/ISO 18033-3, GCM is SP 800-38D/RFC 5288 (the mandatory
+TLS 1.3 cipher), CTR is SP 800-38A, RSA is RFC 8017, SHA-2 is FIPS 180-4, HMAC is RFC 2104.
 
 ## One-time setup in App Store Connect (per app)
 
@@ -83,11 +88,12 @@ shipped without the key; the only uploads that ever failed were the ones that ca
 4. **French store**: France regulates VPN/crypto apps separately (ANSSI declaration). If you have
    made no French filing, answer **No** for availability in France; add it later if you file.
    Answering No ends the wizard — there is no documentation-upload step.
-5. That's it — **no code is issued on this branch**, and none is needed. The declaration lives on
-   the app record; uploaded builds (whose plists carry no `ITS*` keys — see above) pick their
-   compliance up from it. If TestFlight still shows **"Missing Compliance"** on a build, answer the
-   prompt once with the same answers as the wizard (uses encryption: yes, non-exempt, standard
-   algorithms) — never "doesn't use encryption", which is false for a VPN.
+5. That's it — the wizard ends with *"you don't need to upload any documents"* and points at the
+   plist: with `ITSAppUsesNonExemptEncryption=false` in every plist (see above), builds skip the
+   compliance question entirely and **no code is ever issued or needed**. If an older build (built
+   before the plist carried `false`) shows **"Missing Compliance"** in TestFlight, answer its
+   prompt with the same wizard answers — standard algorithms, nothing proprietary — which records
+   as `usesNonExemptEncryption=False`, consistent with the plist.
 
 ## The annual BIS self-classification report
 
@@ -133,14 +139,13 @@ actually declared.
 ## Status of the vpnhood apps (maintainers)
 
 - **Client** (`com.vpnhood.client.ios`): the `true` key added 2026-07-06 (`bda96bae5`) blocked
-  every upload after build 826 with error 90592; **removed 2026-07-31** after the wizard was
-  completed on the app record (France: No → no code). Plists now carry no `ITS*` keys, by design.
-  Note: build 826's per-build answer was recorded as `usesNonExemptEncryption=False` (a quick UI
-  click) — wrong for a VPN; answer non-exempt from now on.
-- **Connect** (`com.vpnhood.connect.ios`): plists carry no encryption keys (same as Client now).
-  Its app record has **not** had the wizard completed — run the one-time setup above for Connect
-  too, so its builds stop needing the per-build "Missing Compliance" click (its build 830 was also
-  recorded as `False`).
+  every upload after build 826 with error 90592. 2026-07-31: wizard completed on the app record,
+  key set to **`false`** in both plists per the wizard's own conclusion. Builds 826 and 835 were
+  answered/recorded as `usesNonExemptEncryption=False` — consistent with this framework.
+- **Connect** (`com.vpnhood.connect.ios`): both plists set to `false` on 2026-07-31 (same commit),
+  so its next upload skips the per-build "Missing Compliance" click that build 830 needed.
+  Optionally run the one-time wizard on its app record too, so the description/answers are on file
+  there as well.
 - BIS annual self-classification: filed (2026) — see contact in
   [EXPORT_COMPLIANCE.md](EXPORT_COMPLIANCE.md).
 - The **private** filing kit (the CSV with entity/contact details, exact send steps, and the

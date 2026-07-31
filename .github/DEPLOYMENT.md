@@ -208,12 +208,12 @@ every store leg it is **skip-with-warning** when its secrets are absent, but not
 - **Signing can't self-sign.** An App Store `.ipa` requires an **Apple Distribution** certificate and
   **App Store** provisioning profiles issued by Apple — there is no ephemeral fallback. Without them the
   build is unsigned (no `.ipa`) and the upload is skipped.
-- **Export compliance is a hard upload gate.** A VPN's encryption is non-exempt, but the
-  declaration lives on the App Store Connect app record (one-time wizard), NOT in the plists —
-  `ITSAppUsesNonExemptEncryption=true` without an Apple-issued code is rejected with error 90592 on
-  every upload, and the non-France flow never issues a code, so the plists deliberately carry no
-  `ITS*` keys. One-time setup, questionnaire answers, the BIS annual report, and the description
-  text Apple asks for are all in
+- **Export compliance is a hard upload gate.** All four iOS plists declare
+  `ITSAppUsesNonExemptEncryption=false` — Apple's prescribed value for standards-body-only crypto
+  with no French-store distribution ("no documentation needed"); it makes uploads pass with no
+  per-build compliance questions. **Never flip it to `true`**: true requires an Apple-issued code
+  the non-France flow never grants, and every upload is then rejected with error 90592. Semantics,
+  the one-time wizard, the BIS annual report, and the description text Apple asks for are all in
   [docs/legal/APP_STORE_EXPORT_COMPLIANCE.md](../docs/legal/APP_STORE_EXPORT_COMPLIANCE.md).
 
 Secrets: `APPLE_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE64`,

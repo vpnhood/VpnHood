@@ -5,6 +5,11 @@
 	<string>VpnHood! Connect Extension</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.vpnhood.connect.ios.networkextension</string>
+	<!-- false = "no encryption requiring Apple export-compliance documentation" — mirrors the host app;
+	     standards-body crypto only, no France. NEVER true (rejected at upload without an Apple-issued
+	     code, error 90592). See docs/legal/APP_STORE_EXPORT_COMPLIANCE.md. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- Version injected from ApplicationDisplayVersion / ApplicationVersion — the app's publish passes
 	     these as GLOBAL MSBuild props, which flow into this .appex build too, so its CFBundleVersion
 	     always matches the app's. Fixes ITMS-90473 (the hardcoded '1' here vs the app's version). Do

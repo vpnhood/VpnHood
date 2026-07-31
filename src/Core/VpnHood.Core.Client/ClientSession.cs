@@ -187,7 +187,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         var manageChannelsTask = ManagePacketChannels(cancellationToken);
 
         // wait for ad before adapter
-        var retryAd = false;
+        var retryAd = false; 
         if (Config.AdRequirement != AdRequirement.None)
             retryAd = await AdHandler.TryWaitForAd(cancellationToken) != null;
 

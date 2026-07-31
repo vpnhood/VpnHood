@@ -134,10 +134,16 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             IsStarted = true;
 
             // get the WAN adapter IP (lets do it again)
-            PrimaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
-            PrimaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
-            AdapterIpNetworkV4 = options.VirtualIpNetworkV4;
-            AdapterIpNetworkV6 = options.VirtualIpNetworkV6;
+            // A concurrent Stop() clears the adapter properties when the user disconnects mid-start,
+            // so the rest of this method must read these locals, never the properties.
+            var primaryAdapterIpV4 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetwork);
+            var primaryAdapterIpV6 = DiscoverPrimaryAdapterIp(AddressFamily.InterNetworkV6);
+            var adapterIpNetworkV4 = options.VirtualIpNetworkV4;
+            var adapterIpNetworkV6 = options.VirtualIpNetworkV6;
+            PrimaryAdapterIpV4 = primaryAdapterIpV4;
+            PrimaryAdapterIpV6 = primaryAdapterIpV6;
+            AdapterIpNetworkV4 = adapterIpNetworkV4;
+            AdapterIpNetworkV6 = adapterIpNetworkV6;
             UseNat = options.UseNat;
             _mtu = options.Mtu ?? _mtu;
             _lastPrimaryAdapterAddresses = GetPrimaryAdapterAddresses();
@@ -148,8 +154,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 "PrimaryAdapterIpV4: {PrimaryAdapterIpV4}, PrimaryAdapterIpV6: {PrimaryAdapterIpV6}, " +
                 "AdapterIpNetworkV4: {AdapterIpNetworkV4}, AdapterIpNetworkV6: {AdapterIpNetworkV6}",
                 VhLogger.FormatType(this), UseNat, _mtu,
-                VhLogger.Format(PrimaryAdapterIpV4), VhLogger.Format(PrimaryAdapterIpV6),
-                AdapterIpNetworkV4, AdapterIpNetworkV6);
+                VhLogger.Format(primaryAdapterIpV4), VhLogger.Format(primaryAdapterIpV6),
+                adapterIpNetworkV4, adapterIpNetworkV6);
 
             // create tun adapter
             VhLogger.Instance.LogInformation("Adding TUN adapter...");
@@ -160,23 +166,24 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
                 await SetSessionName(options.SessionName, cancellationToken);
 
             // Set adapter IPv4 address
-            if (AdapterIpNetworkV4 != null) {
+            if (adapterIpNetworkV4 != null) {
                 VhLogger.Instance.LogDebug("Adding IPv4 address to adapter ...");
-                GatewayIpV4 = BuildGatewayFromFromNetwork(AdapterIpNetworkV4);
-                await AddAddress(AdapterIpNetworkV4, cancellationToken).Vhc();
+                GatewayIpV4 = BuildGatewayFromFromNetwork(adapterIpNetworkV4);
+                await AddAddress(adapterIpNetworkV4, cancellationToken).Vhc();
             }
 
             // Set adapter IPv6 address
-            if (AdapterIpNetworkV6 != null) {
+            if (adapterIpNetworkV6 != null) {
                 VhLogger.Instance.LogDebug("Adding IPv6 address to adapter ...");
                 try {
-                    GatewayIpV6 = BuildGatewayFromFromNetwork(AdapterIpNetworkV6);
-                    await AddAddress(AdapterIpNetworkV6, cancellationToken).Vhc();
+                    GatewayIpV6 = BuildGatewayFromFromNetwork(adapterIpNetworkV6);
+                    await AddAddress(adapterIpNetworkV6, cancellationToken).Vhc();
                 }
                 catch (Exception ex) {
                     VhLogger.Instance.LogError(ex,
                         "Failed to add IPv6 address to TUN adapter. AdapterIpNetworkV6: {AdapterIpNetworkV6}",
-                        AdapterIpNetworkV6);
+                        adapterIpNetworkV6);
+                    adapterIpNetworkV6 = null;
                     AdapterIpNetworkV6 = null;
                 }
             }
@@ -185,8 +192,8 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             if (options.Metric != null) {
                 VhLogger.Instance.LogDebug("Setting metric...");
                 await SetMetric(options.Metric.Value,
-                    ipV4: AdapterIpNetworkV4 != null,
-                    ipV6: AdapterIpNetworkV6 != null,
+                    ipV4: adapterIpNetworkV4 != null,
+                    ipV6: adapterIpNetworkV6 != null,
                     cancellationToken).Vhc();
             }
 
@@ -194,17 +201,17 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             if (options.Mtu != null) {
                 VhLogger.Instance.LogDebug("Setting MTU...");
                 await SetMtu(options.Mtu.Value,
-                    ipV4: AdapterIpNetworkV4 != null,
-                    ipV6: AdapterIpNetworkV6 != null,
+                    ipV4: adapterIpNetworkV4 != null,
+                    ipV6: adapterIpNetworkV6 != null,
                     cancellationToken).Vhc();
             }
 
             // set DNS servers
             VhLogger.Instance.LogDebug("Setting DNS servers...");
             var dnsServers = options.DnsServers;
-            if (AdapterIpNetworkV4 == null)
+            if (adapterIpNetworkV4 == null)
                 dnsServers = dnsServers.Where(x => !x.IsV4()).ToArray();
-            if (AdapterIpNetworkV6 == null)
+            if (adapterIpNetworkV6 == null)
                 dnsServers = dnsServers.Where(x => !x.IsV6()).ToArray();
             await SetDnsServers(dnsServers, cancellationToken).Vhc();
 
@@ -220,19 +227,19 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
             // add routes
             VhLogger.Instance.LogDebug("Adding routes...");
-            if (AdapterIpNetworkV4 != null)
+            if (adapterIpNetworkV4 != null)
                 await AddRouteHelper(includeNetworks, AddressFamily.InterNetwork, cancellationToken).Vhc();
-            if (AdapterIpNetworkV6 != null)
+            if (adapterIpNetworkV6 != null)
                 await AddRouteHelper(includeNetworks, AddressFamily.InterNetworkV6, cancellationToken).Vhc();
 
             // add NAT
             if (UseNat) {
                 VhLogger.Instance.LogDebug("Adding NAT...");
-                if (AdapterIpNetworkV4 != null && PrimaryAdapterIpV4 != null)
-                    await AddNat(AdapterIpNetworkV4, cancellationToken).Vhc();
+                if (adapterIpNetworkV4 != null && primaryAdapterIpV4 != null)
+                    await AddNat(adapterIpNetworkV4, cancellationToken).Vhc();
 
-                if (AdapterIpNetworkV6 != null && PrimaryAdapterIpV6 != null)
-                    await AddNat(AdapterIpNetworkV6, cancellationToken).Vhc();
+                if (adapterIpNetworkV6 != null && primaryAdapterIpV6 != null)
+                    await AddNat(adapterIpNetworkV6, cancellationToken).Vhc();
             }
 
             // add app filter
@@ -249,9 +256,15 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             VhLogger.Instance.LogInformation("TUN adapter started.");
         }
         catch (Exception ex) {
-            VhLogger.Instance.Log(ex is OperationCanceledException ? LogLevel.Trace : LogLevel.Error, ex,
-                "Failed to start TUN adapter.");
+            // when a concurrent Stop() tears the adapter down mid-start, the first step to fail is
+            // fallout of that stop, so report the start as canceled rather than broken
+            var isStopped = _isStopping || !IsStarted;
+            VhLogger.Instance.Log(ex is OperationCanceledException || isStopped ? LogLevel.Trace : LogLevel.Error,
+                ex, "Failed to start TUN adapter.");
             Stop(false);
+
+            if (isStopped && ex is not OperationCanceledException)
+                throw new OperationCanceledException("The VPN adapter has been stopped while starting.", ex);
             throw;
         }
         finally {

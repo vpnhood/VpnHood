@@ -29,6 +29,12 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     private IntPtr _readEvent;
     private readonly byte[] _writeBuffer = new byte[0xFFFF];
 
+    // _tunAdapter is a raw native pointer freed by WintunCloseAdapter; passing it to
+    // WintunStartSession after (or while) it is freed corrupts the process. This lock makes
+    // AdapterOpen atomic against AdapterRemove, which can run concurrently when the user
+    // disconnects while a connect is still setting up the adapter.
+    private readonly Lock _adapterLock = new();
+
     public const int MinRingCapacity = 0x20000; // 128kiB
     public const int MaxRingCapacity = 0x4000000; // 64MiB
     protected override bool IsSocketProtectedByBind => true;
@@ -104,10 +110,17 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
 
     protected override void AdapterRemove()
     {
-        // close the adapter
-        if (_tunAdapter != IntPtr.Zero) {
-            WinTunApi.WintunCloseAdapter(_tunAdapter);
-            _tunAdapter = IntPtr.Zero;
+        lock (_adapterLock) {
+            // WinTun requires ending sessions before closing the adapter. A live session may still
+            // exist here when AdapterOpen raced a concurrent Stop and won, so end it here rather
+            // than relying on callers to close before remove.
+            AdapterClose();
+
+            // close the adapter
+            if (_tunAdapter != IntPtr.Zero) {
+                WinTunApi.WintunCloseAdapter(_tunAdapter);
+                _tunAdapter = IntPtr.Zero;
+            }
         }
 
         // Remove previous NAT iptables record
@@ -128,13 +141,20 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     {
         // start WinTun session
         VhLogger.Instance.LogInformation("Starting WinTun session...");
-        _tunSession = WinTunApi.WintunStartSession(_tunAdapter, _ringCapacity);
-        if (_tunSession == IntPtr.Zero)
-            throw new Win32Exception("Failed to start WinTun session.");
+        lock (_adapterLock) {
+            // a disconnect during connect may have already removed the adapter; the freed native
+            // handle must never reach WintunStartSession
+            if (_tunAdapter == IntPtr.Zero)
+                throw new InvalidOperationException("Could not start WinTun session. The adapter has been removed.");
 
-        // create an event object to wait for packets
-        VhLogger.Instance.LogDebug("Creating event object for WinTun...");
-        _readEvent = WinTunApi.WintunGetReadWaitEvent(_tunSession); // do not close this handle by documentation
+            _tunSession = WinTunApi.WintunStartSession(_tunAdapter, _ringCapacity);
+            if (_tunSession == IntPtr.Zero)
+                throw new Win32Exception("Failed to start WinTun session.");
+
+            // create an event object to wait for packets
+            VhLogger.Instance.LogDebug("Creating event object for WinTun...");
+            _readEvent = WinTunApi.WintunGetReadWaitEvent(_tunSession); // do not close this handle by documentation
+        }
 
         return Task.CompletedTask;
     }

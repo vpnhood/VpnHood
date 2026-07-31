@@ -5,8 +5,11 @@
 	<string>VpnHood! Client</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.vpnhood.client.ios</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<true/>
+	<!-- NO ITSAppUsesNonExemptEncryption here — deliberate. Declaring true requires an Apple-issued
+	     ITSEncryptionExportComplianceCode in the binary, and the non-France App Encryption
+	     Documentation flow never issues one, so true-without-code makes altool reject every upload
+	     (error 90592). Compliance is declared on the App Store Connect app record instead.
+	     See docs/legal/APP_STORE_EXPORT_COMPLIANCE.md before adding any ITS* key. -->
 	<!-- CFBundleShortVersionString / CFBundleVersion are injected by the .NET iOS SDK from
 	     ApplicationDisplayVersion / ApplicationVersion (set by pub/lib/Publish-IosApp.ps1 from
 	     PubVersion.json). Do NOT hardcode them here: a literal value OVERRIDES the MSBuild props and

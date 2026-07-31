@@ -4680,6 +4680,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
     canTryPremium!: boolean;
     selectedLocationInfo!: ClientServerLocationInfo | null;
     customServerEndpoints!: string[] | null;
+    isCustomServerEndpointsEnabled!: boolean;
 
     constructor(data?: IClientProfileBaseInfo) {
         if (data) {
@@ -4711,6 +4712,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
             else {
                 this.customServerEndpoints = null as any;
             }
+            this.isCustomServerEndpointsEnabled = _data["isCustomServerEndpointsEnabled"] !== undefined ? _data["isCustomServerEndpointsEnabled"] : null as any;
         }
     }
 
@@ -4739,6 +4741,7 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
             for (let item of this.customServerEndpoints)
                 data["customServerEndpoints"].push(item);
         }
+        data["isCustomServerEndpointsEnabled"] = this.isCustomServerEndpointsEnabled !== undefined ? this.isCustomServerEndpointsEnabled : null as any;
         return data;
     }
 }
@@ -4756,6 +4759,7 @@ export interface IClientProfileBaseInfo {
     canTryPremium: boolean;
     selectedLocationInfo: ClientServerLocationInfo | null;
     customServerEndpoints: string[] | null;
+    isCustomServerEndpointsEnabled: boolean;
 }
 
 export class ClientServerLocationInfo extends ServerLocationInfo implements IClientServerLocationInfo {
@@ -5679,6 +5683,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
     canGoPremium!: boolean;
     canTryPremium!: boolean;
     customServerEndpoints?: string[] | null;
+    isCustomServerEndpointsEnabled!: boolean;
     selectedLocationInfo?: ClientServerLocationInfo | null;
     clientPolicy?: ClientPolicy | null;
 
@@ -5734,6 +5739,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
             else {
                 this.customServerEndpoints = null as any;
             }
+            this.isCustomServerEndpointsEnabled = _data["isCustomServerEndpointsEnabled"] !== undefined ? _data["isCustomServerEndpointsEnabled"] : null as any;
             this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : null as any;
             this.clientPolicy = _data["clientPolicy"] ? ClientPolicy.fromJS(_data["clientPolicy"]) : null as any;
         }
@@ -5776,6 +5782,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
             for (let item of this.customServerEndpoints)
                 data["customServerEndpoints"].push(item);
         }
+        data["isCustomServerEndpointsEnabled"] = this.isCustomServerEndpointsEnabled !== undefined ? this.isCustomServerEndpointsEnabled : null as any;
         data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : null as any;
         data["clientPolicy"] = this.clientPolicy ? this.clientPolicy.toJSON() : null as any;
         return data;
@@ -5799,6 +5806,7 @@ export interface IClientProfileInfo {
     canGoPremium: boolean;
     canTryPremium: boolean;
     customServerEndpoints?: string[] | null;
+    isCustomServerEndpointsEnabled: boolean;
     selectedLocationInfo?: ClientServerLocationInfo | null;
     clientPolicy?: ClientPolicy | null;
 }
@@ -6503,6 +6511,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
     accessCode?: PatchOfString | null;
     isAccessCodeFromAccount?: PatchOfBoolean | null;
     customServerEndpoints?: PatchOfStringOf | null;
+    isCustomServerEndpointsEnabled?: PatchOfBoolean | null;
 
     constructor(data?: IClientProfileUpdateParams) {
         if (data) {
@@ -6523,6 +6532,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
             this.accessCode = _data["accessCode"] ? PatchOfString.fromJS(_data["accessCode"]) : null as any;
             this.isAccessCodeFromAccount = _data["isAccessCodeFromAccount"] ? PatchOfBoolean.fromJS(_data["isAccessCodeFromAccount"]) : null as any;
             this.customServerEndpoints = _data["customServerEndpoints"] ? PatchOfStringOf.fromJS(_data["customServerEndpoints"]) : null as any;
+            this.isCustomServerEndpointsEnabled = _data["isCustomServerEndpointsEnabled"] ? PatchOfBoolean.fromJS(_data["isCustomServerEndpointsEnabled"]) : null as any;
         }
     }
 
@@ -6543,6 +6553,7 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
         data["accessCode"] = this.accessCode ? this.accessCode.toJSON() : null as any;
         data["isAccessCodeFromAccount"] = this.isAccessCodeFromAccount ? this.isAccessCodeFromAccount.toJSON() : null as any;
         data["customServerEndpoints"] = this.customServerEndpoints ? this.customServerEndpoints.toJSON() : null as any;
+        data["isCustomServerEndpointsEnabled"] = this.isCustomServerEndpointsEnabled ? this.isCustomServerEndpointsEnabled.toJSON() : null as any;
         return data;
     }
 }
@@ -6556,6 +6567,7 @@ export interface IClientProfileUpdateParams {
     accessCode?: PatchOfString | null;
     isAccessCodeFromAccount?: PatchOfBoolean | null;
     customServerEndpoints?: PatchOfStringOf | null;
+    isCustomServerEndpointsEnabled?: PatchOfBoolean | null;
 }
 
 export class PatchOfString implements IPatchOfString {

@@ -12,4 +12,5 @@ public class ClientProfileUpdateParams
     public Patch<string?>? AccessCode { get; set; }
     public Patch<bool>? IsAccessCodeFromAccount { get; set; }
     public Patch<string[]?>? CustomServerEndpoints { get; set; }
+    public Patch<bool>? IsCustomServerEndpointsEnabled { get; set; }
 }

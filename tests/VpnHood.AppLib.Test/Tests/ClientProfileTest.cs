@@ -257,7 +257,8 @@ public class ClientProfileTest : TestAppBase
             SelectedLocation = "us/california",
             AccessCode = TestAppHelper.BuildAccessCode(),
             IsAccessCodeFromAccount = true,
-            CustomServerEndpoints = new Patch<string[]?>(["1.1.1.1:200", "1.1.1.2:200"])
+            CustomServerEndpoints = new Patch<string[]?>(["1.1.1.1:200", "1.1.1.2:200"]),
+            IsCustomServerEndpointsEnabled = false
         };
         app.ClientProfileService.Update(clientProfile.ClientProfileId, updateParams);
         clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
@@ -265,6 +266,7 @@ public class ClientProfileTest : TestAppBase
         Assert.AreEqual(updateParams.IsFavorite.Value, clientProfile.IsFavorite);
         CollectionAssert.AreEqual(updateParams.CustomServerEndpoints?.Value,
             clientProfile.CustomServerEndpoints?.Select(x => x.ToString()).ToArray());
+        Assert.AreEqual(updateParams.IsCustomServerEndpointsEnabled.Value, clientProfile.IsCustomServerEndpointsEnabled);
         Assert.AreEqual(updateParams.CustomData.Value, clientProfile.CustomData);
         Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.IsPremiumLocationSelected);
         Assert.AreEqual(updateParams.SelectedLocation.Value, clientProfile.SelectedLocation);

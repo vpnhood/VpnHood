@@ -24,4 +24,6 @@ public class ClientProfile
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? CustomServerEndpoints { get; set; }
+
+    public bool IsCustomServerEndpointsEnabled { get; set; } = true;
 }

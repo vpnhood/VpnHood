@@ -892,7 +892,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 DebugData1 = UserSettings.DebugData1,
                 DebugData2 = UserSettings.DebugData2,
                 SessionName = profileInfo.ClientProfileName,
-                CustomServerEndpoints = profileInfo.CustomServerEndpoints,
+                CustomServerEndpoints = profileInfo.IsCustomServerEndpointsEnabled ? profileInfo.CustomServerEndpoints : null,
                 AllowAlwaysOn = IsPremiumFeatureAllowed(AppFeature.AlwaysOn),
                 UserReview = Settings.UserReview
             };

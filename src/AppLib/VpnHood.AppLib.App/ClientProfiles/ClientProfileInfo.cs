@@ -28,6 +28,8 @@ public class ClientProfileInfo(ClientProfile clientProfile, AppFeatures appFeatu
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public IPEndPoint[]? CustomServerEndpoints => clientProfile.CustomServerEndpoints;
 
+    public bool IsCustomServerEndpointsEnabled => clientProfile.IsCustomServerEndpointsEnabled;
+
     public ClientServerLocationInfo? SelectedLocationInfo {
         get {
             var ret =

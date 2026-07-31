@@ -130,6 +130,9 @@ public class ClientProfileService
         if (updateParams.CustomServerEndpoints != null)
             item.CustomServerEndpoints = updateParams.CustomServerEndpoints.Value?.Select(ParseEndPoint).ToArray();
 
+        if (updateParams.IsCustomServerEndpointsEnabled != null)
+            item.IsCustomServerEndpointsEnabled = updateParams.IsCustomServerEndpointsEnabled.Value;
+
         if (updateParams.CustomData != null)
             item.CustomData = updateParams.CustomData.Value;
 

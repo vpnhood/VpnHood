@@ -21,4 +21,6 @@ public class ClientProfileBaseInfo
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     public required IPEndPoint[]? CustomServerEndpoints { get; init; }
+
+    public required bool IsCustomServerEndpointsEnabled { get; init; }
 }

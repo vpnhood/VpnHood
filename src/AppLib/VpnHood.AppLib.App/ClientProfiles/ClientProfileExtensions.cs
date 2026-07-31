@@ -20,6 +20,7 @@ public static class ClientProfileExtensions
             SelectedLocationInfo = clientProfileInfo.SelectedLocationInfo,
             HasAccessCode = !string.IsNullOrEmpty(clientProfileInfo.AccessCode),
             CustomServerEndpoints = clientProfileInfo.CustomServerEndpoints,
+            IsCustomServerEndpointsEnabled = clientProfileInfo.IsCustomServerEndpointsEnabled,
             CanGoPremium = clientProfileInfo.CanGoPremium,
             CanTryPremium = clientProfileInfo.CanTryPremium
         };

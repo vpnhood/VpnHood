@@ -13,7 +13,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Data.Sqlite" Version="$(MicrosoftDataSqliteVersion)" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.10" />
 		<!--Override the bundled native SQLite binary to a patched build. Microsoft.Data.Sqlite still pins the vulnerable
 		    SQLitePCLRaw.lib.e_sqlite3 2.1.11 (GHSA-2m69-gcr7-jv3q, e_sqlite3 <= 2.1.11); 3.50.3 ships patched SQLite.
 		    REMOVE THIS once MDS pins a patched SQLitePCLRaw: delete this line, build, and if NU1903 does not return it's

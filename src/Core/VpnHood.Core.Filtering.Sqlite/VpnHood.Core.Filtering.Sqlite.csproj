@@ -18,8 +18,8 @@
 
 		    Apple heads may later swap bundle_e_sqlite3 for SQLitePCLRaw.bundle_sqlite3 (system libsqlite3, no shipped
 		    native binary) to shrink the iOS binary.-->
-		<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.9" />
-		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+		<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.10" />
+		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
 	</ItemGroup>
 
 	<ItemGroup>

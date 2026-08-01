@@ -77,11 +77,11 @@ public sealed class IosSpaWebView : ISpaWebView
         // app background color (not white), so the system bars blend into the app like Android.
         _webView.ScrollView.BackgroundColor = _backgroundColor;
 
-        // set the rubber-band over-scroll bounce: the SPA is app UI, not a scrollable web
+        // Disable the rubber-band over-scroll bounce: the SPA is app UI, not a scrollable web
         // document, so dragging the whole page and having it snap back looks broken (and Android's
         // WebView doesn't do it). Overflowing content still scrolls normally; it just stops hard at
         // the edges instead of bouncing.
-        _webView.ScrollView.Bounces = true;
+        _webView.ScrollView.Bounces = false;
 
         // True edge-to-edge: by default WKWebView auto-insets content for the safe area, which would
         // double up with the SPA's own SystemBarsInfo padding. Disable the automatic inset so the page

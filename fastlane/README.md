@@ -82,23 +82,95 @@ Available on iOS and safe to promote: Cloak Mode (`IosDevice.IsTcpProxySupported
 tunneling by country / domain / IP address / local network, custom (adapter) DNS, TCP & UDP channel
 protocols, IPv4 + IPv6, and adding server keys (`IsAddAccessKeySupported` = `true`).
 
-### Screenshots
+### App icon
 
-Apple requires 6.9" iPhone captures (**1290 × 2796**), up to 10 per locale, numbered `1_en-US.png` …
+App Store Connect takes the 1024 icon from the **binary**, not from deliver — there is no icon file
+in `fastlane/` for iOS. It must carry no alpha channel: Apple rejects on the channel being present
+(ITMS-90717), not on any pixel being translucent.
+[`e2e/store-icon.mjs`](../../VpnHood.Client.WebUI/e2e/store-icon.mjs) re-encodes the appiconset to
+PNG colour type 2, and refuses any icon with real translucency rather than guessing a backdrop:
 
-The current four are Android captures rescaled to the iPhone frame, kept only because the screens they
-show render identically on iOS. **They still need to be re-captured on an iPhone (or the iOS Simulator)
-running the iOS build** — a rescaled Android frame is not a screenshot of this app.
+```bash
+node e2e/store-icon.mjs --in-place
+```
 
-Screens to capture, in listing order:
+---
 
-1. **Home, connected** — must be shot on iOS: the Android capture shows a `SPLIT APPS` row that the iOS
-   build hides. This is the hero screenshot and the listing is currently missing it.
-2. **Servers** — profiles + *Add server*.
-3. **Protocols** — Cloak Mode / Block QUIC / TCP · UDP.
-4. **Cloak Mode** — the feature explainer page.
-5. **Split Tunneling** — the split-tunneling index (the shipped page, redesigned since the current capture).
-6. **DNS** — must be shot on iOS: the Android capture shows the *Private DNS* card, which the iOS build hides.
+## 🖼 Updating store screenshots
+
+The two stores are fed differently. Read this before re-shooting anything.
+
+| | Google Play | App Store |
+| --- | --- | --- |
+| Lives in | `fastlane/metadata/android/en-US/images/phoneScreenshots/`, `…/tvScreenshots/` | `fastlane/screenshots/ios/en-US/` |
+| Size | 1440 × 2960 (phone) | 1290 × 2796 (iPhone 6.9"), 2064 × 2752 (iPad 13") |
+| Naming | `N_en-US.png` | `N_en-US.png`, `ipad_N_en-US.png` |
+| Framed? | No — bare captures | **Yes** — every one is wrapped in a device mockup |
+| Produced by | Captured by hand on a device/emulator and committed | [`e2e/store-screenshots.mjs`](../../VpnHood.Client.WebUI/e2e/store-screenshots.mjs) |
+| Uploaded by | `supply`, in the `playstore` / `publish_contents` lanes | `deliver`, in the `ios upload_metadata` lane |
+
+deliver assigns each iOS screenshot to a device slot by its **pixel size**, not its filename, so the
+`ipad_` prefix is only there to keep the two sets apart for humans; both live in the same locale
+folder.
+
+### Re-shooting the iOS set
+
+Start the **Release** Windows client on `:4700` and connect it, then from the VpnHood.Client.WebUI
+repo:
+
+```bash
+node e2e/store-screenshots.mjs --api http://127.0.0.1:4700 --speed 120/90
+```
+
+That captures both device sets, frames them, and writes to `test-results/store-screenshots/framed/`.
+Copy those into `fastlane/screenshots/ios/en-US/`. Useful flags: `--only 3` for one screen,
+`--device ipad-13` for one device, `--frame-only` to re-frame without re-capturing.
+
+A Windows client is a valid source because iOS and Windows serve the same SPA and gate the same
+features off, per the table further up — which is also why the script aborts on a Debug build, where
+the app name renders as "VpnHood! Client (DEBUG)" and `WinDevice` re-enables app splitting. What it
+cannot reproduce is the real WebKit rasterizer; re-shoot on a device if that ever matters.
+
+Screens, in listing order:
+
+1. **Home, connected** — the hero. `--speed <down>/<up>` pins the live meter to a representative
+   figure; only ever use throughput the product actually sustains, it is a claim on a store page
+2. **Servers** — reused from the Play Store set, see below
+3. **Protocols** — Cloak Mode / Block QUIC / TCP · UDP · QUIC
+4. **Cloak Mode** — the feature explainer page
+5. **Split Tunneling** — the "IP Leak Risk" chip is hidden for the capture: an accurate caution about
+   a user-chosen setting, but out of context on a store page it reads as a claim about the product
+6. **DNS** — Adapter DNS only, since the iOS build hides the Private DNS card
+
+The navigation drawer is excluded on purpose — it shows profile names and session identifiers.
+
+### Sharing one image between the two stores
+
+Most screens render identically on every platform, so a shot may name a static `source` instead of a
+`route` and skip the live capture entirely:
+
+```js
+{
+  num: '2', label: 'Servers',
+  source: '../VpnHood/fastlane/metadata/android/en-US/images/phoneScreenshots/2_en-US.png',
+}
+```
+
+The frame pass fits and crops that PNG into each device's content box, so one file serves both the
+iPhone and the iPad slot. Shot 2 uses it because the Play Store capture carries **sanitised demo
+profiles with masked IPs**, where a live capture would put the real profile names, SIDs and server
+IPs of whichever machine ran the script straight onto the listing.
+
+Two things to watch when reusing an image:
+
+- **Only for screens with nothing platform-gated.** Check it against the iOS feature table above
+  first — an Android capture of the home screen would carry a `SPLIT APPS` row the iOS build hides.
+- **Resolution.** The frame downsamples, so a source larger than the target content box stays sharp
+  and a smaller one gets upscaled. The 1440 × 2960 Play Store captures are comfortable for iPhone and
+  a slight (~1.1×) upscale for iPad.
+
+A run made only of static-source shots needs neither the client nor a browser page, so it works with
+nothing running.
 
 ---
 ## Further Information

@@ -14,7 +14,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="VpnHood.Core.Quic.MsQuic.AndroidNative" Version="8.0.5" />
+	  <PackageReference Include="VpnHood.Core.Quic.MsQuic.AndroidNative" Version="8.0.7" />
 	</ItemGroup>
 
 	<ItemGroup>

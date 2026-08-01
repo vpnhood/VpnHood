@@ -1,4 +1,4 @@
-﻿<Project Sdk="MSTest.Sdk/4.3.0">
+﻿<Project Sdk="MSTest.Sdk/4.3.3">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<IsPackable>false</IsPackable>
@@ -10,7 +10,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.9" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.10" />
 		<PackageReference Include="PacketDotNet" Version="1.4.9-pre53" />
 	</ItemGroup>
 
@@ -39,6 +39,10 @@
 
 	<ItemGroup>
 	  <PackageReference Update="MSTest.TestFramework" Version="4.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.8.1" />
 	</ItemGroup>
 
 </Project>

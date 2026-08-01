@@ -102,8 +102,10 @@ links its own OpenSSL, so no `libcrypto`/`libssl`/.NET-OpenSSL-shim is needed.
   `.so` is produced (`build-android.ps1`); the package commits the binary so consumers never build it.
 - The `<AndroidNativeLibrary>` items in that package flow **transitively** into any consuming APK
   (`lib/<abi>/libmsquic.so`), through this project and on to the app.
-- Only **arm64-v8a** and **x86_64** are produced. 32-bit devices have no `libmsquic.so`, so
-  `IsQuicSupported` is `false` there and the client transparently falls back to TCP.
+- **arm64-v8a**, **armeabi-v7a** and **x86_64** are produced (armeabi-v7a since package 8.0.7 —
+  many Android TVs run a 32-bit userland), covering every ABI the apps publish. Should the lib ever
+  be missing for an ABI, `IsQuicSupported` is `false` there and the client transparently falls back
+  to TCP.
 
 Wiring: `AndroidQuicSocketFactory` (returned by `AndroidVpnService`) exposes `IsQuicSupported` /
 `CreateQuicClient()` → `AndroidQuicClient`. QUIC engages only when the client's `ChannelProtocol`

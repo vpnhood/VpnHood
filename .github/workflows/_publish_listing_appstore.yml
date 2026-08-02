@@ -1,9 +1,20 @@
 name: Publish Listing · App Store (module)
 
-# Pushes ONE app's App Store LISTING (text + screenshots) through fastlane deliver — never a binary.
-# Called by publish_listing.yml. Like every reusable workflow here it runs in the ORIGINAL caller's
-# context, so a bare checkout lands on whichever store-asset repo started the run (Vpnhood.App.Client
-# / Vpnhood.App.Connect) and reads that repo's fastlane/ tree and ios upload_metadata lane.
+# Pushes ONE app's App Store LISTING — never a binary. Called by publish_listing.yml. Like every
+# reusable workflow here it runs in the ORIGINAL caller's context, so a bare checkout lands on
+# whichever store-asset repo started the run (Vpnhood.App.Client / Vpnhood.App.Connect) and reads
+# that repo's fastlane/ tree and ios upload_metadata lane.
+#
+# The push is split in two on purpose:
+#   text        fastlane deliver (skip_screenshots) — small payload, reliable.
+#   screenshots store-asc-screenshots.mjs from the WebUI repo — a checksum SYNC, not deliver.
+# deliver's own screenshot mode deletes every screenshot on the version and re-creates all of them
+# each run; Apple's deletes are eventually consistent, so a re-created file can collide with a
+# half-deleted ghost, the API 500s that write, and deliver retries forever — that wedged this
+# workflow four times, and a cancelled run then leaves the surviving screenshots scrambled (they
+# sit in upload-completion order). The sync tool touches only files that actually differ (by
+# fileName + sourceFileChecksum), retries 5xx with backoff, restores display order, and names the
+# exact file if one fails. An unchanged listing is a no-op in seconds.
 #
 # Missing credentials are NOT an error. A fork may ship on Google Play and not the App Store, so an
 # absent key warns, reports published=false and stays green — the convention documented in
@@ -17,26 +28,33 @@ on:
         description: "iOS bundle identifier whose listing is being pushed (e.g. com.vpnhood.client.ios)."
         type: string
         required: true
+      webui_ref:
+        description: "vpnhood/VpnHood.Client.WebUI ref supplying the screenshot sync tool."
+        type: string
+        required: false
+        default: develop
       skip_metadata:
-        description: "Push screenshots only. Used by the FIRST-version two-pass workaround."
+        description: "Skip the text push (screenshots only)."
         type: boolean
         required: false
         default: false
       skip_screenshots:
-        description: "Push text only. Used by the FIRST-version two-pass workaround."
+        description: "Skip the screenshot sync (text only)."
         type: boolean
         required: false
         default: false
     outputs:
       published:
-        description: "true only when deliver actually ran, so the caller knows whether to record state."
+        description: "true only when the push actually ran, so the caller knows whether to record state."
         value: ${{ jobs.appstore.outputs.published }}
 
 jobs:
   appstore:
     runs-on: ubuntu-latest
+    # The old delete-everything path could spin on Apple's 500s for hours; nothing here should.
+    timeout-minutes: 30
     outputs:
-      published: ${{ steps.push.outputs.published }}
+      published: ${{ steps.done.outputs.published }}
     env:
       # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
       APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
@@ -53,34 +71,32 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Set up Ruby
-        if: env.APPSTORE_CONNECT_API_KEY != ''
+        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_metadata != true
         uses: ruby/setup-ruby@v1
         with: { ruby-version: "3.3", bundler-cache: false }
 
       - name: Install Fastlane
-        if: env.APPSTORE_CONNECT_API_KEY != ''
+        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_metadata != true
         run: gem install fastlane --no-document
 
       # Build the fastlane App Store Connect API-key JSON from the three secrets (never echoed).
       - name: Write ASC API key
-        if: env.APPSTORE_CONNECT_API_KEY != ''
+        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_metadata != true
         run: |
           mkdir -p asc
           jq -n --arg kid "$APPSTORE_CONNECT_API_KEY_ID" --arg iss "$APPSTORE_CONNECT_ISSUER_ID" --arg key "$APPSTORE_CONNECT_API_KEY" \
             '{key_id:$kid, issuer_id:$iss, key:$key, in_house:false}' > asc/api_key.json
 
-      - name: Push the App Store listing (Fastlane deliver)
-        id: push
-        if: env.APPSTORE_CONNECT_API_KEY != ''
+      - name: Push the listing text (Fastlane deliver)
+        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_metadata != true
         run: |
           set -o pipefail
-          echo "🚀 Publishing the App Store listing for ${{ inputs.app_identifier }}"
+          echo "🚀 Publishing the App Store listing text for ${{ inputs.app_identifier }}"
           if fastlane ios upload_metadata \
                app_identifier:"${{ inputs.app_identifier }}" \
-               skip_metadata:"${{ inputs.skip_metadata }}" \
-               skip_screenshots:"${{ inputs.skip_screenshots }}" 2>&1 | tee fastlane.log; then
-            echo "published=true" >> "$GITHUB_OUTPUT"
-            echo "✅ App Store listing published"
+               skip_metadata:"false" \
+               skip_screenshots:"true" 2>&1 | tee fastlane.log; then
+            echo "✅ App Store listing text published"
           else
             # Surface fastlane's REAL error as an annotation at the top of the run instead of the bare
             # "Process completed with exit code 1". fastlane prints failures as "[!] <message>" and
@@ -89,6 +105,31 @@ jobs:
                   | grep -E '^\[!\]|Error:' | tail -6 | sed 's/^\[!\] *//' \
                   | tr '\n' ' ' | sed 's/  */ /g')
             [ -z "$ERR" ] && ERR="fastlane deliver failed with no captured message — see the step log."
-            echo "::error title=App Store listing push failed::${ERR}"
+            echo "::error title=App Store listing text push failed::${ERR}"
             exit 1
           fi
+
+      # The sync tool ships with the screenshot engine that generates these images. It has no npm
+      # dependencies — Node built-ins only — so no install step is needed.
+      - name: Checkout the store tooling
+        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_screenshots != true
+        uses: actions/checkout@v5
+        with:
+          repository: vpnhood/VpnHood.Client.WebUI
+          ref: ${{ inputs.webui_ref }}
+          path: .webui
+
+      - name: Set up Node.js
+        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_screenshots != true
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Sync the listing screenshots (checksum diff)
+        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_screenshots != true
+        run: node .webui/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE"
+
+      - name: Report published
+        id: done
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        run: echo "published=true" >> "$GITHUB_OUTPUT"

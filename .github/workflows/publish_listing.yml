@@ -105,6 +105,7 @@ jobs:
     uses: ./.github/workflows/_publish_listing_appstore.yml
     with:
       app_identifier: ${{ inputs.app_identifier }}
+      webui_ref: ${{ inputs.webui_ref }}
       skip_metadata: ${{ inputs.skip_metadata }}
       skip_screenshots: ${{ inputs.skip_screenshots }}
     secrets: inherit

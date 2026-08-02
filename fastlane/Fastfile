@@ -18,9 +18,13 @@ default_platform(:android)
 platform :android do
   desc "Upload AAB to Google Play"
   lane :playstore do |options|
-    # skip_metadata:"true" uploads the binary ONLY and leaves the live store listing (metadata,
-    # images, screenshots, changelogs) untouched. Default (false) uploads the full listing too.
-    skip_meta = options[:skip_metadata].to_s == 'true'
+    # A RELEASE uploads the binary and its changelog — never the store listing. The listing (title,
+    # descriptions, images, screenshots) is published by publish_listing.yml from the store-asset
+    # repo, which gates on what actually changed. Letting a release push it too would bypass that
+    # gate and, worse, upload THIS repo's copy of the listing: for CLIENT the maintained 13-locale
+    # listing lives in Vpnhood.App.Client, so a release used to overwrite it with the stale en-US
+    # copy left behind here. Changelogs are the exception — they are per-version release content,
+    # keyed by version code, so they belong to the release and stay on.
     upload_params = {
         aab: options[:aab],
         json_key_data: ENV['GOOGLE_PLAY_API_KEY'],
@@ -28,11 +32,11 @@ platform :android do
         version_name: options[:version_name],
         version_code: options[:version_code],
         skip_upload_apk: true,
-        skip_upload_screenshots: skip_meta,
-        skip_upload_images: skip_meta,
-        skip_upload_metadata: skip_meta,
-        skip_upload_changelogs: skip_meta,
-        sync_image_upload: !skip_meta,
+        skip_upload_screenshots: true,
+        skip_upload_images: true,
+        skip_upload_metadata: true,
+        skip_upload_changelogs: false,
+        sync_image_upload: false,
         # A staged rollout (fraction < 1, e.g. 0.01 = 1%) must be 'inProgress'; a full release is
         # 'completed'. Passing rollout with 'completed' is rejected by the Play API.
         release_status: (options[:rollout].to_s.empty? || options[:rollout].to_f >= 1.0) ? 'completed' : 'inProgress'

@@ -1,0 +1,66 @@
+name: Publish Listing · Google Play (module)
+
+# Pushes ONE app's Google Play LISTING (text, graphics, screenshots) through fastlane supply — never
+# an AAB. Called by publish_listing.yml, and like the App Store module it runs in the ORIGINAL
+# caller's context, so a bare checkout lands on the store-asset repo that started the run and uses
+# that repo's fastlane/ tree and android publish_contents lane.
+#
+# Missing credentials are NOT an error: a fork may ship on the App Store and not Play. Absent key ->
+# warning, published=false, job stays green (see .github/DEPLOYMENT.md). A key that IS present but
+# fails to push fails the job loudly.
+#
+# Play listing content is shared across tracks and attaches to the newest PRODUCTION version code,
+# which the publish_contents lane resolves. An app with nothing on production yet therefore has no
+# listing to update — that surfaces as a real failure rather than a silent success, on purpose.
+
+on:
+  workflow_call:
+    outputs:
+      published:
+        description: "true only when supply actually ran, so the caller knows whether to record state."
+        value: ${{ jobs.play.outputs.published }}
+
+jobs:
+  play:
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.push.outputs.published }}
+    env:
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      GOOGLE_PLAY_API_KEY: ${{ secrets.GOOGLE_PLAY_API_KEY }}
+    steps:
+      - name: Skip if this fork has no Google Play credentials
+        if: env.GOOGLE_PLAY_API_KEY == ''
+        run: echo "::warning title=Google Play listing skipped::GOOGLE_PLAY_API_KEY is not set; the Play listing was NOT updated. Add GOOGLE_PLAY_API_KEY (see .github/DEPLOYMENT.md) to enable it."
+
+      # Bare checkout on purpose: github.repository is the store-asset repo that started the run.
+      - name: Checkout the store assets (caller repo)
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        uses: actions/checkout@v5
+
+      - name: Set up Ruby
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        uses: ruby/setup-ruby@v1
+        with: { ruby-version: "3.3", bundler-cache: false }
+
+      - name: Install Fastlane
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        run: gem install fastlane --no-document
+
+      - name: Push the Google Play listing (Fastlane supply)
+        id: push
+        if: env.GOOGLE_PLAY_API_KEY != ''
+        run: |
+          set -o pipefail
+          echo "🚀 Publishing the Google Play listing"
+          if fastlane android publish_contents 2>&1 | tee fastlane.log; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Google Play listing published"
+          else
+            ERR=$(sed -E $'s/\x1b\\[[0-9;]*m//g' fastlane.log \
+                  | grep -E '^\[!\]|Error:' | tail -6 | sed 's/^\[!\] *//' \
+                  | tr '\n' ' ' | sed 's/  */ /g')
+            [ -z "$ERR" ] && ERR="fastlane supply failed with no captured message — see the step log."
+            echo "::error title=Google Play listing push failed::${ERR}"
+            exit 1
+          fi

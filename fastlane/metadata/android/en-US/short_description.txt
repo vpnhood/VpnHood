@@ -1,1 +1,0 @@
-Self-hosted, secure, and open-source VPN client (require server key)

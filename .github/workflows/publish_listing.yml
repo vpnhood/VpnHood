@@ -1,0 +1,166 @@
+name: Publish Listing (all stores)
+
+# Publishes an app's STORE LISTING — the localized texts and screenshots — to every store it ships
+# on. No binaries: those travel through publish_app.yml, and the two are siblings rather than one
+# nested in the other (nesting reusable workflows is capped at four levels, and a listing is not a
+# sub-step of building a binary).
+#
+# Called by a thin stub in each store-asset repo, so it runs in THAT repo's context: a bare checkout
+# in the modules lands on the calling repo's fastlane/ tree, and the token that records the published
+# state belongs to the calling repo. That is what keeps this PAT-free — the shared logic lives here,
+# but it only ever writes to whoever called it.
+#
+#   this workflow ── gate ──> _publish_listing_appstore.yml   (fastlane deliver)
+#                     │  └──> _publish_listing_play.yml       (fastlane supply)
+#                     │  └──> Microsoft Store, once a tool is chosen (fastlane has no support)
+#                     └────── record: commits the published fingerprints back to the caller
+#
+# The gate exists because fastlane never compares against the live listing — supply and deliver
+# upload whatever is on disk every run, and our iOS lane overwrites screenshots, so an unconditional
+# publish re-uploads every screenshot in every locale even when nothing changed. store-publish-state
+# fingerprints what each store would receive and compares it with what was last published.
+#
+# Secrets: the caller passes `secrets: inherit`. Each module treats ITS OWN credential as optional —
+# absent means that store is skipped with a warning and the job stays green, so a fork that ships on
+# only one store still gets a green run (see .github/DEPLOYMENT.md).
+
+on:
+  workflow_call:
+    inputs:
+      app_identifier:
+        description: "iOS bundle identifier of the app whose listing is being published."
+        type: string
+        required: true
+      webui_ref:
+        description: "vpnhood/VpnHood.Client.WebUI ref supplying the store tooling."
+        type: string
+        required: false
+        default: develop
+      force:
+        description: "Publish even when a store's listing is byte-identical to the last published one."
+        type: boolean
+        required: false
+        default: false
+      skip_metadata:
+        description: "App Store only: push screenshots without text (FIRST-version two-pass workaround)."
+        type: boolean
+        required: false
+        default: false
+      skip_screenshots:
+        description: "App Store only: push text without screenshots (FIRST-version two-pass workaround)."
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      appstore: ${{ steps.decide.outputs.appstore }}
+      play: ${{ steps.decide.outputs.play }}
+    steps:
+      - name: Checkout the store assets (caller repo)
+        uses: actions/checkout@v5
+
+      # The store tooling lives beside the generators that produce this listing. store-publish-state
+      # uses only Node built-ins, so there is nothing to install.
+      - name: Checkout the store tooling
+        uses: actions/checkout@v5
+        with:
+          repository: vpnhood/VpnHood.Client.WebUI
+          ref: ${{ inputs.webui_ref }}
+          path: .webui
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Compare against the last published listing
+        id: state
+        run: node .webui/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE"
+
+      # One decision per store, so the module conditions stay readable. A partial App Store pass
+      # states its own intent and therefore bypasses the gate.
+      - name: Decide which stores to publish
+        id: decide
+        run: |
+          if [ "${{ steps.state.outputs.ios_changed }}" = "true" ] || [ "${{ inputs.force }}" = "true" ] \
+             || [ "${{ inputs.skip_metadata }}" = "true" ] || [ "${{ inputs.skip_screenshots }}" = "true" ]; then
+            echo "appstore=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "appstore=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=App Store listing unchanged::Identical to the last published listing; nothing was sent. Re-run with force=true to push anyway."
+          fi
+          if [ "${{ steps.state.outputs.android_changed }}" = "true" ] || [ "${{ inputs.force }}" = "true" ]; then
+            echo "play=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "play=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Google Play listing unchanged::Identical to the last published listing; nothing was sent. Re-run with force=true to push anyway."
+          fi
+
+  appstore:
+    needs: [gate]
+    if: needs.gate.outputs.appstore == 'true'
+    uses: ./.github/workflows/_publish_listing_appstore.yml
+    with:
+      app_identifier: ${{ inputs.app_identifier }}
+      skip_metadata: ${{ inputs.skip_metadata }}
+      skip_screenshots: ${{ inputs.skip_screenshots }}
+    secrets: inherit
+
+  play:
+    needs: [gate]
+    if: needs.gate.outputs.play == 'true'
+    uses: ./.github/workflows/_publish_listing_play.yml
+    secrets: inherit
+
+  # Records ONLY what actually went out. A module that skipped for want of credentials reports
+  # published=false, so a fork without a given store never records a publish it did not make — which
+  # would otherwise make the gate skip that store forever once the credentials arrived.
+  record:
+    needs: [gate, appstore, play]
+    if: always() && (needs.appstore.outputs.published == 'true' || needs.play.outputs.published == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # writes the fingerprints back into the CALLER repo, with the caller's token
+    steps:
+      - name: Checkout the store assets (caller repo)
+        uses: actions/checkout@v5
+
+      - name: Checkout the store tooling
+        uses: actions/checkout@v5
+        with:
+          repository: vpnhood/VpnHood.Client.WebUI
+          ref: ${{ inputs.webui_ref }}
+          path: .webui
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      # A partial App Store pass sends half the listing, so recording it would make the gate skip the
+      # other half as "already published". Only a complete push may be recorded.
+      - name: Record the App Store listing
+        if: needs.appstore.outputs.published == 'true' && !inputs.skip_metadata && !inputs.skip_screenshots
+        run: node .webui/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update ios
+
+      - name: Record the Google Play listing
+        if: needs.play.outputs.published == 'true'
+        run: node .webui/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE" --update android
+
+      - name: Commit the published fingerprints
+        run: |
+          # Stage FIRST, then compare the index: on the very first publish the file is untracked, and
+          # `git diff` ignores untracked files — it would report "no changes" and the publish would
+          # never be recorded, leaving the gate to re-push the same listing on every run.
+          git add fastlane/publish-state.json
+          if git diff --cached --quiet -- fastlane/publish-state.json; then
+            echo "publish-state.json already current — nothing to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: record published store listing"
+          git push

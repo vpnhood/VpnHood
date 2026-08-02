@@ -1,0 +1,94 @@
+name: Publish Listing · App Store (module)
+
+# Pushes ONE app's App Store LISTING (text + screenshots) through fastlane deliver — never a binary.
+# Called by publish_listing.yml. Like every reusable workflow here it runs in the ORIGINAL caller's
+# context, so a bare checkout lands on whichever store-asset repo started the run (Vpnhood.App.Client
+# / Vpnhood.App.Connect) and reads that repo's fastlane/ tree and ios upload_metadata lane.
+#
+# Missing credentials are NOT an error. A fork may ship on Google Play and not the App Store, so an
+# absent key warns, reports published=false and stays green — the convention documented in
+# .github/DEPLOYMENT.md ("Absent → skipped with a warning (the job stays green)"). A key that IS
+# present but fails to push fails the job loudly.
+
+on:
+  workflow_call:
+    inputs:
+      app_identifier:
+        description: "iOS bundle identifier whose listing is being pushed (e.g. com.vpnhood.client.ios)."
+        type: string
+        required: true
+      skip_metadata:
+        description: "Push screenshots only. Used by the FIRST-version two-pass workaround."
+        type: boolean
+        required: false
+        default: false
+      skip_screenshots:
+        description: "Push text only. Used by the FIRST-version two-pass workaround."
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      published:
+        description: "true only when deliver actually ran, so the caller knows whether to record state."
+        value: ${{ jobs.appstore.outputs.published }}
+
+jobs:
+  appstore:
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.push.outputs.published }}
+    env:
+      # Mapped to env so steps can test presence in `if:` (the `secrets` context isn't allowed there).
+      APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
+      APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
+      APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+    steps:
+      - name: Skip if this fork has no App Store credentials
+        if: env.APPSTORE_CONNECT_API_KEY == ''
+        run: echo "::warning title=App Store listing skipped::APPSTORE_CONNECT_API_KEY is not set; the App Store listing was NOT updated. Add APPSTORE_CONNECT_API_KEY/_API_KEY_ID/_ISSUER_ID (see .github/DEPLOYMENT.md) to enable it."
+
+      # Bare checkout on purpose: github.repository is the store-asset repo that started the run.
+      - name: Checkout the store assets (caller repo)
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        uses: actions/checkout@v5
+
+      - name: Set up Ruby
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        uses: ruby/setup-ruby@v1
+        with: { ruby-version: "3.3", bundler-cache: false }
+
+      - name: Install Fastlane
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        run: gem install fastlane --no-document
+
+      # Build the fastlane App Store Connect API-key JSON from the three secrets (never echoed).
+      - name: Write ASC API key
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        run: |
+          mkdir -p asc
+          jq -n --arg kid "$APPSTORE_CONNECT_API_KEY_ID" --arg iss "$APPSTORE_CONNECT_ISSUER_ID" --arg key "$APPSTORE_CONNECT_API_KEY" \
+            '{key_id:$kid, issuer_id:$iss, key:$key, in_house:false}' > asc/api_key.json
+
+      - name: Push the App Store listing (Fastlane deliver)
+        id: push
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        run: |
+          set -o pipefail
+          echo "🚀 Publishing the App Store listing for ${{ inputs.app_identifier }}"
+          if fastlane ios upload_metadata \
+               app_identifier:"${{ inputs.app_identifier }}" \
+               skip_metadata:"${{ inputs.skip_metadata }}" \
+               skip_screenshots:"${{ inputs.skip_screenshots }}" 2>&1 | tee fastlane.log; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "✅ App Store listing published"
+          else
+            # Surface fastlane's REAL error as an annotation at the top of the run instead of the bare
+            # "Process completed with exit code 1". fastlane prints failures as "[!] <message>" and
+            # deliver adds "Error: <detail>".
+            ERR=$(sed -E $'s/\x1b\\[[0-9;]*m//g' fastlane.log \
+                  | grep -E '^\[!\]|Error:' | tail -6 | sed 's/^\[!\] *//' \
+                  | tr '\n' ' ' | sed 's/  */ /g')
+            [ -z "$ERR" ] && ERR="fastlane deliver failed with no captured message — see the step log."
+            echo "::error title=App Store listing push failed::${ERR}"
+            exit 1
+          fi

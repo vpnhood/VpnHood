@@ -2,7 +2,10 @@
 
 What this repo's iOS apps (and any fork) must do about Apple's encryption/export-compliance
 questions. Companion to [EXPORT_COMPLIANCE.md](EXPORT_COMPLIANCE.md) (the public cryptographic
-classification). Not legal advice; a fork makes its own declarations under its own name.
+classification), [APP_STORE_PRIVACY.md](APP_STORE_PRIVACY.md) (the App Privacy questionnaire and
+other App Store legal checkpoints), and [APP_STORE_TERRITORIES.md](APP_STORE_TERRITORIES.md)
+(which storefronts to deselect). Not legal advice; a fork makes its own declarations under its
+own name.
 
 ## TL;DR — it is already handled
 

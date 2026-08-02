@@ -7,7 +7,7 @@
 	<string>com.vpnhood.client.ios.networkextension</string>
 	<!-- false = "no encryption requiring Apple export-compliance documentation" — mirrors the host app;
 	     standards-body crypto only, no France. NEVER true (true-without-code is rejected at upload,
-	     error 90592, and the non-France flow issues no code). See docs/legal/APP_STORE_EXPORT_COMPLIANCE.md. -->
+	     error 90592, and the non-France flow issues no code). See docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<!-- Version injected from ApplicationDisplayVersion / ApplicationVersion — the app's publish passes

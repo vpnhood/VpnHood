@@ -12,7 +12,7 @@
 	     compliance questions. NEVER set true — true requires an Apple-issued
 	     ITSEncryptionExportComplianceCode in the binary, the non-France flow issues none, and altool then
 	     rejects every upload (error 90592). The real export-law duty is the annual BIS self-classification
-	     report (5D992.c). See docs/legal/APP_STORE_EXPORT_COMPLIANCE.md. -->
+	     report (5D992.c). See docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<!-- CFBundleShortVersionString / CFBundleVersion are injected by the .NET iOS SDK from

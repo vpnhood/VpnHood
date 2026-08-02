@@ -224,7 +224,7 @@ every store leg it is **skip-with-warning** when its secrets are absent, but not
   per-build compliance questions. **Never flip it to `true`**: true requires an Apple-issued code
   the non-France flow never grants, and every upload is then rejected with error 90592. Semantics,
   the one-time wizard, the BIS annual report, and the description text Apple asks for are all in
-  [docs/legal/APP_STORE_EXPORT_COMPLIANCE.md](../docs/legal/APP_STORE_EXPORT_COMPLIANCE.md).
+  [docs/legal/APP_STORE_EXPORT_COMPLIANCE.md](../docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md).
 
 Secrets: `APPLE_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE64`,
 `IOS_PROVISION_EXT_BASE64` (build/signing) and `APPSTORE_CONNECT_API_KEY` + `_API_KEY_ID` +

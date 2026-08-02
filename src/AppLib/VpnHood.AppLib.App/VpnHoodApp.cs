@@ -179,6 +179,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             AutoRemoveExpiredPremium = options.AutoRemoveExpiredPremium,
             AllowEndPointStrategy = options.AllowEndPointStrategy,
             IsTv = device.IsTv,
+            OsType = GetOsType(),
             AdjustForSystemBars = options.AdjustForSystemBars,
             UiName = options.UiName,
             IsAccountSupported = options.AccountProvider != null,
@@ -1293,6 +1294,19 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         };
 
         return purchaseOptions;
+    }
+
+    // Mac Catalyst is checked BEFORE iOS on purpose: OperatingSystem.IsIOS() reports true for Catalyst
+    // too, so testing iOS first would label a Mac build as an iPhone and hide/show the wrong content.
+    private static AppOsType GetOsType()
+    {
+        if (OperatingSystem.IsAndroid()) return AppOsType.Android;
+        if (OperatingSystem.IsMacCatalyst()) return AppOsType.MacOs;
+        if (OperatingSystem.IsIOS()) return AppOsType.Ios;
+        if (OperatingSystem.IsWindows()) return AppOsType.Windows;
+        if (OperatingSystem.IsMacOS()) return AppOsType.MacOs;
+        if (OperatingSystem.IsLinux()) return AppOsType.Linux;
+        return AppOsType.Unknown;
     }
 
     private static string CreateClientId(string appId, string deviceId)

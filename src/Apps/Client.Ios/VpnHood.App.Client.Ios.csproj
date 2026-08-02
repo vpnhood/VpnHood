@@ -16,6 +16,13 @@
 
   </PropertyGroup>
 
+  <!-- Apple's privacy manifest. MUST sit at the ROOT of the .app bundle for App Store Connect's scanner
+       to find it, hence the explicit LogicalName; without it the file would be nested under its source
+       path and the upload still fails ITMS-91053. The .appex carries its own copy (see that csproj). -->
+  <ItemGroup>
+    <BundleResource Include="PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+  </ItemGroup>
+
   <!-- Optional private app settings (from the external ".user" folder, sibling to the solution) embedded as
        resources. Mirrors Client.Android.Web. Conditional so a fork without them still builds; AppConfigs
        reads them at startup via AppConfigsBase.LoadConfig(). Client is bring-your-own-key, so unlike Connect

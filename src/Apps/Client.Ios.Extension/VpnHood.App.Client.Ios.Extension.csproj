@@ -41,6 +41,12 @@
     <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="9" />
   </ItemGroup>
 
+  <!-- Apple's privacy manifest for this .appex. An extension is scanned as its own bundle, so the host
+       app's manifest does not cover it; LogicalName puts this at the root of the .appex. -->
+  <ItemGroup>
+    <BundleResource Include="PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+  </ItemGroup>
+
   <ItemGroup>
     <!-- The iOS Network Extension implementation (abstract IosVpnService) lives in the core Device.iOS
          project and transitively references the VpnServiceHost + iOSTun adapter. This project only adds

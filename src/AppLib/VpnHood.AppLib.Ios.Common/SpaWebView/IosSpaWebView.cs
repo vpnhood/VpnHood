@@ -148,6 +148,43 @@ public sealed class IosSpaWebView : ISpaWebView
 
     private sealed class NavDelegate(IosSpaWebView owner) : WKNavigationDelegate
     {
+        // Keeps the SPA in its own WebView. A main-frame navigation to a web page would REPLACE the app
+        // UI with that page — no browser chrome, no back button, no way home, and the loopback server the
+        // SPA is served from is gone the moment the app backgrounds, so it reads as a crash. target="_blank"
+        // avoids that by going through the UI delegate, but relying on it means every link author AND every
+        // machine-regenerated translation that carries an <a> has to remember the attribute; one that
+        // doesn't, kills the app. So the invariant is enforced here rather than asked for at each call site.
+        // Android has always done this (AndroidSpaWebViewClient.ShouldOverrideUrlLoading); this is parity.
+        public override void DecidePolicy(WKWebView webView, WKNavigationAction navigationAction,
+            Action<WKNavigationActionPolicy> decisionHandler)
+        {
+            var url = navigationAction.Request.Url;
+
+            // A null TargetFrame means "open in a new window" (target="_blank"/window.open): allow it so
+            // the UI delegate still gets it and routes through IosReportViewer, which additionally keeps
+            // loopback URLs — the log/report — in the in-app viewer that external Safari cannot reach.
+            // Sub-frame loads are the page's own business. Loopback IS the SPA, so its initial load and
+            // reloads must proceed or the UI never appears. Non-http(s) schemes (about:, blob:) are
+            // WKWebView's internal plumbing and must not be handed to the system browser.
+            if (navigationAction.TargetFrame?.MainFrame != true ||
+                url?.AbsoluteString is not { } urlString ||
+                !Uri.TryCreate(urlString, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+                uri.IsLoopback) {
+                decisionHandler(WKNavigationActionPolicy.Allow);
+                return;
+            }
+
+            // A real off-origin web link that would have navigated the SPA away. Host only, never the
+            // full URL: these can carry a premium/purchase token and the log is user-shareable.
+            VhLogger.Instance.LogInformation(
+                "Opening an external link in the system browser instead of the SPA WebView. Host: {Host}",
+                VhLogger.FormatHostName(uri.Host));
+
+            decisionHandler(WKNavigationActionPolicy.Cancel);
+            UIApplication.SharedApplication.OpenUrl(url, new NSDictionary(), null);
+        }
+
         public override void DidFinishNavigation(WKWebView webView, WKNavigation navigation)
         {
             owner.RaisePageLoaded();

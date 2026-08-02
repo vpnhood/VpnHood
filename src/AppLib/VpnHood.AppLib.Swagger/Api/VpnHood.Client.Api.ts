@@ -3366,6 +3366,7 @@ export class AppFeatures implements IAppFeatures {
     isSplitDomainSupported!: boolean;
     isUserReviewSupported!: boolean;
     isTv!: boolean;
+    osType!: AppOsType;
     gaMeasurementId!: string | null;
     clientId!: string;
     isDebugMode!: boolean;
@@ -3412,6 +3413,7 @@ export class AppFeatures implements IAppFeatures {
             this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
             this.isUserReviewSupported = _data["isUserReviewSupported"] !== undefined ? _data["isUserReviewSupported"] : null as any;
             this.isTv = _data["isTv"] !== undefined ? _data["isTv"] : null as any;
+            this.osType = _data["osType"] !== undefined ? _data["osType"] : null as any;
             this.gaMeasurementId = _data["gaMeasurementId"] !== undefined ? _data["gaMeasurementId"] : null as any;
             this.clientId = _data["clientId"] !== undefined ? _data["clientId"] : null as any;
             this.isDebugMode = _data["isDebugMode"] !== undefined ? _data["isDebugMode"] : null as any;
@@ -3474,6 +3476,7 @@ export class AppFeatures implements IAppFeatures {
         data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
         data["isUserReviewSupported"] = this.isUserReviewSupported !== undefined ? this.isUserReviewSupported : null as any;
         data["isTv"] = this.isTv !== undefined ? this.isTv : null as any;
+        data["osType"] = this.osType !== undefined ? this.osType : null as any;
         data["gaMeasurementId"] = this.gaMeasurementId !== undefined ? this.gaMeasurementId : null as any;
         data["clientId"] = this.clientId !== undefined ? this.clientId : null as any;
         data["isDebugMode"] = this.isDebugMode !== undefined ? this.isDebugMode : null as any;
@@ -3520,6 +3523,7 @@ export interface IAppFeatures {
     isSplitDomainSupported: boolean;
     isUserReviewSupported: boolean;
     isTv: boolean;
+    osType: AppOsType;
     gaMeasurementId: string | null;
     clientId: string;
     isDebugMode: boolean;
@@ -3535,6 +3539,15 @@ export interface IAppFeatures {
     channelProtocols: ChannelProtocol[];
     customData: any | null;
     version: string;
+}
+
+export enum AppOsType {
+    Unknown = "Unknown",
+    Windows = "Windows",
+    Linux = "Linux",
+    Android = "Android",
+    Ios = "Ios",
+    MacOs = "MacOs",
 }
 
 export enum AppFeature {

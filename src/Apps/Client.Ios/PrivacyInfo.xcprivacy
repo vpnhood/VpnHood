@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Apple's privacy manifest for the HOST APP. Required since May 2024: App Store Connect scans the
+     upload for "required reason" API use and rejects with ITMS-91053 when a use is not declared here.
+     The Network Extension is a separate bundle and needs its OWN manifest — see
+     Client.Ios.Extension/PrivacyInfo.xcprivacy, which declares less because it runs no analytics.
+
+     Reason codes come from Apple's published lists; they are NOT free text and an unrecognised code
+     fails validation. On the first App Store upload, check the Xcode/altool privacy report against
+     this file — the .NET BCL can reach a required-reason API from code we never call directly. -->
+<plist version="1.0">
+<dict>
+	<!-- No cross-app/cross-site tracking: no IDFA, no ATTrackingManager, no ad SDK is linked into the
+	     iOS Client at all (AdProviderItems is empty), and the analytics id is a random per-install
+	     value that is never joined with third-party data. false here is what keeps the app out of the
+	     App Tracking Transparency prompt requirement. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<!-- Only meaningful when NSPrivacyTracking is true. Must stay EMPTY: any domain listed here is
+	     hard-blocked by the system when the user denies tracking. -->
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<!-- What the app can send, all of it via Firebase Analytics in the SPA WebView and all of it behind
+	     the user's "Share anonymous usage data" consent (UserSettings.AllowAnonymousTracker — when it is
+	     off the SDK is never constructed). Linked=false because the only identifier is a random install
+	     id that is not tied to an account, an email, or any real-world identity. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<!-- setUserId(clientId): a random per-install id, used to de-duplicate event streams. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeUserID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<!-- GA4's automatic app/page events plus our own UI events. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<!-- Error-dialog messages and app version reported by ErrorHandler for triage. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherDiagnosticData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!-- IosAppCultureProvider stores/reads the selected UI culture in NSUserDefaults.
+		     CA92.1 = access info from the app itself or its App Group container. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+		<!-- IosMemoryMonitor reads the previous log's timestamp; the BCL also stats files it writes.
+		     C617.1 = timestamps of files inside the app's own container. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+		<!-- Environment.TickCount64/Stopwatch throughout the client resolve to mach_absolute_time.
+		     35F9.1 = measure elapsed time. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>35F9.1</string>
+			</array>
+		</dict>
+		<!-- Reached by the .NET BCL when writing the settings/log/IP-location files rather than by our
+		     own code. E174.1 = check free space before writing, to avoid running out of disk. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

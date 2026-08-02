@@ -70,25 +70,61 @@ jobs:
         if: env.APPSTORE_CONNECT_API_KEY != ''
         uses: actions/checkout@v5
 
+      # The sync tool ships with the screenshot engine that generates these images. It has no npm
+      # dependencies — Node built-ins only — so no install step is needed.
+      - name: Checkout the store tooling
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        uses: actions/checkout@v5
+        with:
+          repository: vpnhood/VpnHood.Client.WebUI
+          ref: ${{ inputs.webui_ref }}
+          path: .webui
+
+      - name: Set up Node.js
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      # Apple locks the listing while a version is in review (or live with none open). That is a
+      # normal state between releases, not an error: warn, skip the push, report published=false so
+      # the gate re-publishes once a version opens again. Any exit other than 0/3 is a real failure.
+      - name: Is the listing editable?
+        id: editable
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        run: |
+          set +e
+          node .webui/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --editable-check
+          rc=$?
+          set -e
+          if [ "$rc" = "0" ]; then
+            echo "editable=true" >> "$GITHUB_OUTPUT"
+          elif [ "$rc" = "3" ]; then
+            echo "editable=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=App Store listing locked::No editable version (in review, or live with none open) — the App Store push was skipped. It will run on the next dispatch after a new version exists."
+          else
+            exit "$rc"
+          fi
+
       - name: Set up Ruby
-        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_metadata != true
+        if: env.APPSTORE_CONNECT_API_KEY != '' && steps.editable.outputs.editable == 'true' && inputs.skip_metadata != true
         uses: ruby/setup-ruby@v1
         with: { ruby-version: "3.3", bundler-cache: false }
 
       - name: Install Fastlane
-        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_metadata != true
+        if: env.APPSTORE_CONNECT_API_KEY != '' && steps.editable.outputs.editable == 'true' && inputs.skip_metadata != true
         run: gem install fastlane --no-document
 
       # Build the fastlane App Store Connect API-key JSON from the three secrets (never echoed).
       - name: Write ASC API key
-        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_metadata != true
+        if: env.APPSTORE_CONNECT_API_KEY != '' && steps.editable.outputs.editable == 'true' && inputs.skip_metadata != true
         run: |
           mkdir -p asc
           jq -n --arg kid "$APPSTORE_CONNECT_API_KEY_ID" --arg iss "$APPSTORE_CONNECT_ISSUER_ID" --arg key "$APPSTORE_CONNECT_API_KEY" \
             '{key_id:$kid, issuer_id:$iss, key:$key, in_house:false}' > asc/api_key.json
 
       - name: Push the listing text (Fastlane deliver)
-        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_metadata != true
+        if: env.APPSTORE_CONNECT_API_KEY != '' && steps.editable.outputs.editable == 'true' && inputs.skip_metadata != true
         run: |
           set -o pipefail
           echo "🚀 Publishing the App Store listing text for ${{ inputs.app_identifier }}"
@@ -109,27 +145,13 @@ jobs:
             exit 1
           fi
 
-      # The sync tool ships with the screenshot engine that generates these images. It has no npm
-      # dependencies — Node built-ins only — so no install step is needed.
-      - name: Checkout the store tooling
-        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_screenshots != true
-        uses: actions/checkout@v5
-        with:
-          repository: vpnhood/VpnHood.Client.WebUI
-          ref: ${{ inputs.webui_ref }}
-          path: .webui
-
-      - name: Set up Node.js
-        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_screenshots != true
-        uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-
       - name: Sync the listing screenshots (checksum diff)
-        if: env.APPSTORE_CONNECT_API_KEY != '' && inputs.skip_screenshots != true
+        if: env.APPSTORE_CONNECT_API_KEY != '' && steps.editable.outputs.editable == 'true' && inputs.skip_screenshots != true
         run: node .webui/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE"
 
+      # published=true only when the listing was actually writable: a locked listing must NOT be
+      # recorded, so the gate publishes the pending content once a new version opens.
       - name: Report published
         id: done
-        if: env.APPSTORE_CONNECT_API_KEY != ''
+        if: env.APPSTORE_CONNECT_API_KEY != '' && steps.editable.outputs.editable == 'true'
         run: echo "published=true" >> "$GITHUB_OUTPUT"

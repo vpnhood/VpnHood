@@ -158,13 +158,23 @@ Google and Web builds with one key); providing them separately keeps each store'
 > The Android client projects currently have AOT disabled (grep `TEMP-CI-AOT-OFF`) to keep
 > CI builds fast. Re-enable it before shipping a production release.
 
-### Android client — Google Play (`publish_client.yml`, listing: `publish_metadata_googleplay.yml`)
+### Android client — Google Play (`publish_client.yml`; the store LISTING ships separately via `publish_listing.yml`)
 - `GOOGLE_PLAY_API_KEY`: create a service account in the Google Play Console with the
   *Release* permission, generate a JSON key, and store the file contents.
 - Update `fastlane/Appfile` (`package_name`) to **your** application ID — the current
   value `com.vpnhood.client.android` belongs to the upstream project and you cannot
   publish to it.
 - Track mapping is automatic: prereleases → `alpha`, stable → `production`.
+
+### Store listings — `publish_listing.yml` (reusable; dispatched from the store-asset repos)
+
+Listing text + screenshots (Google Play and the App Store) do **not** ship with releases: the
+store-asset repos (`Vpnhood.App.Client` / `Vpnhood.App.Connect`) dispatch their `publish_listing.yml`
+stub, which calls this repo's reusable workflow. It runs in the caller's context, so the caller repo
+needs the credentials (`GOOGLE_PLAY_API_KEY`, `APPSTORE_CONNECT_*`) and gets the published-state
+commit — no PAT anywhere. The full maintainer's map for the listing pipeline (tools, invariants,
+verification commands, Apple failure lore) lives in
+`VpnHood.Client.WebUI/e2e/store/README.md` — read it before changing any of these workflows.
 
 ### Windows client — `publish_app.yml` (via `publish_client.yml`)
 The MSI is built with **Advanced Installer** on a `windows-latest` runner.

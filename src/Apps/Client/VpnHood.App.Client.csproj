@@ -7,12 +7,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.741" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.742" />
 	</ItemGroup>
 	<!-- Production: reference the zip-only package. It ships no DLL — its build/*.targets embeds
 	     spa.zip into THIS assembly as 'VpnHood.App.Client.spa.zip' (see SpaAsset). -->
 	<ItemGroup Condition="Exists('$(SolutionDir)\..\.user\use-local-spa.txt')==false">
-		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="8.1.834-prerelease" />
+		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="8.1.837" />
 	</ItemGroup>
 	<!-- Local dev: embed the freshly built zip directly, under the same LogicalName the package uses,
 	     so SpaAsset reads it identically. No DLL to build — run _build-local.ps1 then create the

@@ -1,7 +1,7 @@
 {
   "Version": "8.1.838",
   "BumpTime": "2026-08-02T08:44:54.7299385Z",
-  "Prerelease": false,
+  "Prerelease": true,
   "DeprecatedVersion": "7.0.0",
   "NotificationDelay": "03:00:00"
 }

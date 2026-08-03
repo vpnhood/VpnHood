@@ -12,7 +12,9 @@ The app collects **anonymous usage and diagnostic data** and sends it to Google 
 
 ### Your Client ID
 
-The app identifies itself with a **Client ID**: a random identifier created inside the app on its first launch. It is not your device's serial number, advertising ID, or any other hardware identifier — nothing about you or your device goes into it. If you delete and reinstall the app, a brand-new Client ID is created, and different VpnHood apps on the same device each have their own unrelated Client ID.
+The app identifies itself with a **Client ID**. It is never your device's serial number, phone number, or advertising ID, and it is never sent in its raw form — what leaves your device is a one-way hash that also mixes in the app's identity, so two VpnHood apps on the same device have unrelated Client IDs and neither can be traced back to the original value.
+
+On mobile and Linux the underlying value is a random one created inside the app on first launch, so deleting and reinstalling the app produces a brand-new Client ID. On Windows it is derived from your Windows user account instead, which means it stays the same if you reinstall.
 
 The Client ID is used in two places: it labels the anonymous analytics described above, and it is sent to the VPN server you connect to for session management and abuse prevention.
 
@@ -42,7 +44,9 @@ The app does **not** send your traffic volume to analytics; bytes are counted by
 
 VpnHood! CLIENT ships with no server and no access key — you choose the server by the access key you add. Whoever operates that server — you, a third party, or us — necessarily sees what any VPN server sees: your IP address, connection times, and traffic totals. Your VPN traffic is governed by that operator's privacy policy, not this document.
 
-If you connect to a server we operate, we keep connection logs (time, IP address and port, Client ID) for 30 days without backups, only to answer abuse complaints — and we never record the destinations you visit.
+If you connect to a server we operate, we keep connection logs (time, IP address and port, Client ID) for 30 days without backups, only to answer abuse complaints.
+
+**Your destinations are never recorded.** VpnHood servers do not extract the domains, URLs, or IP addresses you visit from your traffic, so there is nothing about them to log, store, or hand over. When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN — that happens inside the app, on your device, and is never sent to us.
 
 ## Service Providers
 

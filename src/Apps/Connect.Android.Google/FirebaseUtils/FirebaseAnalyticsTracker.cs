@@ -8,10 +8,9 @@ using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.App.Connect.Droid.Google.FirebaseUtils;
 
-// This one instance serves both purposes: it logs analytics events, which honour the user's consent through
-// IsEnabled, and it enables Crashlytics, which does not — Firebase installs the crash handler from a
-// ContentProvider before Application.OnCreate, so no setting can be read in time. Crash reporting is
-// therefore unconditional here, and the privacy policy says so rather than the UI offering a dead switch.
+// This one instance owns everything this build sends to Firebase: analytics events and crash reports.
+// Both follow the user's consent through IsEnabled — the app has a single "Share anonymous usage data"
+// switch and nothing here may outlive it.
 public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITracker
 {
     private readonly FirebaseAnalytics? _analytics;
@@ -31,21 +30,18 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
             VhLogger.Instance.LogError(ex, "Could not initialize Firebase Analytics.");
         }
 
-        try {
-            FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(Java.Lang.Boolean.True);
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not enable Firebase Crashlytics collection.");
-        }
+        // Nothing is forced on here. Firebase auto-inits from a ContentProvider before Application.OnCreate
+        // and starts from its own persisted state, which is what IsEnabled last wrote: a user who opted out
+        // stays opted out from the very first instruction of the next launch, and a fresh install collects
+        // until consent is applied — deliberately, so a crash during that first startup is still reported.
     }
 
-    // Follows the user's consent (VpnHoodApp applies UserSettings.AllowAnonymousTracker here), and applies
-    // it to the SDK itself rather than only to our Track calls below: Firebase collects first_open,
-    // session_start and screen_view on its own, which no amount of not-calling-LogEvent would suppress.
-    // Collection is deliberately left ON at startup (no firebase_analytics_collection_enabled meta-data):
-    // Firebase auto-inits before any setting can be read, so the alternative was starting dark on first
-    // launch. The cost is that a user who then opts out has already sent that launch's automatic events —
-    // the privacy policy has to say so. Firebase persists whatever is set here for later launches.
+    // Both SDKs follow the user's consent (VpnHoodApp applies UserSettings.AllowAnonymousTracker here), and
+    // it is applied to the SDKs themselves rather than only to our Track calls below: Firebase collects
+    // first_open/session_start/screen_view and crash reports on its own, which no amount of
+    // not-calling-LogEvent would suppress. Firebase persists both values for subsequent launches.
+    // The only window neither switch can cover is the first startup of a fresh install, before the setting
+    // has been read — the privacy policy says so.
     public bool IsEnabled {
         get;
         set {
@@ -55,6 +51,14 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Could not change the Firebase Analytics collection state.");
+            }
+
+            try {
+                FirebaseCrashlytics.Instance.SetCrashlyticsCollectionEnabled(
+                    value ? Java.Lang.Boolean.True : Java.Lang.Boolean.False);
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "Could not change the Firebase Crashlytics collection state.");
             }
         }
     }

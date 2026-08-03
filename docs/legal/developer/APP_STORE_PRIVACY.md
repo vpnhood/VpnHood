@@ -1,8 +1,9 @@
-# App Store Privacy — VpnHood Client (iOS)
+# App Store Privacy — VpnHood on iOS
 
-How the **Client** app identifies installations and what it sends off-device, and how to answer
-Apple's **App Privacy** questionnaire in App Store Connect so the panel, the binary's privacy
-manifest, and reality all agree. Written for forkers; companion to
+How the app identifies installations and what it sends off-device, and how to answer Apple's
+**App Privacy** questionnaire in App Store Connect so the panel, the binary's privacy manifest, and
+reality all agree. The body covers **CLIENT**; [VpnHood! CONNECT on iOS](#vpnhood-connect-on-ios)
+records where CONNECT differs. Written for forkers; companion to
 [APP_STORE_EXPORT_COMPLIANCE.md](APP_STORE_EXPORT_COMPLIANCE.md). Not legal advice; a fork makes
 its own declarations under its own name.
 
@@ -135,6 +136,43 @@ re-litigate from scratch.
   limits), consider adding the **App Functionality** purpose to User ID — in the panel *and* the
   manifest, which means a new build.
 
+## VpnHood! CONNECT on iOS
+
+CONNECT is the same codebase with a **built-in access key** to VpnHood's own servers and no way to
+add another provider's key (`IsAddAccessKeySupported = false`). A Connect-like fork ships its own
+key to its own servers — the model is "our app, our servers", the opposite of Client's BYO-key.
+
+**On iOS, Connect is much closer to Client than to Connect for Android.** What the Android/Google
+build carries — AdMob, Google Sign-In, Play billing, Firebase Crashlytics, and (in the website
+build) AppsFlyer — is wired in the Android app projects, not in `Connect.Ios`, whose `AppOptions`
+sets no `AccountProvider`, no `AdProviderItems`, and no `TrackerFactory`. App Privacy is answered
+per app record, so none of those Android SDKs belong in the iOS panel.
+
+One real difference from Client: **the native tracker is live**, because Connect's appsettings
+supply a `Ga4MeasurementId`. So iOS Connect sends the Client-side Firebase analytics *and* native
+GA4 events — session start, connection results (`AllowEndPointTracker` is on), error events, and
+periodic usage counters carrying **traffic totals** (`ClientUsageTracker`, every 25 min). Client
+sends none of these: its tracker is a `NullTracker`.
+
+Questionnaire answers for iOS Connect, relative to the Client table above:
+
+| Question | Answer |
+| --- | --- |
+| Collect data? | Yes |
+| Data types | User ID, Product Interaction, **Other Usage Data** (traffic totals), Other Diagnostic Data |
+| Purpose | Analytics; add **App Functionality** to User ID (the servers keep per-client quota/session records) |
+| Linked to identity? | **No** on iOS — there is no sign-in in this build. Yes for the Android app record, where accounts exist |
+| Used for tracking? | No |
+| Device ID? | No — same reasoning as Client (random per-install id; no IDFA, no ATT) |
+| Crash Data? | **No on iOS** — Crashlytics ships only in the Android/Google build |
+
+**Blocker before the first iOS submission:** `Connect.Ios` has **no `PrivacyInfo.xcprivacy`**, and
+neither does `Connect.Ios.Extension` — only the Client pair has them. Apple requires the manifest
+for required-reason API use (ITMS-91053), and the same .NET BCL paths that made Client declare
+`UserDefaults`, `FileTimestamp`, `SystemBootTime` and `DiskSpace` are present here. Copy Client's
+two manifests and extend the host app's `NSPrivacyCollectedDataTypes` with the extra type above;
+the extension's manifest stays collection-free (the tunnel process runs no analytics).
+
 ## If your fork adds sign-in (Connect-like)
 
 Everything above assumes the app's only identity is a random access key. The moment users can
@@ -194,3 +232,10 @@ Re-open this document when any of these change: an ad or crash-reporting SDK is 
 tracker gets a `Ga4MeasurementId` in Client, login/accounts appear, the clientId derivation starts
 using device data, or Firebase web SDK behavior changes. Each of those invalidates at least one
 "No" above.
+
+The clientId derivation is worth watching specifically, because it is already **not uniform**:
+`Client.Win.Web` passes the Windows user SID and `Connect.Android.Web` passes `ANDROID_ID` as
+`AppOptions.DeviceId`, so on those builds the id survives reinstall (it is still hashed with the
+app id and never sent raw). The iOS builds pass nothing and get the random per-install GUID this
+document assumes — if that ever changes, the "not a device identifier" reasoning has to be redone,
+and the end-user policies say so per platform.

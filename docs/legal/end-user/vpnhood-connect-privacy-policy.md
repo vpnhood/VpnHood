@@ -2,69 +2,94 @@
 
 *Effective: 2026-08-02*
 
-This page informs website visitors about our policies regarding the collection, use, and disclosure of Personal Information if they decide to use our service, the VpnHood website, or connect to our online VpnHood servers.
+**PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CONNECT** app and to the VPN servers **we operate**. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
-If you choose to use our service, you agree to the collection and use of information under this policy. The Personal Information that we collect is used for providing and improving the service and preventing unlawful activities. We will not use or share your information with anyone except as described in this Privacy Policy.
+This policy describes what the app collects, what it never collects, and what our servers record. By using the app, you agree to the practices described here. We do not use or share your information except as described in this policy.
 
 ## What VpnHood! CONNECT Collects
 
-VpnHood! CONNECT and the VpnHood servers it connects to collect anonymous analytics data, such as technical information, and send them to Google Analytics (on the Google Play build, through Firebase Analytics). This data is entirely anonymous and does not relate to your identity. An example of this data is the number of times the app is run, use of a menu item, operating system version, and device model information. Our open-source code ultimately shows that we don't send any user-identifiable information anywhere.
+The app collects **anonymous usage and diagnostic data** and sends it to Google Analytics (through Google's Firebase service). This data does not identify you; examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. Our open-source code shows what is sent and when.
 
-### Your Device ID
+Some data depends on **where you installed the app from**, because those builds contain different components:
 
-The app identifies itself to analytics and to VpnHood servers with a **Device ID**: a random identifier created inside the app on its first launch. It is not your device's serial number, advertising ID, or any other hardware identifier — nothing about you or your device goes into it. If you delete and reinstall the app, a brand-new Device ID is created, and different VpnHood apps on the same device each have their own unrelated Device ID.
+| | App&nbsp;Store (iOS), Windows, Linux | Google&nbsp;Play (Android) | Our&nbsp;website (Android) |
+| --- | --- | --- | --- |
+| Anonymous analytics | yes | yes | yes |
+| Crash reports | no | yes | no |
+| Advertisements | no | yes | no |
+| Optional sign-in and purchases | no | yes | no |
+| Install attribution | no | no | in China only |
+
+### Your Client ID
+
+The app identifies itself with a **Client ID**. It is never your device's serial number, phone number, or advertising ID, and it is never sent in its raw form — what leaves your device is a one-way hash that also mixes in the app's identity, so two VpnHood apps on the same device have unrelated Client IDs and neither can be traced back to the original value.
+
+On most builds the underlying value is a random one created inside the app on first launch, so deleting and reinstalling the app produces a brand-new Client ID. On the Android build downloaded from our website, it is derived from the Android system identifier instead, which means it stays the same if you reinstall.
+
+The Client ID labels the anonymous analytics below and is sent to our VPN servers for session management, quotas, and abuse prevention.
 
 ### You can turn analytics off
 
-Analytics is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events from being sent. Turning it off also disables in-app bug-report and feedback sending, since those use the same channel.
-
-### Crash reports (Google Play build)
-
-The Google Play build of VpnHood! CONNECT also sends automatic crash reports through Firebase Crashlytics when the app fails. A crash report contains the technical details of the failure and device information; it never includes your browsing activity or the content of your traffic. Crash reporting is separate from the analytics switch above.
+Analytics is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, and turning it off while the app is running takes effect immediately and is remembered for later launches. Turning it off also disables in-app bug-report and feedback sending, since those use the same channel.
 
 ### Technical information
 
-- Device ID (the random identifier described above)
-- VpnHood version and build number
-- Country
-- Locale
+When analytics is on, the following is collected:
+
+- Client ID (the identifier described above)
+- VpnHood version
+- Country (derived by Google from the connection, not reported by the app)
+- Language
 - OS name and version
-- Phone model (if applicable)
-- Session start and end time
-- Browser
-- Architecture
-- The number of bytes sent and received
+- Device model (if applicable)
+- Device architecture and browser engine
+- Session start time and duration, and the app screens you visit
+- Connection results — the server location you chose, whether the connection succeeded, and the server address used
+- The amount of traffic (bytes sent and received) and the number of connections, reported periodically while connected
+- Error messages shown by the app (their English technical text)
 
-*Note:* This applies only to the software; therefore, tracking depends on the VpnHood server you connect to. See the "Log Data" section.
+### Crash reports (Google Play build)
 
-## Log Data (Applicable if you connect to our VpnHood server)
+The Google Play build sends automatic crash reports through Google Firebase Crashlytics. A crash report contains the technical details of the failure and device information; it never includes your browsing activity or the content of your traffic.
 
-*Note:* This section is not applicable if you set up a private VpnHood server.
+Crash reports follow the same switch as analytics, and your choice is remembered from one launch to the next. The single exception is the very first start of a fresh install: the crash handler has to be in place before your settings can be read, so a crash during that first startup — exactly the kind we most need to fix — is still reported.
 
-We really don't know how some VPN companies claim they don't keep any logs, and then they come up with terms of service that mention they would detect unlawful activity and suspend accounts!
+### Advertisements (Google Play build)
 
-When you connect to a VpnHood server that we operate, such as our free public servers, we collect information that your VpnHood! CONNECT sends to us, referred to as Log Data. This Log Data includes the technical information in the previous section, plus:
+The Google Play build shows advertisements, including rewarded ads you may choose to watch to extend a session. Ads are delivered by **Google AdMob**, which collects its own data under Google's policies to select and measure ads. Advertising is not part of the anonymous analytics above and is not controlled by the analytics switch. Ads are not shown in every country.
 
-- Your email address and public account information (if you log in)
-- We log user IP Addresses and user activity for 30 days
-- For user activity, we have to log the time and client endpoint (IP address & Port), with the Device ID, and keep it for 30 days. We do not back up these log files. If the server hosting sends us "Notices of Claimed Infringement," we use these log files to find and notify or suspend the offending accounts.
+### Optional sign-in and purchases (Google Play build)
 
-**Important!** We do not save your destination endpoints such as the domain, URL, or IP address you are browsing.
+You can use the app without an account. If you choose to sign in with Google to manage a subscription, we receive your **email address and basic public profile information** from Google, and we store it with your account so your subscription follows you across devices. Payments are processed by **Google Play**; we never see your card details.
 
-You should know that we keep user activity just in the VpnHood server log files, not in our database. However, we store technical information associated with the Device ID, and your email address if you have logged in, in our database.
+### Install attribution (website build for Android, China only)
 
-If you don't like this policy, you need to set up your own server and install a VpnHood server on it, but we believe you will encounter the same problem with your server hosting.
+The Android build downloaded from our website contains **AppsFlyer**, which tells us which campaign or link an install came from — necessary where Google Play is unavailable. It starts **only if your device region is China**; everywhere else it is skipped and sends nothing. Advertising identifiers are explicitly disabled for it. The App Store, Google Play, Windows, and Linux builds do not contain it.
+
+## Log Data (our VPN servers)
+
+When you connect, our servers record what any VPN server must see to run the service:
+
+- Your Client ID and the access your app uses to connect
+- The technical information listed above
+- The amount of traffic (bytes sent and received), used for accounting and quotas
+- Your email address, if you have signed in
+- Your IP address and connection activity — the time and your client endpoint (IP address & port) — kept in server log files for **30 days**, without backups. If our hosting provider forwards a "Notice of Claimed Infringement," we use these log files to identify, notify, or suspend the offending account.
+
+**Important!** We do not record your browsing. Our servers never extract the destinations you visit — domains, URLs, or IP addresses — from your traffic, so there is nothing about them to log, store, or hand over.
+
+When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
+
+Connection activity stays only in server log files; it never enters our database. Our database stores the technical information associated with your Client ID, and your email address if you signed in.
 
 ## Service Providers
 
-We may employ third-party companies and individuals due to the following reasons:
+These companies process data on our behalf or in their own right, and only for the purposes described above:
 
-- To facilitate our service
-- To provide the service on our behalf
-- To perform service-related services
-- To assist us in analyzing how our service is used
+- **Google LLC** — Google Analytics / Firebase (anonymous analytics), Firebase Crashlytics (crash reports, Google Play build), Firebase storage (reports and ratings you send), AdMob (advertising, Google Play build), Google Sign-In and Google Play billing (optional accounts and purchases)
+- **AppsFlyer** — install attribution, website build for Android only
 
-We would like to inform our service users that these third parties have access to their personal information. The reason is to perform the tasks assigned to them on our behalf. However, they are obligated not to disclose or use the information for any purpose other than the specified one.
+They are obliged not to use the data for any purpose other than the one we assign them, except where they act as independent controllers under their own published policies (advertising and payments).
 
 ## Android Permissions
 
@@ -72,12 +97,16 @@ The `QUERY_ALL_PACKAGES` permission is used to allow the user to select which ap
 
 ## Children's Privacy
 
-Our Services do not address anyone under the age of 13. We do not knowingly collect identifiable personal information from children under 13. If we discover that a child under 13 has provided us with personal information, we immediately delete it from our servers. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact us so that we can take the necessary actions.
+Our services are not directed to anyone under the age of 18. We do not knowingly collect personal information from anyone under 18. If we discover that a minor has provided us with personal information, we immediately delete it from our servers. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact us so that we can take the necessary actions.
 
 ## Client Feedback & Bug Report
 
-VpnHood! CONNECT lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us. The log file contains basic technical information, and sensitive details that are not required for debugging, such as your IP address, are automatically removed before sending. Please refer to the "Technical Information" section to view the data we collect.
+The app lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us. The log file contains basic technical information, and sensitive details that are not required for debugging, such as your IP address, are automatically removed before sending.
 
 ## Changes to This Privacy Policy
 
-We reserve the right to update our Privacy Policy from time to time. Therefore, we recommend that you review this page periodically for any updates. We will notify you of any changes by posting the new Privacy Policy on this page. These changes are effective immediately after they are posted on this page.
+We may update this policy from time to time; the current version is always available on this page, and changes take effect when posted here. Substantive changes are also visible in the [VpnHood repository history](https://github.com/vpnhood/VpnHood), where this policy is maintained.
+
+## Contact Us
+
+Questions about this policy can be raised on our [GitHub repository](https://github.com/vpnhood/VpnHood/issues).

@@ -16,6 +16,10 @@ on:
         description: "Prerelease bump (alpha) instead of a stable release bump"
         type: boolean
         default: true
+      mark_only:
+        description: "Mark the CURRENT version as a prerelease without incrementing it (implies prerelease)"
+        type: boolean
+        default: false
       then_publish:
         description: "After bumping, dispatch the client publish workflow (creates the GitHub release)"
         type: boolean
@@ -48,7 +52,12 @@ jobs:
       - name: Bump version + push
         shell: pwsh
         run: |
-          $bump = if ("${{ github.event.inputs.prerelease }}" -eq "true") { 2 } else { 1 }
+          # mark_only wins: it is the "change the channel, keep the number" case, so it implies
+          # prerelease regardless of that checkbox. main is left untouched either way.
+          $bump =
+            if ("${{ github.event.inputs.mark_only }}" -eq "true") { 3 }
+            elseif ("${{ github.event.inputs.prerelease }}" -eq "true") { 2 }
+            else { 1 }
           & "$env:GITHUB_WORKSPACE/pub/Invoke-VersionBump.ps1" -bump $bump
       - name: Dispatch client publish
         if: ${{ github.event.inputs.then_publish == 'true' }}

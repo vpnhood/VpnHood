@@ -13,10 +13,13 @@
 # Usage:
 #   ./Invoke-VersionBump.ps1                 # stable release bump (x.y.Z + 1)
 #   ./Invoke-VersionBump.ps1 -bump 2         # prerelease bump
+#   ./Invoke-VersionBump.ps1 -bump 3         # mark the CURRENT version prerelease (no increment)
 #   ./Invoke-VersionBump.ps1 -noPush         # bump only, no commit/push (dry run)
 
 param(
-	# 1 = stable release, 2 = prerelease. Any value > 0 increments the build number.
+	# 1 = stable release, 2 = prerelease (both increment the build number),
+	# 3 = mark the CURRENT version as a prerelease without incrementing it — for shipping an app
+	#     from a version that was already bumped (see Update-VersionFile.ps1).
 	[int]$bump = 1,
 	# Bump only but do not commit or push.
 	[switch]$noPush

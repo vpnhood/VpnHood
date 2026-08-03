@@ -58,6 +58,7 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `publish_client.yml` | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
 | `IOS_PROVISION_APP_BASE64` | `publish_client.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app (`com.vpnhood.client.ios`). |
 | `IOS_PROVISION_EXT_BASE64` | `publish_client.yml` | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the Network Extension (`com.vpnhood.client.ios.networkextension`). The extension needs its own profile. |
+| `ACCESS_KEY_DEFAULT_GOOGLE` / `_WEB` / `_IOS` | `_build_app_android.yml`, `_build_app_ios.yml` | Optional (Connect only) | The `vh://…` default server access key embedded in each Connect distribution — one key per store, written to `.user/VpnHoodConnect/<store>/access_key_default_<store>.txt` before the build. Absent → the build warns and ships with no default key (the UI prompts for one). Ignored by Client builds. |
 | `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `publish_client.yml` | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents**, its Key ID, and the Issuer ID. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
 
 ## Building your own app (fork-friendly)
@@ -91,6 +92,8 @@ secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_GOOGLE_BASE64`)
 .user/VpnHoodClient/google/android_keystore_google_password.txt  store password — secret
 .user/VpnHoodConnect/google/access_key_default_google.txt   Connect default access key
 .user/VpnHoodConnect/google/access_key_default_google.Debug.txt  Debug-config override (optional)
+.user/VpnHoodConnect/web/access_key_default_web.txt         same, for the web distribution
+.user/VpnHoodConnect/ios/access_key_default_ios.txt         same, for iOS (iOS has its own key)
 .user/VpnHoodClient/web/… , .user/VpnHoodConnect/web/…       (per-store signing keys only)
 ```
 

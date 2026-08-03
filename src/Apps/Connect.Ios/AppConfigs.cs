@@ -41,7 +41,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public Uri? UpdateInfoUrl { get; set; }
 
     // PRODUCTION default server key. Left null in code; Load() overrides it from the embedded
-    // access_key_default.txt secret (sourced from .user/VpnHoodConnect/web/access_key_default_web.txt).
+    // access_key_default.txt secret (sourced from .user/VpnHoodConnect/ios/access_key_default_ios.txt).
     // A fork without that secret falls back to null and prompts the user for a key in the UI.
     public string? DefaultAccessKey { get; set; }
 

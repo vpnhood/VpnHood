@@ -66,8 +66,8 @@ The app lets you send us feedback, a rating, or a diagnostic log file to help so
 
 ## Changes to This Privacy Policy
 
-We may update this policy from time to time; the current version is always available on this page, and changes take effect when posted here. Substantive changes are also visible in the [VpnHood repository history](https://github.com/vpnhood/VpnHood), where this policy is maintained.
+We may update this policy from time to time; the current version is always available on this page, and changes take effect when posted here. Every revision is recorded in our open-source repository — see the [change history of this policy](https://github.com/vpnhood/VpnHood/commits/develop/docs/legal/end-user/vpnhood-client-privacy-policy.md).
 
 ## Contact Us
 
-Questions about this policy can be raised on our [GitHub repository](https://github.com/vpnhood/VpnHood/issues).
+Questions about this policy: [support@vpnhood.com](mailto:support@vpnhood.com)

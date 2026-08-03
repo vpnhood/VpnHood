@@ -159,10 +159,12 @@ public class AppAdManager(
         _ = cancellationToken;
         _ = ex;
 
-        // check if private DNS is active and is in allowed list
+        // check if private DNS is active and is in allowed list.
+        // A null provider means the opportunistic mode, which is the platform default and just upgrades the
+        // network's own resolver to DoT; it can not be an ad blocker, so only a chosen provider is checked.
         var privateDns = uiProvider.GetPrivateDns();
         var isUnallowedPrivateDns =
-            privateDns is { IsActive: true } &&
+            privateDns is { IsActive: true, Provider: not null } &&
             allowedPrivateDnsProviders != null &&
             !allowedPrivateDnsProviders.Contains(privateDns.Provider, StringComparer.OrdinalIgnoreCase);
 

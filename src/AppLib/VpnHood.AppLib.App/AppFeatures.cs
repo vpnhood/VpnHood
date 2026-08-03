@@ -19,6 +19,13 @@ public class AppFeatures
     public required bool IsQuicSupported { get; init; }
     public required bool IsSplitDomainSupported { get; init; }
     public required bool IsUserReviewSupported { get; init; }
+
+    // Whether this build collects anonymous data at all: analytics events, and the crash reports that ride
+    // with them where the tracker is a crash-reporting one (Connect's Firebase tracker enables Crashlytics).
+    // Derived from the tracker that could actually be created — no measurement id, or a debug build, leaves
+    // a NullTracker — so the UI drops the privacy consent in a build that collects nothing instead of
+    // asking which product is running. The user's choice is UserSettings.AllowAnonymousTracker.
+    public required bool IsAnonymousTrackerSupported { get; init; }
     public required bool IsTv { get; init; }
     public required AppOsType OsType { get; init; }
     public required string? GaMeasurementId { get; init; }

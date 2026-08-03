@@ -37,6 +37,7 @@ using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
+using VpnHood.Core.Toolkit.Trackers;
 using VpnHood.Core.Toolkit.Utils;
 using TaskExtensions = VpnHood.Core.Toolkit.Extensions.TaskExtensions;
 
@@ -169,6 +170,16 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (_device.IsQuicSupported)
             protocols.Add(ChannelProtocol.Quic);
 
+        // Created before the features because only the tracker knows whether this build collects anything:
+        // a missing measurement id or a debug build collapses to a NullTracker.
+        var clientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId);
+        var tracker = _trackerFactory.TryCreateTracker(new TrackerCreateParams {
+            ClientId = clientId,
+            ClientVersion = appVersion,
+            Ga4MeasurementId = options.Ga4MeasurementId,
+            UserAgent = null //not set yet
+        });
+
         // initialize features
         Features = new AppFeatures {
             Version = appVersion,
@@ -189,8 +200,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
             IsUserReviewSupported = options.UserReviewProvider != null,
             GaMeasurementId = options.Ga4MeasurementId,
+            IsAnonymousTrackerSupported = tracker is not NullTracker,
             WebUiPort = options.WebUiPort,
-            ClientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId),
+            ClientId = clientId,
             AppId = options.AppId,
             AppName = options.Resources.Strings.AppName,
             DebugCommands = DebugCommands.All,
@@ -230,14 +242,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // set the default server location if not set
         var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
-
-        // create tracker
-        var tracker = _trackerFactory.TryCreateTracker(new TrackerCreateParams {
-            ClientId = Features.ClientId,
-            ClientVersion = Features.Version,
-            Ga4MeasurementId = Features.GaMeasurementId,
-            UserAgent = null //not set yet
-        });
 
         // initialize client manager
         _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);

@@ -3365,6 +3365,7 @@ export class AppFeatures implements IAppFeatures {
     isQuicSupported!: boolean;
     isSplitDomainSupported!: boolean;
     isUserReviewSupported!: boolean;
+    isAnonymousTrackerSupported!: boolean;
     isTv!: boolean;
     osType!: AppOsType;
     gaMeasurementId!: string | null;
@@ -3412,6 +3413,7 @@ export class AppFeatures implements IAppFeatures {
             this.isQuicSupported = _data["isQuicSupported"] !== undefined ? _data["isQuicSupported"] : null as any;
             this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
             this.isUserReviewSupported = _data["isUserReviewSupported"] !== undefined ? _data["isUserReviewSupported"] : null as any;
+            this.isAnonymousTrackerSupported = _data["isAnonymousTrackerSupported"] !== undefined ? _data["isAnonymousTrackerSupported"] : null as any;
             this.isTv = _data["isTv"] !== undefined ? _data["isTv"] : null as any;
             this.osType = _data["osType"] !== undefined ? _data["osType"] : null as any;
             this.gaMeasurementId = _data["gaMeasurementId"] !== undefined ? _data["gaMeasurementId"] : null as any;
@@ -3475,6 +3477,7 @@ export class AppFeatures implements IAppFeatures {
         data["isQuicSupported"] = this.isQuicSupported !== undefined ? this.isQuicSupported : null as any;
         data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
         data["isUserReviewSupported"] = this.isUserReviewSupported !== undefined ? this.isUserReviewSupported : null as any;
+        data["isAnonymousTrackerSupported"] = this.isAnonymousTrackerSupported !== undefined ? this.isAnonymousTrackerSupported : null as any;
         data["isTv"] = this.isTv !== undefined ? this.isTv : null as any;
         data["osType"] = this.osType !== undefined ? this.osType : null as any;
         data["gaMeasurementId"] = this.gaMeasurementId !== undefined ? this.gaMeasurementId : null as any;
@@ -3522,6 +3525,7 @@ export interface IAppFeatures {
     isQuicSupported: boolean;
     isSplitDomainSupported: boolean;
     isUserReviewSupported: boolean;
+    isAnonymousTrackerSupported: boolean;
     isTv: boolean;
     osType: AppOsType;
     gaMeasurementId: string | null;

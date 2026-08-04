@@ -12,8 +12,11 @@ public class StoreAccountProvider(
 {
     public IAppAuthenticationProvider AuthenticationProvider { get; } = authenticationProvider;
 
-    public IAppBillingProvider? BillingProvider { get; } = billingProvider != null
-        ? new StoreBillingProvider(storeAppId, authenticationProvider, billingProvider)
+    public AppBilling? Billing { get; } = billingProvider != null
+        ? new AppBilling {
+            Provider = billingProvider,
+            OrderProcessor = new StoreOrderProcessor(storeAppId, authenticationProvider)
+        }
         : null;
 
     public async Task<AppAccount?> GetAccount(CancellationToken cancellationToken)
@@ -47,7 +50,7 @@ public class StoreAccountProvider(
         return appAccount;
     }
 
-    public async Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
     {
         var httpClient = AuthenticationProvider.HttpClient;
         var currentVpnUserClient = new CurrentVpnUserClient(httpClient);
@@ -63,7 +66,7 @@ public class StoreAccountProvider(
             accessKeyList.Add(accessKey);
         }
 
-        return accessKeyList.ToArray();
+        return accessKeyList;
     }
 
     public async Task<string> GetAccessCode(string subscriptionId, CancellationToken cancellationToken)
@@ -81,7 +84,7 @@ public class StoreAccountProvider(
 
     public void Dispose()
     {
-        BillingProvider?.Dispose();
+        Billing?.Provider.Dispose();
         AuthenticationProvider.Dispose();
     }
 }

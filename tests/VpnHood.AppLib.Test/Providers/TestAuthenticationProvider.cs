@@ -1,15 +1,15 @@
-﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
 
 internal class TestAuthenticationProvider : IAppAuthenticationProvider
 {
-    public bool IsSignInWithGoogleSupported => false;
+    public IReadOnlyList<AppSignInMethod> SignInMethods => [AppSignInMethod.Google];
     public string? UserId { get; private set; }
     public HttpClient HttpClient { get; } = new();
 
-    public Task SignInWithGoogle(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task SignIn(IUiContext uiContext, AppSignInOptions signInOptions, CancellationToken cancellationToken)
     {
         UserId = Guid.Empty.ToString();
         return Task.CompletedTask;

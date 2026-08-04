@@ -537,8 +537,10 @@ public class ClientProfileTest : TestAppBase
         using var accessManager = TestHelper.CreateAccessManager();
 
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.AccountProvider = new TestAccountProvider();
-        var billingProvider = (TestBillingProvider)appOptions.AccountProvider.BillingProvider!;
+        var accountProvider = new TestAccountProvider();
+        appOptions.AccountProvider = accountProvider;
+        var billing = accountProvider.Billing ?? throw new InvalidOperationException("TestAccountProvider has no billing.");
+        var billingProvider = (TestBillingProvider)billing.Provider;
 
         await using var app = TestAppHelper.CreateClientApp(appOptions);
 

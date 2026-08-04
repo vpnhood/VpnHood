@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Converters;
 
@@ -15,6 +16,7 @@ public class AppFeatures
     public required bool IsAddAccessKeySupported { get; init; }
     public required bool IsAccountSupported { get; init; }
     public required bool IsBillingSupported { get; init; }
+    public required IReadOnlyList<AppSignInMethod> SignInMethods { get; init; }
     public required bool IsTcpProxySupported { get; init; }
     public required bool IsQuicSupported { get; init; }
     public required bool IsSplitDomainSupported { get; init; }

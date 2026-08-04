@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 
@@ -9,13 +9,13 @@ public class AppAuthenticationService(
     IAppAuthenticationProvider accountProvider)
     : IDisposable
 {
-    public bool IsSignInWithGoogleSupported => accountProvider.IsSignInWithGoogleSupported;
+    public IReadOnlyList<AppSignInMethod> SignInMethods => accountProvider.SignInMethods;
     public string? UserId => accountProvider.UserId;
     public HttpClient HttpClient => accountProvider.HttpClient;
 
-    public async Task SignInWithGoogle(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task SignIn(IUiContext uiContext, AppSignInOptions signInOptions, CancellationToken cancellationToken)
     {
-        await accountProvider.SignInWithGoogle(uiContext, cancellationToken).Vhc();
+        await accountProvider.SignIn(uiContext, signInOptions, cancellationToken).Vhc();
         await accountService.Refresh(cancellationToken).Vhc();
     }
 

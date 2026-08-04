@@ -18,7 +18,10 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
     private readonly HttpClient _httpClientWithoutAuth;
     private ApiKey? _apiKey;
     private string ApiKeyFilePath => Path.Combine(field, "account", "apiKey.json");
-    public bool IsSignInWithGoogleSupported => _authenticationExternalProvider != null;
+
+    public IReadOnlyList<AppSignInMethod> SignInMethods => _authenticationExternalProvider != null
+        ? [AppSignInMethod.Google]
+        : [];
 
     public string? UserId => ApiKey?.UserId;
 
@@ -112,10 +115,10 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
         return null;
     }
 
-    public async Task SignInWithGoogle(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task SignIn(IUiContext uiContext, AppSignInOptions signInOptions, CancellationToken cancellationToken)
     {
-        if (_authenticationExternalProvider == null)
-            throw new InvalidOperationException("Google sign in is not supported.");
+        if (signInOptions.Method != AppSignInMethod.Google || _authenticationExternalProvider == null)
+            throw new NotSupportedException($"Sign-in method is not supported. Method: {signInOptions.Method}");
 
         var idToken = await _authenticationExternalProvider.SignIn(uiContext, false, cancellationToken).Vhc();
         await SignInToVpnHoodStore(idToken, true, cancellationToken).Vhc();

@@ -1,8 +1,8 @@
+using System.Security.Authentication;
 using System.Text.Json;
 using Android.BillingClient.Api;
 using Android.Gms.Common;
 using Microsoft.Extensions.Logging;
-using Org.Apache.Http.Authentication;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Droid.GooglePlay.Exceptions;
 using VpnHood.Core.Client.Devices.Droid;
@@ -16,13 +16,12 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 public class GooglePlayBillingProvider : IAppBillingProvider
 {
     private readonly Lazy<BillingClient> _billingClient;
-    private readonly IAppAuthenticationProvider _authenticationProvider;
-    private readonly string[] _productIds;
-    private TaskCompletionSource<string>? _taskCompletionSource;
+    private readonly IReadOnlyList<string> _productIds;
+    private TaskCompletionSource<AppPurchaseResult>? _taskCompletionSource;
     public BillingPurchaseState PurchaseState { get; private set; }
     public string ProviderName => "GooglePlay";
 
-    public GooglePlayBillingProvider(IAppAuthenticationProvider authenticationProvider, string[] productIds)
+    public GooglePlayBillingProvider(IReadOnlyList<string> productIds)
     {
         _billingClient = new Lazy<BillingClient>(() => {
             var builder = BillingClient.NewBuilder(Application.Context);
@@ -35,7 +34,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             ).Build();
         });
 
-        _authenticationProvider = authenticationProvider;
         _productIds = productIds;
     }
 
@@ -50,7 +48,10 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                 }
 
                 if (purchasedItem.OrderId != null)
-                    _taskCompletionSource?.TrySetResult(purchasedItem.OrderId);
+                    _taskCompletionSource?.TrySetResult(new AppPurchaseResult {
+                        ProviderOrderId = purchasedItem.OrderId,
+                        PurchaseData = purchasedItem.PurchaseToken
+                    });
                 else
                     // Based on Google document, orderId is null on pending state.
                     // The pending state must be handled in the UI to let the user know their subscription will be
@@ -65,7 +66,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         }
     }
 
-    public async Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         var billingClient = await GetSafeBillingClient(cancellationToken).Vhc();
 
@@ -143,7 +144,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         }
     }
 
-    private static async Task<ProductDetails[]> GetProducts(BillingClient billingClient, string[] productIds)
+    private static async Task<IReadOnlyList<ProductDetails>> GetProducts(BillingClient billingClient,
+        IReadOnlyList<string> productIds)
     {
         // Create a generic List to hold the product definitions
         var productsToQuery = productIds
@@ -167,7 +169,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         return productDetailsResult.ProductDetails.ToArray();
     }
 
-    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, CancellationToken cancellationToken)
+    public async Task<AppPurchaseResult> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
@@ -175,8 +177,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         var billingClient = await GetSafeBillingClient(cancellationToken).Vhc();
 
-        if (_authenticationProvider.UserId == null)
-            throw new AuthenticationException();
+        var accountId = purchaseParams.Attribution?.AccountId
+            ?? throw new AuthenticationException("Could not purchase because the purchase attribution has no account id.");
 
         // Get the product details for the selected plan
         var products = await GetProducts(billingClient, _productIds).Vhc();
@@ -190,20 +192,20 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             .Build();
 
         var billingFlowParams = BillingFlowParams.NewBuilder()
-            .SetObfuscatedAccountId(_authenticationProvider.UserId)
+            .SetObfuscatedAccountId(accountId)
             .SetProductDetailsParamsList([productParam])
             .Build();
 
         try {
             PurchaseState = BillingPurchaseState.Started;
-            _taskCompletionSource = new TaskCompletionSource<string>();
+            _taskCompletionSource = new TaskCompletionSource<AppPurchaseResult>();
             var billingResult = billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
 
-            var orderId = await _taskCompletionSource.Task.WaitAsync(cancellationToken).Vhc();
-            return orderId;
+            var purchaseResult = await _taskCompletionSource.Task.WaitAsync(cancellationToken).Vhc();
+            return purchaseResult;
         }
         catch (TaskCanceledException ex) {
             VhLogger.Instance.LogError(ex, "The google play purchase task was canceled by the user");
@@ -216,6 +218,12 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         finally {
             PurchaseState = BillingPurchaseState.None;
         }
+    }
+
+    public Task<AppPurchaseResult?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        // GooglePlay purchases are reconciled by the backend via real-time developer notifications
+        return Task.FromResult<AppPurchaseResult?>(null);
     }
 
     private async Task<BillingClient> GetSafeBillingClient(CancellationToken cancellationToken)

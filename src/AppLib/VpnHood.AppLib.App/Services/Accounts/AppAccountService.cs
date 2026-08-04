@@ -27,8 +27,8 @@ public class AppAccountService
         _clientProfileService = clientProfileService;
         _appAccountFilePath = Path.Combine(storageFolderPath, "account.json");
         AuthenticationService = new AppAuthenticationService(this, accountProvider.AuthenticationProvider);
-        BillingService = accountProvider.BillingProvider != null
-            ? new AppBillingService(this, accountProvider.BillingProvider)
+        BillingService = accountProvider.Billing != null
+            ? new AppBillingService(this, accountProvider.Billing)
             : null;
     }
 
@@ -136,7 +136,7 @@ public class AppAccountService
         return profile;
     }
 
-    public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken = default)
     {
         return _accountProvider.ListAccessKeys(subscriptionId, cancellationToken);
     }

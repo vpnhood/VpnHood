@@ -22,14 +22,8 @@ public class AccountController : ControllerBase, IAccountController
     }
 
 
-    [HttpGet("is-signin-with-google-supported")]
-    public bool IsSigninWithGoogleSupported()
-    {
-        throw new SwaggerOnlyException();
-    }
-
-    [HttpPost("signin-with-google")]
-    public Task SignInWithGoogle(CancellationToken cancellationToken)
+    [HttpPost("sign-in")]
+    public Task SignIn(AppSignInOptions signInOptions, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -41,7 +35,7 @@ public class AccountController : ControllerBase, IAccountController
     }
 
     [HttpGet("subscriptions/{subscriptionId}/access-keys")]
-    public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

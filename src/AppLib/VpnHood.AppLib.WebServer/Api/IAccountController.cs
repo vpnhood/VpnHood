@@ -1,13 +1,12 @@
-﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions;
 
 namespace VpnHood.AppLib.WebServer.Api;
 
 public interface IAccountController
 {
-    bool IsSigninWithGoogleSupported();
-    Task SignInWithGoogle(CancellationToken cancellationToken);
+    Task SignIn(AppSignInOptions signInOptions, CancellationToken cancellationToken);
     Task SignOut(CancellationToken cancellationToken);
     Task Refresh(CancellationToken cancellationToken);
     Task<AppAccount?> Get(CancellationToken cancellationToken);
-    Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken);
 }

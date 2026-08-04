@@ -18,7 +18,7 @@ public class SplitTunnelingSettings
     public bool UseIpViaApp { get; set; }
     public bool UseIpViaDevice { get; set; }
     public bool UseDomain { get; set; }
-    public bool UseLocalNetwork { get; set; } = true;
+    public bool UseLocalNetwork { get; set; }
     public SplitDnsMode DnsMode { get; set; } = SplitDnsMode.IncludeAll;
 
     // The fate of a destination the server does not route: Exclude bypasses it, Block fails closed.

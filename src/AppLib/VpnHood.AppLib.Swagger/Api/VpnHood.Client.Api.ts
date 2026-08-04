@@ -115,63 +115,18 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    isSigninWithGoogleSupported( cancelToken?: CancelToken): Promise<boolean> {
-        let url_ = this.baseUrl + "/api/account/is-signin-with-google-supported";
+    signIn(signInOptions: AppSignInOptions, cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/account/sign-in";
         url_ = url_.replace(/[?&]$/, "");
 
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processIsSigninWithGoogleSupported(_response);
-        });
-    }
-
-    protected processIsSigninWithGoogleSupported(response: AxiosResponse): Promise<boolean> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-                result200 = resultData200 !== undefined ? resultData200 : null as any;
-    
-            return Promise.resolve<boolean>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<boolean>(null as any);
-    }
-
-    signInWithGoogle( cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/account/signin-with-google";
-        url_ = url_.replace(/[?&]$/, "");
+        const content_ = JSON.stringify(signInOptions);
 
         let options_: AxiosRequestConfig = {
+            data: content_,
             method: "POST",
             url: url_,
             headers: {
+                "Content-Type": "application/json",
             },
             cancelToken
         };
@@ -183,11 +138,11 @@ export class AccountClient {
                 throw _error;
             }
         }).then((_response: AxiosResponse) => {
-            return this.processSignInWithGoogle(_response);
+            return this.processSignIn(_response);
         });
     }
 
-    protected processSignInWithGoogle(response: AxiosResponse): Promise<void> {
+    protected processSignIn(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1805,6 +1760,55 @@ export class BillingClient {
         return Promise.resolve<string>(null as any);
     }
 
+    restorePurchase( cancelToken?: CancelToken): Promise<string> {
+        let url_ = this.baseUrl + "/api/billing/restore-purchase";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processRestorePurchase(_response);
+        });
+    }
+
+    protected processRestorePurchase(response: AxiosResponse): Promise<string> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+                result200 = resultData200 !== undefined ? resultData200 : null as any;
+    
+            return Promise.resolve<string>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<string>(null as any);
+    }
+
     getPurchaseOptions(clientProfileId: string, cancelToken?: CancelToken): Promise<AppPurchaseOptions> {
         let url_ = this.baseUrl + "/api/billing/purchase-options?";
         if (clientProfileId === undefined || clientProfileId === null)
@@ -3265,6 +3269,56 @@ export interface IAppAccount {
     providerSubscriptionId?: string | null;
 }
 
+export class AppSignInOptions implements IAppSignInOptions {
+    method!: AppSignInMethod;
+    userName?: string | null;
+    password?: string | null;
+
+    constructor(data?: IAppSignInOptions) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.method = _data["method"] !== undefined ? _data["method"] : null as any;
+            this.userName = _data["userName"] !== undefined ? _data["userName"] : null as any;
+            this.password = _data["password"] !== undefined ? _data["password"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): AppSignInOptions {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppSignInOptions();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["method"] = this.method !== undefined ? this.method : null as any;
+        data["userName"] = this.userName !== undefined ? this.userName : null as any;
+        data["password"] = this.password !== undefined ? this.password : null as any;
+        return data;
+    }
+}
+
+export interface IAppSignInOptions {
+    method: AppSignInMethod;
+    userName?: string | null;
+    password?: string | null;
+}
+
+export enum AppSignInMethod {
+    Google = "Google",
+    Apple = "Apple",
+    UsernamePassword = "UsernamePassword",
+}
+
 export class AppData implements IAppData {
     features!: AppFeatures;
     intentFeatures!: DeviceIntentFeatures;
@@ -3361,6 +3415,7 @@ export class AppFeatures implements IAppFeatures {
     isAddAccessKeySupported!: boolean;
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
+    signInMethods!: AppSignInMethod[];
     isTcpProxySupported!: boolean;
     isQuicSupported!: boolean;
     isSplitDomainSupported!: boolean;
@@ -3392,6 +3447,7 @@ export class AppFeatures implements IAppFeatures {
             }
         }
         if (!data) {
+            this.signInMethods = [];
             this.debugCommands = [];
             this.premiumFeatures = [];
             this.channelProtocols = [];
@@ -3409,6 +3465,14 @@ export class AppFeatures implements IAppFeatures {
             this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : null as any;
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : null as any;
             this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : null as any;
+            if (Array.isArray(_data["signInMethods"])) {
+                this.signInMethods = [] as any;
+                for (let item of _data["signInMethods"])
+                    this.signInMethods!.push(item);
+            }
+            else {
+                this.signInMethods = null as any;
+            }
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
             this.isQuicSupported = _data["isQuicSupported"] !== undefined ? _data["isQuicSupported"] : null as any;
             this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
@@ -3473,6 +3537,11 @@ export class AppFeatures implements IAppFeatures {
         data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : null as any;
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : null as any;
         data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : null as any;
+        if (Array.isArray(this.signInMethods)) {
+            data["signInMethods"] = [];
+            for (let item of this.signInMethods)
+                data["signInMethods"].push(item);
+        }
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
         data["isQuicSupported"] = this.isQuicSupported !== undefined ? this.isQuicSupported : null as any;
         data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
@@ -3521,6 +3590,7 @@ export interface IAppFeatures {
     isAddAccessKeySupported: boolean;
     isAccountSupported: boolean;
     isBillingSupported: boolean;
+    signInMethods: AppSignInMethod[];
     isTcpProxySupported: boolean;
     isQuicSupported: boolean;
     isSplitDomainSupported: boolean;
@@ -6415,6 +6485,7 @@ export interface ISubscriptionPlan {
 
 export class PurchaseParams implements IPurchaseParams {
     purchaseToken!: string;
+    attribution?: AppPurchaseAttribution | null;
 
     constructor(data?: IPurchaseParams) {
         if (data) {
@@ -6428,6 +6499,7 @@ export class PurchaseParams implements IPurchaseParams {
     init(_data?: any) {
         if (_data) {
             this.purchaseToken = _data["purchaseToken"] !== undefined ? _data["purchaseToken"] : null as any;
+            this.attribution = _data["attribution"] ? AppPurchaseAttribution.fromJS(_data["attribution"]) : null as any;
         }
     }
 
@@ -6441,12 +6513,58 @@ export class PurchaseParams implements IPurchaseParams {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["purchaseToken"] = this.purchaseToken !== undefined ? this.purchaseToken : null as any;
+        data["attribution"] = this.attribution ? this.attribution.toJSON() : null as any;
         return data;
     }
 }
 
 export interface IPurchaseParams {
     purchaseToken: string;
+    attribution?: AppPurchaseAttribution | null;
+}
+
+export class AppPurchaseAttribution implements IAppPurchaseAttribution {
+    accountId?: string | null;
+    appAccountToken?: string | null;
+    storeServiceTicket?: string | null;
+
+    constructor(data?: IAppPurchaseAttribution) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.accountId = _data["accountId"] !== undefined ? _data["accountId"] : null as any;
+            this.appAccountToken = _data["appAccountToken"] !== undefined ? _data["appAccountToken"] : null as any;
+            this.storeServiceTicket = _data["storeServiceTicket"] !== undefined ? _data["storeServiceTicket"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): AppPurchaseAttribution {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppPurchaseAttribution();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["accountId"] = this.accountId !== undefined ? this.accountId : null as any;
+        data["appAccountToken"] = this.appAccountToken !== undefined ? this.appAccountToken : null as any;
+        data["storeServiceTicket"] = this.storeServiceTicket !== undefined ? this.storeServiceTicket : null as any;
+        return data;
+    }
+}
+
+export interface IAppPurchaseAttribution {
+    accountId?: string | null;
+    appAccountToken?: string | null;
+    storeServiceTicket?: string | null;
 }
 
 export class AppPurchaseOptions implements IAppPurchaseOptions {

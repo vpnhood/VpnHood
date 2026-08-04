@@ -27,13 +27,9 @@ internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountContr
             await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.GET, baseUrl + "is-signin-with-google-supported", async ctx => {
-            var res = IsSigninWithGoogleSupported();
-            await ctx.SendJson(res);
-        });
-
-        mapper.AddStatic(HttpMethod.POST, baseUrl + "signin-with-google", async ctx => {
-            await SignInWithGoogle(ctx.Token);
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "sign-in", async ctx => {
+            var signInOptions = ctx.ReadJson<AppSignInOptions>();
+            await SignIn(signInOptions, ctx.Token);
             await ctx.SendNoContent();
         });
 
@@ -61,17 +57,13 @@ internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountContr
         return AccountService.Refresh(cancellationToken: cancellationToken);
     }
 
-    public bool IsSigninWithGoogleSupported()
+    public Task SignIn(AppSignInOptions signInOptions, CancellationToken cancellationToken)
     {
-        return app.Services.AccountService?.AuthenticationService.IsSignInWithGoogleSupported ?? false;
-    }
+        if (!AccountService.AuthenticationService.SignInMethods.Contains(signInOptions.Method))
+            throw new NotSupportedException($"Sign-in method is not supported. Method: {signInOptions.Method}");
 
-    public Task SignInWithGoogle(CancellationToken cancellationToken)
-    {
-        if (!AccountService.AuthenticationService.IsSignInWithGoogleSupported)
-            throw new NotSupportedException("Sign in with Google is not supported.");
-
-        return AccountService.AuthenticationService.SignInWithGoogle(AppUiContext.RequiredContext, cancellationToken);
+        return AccountService.AuthenticationService.SignIn(AppUiContext.RequiredContext, signInOptions,
+            cancellationToken);
     }
 
     public Task SignOut(CancellationToken cancellationToken)
@@ -79,7 +71,7 @@ internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountContr
         return AccountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, cancellationToken);
     }
 
-    public Task<string[]> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
     {
         return AccountService.ListAccessKeys(subscriptionId, cancellationToken);
     }

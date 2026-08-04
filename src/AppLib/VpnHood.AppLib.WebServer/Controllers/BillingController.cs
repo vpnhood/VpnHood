@@ -27,15 +27,27 @@ internal class BillingController(VpnHoodApp app) : ControllerBase, IBillingContr
             var res = await Purchase(purchaseParams, ctx.Token);
             await ctx.SendJson(res);
         });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "restore-purchase", async ctx => {
+            var res = await RestorePurchase(ctx.Token);
+            await ctx.SendJson(res);
+        });
     }
 
-    public Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         return BillingService.GetSubscriptionPlans(cancellationToken);
     }
 
     public Task<string> Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
+        // attribution is owned by the billing orchestration; never accept it from the SPA
+        purchaseParams.Attribution = null;
         return BillingService.Purchase(AppUiContext.RequiredContext, purchaseParams, cancellationToken);
+    }
+
+    public Task<string?> RestorePurchase(CancellationToken cancellationToken)
+    {
+        return BillingService.RestorePurchase(AppUiContext.RequiredContext, cancellationToken);
     }
 }

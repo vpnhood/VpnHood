@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
@@ -10,7 +10,7 @@ internal class TestBillingProvider : IAppBillingProvider
 
     public string ProviderName => "Test";
 
-    public async Task<SubscriptionPlan[]> GetSubscriptionPlans(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         if (SubscriptionPlanException != null)
             throw SubscriptionPlanException;
@@ -28,13 +28,21 @@ internal class TestBillingProvider : IAppBillingProvider
         ];
     }
 
-    public async Task<string> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, CancellationToken cancellationToken)
+    public async Task<AppPurchaseResult> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+        CancellationToken cancellationToken)
     {
         if (PurchaseException != null)
             throw PurchaseException;
 
         await Task.CompletedTask;
-        return Guid.NewGuid().ToString();
+        return new AppPurchaseResult {
+            ProviderOrderId = Guid.NewGuid().ToString()
+        };
+    }
+
+    public Task<AppPurchaseResult?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return Task.FromResult<AppPurchaseResult?>(null);
     }
 
     public BillingPurchaseState PurchaseState => BillingPurchaseState.None;

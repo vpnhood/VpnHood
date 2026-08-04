@@ -4,15 +4,26 @@ namespace VpnHood.AppLib.Test.Providers;
 
 internal class TestAccountProvider : IAppAccountProvider
 {
-    public IAppAuthenticationProvider AuthenticationProvider { get; } = new TestAuthenticationProvider();
-    public AppBilling? Billing { get; } = new() {
-        Provider = new TestBillingProvider(),
-        OrderProcessor = new TestOrderProcessor()
-    };
+    public AppAccount? Account { get; set; }
+    public TestAuthenticationProvider TestAuthenticationProvider { get; } = new();
+    public TestBillingProvider TestBillingProvider { get; } = new();
+    public TestOrderProcessor TestOrderProcessor { get; } = new();
+
+    public IAppAuthenticationProvider AuthenticationProvider => TestAuthenticationProvider;
+
+    public AppBilling? Billing { get; }
+
+    public TestAccountProvider()
+    {
+        Billing = new AppBilling {
+            Provider = TestBillingProvider,
+            OrderProcessor = TestOrderProcessor
+        };
+    }
 
     public Task<AppAccount?> GetAccount(CancellationToken cancellationToken)
     {
-        return Task.FromResult<AppAccount?>(null);
+        return Task.FromResult(Account);
     }
 
     public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)

@@ -7,6 +7,8 @@ internal class TestBillingProvider : IAppBillingProvider
 {
     public Exception? PurchaseException { get; set; }
     public Exception? SubscriptionPlanException { get; set; }
+    public AppPurchaseResult? RestoreResult { get; set; }
+    public PurchaseParams? LastPurchaseParams { get; private set; }
 
     public string ProviderName => "Test";
 
@@ -31,18 +33,20 @@ internal class TestBillingProvider : IAppBillingProvider
     public async Task<AppPurchaseResult> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
         CancellationToken cancellationToken)
     {
+        LastPurchaseParams = purchaseParams;
         if (PurchaseException != null)
             throw PurchaseException;
 
         await Task.CompletedTask;
         return new AppPurchaseResult {
-            ProviderOrderId = Guid.NewGuid().ToString()
+            ProviderOrderId = Guid.NewGuid().ToString(),
+            PurchaseData = "test_purchase_data"
         };
     }
 
     public Task<AppPurchaseResult?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        return Task.FromResult<AppPurchaseResult?>(null);
+        return Task.FromResult(RestoreResult);
     }
 
     public BillingPurchaseState PurchaseState => BillingPurchaseState.None;

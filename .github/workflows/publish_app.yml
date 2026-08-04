@@ -53,26 +53,74 @@ on:
         type: string
         required: false
         default: "100"
+      # The channel the CALLER intends to ship on. The channel that actually gets used is derived from
+      # pub/PubVersion.json (Play track, TestFlight-vs-App-Store lane, and the GitHub release flag all
+      # read it) — this input does not set it, it ASSERTS it, so a dispatch that disagrees with the
+      # version file fails before anything reaches a store instead of silently shipping to the wrong
+      # one. Optional (blank = warn and proceed) because publish_app.yml is the public entry point that
+      # the Connect repo and forkers pin: making it required would break every existing caller.
+      release_type:
+        description: "Channel this build must ship on: release | prerelease (blank = no assertion)"
+        type: string
+        required: false
+        default: ""
 
 env:
   CODE_REPO: vpnhood/VpnHood
 
 jobs:
+  # Fail-closed gate: every build job needs this, so a mismatch costs one 10-second job instead of a
+  # wrong-channel release. See the release_type input above for why it is an assertion, not a setting.
+  verify-release-type:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the version file (${{ env.CODE_REPO }})
+        uses: actions/checkout@v5
+        with:
+          repository: "${{ env.CODE_REPO }}"
+          ref: "${{ inputs.code_ref }}"
+          sparse-checkout: pub/PubVersion.json
+          sparse-checkout-cone-mode: false
+          path: code
+      - name: Verify the declared release type matches pub/PubVersion.json
+        shell: bash
+        env:
+          DECLARED: ${{ inputs.release_type }}
+          CODE_REF: ${{ inputs.code_ref }}
+        run: |
+          set -e
+          VERSION=$(jq -r '.Version' code/pub/PubVersion.json)
+          PRERELEASE=$(jq -r '.Prerelease' code/pub/PubVersion.json)
+          case "$PRERELEASE" in true|True) ACTUAL=prerelease ;; *) ACTUAL=release ;; esac
+          if [ -z "$DECLARED" ]; then
+            echo "::warning title=Release type not declared::No release_type was passed; shipping as '$ACTUAL' per pub/PubVersion.json (v$VERSION). Pass release_type to have this checked."
+            exit 0
+          fi
+          if [ "$DECLARED" != "$ACTUAL" ]; then
+            if [ "$DECLARED" = "prerelease" ]; then NEEDED=true; else NEEDED=false; fi
+            echo "::error title=Release type mismatch::Dispatched with release_type='$DECLARED', but pub/PubVersion.json at '$CODE_REF' says '$ACTUAL' (v$VERSION, Prerelease=$PRERELEASE). Nothing was built or published. To ship a '$DECLARED', run the Bump Version workflow with prerelease=$NEEDED first, then re-dispatch."
+            exit 1
+          fi
+          echo "✅ release_type='$DECLARED' matches pub/PubVersion.json (v$VERSION, Prerelease=$PRERELEASE)."
+
   # --- Per-platform builds: each is a small standalone reusable module (single source of truth). ---
   build-linux:
     # TEMP/opt: skipped when only_aab is set so the Android/Play path can be iterated quickly.
+    needs: [verify-release-type]
     if: ${{ inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_linux.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
     secrets: inherit
 
   build-windows:
+    needs: [verify-release-type]
     if: ${{ inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_windows.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
     secrets: inherit
 
   build-android:
+    needs: [verify-release-type]
     if: ${{ inputs.build_android == true }}
     uses: ./.github/workflows/_build_app_android.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }
@@ -80,6 +128,7 @@ jobs:
 
   # iOS build (client and connect). Off for connect unless the caller passes build_ios=true.
   build-ios:
+    needs: [verify-release-type]
     if: ${{ inputs.build_ios != false && inputs.only_aab != true }}
     uses: ./.github/workflows/_build_app_ios.yml
     with: { app: "${{ inputs.app }}", code_ref: "${{ inputs.code_ref }}" }

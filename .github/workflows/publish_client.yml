@@ -12,6 +12,21 @@ on:
         description: "Branch or commit to build (blank = the branch this workflow is dispatched from)"
         required: false
         default: ""
+      # State the channel out loud. It does NOT choose the channel — pub/PubVersion.json does (Play
+      # track, TestFlight vs App Store, and the GitHub release flag all read it) — it is checked
+      # against that file and the run dies before any build if the two disagree. Without it there was
+      # no way to say "I want a stable release" at dispatch time, so a publish dispatched against a
+      # prerelease-flagged version shipped to alpha/TestFlight with nothing to notice it.
+      # Default is 'prerelease' because that is the harmless direction to get wrong: a mistaken
+      # prerelease reaches testers, a mistaken release reaches production.
+      release_type:
+        description: "Channel this build must ship on — must match pub/PubVersion.json or the run fails"
+        type: choice
+        required: true
+        options:
+          - prerelease
+          - release
+        default: prerelease
       publish_release:
         description: "Create the GitHub release"
         type: boolean
@@ -53,6 +68,7 @@ jobs:
     with:
       app: client
       code_ref: ${{ inputs.ref || github.ref_name }}
+      release_type: ${{ inputs.release_type }}
       publish_release: ${{ inputs.publish_release }}
       build_android: ${{ inputs.build_android }}
       publish_play: ${{ inputs.publish_play }}

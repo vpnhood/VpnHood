@@ -63,8 +63,15 @@ jobs:
         if: ${{ github.event.inputs.then_publish == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          MARK_ONLY: ${{ github.event.inputs.mark_only }}
+          PRERELEASE: ${{ github.event.inputs.prerelease }}
         run: |
-          gh workflow run publish_client.yml --repo "${{ github.repository }}" --ref develop -f publish_release=true -f build_android=true -f rollout="${{ github.event.inputs.rollout }}"
+          # Declare the channel to the publish workflow, which asserts it against the PubVersion.json
+          # this job just wrote. Same rule as the bump above: mark_only implies prerelease. The two
+          # cannot drift — a mismatch would mean the bump and the publish disagree, and the publish
+          # then refuses to build rather than shipping to the wrong track.
+          if [ "$MARK_ONLY" = "true" ] || [ "$PRERELEASE" = "true" ]; then RELEASE_TYPE=prerelease; else RELEASE_TYPE=release; fi
+          gh workflow run publish_client.yml --repo "${{ github.repository }}" --ref develop -f publish_release=true -f build_android=true -f release_type="$RELEASE_TYPE" -f rollout="${{ github.event.inputs.rollout }}"
       - name: Dispatch NuGet publish
         if: ${{ github.event.inputs.then_publish_nugets == 'true' }}
         env:

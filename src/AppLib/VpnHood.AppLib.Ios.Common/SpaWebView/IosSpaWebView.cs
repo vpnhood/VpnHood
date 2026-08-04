@@ -167,7 +167,7 @@ public sealed class IosSpaWebView : ISpaWebView
             // reloads must proceed or the UI never appears. Non-http(s) schemes (about:, blob:) are
             // WKWebView's internal plumbing and must not be handed to the system browser.
             if (navigationAction.TargetFrame?.MainFrame != true ||
-                url?.AbsoluteString is not { } urlString ||
+                url.AbsoluteString is not { } urlString ||
                 !Uri.TryCreate(urlString, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
                 uri.IsLoopback) {

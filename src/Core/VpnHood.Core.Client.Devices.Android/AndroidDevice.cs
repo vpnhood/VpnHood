@@ -43,7 +43,7 @@ public class AndroidDevice : IDevice
         return new AndroidDevice();
     }
 
-    public DeviceAppInfo[] InstalledApps {
+    public IReadOnlyList<DeviceAppInfo> InstalledApps {
         get {
             var deviceAppInfos = new List<DeviceAppInfo>();
             var packageManager = Application.Context.PackageManager ??

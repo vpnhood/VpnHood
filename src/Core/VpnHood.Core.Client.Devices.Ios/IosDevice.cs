@@ -76,7 +76,7 @@ public class IosDevice : IDevice
             throw new NotSupportedException("Binding process to VPN is not supported on iOS.");
     }
 
-    public DeviceAppInfo[] InstalledApps =>
+    public IReadOnlyList<DeviceAppInfo> InstalledApps =>
         throw new NotSupportedException("VPN filtering (App Filter) is not supported for regular iOS VPN apps");
 
 

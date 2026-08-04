@@ -26,7 +26,7 @@ public class WinDevice(string storageFolder, bool isDebugMode) : IDevice
         }
     }
 
-    public DeviceAppInfo[] InstalledApps {
+    public IReadOnlyList<DeviceAppInfo> InstalledApps {
         get {
             if (!isDebugMode)
                 throw new NotSupportedException();

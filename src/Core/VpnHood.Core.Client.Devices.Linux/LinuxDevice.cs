@@ -26,7 +26,7 @@ public class LinuxDevice(string storageFolder) : IDevice
         }
     }
 
-    public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
+    public IReadOnlyList<DeviceAppInfo> InstalledApps => throw new NotSupportedException();
 
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {

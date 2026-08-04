@@ -55,7 +55,7 @@ public class TcpMessageTest
             await Assert.ThrowsAsync<OperationCanceledException>(() => sendTask);
 
             listener.Dispose();
-            await listenerTask.WaitAsync(TimeSpan.FromSeconds(5));
+            await listenerTask.WaitAsync(TimeSpan.FromSeconds(5), requestCts.Token);
         }
         finally {
             Directory.Delete(configFolder, recursive: true);

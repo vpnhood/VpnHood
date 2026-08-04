@@ -31,7 +31,7 @@ public class TestDevice(
     public DeviceMemInfo? MemInfo => null;
     public TimeSpan StartServiceDelay { get; set; } = TimeSpan.Zero;
 
-    public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
+    public IReadOnlyList<DeviceAppInfo> InstalledApps => throw new NotSupportedException();
 
     public Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken)
     {

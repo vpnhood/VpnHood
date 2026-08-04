@@ -32,7 +32,7 @@ public class FirebaseAnalyticsTracker : Singleton<FirebaseAnalyticsTracker>, ITr
 
         // Nothing is forced on here. Firebase auto-inits from a ContentProvider before Application.OnCreate
         // and starts from its own persisted state, which is what IsEnabled last wrote: a user who opted out
-        // stays opted out from the very first instruction of the next launch, and a fresh install collects
+        // stays opted out from the very first instruction of the next launch, and a fresh installation collects
         // until consent is applied — deliberately, so a crash during that first startup is still reported.
     }
 

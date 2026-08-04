@@ -3,7 +3,6 @@ using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.DomainFiltering;
-using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
 

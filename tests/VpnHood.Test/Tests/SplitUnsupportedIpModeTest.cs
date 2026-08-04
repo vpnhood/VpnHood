@@ -35,10 +35,9 @@ public class SplitUnsupportedIpModeTest : TestBase
     [TestMethod]
     public void A_server_range_miss_becomes_the_modes_action()
     {
-        using var serverIpFilter = new ServerIpFilter(null) {
-            IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnroutedIpMode = SplitUnsupportedIpMode.Block
-        };
+        using var serverIpFilter = new ServerIpFilter(null);
+        serverIpFilter.IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList();
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Block;
 
         Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "a routed destination passes");
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, UnroutedIp), "an unrouted one takes the mode's action");
@@ -55,10 +54,9 @@ public class SplitUnsupportedIpModeTest : TestBase
         var clientGates = new StaticIpFilter(null) {
             ExcludeRanges = new[] { new IpRange(UnroutedIp) }.ToOrderedList()
         };
-        using var serverIpFilter = new ServerIpFilter(clientGates) {
-            IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnroutedIpMode = SplitUnsupportedIpMode.Block
-        };
+        using var serverIpFilter = new ServerIpFilter(clientGates);
+        serverIpFilter.IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList();
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Block;
 
         Assert.AreEqual(FilterAction.Exclude, Process(serverIpFilter, UnroutedIp));
     }
@@ -69,10 +67,9 @@ public class SplitUnsupportedIpModeTest : TestBase
         var clientGates = new StaticIpFilter(null) {
             BlockedRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList()
         };
-        using var serverIpFilter = new ServerIpFilter(clientGates) {
-            IncludeRanges = IpNetwork.All.ToIpRanges(),
-            UnroutedIpMode = SplitUnsupportedIpMode.Exclude
-        };
+        using var serverIpFilter = new ServerIpFilter(clientGates);
+        serverIpFilter.IncludeRanges = IpNetwork.All.ToIpRanges();
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Exclude;
 
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, RoutedIp));
     }
@@ -83,10 +80,9 @@ public class SplitUnsupportedIpModeTest : TestBase
         // an inner Include survives the server's ranges only when the server routes the destination. A
         // refused Include is blocked under EITHER mode: it promised to travel inside the tunnel, so
         // excluding it would leak the very traffic the promise covers.
-        using var serverIpFilter = new ServerIpFilter(new FixedActionFilter(FilterAction.Include)) {
-            IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnroutedIpMode = SplitUnsupportedIpMode.Block
-        };
+        using var serverIpFilter = new ServerIpFilter(new FixedActionFilter(FilterAction.Include));
+        serverIpFilter.IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList();
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Block;
 
         Assert.AreEqual(FilterAction.Include, Process(serverIpFilter, RoutedIp), "the override lane is preserved on a hit");
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, UnroutedIp), "and refused on a miss");
@@ -101,12 +97,11 @@ public class SplitUnsupportedIpModeTest : TestBase
     {
         // a v4-only server may still have declared "no restriction" (All); the family flag must win
         var routedIpV6 = IPAddress.Parse("2001:4860:4860::8888");
-        using var serverIpFilter = new ServerIpFilter(null) {
-            IncludeRanges = IpNetwork.All.ToIpRanges(),
-            UnroutedIpMode = SplitUnsupportedIpMode.Exclude,
-            UnsupportedIpV6Mode = SplitUnsupportedIpMode.Block,
-            IsIpV6SupportedByServer = false
-        };
+        using var serverIpFilter = new ServerIpFilter(null);
+        serverIpFilter.IncludeRanges = IpNetwork.All.ToIpRanges();
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Exclude;
+        serverIpFilter.UnsupportedIpV6Mode = SplitUnsupportedIpMode.Block;
+        serverIpFilter.IsIpV6SupportedByServer = false;
 
         Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "IPv4 is untouched");
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, routedIpV6), "IPv6 takes ITS mode, not the general one");
@@ -125,12 +120,11 @@ public class SplitUnsupportedIpModeTest : TestBase
         // the app resolves the pair before it gets here, but the rule must hold for raw values too:
         // a general Block kills the unsupported family even when its own mode chose bypass
         var globalV6 = IPAddress.Parse("2600::1");
-        using var serverIpFilter = new ServerIpFilter(null) {
-            IncludeRanges = IpNetwork.All.ToIpRanges(),
-            UnroutedIpMode = SplitUnsupportedIpMode.Block,
-            UnsupportedIpV6Mode = SplitUnsupportedIpMode.Exclude,
-            IsIpV6SupportedByServer = false
-        };
+        using var serverIpFilter = new ServerIpFilter(null);
+        serverIpFilter.IncludeRanges = IpNetwork.All.ToIpRanges();
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Block;
+        serverIpFilter.UnsupportedIpV6Mode = SplitUnsupportedIpMode.Exclude;
+        serverIpFilter.IsIpV6SupportedByServer = false;
 
         Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "IPv4 members still pass");
         Assert.AreEqual(FilterAction.Block, Process(serverIpFilter, globalV6),
@@ -146,12 +140,11 @@ public class SplitUnsupportedIpModeTest : TestBase
     {
         // the v6 mode owns only the family-unsupported case; narrow v6 ranges are ordinary misses
         var unroutedIpV6 = IPAddress.Parse("2001:db8::1");
-        using var serverIpFilter = new ServerIpFilter(null) {
-            IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList(),
-            UnroutedIpMode = SplitUnsupportedIpMode.Exclude,
-            UnsupportedIpV6Mode = SplitUnsupportedIpMode.Block,
-            IsIpV6SupportedByServer = true
-        };
+        using var serverIpFilter = new ServerIpFilter(null);
+        serverIpFilter.IncludeRanges = new[] { new IpRange(RoutedIp) }.ToOrderedList();
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Exclude;
+        serverIpFilter.UnsupportedIpV6Mode = SplitUnsupportedIpMode.Block;
+        serverIpFilter.IsIpV6SupportedByServer = true;
 
         Assert.AreEqual(FilterAction.Exclude, Process(serverIpFilter, unroutedIpV6));
     }
@@ -212,9 +205,8 @@ public class SplitUnsupportedIpModeTest : TestBase
         // "no declaration yet" and "server routes everything" are one honest state: All. An empty
         // assignment is converted at the door, so the stage can never accidentally turn every address
         // into a miss.
-        using var serverIpFilter = new ServerIpFilter(null) {
-            UnroutedIpMode = SplitUnsupportedIpMode.Block
-        };
+        using var serverIpFilter = new ServerIpFilter(null);
+        serverIpFilter.UnroutedIpMode = SplitUnsupportedIpMode.Block;
         Assert.AreEqual(FilterAction.Default, Process(serverIpFilter, RoutedIp), "the default is All");
 
         serverIpFilter.IncludeRanges = IpRangeOrderedList.Empty;

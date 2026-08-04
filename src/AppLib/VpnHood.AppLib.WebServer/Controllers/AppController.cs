@@ -327,7 +327,8 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
 
     public Task<DeviceAppInfo[]> GetInstalledApps(CancellationToken cancellationToken)
     {
-        return Task.FromResult(app.InstalledApps);
+        // the api contract is an array, as it is what NSwag generates the ts client from
+        return Task.FromResult(app.InstalledApps.ToArray());
     }
 
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken)

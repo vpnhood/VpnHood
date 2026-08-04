@@ -103,7 +103,7 @@ public sealed class AndroidMessageListener : IMessageListener
                 TransactionFlags.Oneway);
         }
         catch (Exception ex) {
-            // the client process is gone; its pending request fails via its disconnect callbacks
+            // the client process is gone; So its pending request fails via its disconnect callbacks
             VhLogger.Instance.LogDebug(ex, "Could not deliver a VpnService message reply. RequestId: {RequestId}",
                 requestId);
             return false;

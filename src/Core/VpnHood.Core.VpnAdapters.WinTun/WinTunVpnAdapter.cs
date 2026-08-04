@@ -32,7 +32,7 @@ public class WinTunVpnAdapter(WinVpnAdapterSettings adapterSettings)
     // _tunAdapter is a raw native pointer freed by WintunCloseAdapter; passing it to
     // WintunStartSession after (or while) it is freed corrupts the process. This lock makes
     // AdapterOpen atomic against AdapterRemove, which can run concurrently when the user
-    // disconnects while a connect is still setting up the adapter.
+    // disconnects while a connection is still setting up the adapter.
     private readonly Lock _adapterLock = new();
 
     public const int MinRingCapacity = 0x20000; // 128kiB

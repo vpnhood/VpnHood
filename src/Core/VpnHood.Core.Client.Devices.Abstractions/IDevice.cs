@@ -14,7 +14,7 @@ public interface IDevice : IDisposable
     bool IsQuicSupported { get; }
     string OsInfo { get; }
     DeviceMemInfo? MemInfo { get; }
-    DeviceAppInfo[] InstalledApps { get; }
+    IReadOnlyList<DeviceAppInfo> InstalledApps { get; }
     Task RequestVpnService(IUiContext? uiContext, TimeSpan timeout, CancellationToken cancellationToken);
     Task StartVpnService(CancellationToken cancellationToken);
     IMessageClient CreateMessageClient();

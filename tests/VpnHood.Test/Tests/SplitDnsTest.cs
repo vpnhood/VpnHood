@@ -249,6 +249,7 @@ public class SplitDnsTest : TestBase
             serverIncludeIpRanges: new[] { IpRange.Parse("1.2.3.0-1.2.3.255") }.ToOrderedList(),
             clientExcludeRanges: IpNetwork.All.ToIpRanges());
 
+        // ReSharper disable once AccessToDisposedClosure
         Assert.ThrowsExactly<InvalidOperationException>(() => ClientHelper.GetDnsServers(
             userDnsAddresses: [PublicDns],
             serverDnsAddresses: [IPAddress.Parse("9.9.9.9")],

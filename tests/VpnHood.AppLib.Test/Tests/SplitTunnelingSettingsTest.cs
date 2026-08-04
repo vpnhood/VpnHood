@@ -3,7 +3,6 @@ using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
-using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.Test.Tests;
 

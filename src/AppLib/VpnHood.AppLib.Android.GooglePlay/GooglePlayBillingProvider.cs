@@ -86,62 +86,64 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         try {
             var products = await GetProducts(billingClient, _productIds);
 
-            // We chose the subscriptionOfferDetails which contains the lowest PricingPhaseList
-            // Then build the SubscriptionPlan list from it.
-            var subscriptionPlans = products.Select(product => {
-                // Get the offer details with the lowest price
-                var subscriptionOffer = product.GetSubscriptionOfferDetails()?
-                    .OrderBy(od => od.PricingPhases.PricingPhaseList.Min(pp => pp.PriceAmountMicros))
-                    .FirstOrDefault();
+            // One plan per (product, base plan) so every purchasable period surfaces. Which plans exist,
+            // their order and labels are catalog decisions and must not be inferred here; the store only prices them.
+            var subscriptionPlans = products
+                .SelectMany(product => (product.GetSubscriptionOfferDetails() ?? [])
+                    .GroupBy(offer => offer.BasePlanId)
+                    .Select(basePlanOffers => BuildSubscriptionPlan(product, basePlanOffers)))
+                .OfType<SubscriptionPlan>()
+                .ToArray();
 
-                // Get the pricing phases for that offer
-                var pricingPhases = subscriptionOffer?.PricingPhases.PricingPhaseList;
-                if (subscriptionOffer is null || pricingPhases is null) {
-                    VhLogger.Instance.LogWarning("Could not get GooglePlay pricing phases for product id {ProductId}",
-                        product.ProductId);
-                    return null;
-                }
-
-                // order pricing phases by price amount descending, the first is base price, the rest are discounted prices if any
-                var planPrices = pricingPhases
-                    .OrderByDescending(pricingPhase => pricingPhase.PriceAmountMicros)
-                    .ToArray();
-
-                if (!planPrices.Any()) {
-                    VhLogger.Instance.LogWarning("Could not get GooglePlay plan prices for product id {ProductId}",
-                        product.ProductId);
-                    return null;
-                }
-
-                var planToken = new SubscriptionPlanToken {
-                    ProductId = product.ProductId,
-                    BasePlanId = subscriptionOffer.BasePlanId,
-                    OfferToken = subscriptionOffer.OfferToken
-                };
-
-                // Get highest and lowest pricing phases
-                var highestPricingPhase = planPrices.First();
-                var lowestPricingPhase = planPrices.Last();
-
-                // Build and return the SubscriptionPlan
-                return new SubscriptionPlan {
-                    PlanToken = JsonSerializer.Serialize(planToken),
-                    BasePrice = highestPricingPhase.PriceAmountMicros / 1_000_000.0,
-                    CurrentPrice = lowestPricingPhase.PriceAmountMicros / 1_000_000.0,
-                    Period = highestPricingPhase.BillingPeriod,
-                    CurrencySymbol = VhUtils.GetCurrencySymbol(highestPricingPhase.PriceCurrencyCode),
-                    CurrencyCode = highestPricingPhase.PriceCurrencyCode
-                };
-            });
-
-            // filter out null plans and return as array
-            var result = subscriptionPlans.Where(plan => plan != null).ToArray();
-            return result!;
+            return subscriptionPlans;
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not get products from google play.");
             throw;
         }
+    }
+
+    private static SubscriptionPlan? BuildSubscriptionPlan(ProductDetails product,
+        IEnumerable<ProductDetails.SubscriptionOfferDetails> basePlanOffers)
+    {
+        // GooglePlay only returns offers the user is eligible for; among them pick the one with the
+        // lowest paid price. An offer with no paid phase can not be priced and never wins.
+        var subscriptionOffer = basePlanOffers
+            .OrderBy(offer => offer.PricingPhases.PricingPhaseList
+                .Where(pricingPhase => pricingPhase.PriceAmountMicros > 0)
+                .Select(pricingPhase => pricingPhase.PriceAmountMicros)
+                .DefaultIfEmpty(long.MaxValue)
+                .Min())
+            .First();
+
+        // phases are ordered by payment sequence: an optional zero-price trial, an optional
+        // introductory price, then the recurring base price as the last phase
+        var pricingPhases = subscriptionOffer.PricingPhases.PricingPhaseList;
+        var basePhase = pricingPhases.LastOrDefault();
+        var currentPhase = pricingPhases.FirstOrDefault(pricingPhase => pricingPhase.PriceAmountMicros > 0);
+        var trialPhase = pricingPhases.FirstOrDefault(pricingPhase => pricingPhase.PriceAmountMicros == 0);
+        if (basePhase == null || currentPhase == null) {
+            VhLogger.Instance.LogWarning(
+                "Could not price a GooglePlay base plan. ProductId: {ProductId}, BasePlanId: {BasePlanId}",
+                product.ProductId, subscriptionOffer.BasePlanId);
+            return null;
+        }
+
+        var planToken = new SubscriptionPlanToken {
+            ProductId = product.ProductId,
+            BasePlanId = subscriptionOffer.BasePlanId,
+            OfferToken = subscriptionOffer.OfferToken
+        };
+
+        return new SubscriptionPlan {
+            PlanToken = JsonSerializer.Serialize(planToken),
+            BasePrice = basePhase.PriceAmountMicros / 1_000_000.0,
+            CurrentPrice = currentPhase.PriceAmountMicros / 1_000_000.0,
+            Period = basePhase.BillingPeriod,
+            TrialPeriod = trialPhase?.BillingPeriod,
+            CurrencySymbol = VhUtils.GetCurrencySymbol(basePhase.PriceCurrencyCode),
+            CurrencyCode = basePhase.PriceCurrencyCode
+        };
     }
 
     private static async Task<IReadOnlyList<ProductDetails>> GetProducts(BillingClient billingClient,

@@ -13,21 +13,23 @@ public class GoogleCredentialManager(ICredentialManager credentialManager) : IDi
     public async Task<GetCredentialResponse> GetCredentialAsync(Activity activity,
         GetCredentialRequest credentialRequest, CancellationToken cancellationToken)
     {
+        var mainExecutor = activity.MainExecutor ?? throw new InvalidOperationException("Activity has no main executor.");
         using var credentialManagerCallback = new CredentialManagerCallback();
         var cancellationSignal = cancellationToken.ToCancellationSignal(); // do not dispose this
         credentialManager.GetCredentialAsync(activity, credentialRequest, cancellationSignal,
-            activity.MainExecutor!, credentialManagerCallback);
-            var credentialResponse = await credentialManagerCallback.GetResultAsync().ConfigureAwait(false);
-            return credentialResponse;
+            mainExecutor, credentialManagerCallback);
+        var credentialResponse = await credentialManagerCallback.GetResultAsync().ConfigureAwait(false);
+        return credentialResponse;
     }
 
     public async Task ClearCredentialStateAsync(Activity activity, CancellationToken cancellationToken)
     {
+        var mainExecutor = activity.MainExecutor ?? throw new InvalidOperationException("Activity has no main executor.");
         using var request = new ClearCredentialStateRequest();
         using var credentialManagerCallback = new CredentialManagerCallback();
         var cancellationSignal = cancellationToken.ToCancellationSignal(); // do not dispose this
         credentialManager.ClearCredentialStateAsync(request, cancellationSignal,
-            activity.MainExecutor!, credentialManagerCallback);
+            mainExecutor, credentialManagerCallback);
         await credentialManagerCallback.GetResultAsync().ConfigureAwait(false);
     }
 

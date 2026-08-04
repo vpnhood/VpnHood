@@ -59,7 +59,9 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
                 return;
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(ApiKeyFilePath)!);
+            var directoryPath = Path.GetDirectoryName(ApiKeyFilePath)
+                ?? throw new InvalidOperationException("Could not get the folder of the api key file.");
+            Directory.CreateDirectory(directoryPath);
             File.WriteAllText(ApiKeyFilePath, JsonSerializer.Serialize(value));
         }
     }
@@ -75,8 +77,8 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
             return ApiKey;
 
         try {
-            // refresh by refresh token
-            if (ApiKey.RefreshToken != null && ApiKey.RefreshToken.ExpirationTime < DateTime.UtcNow) {
+            // refresh by refresh token while the refresh token itself is still valid
+            if (ApiKey.RefreshToken != null && ApiKey.RefreshToken.ExpirationTime > DateTime.UtcNow) {
                 var authenticationClient = new AuthenticationClient(_httpClientWithoutAuth);
                 ApiKey = await authenticationClient
                     .RefreshTokenAsync(
@@ -126,10 +128,7 @@ public class StoreAuthenticationProvider : IAppAuthenticationProvider
 
     public async Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        ApiKey = null;
-        if (File.Exists(ApiKeyFilePath))
-            File.Delete(ApiKeyFilePath);
-
+        ApiKey = null; // the setter deletes the api key file
 
         if (_authenticationExternalProvider != null)
             await _authenticationExternalProvider.SignOut(uiContext, cancellationToken).Vhc();

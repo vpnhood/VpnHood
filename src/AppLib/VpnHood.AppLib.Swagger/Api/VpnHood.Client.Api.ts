@@ -6431,6 +6431,7 @@ export class SubscriptionPlan implements ISubscriptionPlan {
     basePrice!: number;
     currentPrice!: number;
     period!: string;
+    trialPeriod?: string | null;
     planToken!: string;
     currencySymbol!: string;
     currencyCode!: string;
@@ -6449,6 +6450,7 @@ export class SubscriptionPlan implements ISubscriptionPlan {
             this.basePrice = _data["basePrice"] !== undefined ? _data["basePrice"] : null as any;
             this.currentPrice = _data["currentPrice"] !== undefined ? _data["currentPrice"] : null as any;
             this.period = _data["period"] !== undefined ? _data["period"] : null as any;
+            this.trialPeriod = _data["trialPeriod"] !== undefined ? _data["trialPeriod"] : null as any;
             this.planToken = _data["planToken"] !== undefined ? _data["planToken"] : null as any;
             this.currencySymbol = _data["currencySymbol"] !== undefined ? _data["currencySymbol"] : null as any;
             this.currencyCode = _data["currencyCode"] !== undefined ? _data["currencyCode"] : null as any;
@@ -6467,6 +6469,7 @@ export class SubscriptionPlan implements ISubscriptionPlan {
         data["basePrice"] = this.basePrice !== undefined ? this.basePrice : null as any;
         data["currentPrice"] = this.currentPrice !== undefined ? this.currentPrice : null as any;
         data["period"] = this.period !== undefined ? this.period : null as any;
+        data["trialPeriod"] = this.trialPeriod !== undefined ? this.trialPeriod : null as any;
         data["planToken"] = this.planToken !== undefined ? this.planToken : null as any;
         data["currencySymbol"] = this.currencySymbol !== undefined ? this.currencySymbol : null as any;
         data["currencyCode"] = this.currencyCode !== undefined ? this.currencyCode : null as any;
@@ -6478,6 +6481,7 @@ export interface ISubscriptionPlan {
     basePrice: number;
     currentPrice: number;
     period: string;
+    trialPeriod?: string | null;
     planToken: string;
     currencySymbol: string;
     currencyCode: string;

@@ -29,7 +29,11 @@ public class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCal
 
     public void OnResult(Java.Lang.Object? result)
     {
-        _taskCompletionSource.TrySetResult((GetCredentialResponse)result!);
+        if (result is GetCredentialResponse credentialResponse)
+            _taskCompletionSource.TrySetResult(credentialResponse);
+        else
+            _taskCompletionSource.TrySetException(
+                new InvalidOperationException("Credential manager returned no credential response."));
     }
 
     public Task<GetCredentialResponse> GetResultAsync()

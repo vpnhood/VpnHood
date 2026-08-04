@@ -14,6 +14,7 @@ public class AppAccountService
     private readonly AppSettingsService _settingsService;
     private readonly IAppAccountProvider _accountProvider;
     private readonly ClientProfileService _clientProfileService;
+    private readonly string _storageFolderPath;
     private readonly string _appAccountFilePath;
 
     public AppAccountService(
@@ -25,6 +26,7 @@ public class AppAccountService
         _settingsService = settingsService;
         _accountProvider = accountProvider;
         _clientProfileService = clientProfileService;
+        _storageFolderPath = storageFolderPath;
         _appAccountFilePath = Path.Combine(storageFolderPath, "account.json");
         AuthenticationService = new AppAuthenticationService(this, accountProvider.AuthenticationProvider);
         BillingService = accountProvider.Billing != null
@@ -70,7 +72,7 @@ public class AppAccountService
     public async Task Refresh(CancellationToken cancellationToken)
     {
         _appAccount = await _accountProvider.GetAccount(cancellationToken).Vhc();
-        Directory.CreateDirectory(Path.GetDirectoryName(_appAccountFilePath)!);
+        Directory.CreateDirectory(_storageFolderPath);
         await File.WriteAllTextAsync(_appAccountFilePath, JsonSerializer.Serialize(_appAccount), cancellationToken).Vhc();
 
         // if requested, update the current client profile with the new access code from the account
@@ -136,7 +138,7 @@ public class AppAccountService
         return profile;
     }
 
-    public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
     {
         return _accountProvider.ListAccessKeys(subscriptionId, cancellationToken);
     }

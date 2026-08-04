@@ -18,9 +18,9 @@ internal class TestBillingProvider : IAppBillingProvider
         await Task.CompletedTask;
         return [
             new SubscriptionPlan {
-                BasePrice = 1000,
-                CurrentPrice = 9000,
-                Period = "1M",
+                BasePrice = 12,
+                CurrentPrice = 9,
+                Period = "P1M",
                 PlanToken = "test_plan_1m",
                 CurrencySymbol = "$",
                 CurrencyCode = "USD"

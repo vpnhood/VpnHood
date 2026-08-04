@@ -21,6 +21,10 @@ public class AndroidDevice : IDevice
     private TaskCompletionSource<bool> _grantPermissionTaskSource = new();
     private const int RequestVpnPermissionId = 20100;
 
+    // the app list renders the icons at 30 css pixels, so this keeps them crisp on high density
+    // screens while bounding the encoded payload, as the list may contain hundreds of apps
+    private const int IconSize = 64;
+
     public bool IsBindProcessToVpnSupported => true;
     public bool IsExcludeAppsSupported => true;
     public bool IsIncludeAppsSupported => true;
@@ -68,7 +72,7 @@ public class AndroidDevice : IDevice
                 deviceAppInfos.Add(new DeviceAppInfo {
                     AppId = appInfo.PackageName!,
                     AppName = appName,
-                    IconPng = icon.DrawableEncodeToBase64(100)
+                    IconPng = icon.DrawableEncodeToBase64(IconSize)
                 });
             }
 

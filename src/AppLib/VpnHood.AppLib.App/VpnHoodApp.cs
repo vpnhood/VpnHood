@@ -10,7 +10,6 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
-using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Providers;
 using VpnHood.AppLib.Services;
@@ -81,6 +80,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private CancellationTokenSource _showAdCts = new();
     private CancellationTokenSource _connectTimeoutCts = new();
     private CultureInfo? _systemUiCulture;
+    private IReadOnlyList<DeviceAppInfo>? _installedApps;
     private bool _isConnecting;
     private int _userReviewRecommended;
     private bool _quickLaunchRecommended;
@@ -99,7 +99,10 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppResources Resources { get; }
     public AppServices Services { get; }
     public AppSettingsService SettingsService { get; }
-    public DeviceAppInfo[] InstalledApps => _device.InstalledApps;
+    // Building this list is expensive (on Android it loads and png encodes an icon for every
+    // installed app), so it is cached until the app returns to the foreground, which is the only
+    // moment the user could have installed or removed an app.
+    public IReadOnlyList<DeviceAppInfo> InstalledApps => _installedApps ??= _device.InstalledApps;
 
 
     public AppAdManager AdManager { get; }
@@ -305,6 +308,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // schedule job
         AppUiContext.OnChanged += ActiveUiContext_OnChanged;
+        AppUiContext.OnResumed += ActiveUiContext_OnResumed;
 
         // launch startup task
         Task.Run(OnStartup);
@@ -360,7 +364,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 // Nothing is forced: the flag just lets the UI offer a reconnect for the running session.
                 var splitTunneling = UserSettings.SplitTunneling.ToEffective(this);
                 var oldSplitTunneling = oldUserSettings.SplitTunneling.ToEffective(this);
-                var sessionInfo = ConnectionInfo?.SessionInfo;
+                var sessionInfo = ConnectionInfo.SessionInfo;
                 var reconnectRequired =
                     splitTunneling.UseLocalNetwork != oldSplitTunneling.UseLocalNetwork ||
                     splitTunneling.UseIpViaDevice != oldSplitTunneling.UseIpViaDevice ||
@@ -455,6 +459,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // try update the app
         if (uiContext != null)
             _ = Services.UpdaterService?.TryCheckForUpdate(false, CancellationToken.None);
+    }
+
+    private void ActiveUiContext_OnResumed(object? sender, EventArgs e)
+    {
+        // the user may have installed or removed an app while we were in the background. this runs
+        // on the platform resume hook, so it must stay a cheap assignment and never block
+        _installedApps = null;
     }
 
     public ClientProfileInfo? CurrentClientProfileInfo =>
@@ -1375,6 +1386,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         _device.Dispose();
         _logService.Dispose();
         AppUiContext.OnChanged -= ActiveUiContext_OnChanged;
+        AppUiContext.OnResumed -= ActiveUiContext_OnResumed;
 
         base.Dispose(disposing);
     }

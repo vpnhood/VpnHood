@@ -13,23 +13,34 @@ public static class AndroidExtensions
 
     extension(Drawable drawable)
     {
-        public string DrawableEncodeToBase64(int quality)
+        public string DrawableEncodeToBase64(int size)
         {
-            var bitmap = drawable.DrawableToBitmap();
-            var stream = new MemoryStream();
-            if (!bitmap.Compress(Bitmap.CompressFormat.Png!, quality, stream))
+            using var bitmap = drawable.DrawableToBitmap(size);
+            using var stream = new MemoryStream();
+            var format = Bitmap.CompressFormat.Png ??
+                         throw new InvalidOperationException("Could not acquire the PNG compress format.");
+
+            // quality is ignored by the lossless png encoder
+            if (!bitmap.Compress(format, 100, stream))
                 throw new Exception("Could not compress bitmap to png.");
-            return Convert.ToBase64String(stream.ToArray());
+
+            var base64 = Convert.ToBase64String(stream.ToArray());
+
+            // free the native pixels at once, as this may be called for hundreds of apps in a row
+            bitmap.Recycle();
+            return base64;
         }
 
-        public Bitmap DrawableToBitmap()
+        public Bitmap DrawableToBitmap(int size)
         {
-            if (drawable is BitmapDrawable { Bitmap: not null } drawable1)
-                return drawable1.Bitmap;
+            var config = Bitmap.Config.Argb8888 ??
+                         throw new InvalidOperationException("Could not acquire the Argb8888 bitmap config.");
 
-            //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);
-            var bitmap = Bitmap.CreateBitmap(32, 32, Bitmap.Config.Argb8888!);
-            var canvas = new Canvas(bitmap);
+            // every drawable is rendered into a fixed size canvas, including BitmapDrawable which
+            // carries the icon at its own density (up to 432x432) and would bloat the encoded size.
+            // it also keeps the result an owned bitmap that the caller can recycle safely
+            var bitmap = Bitmap.CreateBitmap(size, size, config);
+            using var canvas = new Canvas(bitmap);
             drawable.SetBounds(0, 0, canvas.Width, canvas.Height);
             drawable.Draw(canvas);
 

@@ -32,14 +32,20 @@ public static class ConnectionExtensions
             // Write the session response to the client stream
             try {
                 await streamConnection.WriteResponseAsync(sessionResponse, cancellationToken).Vhc();
+                await streamConnection.Stream.FlushAsync(cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogDebug(GeneralEventId.Stream, ex,
                     "Could not dispose a Connection gracefully. ConnectionId: {ConnectionId}",
                     streamConnection.ConnectionId);
-
-                streamConnection.Dispose();
             }
+
+            // the connection must never be left for the GC to collect: a finalized socket is closed
+            // abortively, and the reset discards the response the client has not read yet.
+            // reuse stays off here: no reply path has ever disposed its connection, so server-side reuse of
+            // a request connection has never actually run; turning it on is a separate decision
+            streamConnection.PreventReuse();
+            await streamConnection.DisposeAsync().Vhc();
         }
     }
 }

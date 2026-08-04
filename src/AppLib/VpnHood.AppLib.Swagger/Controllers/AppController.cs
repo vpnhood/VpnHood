@@ -128,7 +128,7 @@ public class AppController : ControllerBase, IAppController
     }
 
     [HttpGet("installed-apps")]
-    public Task<DeviceAppInfo[]> GetInstalledApps(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

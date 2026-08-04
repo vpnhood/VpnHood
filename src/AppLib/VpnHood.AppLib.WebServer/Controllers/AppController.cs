@@ -325,10 +325,9 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
         return await File.ReadAllBytesAsync(app.SettingsService.PromotionImageFilePath, cancellationToken);
     }
 
-    public Task<DeviceAppInfo[]> GetInstalledApps(CancellationToken cancellationToken)
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
     {
-        // the api contract is an array, as it is what NSwag generates the ts client from
-        return Task.FromResult(app.InstalledApps.ToArray());
+        return Task.FromResult(app.InstalledApps);
     }
 
     public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode, CancellationToken cancellationToken)

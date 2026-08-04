@@ -29,7 +29,7 @@ public interface IAppController
     Task SetUserSettings(UserSettings userSettings, CancellationToken cancellationToken);
     Task<string> Log(CancellationToken cancellationToken);
     Task<byte[]> PromotionImage(CancellationToken cancellationToken);
-    Task<DeviceAppInfo[]> GetInstalledApps(CancellationToken cancellationToken);
+    Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken);
     Task VersionCheck(CancellationToken cancellationToken);
     Task VersionCheckPostpone(CancellationToken cancellationToken);
     Task ExtendByRewardedAd(CancellationToken cancellationToken);

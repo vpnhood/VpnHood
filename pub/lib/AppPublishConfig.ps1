@@ -88,3 +88,35 @@ function Assert-AppSettings {
         Throw "publish.json is present (strict mode) but the shared appsettings is missing: '$file'. It is embedded as AppSettings.json; a build without it would silently ship default settings. Add it, or remove publish.json to build with built-in defaults.";
     }
 }
+
+# Strict guard for CONNECT's default server access key (.user/<app>/<distribution>/access_key_default_<distribution>.txt,
+# embedded as access_key_default.txt by each Connect distribution's csproj via Condition="Exists"). Connect is
+# useless without it: the app ships with DefaultAccessKey=null and the UI opens on an empty server list, which is
+# exactly how a keyless Windows installer went out in 8.1.838-prerelease. The csproj Exists() short-circuit and the
+# CI "secret not set" warning both fail OPEN, so nothing downstream notices — this is the one place that fails CLOSED.
+#
+# CLIENT never embeds a key (it prompts for one by design), so this is Connect-only: callers pass -connect.
+# Gated on strict mode like Assert-AppSettings, so a fork with no publish.json still builds keyless.
+#
+# $distribution is the .user subfolder AND the filename suffix (they match so the file maps 1:1 to its GitHub
+# secret, ACCESS_KEY_DEFAULT_<DIST>): google | web | ios. Windows and Linux are direct downloads, so they share
+# the 'web' key with the Android web APK — the same channel, hence the same key.
+function Assert-DefaultAccessKey {
+    param(
+        [Parameter(Mandatory = $true)][string]$appFolder,
+        [Parameter(Mandatory = $true)][string]$distribution,
+        # Only Connect embeds a default key; the switch keeps the call sites uniform across shared
+        # publishers (Publish-Installer.ps1 serves Client, Connect AND Server from one script).
+        [switch]$connect)
+
+    if (-not $connect) { return; }
+    if (-not (Get-AppPublishConfig $appFolder).exists) { return; }   # no publish.json -> defaults only, no lookups
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot);
+    $file = Join-Path (Join-Path (Join-Path "$repoRoot/../.user" $appFolder) $distribution) "access_key_default_$distribution.txt";
+    if (-not (Test-Path $file)) {
+        Throw "publish.json is present (strict mode) but Connect's default access key is missing: '$file'. It is embedded as access_key_default.txt; a build without it ships with NO default server and the app opens on an empty server list. In CI this file is written from the ACCESS_KEY_DEFAULT_$($distribution.ToUpperInvariant()) secret — set it on the publishing repo. Locally, drop the vh:// key in that path.";
+    }
+    if ([string]::IsNullOrWhiteSpace((Get-Content $file -Raw))) {
+        Throw "Connect's default access key file is present but EMPTY: '$file'. An empty file embeds an empty resource, which the app treats as no default server at all. In CI this means the ACCESS_KEY_DEFAULT_$($distribution.ToUpperInvariant()) secret is set to an empty value.";
+    }
+}

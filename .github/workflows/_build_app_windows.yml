@@ -31,6 +31,9 @@ jobs:
       ADVANCED_INSTALLER_LICENSE: ${{ secrets.ADVANCED_INSTALLER_LICENSE }}
       AZURE_SIGNING_CREDENTIAL: ${{ secrets.AZURE_SIGNING_CREDENTIAL }}
       AZURE_SIGNING_TARGET: ${{ vars.AZURE_SIGNING_TARGET || secrets.AZURE_SIGNING_TARGET }}
+      # Connect embeds a default server access key. Windows is a direct download, so it uses the same
+      # 'web' key as the Android web APK. Empty/unused for the client.
+      ACCESS_KEY_DEFAULT_WEB: ${{ secrets.ACCESS_KEY_DEFAULT_WEB }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v5
@@ -52,18 +55,48 @@ jobs:
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         uses: caphyon/advinst-github-action@7edde34c6ff935e53e3de72a5699efcfceb5f6c6 # v2.0.3
         with: { advinst-license: "${{ env.ADVANCED_INSTALLER_LICENSE }}" }
+      # Windows is a direct download, so it embeds the same 'web' key as the Android web APK. When the
+      # secret is absent nothing is written and the strict guard in the publish script (Assert-DefaultAccessKey)
+      # FAILS the build — a Connect installer with no default server opens on an empty server list, which
+      # is exactly how 8.1.838-prerelease shipped.
+      - name: Write default access key (connect)
+        if: env.ADVANCED_INSTALLER_LICENSE != '' && inputs.app == 'connect'
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_WEB)) { return }
+          $d = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG/web"
+          New-Item -ItemType Directory -Path $d -Force | Out-Null
+          $env:ACCESS_KEY_DEFAULT_WEB | Out-File (Join-Path $d "access_key_default_web.txt") -Encoding ascii -Force -NoNewline
+      # publish.json is the strict-mode switch (see pub/lib/AppPublishConfig.ps1). Without it the Windows
+      # build silently skipped every .user guard, so a missing appsettings/access key went unnoticed.
+      - name: Write publish.json
+        if: env.ADVANCED_INSTALLER_LICENSE != '' && vars.PUBLISH != ''
+        shell: pwsh
+        env: { PUBLISH: "${{ vars.PUBLISH }}" }
+        run: |
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
       - name: Write appsettings
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh
-        env: { APPSETTINGS: "${{ vars.APPSETTINGS }}" }
+        env:
+          APPSETTINGS: "${{ vars.APPSETTINGS }}"
+          PUBLISH: "${{ vars.PUBLISH }}"
         run: |
+          # publish.json (present when the PUBLISH var is set) turns on strict mode, which REQUIRES the
+          # shared appsettings — a missing secret must fail the Windows build loudly. Without it (a fork
+          # with no PUBLISH var) the build is non-strict, so warn and continue.
           if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
-            Write-Host "::warning::APPSETTINGS not set; building with default appsettings."
-          } else {
-            $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
-            New-Item -ItemType Directory -Path $u -Force | Out-Null
-            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+            if (-not [string]::IsNullOrWhiteSpace($env:PUBLISH)) {
+              throw "APPSETTINGS variable is not set, but a strict Windows publish (publish.json present) requires .user/$env:PKG/appsettings.json."
+            }
+            Write-Host "::warning::APPSETTINGS not set and no publish.json; building Windows with default appsettings."
+            return
           }
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
       - name: Build Windows binary (dotnet publish)
         if: env.ADVANCED_INSTALLER_LICENSE != ''
         shell: pwsh

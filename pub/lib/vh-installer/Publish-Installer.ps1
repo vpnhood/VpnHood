@@ -24,6 +24,9 @@ $repoBaseUrl =
 # Strict: the app's shared appsettings (embedded as AppSettings.json) must exist when strict.
 # Server has no publish.json, so Assert-AppSettings short-circuits (exists=false) and never throws.
 Assert-AppSettings $publishDirName;
+# Strict: Connect must carry a default server access key. Linux is a direct download, so it shares the
+# 'web' key with the Android web APK. No-ops for Client and Server (neither passes -connect).
+Assert-DefaultAccessKey $publishDirName "web" -Connect:$connect;
 
 # Build x64
 . "$PSScriptRoot/Publish-InstallerImpl.ps1" `

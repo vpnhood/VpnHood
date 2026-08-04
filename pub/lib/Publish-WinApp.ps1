@@ -40,6 +40,9 @@ $installationPageUrl =
 	else { "$repoUrl/releases/latest" };
 # Strict: the app's shared appsettings (embedded as AppSettings.json) must exist when strict.
 Assert-AppSettings $appFolder;
+# Strict: Connect must carry a default server access key. Windows is a direct download, so it shares the
+# 'web' key ($distribution is already "web" here) with the Android web APK.
+Assert-DefaultAccessKey $appFolder $distribution -Connect:$connect;
 
 $doPublish = $stage -in @("all", "publish");
 $doPackage = $stage -in @("all", "package");

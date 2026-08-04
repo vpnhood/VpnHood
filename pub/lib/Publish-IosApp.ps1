@@ -41,6 +41,8 @@ $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-Publish
 $installationPageUrl = if ($appConfig.installationPageUrl) { $appConfig.installationPageUrl } else { $repoUrl };
 # Strict: in strict mode (publish.json present) the app's shared appsettings must exist.
 Assert-AppSettings $appFolder;
+# Strict: Connect must carry a default server access key. iOS has its own ($distribution is "ios").
+Assert-DefaultAccessKey $appFolder $distribution -Connect:$connect;
 
 Write-Host "";
 Write-Host "*** Publishing $projectFile (iOS) ..." -BackgroundColor Blue -ForegroundColor White;

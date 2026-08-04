@@ -25,6 +25,17 @@
 		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json" LogicalName="AppSettings_Environment.json" Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\appsettings.$(Configuration).json')" />
 	</ItemGroup>
 
+	<!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret.
+	     Linux is a direct download, so it shares the 'web' distribution key with the Android web APK.
+	     The configuration-specific file wins (Debug embeds access_key_default_web.Debug.txt), otherwise
+	     the base access_key_default_web.txt is used. Both are optional here: a fork without them falls
+	     back to the in-code default in AppConfigs, while a real (strict) publish is gated by
+	     Assert-DefaultAccessKey in pub/lib/AppPublishConfig.ps1. -->
+	<ItemGroup>
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.$(Configuration).txt" LogicalName="access_key_default.txt" Condition="Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.$(Configuration).txt')" />
+		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.txt" LogicalName="access_key_default.txt" Condition="!Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.$(Configuration).txt') And Exists('$(SolutionDir)\..\.user\VpnHoodConnect\web\access_key_default_web.txt')" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />

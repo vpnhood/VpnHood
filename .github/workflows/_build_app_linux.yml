@@ -27,6 +27,9 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       PKG: ${{ inputs.app == 'connect' && 'VpnHoodConnect' || 'VpnHoodClient' }}
       PREFIX: ${{ inputs.app == 'connect' && 'Connect' || 'Client' }}
+      # Connect embeds a default server access key. Linux is a direct download, so it uses the same
+      # 'web' key as the Android web APK. Empty/unused for the client.
+      ACCESS_KEY_DEFAULT_WEB: ${{ secrets.ACCESS_KEY_DEFAULT_WEB }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v5
@@ -39,17 +42,46 @@ jobs:
           $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
           "MODULE_DIR=code/pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+      # Linux is a direct download, so it embeds the same 'web' key as the Android web APK. When the
+      # secret is absent nothing is written and the strict guard in the publish script (Assert-DefaultAccessKey)
+      # FAILS the build — a Connect package with no default server opens on an empty server list.
+      - name: Write default access key (connect)
+        if: inputs.app == 'connect'
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_WEB)) { return }
+          $d = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG/web"
+          New-Item -ItemType Directory -Path $d -Force | Out-Null
+          $env:ACCESS_KEY_DEFAULT_WEB | Out-File (Join-Path $d "access_key_default_web.txt") -Encoding ascii -Force -NoNewline
+      # publish.json is the strict-mode switch (see pub/lib/AppPublishConfig.ps1). Without it the Linux
+      # build silently skipped every .user guard, so a missing appsettings/access key went unnoticed.
+      - name: Write publish.json
+        if: vars.PUBLISH != ''
+        shell: pwsh
+        env: { PUBLISH: "${{ vars.PUBLISH }}" }
+        run: |
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:PUBLISH | Out-File (Join-Path $u "publish.json") -Encoding utf8 -Force
       - name: Write appsettings
         shell: pwsh
-        env: { APPSETTINGS: "${{ vars.APPSETTINGS }}" }
+        env:
+          APPSETTINGS: "${{ vars.APPSETTINGS }}"
+          PUBLISH: "${{ vars.PUBLISH }}"
         run: |
+          # publish.json (present when the PUBLISH var is set) turns on strict mode, which REQUIRES the
+          # shared appsettings — a missing secret must fail the Linux build loudly. Without it (a fork
+          # with no PUBLISH var) the build is non-strict, so warn and continue.
           if ([string]::IsNullOrWhiteSpace($env:APPSETTINGS)) {
-            Write-Host "::warning::APPSETTINGS not set; building with default appsettings."
-          } else {
-            $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
-            New-Item -ItemType Directory -Path $u -Force | Out-Null
-            $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
+            if (-not [string]::IsNullOrWhiteSpace($env:PUBLISH)) {
+              throw "APPSETTINGS variable is not set, but a strict Linux publish (publish.json present) requires .user/$env:PKG/appsettings.json."
+            }
+            Write-Host "::warning::APPSETTINGS not set and no publish.json; building Linux with default appsettings."
+            return
           }
+          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          $env:APPSETTINGS | Out-File (Join-Path $u "appsettings.json") -Encoding utf8 -Force
       - name: Build Linux
         shell: pwsh
         run: |

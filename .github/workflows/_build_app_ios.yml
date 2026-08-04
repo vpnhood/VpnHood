@@ -61,15 +61,17 @@ jobs:
           $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
           "MODULE_DIR=code/pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
+      # When the secret is absent nothing is written and the strict guard in the publish script
+      # (Assert-DefaultAccessKey) FAILS the build — a Connect app with no default server opens on an
+      # empty server list, so this must never pass silently.
       - name: Write default access key (connect)
         if: inputs.app == 'connect'
         shell: pwsh
         run: |
-          $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
-          if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_IOS)) {
-            $d = Join-Path $u "ios"; New-Item -ItemType Directory -Path $d -Force | Out-Null
-            $env:ACCESS_KEY_DEFAULT_IOS | Out-File (Join-Path $d "access_key_default_ios.txt") -Encoding ascii -Force -NoNewline
-          } else { Write-Host "::warning::ACCESS_KEY_DEFAULT_IOS not set; the iOS build has no default access key." }
+          if ([string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_IOS)) { return }
+          $d = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG/ios"
+          New-Item -ItemType Directory -Path $d -Force | Out-Null
+          $env:ACCESS_KEY_DEFAULT_IOS | Out-File (Join-Path $d "access_key_default_ios.txt") -Encoding ascii -Force -NoNewline
       - name: Write publish.json
         if: vars.PUBLISH != ''
         shell: pwsh

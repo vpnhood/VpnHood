@@ -1,6 +1,6 @@
 # Latest
 
-* Feature: Support QUIC on Windows and Linux
+* Feature: Support QUIC on All Platfroms
 * Feature: Split DNS — DNS queries now follow your split tunneling rules, so bypassed apps and sites resolve outside the tunnel
 * Feature: Unrouted IP protection — choose to block or bypass destinations the server cannot route, so traffic never leaks silently
 * Feature: Split tunneling master switch — one tap keeps all traffic inside the VPN and blocks what the server cannot carry
@@ -11,6 +11,7 @@
 * Improve: Initialization speed when using split tunneling by country
 * Improve: SOCKS & HTTP proxies stability
 * Improve: Memory usage & stability
+* Fix: Windows and Linux shipped without the default server, leaving the server list empty on first run #connect
 * Fix: A stray UDP packet could permanently stop unrelated UDP flows sharing the same server port
 * Fix: UDP flows sending without replies for over a minute could no longer receive responses
 * Update: Removed the legacy UDP proxy and the server's UseUdpProxy2 option; the shared UDP proxy is now always used and behaves as a port-restricted NAT

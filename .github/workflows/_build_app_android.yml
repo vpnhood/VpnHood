@@ -86,6 +86,9 @@ jobs:
         shell: pwsh
         run: |
           & "$env:GITHUB_WORKSPACE/code/pub/lib/Initialize-CiAndroidSigning.ps1"
+      # When a secret is absent nothing is written and the strict guard in the publish script
+      # (Assert-DefaultAccessKey) FAILS the build — a Connect app with no default server opens on an
+      # empty server list, so this must never pass silently.
       - name: Write default access keys (connect)
         if: inputs.app == 'connect'
         shell: pwsh
@@ -94,11 +97,11 @@ jobs:
           if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_GOOGLE)) {
             $d = Join-Path $u "google"; New-Item -ItemType Directory -Path $d -Force | Out-Null
             $env:ACCESS_KEY_DEFAULT_GOOGLE | Out-File (Join-Path $d "access_key_default_google.txt") -Encoding ascii -Force -NoNewline
-          } else { Write-Host "::warning::ACCESS_KEY_DEFAULT_GOOGLE not set; the Google build has no default access key." }
+          }
           if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_WEB)) {
             $d = Join-Path $u "web"; New-Item -ItemType Directory -Path $d -Force | Out-Null
             $env:ACCESS_KEY_DEFAULT_WEB | Out-File (Join-Path $d "access_key_default_web.txt") -Encoding ascii -Force -NoNewline
-          } else { Write-Host "::warning::ACCESS_KEY_DEFAULT_WEB not set; the web build has no default access key." }
+          }
       - name: Write publish.json
         if: vars.PUBLISH != ''
         shell: pwsh

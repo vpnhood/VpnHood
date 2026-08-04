@@ -133,7 +133,7 @@ public sealed class LocalTcpStackOptionsTest
         while (reassembled.Count < payload.Length) {
             cts.Token.ThrowIfCancellationRequested();
             IpPacket[] batch;
-            lock (sync) { batch = sent.Skip(consumed).ToArray(); consumed = sent.Count; }
+            lock (sync) { batch = [.. sent.Skip(consumed)]; consumed = sent.Count; }
 
             var progressed = false;
             foreach (var p in batch) {

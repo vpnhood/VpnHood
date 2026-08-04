@@ -117,7 +117,7 @@ public class WinDivertVpnAdapter(WinDivertVpnAdapterSettings adapterSettings) :
 
     protected override Task SetDnsServers(IReadOnlyList<IPAddress> dnsServers, CancellationToken cancellationToken)
     {
-        _dnsServers = dnsServers.ToList();
+        _dnsServers = [.. dnsServers];
         return Task.CompletedTask;
     }
 

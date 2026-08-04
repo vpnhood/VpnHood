@@ -40,7 +40,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         // show unblockable only if the policy is set
         if (policy?.UnblockableOnly == true)
-            items = items.Where(x => x.Options.HasUnblockable).ToArray();
+            items = [.. items.Where(x => x.Options.HasUnblockable)];
 
         return items;
     }
@@ -121,7 +121,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
                 RegionName = item.RegionName,
                 IsNestedCountry = isMultipleCountry,
                 IsDefault = countryCount.Count == 1 && !isMultipleCountry,
-                Tags = GetItemTags(item, freeLocations).ToArray()
+                Tags = [.. GetItemTags(item, freeLocations)]
             });
         }
 
@@ -137,14 +137,15 @@ public class ClientServerLocationInfo : ServerLocationInfo
 
         // set head sub auto items
         foreach (var locationInfo in results.Where(x => x is { IsAuto: false, RegionName: "*" })) {
-            locationInfo.Tags =
-                CalcCategoryTags(results.Where(x => x.CountryCode == locationInfo.CountryCode && x.RegionName != "*"))
-                    .ToArray();
+            locationInfo.Tags = [
+                .. CalcCategoryTags(
+                    results.Where(x => x.CountryCode == locationInfo.CountryCode && x.RegionName != "*"))
+            ];
         }
 
         // set head the auto after setting all sub auto items. This is to make sure the auto tags are calculated after all sub auto tags are set
         foreach (var locationInfo in results.Where(x => x.IsAuto)) {
-            locationInfo.Tags = CalcCategoryTags(results.Where(x => x.CountryCode != AutoCountryCode)).ToArray();
+            locationInfo.Tags = [.. CalcCategoryTags(results.Where(x => x.CountryCode != AutoCountryCode))];
         }
 
 

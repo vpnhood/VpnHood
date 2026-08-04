@@ -38,9 +38,9 @@ public class TestWebServer : IDisposable
         TestIps = testIps;
         LocalEps = new TestWebServerLocalEps(testIps);
         MockEps = new TestWebServerMockEps(LocalEps, testIps);
-        UdpClients = LocalEps.AllUdpEchoEndPoints.Select(BindUdpClient).ToArray();
-        UdpUploadClients = LocalEps.AllUdpUploadEndPoints.Select(BindUdpClient).ToArray();
-        UdpDownloadClients = LocalEps.AllUdpDownloadEndPoints.Select(BindUdpClient).ToArray();
+        UdpClients = [.. LocalEps.AllUdpEchoEndPoints.Select(BindUdpClient)];
+        UdpUploadClients = [.. LocalEps.AllUdpUploadEndPoints.Select(BindUdpClient)];
+        UdpDownloadClients = [.. LocalEps.AllUdpDownloadEndPoints.Select(BindUdpClient)];
 
         // Init files
         FileContent1 = string.Empty;

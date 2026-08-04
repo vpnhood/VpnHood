@@ -28,7 +28,7 @@ public class ServerFinderTest : TestBase
 
             // create token
             var token = TestHelper.CreateAccessToken(servers[0]);
-            token.ServerToken.HostEndPoints = servers.SelectMany(x => x.ServerHost.TcpEndPoints).ToArray();
+            token.ServerToken.HostEndPoints = [.. servers.SelectMany(x => x.ServerHost.TcpEndPoints)];
 
             // stop server1 and server2
             await servers[0].DisposeAsync();

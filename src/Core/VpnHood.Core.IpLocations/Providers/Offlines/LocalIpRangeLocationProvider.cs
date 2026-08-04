@@ -26,10 +26,11 @@ public class LocalIpRangeLocationProvider(
     public async Task<string[]> GetCountryCodes(CancellationToken cancellationToken)
     {
         using var _ = await _lock.LockAsync(cancellationToken);
-        _countryCodes ??= _zipArchive.Value.Entries
-            .Where(x => Path.GetExtension(x.Name) == ".ips")
-            .Select(x => Path.GetFileNameWithoutExtension(x.Name).ToUpper())
-            .ToArray();
+        _countryCodes ??= [
+            .. _zipArchive.Value.Entries
+                .Where(x => Path.GetExtension(x.Name) == ".ips")
+                .Select(x => Path.GetFileNameWithoutExtension(x.Name).ToUpper())
+        ];
 
         return _countryCodes;
     }

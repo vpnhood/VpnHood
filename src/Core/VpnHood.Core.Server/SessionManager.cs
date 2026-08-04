@@ -344,33 +344,36 @@ public class SessionManager : IAsyncDisposable, IDisposable
     private Session[] GetIdleSessions()
     {
         var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
-        return Sessions
-            .Values
-            .Where(x =>
-                x is { IsDisposed: false, IsSyncRequired: false } &&
-                x.LastActivityTime < minSessionActivityTime)
-            .ToArray(); // make sure make a copy to avoid modification in the loop
+        return [
+            .. Sessions
+                .Values
+                .Where(x =>
+                    x is { IsDisposed: false, IsSyncRequired: false } &&
+                    x.LastActivityTime < minSessionActivityTime)
+        ]; // make sure make a copy to avoid modification in the loop
     }
 
     private Session[] GetFailedSessions()
     {
-        return Sessions
-            .Values
-            .Where(x =>
-                x is { IsDisposed: false, IsSyncRequired: false } &&
-                x.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
-            .ToArray();
+        return [
+            .. Sessions
+                .Values
+                .Where(x =>
+                    x is { IsDisposed: false, IsSyncRequired: false } &&
+                    x.SessionResponseEx.ErrorCode != SessionErrorCode.Ok)
+        ];
     }
 
     private Session[] GetDeadSessions()
     {
         var utcNow = DateTime.UtcNow;
-        return Sessions
-            .Values
-            .Where(x =>
-                x is { IsDisposed: true, IsSyncRequired: false } &&
-                utcNow - x.DisposedTime > _deadSessionTimeout)
-            .ToArray(); // make sure make a copy to avoid modification in the loop
+        return [
+            .. Sessions
+                .Values
+                .Where(x =>
+                    x is { IsDisposed: true, IsSyncRequired: false } &&
+                    utcNow - x.DisposedTime > _deadSessionTimeout)
+        ]; // make sure make a copy to avoid modification in the loop
     }
 
     // remove sessions from memory that are idle but not disposed yet

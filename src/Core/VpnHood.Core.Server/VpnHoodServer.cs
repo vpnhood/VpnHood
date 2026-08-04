@@ -194,8 +194,8 @@ public class VpnHoodServer : IAsyncDisposable
             var serverInfo = new ServerInfo {
                 EnvironmentVersion = Environment.Version,
                 Version = ServerVersion,
-                PrivateIpAddresses = privateIpAddresses.ToArray(),
-                PublicIpAddresses = publicIpAddresses.ToArray(),
+                PrivateIpAddresses = [.. privateIpAddresses],
+                PublicIpAddresses = [.. publicIpAddresses],
                 Status = await GetStatus(),
                 MachineName = Environment.MachineName,
                 OsInfo = providerSystemInfo.OsInfo,
@@ -272,8 +272,8 @@ public class VpnHoodServer : IAsyncDisposable
                 TcpEndPoints = serverConfig.TcpEndPointsValue,
                 UdpEndPoints = serverConfig.UdpEndPointsValue,
                 QuicEndPoints = serverConfig.QuicEndPointsValue,
-                Certificates = serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null))
-                    .ToArray(),
+                Certificates =
+                    [.. serverConfig.Certificates.Select(x => X509CertificateLoader.LoadPkcs12(x.RawData, null))],
                 UdpChannelBufferSize = serverConfig.SessionOptions.UdpChannelBufferSizeValue
             }).Vhc();
 
@@ -369,15 +369,17 @@ public class VpnHoodServer : IAsyncDisposable
         var dnsServerIpRanges = dnsServers.Select(x => new IpRange(x)).ToOrderedList();
 
         // assign to workers
-        serverHost.NetFilterIncludeIpRanges = netFilterOptions
-            .GetFinalIncludeIpRanges()
-            .Union(dnsServerIpRanges)
-            .ToArray();
+        serverHost.NetFilterIncludeIpRanges = [
+            .. netFilterOptions
+                .GetFinalIncludeIpRanges()
+                .Union(dnsServerIpRanges)
+        ];
 
-        serverHost.NetFilterVpnAdapterIncludeIpRanges = netFilterOptions
-            .GetFinalVpnAdapterIncludeIpRanges()
-            .Union(dnsServerIpRanges)
-            .ToArray();
+        serverHost.NetFilterVpnAdapterIncludeIpRanges = [
+            .. netFilterOptions
+                .GetFinalVpnAdapterIncludeIpRanges()
+                .Union(dnsServerIpRanges)
+        ];
 
         serverHost.IsIpV6Supported = isIpV6Supported && !netFilterOptions.BlockIpV6Value;
 

@@ -32,11 +32,11 @@ public static class IpRangeTextFileParser
 
     public static IpRange[] ParseIncludes(string? text)
     {
-        return Parse(text, IpNetwork.All.ToIpRanges().ToArray());
+        return Parse(text, [.. IpNetwork.All.ToIpRanges()]);
     }
 
     public static IpRange[] ParseExcludes(string? text)
     {
-        return Parse(text, IpNetwork.None.ToIpRanges().ToArray());
+        return Parse(text, [.. IpNetwork.None.ToIpRanges()]);
     }
 }

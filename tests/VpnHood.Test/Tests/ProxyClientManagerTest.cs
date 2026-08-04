@@ -18,7 +18,7 @@ public class ManagedProxyConnectorTest : TestBase
     {
         var store = new ProxyEndPointStore(Path.Combine(TestHelper.WorkingPath, "proxies", "proxies.db"));
         if (proxyEndPoints.Length > 0)
-            await store.Upsert(proxyEndPoints.Select(x => new ProxyEndPointRecord { EndPoint = x }).ToArray());
+            await store.Upsert([.. proxyEndPoints.Select(x => new ProxyEndPointRecord { EndPoint = x })]);
         return store;
     }
 

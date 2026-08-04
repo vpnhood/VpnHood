@@ -26,7 +26,7 @@ internal class TcpListenerHost(
     private bool _disposed;
 
     public IReadOnlyList<IPEndPoint> EndPoints =>
-        _listeners.Select(x => (IPEndPoint)x.Listener.LocalEndpoint).ToArray();
+        [.. _listeners.Select(x => (IPEndPoint)x.Listener.LocalEndpoint)];
 
     public async Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
         IReadOnlyList<IPEndPoint> ipEndPoints, 

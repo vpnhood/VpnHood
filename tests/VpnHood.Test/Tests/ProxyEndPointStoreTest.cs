@@ -368,17 +368,18 @@ public class ProxyEndPointStoreTest : TestBase
         using var store2 = new ProxyEndPointStore(dbPath);
 
         var endPoints = Enumerable.Range(0, 50).Select(i => CreateEndPoint(i)).ToArray();
-        await store1.Upsert(endPoints.Select(x => new ProxyEndPointRecord { EndPoint = x }).ToArray());
+        await store1.Upsert([.. endPoints.Select(x => new ProxyEndPointRecord { EndPoint = x })]);
 
         // one instance hammers status updates (core flush) while the other does CRUD (app)
         var statusTask = Task.Run(async () => {
             for (var round = 0; round < 20; round++) {
-                await store1.UpdateStatuses(endPoints
-                    .Select(x => new ProxyEndPointInfo {
-                        EndPoint = x,
-                        Status = new ProxyEndPointStatus { SucceededCount = round + 1 }
-                    })
-                    .ToArray());
+                await store1.UpdateStatuses([
+                    .. endPoints
+                        .Select(x => new ProxyEndPointInfo {
+                            EndPoint = x,
+                            Status = new ProxyEndPointStatus { SucceededCount = round + 1 }
+                        })
+                ]);
             }
         });
 

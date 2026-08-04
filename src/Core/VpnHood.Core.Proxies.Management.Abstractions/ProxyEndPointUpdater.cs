@@ -64,9 +64,9 @@ public static class ProxyEndPointUpdater
 
         // Keep first maxItemCount items
         if (result.Count > maxItemCount)
-            result = result.Take(maxItemCount.Value).ToList();
+            result = [.. result.Take(maxItemCount.Value)];
 
-        return result.ToArray();
+        return [.. result];
     }
 
     private static ProxyEndPoint[] RemoveDuplicateIps(ProxyEndPointInfo[] currentEndPointInfos,

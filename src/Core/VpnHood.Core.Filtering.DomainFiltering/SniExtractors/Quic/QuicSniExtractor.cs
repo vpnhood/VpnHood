@@ -50,7 +50,7 @@ internal static class QuicSniExtractor
 
             state = new QuicSniState {
                 IsV2 = isV2,
-                Dcid = dcid.ToArray(),
+                Dcid = [.. dcid],
                 PacketBudget = 3,
                 DeadlineTicks = nowTicks + TimeoutTicks300Ms,
                 MaxBytes = 64 * 1024
@@ -83,7 +83,7 @@ internal static class QuicSniExtractor
             // ensure secrets match the actual packet (first time)
             if (!state.SecretsReady) {
                 state.IsV2 = pktIsV2;
-                state.Dcid = dcidHdr.ToArray();
+                state.Dcid = [.. dcidHdr];
                 DeriveInitialSecrets(state);
             }
 

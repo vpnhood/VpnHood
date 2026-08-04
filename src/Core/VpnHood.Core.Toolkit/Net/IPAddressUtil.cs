@@ -66,7 +66,7 @@ public static class IPAddressUtil
         if (ipV4Task.Result != null) ret.Add(ipV4Task.Result);
         if (ipV6Task.Result != null) ret.Add(ipV6Task.Result);
 
-        return ret.ToArray();
+        return [.. ret];
     }
 
     public static async Task<bool> IsIpv6Supported()
@@ -115,7 +115,7 @@ public static class IPAddressUtil
         if (ipV4Task != null) ret.Add(ipV4Task);
         if (ipV6Task != null) ret.Add(ipV6Task);
 
-        return ret.ToArray();
+        return [.. ret];
     }
 
     public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily,

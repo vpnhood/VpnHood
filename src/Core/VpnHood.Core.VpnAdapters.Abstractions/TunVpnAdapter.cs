@@ -210,19 +210,20 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
             VhLogger.Instance.LogDebug("Setting DNS servers...");
             var dnsServers = options.DnsServers;
             if (adapterIpNetworkV4 == null)
-                dnsServers = dnsServers.Where(x => !x.IsV4()).ToArray();
+                dnsServers = [.. dnsServers.Where(x => !x.IsV4())];
             if (adapterIpNetworkV6 == null)
-                dnsServers = dnsServers.Where(x => !x.IsV6()).ToArray();
+                dnsServers = [.. dnsServers.Where(x => !x.IsV6())];
             await SetDnsServers(dnsServers, cancellationToken).Vhc();
 
             // exclude dead networks
             var includeNetworks = options.IncludeNetworks.ToArray();
             if (IsSocketProtectedByBind) {
-                includeNetworks = includeNetworks
-                    .ToIpRanges()
-                    .Exclude(WebDeadNetworks.ToIpRanges())
-                    .ToIpNetworks()
-                    .ToArray();
+                includeNetworks = [
+                    .. includeNetworks
+                        .ToIpRanges()
+                        .Exclude(WebDeadNetworks.ToIpRanges())
+                        .ToIpNetworks()
+                ];
             }
 
             // add routes
@@ -656,13 +657,14 @@ public abstract class TunVpnAdapter : PacketTransport, IVpnAdapter
 
     private HashSet<IPAddress> GetPrimaryAdapterAddresses()
     {
-        return NetworkInterface.GetAllNetworkInterfaces()
-            .Where(IsPrimaryAdapter)
-            .Where(ni => ni.OperationalStatus == OperationalStatus.Up)
-            .Where(ni => !ni.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase))
-            .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
-            .Select(a => a.Address)
-            .ToHashSet();
+        return [
+            .. NetworkInterface.GetAllNetworkInterfaces()
+                .Where(IsPrimaryAdapter)
+                .Where(ni => ni.OperationalStatus == OperationalStatus.Up)
+                .Where(ni => !ni.Name.Equals(AdapterName, StringComparison.OrdinalIgnoreCase))
+                .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
+                .Select(a => a.Address)
+        ];
     }
 
     private readonly AsyncLock _restartLock = new();

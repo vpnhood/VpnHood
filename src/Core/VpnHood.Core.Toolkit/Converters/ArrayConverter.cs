@@ -20,7 +20,7 @@ public class ArrayConverter<T, TConverter> : JsonConverter<T[]> where TConverter
             reader.Read();
         }
 
-        return elements.ToArray();
+        return [.. elements];
     }
 
     public override void Write(Utf8JsonWriter writer, T[] value, JsonSerializerOptions options)

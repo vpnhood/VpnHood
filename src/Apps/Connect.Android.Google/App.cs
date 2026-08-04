@@ -128,7 +128,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         //        ProviderName = "Chartboost"
         //    });
 
-        return items.ToArray();
+        return [.. items];
     }
 
     private static IAppAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)

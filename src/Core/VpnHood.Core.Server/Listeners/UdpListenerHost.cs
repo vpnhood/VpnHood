@@ -15,7 +15,7 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
     private bool _disposed;
 
     public IReadOnlyList<IPEndPoint> EndPoints =>
-        _transmitters.Select(x => x.LocalEndPoint).ToArray();
+        [.. _transmitters.Select(x => x.LocalEndPoint)];
 
     public Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
         IReadOnlyList<IPEndPoint> ipEndPoints, TransferBufferSize? bufferSize)

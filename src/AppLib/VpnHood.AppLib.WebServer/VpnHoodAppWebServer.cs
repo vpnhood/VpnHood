@@ -384,6 +384,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             ipAddresses.AddRange(ips);
         }
 
-        return ipAddresses.ToArray();
+        return [.. ipAddresses];
     }
 }

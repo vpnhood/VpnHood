@@ -18,7 +18,7 @@ public class ClientOptions
     };
 
     [JsonConverter(typeof(ArrayConverter<IpRange, IpRangeConverter>))]
-    public IpRange[] IncludeIpRangesByDevice { get; set; } = IpNetwork.All.ToIpRanges().ToArray();
+    public IpRange[] IncludeIpRangesByDevice { get; set; } = [.. IpNetwork.All.ToIpRanges()];
 
     [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
     public IPAddress[]? DnsServers { get; set; }

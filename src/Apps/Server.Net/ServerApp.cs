@@ -169,7 +169,7 @@ public class ServerApp : IDisposable
         foreach (var port in allListenerPorts)
             defaultPublicEps.AddRange(publicIps.Select(x => new IPEndPoint(x, port)));
 
-        return defaultPublicEps.ToArray();
+        return [.. defaultPublicEps];
     }
 
     private static HttpAccessManager CreateHttpAccessManager(HttpAccessManagerOptions options)

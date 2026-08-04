@@ -11,7 +11,7 @@ namespace VpnHood.Core.Tunneling.Channels.Streams;
 
 public class HttpStream : ChunkStream
 {
-    private readonly byte[] _newLineBytes = "\r\n"u8.ToArray();
+    private readonly byte[] _newLineBytes = [.. "\r\n"u8];
 
     private int _remainingChunkBytes;
     private readonly byte[] _chunkHeaderBuffer = new byte[10];

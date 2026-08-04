@@ -166,7 +166,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             .Vhc();
 
         // productDetailsResult.ProductDetailsList is obsolete and return null
-        return productDetailsResult.ProductDetails.ToArray();
+        return [.. productDetailsResult.ProductDetails];
     }
 
     public async Task<AppPurchaseResult> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, CancellationToken cancellationToken)

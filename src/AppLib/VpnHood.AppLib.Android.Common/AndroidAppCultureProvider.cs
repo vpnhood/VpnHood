@@ -59,7 +59,7 @@ public class AndroidAppCultureProvider : IAppCultureProvider
         }
         set {
             var localeManager = GetLocalManager();
-            localeManager.ApplicationLocales = new LocaleList(value.Select(x => new Locale(x)).ToArray());
+            localeManager.ApplicationLocales = new LocaleList([.. value.Select(x => new Locale(x))]);
         }
     }
 }

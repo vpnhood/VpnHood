@@ -322,7 +322,7 @@ public class TestHelper : IDisposable
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
             MaxPacketChannelCount = 1,
-            IncludeIpRangesByDevice = TestIps.AllRemoteTestIps.ToIpRanges().ToArray(),
+            IncludeIpRangesByDevice = [.. TestIps.AllRemoteTestIps.ToIpRanges()],
             SplitLocalNetwork = true,
             ConnectTimeout = TimeSpan.FromSeconds(3),
             ChannelProtocol = channelProtocol,

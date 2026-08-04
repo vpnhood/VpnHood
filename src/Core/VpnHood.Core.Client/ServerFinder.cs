@@ -53,14 +53,16 @@ public class ServerFinder(
                 string.Join(", ", customServerEndpoints.Select(VhLogger.Format)));
 
             // select forced endpoints for each server token
-            return serverTokens
-                .SelectMany(serverToken => customServerEndpoints.Select(ep =>
-                    new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase)))
-                .Where(x =>
-                    includeIpV6 || // accept any IPv6 if allowed
-                    x.TcpEndPoint.IsV4() ||
-                    x.TcpEndPoint.Address.IsLoopback())// loopback addresses are for tests
-                .ToArray();
+            return [
+                .. serverTokens
+                    .SelectMany(serverToken => customServerEndpoints.Select(ep =>
+                        new VpnEndPoint(ep, serverToken.HostName, serverToken.CertificateHash, serverToken.PathBase)))
+                    .Where(x =>
+                        includeIpV6 || // accept any IPv6 if allowed
+                        x.TcpEndPoint.IsV4() ||
+                        x.TcpEndPoint.Address.IsLoopback()) // loopback addresses are for tests
+
+            ];
         }
 
         // resolve endpoints for each server token in parallel

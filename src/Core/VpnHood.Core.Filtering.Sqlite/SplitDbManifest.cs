@@ -27,7 +27,7 @@ public static class SplitDbManifest
 
         var data = JsonSerializer.Deserialize<ManifestData>(File.ReadAllText(manifestPath))
                    ?? throw new InvalidDataException($"Could not deserialize {manifestPath}.");
-        return data.DbFiles.Select(fileName => Path.Combine(folderPath, fileName)).ToArray();
+        return [.. data.DbFiles.Select(fileName => Path.Combine(folderPath, fileName))];
     }
 
     // Publish the current db set (atomic temp+rename, so a concurrent Read never sees a torn file),

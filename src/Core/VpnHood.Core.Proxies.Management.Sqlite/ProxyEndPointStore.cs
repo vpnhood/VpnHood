@@ -427,7 +427,7 @@ public class ProxyEndPointStore(string dbPath) : IProxyEndPointStore
         var currentRecords = await ReadAll(connection).Vhc();
         var currentInfos = currentRecords.Select(x => x.ToInfo()).ToArray();
         var mergedEndPoints = ProxyEndPointUpdater.Merge(
-            currentInfos, newEndPoints as ProxyEndPoint[] ?? newEndPoints.ToArray(),
+            currentInfos, newEndPoints as ProxyEndPoint[] ?? [.. newEndPoints],
             maxItemCount, maxPenalty, removeDuplicateIps);
 
         var mergedIds = mergedEndPoints.Select(x => x.Id).ToHashSet();

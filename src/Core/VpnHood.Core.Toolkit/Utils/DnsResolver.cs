@@ -130,7 +130,7 @@ public static class DnsResolver
 
         return new IPHostEntry {
             HostName = "",
-            AddressList = ipAddresses.ToArray()
+            AddressList = [.. ipAddresses]
         };
     }
 

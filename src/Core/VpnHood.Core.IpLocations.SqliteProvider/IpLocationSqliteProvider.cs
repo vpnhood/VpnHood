@@ -109,7 +109,7 @@ public class IpLocationSqliteProvider : IIpRangeLocationProvider, IAsyncDisposab
             countryCodes.Add(countryCode.ToUpperInvariant());
         }
 
-        return countryCodes.ToArray();
+        return [.. countryCodes];
     }
 
     private static SqliteConnection OpenConnection(string dbPath)

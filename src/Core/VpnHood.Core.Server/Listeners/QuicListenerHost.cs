@@ -26,7 +26,7 @@ internal class QuicListenerHost(
     // only report listeners that are still running; a listener whose task has finished
     // (e.g. stopped due to an unrecoverable error) must not be advertised in the Hello response
     public IReadOnlyList<IPEndPoint> EndPoints =>
-        _listeners.Where(x => !x.ListenerTask.IsCompleted).Select(x => x.Listener.LocalEndPoint).ToArray();
+        [.. _listeners.Where(x => !x.ListenerTask.IsCompleted).Select(x => x.Listener.LocalEndPoint)];
 
     public async Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
         IReadOnlyList<IPEndPoint> ipEndPoints,

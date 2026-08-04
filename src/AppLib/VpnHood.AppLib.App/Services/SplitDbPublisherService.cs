@@ -26,7 +26,7 @@ public class SplitDbPublisherService(
             await splitCountryService.EnsureSplitIpDb(ipDbFolder, cancellationToken).Vhc(),
             await splitIpViaAppService.EnsureSplitIpDb(ipDbFolder, cancellationToken).Vhc()
         ];
-        SplitDbManifest.Write(ipDbFolder, ipDbPaths.OfType<string>().ToArray());
+        SplitDbManifest.Write(ipDbFolder, [.. ipDbPaths.OfType<string>()]);
 
         var domainDbFolder = Path.Combine(vpnServiceConfigFolder, SplitDbManifest.DomainFiltersFolderName);
         var domainDbPath = await splitDomainService.EnsureSplitDomainDb(domainDbFolder, cancellationToken).Vhc();

@@ -33,7 +33,7 @@ public class SplitDomainDbTest : TestBase
         var domains = new List<string>();
         while (reader.Read())
             domains.Add(reader.GetString(0));
-        return domains.ToArray();
+        return [.. domains];
     }
 
     private static string? ReadMeta(string dbPath, string key)

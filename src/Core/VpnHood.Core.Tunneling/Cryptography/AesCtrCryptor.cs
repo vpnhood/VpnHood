@@ -13,7 +13,7 @@ internal sealed class AesCtrCryptor : ICryptor
         _aes = Aes.Create();
         _aes.Mode = CipherMode.ECB;
         _aes.Padding = PaddingMode.None;
-        _aes.Key = key.ToArray();
+        _aes.Key = [.. key];
         _encryptor = _aes.CreateEncryptor();
     }
 

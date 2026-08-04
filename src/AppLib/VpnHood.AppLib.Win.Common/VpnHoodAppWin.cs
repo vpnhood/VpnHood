@@ -321,7 +321,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
 
             // update if changed
             if (!hostLines.SequenceEqual(newHostLines))
-                File.WriteAllLines(hostsFilePath, newHostLines.ToArray());
+                File.WriteAllLines(hostsFilePath, [.. newHostLines]);
 
             return new Uri($"http://{localHost}:{freeLocalEndPoint.Port}");
         }

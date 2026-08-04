@@ -57,7 +57,7 @@ public class ServerConfig
 
 
     [JsonIgnore]
-    public IPAddress[] DnsServersValue => DnsServers ?? IPAddressUtil.GoogleDnsServers.ToArray();
+    public IPAddress[] DnsServersValue => DnsServers ?? [.. IPAddressUtil.GoogleDnsServers];
 
     [JsonIgnore]
     public TimeSpan UpdateStatusIntervalValue => UpdateStatusInterval ?? TimeSpan.FromSeconds(120);

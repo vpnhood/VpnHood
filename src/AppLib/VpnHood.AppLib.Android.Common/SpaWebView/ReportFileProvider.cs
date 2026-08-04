@@ -70,8 +70,8 @@ public sealed class ReportFileProvider : ContentProvider
             }
         }
 
-        var cursor = new MatrixCursor(names.ToArray(), 1);
-        cursor.AddRow(values.ToArray());
+        var cursor = new MatrixCursor([.. names], 1);
+        cursor.AddRow([.. values]);
         return cursor;
     }
 

@@ -99,8 +99,8 @@ public class IosVpnAdapter(
         // Set the default gateway for IPv4 and IPv6
         if (_ipv4Networks.Count > 0) {
             using var ipv4Settings = new NEIPv4Settings(
-                _ipv4Networks.Select(x => x.Prefix.ToString()).ToArray(),
-                _ipv4Networks.Select(x => x.SubnetMask.ToString()).ToArray());
+                [.. _ipv4Networks.Select(x => x.Prefix.ToString())],
+                [.. _ipv4Networks.Select(x => x.SubnetMask.ToString())]);
 
             var includedRoutes = _ipv4Routes
                 .Select(r => new NEIPv4Route(r.Prefix.ToString(), r.SubnetMask.ToString()))
@@ -125,7 +125,7 @@ public class IosVpnAdapter(
             NEIPv6Settings ipv6Settings;
             try {
                 ipv6Settings = new NEIPv6Settings(
-                    _ipv6Networks.Select(x => x.Prefix.ToString()).ToArray(), prefixLengths);
+                    [.. _ipv6Networks.Select(x => x.Prefix.ToString())], prefixLengths);
             }
             finally {
                 foreach (var prefixLength in prefixLengths)
@@ -179,7 +179,7 @@ public class IosVpnAdapter(
 
         // Set DNS servers if any are provided
         if (_dnsServers.Count > 0) {
-            using var dnsSettings = new NEDnsSettings(_dnsServers.Select(x => x.ToString()).ToArray());
+            using var dnsSettings = new NEDnsSettings([.. _dnsServers.Select(x => x.ToString())]);
             networkSettings.DnsSettings = dnsSettings;
         }
 

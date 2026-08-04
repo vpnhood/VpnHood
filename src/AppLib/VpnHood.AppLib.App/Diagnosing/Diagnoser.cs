@@ -50,12 +50,12 @@ public class Diagnoser
         VhLogger.Instance.LogInformation("Checking the endpoints via ping...");
         if (!await IPAddressUtil.IsIpv6Supported() && ipEndPoints.Any(x => x.IsV6())) {
             VhLogger.Instance.LogInformation("IpV6 is not supported. Excluding IpV6 addresses");
-            ipEndPoints = ipEndPoints.Where(x => !x.Address.IsV6()).ToArray();
+            ipEndPoints = [.. ipEndPoints.Where(x => !x.Address.IsV6())];
         }
 
         // check ping
         var pingRes = await DiagnoseUtil
-            .CheckPing(ipEndPoints.Select(x => x.Address).ToArray(), NsTimeout, cancellationToken)
+            .CheckPing([.. ipEndPoints.Select(x => x.Address)], NsTimeout, cancellationToken)
             .Vhc();
 
         if (pingRes == null)

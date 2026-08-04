@@ -13,21 +13,21 @@ public static class DiagnoseUtil
     public static Task<Exception?> CheckHttps(Uri[] uris, TimeSpan timeout, CancellationToken cancellationToken)
     {
         var tasks = uris.Select(x => CheckHttps(x, timeout, cancellationToken));
-        return WhenAnySuccess(tasks.ToArray());
+        return WhenAnySuccess([.. tasks]);
     }
 
     public static Task<Exception?> CheckUdp(IPEndPoint[] nsIpEndPoints, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         var tasks = nsIpEndPoints.Select(x => CheckUdp(x, timeout, cancellationToken));
-        return WhenAnySuccess(tasks.ToArray());
+        return WhenAnySuccess([.. tasks]);
     }
 
     public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, TimeSpan timeout,
         CancellationToken cancellationToken)
     {
         var tasks = ipAddresses.Select(x => CheckPing(x, timeout, cancellationToken));
-        return WhenAnySuccess(tasks.ToArray());
+        return WhenAnySuccess([.. tasks]);
     }
 
     private static async Task<Exception?> WhenAnySuccess(Task<Exception?>[] tasks)
@@ -39,7 +39,7 @@ public static class DiagnoseUtil
             if (exception == null)
                 return null; //at least one task is success
 
-            tasks = tasks.Where(x => x != task).ToArray();
+            tasks = [.. tasks.Where(x => x != task)];
         }
 
         return exception;

@@ -78,7 +78,7 @@ internal static class ClientHelper
                         "Using user's DNS servers outside the tunnel because the session can not tunnel them (excluded by filters or not routed by the server). DnsServers: {DnsServers}",
                         VhLogger.Format(results));
                     return new DnsConfig {
-                        DnsServers = results.ToArray(),
+                        DnsServers = [.. results],
                         IsIncludedInVpn = false,
                         IsUserSuppressed = isUserSuppressed, // false: the user's own exclusion is being honored, not suppressed
                         DnsSelection = DnsSelection.UserDns
@@ -101,7 +101,7 @@ internal static class ClientHelper
                     VhLogger.Format(results));
 
                 return new DnsConfig {
-                    DnsServers = results.ToArray(),
+                    DnsServers = [.. results],
                     IsIncludedInVpn = true,
                     IsUserSuppressed = isUserSuppressed,
                     DnsSelection = DnsSelection.UserDns
@@ -126,7 +126,7 @@ internal static class ClientHelper
                     VhLogger.Format(results));
 
                 return new DnsConfig {
-                    DnsServers = results.ToArray(),
+                    DnsServers = [.. results],
                     IsIncludedInVpn = true,
                     IsUserSuppressed = isUserSuppressed,
                     DnsSelection = DnsSelection.ServerDns
@@ -143,7 +143,7 @@ internal static class ClientHelper
                 VhLogger.Format(results));
 
             return new DnsConfig {
-                DnsServers = results.ToArray(),
+                DnsServers = [.. results],
                 IsIncludedInVpn = true,
                 IsUserSuppressed = isUserSuppressed,
                 DnsSelection = DnsSelection.GoogleDns
@@ -164,7 +164,7 @@ internal static class ClientHelper
             "Using Google DNS servers although the session can not route them through the VPN; DNS may not work. DnsServers: {DnsServers}",
             VhLogger.Format(results));
         return new DnsConfig {
-            DnsServers = results.ToArray(),
+            DnsServers = [.. results],
             IsIncludedInVpn = false,
             IsUserSuppressed = isUserSuppressed,
             DnsSelection = DnsSelection.GoogleDns

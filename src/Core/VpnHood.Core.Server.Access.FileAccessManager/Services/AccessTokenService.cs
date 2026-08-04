@@ -84,7 +84,7 @@ public class AccessTokenService
                 tokenItems.Add(tokenItem);
         }
 
-        return tokenItems.ToArray();
+        return [.. tokenItems];
     }
 
     public Task<int> GetTotalCount()

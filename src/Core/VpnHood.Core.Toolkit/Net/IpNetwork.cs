@@ -59,7 +59,7 @@ public class IpNetwork
     public static IReadOnlyList<IpNetwork> LoopbackNetworks => field ??= [LoopbackNetworkV4, LoopbackNetworkV6];
     public static IpNetwork AllV6 => field ??= new IpNetwork(IPAddress.IPv6Any, 0);
     public static IpNetwork AllGlobalUnicastV6 => field ??= Parse("2000::/3");
-    public static IReadOnlyList<IpNetwork> LocalNetworksV6 => field ??= AllGlobalUnicastV6.Invert().ToArray();
+    public static IReadOnlyList<IpNetwork> LocalNetworksV6 => field ??= [.. AllGlobalUnicastV6.Invert()];
     public static IReadOnlyList<IpNetwork> LocalNetworks => field ??= LocalNetworksV4.Concat(LocalNetworksV6).ToArray();
     public static IReadOnlyList<IpNetwork> All => field ??= [AllV4, AllV6];
     public static IReadOnlyList<IpNetwork> None { get; } = [];

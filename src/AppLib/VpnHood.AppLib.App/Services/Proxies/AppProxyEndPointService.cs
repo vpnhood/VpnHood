@@ -119,7 +119,7 @@ public class AppProxyEndPointService(
         }).Vhc();
 
         return new ListResult<AppProxyEndPointInfo> {
-            Items = result.Items.Select(ToAppInfo).ToArray(),
+            Items = [.. result.Items.Select(ToAppInfo)],
             TotalCount = result.TotalCount
         };
     }
@@ -229,6 +229,7 @@ public class AppProxyEndPointService(
             return;
 
         // resolve all host with domain name
+        // ReSharper disable once UseCollectionExpression
         proxyEndPointInfos = proxyEndPointInfos.Where(x => x.CountryCode is null).ToArray();
         var hostCountries = await _hostCountryResolver
             .GetHostCountries(proxyEndPointInfos.Select(x => x.EndPoint.Host), cancellationToken);

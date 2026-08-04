@@ -25,7 +25,7 @@ public class ClientProfileService
     {
         ClientProfilesFilePath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
         _appFeatures = appFeatures;
-        _clientProfiles = Load().ToList();
+        _clientProfiles = [.. Load()];
     }
 
     public ClientProfileInfo? FindInfo(Guid clientProfileId)
@@ -73,7 +73,7 @@ public class ClientProfileService
 
     public ClientProfile[] List()
     {
-        return _clientProfiles.ToArray();
+        return [.. _clientProfiles];
     }
 
     public void Delete(Guid clientProfileId)
@@ -225,7 +225,7 @@ public class ClientProfileService
                 x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId)) > 0)
             Save();
 
-        return clientProfiles.ToArray();
+        return [.. clientProfiles];
     }
 
     public bool TryUpdateTokenByAccessKey(string tokenId, string accessKey)
@@ -330,7 +330,7 @@ public class ClientProfileService
 
     public void Reload()
     {
-        _clientProfiles = Load().ToList();
+        _clientProfiles = [.. Load()];
         _cashInfo = null;
     }
 

@@ -215,13 +215,13 @@ public class ProxyEndPointServiceTest : TestAppBase
         await dom.App.Services.ProxyEndPointService.Add(newNode);
         var updatedNodes = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
         Assert.HasCount(11, updatedNodes);
-        Assert.HasCount(1, updatedNodes.Where(x => x.EndPoint.Id == newNode.Id).ToArray());
+        Assert.HasCount(1, [.. updatedNodes.Where(x => x.EndPoint.Id == newNode.Id)]);
 
         // add same but should be duplicated
         await dom.App.Services.ProxyEndPointService.Add(newNode);
         updatedNodes = (await dom.App.Services.ProxyEndPointService.ListProxies()).Items;
         Assert.HasCount(11, updatedNodes);
-        Assert.HasCount(1, updatedNodes.Where(x => x.EndPoint.Id == newNode.Id).ToArray());
+        Assert.HasCount(1, [.. updatedNodes.Where(x => x.EndPoint.Id == newNode.Id)]);
 
         // update endpoint[2]
         newNode = new ProxyEndPoint {

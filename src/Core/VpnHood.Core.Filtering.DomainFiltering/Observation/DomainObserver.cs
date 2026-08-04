@@ -14,7 +14,7 @@ public class DomainObserver(EventId sniEventId)
     public IReadOnlyList<DomainObservation> Observations {
         get {
             lock (_lockObject) {
-                return _observations.Values.ToList();
+                return [.. _observations.Values];
             }
         }
     }

@@ -74,7 +74,7 @@ public class ClientProfileInfo(ClientProfile clientProfile, AppFeatures appFeatu
         if (serverToken.HostEndPoints != null)
             hostNames.AddRange(serverToken.HostEndPoints.Select(x => VhUtils.RedactIpAddress(x.Address)));
 
-        return hostNames.ToArray();
+        return [.. hostNames];
     }
 
     public bool HasMultipleRegion(string countryCode)

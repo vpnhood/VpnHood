@@ -138,7 +138,7 @@ public static class ProxyEndPointParser
                 results.Add(uri);
         }
 
-        return results.ToArray();
+        return [.. results];
     }
 
     private static bool TryCreateUri(string input, [NotNullWhen(true)] out Uri? uri)

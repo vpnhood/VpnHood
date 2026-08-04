@@ -69,7 +69,7 @@ public class EventReporter : IDisposable
             args = args.Concat(LogScope.Data).ToArray();
 
         var log = _message + " " + string.Join(", ", args.Select(x => $"{x.Item1}: {{{x.Item1}}}"));
-        VhLogger.Instance.LogInformation(_eventId, log, args.Select(x => x.Item2).ToArray());
+        VhLogger.Instance.LogInformation(_eventId, log, [.. args.Select(x => x.Item2)]);
     }
 
     public void Dispose()

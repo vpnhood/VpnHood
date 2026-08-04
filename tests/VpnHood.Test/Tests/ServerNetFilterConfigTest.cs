@@ -81,7 +81,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // create client
         var clientOptions = TestHelper.CreateClientOptions(token: token);
-        clientOptions.IncludeIpRangesByDevice = IpNetwork.All.ToIpRanges().ToArray();
+        clientOptions.IncludeIpRangesByDevice = [.. IpNetwork.All.ToIpRanges()];
         clientOptions.SplitLocalNetwork = true;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
@@ -117,7 +117,7 @@ public class ServerNetFilterConfigTest : TestBase
 
         // create client
         var clientOptions = TestHelper.CreateClientOptions(token: token);
-        clientOptions.IncludeIpRangesByDevice = IpNetwork.All.ToIpRanges().ToArray();
+        clientOptions.IncludeIpRangesByDevice = [.. IpNetwork.All.ToIpRanges()];
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: new TestNullVpnAdapter());
 

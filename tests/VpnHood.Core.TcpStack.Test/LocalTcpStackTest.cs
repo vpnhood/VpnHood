@@ -35,7 +35,7 @@ public sealed class LocalTcpStackTest
         tcpStack.ProcessIncoming(synPacket);
 
         // Assert - Should receive SYN-ACK
-        Assert.AreEqual(1, sentPackets.Count, "Should send SYN-ACK");
+        Assert.HasCount(1, sentPackets, "Should send SYN-ACK");
         var synAckPacket = sentPackets[0];
         var synAckTcp = synAckPacket.ExtractTcp();
         Assert.IsTrue(synAckTcp.Synchronize, "SYN-ACK should have SYN flag");
@@ -43,7 +43,7 @@ public sealed class LocalTcpStackTest
         Assert.AreEqual(1001u, synAckTcp.AcknowledgmentNumber, "ACK number should be SYN seq + 1");
 
         // Act - Send final ACK to complete handshake
-        var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, 
+        var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: synAckTcp.SequenceNumber + 1);
         tcpStack.ProcessIncoming(ackPacket);
 
@@ -106,10 +106,10 @@ public sealed class LocalTcpStackTest
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
         tcpStack.ProcessIncoming(synPacket);
-        
+
         var synAckTcp = sentPackets[0].ExtractTcp();
         var serverSeq = synAckTcp.SequenceNumber;
-        
+
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
         tcpStack.ProcessIncoming(ackPacket);
@@ -127,8 +127,8 @@ public sealed class LocalTcpStackTest
         await WaitForCondition(() => sentPackets.Count >= 1, cts.Token);
 
         // Assert - Should receive data ACK
-        Assert.IsTrue(sentPackets.Count >= 1, "Should send ACK for data");
-        
+        Assert.IsGreaterThanOrEqualTo(1, sentPackets.Count, "Should send ACK for data");
+
         // Read data from stream
         var buffer = new byte[100];
         var bytesRead = await stream.Stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
@@ -236,7 +236,7 @@ public sealed class LocalTcpStackTest
         await Task.Delay(100, cts.Token);
 
         lock (lockObj) {
-            Assert.IsFalse(sentPackets.Any(p => p.ExtractTcp().Payload.Length == 0 && p.ExtractTcp().AcknowledgmentNumber == 1513),
+            Assert.DoesNotContain(p => p.ExtractTcp().Payload.Length == 0 && p.ExtractTcp().AcknowledgmentNumber == 1513, sentPackets,
                 "The first full-size non-PSH segment should be ACK-thinned.");
         }
 
@@ -281,10 +281,10 @@ public sealed class LocalTcpStackTest
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
         tcpStack.ProcessIncoming(synPacket);
-        
+
         var synAckTcp = sentPackets[0].ExtractTcp();
         var serverSeq = synAckTcp.SequenceNumber;
-        
+
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
         tcpStack.ProcessIncoming(ackPacket);
@@ -296,15 +296,15 @@ public sealed class LocalTcpStackTest
         // Act - Server writes data
         var responseData = "World"u8.ToArray(); // "World"
         await stream.Stream.WriteAsync(responseData, 0, responseData.Length, cts.Token);
-        
+
         // Give time for async packet emission
         await Task.Delay(100, cts.Token);
 
         // Assert - Should send data packet
-        Assert.IsTrue(sentPackets.Count >= 1, "Should send data packet");
+        Assert.IsGreaterThanOrEqualTo(1, sentPackets.Count, "Should send data packet");
         var dataPacket = sentPackets.First(p => p.ExtractTcp().Payload.Length > 0);
         var dataTcp = dataPacket.ExtractTcp();
-        
+
         Assert.IsTrue(dataTcp.Acknowledgment, "Data packet should have ACK flag");
         Assert.IsTrue(dataTcp.Push, "Data packet should have PSH flag");
         CollectionAssert.AreEqual(responseData, dataTcp.Payload.ToArray(), "Payload should match");
@@ -323,24 +323,19 @@ public sealed class LocalTcpStackTest
         var tcpStack = new LocalTcpStack();
         var sentPackets = new List<IpPacket>();
         object lockObj = new();
-        tcpStack.OnPacketSend = packet =>
-        {
-            lock (lockObj)
-            {
+        tcpStack.OnPacketSend = packet => {
+            lock (lockObj) {
                 sentPackets.Add(packet);
             }
         };
 
         var listener = tcpStack.Listen(new IpEndPointValue(ServerIp, ServerPort));
-        
+
         // Start echo server
-        _ = Task.Run(async () =>
-        {
-            await foreach (var stream in listener.AcceptAllAsync())
-            {
+        _ = Task.Run(async () => {
+            await foreach (var stream in listener.AcceptAllAsync()) {
                 var buffer = new byte[1024];
-                while (true)
-                {
+                while (true) {
                     var bytesRead = await stream.Stream.ReadAsync(buffer, 0, buffer.Length);
                     if (bytesRead == 0) break;
                     await stream.Stream.WriteAsync(buffer, 0, bytesRead);
@@ -352,38 +347,40 @@ public sealed class LocalTcpStackTest
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
         tcpStack.ProcessIncoming(synPacket);
-        
+
         IpPacket synAckPacket;
         lock (lockObj) { synAckPacket = sentPackets[0]; }
         var synAckTcp = synAckPacket.ExtractTcp();
         var serverSeq = synAckTcp.SequenceNumber;
-        
+
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
         tcpStack.ProcessIncoming(ackPacket);
-        
+
         await Task.Delay(100); // Wait for accept
 
         // Act - Send data and check for echo
         lock (lockObj) { sentPackets.Clear(); }
-        
+
         var testData = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
         var dataPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: testData);
         tcpStack.ProcessIncoming(dataPacket);
-        
+
         // Wait for echo response
         await Task.Delay(500);
-        
+
         // Assert - Should receive echoed data
         IpPacket[] packetsSnapshot;
-        lock (lockObj) { packetsSnapshot = sentPackets.ToArray(); }
-        
+        lock (lockObj) {
+            packetsSnapshot = [.. sentPackets];
+        }
+
         var dataPackets = packetsSnapshot.Where(p => p.ExtractTcp().Payload.Length > 0).ToList();
-        Assert.IsTrue(dataPackets.Count > 0, "Should receive echoed data packet");
-        
+        Assert.IsNotEmpty(dataPackets, "Should receive echoed data packet");
+
         var echoedData = dataPackets[0].ExtractTcp().Payload.ToArray();
-        CollectionAssert.AreEqual(testData, echoedData, "Echoed data should match sent data");
+        Assert.AreSequenceEqual(testData, echoedData, "Echoed data should match sent data");
     }
 
     /// <summary>
@@ -397,10 +394,8 @@ public sealed class LocalTcpStackTest
         var tcpStack = new LocalTcpStack();
         var sentPackets = new List<IpPacket>();
         object lockObj = new();
-        tcpStack.OnPacketSend = packet =>
-        {
-            lock (lockObj)
-            {
+        tcpStack.OnPacketSend = packet => {
+            lock (lockObj) {
                 sentPackets.Add(packet);
             }
         };
@@ -411,12 +406,12 @@ public sealed class LocalTcpStackTest
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
         tcpStack.ProcessIncoming(synPacket);
-        
+
         IpPacket synAckPacket;
         lock (lockObj) { synAckPacket = sentPackets[0]; }
         var synAckTcp = synAckPacket.ExtractTcp();
         var serverSeq = synAckTcp.SequenceNumber;
-        
+
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
         tcpStack.ProcessIncoming(ackPacket);
@@ -427,7 +422,7 @@ public sealed class LocalTcpStackTest
         // Act - Send 1KB of data
         var testData = new byte[1024];
         RandomNumberGenerator.Fill(testData);
-        
+
         var dataPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: testData);
         tcpStack.ProcessIncoming(dataPacket);
@@ -435,16 +430,15 @@ public sealed class LocalTcpStackTest
         // Read data from stream
         var received = new List<byte>();
         var buffer = new byte[256];
-        
-        while (received.Count < testData.Length)
-        {
+
+        while (received.Count < testData.Length) {
             var bytesRead = await stream.Stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
             if (bytesRead == 0) break;
             received.AddRange(buffer.Take(bytesRead));
         }
 
         // Assert
-        Assert.AreEqual(testData.Length, received.Count, "Should receive all data");
+        Assert.HasCount(testData.Length, received, "Should receive all data");
         CollectionAssert.AreEqual(testData, received.ToArray(), "Data should match");
 
         await stream.DisposeAsync();
@@ -471,8 +465,7 @@ public sealed class LocalTcpStackTest
         });
         var sentPackets = new List<IpPacket>();
         object lockObj = new();
-        tcpStack.OnPacketSend = packet =>
-        {
+        tcpStack.OnPacketSend = packet => {
             lock (lockObj) sentPackets.Add(packet);
         };
 
@@ -518,7 +511,7 @@ public sealed class LocalTcpStackTest
         // Assert — the probes carried *distinct, advancing* sequence numbers covering the whole payload,
         // proving each probe sent a fresh byte rather than retransmitting _sndUna.
         IpPacket[] snapshot;
-        lock (lockObj) { snapshot = sentPackets.ToArray(); }
+        lock (lockObj) { snapshot = [.. sentPackets]; }
 
         var probeSequences = snapshot
             .Where(p => p.ExtractTcp().Payload.Length > 0)
@@ -526,7 +519,7 @@ public sealed class LocalTcpStackTest
             .Distinct()
             .ToList();
 
-        Assert.IsTrue(probeSequences.Count >= 2,
+        Assert.IsGreaterThanOrEqualTo(2, probeSequences.Count,
             $"Zero Window Probes must advance the sequence number (forward progress), but only " +
             $"{probeSequences.Count} distinct probe sequence number(s) were sent — the sender is stuck " +
             "retransmitting the same byte (regression).");
@@ -580,7 +573,7 @@ public sealed class LocalTcpStackTest
 
         // Assert — C admitted (SYN-ACK, not RST).
         IpPacket[] snap;
-        lock (lockObj) snap = sentPackets.ToArray();
+        lock (lockObj) snap = [.. sentPackets];
         var reply = snap.Select(p => p.ExtractTcp()).FirstOrDefault(t => t.DestinationPort == 1003);
         Assert.IsNotNull(reply, "Stack should reply to conn C's SYN.");
         Assert.IsTrue(reply is { Synchronize: true, Acknowledgment: true },
@@ -650,7 +643,7 @@ public sealed class LocalTcpStackTest
 
         // Assert — C is RST, not admitted.
         IpPacket[] snap;
-        lock (lockObj) snap = sentPackets.ToArray();
+        lock (lockObj) snap = [.. sentPackets];
         var reply = snap.Select(p => p.ExtractTcp()).FirstOrDefault(t => t.DestinationPort == 1003);
         Assert.IsNotNull(reply, "Stack should reply to conn C's SYN.");
         Assert.IsTrue(reply.Reset, "Conn C must be RST when no connection is idle enough to evict.");
@@ -676,8 +669,7 @@ public sealed class LocalTcpStackTest
 
     private static async Task<ITcpClient> AcceptConnectionAsync(ITcpListener listener)
     {
-        await foreach (var client in listener.AcceptAllAsync())
-        {
+        await foreach (var client in listener.AcceptAllAsync()) {
             return client;
         }
         throw new InvalidOperationException("No connection accepted");
@@ -706,7 +698,7 @@ public sealed class LocalTcpStackTest
         tcp.SequenceNumber = seq;
         tcp.AcknowledgmentNumber = ackNum;
         tcp.WindowSize = window;
-        
+
         packet.UpdateAllChecksums();
         return packet;
     }
@@ -722,8 +714,7 @@ public sealed class LocalTcpStackTest
         var tcpStack = new LocalTcpStack();
         var sentPackets = new List<IpPacket>();
         object lockObj = new();
-        tcpStack.OnPacketSend = packet =>
-        {
+        tcpStack.OnPacketSend = packet => {
             lock (lockObj) sentPackets.Add(packet);
         };
 
@@ -733,12 +724,12 @@ public sealed class LocalTcpStackTest
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
         tcpStack.ProcessIncoming(synPacket);
-        
+
         IpPacket synAckPacket;
         lock (lockObj) { synAckPacket = sentPackets[0]; }
         var synAckTcp = synAckPacket.ExtractTcp();
         var serverSeq = synAckTcp.SequenceNumber;
-        
+
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
         tcpStack.ProcessIncoming(ackPacket);
@@ -752,23 +743,23 @@ public sealed class LocalTcpStackTest
         var dataPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1001, ackNum: serverSeq + 1, payload: testData);
         tcpStack.ProcessIncoming(dataPacket);
-        
+
         // Wait for ACK
         await Task.Delay(50, cts.Token);
-        
+
         int ackCountAfterFirst;
         lock (lockObj) { ackCountAfterFirst = sentPackets.Count; }
-        Assert.IsTrue(ackCountAfterFirst >= 1, "Should send ACK for data");
-        
+        Assert.IsGreaterThanOrEqualTo(1, ackCountAfterFirst, "Should send ACK for data");
+
         // Act - Simulate retransmission (same packet again)
         tcpStack.ProcessIncoming(dataPacket);
-        
+
         // Wait for ACK of retransmit
         await Task.Delay(50, cts.Token);
-        
+
         int ackCountAfterRetransmit;
         lock (lockObj) { ackCountAfterRetransmit = sentPackets.Count; }
-        Assert.IsTrue(ackCountAfterRetransmit > ackCountAfterFirst, "Should ACK retransmitted packet");
+        Assert.IsGreaterThan(ackCountAfterFirst, ackCountAfterRetransmit, "Should ACK retransmitted packet");
 
         // Read data from stream - should only get 5 bytes, not 10
         var buffer = new byte[100];
@@ -791,8 +782,7 @@ public sealed class LocalTcpStackTest
         var tcpStack = new LocalTcpStack();
         var sentPackets = new List<IpPacket>();
         object lockObj = new();
-        tcpStack.OnPacketSend = packet =>
-        {
+        tcpStack.OnPacketSend = packet => {
             lock (lockObj) sentPackets.Add(packet);
         };
 
@@ -802,12 +792,12 @@ public sealed class LocalTcpStackTest
         // Complete handshake
         var synPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort, syn: true, seq: 1000);
         tcpStack.ProcessIncoming(synPacket);
-        
+
         IpPacket synAckPacket;
         lock (lockObj) { synAckPacket = sentPackets[0]; }
         var synAckTcp = synAckPacket.ExtractTcp();
         var serverSeq = synAckTcp.SequenceNumber;
-        
+
         var ackPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, seq: 1001, ackNum: serverSeq + 1);
         tcpStack.ProcessIncoming(ackPacket);
@@ -821,19 +811,19 @@ public sealed class LocalTcpStackTest
         var outOfOrderPacket = CreateTcpPacket(ClientIp, ClientPort, ServerIp, ServerPort,
             ack: true, psh: true, seq: 1006, ackNum: serverSeq + 1, payload: testData);
         tcpStack.ProcessIncoming(outOfOrderPacket);
-        
+
         await Task.Delay(50, cts.Token);
 
         // Assert - Should send duplicate ACK for expected sequence
         IpPacket[] packets;
-        lock (lockObj) { packets = sentPackets.ToArray(); }
-        
-        Assert.IsTrue(packets.Length >= 1, "Should send ACK");
+        lock (lockObj) { packets = [.. sentPackets]; }
+
+        Assert.IsGreaterThanOrEqualTo(1, packets.Length, "Should send ACK");
         var dupAck = packets.First(p => p.ExtractTcp().Acknowledgment);
         var dupAckTcp = dupAck.ExtractTcp();
-        
+
         // The ACK number should still be for seq 1001 (the expected next seq)
-        Assert.AreEqual(1001u, dupAckTcp.AcknowledgmentNumber, 
+        Assert.AreEqual(1001u, dupAckTcp.AcknowledgmentNumber,
             "Should ACK the expected sequence (indicating gap)");
     }
 
@@ -854,8 +844,7 @@ public sealed class LocalTcpStackTest
         var tcpStack = new LocalTcpStack();
         var sentPackets = new List<IpPacket>();
         object lockObj = new();
-        tcpStack.OnPacketSend = packet =>
-        {
+        tcpStack.OnPacketSend = packet => {
             lock (lockObj) sentPackets.Add(packet);
         };
 
@@ -904,7 +893,7 @@ public sealed class LocalTcpStackTest
         await Task.Delay(100, cts.Token);
 
         IpPacket[] outgoing;
-        lock (lockObj) { outgoing = sentPackets.ToArray(); }
+        lock (lockObj) { outgoing = [.. sentPackets]; }
         var serverData = outgoing.First(p => p.ExtractTcp().Payload.Length > 0);
         Assert.AreEqual(IpVersion.IPv6, serverData.Version, "Outgoing data must be IPv6");
         Assert.AreEqual(serverIpV6, serverData.SourceAddress);
@@ -934,7 +923,7 @@ public sealed class LocalTcpStackTest
         tcpStack.ProcessIncoming(synPacket);
 
         // Assert - IPv6 RST
-        Assert.AreEqual(1, sentPackets.Count);
+        Assert.HasCount(1, sentPackets);
         var rst = sentPackets[0];
         Assert.AreEqual(IpVersion.IPv6, rst.Version);
         Assert.AreEqual(serverIpV6, rst.SourceAddress);

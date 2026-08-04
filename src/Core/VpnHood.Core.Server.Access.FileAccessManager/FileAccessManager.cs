@@ -189,7 +189,7 @@ public class FileAccessManager : IAccessManager
                 ? serverInfo.FreeUdpPortV6
                 : serverInfo.FreeUdpPortV4;
         }
-        ServerConfig.UdpEndPoints = udpEndPoints.Where(x => x.Port != 0).ToArray();
+        ServerConfig.UdpEndPoints = [.. udpEndPoints.Where(x => x.Port != 0)];
 
         // update QuicEndPoints if they are not configured (port 0 means auto-assign)
         var quicEndPoints = ServerConfig.QuicEndPointsValue.ToArray();
@@ -198,7 +198,7 @@ public class FileAccessManager : IAccessManager
                 ? serverInfo.FreeQuicPortV6
                 : serverInfo.FreeQuicPortV4;
         }
-        ServerConfig.QuicEndPoints = quicEndPoints.Where(x => x.Port != 0).ToArray();
+        ServerConfig.QuicEndPoints = [.. quicEndPoints.Where(x => x.Port != 0)];
 
         return Task.FromResult<ServerConfig>(ServerConfig);
     }
@@ -345,7 +345,7 @@ public class FileAccessManager : IAccessManager
             }
         }
 
-        return responses.ToArray();
+        return [.. responses];
     }
 
 

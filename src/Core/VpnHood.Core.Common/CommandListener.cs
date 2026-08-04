@@ -34,7 +34,7 @@ public class CommandListener(string commandFilePath) : IDisposable
 
             _fileSystemWatcher.Changed += (_, e) => {
                 var command = ReadAllTextAndWait(e.FullPath);
-                OnCommand(VhUtils.ParseArguments(command).ToArray());
+                OnCommand([.. VhUtils.ParseArguments(command)]);
             };
         }
         catch (Exception ex) {

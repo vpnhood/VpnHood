@@ -79,7 +79,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
         // reconfigure
         DnsServers = configuration.DnsServers;
-        Certificates = configuration.Certificates.Select(x => new CertificateHostName(x)).ToArray();
+        Certificates = [.. configuration.Certificates.Select(x => new CertificateHostName(x))];
 
         var tcpStatuses = await _tcpListenerHost.Configure(configuration.TcpEndPoints, Certificates).Vhc();
         var quicStatuses = await _quicListenerHost.Configure(configuration.QuicEndPoints, Certificates).Vhc();

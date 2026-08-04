@@ -53,7 +53,7 @@ public class DnsConfigurationTest : TestBase
         var fileAccessManagerOptions = TestHelper.CreateFileAccessManagerOptions();
         fileAccessManagerOptions.DnsServers = [IPAddress.Parse("1.1.1.1"), IPAddress.Parse("1.1.1.2")];
         fileAccessManagerOptions.NetFilterOptions = new NetFilterOptions {
-            ExcludeIpRanges = clientDnsServers.Select(x => new IpRange(x)).ToArray()
+            ExcludeIpRanges = [.. clientDnsServers.Select(x => new IpRange(x))]
         };
         await using var server = await TestHelper.CreateServer(fileAccessManagerOptions);
 

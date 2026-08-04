@@ -16,7 +16,7 @@ internal static class ChannelProtocolValidator
         if (helloResponse is { QuicPort: > 0 } && isQuicSupported)
             channelProtocols.Add(ChannelProtocol.Quic);
 
-        return channelProtocols.ToArray();
+        return [.. channelProtocols];
     }
 
     public static ChannelProtocol Validate(ChannelProtocol value, SessionInfo sessionInfo)

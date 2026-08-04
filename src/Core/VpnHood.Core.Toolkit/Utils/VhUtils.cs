@@ -120,7 +120,7 @@ public static class VhUtils
     public static T[] SafeToArray<T>(object lockObject, IEnumerable<T> collection)
     {
         lock (lockObject)
-            return collection.ToArray();
+            return [.. collection];
     }
 
     public static Task<T> RunTask<T>(Task<T> task, CancellationToken cancellationToken = default)

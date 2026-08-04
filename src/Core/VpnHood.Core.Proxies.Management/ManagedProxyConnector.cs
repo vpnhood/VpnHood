@@ -106,14 +106,15 @@ public class ManagedProxyConnector : IProxyConnector
     }
 
     public IReadOnlyList<ProxyEndPointInfo> GetEndPointInfos() =>
-        _proxyEndPointEntries.Select(x => x.Info).ToArray();
+        [.. _proxyEndPointEntries.Select(x => x.Info)];
 
     private async Task<ProxyEndPointEntry[]> LoadEntries()
     {
         var records = await _store.List().Vhc();
-        return records
-            .Select(x => new ProxyEndPointEntry(x.ToInfo()))
-            .ToArray();
+        return [
+            .. records
+                .Select(x => new ProxyEndPointEntry(x.ToInfo()))
+        ];
     }
 
     private async Task ReloadEntries()
@@ -155,7 +156,7 @@ public class ManagedProxyConnector : IProxyConnector
         if (dirtyEntries.Length == 0)
             return;
 
-        await _store.UpdateStatuses(dirtyEntries.Select(x => x.Info).ToArray()).Vhc();
+        await _store.UpdateStatuses([.. dirtyEntries.Select(x => x.Info)]).Vhc();
         await _store.SetQueuePosition(_queuePosition).Vhc();
         foreach (var entry in dirtyEntries)
             entry.IsDirty = false;
@@ -392,7 +393,7 @@ public class ManagedProxyConnector : IProxyConnector
         }
 
         result.AddRange(tailFailed);
-        return result.ToArray();
+        return [.. result];
     }
 
     private readonly AsyncLock _connectLock = new();
@@ -411,7 +412,7 @@ public class ManagedProxyConnector : IProxyConnector
 
         // push the failed ones to the end and try again
         await CheckServers(socketFactory, endPointEntries, 1, cancellationToken);
-        return GetOrderedEntriesQuery().ToArray();
+        return [.. GetOrderedEntriesQuery()];
     }
 
     public async Task<TcpClient> ConnectAsync(ISocketFactory socketFactory, IPEndPoint ipEndPoint,

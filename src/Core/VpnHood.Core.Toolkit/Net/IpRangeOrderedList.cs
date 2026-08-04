@@ -231,8 +231,8 @@ public class IpRangeOrderedList :
             .Where(x => x.AddressFamily == AddressFamily.InterNetworkV6);
 
         //all range are ordered as the following process does not change the order
-        var ipRangesV4 = IntersectInternal(v4SortedRanges1, v4SortedRanges2.ToArray());
-        var ipRangesV6 = IntersectInternal(v6SortedRanges1, v6SortedRanges2.ToArray());
+        var ipRangesV4 = IntersectInternal(v4SortedRanges1, [.. v4SortedRanges2]);
+        var ipRangesV6 = IntersectInternal(v6SortedRanges1, [.. v6SortedRanges2]);
         var ret = ipRangesV4.Concat(ipRangesV6);
 
         return new IpRangeOrderedList(ret);

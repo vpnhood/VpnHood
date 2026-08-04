@@ -190,11 +190,12 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
             Features = app.Features,
             IntentFeatures = new DeviceIntentFeatures(app.Services.DeviceUiProvider, app.Services.UserReviewProvider),
             UserSettings = app.UserSettings,
-            ClientProfileInfos = app.ClientProfileService.List().Select(x => x.ToInfo(app.Features)).ToArray(),
+            ClientProfileInfos = [.. app.ClientProfileService.List().Select(x => x.ToInfo(app.Features))],
             State = app.State,
-            AvailableCultureInfos = app.Services.CultureProvider.AvailableCultures
-                .Select(x => new UiCultureInfo(x))
-                .ToArray()
+            AvailableCultureInfos = [
+                .. app.Services.CultureProvider.AvailableCultures
+                    .Select(x => new UiCultureInfo(x))
+            ]
         };
 
         return Task.FromResult(ret);

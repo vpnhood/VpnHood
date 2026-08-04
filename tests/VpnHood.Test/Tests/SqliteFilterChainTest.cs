@@ -220,7 +220,11 @@ public class SqliteFilterChainTest : TestBase
 
         using var stopCts = new CancellationTokenSource();
         Exception? firstError = null;
-        var workers = Enumerable.Range(0, 8).Select(_ => Task.Run(() => {
+        // the hammer runs on dedicated threads: spin loops would otherwise hold the thread pool hostage for
+        // the whole test, and stopCts must stay out of the creation token, or a worker that has not started
+        // yet completes as Canceled and fails the wait below instead of the drain it is meant to check
+        // ReSharper disable once AccessToDisposedClosure
+        var workers = Enumerable.Range(0, 8).Select(_ => Task.Factory.StartNew(() => {
             while (!stopCts.IsCancellationRequested)
                 try {
                     // ReSharper disable once AccessToDisposedClosure
@@ -231,7 +235,7 @@ public class SqliteFilterChainTest : TestBase
                 catch (Exception ex) {
                     firstError ??= ex;
                 }
-        }, stopCts.Token)).ToArray();
+        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ToArray();
 
         // each round publishes a NEW file (the real versioned flow); the manifest sweep cannot delete
         // the previous db (the chain holds it open) — the swap disposes and deletes it

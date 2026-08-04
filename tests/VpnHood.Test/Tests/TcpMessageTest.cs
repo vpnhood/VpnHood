@@ -55,7 +55,9 @@ public class TcpMessageTest
             await Assert.ThrowsAsync<OperationCanceledException>(() => sendTask);
 
             listener.Dispose();
-            await listenerTask.WaitAsync(TimeSpan.FromSeconds(5), requestCts.Token);
+            // requestCts has already been canceled; the timeout is the only guard for the listener unwind
+            // ReSharper disable once MethodSupportsCancellation
+            await listenerTask.WaitAsync(TimeSpan.FromSeconds(5));
         }
         finally {
             Directory.Delete(configFolder, recursive: true);

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>VpnHood App Store billing (StoreKit 2 via the VpnHoodStoreKit Swift facade) and Sign in with Apple</Description>
+		<TargetFramework>net11.0-ios</TargetFramework>
+		<SupportedOSPlatformVersion>15.0</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.AppLib.Ios.AppStore</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+	</ItemGroup>
+
+	<!-- The StoreKit 2 facade: Microsoft.iOS does not bind SK2's Swift-async API, so a
+	     small Swift xcframework exposes it over a C ABI (see swift/README.md for the
+	     one-command build on a Mac). Conditional so the project still compiles before
+	     the xcframework has been built — the provider then throws at runtime with a
+	     pointed message instead of the whole solution failing. -->
+	<ItemGroup Condition="Exists('swift\VpnHoodStoreKit.xcframework')">
+		<NativeReference Include="swift\VpnHoodStoreKit.xcframework">
+			<Kind>Framework</Kind>
+			<SmartLink>true</SmartLink>
+		</NativeReference>
+	</ItemGroup>
+
+</Project>

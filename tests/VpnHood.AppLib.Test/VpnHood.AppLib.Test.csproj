@@ -11,6 +11,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<ProjectReference Include="..\..\src\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
 		<ProjectReference Include="..\..\src\Core\VpnHood.Core.IpLocations.SqliteProvider\VpnHood.Core.IpLocations.SqliteProvider.csproj" />
 		<ProjectReference Include="..\VpnHood.Test\VpnHood.Test.csproj" />
 	</ItemGroup>

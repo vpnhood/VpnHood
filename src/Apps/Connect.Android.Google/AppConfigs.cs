@@ -30,7 +30,12 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public string GoogleSignInClientId { get; set; } =
         "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
 
-    // VpnHood Store server
+    // VpnHood Portal (the WHMCS vpnhoodiap backend). When set, the app uses the Portal
+    // for accounts/purchases; when null it stays on the legacy Store server below.
+    // Production value: https://<whmcs host>/modules/addons/vpnhoodiap/api.php
+    public Uri? PortalBaseUri { get; set; }
+
+    // VpnHood Store server (legacy; replaced by the Portal once PortalBaseUri is set)
     public string StoreBaseUri { get; set; } = new("https://store-api.vpnhood.com");
 
     public Guid StoreAppId { get; set; } =

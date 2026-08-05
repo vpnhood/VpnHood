@@ -1,0 +1,254 @@
+using System.Security.Authentication;
+using System.Text.Json;
+using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Portal;
+using VpnHood.AppLib.Test.Providers;
+using VpnHood.Core.Client.Devices.UiContexts;
+
+namespace VpnHood.AppLib.Test.Tests;
+
+/// <summary>
+/// VpnHood.AppLib.Portal against a scripted loopback portal: the real HTTP
+/// surface (actions, bodies, bearer headers, session persistence) with no
+/// real backend and no store.
+/// </summary>
+[TestClass]
+public class PortalTest
+{
+    private class TestUiContext : IUiContext
+    {
+        public Task<bool> IsDestroyed() => Task.FromResult(false);
+        public Task<bool> IsActive() => Task.FromResult(true);
+    }
+
+    private const string PackageName = "com.vpnhood.connect.android";
+    private static readonly Guid ExternalUid = Guid.Parse("c0ffee00-0000-4000-8000-000000000001");
+
+    private TestPortalServer _portal = null!;
+    private string _storageFolder = null!;
+
+    [TestInitialize]
+    public void Initialize()
+    {
+        _portal = new TestPortalServer();
+        _storageFolder = Path.Combine(Path.GetTempPath(), "vhtest-portal", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_storageFolder);
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        _portal.Dispose();
+        if (Directory.Exists(_storageFolder))
+            Directory.Delete(_storageFolder, recursive: true);
+    }
+
+    private static object SignInData(string accessToken = "session-token-1", string state = "ok")
+    {
+        return new {
+            accessToken,
+            expiresAt = DateTime.UtcNow.AddDays(30).ToString("O"),
+            userId = ExternalUid.ToString(),
+            account = new { email = "buyer@example.com", emailVerified = state == "ok" },
+            state
+        };
+    }
+
+    private PortalAuthenticationProvider CreateAuthenticationProvider(
+        TestAuthenticationExternalProvider? externalProvider = null)
+    {
+        return new PortalAuthenticationProvider(
+            _storageFolder,
+            _portal.BaseUrl,
+            PackageName,
+            externalProvider ?? new TestAuthenticationExternalProvider("google-id-token"));
+    }
+
+    [TestMethod]
+    public async Task SignIn_posts_the_id_token_and_persists_the_session()
+    {
+        _portal.Enqueue("auth.token", SignInData());
+        using var authenticationProvider = CreateAuthenticationProvider();
+
+        Assert.IsNull(authenticationProvider.UserId, "no session before sign-in");
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethod.Google },
+            CancellationToken.None);
+
+        Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId);
+        var request = _portal.Requests.Single(x => x.Action == "auth.token");
+        Assert.AreEqual("google", request.Body.GetProperty("provider").GetString());
+        Assert.AreEqual("google-id-token", request.Body.GetProperty("idToken").GetString());
+        Assert.AreEqual(PackageName, request.Body.GetProperty("packageName").GetString());
+
+        // session file persisted → a NEW provider instance is already signed in
+        using var reloadedProvider = CreateAuthenticationProvider();
+        Assert.AreEqual(ExternalUid.ToString(), reloadedProvider.UserId, "session must survive restarts");
+    }
+
+    [TestMethod]
+    public async Task Requests_carry_the_session_as_bearer_and_portal_token()
+    {
+        _portal.Enqueue("auth.token", SignInData(accessToken: "tok-abc"));
+        _portal.Enqueue("me.get", new {
+            userId = ExternalUid.ToString(),
+            account = new { email = "buyer@example.com", emailVerified = true },
+            state = "ok"
+        });
+        _portal.Enqueue("entitlement.get", new { entitlements = Array.Empty<object>() });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethod.Google },
+            CancellationToken.None);
+
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null, "googleplay", PackageName);
+        var account = await accountProvider.GetAccount(CancellationToken.None);
+
+        Assert.IsNotNull(account);
+        Assert.AreEqual("buyer@example.com", account.Email);
+        Assert.IsNull(account.SubscriptionId, "no entitlement → no subscription");
+
+        var request = _portal.Requests.Single(x => x.Action == "me.get");
+        Assert.AreEqual("Bearer tok-abc", request.Authorization);
+        Assert.AreEqual("tok-abc", request.PortalToken);
+    }
+
+    [TestMethod]
+    public async Task GetAccount_maps_the_entitlement_and_GetAccessCode_returns_its_code()
+    {
+        _portal.Enqueue("auth.token", SignInData());
+        var entitlementData = new {
+            entitlements = new object[] {
+                new {
+                    state = "provisioned",
+                    accessCode = "12345678901234567890",
+                    expiresAt = DateTime.UtcNow.AddDays(30).ToString("O"),
+                    planId = "vh_premium/monthly"
+                }
+            }
+        };
+        _portal.Enqueue("me.get", new {
+            userId = ExternalUid.ToString(),
+            account = new { email = "buyer@example.com", emailVerified = true },
+            state = "ok"
+        });
+        _portal.Enqueue("entitlement.get", entitlementData);
+        _portal.Enqueue("entitlement.get", entitlementData);
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethod.Google },
+            CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null, "googleplay", PackageName);
+
+        var account = await accountProvider.GetAccount(CancellationToken.None);
+        Assert.IsNotNull(account);
+        Assert.AreEqual(PortalAccountProvider.PortalSubscriptionId, account.SubscriptionId);
+        Assert.AreEqual("vh_premium/monthly", account.ProviderPlanId);
+        Assert.IsNotNull(account.ExpirationTime);
+
+        var accessCode = await accountProvider.GetAccessCode(PortalAccountProvider.PortalSubscriptionId,
+            CancellationToken.None);
+        Assert.AreEqual("12345678901234567890", accessCode);
+    }
+
+    [TestMethod]
+    public async Task OrderProcessor_prepares_attribution_and_verifies_the_purchase()
+    {
+        _portal.Enqueue("auth.token", SignInData());
+        _portal.Enqueue("purchase.verify", new {
+            state = "provisioned",
+            accessCode = "12345678901234567890",
+            expiresAt = DateTime.UtcNow.AddDays(30).ToString("O"),
+            planId = "vh_premium/monthly"
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        using var accountProvider = new PortalAccountProvider(authenticationProvider,
+            new TestBillingProvider(), "googleplay", PackageName);
+        var orderProcessor = accountProvider.Billing?.OrderProcessor
+            ?? throw new InvalidOperationException("Billing must exist when a provider is given.");
+
+        // not signed in → PreparePurchase refuses
+        await Assert.ThrowsExactlyAsync<AuthenticationException>(() =>
+            orderProcessor.PreparePurchase(CancellationToken.None));
+
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethod.Google },
+            CancellationToken.None);
+
+        var attribution = await orderProcessor.PreparePurchase(CancellationToken.None);
+        Assert.AreEqual(ExternalUid.ToString(), attribution.AccountId);
+        Assert.AreEqual(ExternalUid, attribution.AppAccountToken, "the uid doubles as the Apple appAccountToken");
+
+        await orderProcessor.CompleteOrder(
+            new AppPurchaseResult { ProviderOrderId = "GPA.1111", PurchaseData = "purchase-token-xyz" },
+            CancellationToken.None);
+
+        var request = _portal.Requests.Single(x => x.Action == "purchase.verify");
+        Assert.AreEqual("googleplay", request.Body.GetProperty("store").GetString());
+        Assert.AreEqual(PackageName, request.Body.GetProperty("packageName").GetString());
+        Assert.AreEqual("purchase-token-xyz",
+            request.Body.GetProperty("proof").GetProperty("purchaseToken").GetString());
+    }
+
+    [TestMethod]
+    public async Task CompleteOrder_surfaces_email_verification_parking()
+    {
+        _portal.Enqueue("auth.token", SignInData(state: "email_unverified"));
+        _portal.Enqueue("purchase.verify", new {
+            state = "awaiting_email_verification",
+            accessCode = (string?)null,
+            expiresAt = (string?)null,
+            planId = (string?)null
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethod.Google },
+            CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider,
+            new TestBillingProvider(), "googleplay", PackageName);
+        var orderProcessor = accountProvider.Billing?.OrderProcessor
+            ?? throw new InvalidOperationException("Billing must exist when a provider is given.");
+
+        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            orderProcessor.CompleteOrder(
+                new AppPurchaseResult { ProviderOrderId = "GPA.2222", PurchaseData = "purchase-token-xyz" },
+                CancellationToken.None));
+        StringAssert.Contains(exception.Message, "verified");
+    }
+
+    [TestMethod]
+    public async Task Error_envelope_becomes_a_PortalApiException()
+    {
+        _portal.Enqueue("auth.token", new TestPortalServer.ErrorScript {
+            Error = "Invalid sign-in token.",
+            StatusCode = 401
+        });
+        using var authenticationProvider = CreateAuthenticationProvider();
+
+        var exception = await Assert.ThrowsExactlyAsync<PortalApiException>(() =>
+            authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethod.Google },
+                CancellationToken.None));
+        Assert.AreEqual(401, exception.StatusCode);
+        StringAssert.Contains(exception.Message, "Invalid sign-in token");
+    }
+
+    [TestMethod]
+    public async Task SignOut_revokes_the_session_and_deletes_the_file()
+    {
+        _portal.Enqueue("auth.token", SignInData());
+        _portal.Enqueue("auth.revoke", new { revoked = true });
+
+        var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
+        using var authenticationProvider = CreateAuthenticationProvider(externalProvider);
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethod.Google },
+            CancellationToken.None);
+        Assert.IsNotNull(authenticationProvider.UserId);
+
+        await authenticationProvider.SignOut(new TestUiContext(), CancellationToken.None);
+
+        Assert.IsNull(authenticationProvider.UserId);
+        Assert.AreEqual(1, externalProvider.SignOutCalls);
+        Assert.AreEqual(1, _portal.Requests.Count(x => x.Action == "auth.revoke"));
+        using var reloadedProvider = CreateAuthenticationProvider();
+        Assert.IsNull(reloadedProvider.UserId, "the session file must be gone");
+    }
+}

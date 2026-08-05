@@ -72,6 +72,7 @@
   <Folder Name="/src/AppLib/">
     <Project Path="src/AppLib/VpnHood.AppLib.Abstractions/VpnHood.AppLib.Abstractions.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Portal/VpnHood.AppLib.Portal.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Store/VpnHood.AppLib.Store.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.SpaWebView/VpnHood.AppLib.SpaWebView.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Swagger/VpnHood.AppLib.Swagger.csproj" />
@@ -84,6 +85,9 @@
     <Project Path="src/AppLib/VpnHood.AppLib.Android.GooglePlay/VpnHood.AppLib.Android.GooglePlay.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Ios/">
+    <Project Path="src/AppLib/VpnHood.AppLib.Ios.AppStore/VpnHood.AppLib.Ios.AppStore.csproj">
+      <Build Solution="Debug|*" Project="false" />
+    </Project>
     <Project Path="src/AppLib/VpnHood.AppLib.Ios.Common/VpnHood.AppLib.Ios.Common.csproj">
       <Build Solution="Debug|*" Project="false" />
     </Project>

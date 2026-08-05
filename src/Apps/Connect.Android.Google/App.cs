@@ -8,6 +8,7 @@ using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
+using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Store;
@@ -135,12 +136,24 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     {
         try {
             var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
+            var googlePlayBillingProvider = TryCreateBillingClient(appConfigs);
+
+            // Portal backend (the WHMCS vpnhoodiap module) once configured; legacy
+            // Store.Server otherwise. Flip by setting PortalBaseUri in AppConfigs.
+            if (appConfigs.PortalBaseUri != null) {
+                var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
+                    appConfigs.PortalBaseUri, appConfigs.AppId, authenticationExternalProvider,
+                    ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
+
+                return new PortalAccountProvider(portalAuthenticationProvider, googlePlayBillingProvider,
+                    storeId: "googleplay", packageName: appConfigs.AppId);
+            }
+
             var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath,
                 new Uri(appConfigs.StoreBaseUri),
                 appConfigs.StoreAppId, authenticationExternalProvider,
                 ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
 
-            var googlePlayBillingProvider = TryCreateBillingClient(appConfigs);
             var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider,
                 appConfigs.StoreAppId);
 

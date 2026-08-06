@@ -30,23 +30,17 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public string GoogleSignInClientId { get; set; } =
         "000000000000-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com"; //YOUR_FIREBASE_CLIENT_ID
 
-    // VpnHood Portal (the WHMCS vpnhoodiap backend). When set, the app uses the Portal
-    // for accounts/purchases; when null it stays on the legacy Store server below.
+    // VpnHood Portal (the WHMCS vpnhoodiap backend) — accounts, purchases, entitlements.
+    // Unset = account features off (sign-in/purchase hidden; the VPN itself still works).
     // Production value: https://<whmcs host>/modules/addons/vpnhoodiap/api.php
     public Uri? PortalBaseUri { get; set; }
-
-    // VpnHood Store server (legacy; replaced by the Portal once PortalBaseUri is set)
-    public string StoreBaseUri { get; set; } = new("https://store-api.vpnhood.com");
-
-    public Guid StoreAppId { get; set; } =
-        Guid.Parse("00000000-0000-0000-0000-000000000000"); //YOUR_VPNHOOD_STORE_APP_ID
 
     public string[] GooglePlayProductIds { get; set; } = [
         "vpnhood_1_month_subscription",
         "vpnhood_1_year_subscription"
     ];
 
-    public bool StoreIgnoreSslVerification { get; set; } = IsDebugMode;
+    public bool PortalIgnoreSslVerification { get; set; } = IsDebugMode;
 
     // AdMob
     // Default value is AdMob test AdUnit id, References: https://developers.google.com/admob/android/test-ads

@@ -11,7 +11,6 @@ using VpnHood.AppLib.Droid.GooglePlay;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
-using VpnHood.AppLib.Store;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
 
@@ -135,29 +134,21 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
     private static IAppAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
     {
         try {
+            // no Portal configured — ship without account features rather than half-wired ones
+            if (appConfigs.PortalBaseUri == null) {
+                VhLogger.Instance.LogWarning("PortalBaseUri is not configured. Account features are disabled.");
+                return null;
+            }
+
             var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
             var googlePlayBillingProvider = TryCreateBillingClient(appConfigs);
 
-            // Portal backend (the WHMCS vpnhoodiap module) once configured; legacy
-            // Store.Server otherwise. Flip by setting PortalBaseUri in AppConfigs.
-            if (appConfigs.PortalBaseUri != null) {
-                var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
-                    appConfigs.PortalBaseUri, appConfigs.AppId, authenticationExternalProvider,
-                    ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
+                appConfigs.PortalBaseUri, appConfigs.AppId, authenticationExternalProvider,
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
-                return new PortalAccountProvider(portalAuthenticationProvider, googlePlayBillingProvider,
-                    storeId: "googleplay", packageName: appConfigs.AppId);
-            }
-
-            var authenticationProvider = new StoreAuthenticationProvider(storageFolderPath,
-                new Uri(appConfigs.StoreBaseUri),
-                appConfigs.StoreAppId, authenticationExternalProvider,
-                ignoreSslVerification: appConfigs.StoreIgnoreSslVerification);
-
-            var accountProvider = new StoreAccountProvider(authenticationProvider, googlePlayBillingProvider,
-                appConfigs.StoreAppId);
-
-            return accountProvider;
+            return new PortalAccountProvider(portalAuthenticationProvider, googlePlayBillingProvider,
+                storeId: "googleplay", packageName: appConfigs.AppId);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create AppAccountService.");

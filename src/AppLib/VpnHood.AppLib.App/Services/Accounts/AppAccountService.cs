@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
@@ -10,7 +11,15 @@ namespace VpnHood.AppLib.Services.Accounts;
 
 public class AppAccountService
 {
+    // A cached account is only trusted while its own expiry lies in the future.
+    // After the store renews a subscription, the new expiry exists only on the
+    // server — serving the stale cache forever would show "expired" and offer a
+    // re-purchase the store rejects. Genuinely expired accounts re-check at most
+    // once per this interval, so the server is not hammered.
+    private static readonly TimeSpan ExpiredAccountRecheckInterval = TimeSpan.FromMinutes(5);
+
     private AppAccount? _appAccount;
+    private DateTime _lastRefreshAttemptTime = DateTime.MinValue;
     private readonly AppSettingsService _settingsService;
     private readonly IAppAccountProvider _accountProvider;
     private readonly ClientProfileService _clientProfileService;
@@ -60,17 +69,35 @@ public class AppAccountService
         // Get from local cache
         if (useCache) {
             _appAccount ??= JsonUtils.TryDeserializeFile<AppAccount>(_appAccountFilePath, logger: VhLogger.Instance);
-            if (_appAccount != null)
+            if (_appAccount != null && (IsCacheCurrent(_appAccount) || !IsRecheckDue()))
                 return _appAccount;
         }
 
-        // Update cache from server and update local cache
-        await Refresh(cancellationToken);
+        // Update cache from server and update local cache. If the server is
+        // unreachable, a stale account is still better than none for display.
+        try {
+            await Refresh(cancellationToken);
+        }
+        catch (Exception ex) when (_appAccount != null) {
+            VhLogger.Instance.LogWarning(ex, "Could not refresh the account. Using the cached one.");
+        }
         return _appAccount;
+    }
+
+    // the cached account is current while its own expiry (if any) has not passed
+    private static bool IsCacheCurrent(AppAccount account)
+    {
+        return account.ExpirationTime == null || account.ExpirationTime.Value.ToUniversalTime() > DateTime.UtcNow;
+    }
+
+    private bool IsRecheckDue()
+    {
+        return DateTime.UtcNow - _lastRefreshAttemptTime >= ExpiredAccountRecheckInterval;
     }
 
     public async Task Refresh(CancellationToken cancellationToken)
     {
+        _lastRefreshAttemptTime = DateTime.UtcNow;
         _appAccount = await _accountProvider.GetAccount(cancellationToken).Vhc();
         Directory.CreateDirectory(_storageFolderPath);
         await File.WriteAllTextAsync(_appAccountFilePath, JsonSerializer.Serialize(_appAccount), cancellationToken).Vhc();

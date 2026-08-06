@@ -1,6 +1,6 @@
-﻿using System.Security.Authentication;
-using AndroidX.Credentials;
+﻿using AndroidX.Credentials;
 using AndroidX.Credentials.Exceptions;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Toolkit.ApiClients;
 using GetCredentialResponse = AndroidX.Credentials.GetCredentialResponse;
 
@@ -15,7 +15,7 @@ public class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCal
         if (e.Class.SimpleName == "NoCredentialException")
             _taskCompletionSource.TrySetException(new NoCredentialException(e.ToString()));
         else if (e.Class.SimpleName == "GetCredentialCancellationException")
-            _taskCompletionSource.TrySetException(new AuthenticationException(e.ToString()));
+            _taskCompletionSource.TrySetException(new UserCanceledException(e.ToString()));
         else if (e.Class.TypeName.Contains("CancellationException"))
             _taskCompletionSource.TrySetCanceled();
         else

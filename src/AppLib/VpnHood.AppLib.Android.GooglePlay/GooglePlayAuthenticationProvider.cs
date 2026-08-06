@@ -54,9 +54,12 @@ public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAp
                 .ConfigureAwait(false);
             return GetIdTokenFromCredentialResponse(fallbackResponse);
         }
-        catch (AuthenticationException ex) when (ex.Message.Contains("CancellationException")) {
-            // GetCredentialCancellationException from user dismissing the dialog
-            throw new UserCanceledException(ex.Message, ex);
+        catch (NoCredentialException ex) {
+            // The sheet had nothing to offer because the device has no Google account at all.
+            // Without this, the caller sees a cancellation and stays silent (cancelling is
+            // deliberately not reported), so sign-in appears to do nothing on a fresh device.
+            throw new AuthenticationException(
+                "There is no Google account on this device. Add one in the device settings and try again.", ex);
         }
     }
 

@@ -91,7 +91,6 @@ gh workflow run bump.yml `
 	--repo $monoRepo `
 	--ref develop `
 	-f "prerelease=$($prerelease.ToString().ToLower())" `
-	-f "then_publish=false" `
 	-f "then_publish_nugets=false";
 if ($LASTEXITCODE -ne 0) { throw "Failed to dispatch bump.yml on $monoRepo."; }
 

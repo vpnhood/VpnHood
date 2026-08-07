@@ -112,12 +112,15 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    at release time it extracts whatever the first H1 (`#`) section is for the GitHub release note, and
    Google Play uses the same exclude-phrases pass. Update the `# Latest` section yourself each cycle.
    Commit + push as normal work.
-2. Run the **Bump Version** workflow (`bump.yml`). Choose `prerelease` on/off. Optionally tick
-   `then_publish` (create the GitHub release) and/or `then_publish_nugets`. It bumps the version once
-   (`PubVersion.json` + `Directory.Build.props`) and pushes `develop` (a stable bump also fast-forwards
-   `main`; a prerelease bump does not). It does **not** touch the changelog.
-3. If you didn't chain them, dispatch **Publish Client** (`publish_client.yml`) and/or **Publish
-   NuGet Packages** (`publish_nugets.yml`) against `develop` yourself — both are standalone.
+2. Run the brand repo's `_publish.ps1` (`vpnhood/Vpnhood.App.Client` or `vpnhood/Vpnhood.App.Connect`).
+   It prompts for the channel and the Play audience ratio, dispatches **Bump Version** (`bump.yml`)
+   here, waits for it, then dispatches that app's publish workflow against the freshly bumped
+   `develop`. A failed bump means nothing is published.
+3. To bump without publishing, run `bump.yml` directly. Choose `prerelease` on/off and optionally
+   tick `then_publish_nugets`. It bumps the version once (`PubVersion.json` + `Directory.Build.props`)
+   and pushes `develop` (a stable bump also fast-forwards `main`; a prerelease bump does not). It does
+   **not** touch the changelog, and it does **not** chain an app publish — every app now publishes
+   from its own brand repo, which this repo deliberately holds no credential to trigger.
 
 `pub/Client/Publish.ps1` is now **build-only** for local smoke testing (no bump, no distribute, no
 push).

@@ -26,8 +26,8 @@ VpnHood's name. Your fork must publish its own policy at its own URL — see
 
 Currently here:
 
-- [vpnhood-client-privacy-policy.md](vpnhood-client-privacy-policy.md) — VpnHood! CLIENT
-- [vpnhood-connect-privacy-policy.md](vpnhood-connect-privacy-policy.md) — VpnHood! CONNECT
+- [vpnhood-client-privacy-policy.md](vpnhood-client-privacy-policy.md) — VpnHood! CLIENT (the app only; CLIENT is bring-your-own-key, so server behaviour is out of its scope)
+- [vpnhood-connect-privacy-policy.md](vpnhood-connect-privacy-policy.md) — VpnHood! CONNECT (app **and** our servers, since CONNECT only uses ours)
 
 MANAGER's privacy policy and terms of use still live in the GitHub wiki and migrate here later; the
 site's build workflow fetches those two from the wiki and everything in this folder from `main`.

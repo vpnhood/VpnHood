@@ -1,6 +1,6 @@
 # VpnHood! CLIENT - Privacy Policy
 
-*Effective: 2026-08-02*
+*Effective: 2026-08-06*
 
 **PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CLIENT** app. VpnHood! CLIENT works with an access key you obtain yourself; your VPN traffic is handled by the server that key belongs to, under its operator's privacy policy, which is beyond our control.
 
@@ -42,11 +42,9 @@ The app does **not** send your traffic volume to analytics; bytes are counted by
 
 ## VPN Servers
 
-VpnHood! CLIENT ships with no server and no access key — you choose the server by the access key you add. Whoever operates that server — you, a third party, or us — necessarily sees what any VPN server sees: your IP address, connection times, and traffic totals. Your VPN traffic is governed by that operator's privacy policy, not this document.
+VpnHood! CLIENT ships with no server and no access key — you choose the server by the access key you add. Whoever operates that server necessarily sees what any VPN server sees: your IP address, connection times, and traffic totals. Your VPN traffic is governed by that operator's privacy policy, not this document.
 
-If you connect to a server we operate, we keep connection logs (time, IP address and port, Client ID) for 30 days without backups, only to answer abuse complaints.
-
-**Your destinations are never recorded.** VpnHood servers do not extract the domains, URLs, or IP addresses you visit from your traffic, so there is nothing about them to log, store, or hand over. When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN — that happens inside the app, on your device, and is never sent to us.
+**Your destinations are never recorded.** The official VpnHood server implementation does not extract the domains, URLs, or IP addresses you visit from your traffic, so there is nothing about them to log, store, or hand over — that holds on any server running the official implementation, whoever operates it. When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN; that happens inside the app, on your device, and is never sent anywhere.
 
 ## Service Providers
 

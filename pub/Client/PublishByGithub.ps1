@@ -1,52 +1,53 @@
-# Triggers a FULL release on GitHub Actions by dispatching the "Bump Version" workflow (bump.yml),
-# which is the single writer of the version: it bumps pub/PubVersion.json (the CHANGELOG is
-# hand-maintained, never rewritten), commits, fast-forwards develop + main, and then chains the
-# client publish (Linux + Windows +
-# Android + Google Play + GitHub release) AND the NuGet publish against the freshly bumped commit.
+# Releases VpnHood! CLIENT. The client's code + version live in THIS monorepo, but the client is now
+# PUBLISHED from a separate repo (vpnhood/Vpnhood.App.Client), whose workflow checks out this code at
+# build time and supplies the fastlane tree + store secrets. Its GitHub release still lands back HERE
+# — that repo sets VH_PUBLISH_REPO=vpnhood/VpnHood — so every existing download link, README badge and
+# in-app update URL keeps working.
 #
-# Bumping runs in CI (not on a developer's machine) on purpose — it avoids version-file conflicts
-# between developers. This script only prompts + dispatches; it never bumps locally.
+# Two steps, one command (the same shape as Connect's dispatcher beside this one):
+#   1. Bump the MONOREPO in CI (bump.yml) with the nuget publish OFF — so PubVersion.json advances and
+#      is pushed to develop + main. Waits for it to finish; a failed bump publishes nothing.
+#   2. Dispatch publish_client.yml in the CLIENT repo (ref = develop) to build from the freshly bumped
+#      code. No bump and no NuGet happen in the client repo.
 #
-# It asks two mandatory questions (unless supplied as parameters):
-#   1. Release or prerelease            -> 1: release (stable/production), 2: prerelease (alpha)
-#   2. Google Play audience ratio (%)   -> 1-100, default 100 (100 = full release; <100 stages on
-#                                          the production track only — ignored on prerelease/alpha)
+# Why two dispatches instead of letting bump.yml chain the publish: bump.yml runs here, and dispatching
+# a workflow in the client repo from there would need a cross-repo `actions: write` credential this
+# repo deliberately does not hold. Your own gh login already has that reach locally, so the two-step
+# costs no new credential and keeps this repo unable to trigger anything in a brand repo.
 #
 # Usage:
-#   ./PublishByGithub.ps1                       # prompts for both, then releases
+#   ./PublishByGithub.ps1                       # prompts for both, then bumps + releases the client
+#   ./PublishByGithub.ps1 -bump 2               # prerelease (alpha; rollout not asked)
 #   ./PublishByGithub.ps1 -bump 1 -rollout 20   # stable release staged to 20% on Google Play
-#   ./PublishByGithub.ps1 -bump 2               # prerelease (rollout not asked; alpha ships complete)
-#   ./PublishByGithub.ps1 -watch                # follow the bump run to completion
-#   ./PublishByGithub.ps1 -repo owner/name      # override the target repo (else auto-resolved)
+#   ./PublishByGithub.ps1 -bump 2 -watch        # follow the client run to completion
 
 param(
 	# 1 = release, 2 = prerelease (alpha). 0 (default) => prompt.
 	[ValidateSet(0, 1, 2)] [int]$bump = 0,
 	# Google Play audience ratio as a percent (1-100). 0 (default) => prompt (release only).
 	[int]$rollout = 0,
-	# owner/repo to dispatch against. Defaults to the same repo the rest of the pipeline publishes to
-	# (VH_PUBLISH_REPO -> origin remote), via the shared resolver.
-	[string]$repo,
-	# Follow the triggered bump run in the console until it finishes.
+	# The monorepo that holds bump.yml, the version and the client code. Defaults to this repo's slug.
+	[string]$monoRepo,
+	# The client PUBLISH repo (holds publish_client.yml + fastlane + store secrets). Note this is not
+	# where the release lands — that is the monorepo, per the client repo's VH_PUBLISH_REPO variable.
+	[string]$clientRepo = "vpnhood/Vpnhood.App.Client",
+	# Follow the triggered client run in the console until it finishes.
 	[switch]$watch,
 	# Skip the final confirmation prompt (for non-interactive use).
 	[switch]$yes
 );
 
 $ErrorActionPreference = "Stop";
-$workflowFile = "bump.yml";
 
 # gh authenticates the dispatch from its own login (gh auth login / keyring) or an ambient
 # GITHUB_TOKEN — no token file. Run `gh auth login` once if dispatch fails with a 401.
 
-# Resolve the target repo the same way the build does (no side effects: this resolver does NOT bump
-# the version, unlike Common.ps1, so it is safe to dot-source here).
+# Resolve the monorepo the same way the build does (no side effects: this resolver does NOT bump the
+# version, unlike Common.ps1, so it is safe to dot-source here).
 . "$PSScriptRoot/../lib/Resolve-PublishRepo.ps1";
-if ([string]::IsNullOrWhiteSpace($repo)) {
-	$repo = Resolve-PublishRepoSlug;
-}
-if ([string]::IsNullOrWhiteSpace($repo)) {
-	throw "Could not resolve the target repo. Set -repo owner/name or VH_PUBLISH_REPO.";
+if ([string]::IsNullOrWhiteSpace($monoRepo)) { $monoRepo = Resolve-PublishRepoSlug; }
+if ([string]::IsNullOrWhiteSpace($monoRepo)) {
+	throw "Could not resolve the monorepo. Set -monoRepo owner/name or VH_PUBLISH_REPO.";
 }
 
 # --- Mandatory prompt 1: release or prerelease -------------------------------------------------
@@ -59,44 +60,37 @@ if ($bump -notin @(1, 2)) {
 $prerelease = ($bump -eq 2);
 
 # --- Mandatory prompt 2: Google Play audience ratio (release only) -----------------------------
-# A staged rollout is a production concept; prerelease/alpha always ships complete to testers, so we
-# do not ask for (or send) a ratio on a prerelease.
 if ($prerelease) {
 	$rollout = 100;
 }
 elseif ($rollout -lt 1 -or $rollout -gt 100) {
 	$parsed = 0;
 	$ans = Read-Host "Google Play audience ratio % (1-100, default 100)";
-	if ([string]::IsNullOrWhiteSpace($ans)) {
-		$rollout = 100;
-	}
-	elseif ([int]::TryParse($ans, [ref]$parsed) -and $parsed -ge 1 -and $parsed -le 100) {
-		$rollout = $parsed;
-	}
-	else {
-		throw "Invalid audience ratio '$ans' (expected an integer 1-100).";
-	}
+	if ([string]::IsNullOrWhiteSpace($ans)) { $rollout = 100; }
+	elseif ([int]::TryParse($ans, [ref]$parsed) -and $parsed -ge 1 -and $parsed -le 100) { $rollout = $parsed; }
+	else { throw "Invalid audience ratio '$ans' (expected an integer 1-100)."; }
 }
 
-# Guard: GitHub only exposes a workflow for dispatch once it has indexed the file (which happens on
-# the push that changes that file's contents). If the workflow file is on the branch but was never
-# indexed, the dispatch 404s. Check up front and give an actionable message instead of a raw 404.
-gh api "repos/$repo/actions/workflows/$workflowFile" --silent 2>$null | Out-Null;
-if ($LASTEXITCODE -ne 0) {
-	throw ("GitHub has not indexed '$workflowFile' on $repo, so it cannot be dispatched yet. " +
-		"Make a commit that modifies .github/workflows/$workflowFile (a comment line is enough) " +
-		"and push it to the default branch, then retry.");
-}
+# Guard: both workflows must be indexed on their repos before they can be dispatched.
+gh api "repos/$monoRepo/actions/workflows/bump.yml" --silent 2>$null | Out-Null;
+if ($LASTEXITCODE -ne 0) { throw "GitHub has not indexed 'bump.yml' on $monoRepo yet (push a change to it first)."; }
+gh api "repos/$clientRepo/actions/workflows/publish_client.yml" --silent 2>$null | Out-Null;
+if ($LASTEXITCODE -ne 0) { throw "GitHub has not indexed 'publish_client.yml' on $clientRepo yet (push a change to it first)."; }
 
-$releaseKind = if ($prerelease) { "prerelease (alpha)" } else { "release (stable/production)" };
+# The channel is DECLARED to publish_client.yml, which asserts it against the PubVersion.json the bump
+# just wrote and refuses to build on disagreement. Deriving it from the same $prerelease that drives
+# the bump is what keeps the two from ever drifting.
+$releaseType = if ($prerelease) { "prerelease" } else { "release" };
+$releaseKind = if ($prerelease) { "prerelease (alpha + TestFlight)" } else { "release (production + App Store)" };
 $rolloutText = if ($prerelease) { "n/a (alpha ships complete)" } else { "$rollout%" };
 
 Write-Host "";
-Write-Host "*** Trigger FULL release via the Bump workflow" -BackgroundColor Blue;
-Write-Host "  repo             : $repo";
+Write-Host "*** Release VpnHood! CLIENT via GitHub Actions" -BackgroundColor Blue;
+Write-Host "  1) bump monorepo : $monoRepo   (nuget OFF -> push develop + main)";
+Write-Host "  2) publish client: $clientRepo   (build from monorepo develop)";
+Write-Host "  GitHub release   : $monoRepo   (per the client repo's VH_PUBLISH_REPO)";
 Write-Host "  type             : $releaseKind";
 Write-Host "  Play audience    : $rolloutText";
-Write-Host "  will bump version, then publish client (all platforms + Google Play) AND NuGet packages.";
 Write-Host "";
 
 if (-not $yes) {
@@ -107,27 +101,44 @@ if (-not $yes) {
 	}
 }
 
-gh workflow run $workflowFile `
-	--repo $repo `
+# --- Step 1: bump the monorepo (nuget OFF), then wait for it to finish --------------------------
+Write-Host "Dispatching bump on $monoRepo ..." -ForegroundColor Cyan;
+gh workflow run bump.yml `
+	--repo $monoRepo `
 	--ref develop `
 	-f "prerelease=$($prerelease.ToString().ToLower())" `
-	-f "rollout=$rollout" `
-	-f "then_publish=true" `
-	-f "then_publish_nugets=true";
+	-f "then_publish_nugets=false";
+if ($LASTEXITCODE -ne 0) { throw "Failed to dispatch bump.yml on $monoRepo."; }
 
-if ($LASTEXITCODE -ne 0) {
-	throw "Failed to dispatch '$workflowFile'. Exit code: $LASTEXITCODE";
-}
-Write-Host "Dispatched. View runs: https://github.com/$repo/actions/workflows/$workflowFile" -ForegroundColor Green;
+Start-Sleep -Seconds 6;
+$bumpRun = (gh run list --repo $monoRepo --workflow bump.yml -L 1 --json databaseId --jq '.[0].databaseId');
+if ([string]::IsNullOrWhiteSpace($bumpRun)) { throw "Could not find the queued bump run; check the Actions tab."; }
+Write-Host "Waiting for the bump run ($bumpRun) to finish ..." -ForegroundColor Cyan;
+gh run watch $bumpRun --repo $monoRepo --exit-status;
+if ($LASTEXITCODE -ne 0) { throw "The bump run failed; the client was NOT dispatched. Fix the bump, then retry."; }
+
+# --- Step 2: dispatch the client release (build from the freshly bumped develop) ----------------
+Write-Host "Dispatching client release on $clientRepo ..." -ForegroundColor Cyan;
+gh workflow run publish_client.yml `
+	--repo $clientRepo `
+	--ref main `
+	-f "ref=develop" `
+	-f "release_type=$releaseType" `
+	-f "build_android=true" `
+	-f "publish_play=true" `
+	-f "build_ios=true" `
+	-f "publish_appstore=true" `
+	-f "publish_release=true" `
+	-f "rollout=$rollout";
+if ($LASTEXITCODE -ne 0) { throw "Failed to dispatch publish_client.yml on $clientRepo."; }
+Write-Host "Dispatched. View runs: https://github.com/$clientRepo/actions/workflows/publish_client.yml" -ForegroundColor Green;
 
 if ($watch) {
-	# The run id is not returned by `workflow run`; give GitHub a moment to register the queued run,
-	# then grab the newest run for this workflow and follow it.
 	Start-Sleep -Seconds 6;
-	$runId = (gh run list --repo $repo --workflow $workflowFile -L 1 --json databaseId --jq '.[0].databaseId');
+	$runId = (gh run list --repo $clientRepo --workflow publish_client.yml -L 1 --json databaseId --jq '.[0].databaseId');
 	if ([string]::IsNullOrWhiteSpace($runId)) {
-		Write-Host "Could not find the queued run yet; check the Actions tab." -ForegroundColor Yellow;
+		Write-Host "Could not find the queued client run yet; check the Actions tab." -ForegroundColor Yellow;
 	} else {
-		gh run watch $runId --repo $repo --exit-status;
+		gh run watch $runId --repo $clientRepo --exit-status;
 	}
 }

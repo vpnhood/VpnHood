@@ -2,7 +2,7 @@
 # SEPARATE repo (vpnhood/Vpnhood.App.Connect) whose workflow checks out this code at build time.
 #
 # Two steps, one command:
-#   1. Bump the MONOREPO in CI (bump.yml) with client-publish AND nuget OFF — so PubVersion.json +
+#   1. Bump the MONOREPO in CI (bump.yml) with the nuget publish OFF — so PubVersion.json +
 #      CHANGELOG advance and are pushed to develop + main. Waits for it to finish.
 #   2. Dispatch connect_publish.yml in the CONNECT repo (ref = develop) to build Connect from the
 #      freshly bumped code and release it there. No bump and no NuGet happen in the Connect repo.
@@ -71,7 +71,7 @@ $rolloutText = if ($prerelease) { "n/a (alpha ships complete)" } else { "$rollou
 
 Write-Host "";
 Write-Host "*** Release Connect via GitHub Actions" -BackgroundColor Blue;
-Write-Host "  1) bump monorepo : $monoRepo   (publish OFF, nuget OFF -> push develop + main)";
+Write-Host "  1) bump monorepo : $monoRepo   (nuget OFF -> push develop + main)";
 Write-Host "  2) publish Connect: $connectRepo   (build from monorepo develop, release there)";
 Write-Host "  type             : $releaseKind";
 Write-Host "  Play audience    : $rolloutText";
@@ -85,13 +85,12 @@ if (-not $yes) {
 	}
 }
 
-# --- Step 1: bump the monorepo (publish + nuget OFF), then wait for it to finish ----------------
+# --- Step 1: bump the monorepo (nuget OFF), then wait for it to finish ----------------
 Write-Host "Dispatching bump on $monoRepo ..." -ForegroundColor Cyan;
 gh workflow run bump.yml `
 	--repo $monoRepo `
 	--ref develop `
 	-f "prerelease=$($prerelease.ToString().ToLower())" `
-	-f "then_publish=false" `
 	-f "then_publish_nugets=false";
 if ($LASTEXITCODE -ne 0) { throw "Failed to dispatch bump.yml on $monoRepo."; }
 

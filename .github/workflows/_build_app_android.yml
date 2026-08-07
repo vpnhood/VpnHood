@@ -47,6 +47,13 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       PKG: ${{ inputs.app == 'connect' && 'VpnHoodConnect' || 'VpnHoodClient' }}
       PREFIX: ${{ inputs.app == 'connect' && 'Connect' || 'Client' }}
+      # The release repo drives every generated install/update URL (Resolve-PublishRepo otherwise falls
+      # back to GITHUB_REPOSITORY, i.e. the CALLER). When the publishing repo is not the release repo —
+      # the client publishes from Vpnhood.App.Client but releases into vpnhood/VpnHood — the BUILDS must
+      # honour the same override the release job uses, or the shipped JSON points at a repo with no
+      # releases and in-app update breaks with nothing going red.
+      VH_PUBLISH_REPO: ${{ inputs.app != 'connect' && (vars.VH_PUBLISH_REPO || github.repository) || '' }}
+      VH_CONNECT_PUBLISH_REPO: ${{ inputs.app == 'connect' && (vars.VH_CONNECT_PUBLISH_REPO || vars.VH_PUBLISH_REPO || github.repository) || '' }}
       # Standardized secret names map to the app-specific env names android-signing.json expects
       # (CLIENT_* for client, CONNECT_* for connect). Only the active app's vars are populated.
       ANDROID_KEYSTORE_CLIENT_GOOGLE_BASE64: ${{ inputs.app == 'client' && secrets.ANDROID_KEYSTORE_GOOGLE_BASE64 || '' }}

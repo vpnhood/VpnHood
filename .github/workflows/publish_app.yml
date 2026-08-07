@@ -331,9 +331,15 @@ jobs:
     env:
       PKG: ${{ inputs.app == 'connect' && 'VpnHoodConnect' || 'VpnHoodClient' }}
       DROP_TAG: ${{ inputs.app == 'connect' && '#client' || '#connect' }}
-      # The release lands on the CALLER repo; Resolve-PublishRepo reads whichever var matches the app.
-      VH_PUBLISH_REPO: ${{ inputs.app != 'connect' && github.repository || '' }}
-      VH_CONNECT_PUBLISH_REPO: ${{ inputs.app == 'connect' && github.repository || '' }}
+      # Where the release lands. The CALLER repo by default — right whenever the repo that dispatches
+      # also owns the Releases page (connect, and the monorepo itself). A store-asset repo that must
+      # release ELSEWHERE sets a VH_PUBLISH_REPO variable on itself: the client publishes from
+      # Vpnhood.App.Client, but its downloads stay on vpnhood/VpnHood, so every existing link, badge
+      # and updater URL keeps working. `vars` resolves in the CALLER's context inside a reusable
+      # workflow, so this needs no new input and a caller without the variable is unaffected.
+      RELEASE_REPO: ${{ inputs.app == 'connect' && (vars.VH_CONNECT_PUBLISH_REPO || vars.VH_PUBLISH_REPO || github.repository) || (vars.VH_PUBLISH_REPO || github.repository) }}
+      VH_PUBLISH_REPO: ${{ inputs.app != 'connect' && (vars.VH_PUBLISH_REPO || github.repository) || '' }}
+      VH_CONNECT_PUBLISH_REPO: ${{ inputs.app == 'connect' && (vars.VH_CONNECT_PUBLISH_REPO || vars.VH_PUBLISH_REPO || github.repository) || '' }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v5
@@ -387,17 +393,19 @@ jobs:
         with:
           name: ${{ inputs.app }}-ios
           path: ${{ env.MODULE_DIR }}/ios
-      # Resolve the exact commit the version tag will be pinned to. The tag is created in the CALLER
+      # Resolve the exact commit the version tag will be pinned to. The tag is created in the RELEASE
       # repo, so --target MUST name a commit that exists THERE; left unset, GitHub silently falls back
       # to that repo's default-branch tip, which is not the released code (and changes meaning whenever
-      # the default branch does).
+      # the default branch does). Keying this off the release repo rather than the caller is what makes
+      # "publish from the store-asset repo, release into the monorepo" land on the built commit: the
+      # caller's own SHA does not exist in the monorepo at all.
       - name: Resolve release target commit
         shell: bash
         run: |
           set -e
           CODE_COMMIT=$(git -C code rev-parse HEAD)
-          if [ "${{ github.repository }}" = "${{ env.CODE_REPO }}" ]; then
-            # Releasing to the monorepo itself: tag the code commit that was actually built.
+          if [ "$RELEASE_REPO" = "${{ env.CODE_REPO }}" ]; then
+            # Releasing into the monorepo: tag the code commit that was actually built.
             RELEASE_TARGET="$CODE_COMMIT"
           else
             # Releasing to a thin caller repo (connect): it holds no source, so tag its own commit —
@@ -406,11 +414,35 @@ jobs:
           fi
           echo "CODE_COMMIT=$CODE_COMMIT" >> $GITHUB_ENV
           echo "RELEASE_TARGET=$RELEASE_TARGET" >> $GITHUB_ENV
-          echo "✅ tag target=$RELEASE_TARGET (built from ${{ env.CODE_REPO }}@$CODE_COMMIT)"
-      - name: Create GitHub release (caller repo)
+          # Split for the App-token step, which wants owner and bare repo name separately.
+          echo "RELEASE_REPO_OWNER=${RELEASE_REPO%%/*}" >> $GITHUB_ENV
+          echo "RELEASE_REPO_NAME=${RELEASE_REPO#*/}" >> $GITHUB_ENV
+          echo "✅ release repo=$RELEASE_REPO tag target=$RELEASE_TARGET (built from ${{ env.CODE_REPO }}@$CODE_COMMIT)"
+      # Releasing into a repo OTHER than the one running this workflow cannot use github.token — that
+      # token is scoped to the caller. The store-asset repo holds the credentials of a GitHub App
+      # installed on the release repo and mints a short-lived installation token here. No App
+      # configured (or releasing to itself) -> github.token, so every existing caller is untouched.
+      - name: Mint a release token for ${{ env.RELEASE_REPO }}
+        id: release_token
+        if: ${{ env.RELEASE_REPO != github.repository && vars.PUBLISHER_APP_ID != '' }}
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.PUBLISHER_APP_ID }}
+          private-key: ${{ secrets.PUBLISHER_APP_PRIVATE_KEY }}
+          owner: ${{ env.RELEASE_REPO_OWNER }}
+          repositories: ${{ env.RELEASE_REPO_NAME }}
+      # Fail loud rather than silently releasing to the wrong place: a caller that asked for a
+      # cross-repo release but has no App credentials would otherwise fall back to github.token and
+      # die deep inside gh with a bare 404.
+      - name: Require a release token for a cross-repo release
+        if: ${{ env.RELEASE_REPO != github.repository && vars.PUBLISHER_APP_ID == '' }}
+        run: |
+          echo "::error title=Missing release credentials::VH_PUBLISH_REPO points at $RELEASE_REPO, but this repo has no PUBLISHER_APP_ID/PUBLISHER_APP_PRIVATE_KEY. github.token cannot write to another repository."
+          exit 1
+      - name: Create GitHub release (${{ env.RELEASE_REPO }})
         shell: pwsh
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.release_token.outputs.token || github.token }}
         run: |
           . "$env:GITHUB_WORKSPACE/code/pub/lib/Resolve-PublishRepo.ps1"
           $slug = if ("${{ inputs.app }}" -eq "connect") { Resolve-PublishRepoSlug -Connect } else { Resolve-PublishRepoSlug }

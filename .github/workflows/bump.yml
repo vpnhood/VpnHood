@@ -5,9 +5,15 @@ name: Bump Version
 # never rewritten here. Bumping in CI (not on a developer's machine) avoids version-file conflicts
 # between developers. See pub/RELEASE-STRATEGY.md.
 #
-# Optional chaining ("do both"): after bumping it can dispatch the client publish and/or the NuGet
-# publish against the freshly bumped commit — while each of those workflows also stays independently
-# dispatchable on its own.
+# Optional chaining ("do both"): after bumping it can dispatch the NuGet publish against the freshly
+# bumped commit, while that workflow also stays independently dispatchable on its own.
+#
+# It does NOT chain an APP publish. Every app now publishes from its own brand repo — the client from
+# vpnhood/Vpnhood.App.Client, Connect from vpnhood/Vpnhood.App.Connect — and dispatching a workflow
+# there from here would need a cross-repo `actions: write` credential this repo deliberately does not
+# hold. Use the brand repo's `_publish.ps1`, which prompts for the channel, bumps here, waits, and
+# then dispatches the publish with your own gh login. That keeps the version single-sourced in this
+# repo while leaving it unable to trigger anything in a brand repo.
 
 on:
   workflow_dispatch:
@@ -20,18 +26,10 @@ on:
         description: "Mark the CURRENT version as a prerelease without incrementing it (implies prerelease)"
         type: boolean
         default: false
-      then_publish:
-        description: "After bumping, dispatch the client publish workflow (creates the GitHub release)"
-        type: boolean
-        default: false
       then_publish_nugets:
         description: "After bumping, dispatch the NuGet publish workflow"
         type: boolean
         default: false
-      rollout:
-        description: "Google Play audience ratio (%) forwarded to the client publish (1-100; 100 = full). Ignored on prerelease."
-        required: false
-        default: "100"
 
 jobs:
   bump:
@@ -59,19 +57,6 @@ jobs:
             elseif ("${{ github.event.inputs.prerelease }}" -eq "true") { 2 }
             else { 1 }
           & "$env:GITHUB_WORKSPACE/pub/Invoke-VersionBump.ps1" -bump $bump
-      - name: Dispatch client publish
-        if: ${{ github.event.inputs.then_publish == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          MARK_ONLY: ${{ github.event.inputs.mark_only }}
-          PRERELEASE: ${{ github.event.inputs.prerelease }}
-        run: |
-          # Declare the channel to the publish workflow, which asserts it against the PubVersion.json
-          # this job just wrote. Same rule as the bump above: mark_only implies prerelease. The two
-          # cannot drift — a mismatch would mean the bump and the publish disagree, and the publish
-          # then refuses to build rather than shipping to the wrong track.
-          if [ "$MARK_ONLY" = "true" ] || [ "$PRERELEASE" = "true" ]; then RELEASE_TYPE=prerelease; else RELEASE_TYPE=release; fi
-          gh workflow run publish_client.yml --repo "${{ github.repository }}" --ref develop -f publish_release=true -f build_android=true -f release_type="$RELEASE_TYPE" -f rollout="${{ github.event.inputs.rollout }}"
       - name: Dispatch NuGet publish
         if: ${{ github.event.inputs.then_publish_nugets == 'true' }}
         env:

@@ -59,9 +59,17 @@ truth — follow them, and when a new durable convention is agreed, update this 
   store listings) run on **GitHub Actions — never from a developer machine**. Don't build release packages
   or run Fastlane locally; the runners hold the signing keys, toolchains, and store credentials. A local
   build is only ever for a quick smoke test, not for distribution.
-- **Client** releases from this repo (`publish_client.yml` + `bump.yml` via `pub/Client/PublishByGithub.ps1`).
-  **Connect** releases from the sibling repo `vpnhood/Vpnhood.App.Connect` (`connect_publish.yml`, dispatched by
-  `pub/Connect/PublishByGithub.ps1`); that repo also holds the Connect Fastlane config + store metadata.
+- Every app publishes from its own **brand repo**, which holds that app's Fastlane config, store
+  metadata and store secrets. This repo holds the code, the single version, and the one shared
+  build/store/release definition (`publish_app.yml`) that each brand repo calls.
+  **Client** → `vpnhood/Vpnhood.App.Client` (`publish_client.yml`); its GitHub release still lands
+  **here**, because that repo sets `VH_PUBLISH_REPO=vpnhood/VpnHood` so existing download links and
+  in-app update URLs keep working. **Connect** → `vpnhood/Vpnhood.App.Connect`
+  (`connect_publish.yml`), which releases to itself.
+  Publish either with its dispatcher **here** — `pub/Client/PublishByGithub.ps1` or
+  `pub/Connect/PublishByGithub.ps1`: each prompts for the channel, bumps this repo, waits, then
+  dispatches that app's workflow in its brand repo. `bump.yml` never chains an app publish — it
+  cannot reach a brand repo, by design.
 - The iOS **App Store listing** (metadata + screenshots, no binary) is pushed by a Fastlane `deliver` lane
   (`ios upload_metadata`) via its own workflow — Connect: `publish_appstore_metadata.yml`. The TestFlight
   **build** ships separately through the `*_publish.yml` iOS leg. Connect iOS is TestFlight-only for now.

@@ -1,0 +1,22 @@
+# The CLIENT's store listing — fastlane metadata, screenshots and store texts for 13 locales —
+# is generated content, not source, so it lives in its own repo (vpnhood/Vpnhood.App.Client) and
+# is regenerated wholesale by that repo's update-screenshots.yml.
+#
+# It is mounted here so catalogue crawlers that read the listing out of a source clone can still
+# find it (vpnhood/VpnHood#765). The metadata therefore sits at
+#
+#     fastlane/fastlane/metadata/android/<locale>/
+#
+# — the doubled segment is unavoidable: the submodule brings its own repo root with it.
+#
+# A plain `git clone` of this repo does NOT fetch it; only `--recurse-submodules` pays the
+# download. The pin below is a fixed commit, so bump it when the listing should be refreshed:
+#
+#     git submodule update --remote fastlane && git commit -am "Bump the fastlane listing"
+#
+# This mount is a stopgap. The intent is to split this repo into real submodules as it grows;
+# this is simply the first of them, created early because the listing needed a home.
+[submodule "fastlane"]
+	path = fastlane
+	url = https://github.com/vpnhood/Vpnhood.App.Client.git
+	branch = main

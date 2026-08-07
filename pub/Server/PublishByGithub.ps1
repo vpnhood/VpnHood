@@ -1,6 +1,6 @@
 # Releases the VpnHood SERVER. The server's code + version live in THIS monorepo, but the server
 # releases to a SEPARATE repo (vpnhood/VpnHood.App.Server) whose workflow checks out this code at
-# build time — the same split as Connect (see pub/Connect/PublishByGithub.ps1). That release repo
+# build time — the same split as Connect (see that repo's _publish.ps1). That release repo
 # holds NO code and only a `main` branch (a develop line there would be meaningless); the
 # develop -> main prerelease/stable model lives in THIS monorepo via bump.yml.
 #

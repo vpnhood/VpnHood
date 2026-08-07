@@ -101,8 +101,11 @@ public class BillingServiceTest : TestAppBase
     [TestMethod]
     public async Task Purchase_failure_resets_state_and_skips_order_completion()
     {
-        var accountProvider = new TestAccountProvider();
-        accountProvider.TestBillingProvider.PurchaseException = new Exception("The store rejected the purchase.");
+        var accountProvider = new TestAccountProvider {
+            TestBillingProvider = {
+                PurchaseException = new Exception("The store rejected the purchase.")
+            }
+        };
         await using var app = CreateAppWithAccount(accountProvider);
         var billingService = GetBillingService(app);
 
@@ -131,9 +134,12 @@ public class BillingServiceTest : TestAppBase
     [TestMethod]
     public async Task RestorePurchase_completes_restored_order()
     {
-        var accountProvider = new TestAccountProvider();
-        accountProvider.TestBillingProvider.RestoreResult = new AppPurchaseResult {
-            ProviderOrderId = "restored_order_1"
+        var accountProvider = new TestAccountProvider {
+            TestBillingProvider = {
+                RestoreResult = new AppPurchaseResult {
+                    ProviderOrderId = "restored_order_1"
+                }
+            }
         };
         await using var app = CreateAppWithAccount(accountProvider);
         var billingService = GetBillingService(app);

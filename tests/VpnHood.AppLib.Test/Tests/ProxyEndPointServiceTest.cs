@@ -11,6 +11,7 @@ using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Socks5ProxyServers;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Test;
+// ReSharper disable AccessToModifiedClosure
 
 namespace VpnHood.AppLib.Test.Tests;
 

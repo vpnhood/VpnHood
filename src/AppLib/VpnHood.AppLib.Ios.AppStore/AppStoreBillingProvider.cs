@@ -24,6 +24,7 @@ public class AppStoreBillingProvider(
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         var products = await _bridge.LoadProducts(productIds, cancellationToken).Vhc();
+        // ReSharper disable once UseCollectionExpression
         return products
             .Select(product => new SubscriptionPlan {
                 PlanToken = product.Id,

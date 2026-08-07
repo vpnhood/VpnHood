@@ -27,27 +27,38 @@ public partial class CredentialManagerCallback : Java.Lang.Object, ICredentialMa
         VhLogger.Instance.LogWarning("Google credential manager error: {Type}: {Message}",
             e.Class.TypeName, e.ToString());
 
-        if (e.Class.SimpleName == "NoCredentialException") {
-            _taskCompletionSource.TrySetException(new NoCredentialException(e.ToString()));
-        }
-        else if (e.Class.SimpleName == "GetCredentialCancellationException") {
-            var statusCode = GmsStatusCodeRegex().Match(e.ToString() ?? string.Empty);
-            _taskCompletionSource.TrySetException(statusCode.Success
-                ? new AuthenticationException(
-                    $"Google sign-in failed (code {statusCode.Groups[1].Value}). " +
-                    "Try re-adding your Google account in the device settings, then sign in again.")
-                : new UserCanceledException(e.ToString()));
-        }
-        else if (e.Class.TypeName.Contains("CancellationException")) {
-            _taskCompletionSource.TrySetCanceled();
-        }
-        else {
-            _taskCompletionSource.TrySetException(new ApiException(
-                new ApiError {
-                    TypeFullName = e.Class.TypeName,
-                    TypeName = e.Class.SimpleName,
-                    Message = e.ToString()
-                }));
+        switch (e.Class.SimpleName)
+        {
+            case "NoCredentialException":
+                _taskCompletionSource.TrySetException(new NoCredentialException(e.ToString()));
+                break;
+
+            case "GetCredentialCancellationException":
+            {
+                var statusCode = GmsStatusCodeRegex().Match(e.ToString());
+                _taskCompletionSource.TrySetException(statusCode.Success
+                    ? new AuthenticationException(
+                        $"Google sign-in failed (code {statusCode.Groups[1].Value}). " +
+                        "Try re-adding your Google account in the device settings, then sign in again.")
+                    : new UserCanceledException(e.ToString()));
+                break;
+            }
+
+            default: {
+                if (e.Class.TypeName.Contains("CancellationException")) {
+                    _taskCompletionSource.TrySetCanceled();
+                }
+                else {
+                    _taskCompletionSource.TrySetException(new ApiException(
+                        new ApiError {
+                            TypeFullName = e.Class.TypeName,
+                            TypeName = e.Class.SimpleName,
+                            Message = e.ToString()
+                        }));
+                }
+
+                break;
+            }
         }
     }
 

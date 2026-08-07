@@ -113,8 +113,25 @@ if ($signTargetRaw) {
 # from AZURE_SIGNING_CREDENTIAL) plus the Trusted Signing target (from AZURE_SIGNING_TARGET). Without
 # them the build is intentionally UNSIGNED and does not fail. When signing IS configured, any
 # failure is fatal so a silently-unsigned package is never shipped.
-$signEnabled = [bool]($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET `
-	-and $signAccount -and $signProfile -and $signEndpoint);
+$signCredentialSet = [bool]($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET);
+$signTargetSet     = [bool]($signAccount -and $signProfile -and $signEndpoint);
+
+# HALF-configured is an error, not a warning. "No signing configured at all" is the documented
+# fork-friendly path (warn + unsigned + green), but ONE of the two halves present means somebody
+# intended to sign and the other half is missing or malformed — that is "present but failing", which
+# ships an unsigned installer from a green run. It stayed hidden exactly that way: the org held
+# AZURE_SIGNING_CREDENTIAL while AZURE_SIGNING_TARGET was never set anywhere, so every release built
+# unsigned and nothing went red.
+if ($signCredentialSet -ne $signTargetSet) {
+	$missing = if ($signCredentialSet) { "AZURE_SIGNING_TARGET" } else { "AZURE_SIGNING_CREDENTIAL" };
+	$present = if ($signCredentialSet) { "AZURE_SIGNING_CREDENTIAL" } else { "AZURE_SIGNING_TARGET" };
+	Throw ("Azure Trusted Signing is half-configured: $present is set but $missing is missing or " +
+		"incomplete, so the installer would ship UNSIGNED from a passing build. Set both (see " +
+		".github/DEPLOYMENT.md), or unset both to build unsigned on purpose. " +
+		"AZURE_SIGNING_TARGET must be JSON with Endpoint, CodeSigningAccountName and CertificateProfileName.");
+}
+
+$signEnabled = $signCredentialSet -and $signTargetSet;
 $script:signToolReady = $false;
 function Invoke-VhSign([string[]]$files) {
 	if (-not $signEnabled) { return; }

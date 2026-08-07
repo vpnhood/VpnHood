@@ -112,10 +112,10 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    at release time it extracts whatever the first H1 (`#`) section is for the GitHub release note, and
    Google Play uses the same exclude-phrases pass. Update the `# Latest` section yourself each cycle.
    Commit + push as normal work.
-2. Run the brand repo's `_publish.ps1` (`vpnhood/Vpnhood.App.Client` or `vpnhood/Vpnhood.App.Connect`).
-   It prompts for the channel and the Play audience ratio, dispatches **Bump Version** (`bump.yml`)
-   here, waits for it, then dispatches that app's publish workflow against the freshly bumped
-   `develop`. A failed bump means nothing is published.
+2. Run `pub/Client/PublishByGithub.ps1` (or `pub/Connect/PublishByGithub.ps1`). It prompts for the
+   channel and the Play audience ratio, dispatches **Bump Version** (`bump.yml`) here, waits for it,
+   then dispatches that app's publish workflow — which lives in its brand repo — against the freshly
+   bumped `develop`. A failed bump means nothing is published.
 3. To bump without publishing, run `bump.yml` directly. Choose `prerelease` on/off and optionally
    tick `then_publish_nugets`. It bumps the version once (`PubVersion.json` + `Directory.Build.props`)
    and pushes `develop` (a stable bump also fast-forwards `main`; a prerelease bump does not). It does

@@ -4,4 +4,3 @@ The Fastlane tree for **VpnHood! CLIENT** — `Fastfile`, store listings, screen
 own repo:
 
 - [Vpnhood.App.Client/fastlane](https://github.com/vpnhood/Vpnhood.App.Client/tree/main/fastlane)
-- [Vpnhood.App.Client/fastlane/metadata/android](https://github.com/vpnhood/Vpnhood.App.Client/tree/main/fastlane/metadata/android)

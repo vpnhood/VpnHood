@@ -30,7 +30,7 @@ git commit -am "ci: activate workflows" && git push
 gh api repos/<owner>/<repo>/actions/workflows -q .total_count
 ```
 
-Each brand repo's `_publish.ps1` also pre-checks this and fails with the same instruction if a
+`pub/Client/PublishByGithub.ps1` also pre-checks this and fails with the same instruction if a
 workflow it needs is not yet indexed.
 
 ## How to set a secret

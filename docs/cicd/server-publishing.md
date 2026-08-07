@@ -49,7 +49,7 @@ run on GitHub Actions; local scripts are build-only.*
 | Release repo | this repo | `vpnhood/Vpnhood.App.Connect` | `vpnhood/VpnHood.App.Server` |
 | Workflow lives in | the Client repo — `publish_client.yml` | the Connect repo — `connect_publish.yml` | **the Server repo — `server_publish.yml`** |
 | Token to create the release | automatic `github.token` (same-repo) | automatic `github.token` (workflow runs *in* the target repo) | **automatic `github.token`** (same trick) |
-| Trigger script | the Client repo — `_publish.ps1` | the Connect repo — `_publish.ps1` | **new `pub/Server/PublishByGithub.ps1`** |
+| Trigger script | [Client/PublishByGithub.ps1](../../pub/Client/PublishByGithub.ps1) | [Connect/PublishByGithub.ps1](../../pub/Connect/PublishByGithub.ps1) | **new `pub/Server/PublishByGithub.ps1`** |
 | Store leg | Google Play / App Store | Google Play / App Store | **none** (no fastlane, no store) |
 | Extra artifact | — | — | **multi-arch Docker image → Docker Hub** |
 
@@ -138,7 +138,7 @@ compose keep pointing there, no consumer-facing change.
   list is currently client/connect-specific (Android/MSI), so it must be made **asset-set aware** —
   see the decision below.
 - New `pub/Server/PublishByGithub.ps1`: a trimmed copy of
-  the Connect repo's `_publish.ps1` — bump the monorepo
+  [pub/Connect/PublishByGithub.ps1](../../pub/Connect/PublishByGithub.ps1) — bump the monorepo
   (publish OFF, nuget OFF), wait, then dispatch `server_publish.yml` in the Server repo. No
   rollout/store prompts; add a `-pushDocker` switch. Only prompt: release vs prerelease.
 

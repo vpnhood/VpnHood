@@ -116,7 +116,7 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
         if (session != null) {
             try {
                 var apiClient = new PortalApiClient(HttpClient);
-                await apiClient.Delete("/auth/sessions/current", cancellationToken).Vhc();
+                await apiClient.DeleteCurrentSession(cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogWarning(ex, "Could not revoke the portal session.");
@@ -131,12 +131,8 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
     private async Task<PortalSession> SignInToPortal(string idToken, CancellationToken cancellationToken)
     {
         var apiClient = new PortalApiClient(_httpClientWithoutAuth);
-        var response = await apiClient.Post<PortalSignInResponse>("/auth/sessions",
-            new Dictionary<string, object?> {
-                ["provider"] = "google",
-                ["idToken"] = idToken,
-                ["packageName"] = _packageName
-            }, cancellationToken).Vhc();
+        var response = await apiClient
+            .CreateSession("google", idToken, _packageName, cancellationToken).Vhc();
 
         // the portal signs in even when the email waits for WHMCS-side verification;
         // purchases park until then (state=email_unverified is informational here)

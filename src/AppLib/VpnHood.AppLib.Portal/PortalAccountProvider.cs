@@ -34,7 +34,7 @@ public class PortalAccountProvider(
             return null;
 
         var apiClient = new PortalApiClient(AuthenticationProvider.HttpClient);
-        var me = await apiClient.Get<PortalAccountInfo>("/account", cancellationToken).Vhc();
+        var me = await apiClient.GetAccount(cancellationToken).Vhc();
         var entitlement = await TryGetEntitlement(apiClient, cancellationToken).Vhc();
 
         return new AppAccount {
@@ -63,8 +63,7 @@ public class PortalAccountProvider(
     private static async Task<PortalEntitlement?> TryGetEntitlement(PortalApiClient apiClient,
         CancellationToken cancellationToken)
     {
-        var entitlements = await apiClient
-            .Get<PortalEntitlementList>("/account/entitlements", cancellationToken).Vhc();
+        var entitlements = await apiClient.ListEntitlements(cancellationToken).Vhc();
         return entitlements.Items.FirstOrDefault(x => x.AccessCode != null);
     }
 

@@ -133,7 +133,9 @@ public class ApiClientBase : ApiClientCommon
         request.Method = httpMethod;
         request.Headers.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
-        if (httpMethod != HttpMethod.Get) {
+        // only the methods that carry a body get one; a DELETE used to be sent with a
+        // literal "null" payload, which some servers and proxies reject outright
+        if (httpMethod == HttpMethod.Post || httpMethod == HttpMethod.Put || httpMethod == HttpMethod.Patch) {
             var content = new StringContent(JsonSerializer.Serialize(data, JsonSerializerSettings));
             content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
             request.Content = content;
@@ -230,8 +232,56 @@ public class ApiClientBase : ApiClientCommon
         var responseData = response.Content != null
             ? await response.Content.ReadAsStringAsync(cancellationToken).Vhc()
             : null;
+
+        // RFC 9457 problem+json is the REST standard for errors, announced by its
+        // media type — how a non-.NET backend reports failures. Refit it as an
+        // ApiError so the same ApiException reaches callers whichever dialect the
+        // server speaks: Message from the problem's detail, the machine code in
+        // Data["Code"] and as ExceptionTypeName. ApiError bodies keep flowing
+        // through the ApiException constructor's own parsing, as before.
+        var problemError = TryConvertProblemDetails(response, responseData);
+        if (problemError != null)
+            throw new ApiException(problemError.Message, status, problemError.ToJson(), headers, null);
+
         throw new ApiException("The HTTP status code of the response was not expected (" + status + ").", status,
             responseData, headers, null);
+    }
+
+    /// <summary>An RFC 9457 problem+json response as an ApiError, or null when the response is not one.</summary>
+    private static ApiError? TryConvertProblemDetails(HttpResponseMessage response, string? responseData)
+    {
+        var mediaType = response.Content.Headers.ContentType?.MediaType;
+        if (!string.Equals(mediaType, "application/problem+json", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(responseData))
+            return null;
+
+        try {
+            using var problem = JsonDocument.Parse(responseData);
+            if (problem.RootElement.ValueKind != JsonValueKind.Object)
+                return null;
+
+            var code = GetStringProperty(problem.RootElement, "code");
+            var detail = GetStringProperty(problem.RootElement, "detail")
+                         ?? GetStringProperty(problem.RootElement, "title");
+
+            var apiError = new ApiError {
+                TypeName = code ?? "HttpProblem",
+                Message = detail ?? code ?? "The server reported a problem."
+            };
+            if (code != null)
+                apiError.Data["Code"] = code;
+            return apiError;
+        }
+        catch (JsonException) {
+            return null; // the media type lied; fall back to the generic path
+        }
+    }
+
+    private static string? GetStringProperty(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
+            ? property.GetString()
+            : null;
     }
 
     protected virtual Task<HttpResponseMessage> HttpClientSendAsync(HttpClient client, HttpRequestMessage request,
@@ -273,7 +323,7 @@ public class ApiClientBase : ApiClientCommon
     protected Task<T> HttpPatchAsync<T>(string urlPart, Dictionary<string, object?>? parameters, object? data,
         CancellationToken cancellationToken = default)
     {
-        return HttpSendAsync<T>(HttpMethod.Put, urlPart, parameters, data, cancellationToken);
+        return HttpSendAsync<T>(HttpMethod.Patch, urlPart, parameters, data, cancellationToken);
     }
 
     protected Task HttpPatchAsync(string urlPart, Dictionary<string, object?>? parameters, object? data,

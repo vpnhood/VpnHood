@@ -4,6 +4,7 @@ using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -220,7 +221,7 @@ public class PortalTest
     }
 
     [TestMethod]
-    public async Task A_problem_response_becomes_a_PortalApiException()
+    public async Task A_problem_response_becomes_the_standard_ApiException()
     {
         _portal.Enqueue(SignInRoute, new TestPortalServer.ErrorScript {
             Code = "invalid_id_token",
@@ -229,12 +230,12 @@ public class PortalTest
         });
         using var authenticationProvider = CreateAuthenticationProvider();
 
-        var exception = await Assert.ThrowsExactlyAsync<PortalApiException>(() =>
+        var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
             authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethod.Google },
                 CancellationToken.None));
-        Assert.AreEqual(401, exception.StatusCode);
-        Assert.AreEqual("invalid_id_token", exception.Code, "clients branch on the machine code");
-        StringAssert.Contains(exception.Message, "Invalid sign-in token");
+        Assert.AreEqual(401, exception.StatusCode, "the real HTTP status, not ApiError's 400 default");
+        Assert.AreEqual("invalid_id_token", exception.Data["Code"], "clients branch on the machine code");
+        Assert.AreEqual("Invalid sign-in token.", exception.Message, "the problem detail, no raw response appended");
     }
 
     [TestMethod]
@@ -253,7 +254,9 @@ public class PortalTest
 
         Assert.IsNull(authenticationProvider.UserId);
         Assert.AreEqual(1, externalProvider.SignOutCalls);
-        Assert.AreEqual(1, _portal.Requests.Count(x => x.Route == SignOutRoute));
+        var signOut = _portal.Requests.Single(x => x.Route == SignOutRoute);
+        Assert.AreEqual(JsonValueKind.Undefined, signOut.Body.ValueKind,
+            "a DELETE must not carry a body — some servers and proxies reject one");
         using var reloadedProvider = CreateAuthenticationProvider();
         Assert.IsNull(reloadedProvider.UserId, "the session file must be gone");
     }

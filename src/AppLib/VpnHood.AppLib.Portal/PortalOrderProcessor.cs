@@ -38,12 +38,8 @@ internal class PortalOrderProcessor(
 
         var apiClient = new PortalApiClient(authenticationProvider.HttpClient);
         for (var counter = 0; ; counter++) {
-            var entitlement = await apiClient.Post<PortalEntitlement>("/billing/purchases",
-                new Dictionary<string, object?> {
-                    ["store"] = storeId,
-                    ["packageName"] = packageName,
-                    ["proof"] = BuildProof(purchaseData)
-                }, cancellationToken).Vhc();
+            var entitlement = await apiClient
+                .CreatePurchase(storeId, packageName, purchaseData, cancellationToken).Vhc();
 
             switch (entitlement.State) {
                 case PortalEntitlement.StateProvisioned:
@@ -69,15 +65,4 @@ internal class PortalOrderProcessor(
         }
     }
 
-    /// <summary>
-    /// Each store proves a purchase its own way: Play hands out a purchase token,
-    /// StoreKit 2 a signed transaction. Either way the proof is only a pointer —
-    /// the portal re-fetches the purchase from the store before acting on it.
-    /// </summary>
-    private Dictionary<string, object?> BuildProof(string purchaseData)
-    {
-        return storeId == PortalStoreIds.AppStore
-            ? new Dictionary<string, object?> { ["jws"] = purchaseData }
-            : new Dictionary<string, object?> { ["purchaseToken"] = purchaseData };
-    }
 }

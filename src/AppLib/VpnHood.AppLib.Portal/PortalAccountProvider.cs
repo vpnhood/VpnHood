@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Portal.Dto;
 using VpnHood.Core.Toolkit.Extensions;
 
@@ -6,7 +6,7 @@ namespace VpnHood.AppLib.Portal;
 
 /// <summary>
 /// Account facade over the Portal API. Entitlements carry their access code
-/// directly (entitlement.get) — no token-list walking; the portal never
+/// directly (GET /account/entitlements) — no token-list walking; the portal never
 /// exposes backend ids on the wire.
 /// </summary>
 public class PortalAccountProvider(
@@ -34,7 +34,7 @@ public class PortalAccountProvider(
             return null;
 
         var apiClient = new PortalApiClient(AuthenticationProvider.HttpClient);
-        var me = await apiClient.Invoke<PortalMe>("me.get", null, cancellationToken).Vhc();
+        var me = await apiClient.Get<PortalAccountInfo>("/account", cancellationToken).Vhc();
         var entitlement = await TryGetEntitlement(apiClient, cancellationToken).Vhc();
 
         return new AppAccount {
@@ -64,8 +64,8 @@ public class PortalAccountProvider(
         CancellationToken cancellationToken)
     {
         var entitlements = await apiClient
-            .Invoke<PortalEntitlementList>("entitlement.get", null, cancellationToken).Vhc();
-        return entitlements.Entitlements.FirstOrDefault(x => x.AccessCode != null);
+            .Get<PortalEntitlementList>("/account/entitlements", cancellationToken).Vhc();
+        return entitlements.Items.FirstOrDefault(x => x.AccessCode != null);
     }
 
     public void Dispose()

@@ -1,6 +1,6 @@
-namespace VpnHood.AppLib.Portal.Dto;
+﻿namespace VpnHood.AppLib.Portal.Dto;
 
-/// <summary>auth.token response.</summary>
+/// <summary>POST /auth/sessions response.</summary>
 public class PortalSignInResponse
 {
     public required string AccessToken { get; init; }

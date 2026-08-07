@@ -1,4 +1,4 @@
-using AuthenticationServices;
+﻿using AuthenticationServices;
 using Foundation;
 using UIKit;
 using VpnHood.AppLib.Abstractions;
@@ -9,7 +9,7 @@ namespace VpnHood.AppLib.Ios.AppStore;
 /// <summary>
 /// Sign in with Apple (ASAuthorizationAppleIdProvider — fully bound in
 /// Microsoft.iOS, no Swift needed). Returns the identity token JWS, which the
-/// portal's auth.token verifies against Apple's published keys.
+/// portal's POST /auth/sessions verifies against Apple's published keys.
 /// </summary>
 public class AppleAuthenticationProvider : IAppAuthenticationExternalProvider
 {
@@ -41,7 +41,7 @@ public class AppleAuthenticationProvider : IAppAuthenticationExternalProvider
 
     public Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        // Apple has no sign-out API; the portal session revoke (auth.revoke) is the
+        // Apple has no sign-out API; the portal session revoke (DELETE /auth/sessions/current) is the
         // real sign-out. Nothing to do on the device.
         return Task.CompletedTask;
     }

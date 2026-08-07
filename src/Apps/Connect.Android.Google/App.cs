@@ -148,7 +148,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
             return new PortalAccountProvider(portalAuthenticationProvider, googlePlayBillingProvider,
-                storeId: "googleplay", packageName: appConfigs.AppId);
+                storeId: PortalStoreIds.GooglePlay, packageName: appConfigs.AppId);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create AppAccountService.");

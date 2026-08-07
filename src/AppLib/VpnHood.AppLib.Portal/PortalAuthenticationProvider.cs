@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
@@ -11,10 +11,10 @@ using VpnHood.Core.Toolkit.Utils;
 namespace VpnHood.AppLib.Portal;
 
 /// <summary>
-/// Signs in against the Portal API (auth.token with a provider id token) and
-/// holds the opaque session token: persisted like the Store package's api key,
-/// injected into every request as a bearer plus X-Portal-Token (the custom
-/// header survives proxies that strip Authorization).
+/// Signs in against the Portal API (POST /auth/sessions with a provider id
+/// token) and holds the opaque session token: persisted like the Store package's
+/// api key, injected into every request as a bearer plus X-Portal-Token (the
+/// custom header survives proxies that strip Authorization).
 /// </summary>
 public class PortalAuthenticationProvider : IAppAuthenticationProvider
 {
@@ -116,7 +116,7 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
         if (session != null) {
             try {
                 var apiClient = new PortalApiClient(HttpClient);
-                await apiClient.Invoke<object>("auth.revoke", null, cancellationToken).Vhc();
+                await apiClient.Delete("/auth/sessions/current", cancellationToken).Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogWarning(ex, "Could not revoke the portal session.");
@@ -131,7 +131,7 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
     private async Task<PortalSession> SignInToPortal(string idToken, CancellationToken cancellationToken)
     {
         var apiClient = new PortalApiClient(_httpClientWithoutAuth);
-        var response = await apiClient.Invoke<PortalSignInResponse>("auth.token",
+        var response = await apiClient.Post<PortalSignInResponse>("/auth/sessions",
             new Dictionary<string, object?> {
                 ["provider"] = "google",
                 ["idToken"] = idToken,

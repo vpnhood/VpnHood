@@ -1,4 +1,4 @@
-using System.Security.Authentication;
+﻿using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Portal.Dto;
@@ -8,7 +8,7 @@ using VpnHood.Core.Toolkit.Logging;
 namespace VpnHood.AppLib.Portal;
 
 /// <summary>
-/// Portal reconciliation: one synchronous purchase.verify call returns the
+/// Portal reconciliation: one synchronous POST /billing/purchases returns the
 /// entitlement and access code — no polling loop (that was Store.Server's
 /// design). A short retry only covers the store-side "pending" state.
 /// </summary>
@@ -38,11 +38,11 @@ internal class PortalOrderProcessor(
 
         var apiClient = new PortalApiClient(authenticationProvider.HttpClient);
         for (var counter = 0; ; counter++) {
-            var entitlement = await apiClient.Invoke<PortalEntitlement>("purchase.verify",
+            var entitlement = await apiClient.Post<PortalEntitlement>("/billing/purchases",
                 new Dictionary<string, object?> {
                     ["store"] = storeId,
                     ["packageName"] = packageName,
-                    ["proof"] = new Dictionary<string, object?> { ["purchaseToken"] = purchaseData }
+                    ["proof"] = BuildProof(purchaseData)
                 }, cancellationToken).Vhc();
 
             switch (entitlement.State) {
@@ -67,5 +67,17 @@ internal class PortalOrderProcessor(
                     throw new InvalidOperationException($"Unexpected entitlement state: {entitlement.State}");
             }
         }
+    }
+
+    /// <summary>
+    /// Each store proves a purchase its own way: Play hands out a purchase token,
+    /// StoreKit 2 a signed transaction. Either way the proof is only a pointer —
+    /// the portal re-fetches the purchase from the store before acting on it.
+    /// </summary>
+    private Dictionary<string, object?> BuildProof(string purchaseData)
+    {
+        return storeId == PortalStoreIds.AppStore
+            ? new Dictionary<string, object?> { ["jws"] = purchaseData }
+            : new Dictionary<string, object?> { ["purchaseToken"] = purchaseData };
     }
 }

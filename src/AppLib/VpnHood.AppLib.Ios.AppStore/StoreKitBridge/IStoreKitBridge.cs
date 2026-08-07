@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Ios.AppStore.StoreKitBridge;
+﻿namespace VpnHood.AppLib.Ios.AppStore.StoreKitBridge;
 
 /// <summary>
 /// The StoreKit 2 surface this package needs, as a seam: the native
@@ -47,6 +47,6 @@ public class StoreKitPurchase
     public string? TransactionId { get; init; }
     public string? OriginalTransactionId { get; init; }
 
-    /// <summary>The SK2 signed transaction (JWS) — the proof purchase.verify posts to the portal.</summary>
+    /// <summary>The SK2 signed transaction (JWS) — the proof POST /billing/purchases sends to the portal.</summary>
     public string? Jws { get; init; }
 }

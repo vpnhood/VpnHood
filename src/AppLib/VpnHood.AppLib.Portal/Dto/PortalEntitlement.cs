@@ -1,6 +1,6 @@
-namespace VpnHood.AppLib.Portal.Dto;
+﻿namespace VpnHood.AppLib.Portal.Dto;
 
-/// <summary>purchase.verify response and entitlement.get list items.</summary>
+/// <summary>POST /billing/purchases response, and the items of GET /account/entitlements.</summary>
 public class PortalEntitlement
 {
     public const string StateProvisioned = "provisioned";

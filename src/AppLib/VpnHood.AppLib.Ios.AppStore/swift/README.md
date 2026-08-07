@@ -31,7 +31,7 @@ DllImport error, which is the intended "facade not built yet" signal.
 
 - `transaction.finish()` is called immediately after a successful purchase:
   with the portal flow, delivery acknowledgment happens SERVER-side
-  (purchase.verify re-fetches the transaction from Apple), so an unfinished
+  (POST /billing/purchases re-fetches the transaction from Apple), so an unfinished
   transaction would only cause repeated `updates` replays on the device.
 - Purchases carry `appAccountToken` = the portal's external uid (a UUID), the
   same value Google receives as `obfuscatedAccountId` — the backend owns that

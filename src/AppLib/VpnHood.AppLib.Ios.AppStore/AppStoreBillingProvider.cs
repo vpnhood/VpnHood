@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Ios.AppStore.StoreKitBridge;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
@@ -8,7 +8,7 @@ namespace VpnHood.AppLib.Ios.AppStore;
 /// <summary>
 /// StoreKit 2 billing. The plan token is the App Store product id (Apple has
 /// no base plans — the product IS the plan+cycle); the purchase proof is the
-/// SK2 signed transaction (JWS), which the portal's purchase.verify treats as
+/// SK2 signed transaction (JWS), which the portal's POST /billing/purchases treats as
 /// a pointer and re-fetches server-to-server.
 /// </summary>
 public class AppStoreBillingProvider(

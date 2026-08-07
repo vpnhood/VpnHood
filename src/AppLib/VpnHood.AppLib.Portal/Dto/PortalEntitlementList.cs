@@ -1,6 +1,7 @@
-namespace VpnHood.AppLib.Portal.Dto;
+﻿namespace VpnHood.AppLib.Portal.Dto;
 
+/// <summary>GET /account/entitlements — the account's live entitlements, newest first.</summary>
 public class PortalEntitlementList
 {
-    public required IReadOnlyList<PortalEntitlement> Entitlements { get; init; }
+    public required IReadOnlyList<PortalEntitlement> Items { get; init; }
 }

@@ -134,8 +134,6 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
         var response = await apiClient
             .CreateSession("google", idToken, _packageName, cancellationToken).Vhc();
 
-        // the portal signs in even when the email waits for WHMCS-side verification;
-        // purchases park until then (state=email_unverified is informational here)
         var session = new PortalSession {
             AccessToken = response.AccessToken,
             ExpiresAt = response.ExpiresAt,

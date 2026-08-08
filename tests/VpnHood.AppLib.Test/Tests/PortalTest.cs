@@ -46,14 +46,13 @@ public class PortalTest
             Directory.Delete(_storageFolder, recursive: true);
     }
 
-    private static object SignInData(string accessToken = "session-token-1", string state = "ok")
+    private static object SignInData(string accessToken = "session-token-1")
     {
         return new {
             accessToken,
             expiresAt = DateTime.UtcNow.AddDays(30).ToString("O"),
             userId = ExternalUid.ToString(),
-            account = new { email = "buyer@example.com", emailVerified = state == "ok" },
-            state
+            account = new { email = "buyer@example.com" }
         };
     }
 
@@ -94,8 +93,7 @@ public class PortalTest
         _portal.Enqueue(SignInRoute, SignInData(accessToken: "tok-abc"));
         _portal.Enqueue("GET /account", new {
             userId = ExternalUid.ToString(),
-            account = new { email = "buyer@example.com", emailVerified = true },
-            state = "ok"
+            account = new { email = "buyer@example.com" }
         });
         _portal.Enqueue("GET /account/entitlements", new { items = Array.Empty<object>() });
 
@@ -132,8 +130,7 @@ public class PortalTest
         };
         _portal.Enqueue("GET /account", new {
             userId = ExternalUid.ToString(),
-            account = new { email = "buyer@example.com", emailVerified = true },
-            state = "ok"
+            account = new { email = "buyer@example.com" }
         });
         _portal.Enqueue("GET /account/entitlements", entitlementData);
         _portal.Enqueue("GET /account/entitlements", entitlementData);
@@ -192,32 +189,6 @@ public class PortalTest
         Assert.AreEqual(PackageName, request.Body.GetProperty("packageName").GetString());
         Assert.AreEqual("purchase-token-xyz",
             request.Body.GetProperty("proof").GetProperty("purchaseToken").GetString());
-    }
-
-    [TestMethod]
-    public async Task CompleteOrder_surfaces_email_verification_parking()
-    {
-        _portal.Enqueue(SignInRoute, SignInData(state: "email_unverified"));
-        _portal.Enqueue("POST /billing/purchases", new {
-            state = "awaiting_email_verification",
-            accessCode = (string?)null,
-            expiresAt = (string?)null,
-            planId = (string?)null
-        });
-
-        using var authenticationProvider = CreateAuthenticationProvider();
-        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethod.Google },
-            CancellationToken.None);
-        using var accountProvider = new PortalAccountProvider(authenticationProvider,
-            new TestBillingProvider(), PortalStoreIds.GooglePlay, PackageName);
-        var orderProcessor = accountProvider.Billing?.OrderProcessor
-            ?? throw new InvalidOperationException("Billing must exist when a provider is given.");
-
-        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
-            orderProcessor.CompleteOrder(
-                new AppPurchaseResult { ProviderOrderId = "GPA.2222", PurchaseData = "purchase-token-xyz" },
-                CancellationToken.None));
-        StringAssert.Contains(exception.Message, "verified");
     }
 
     [TestMethod]

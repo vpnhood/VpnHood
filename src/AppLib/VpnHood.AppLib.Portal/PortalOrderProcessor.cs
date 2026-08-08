@@ -45,12 +45,6 @@ internal class PortalOrderProcessor(
                 case PortalEntitlement.StateProvisioned:
                     return;
 
-                case PortalEntitlement.StateAwaitingEmailVerification:
-                    // parked server-side; resumes on verification — surface it, don't spin
-                    throw new InvalidOperationException(
-                        "Your email address must be verified before the purchase can be delivered. " +
-                        "Please check your inbox and try again.");
-
                 case PortalEntitlement.StatePending:
                     // store-side payment not complete yet — brief retry, then give up loudly
                     VhLogger.Instance.LogWarning("Purchase is still pending at the store. Attempt: {Attempt}", counter + 1);

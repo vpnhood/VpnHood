@@ -68,6 +68,18 @@
     <ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
   </ItemGroup>
 
+  <!-- The StoreKit facade must be referenced from the APP project: a plain class library's
+       NativeReference does not flow through ProjectReference (only binding projects package a
+       .resources sidecar), so without this the app link drops the vhsk_* symbols and every
+       DllImport("__Internal") in NativeStoreKitBridge fails to link. Same conditional as the
+       lib: buildable before the xcframework exists, billing then throws at first use. -->
+  <ItemGroup Condition="Exists('..\..\AppLib\VpnHood.AppLib.Ios.AppStore\swift\VpnHoodStoreKit.xcframework')">
+    <NativeReference Include="..\..\AppLib\VpnHood.AppLib.Ios.AppStore\swift\VpnHoodStoreKit.xcframework">
+      <Kind>Framework</Kind>
+      <SmartLink>true</SmartLink>
+    </NativeReference>
+  </ItemGroup>
+
   <ItemGroup>
     <!-- Bundle the Network Extension as a PlugIn (.appex) inside the host app. UndefineProperties drops
          the app's global /p:CodesignProvision (the App Store publish passes the *app* profile) when

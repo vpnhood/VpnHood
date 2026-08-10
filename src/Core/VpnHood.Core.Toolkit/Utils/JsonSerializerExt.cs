@@ -36,7 +36,10 @@ public static class JsonSerializerExt
                 ? new Uri(uriString, UriKind.RelativeOrAbsolute)
                 : null;
         }
-        else if (propertyType.IsValueType || propertyType == typeof(string)) {
+        else if (propertyType.IsValueType || propertyType == typeof(string) ||
+                 updatedProperty.Value.ValueKind is JsonValueKind.Array or JsonValueKind.Null) {
+            // arrays (e.g. string[] product ids) and explicit nulls replace the value wholesale;
+            // only JSON objects merge property-by-property below
             parsedValue = JsonSerializer.Deserialize(updatedProperty.Value.GetRawText(), propertyType);
         }
         else {

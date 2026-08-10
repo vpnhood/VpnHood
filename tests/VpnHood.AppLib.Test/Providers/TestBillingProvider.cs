@@ -11,6 +11,7 @@ internal class TestBillingProvider : IAppBillingProvider
     public PurchaseParams? LastPurchaseParams { get; private set; }
 
     public string ProviderName => "Test";
+    public Uri? SubscriptionManagementUrl => new("https://test.local/subscriptions");
 
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {

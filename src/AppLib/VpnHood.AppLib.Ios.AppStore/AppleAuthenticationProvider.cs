@@ -13,6 +13,8 @@ namespace VpnHood.AppLib.Ios.AppStore;
 /// </summary>
 public class AppleAuthenticationProvider : IAppAuthenticationExternalProvider
 {
+    public string SignInMethod => AppSignInMethods.Apple;
+
     public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin, CancellationToken cancellationToken)
     {
         // Apple has no silent token mint; an interactive-capable session is required.

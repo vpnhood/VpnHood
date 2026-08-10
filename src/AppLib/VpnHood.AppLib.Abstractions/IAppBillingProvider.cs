@@ -5,6 +5,15 @@ namespace VpnHood.AppLib.Abstractions;
 public interface IAppBillingProvider : IDisposable
 {
     string ProviderName { get; }
+
+    /// <summary>
+    /// The store's own manage-subscriptions page for the signed-in store account (cancel, change
+    /// plan, payment method). Self-declared by the store provider so no UI ever hardcodes a store
+    /// URL or names another platform's store; surfaced to the SPA through AppFeatures. Null when
+    /// the store has no such page.
+    /// </summary>
+    Uri? SubscriptionManagementUrl { get; }
+
     Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken);
 
     Task<AppPurchaseResult> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,

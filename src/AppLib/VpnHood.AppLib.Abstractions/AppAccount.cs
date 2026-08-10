@@ -13,4 +13,9 @@ public class AppAccount
     public string? PriceCurrency { get; set; }
     public bool? IsAutoRenew { get; set; }
     public string? ProviderSubscriptionId { get; set; }
+
+    // The manage-subscriptions page for the active subscription — only when THIS build's store billed
+    // it (a subscription billed by another platform's store has no page this device can open). The UI
+    // renders it verbatim when present and shows a neutral "managed where purchased" hint otherwise.
+    public Uri? SubscriptionManagementUrl { get; set; }
 }

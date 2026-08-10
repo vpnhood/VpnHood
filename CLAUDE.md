@@ -59,6 +59,9 @@ truth — follow them, and when a new durable convention is agreed, update this 
   store listings) run on **GitHub Actions — never from a developer machine**. Don't build release packages
   or run Fastlane locally; the runners hold the signing keys, toolchains, and store credentials. A local
   build is only ever for a quick smoke test, not for distribution.
+- The `fastlane/` **submodule is CI-only**: never init/fetch it on a developer machine (no
+  `git submodule update --init`). Keep it registered but uninitialized locally; only the GitHub runners
+  check it out.
 - Every app publishes from its own **brand repo**, which holds that app's Fastlane config, store
   metadata and store secrets. This repo holds the code, the single version, and the one shared
   build/store/release definition (`publish_app.yml`) that each brand repo calls.

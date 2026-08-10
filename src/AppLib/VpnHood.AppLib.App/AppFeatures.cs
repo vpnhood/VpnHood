@@ -16,7 +16,10 @@ public class AppFeatures
     public required bool IsAddAccessKeySupported { get; init; }
     public required bool IsAccountSupported { get; init; }
     public required bool IsBillingSupported { get; init; }
-    public required IReadOnlyList<AppSignInMethod> SignInMethods { get; init; }
+    // Sign-in method ids (see AppSignInMethods), self-declared by the app's auth provider. Strings,
+    // not an enum: third-party providers declare their own ids and the UI derives labels by
+    // convention (SIGN_IN_WITH_<UPPERCASE-ID>).
+    public required IReadOnlyList<string> SignInMethods { get; init; }
     public required bool IsTcpProxySupported { get; init; }
     public required bool IsQuicSupported { get; init; }
     public required bool IsSplitDomainSupported { get; init; }

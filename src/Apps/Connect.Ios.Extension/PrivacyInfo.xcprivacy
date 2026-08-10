@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Apple's privacy manifest for the Network Extension (.appex). An app extension ships as its own
+     bundle and is scanned separately from the host app, so it needs this file even though the host
+     already has one — see Connect.Ios/PrivacyInfo.xcprivacy.
+
+     This one is deliberately smaller than the app's: the extension links only
+     VpnHood.Core.Client.Devices.Ios (no AppLib, no SPA, no GA4, no Firebase), so it collects nothing and
+     never touches NSUserDefaults — the culture provider that does lives in the app process. Keep the two
+     in sync when a reference is added here, and re-check both against the upload's privacy report.
+     Identical to the Client extension's manifest: the two appex projects reference the same code and
+     differ only in bundle id and signing profile. -->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<!-- The tunnel process reports nothing off-device. Telemetry, if the user consented to it, is sent
+	     by the host app; packet data never leaves the extension. -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!-- IosMemoryMonitor reads the previous ext-log's timestamp inside the shared App Group
+		     container. C617.1 = timestamps of files inside the app/App Group container. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+		<!-- Environment.TickCount64 drives the tunnel's timeouts, diagnostics and proxy latency
+		     measurements. 35F9.1 = measure elapsed time. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>35F9.1</string>
+			</array>
+		</dict>
+		<!-- Reached by the .NET BCL when the extension writes its log/config files rather than by our
+		     own code. E174.1 = check free space before writing, to avoid running out of disk. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

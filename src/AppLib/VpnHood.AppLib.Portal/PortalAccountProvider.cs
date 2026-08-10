@@ -42,7 +42,12 @@ public class PortalAccountProvider(
             Email = me.Account.Email,
             SubscriptionId = entitlement != null ? PortalSubscriptionId : null,
             ProviderPlanId = entitlement?.PlanId,
-            ExpirationTime = entitlement?.ExpiresAt
+            ExpirationTime = entitlement?.ExpiresAt,
+            // the build's store page is offered only when that same store billed the entitlement;
+            // a cross-store subscription gets no link and the UI falls back to a neutral sentence
+            SubscriptionManagementUrl = entitlement?.Store == storeId
+                ? billingProvider?.SubscriptionManagementUrl
+                : null
         };
     }
 

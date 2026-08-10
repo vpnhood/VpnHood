@@ -144,7 +144,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             var googlePlayBillingProvider = TryCreateBillingClient(appConfigs);
 
             var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
-                appConfigs.PortalBaseUri, appConfigs.AppId, authenticationExternalProvider,
+                appConfigs.PortalBaseUri, appConfigs.AppId, [authenticationExternalProvider],
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
             return new PortalAccountProvider(portalAuthenticationProvider, googlePlayBillingProvider,

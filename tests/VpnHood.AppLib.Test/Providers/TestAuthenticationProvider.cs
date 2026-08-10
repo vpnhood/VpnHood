@@ -5,7 +5,7 @@ namespace VpnHood.AppLib.Test.Providers;
 
 internal class TestAuthenticationProvider : IAppAuthenticationProvider
 {
-    public IReadOnlyList<AppSignInMethod> SignInMethods => [AppSignInMethod.Google];
+    public IReadOnlyList<string> SignInMethods => [AppSignInMethods.Google];
     public string? UserId { get; private set; }
     public HttpClient HttpClient { get; } = new();
 

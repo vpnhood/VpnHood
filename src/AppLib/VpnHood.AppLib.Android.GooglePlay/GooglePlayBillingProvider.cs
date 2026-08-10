@@ -21,6 +21,11 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     public BillingPurchaseState PurchaseState { get; private set; }
     public string ProviderName => "GooglePlay";
 
+    // Play's account-wide subscriptions page. Deliberately not the per-sku deep link (it needs the
+    // purchased sku + package at render time, data the UI should not assemble); this page lists the
+    // user's subscriptions including this app's.
+    public Uri? SubscriptionManagementUrl => new("https://play.google.com/store/account/subscriptions");
+
     public GooglePlayBillingProvider(IReadOnlyList<string> productIds)
     {
         _billingClient = new Lazy<BillingClient>(() => {

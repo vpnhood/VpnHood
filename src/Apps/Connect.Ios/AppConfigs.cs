@@ -50,6 +50,17 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public bool AllowEndPointTracker { get; set; }
     public JsonElement? CustomData { get; set; }
 
+    // Portal (account/billing) backend. Null disables account features entirely — the app builds and
+    // runs sign-in-less (fail-soft, matching Connect.Android.Google's CreateAppAccountProvider) until
+    // the ".user" appsettings supply the URI. Debug points at the dev WHMCS via appsettings.Debug.json.
+    public Uri? PortalBaseUri { get; set; }
+    public bool PortalIgnoreSslVerification { get; set; } = IsDebugMode;
+
+    // App Store subscription product ids (the StoreKit product IS the plan+cycle). Empty until the
+    // products exist in App Store Connect; sourced from the embedded appsettings like the Android
+    // GooglePlayProductIds. An empty list renders an empty plans page, never an error.
+    public string[] AppStoreProductIds { get; set; } = [];
+
     public static AppConfigs Load()
     {
         var appConfigs = new AppConfigs();

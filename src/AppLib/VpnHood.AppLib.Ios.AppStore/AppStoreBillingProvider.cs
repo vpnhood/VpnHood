@@ -21,6 +21,9 @@ public class AppStoreBillingProvider(
     public string ProviderName => "AppStore";
     public BillingPurchaseState PurchaseState { get; private set; }
 
+    // Apple's system page for every subscription on the Apple ID; there is no per-product deep link.
+    public Uri? SubscriptionManagementUrl => new("https://apps.apple.com/account/subscriptions");
+
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
         var products = await _bridge.LoadProducts(productIds, cancellationToken).Vhc();

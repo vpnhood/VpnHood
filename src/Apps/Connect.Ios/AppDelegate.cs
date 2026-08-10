@@ -1,7 +1,10 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
+using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Ios.AppStore;
 using VpnHood.AppLib.Ios.Common;
+using VpnHood.AppLib.Portal;
 using VpnHood.Core.Client.Devices.Ios;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
@@ -78,6 +81,10 @@ public class AppDelegate : UIApplicationDelegate
             WebUiPort = appConfigs.WebUiPort,
             IsAddAccessKeySupported = false,
             PremiumFeatures = ConnectAppResources.PremiumFeatures,
+            // Sign in with Apple + StoreKit billing on the Portal backend. Null when PortalBaseUri is
+            // absent from the embedded appsettings: the app then runs sign-in-less (fail-soft, the
+            // same contract as Connect.Android.Google).
+            AccountProvider = CreateAppAccountProvider(appConfigs, storageFolderPath),
             // The WKWebView renders edge-to-edge (fills the whole window incl. the status-bar and
             // home-indicator safe areas). false = "don't let the native side pad to the safe area;
             // instead publish the inset sizes (SystemBarsInfo) so the SPA pads itself" — matching the
@@ -111,5 +118,33 @@ public class AppDelegate : UIApplicationDelegate
                 MinLogLevel = LogLevel.Information
             }
         };
+    }
+
+    // Mirrors Connect.Android.Google's CreateAppAccountProvider, with the Apple pieces swapped in:
+    // Sign in with Apple (email scope only — the no-name policy in APP_STORE_PRIVACY.md) as the
+    // external identity, StoreKit 2 as the billing provider, the Portal as the account backend.
+    private static IAppAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
+    {
+        try {
+            // no Portal configured — ship without account features rather than half-wired ones
+            if (appConfigs.PortalBaseUri == null) {
+                VhLogger.Instance.LogWarning("PortalBaseUri is not configured. Account features are disabled.");
+                return null;
+            }
+
+            var appleAuthenticationProvider = new AppleAuthenticationProvider();
+            var appStoreBillingProvider = new AppStoreBillingProvider(appConfigs.AppStoreProductIds);
+
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
+                appConfigs.PortalBaseUri, appConfigs.AppId, [appleAuthenticationProvider],
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
+
+            return new PortalAccountProvider(portalAuthenticationProvider, appStoreBillingProvider,
+                storeId: PortalStoreIds.AppStore, packageName: appConfigs.AppId);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create the account provider.");
+            return null;
+        }
     }
 }

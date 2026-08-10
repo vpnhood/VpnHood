@@ -9,7 +9,7 @@ public class AppAuthenticationService(
     IAppAuthenticationProvider accountProvider)
     : IDisposable
 {
-    public IReadOnlyList<AppSignInMethod> SignInMethods => accountProvider.SignInMethods;
+    public IReadOnlyList<string> SignInMethods => accountProvider.SignInMethods;
     public string? UserId => accountProvider.UserId;
     public HttpClient HttpClient => accountProvider.HttpClient;
 

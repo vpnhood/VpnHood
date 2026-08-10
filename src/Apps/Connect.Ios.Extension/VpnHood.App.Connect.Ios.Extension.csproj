@@ -48,4 +48,10 @@
     <ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
   </ItemGroup>
 
+  <!-- Apple's privacy manifest for this .appex. An extension is scanned as its own bundle, so the host
+       app's manifest does not cover it; LogicalName puts this at the root of the .appex. -->
+  <ItemGroup>
+    <BundleResource Include="PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+  </ItemGroup>
+
 </Project>

@@ -86,7 +86,7 @@ public class BillingServiceTest : TestAppBase
 
         // sign in so the account (with its active subscription) becomes visible
         await accountService.AuthenticationService.SignIn(AppUiContext.RequiredContext,
-            new AppSignInOptions { Method = AppSignInMethod.Google }, CancellationToken.None);
+            new AppSignInOptions { Method = AppSignInMethods.Google }, CancellationToken.None);
 
         var billingService = GetBillingService(app);
         var purchaseParams = new PurchaseParams { PurchaseToken = "test_plan_1m" };

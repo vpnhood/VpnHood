@@ -3205,6 +3205,7 @@ export class AppAccount implements IAppAccount {
     priceCurrency?: string | null;
     isAutoRenew?: boolean | null;
     providerSubscriptionId?: string | null;
+    subscriptionManagementUrl?: string | null;
 
     constructor(data?: IAppAccount) {
         if (data) {
@@ -3228,6 +3229,7 @@ export class AppAccount implements IAppAccount {
             this.priceCurrency = _data["priceCurrency"] !== undefined ? _data["priceCurrency"] : null as any;
             this.isAutoRenew = _data["isAutoRenew"] !== undefined ? _data["isAutoRenew"] : null as any;
             this.providerSubscriptionId = _data["providerSubscriptionId"] !== undefined ? _data["providerSubscriptionId"] : null as any;
+            this.subscriptionManagementUrl = _data["subscriptionManagementUrl"] !== undefined ? _data["subscriptionManagementUrl"] : null as any;
         }
     }
 
@@ -3251,6 +3253,7 @@ export class AppAccount implements IAppAccount {
         data["priceCurrency"] = this.priceCurrency !== undefined ? this.priceCurrency : null as any;
         data["isAutoRenew"] = this.isAutoRenew !== undefined ? this.isAutoRenew : null as any;
         data["providerSubscriptionId"] = this.providerSubscriptionId !== undefined ? this.providerSubscriptionId : null as any;
+        data["subscriptionManagementUrl"] = this.subscriptionManagementUrl !== undefined ? this.subscriptionManagementUrl : null as any;
         return data;
     }
 }
@@ -3267,10 +3270,11 @@ export interface IAppAccount {
     priceCurrency?: string | null;
     isAutoRenew?: boolean | null;
     providerSubscriptionId?: string | null;
+    subscriptionManagementUrl?: string | null;
 }
 
 export class AppSignInOptions implements IAppSignInOptions {
-    method!: AppSignInMethod;
+    method!: string;
     userName?: string | null;
     password?: string | null;
 
@@ -3308,15 +3312,9 @@ export class AppSignInOptions implements IAppSignInOptions {
 }
 
 export interface IAppSignInOptions {
-    method: AppSignInMethod;
+    method: string;
     userName?: string | null;
     password?: string | null;
-}
-
-export enum AppSignInMethod {
-    Google = "Google",
-    Apple = "Apple",
-    UsernamePassword = "UsernamePassword",
 }
 
 export class AppData implements IAppData {
@@ -3415,7 +3413,7 @@ export class AppFeatures implements IAppFeatures {
     isAddAccessKeySupported!: boolean;
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
-    signInMethods!: AppSignInMethod[];
+    signInMethods!: string[];
     isTcpProxySupported!: boolean;
     isQuicSupported!: boolean;
     isSplitDomainSupported!: boolean;
@@ -3590,7 +3588,7 @@ export interface IAppFeatures {
     isAddAccessKeySupported: boolean;
     isAccountSupported: boolean;
     isBillingSupported: boolean;
-    signInMethods: AppSignInMethod[];
+    signInMethods: string[];
     isTcpProxySupported: boolean;
     isQuicSupported: boolean;
     isSplitDomainSupported: boolean;

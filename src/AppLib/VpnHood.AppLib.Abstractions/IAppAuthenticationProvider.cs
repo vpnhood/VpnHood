@@ -4,7 +4,7 @@ namespace VpnHood.AppLib.Abstractions;
 
 public interface IAppAuthenticationProvider : IDisposable
 {
-    IReadOnlyList<AppSignInMethod> SignInMethods { get; }
+    IReadOnlyList<string> SignInMethods { get; }
     string? UserId { get; }
     HttpClient HttpClient { get; }
     Task SignIn(IUiContext uiContext, AppSignInOptions signInOptions, CancellationToken cancellationToken);

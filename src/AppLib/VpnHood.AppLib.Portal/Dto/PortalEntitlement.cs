@@ -10,4 +10,7 @@ public class PortalEntitlement
     public string? AccessCode { get; init; }
     public DateTime? ExpiresAt { get; init; }
     public string? PlanId { get; init; }
+
+    /// <summary>The store that billed this entitlement (PortalStoreIds) — may differ from the build's own store.</summary>
+    public string? Store { get; init; }
 }

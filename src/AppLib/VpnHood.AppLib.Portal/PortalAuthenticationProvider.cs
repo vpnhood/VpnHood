@@ -19,15 +19,17 @@ namespace VpnHood.AppLib.Portal;
 public class PortalAuthenticationProvider : IAppAuthenticationProvider
 {
     private bool _disposed;
-    private readonly IAppAuthenticationExternalProvider? _authenticationExternalProvider;
+    private readonly IReadOnlyList<IAppAuthenticationExternalProvider> _authenticationExternalProviders;
     private readonly HttpClient _httpClientWithoutAuth;
     private readonly string _packageName;
     private PortalSession? _session;
     private string SessionFilePath => Path.Combine(field, "account", "portalSession.json");
 
-    public IReadOnlyList<AppSignInMethod> SignInMethods => _authenticationExternalProvider != null
-        ? [AppSignInMethod.Google]
-        : [];
+    // Pure pass-through of the external providers' self-declared method ids ("google" on Android,
+    // "apple" on iOS, any id a third-party provider declares). This class has no identity-provider
+    // knowledge of its own: AppSignInOptions.Method selects among these declarations, and the portal
+    // wire discriminator is the selected declaration verbatim.
+    public IReadOnlyList<string> SignInMethods { get; }
 
     public string? UserId => Session?.UserId;
     public string? Email => Session?.Email;
@@ -37,12 +39,16 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
         string storageFolderPath,
         Uri portalBaseUrl,
         string packageName,
-        IAppAuthenticationExternalProvider? authenticationExternalProvider,
+        IReadOnlyList<IAppAuthenticationExternalProvider> authenticationExternalProviders,
         bool ignoreSslVerification = false)
     {
         SessionFilePath = storageFolderPath;
         _packageName = packageName;
-        _authenticationExternalProvider = authenticationExternalProvider;
+        _authenticationExternalProviders = authenticationExternalProviders;
+        SignInMethods = authenticationExternalProviders.Select(x => x.SignInMethod).ToArray();
+        if (SignInMethods.Distinct().Count() != SignInMethods.Count)
+            throw new ArgumentException("Multiple external providers declare the same sign-in method id.",
+                nameof(authenticationExternalProviders));
 
         var handlerWithAuth = new HttpClientHandlerAuth(this);
         if (ignoreSslVerification) handlerWithAuth.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
@@ -86,12 +92,16 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
             // silent re-sign-in with a fresh provider id token
             if (uiContext == null)
                 throw new InvalidOperationException("UI context is not available.");
-            if (_authenticationExternalProvider == null)
+
+            // renew only via the provider that established the session; a different IdP could land in
+            // a different account
+            var externalProvider = FindExternalProvider(Session.SignInMethod);
+            if (externalProvider == null)
                 return Session; // no way to renew; use it until the portal rejects it
 
-            var idToken = await _authenticationExternalProvider.SignIn(uiContext, true, cancellationToken).Vhc();
+            var idToken = await externalProvider.SignIn(uiContext, true, cancellationToken).Vhc();
             if (!string.IsNullOrWhiteSpace(idToken))
-                return await SignInToPortal(idToken, cancellationToken).Vhc();
+                return await SignInToPortal(externalProvider, idToken, cancellationToken).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not renew the portal session silently.");
@@ -102,11 +112,12 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
 
     public async Task SignIn(IUiContext uiContext, AppSignInOptions signInOptions, CancellationToken cancellationToken)
     {
-        if (signInOptions.Method != AppSignInMethod.Google || _authenticationExternalProvider == null)
-            throw new NotSupportedException($"Sign-in method is not supported. Method: {signInOptions.Method}");
+        // Method selects among the wired providers by their self-declared ids — never a hardcoded one.
+        var externalProvider = FindExternalProvider(signInOptions.Method)
+            ?? throw new NotSupportedException($"Sign-in method is not supported. Method: {signInOptions.Method}");
 
-        var idToken = await _authenticationExternalProvider.SignIn(uiContext, false, cancellationToken).Vhc();
-        await SignInToPortal(idToken, cancellationToken).Vhc();
+        var idToken = await externalProvider.SignIn(uiContext, false, cancellationToken).Vhc();
+        await SignInToPortal(externalProvider, idToken, cancellationToken).Vhc();
     }
 
     public async Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
@@ -124,24 +135,38 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
         }
         Session = null; // the setter deletes the session file
 
-        if (_authenticationExternalProvider != null)
-            await _authenticationExternalProvider.SignOut(uiContext, cancellationToken).Vhc();
+        // sign out the provider that established the session; when that is unknown, all of them (best effort)
+        var externalProviders = _authenticationExternalProviders
+            .Where(x => session?.SignInMethod == null || x.SignInMethod == session.SignInMethod);
+        foreach (var externalProvider in externalProviders)
+            await externalProvider.SignOut(uiContext, cancellationToken).Vhc();
     }
 
-    private async Task<PortalSession> SignInToPortal(string idToken, CancellationToken cancellationToken)
+    private async Task<PortalSession> SignInToPortal(IAppAuthenticationExternalProvider externalProvider,
+        string idToken, CancellationToken cancellationToken)
     {
+        // The wire discriminator tells the portal which IdP's keys verify this idToken. It is the
+        // external provider's self-declared method id, sent VERBATIM — no mapping, no enumeration, so
+        // a new provider (first- or third-party) needs no change here. Unknown ids are the portal's
+        // to reject (fail-closed).
         var apiClient = new PortalApiClient(_httpClientWithoutAuth);
         var response = await apiClient
-            .CreateSession("google", idToken, _packageName, cancellationToken).Vhc();
+            .CreateSession(externalProvider.SignInMethod, idToken, _packageName, cancellationToken).Vhc();
 
         var session = new PortalSession {
             AccessToken = response.AccessToken,
             ExpiresAt = response.ExpiresAt,
             UserId = response.UserId,
-            Email = response.Account.Email
+            Email = response.Account.Email,
+            SignInMethod = externalProvider.SignInMethod
         };
         Session = session;
         return session;
+    }
+
+    private IAppAuthenticationExternalProvider? FindExternalProvider(string? signInMethod)
+    {
+        return _authenticationExternalProviders.FirstOrDefault(x => x.SignInMethod == signInMethod);
     }
 
     public void Dispose()
@@ -149,7 +174,8 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
         if (_disposed) return;
         _disposed = true;
 
-        _authenticationExternalProvider?.Dispose();
+        foreach (var externalProvider in _authenticationExternalProviders)
+            externalProvider.Dispose();
         _httpClientWithoutAuth.Dispose();
         HttpClient.Dispose();
     }

@@ -28,6 +28,6 @@ Team `6KKW3MKLR7` (OmegaHood LLC). Namespaces `VpnHood.App.Client.Ios` / `VpnHoo
 | App | App bundle id | Extension bundle id | App Group | Dev profiles |
 |-----|---------------|---------------------|-----------|--------------|
 | Client  | `com.vpnhood.client.ios`  | `com.vpnhood.client.ios.networkextension`  | `group.com.vpnhood.client.ios`  | "VpnHood Client Dev Profile" + "VpnHood Client Extension Dev Profile" |
-| Connect | `com.vpnhood.connect.ios` | `com.vpnhood.connect.ios.networkextension` | `group.com.vpnhood.connect.ios` | *(create these — Connect isn't provisioned yet)* |
+| Connect | `com.vpnhood.connect.ios` | `com.vpnhood.connect.ios.networkextension` | `group.com.vpnhood.connect.ios` | *(automatic provisioning — App IDs/App Group registered since 2026-07; App Store profiles "VpnHood Connect AppStore" + "VpnHood Connect Extension AppStore" sign CI/TestFlight builds)* |
 
 See [build-deploy-and-provisioning.md](build-deploy-and-provisioning.md) for the portal steps.

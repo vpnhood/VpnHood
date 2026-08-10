@@ -11,6 +11,8 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 
 public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAppAuthenticationExternalProvider
 {
+    public string SignInMethod => AppSignInMethods.Google;
+
     public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin, 
         CancellationToken cancellationToken)
     {

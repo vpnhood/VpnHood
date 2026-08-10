@@ -75,9 +75,11 @@ xcrun devicectl device copy from --device $DEVICE \
 
 ## Provisioning / signing
 Known-good for **Client** (team `6KKW3MKLR7`, OmegaHood LLC): profiles `"VpnHood Client Dev Profile"` (App) +
-`"VpnHood Client Extension Dev Profile"` (Extension). **Connect** needs its own equivalents created before it can
-build for device (bundle ids `com.vpnhood.connect.ios` / `.networkextension`, App Group
-`group.com.vpnhood.connect.ios`, and matching profiles) — see below.
+`"VpnHood Client Extension Dev Profile"` (Extension). **Connect** is provisioned too (since 2026-07): bundle ids
+`com.vpnhood.connect.ios` / `.networkextension` and App Group `group.com.vpnhood.connect.ios` are registered,
+and the App Store profiles `"VpnHood Connect AppStore"` / `"VpnHood Connect Extension AppStore"` sign the
+CI/TestFlight builds (`.user/VpnHoodConnect/ios/`). For device (dev) builds Connect relies on automatic
+provisioning; create named dev profiles per the steps below only if that isn't available.
 
 ### Diagnose a stale profile
 ```bash

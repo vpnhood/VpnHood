@@ -237,6 +237,55 @@ public class PortalTest
     }
 
     [TestMethod]
+    public async Task DeleteAccount_erases_the_account_and_this_device_forgets_it()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("DELETE /account", TestPortalServer.NoContent);
+        _portal.Enqueue(SignOutRoute, TestPortalServer.NoContent);
+
+        var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
+        var authenticationProvider = CreateAuthenticationProvider(externalProvider);
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethods.Google },
+            CancellationToken.None);
+
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName);
+        await accountProvider.DeleteAccount(new TestUiContext(), CancellationToken.None);
+
+        Assert.IsNotNull(_portal.Requests.SingleOrDefault(x => x.Route == "DELETE /account"));
+        Assert.IsNull(authenticationProvider.UserId, "this device must be signed out");
+        Assert.AreEqual(1, externalProvider.SignOutCalls,
+            "the IdP credential must be dropped so the next sign-in is a deliberate act");
+        using var reloadedProvider = CreateAuthenticationProvider();
+        Assert.IsNull(reloadedProvider.UserId, "the session file must be gone");
+    }
+
+    [TestMethod]
+    public async Task DeleteAccount_blocked_by_web_services_keeps_the_session()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("DELETE /account", new TestPortalServer.ErrorScript {
+            Code = "deletion_blocked",
+            Detail = "This account has active web services. Cancel them in the web client area first, then delete the account.",
+            StatusCode = 409
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethods.Google },
+            CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName);
+
+        var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            accountProvider.DeleteAccount(new TestUiContext(), CancellationToken.None));
+
+        Assert.AreEqual(409, exception.StatusCode);
+        Assert.AreEqual("deletion_blocked", exception.Data["Code"], "clients branch on the machine code");
+        Assert.IsNotNull(authenticationProvider.UserId,
+            "a refused deletion must leave the session intact — the user needs it to come back and retry");
+    }
+
+    [TestMethod]
     public async Task GetAccount_offers_the_manage_page_only_when_this_store_billed_it()
     {
         object EntitlementData(string store) => new {

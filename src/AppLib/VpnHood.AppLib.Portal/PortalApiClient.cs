@@ -53,6 +53,16 @@ public class PortalApiClient : ApiClientBase
         return HttpGetAsync<PortalAccountInfo>("account", null, cancellationToken);
     }
 
+    /// <summary>
+    /// DELETE /account — "forget me": the portal erases the person everywhere (all sessions, all
+    /// identities, the account itself). Fails with 409 `deletion_blocked` while the account still
+    /// has active web services to cancel first.
+    /// </summary>
+    public Task DeleteAccount(CancellationToken cancellationToken)
+    {
+        return HttpDeleteAsync("account", null, cancellationToken);
+    }
+
     /// <summary>GET /account/entitlements — what the signed-in account currently holds.</summary>
     public Task<PortalEntitlementList> ListEntitlements(CancellationToken cancellationToken)
     {

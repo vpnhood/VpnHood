@@ -1,10 +1,12 @@
 using VpnHood.AppLib.Abstractions;
+using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
 
 internal class TestAccountProvider : IAppAccountProvider
 {
     public AppAccount? Account { get; set; }
+    public int DeleteAccountCalls { get; private set; }
     public TestAuthenticationProvider TestAuthenticationProvider { get; } = new();
     public TestBillingProvider TestBillingProvider { get; } = new();
     public TestOrderProcessor TestOrderProcessor { get; } = new();
@@ -34,5 +36,12 @@ internal class TestAccountProvider : IAppAccountProvider
     public Task<string> GetAccessCode(string subscriptionId, CancellationToken cancellationToken)
     {
         return Task.FromResult(string.Empty);
+    }
+
+    public Task DeleteAccount(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        DeleteAccountCalls++;
+        Account = null;
+        return Task.CompletedTask;
     }
 }

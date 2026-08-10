@@ -1,5 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Portal.Dto;
+using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.AppLib.Portal;
@@ -63,6 +64,18 @@ public class PortalAccountProvider(
     {
         // the portal delivers access codes, never raw access keys
         return Task.FromResult<IReadOnlyList<string>>([]);
+    }
+
+    public async Task DeleteAccount(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        var apiClient = new PortalApiClient(AuthenticationProvider.HttpClient);
+        await apiClient.DeleteAccount(cancellationToken).Vhc();
+
+        // The account is gone server-side; make this device forget it too. SignOut deletes the
+        // session file and drops the external IdP's cached credential, so the next sign-in is a
+        // deliberate act that knowingly creates a brand-new account. Its server-side revoke is a
+        // harmless 204 — the portal already deleted every session.
+        await authenticationProvider.SignOut(uiContext, cancellationToken).Vhc();
     }
 
     public async Task<string> GetAccessCode(string subscriptionId, CancellationToken cancellationToken)

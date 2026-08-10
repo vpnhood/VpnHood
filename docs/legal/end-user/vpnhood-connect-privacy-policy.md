@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-08-02*
+*Effective: 2026-08-10*
 
 **PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CONNECT** app and to the VPN servers **we operate**. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -81,6 +81,40 @@ When you connect, our servers record what any VPN server must see to run the ser
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 
 Connection activity stays only in server log files; it never enters our database. Our database stores the technical information associated with your Client ID, and your email address if you signed in.
+
+## Delete Your Account (Forget Me)
+
+If you have signed in, you can permanently delete your account at any time:
+
+- **In the app**: Account page → **Delete my account**.
+- **Without the app**: follow the steps on our [account deletion page](https://www.vpnhood.com/user-account-deletion-request).
+
+Deletion applies everywhere at once: you are signed out on all devices, your sign-in identity and
+email address are erased, and there is no way to restore the account — signing in again later
+creates a new, empty one.
+
+What deletion does **not** do:
+
+- It does not cancel a subscription. Subscriptions are billed by the store where you purchased
+  them, and only you can cancel there — before or after deleting. Access you have already paid for
+  keeps working until the current period ends.
+- It does not erase invoices and payment records. We are legally required to keep them for
+  accounting and tax purposes, but they are anonymized: your name and email address are replaced
+  with placeholders.
+- Residual copies of your data may remain in our server logs and backups for up to **30 days**
+  after deletion, after which they expire.
+
+If you also have services purchased on our website, those form a separate billing relationship:
+deletion is refused until you cancel them in the web client area, so you are never left with a
+running payment you cannot manage. Companies that processed your data in their own right — your
+sign-in provider, the app store that billed you, and payment processors — retain their own records
+under their own published policies.
+
+Separately from deletion: if we process a refund for a purchase made **on our website**, we keep an
+anonymous one-way hash of the refunded account's email address for up to **24 months**, used only to
+evaluate future refund requests (fraud prevention). It cannot be turned back into your address and
+survives account deletion. Refunds of app-store purchases are decided by the store and leave no such
+record with us.
 
 ## Service Providers
 

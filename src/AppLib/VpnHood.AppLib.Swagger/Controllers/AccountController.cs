@@ -34,6 +34,12 @@ public class AccountController : ControllerBase, IAccountController
         throw new SwaggerOnlyException();
     }
 
+    [HttpDelete]
+    public Task Delete(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
     [HttpGet("subscriptions/{subscriptionId}/access-keys")]
     public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
     {

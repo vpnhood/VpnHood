@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
+using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
@@ -93,6 +94,24 @@ public class AppAccountService
     private bool IsRecheckDue()
     {
         return DateTime.UtcNow - _lastRefreshAttemptTime >= ExpiredAccountRecheckInterval;
+    }
+
+    /// <summary>
+    /// "Forget me": the backend erases the person everywhere, then this device forgets the account
+    /// like a sign-out — except an account-sourced access code is first detached into a manual one.
+    /// The paid period keeps working by policy (deletion erases the person, never the service), and
+    /// with the account gone the code could never be fetched again, so stripping it here would take
+    /// away access that was already bought.
+    /// </summary>
+    public async Task DeleteAccount(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        var currentProfile = GetCurrentProfile();
+        if (currentProfile is { IsAccessCodeFromAccount: true })
+            _clientProfileService.Update(currentProfile.ClientProfileId,
+                new ClientProfileUpdateParams { IsAccessCodeFromAccount = false });
+
+        await _accountProvider.DeleteAccount(uiContext, cancellationToken).Vhc();
+        await Refresh(cancellationToken).Vhc();
     }
 
     public async Task Refresh(CancellationToken cancellationToken)

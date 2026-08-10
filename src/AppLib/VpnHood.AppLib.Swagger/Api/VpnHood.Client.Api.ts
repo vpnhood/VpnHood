@@ -3203,6 +3203,7 @@ export class AppAccount implements IAppAccount {
     expirationTime?: Date | null;
     priceAmount?: number | null;
     priceCurrency?: string | null;
+    priceBillingPeriod?: string | null;
     isAutoRenew?: boolean | null;
     providerSubscriptionId?: string | null;
     subscriptionManagementUrl?: string | null;
@@ -3227,6 +3228,7 @@ export class AppAccount implements IAppAccount {
             this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : null as any;
             this.priceAmount = _data["priceAmount"] !== undefined ? _data["priceAmount"] : null as any;
             this.priceCurrency = _data["priceCurrency"] !== undefined ? _data["priceCurrency"] : null as any;
+            this.priceBillingPeriod = _data["priceBillingPeriod"] !== undefined ? _data["priceBillingPeriod"] : null as any;
             this.isAutoRenew = _data["isAutoRenew"] !== undefined ? _data["isAutoRenew"] : null as any;
             this.providerSubscriptionId = _data["providerSubscriptionId"] !== undefined ? _data["providerSubscriptionId"] : null as any;
             this.subscriptionManagementUrl = _data["subscriptionManagementUrl"] !== undefined ? _data["subscriptionManagementUrl"] : null as any;
@@ -3251,6 +3253,7 @@ export class AppAccount implements IAppAccount {
         data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : null as any;
         data["priceAmount"] = this.priceAmount !== undefined ? this.priceAmount : null as any;
         data["priceCurrency"] = this.priceCurrency !== undefined ? this.priceCurrency : null as any;
+        data["priceBillingPeriod"] = this.priceBillingPeriod !== undefined ? this.priceBillingPeriod : null as any;
         data["isAutoRenew"] = this.isAutoRenew !== undefined ? this.isAutoRenew : null as any;
         data["providerSubscriptionId"] = this.providerSubscriptionId !== undefined ? this.providerSubscriptionId : null as any;
         data["subscriptionManagementUrl"] = this.subscriptionManagementUrl !== undefined ? this.subscriptionManagementUrl : null as any;
@@ -3268,6 +3271,7 @@ export interface IAppAccount {
     expirationTime?: Date | null;
     priceAmount?: number | null;
     priceCurrency?: string | null;
+    priceBillingPeriod?: string | null;
     isAutoRenew?: boolean | null;
     providerSubscriptionId?: string | null;
     subscriptionManagementUrl?: string | null;

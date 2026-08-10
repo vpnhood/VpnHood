@@ -43,6 +43,14 @@ public class PortalAccountProvider(
             SubscriptionId = entitlement != null ? PortalSubscriptionId : null,
             ProviderPlanId = entitlement?.PlanId,
             ExpirationTime = entitlement?.ExpiresAt,
+            // this provider has no account-level record to expose, so the account IS the
+            // subscription here: CreatedTime is when the subscription started, and the
+            // price is the store's own charge for the current period
+            CreatedTime = entitlement?.PurchasedAt,
+            IsAutoRenew = entitlement?.AutoRenewing,
+            PriceAmount = entitlement?.PriceAmount,
+            PriceCurrency = entitlement?.PriceCurrency,
+            PriceBillingPeriod = entitlement?.BillingPeriod,
             // the build's store page is offered only when that same store billed the entitlement;
             // a cross-store subscription gets no link and the UI falls back to a neutral sentence
             SubscriptionManagementUrl = entitlement?.Store == storeId

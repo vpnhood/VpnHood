@@ -11,6 +11,11 @@ public class AppAccount
     public DateTime? ExpirationTime { get; set; }
     public decimal? PriceAmount { get; set; }
     public string? PriceCurrency { get; set; }
+
+    // The period PriceAmount buys, as an ISO-8601 duration ("P1M", "P1Y", …) — the same
+    // vocabulary the store uses for plan periods. Without it the UI cannot say what the
+    // price is *per*, and a yearly subscription reads as a monthly one.
+    public string? PriceBillingPeriod { get; set; }
     public bool? IsAutoRenew { get; set; }
     public string? ProviderSubscriptionId { get; set; }
 

@@ -1,7 +1,9 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Portal.Dto;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Portal;
 
@@ -12,7 +14,7 @@ namespace VpnHood.AppLib.Portal;
 /// </summary>
 /// <param name="fallbackProductIds">
 /// The build's own store product ids, used only while the portal cannot answer — see
-/// <see cref="PortalProductCatalog" />. The portal is the catalog; this is the offline/first-run
+/// <see cref="GetProductIds" />. The portal is the catalog; this is the offline/first-run
 /// stand-in so an unreachable backend cannot empty the plans page.
 /// </param>
 public class PortalAccountProvider(
@@ -31,11 +33,45 @@ public class PortalAccountProvider(
     public AppBilling? Billing { get; } = billingProvider != null
         ? new AppBilling {
             Provider = billingProvider,
-            OrderProcessor = new PortalOrderProcessor(authenticationProvider, storeId, packageName),
-            ProductCatalog = new PortalProductCatalog(authenticationProvider.HttpClientWithoutAuth,
-                storeId, packageName, fallbackProductIds)
+            OrderProcessor = new PortalOrderProcessor(authenticationProvider, storeId, packageName)
         }
         : null;
+
+    /// <summary>
+    /// The sellable products according to the portal (GET /billing/plans), which is where the
+    /// mapping from a store product to a plan already lives: a product the portal does not map
+    /// cannot be redeemed, so asking it — rather than trusting the build's own list — is what keeps
+    /// a purchase from landing on a plan the backend has never heard of. Read anonymously: the
+    /// resource takes no session, and a plans page renders before anyone signs in.
+    /// <para>
+    /// The fallback ids stand in whenever the portal cannot answer (offline, first run, an older
+    /// module): a backend outage must not empty the plans page. An answered-but-empty catalog is
+    /// honoured as given — the portal saying "nothing is sellable here" is an answer, and falling
+    /// back there would offer products no payment could be redeemed against.
+    /// </para>
+    /// </summary>
+    public async Task<IReadOnlyList<string>> GetProductIds(CancellationToken cancellationToken)
+    {
+        try {
+            var apiClient = new PortalApiClient(authenticationProvider.HttpClientWithoutAuth);
+            var plans = await apiClient.ListPlans(storeId, packageName, cancellationToken).Vhc();
+
+            // a store product may carry several plans (Play base plans); the store is queried per product
+            var productIds = plans.Items.Select(x => x.StoreProductId).Distinct().ToArray();
+            if (productIds.Length == 0)
+                VhLogger.Instance.LogWarning(
+                    "The portal maps no sellable product for this app. Store: {Store}, PackageName: {PackageName}",
+                    storeId, packageName);
+
+            return productIds;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex,
+                "Could not read the product catalog from the portal; falling back to the embedded ids. " +
+                "Store: {Store}, PackageName: {PackageName}", storeId, packageName);
+            return fallbackProductIds;
+        }
+    }
 
     public async Task<AppAccount?> GetAccount(CancellationToken cancellationToken)
     {

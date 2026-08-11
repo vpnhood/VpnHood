@@ -7,6 +7,7 @@ internal class TestAccountProvider : IAppAccountProvider
 {
     public AppAccount? Account { get; set; }
     public int DeleteAccountCalls { get; private set; }
+    public IReadOnlyList<string> ProductIds { get; set; } = ["test_plan_1m"];
     public TestAuthenticationProvider TestAuthenticationProvider { get; } = new();
     public TestBillingProvider TestBillingProvider { get; } = new();
     public TestOrderProcessor TestOrderProcessor { get; } = new();
@@ -19,9 +20,13 @@ internal class TestAccountProvider : IAppAccountProvider
     {
         Billing = new AppBilling {
             Provider = TestBillingProvider,
-            OrderProcessor = TestOrderProcessor,
-            ProductCatalog = new StaticAppProductCatalog(["test_plan_1m"])
+            OrderProcessor = TestOrderProcessor
         };
+    }
+
+    public Task<IReadOnlyList<string>> GetProductIds(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(ProductIds);
     }
 
     public Task<AppAccount?> GetAccount(CancellationToken cancellationToken)

@@ -13,7 +13,6 @@ public class AppBillingService(
 {
     private readonly IAppBillingProvider _billingProvider = billing.Provider;
     private readonly IAppOrderProcessor _orderProcessor = billing.OrderProcessor;
-    private readonly IAppProductCatalog _productCatalog = billing.ProductCatalog;
     private BillingPurchaseState _purchaseState;
 
     public BillingPurchaseState PurchaseState => _purchaseState != BillingPurchaseState.None
@@ -29,7 +28,7 @@ public class AppBillingService(
     /// </summary>
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
-        var productIds = await _productCatalog.GetProductIds(cancellationToken).Vhc();
+        var productIds = await accountService.GetProductIds(cancellationToken).Vhc();
         return await _billingProvider.GetSubscriptionPlans(productIds, cancellationToken).Vhc();
     }
 

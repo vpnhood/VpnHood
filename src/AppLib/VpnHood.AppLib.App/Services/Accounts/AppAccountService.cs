@@ -188,4 +188,10 @@ public class AppAccountService
     {
         return _accountProvider.ListAccessKeys(subscriptionId, cancellationToken);
     }
+
+    /// <summary>The store product ids this app may sell — see <see cref="IAppAccountProvider.GetProductIds" />.</summary>
+    public Task<IReadOnlyList<string>> GetProductIds(CancellationToken cancellationToken)
+    {
+        return _accountProvider.GetProductIds(cancellationToken);
+    }
 }

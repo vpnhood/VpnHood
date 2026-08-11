@@ -49,6 +49,22 @@ public class BillingServiceTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task GetSubscriptionPlans_prices_exactly_what_the_account_provider_sells()
+    {
+        var accountProvider = new TestAccountProvider {
+            ProductIds = ["premium_1m", "premium_1y"]
+        };
+        await using var app = CreateAppWithAccount(accountProvider);
+        var billingService = GetBillingService(app);
+
+        // the seam: the account backend answers WHICH products, the store only prices them
+        await billingService.GetSubscriptionPlans(CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { "premium_1m", "premium_1y" },
+            accountProvider.TestBillingProvider.LastRequestedProductIds?.ToArray());
+    }
+
+    [TestMethod]
     public async Task Purchase_uses_processor_attribution_and_completes_order()
     {
         var accountProvider = new TestAccountProvider();

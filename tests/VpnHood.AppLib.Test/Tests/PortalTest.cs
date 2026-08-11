@@ -360,18 +360,8 @@ public class PortalTest
         Assert.AreEqual(1, appleProvider.SignOutCalls);
     }
 
-    private IAppProductCatalog CreateProductCatalog(PortalAuthenticationProvider authenticationProvider,
-        params string[] fallbackProductIds)
-    {
-        // the catalog is the account provider's, built from the same store+app it reconciles orders for
-        var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
-            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds);
-        return accountProvider.Billing?.ProductCatalog
-               ?? throw new InvalidOperationException("Billing must expose a catalog.");
-    }
-
     [TestMethod]
-    public async Task ProductCatalog_asks_the_portal_and_deduplicates_the_store_products()
+    public async Task GetProductIds_asks_the_portal_and_deduplicates_the_store_products()
     {
         _portal.Enqueue("GET /billing/plans", new {
             items = new object[] {
@@ -382,9 +372,10 @@ public class PortalTest
         });
 
         using var authenticationProvider = CreateAuthenticationProvider();
-        var catalog = CreateProductCatalog(authenticationProvider, "embedded-only");
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: ["embedded-only"]);
 
-        var productIds = await catalog.GetProductIds(CancellationToken.None);
+        var productIds = await accountProvider.GetProductIds(CancellationToken.None);
 
         // the store is queried per product, so the two base plans of one product must collapse to one id
         CollectionAssert.AreEqual(new[] { "premium", "premium_plus" }, productIds.ToArray());
@@ -397,46 +388,25 @@ public class PortalTest
     }
 
     [TestMethod]
-    public async Task ProductCatalog_falls_back_to_the_embedded_ids_when_the_portal_cannot_answer()
+    public async Task GetProductIds_falls_back_to_the_embedded_ids_when_the_portal_cannot_answer()
     {
         _portal.Enqueue("GET /billing/plans",
             new TestPortalServer.ErrorScript { Code = "not_found", Detail = "no portal here", StatusCode = 404 });
 
         using var authenticationProvider = CreateAuthenticationProvider();
-        var catalog = CreateProductCatalog(authenticationProvider,
-            "vpnhood_1_month_subscription", "vpnhood_1_year_subscription");
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName,
+            fallbackProductIds: ["vpnhood_1_month_subscription", "vpnhood_1_year_subscription"]);
 
         // an unreachable or outdated portal must not empty the plans page
-        var productIds = await catalog.GetProductIds(CancellationToken.None);
+        var productIds = await accountProvider.GetProductIds(CancellationToken.None);
         CollectionAssert.AreEqual(new[] { "vpnhood_1_month_subscription", "vpnhood_1_year_subscription" },
             productIds.ToArray());
 
         // ...but an answer of "nothing is sellable" is an answer, not a failure: falling back there would
         // offer products the portal cannot redeem
         _portal.Enqueue("GET /billing/plans", new { items = Array.Empty<object>() });
-        Assert.AreEqual(0, (await catalog.GetProductIds(CancellationToken.None)).Count);
-    }
-
-    [TestMethod]
-    public async Task The_store_prices_exactly_what_the_catalog_sells()
-    {
-        _portal.Enqueue("GET /billing/plans", new {
-            items = new object[] {
-                new { planId = "premium", storeProductId = "premium", basePlanId = "" }
-            }
-        });
-
-        using var authenticationProvider = CreateAuthenticationProvider();
-        var billingProvider = new TestBillingProvider();
-        using var accountProvider = new PortalAccountProvider(authenticationProvider, billingProvider,
-            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: ["never-used"]);
-        var billing = accountProvider.Billing ?? throw new InvalidOperationException("Billing is required.");
-
-        // the seam this design exists for: the backend answers WHICH, the store only prices them
-        var productIds = await billing.ProductCatalog.GetProductIds(CancellationToken.None);
-        await billing.Provider.GetSubscriptionPlans(productIds, CancellationToken.None);
-
-        CollectionAssert.AreEqual(new[] { "premium" }, billingProvider.LastRequestedProductIds?.ToArray());
+        Assert.AreEqual(0, (await accountProvider.GetProductIds(CancellationToken.None)).Count);
     }
 
     [TestMethod]

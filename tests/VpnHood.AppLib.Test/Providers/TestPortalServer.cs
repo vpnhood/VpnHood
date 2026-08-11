@@ -23,6 +23,19 @@ public sealed class TestPortalServer : IDisposable
     /// <summary>The marker for a 204 answer (DELETE /auth/sessions/current).</summary>
     public static readonly object NoContent = new();
 
+    /// <summary>
+    /// The real portal's anonymous resources — everything else 401s without a bearer, exactly as
+    /// api.php does. Enforced, not just recorded: without this, a client that hits a protected
+    /// route with the wrong HttpClient still gets its scripted answer, and the suite asserts a
+    /// contract the real server does not honour.
+    /// </summary>
+    private static readonly HashSet<string> AnonymousRoutes = [
+        "GET /system/status",
+        "GET /openapi.json",
+        "POST /auth/sessions",
+        "GET /billing/plans"
+    ];
+
     public sealed class RecordedRequest
     {
         /// <summary>"POST /billing/purchases" — method and path, as the routing table names it.</summary>
@@ -119,6 +132,14 @@ public sealed class TestPortalServer : IDisposable
             });
         }
 
+        // a protected route without a bearer never reaches its script — the real server rejects
+        // before routing, and the enqueued answer must stay queued for the properly-auth'd retry
+        if (!AnonymousRoutes.Contains(route) &&
+            string.IsNullOrEmpty(context.Request.Headers["Authorization"])) {
+            await WriteResponse(context, 401, Problem(401, "unauthorized", "Unauthorized."), isProblem: true);
+            return;
+        }
+
         Script? script = null;
         if (_scripts.TryGetValue(route, out var queue) && queue.Count > 0)
             script = queue.Dequeue();
@@ -132,6 +153,12 @@ public sealed class TestPortalServer : IDisposable
                 (object?)value, false)
         };
 
+        await WriteResponse(context, statusCode, payload, isProblem);
+    }
+
+    private static async Task WriteResponse(HttpListenerContext context, int statusCode, object? payload,
+        bool isProblem)
+    {
         context.Response.StatusCode = statusCode;
         if (payload == null) {
             context.Response.Close();

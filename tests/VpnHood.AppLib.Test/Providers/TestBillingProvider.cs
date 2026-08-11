@@ -13,8 +13,13 @@ internal class TestBillingProvider : IAppBillingProvider
     public string ProviderName => "Test";
     public Uri? SubscriptionManagementUrl => new("https://test.local/subscriptions");
 
-    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
+    /// <summary>The product ids the catalog asked to be priced, as the store received them.</summary>
+    public IReadOnlyList<string>? LastRequestedProductIds { get; private set; }
+
+    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
+        CancellationToken cancellationToken)
     {
+        LastRequestedProductIds = productIds;
         if (SubscriptionPlanException != null)
             throw SubscriptionPlanException;
 

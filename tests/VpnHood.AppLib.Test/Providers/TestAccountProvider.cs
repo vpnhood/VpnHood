@@ -19,7 +19,8 @@ internal class TestAccountProvider : IAppAccountProvider
     {
         Billing = new AppBilling {
             Provider = TestBillingProvider,
-            OrderProcessor = TestOrderProcessor
+            OrderProcessor = TestOrderProcessor,
+            ProductCatalog = new StaticAppProductCatalog(["test_plan_1m"])
         };
     }
 

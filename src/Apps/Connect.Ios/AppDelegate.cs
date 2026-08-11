@@ -133,14 +133,18 @@ public class AppDelegate : UIApplicationDelegate
             }
 
             var appleAuthenticationProvider = new AppleAuthenticationProvider();
-            var appStoreBillingProvider = new AppStoreBillingProvider(appConfigs.AppStoreProductIds);
+            var appStoreBillingProvider = new AppStoreBillingProvider();
 
             var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
                 appConfigs.PortalBaseUri, appConfigs.AppId, [appleAuthenticationProvider],
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
+            // The portal owns the catalog: it maps each store product to the plan that redeems it, so a
+            // product it does not map cannot become an entitlement. The embedded ids are the fallback
+            // for when it cannot answer.
             return new PortalAccountProvider(portalAuthenticationProvider, appStoreBillingProvider,
-                storeId: PortalStoreIds.AppStore, packageName: appConfigs.AppId);
+                storeId: PortalStoreIds.AppStore, packageName: appConfigs.AppId,
+                fallbackProductIds: appConfigs.AppStoreProductIds);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create the account provider.");

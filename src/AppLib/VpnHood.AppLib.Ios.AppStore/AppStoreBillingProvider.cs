@@ -11,9 +11,7 @@ namespace VpnHood.AppLib.Ios.AppStore;
 /// SK2 signed transaction (JWS), which the portal's POST /billing/purchases treats as
 /// a pointer and re-fetches server-to-server.
 /// </summary>
-public class AppStoreBillingProvider(
-    IReadOnlyList<string> productIds,
-    IStoreKitBridge? bridge = null)
+public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
     : IAppBillingProvider
 {
     private readonly IStoreKitBridge _bridge = bridge ?? new NativeStoreKitBridge();
@@ -22,9 +20,10 @@ public class AppStoreBillingProvider(
     public BillingPurchaseState PurchaseState { get; private set; }
 
     // Apple's system page for every subscription on the Apple ID; there is no per-product deep link.
-    public Uri? SubscriptionManagementUrl => new("https://apps.apple.com/account/subscriptions");
+    public Uri SubscriptionManagementUrl => new("https://apps.apple.com/account/subscriptions");
 
-    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
+        CancellationToken cancellationToken)
     {
         var products = await _bridge.LoadProducts(productIds, cancellationToken).Vhc();
         // ReSharper disable once UseCollectionExpression

@@ -35,6 +35,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     // Production value: https://<whmcs host>/modules/addons/vpnhoodiap/api.php
     public Uri? PortalBaseUri { get; set; }
 
+    // The portal is the catalog at runtime (GET /billing/plans); these are the fallback for when it
+    // cannot answer — offline, first run, or an older module.
     public string[] GooglePlayProductIds { get; set; } = [
         "vpnhood_1_month_subscription",
         "vpnhood_1_year_subscription"

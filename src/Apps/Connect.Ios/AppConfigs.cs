@@ -56,9 +56,10 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public Uri? PortalBaseUri { get; set; }
     public bool PortalIgnoreSslVerification { get; set; } = IsDebugMode;
 
-    // App Store subscription product ids (the StoreKit product IS the plan+cycle). Empty until the
-    // products exist in App Store Connect; sourced from the embedded appsettings like the Android
-    // GooglePlayProductIds. An empty list renders an empty plans page, never an error.
+    // App Store subscription product ids (the StoreKit product IS the plan+cycle). The portal is the
+    // catalog at runtime (GET /billing/plans); these embedded ids are the fallback for when it cannot
+    // answer — offline, first run, or an older module. An empty list renders an empty plans page,
+    // never an error.
     public string[] AppStoreProductIds { get; set; } = [];
 
     public static AppConfigs Load()

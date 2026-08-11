@@ -13,6 +13,7 @@ public class AppBillingService(
 {
     private readonly IAppBillingProvider _billingProvider = billing.Provider;
     private readonly IAppOrderProcessor _orderProcessor = billing.OrderProcessor;
+    private readonly IAppProductCatalog _productCatalog = billing.ProductCatalog;
     private BillingPurchaseState _purchaseState;
 
     public BillingPurchaseState PurchaseState => _purchaseState != BillingPurchaseState.None
@@ -21,15 +22,21 @@ public class AppBillingService(
 
     public string ProviderName => _billingProvider.ProviderName;
 
-    public Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
+    /// <summary>
+    /// What this app can sell, priced. Two sides answer it: the account backend says WHICH products
+    /// may be sold (a store cannot list an app's own catalog, and a product the backend cannot map is
+    /// a payment it cannot turn into access), the store prices and localizes them.
+    /// </summary>
+    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
     {
-        return _billingProvider.GetSubscriptionPlans(cancellationToken);
+        var productIds = await _productCatalog.GetProductIds(cancellationToken).Vhc();
+        return await _billingProvider.GetSubscriptionPlans(productIds, cancellationToken).Vhc();
     }
 
     public async Task<AppStoreInfo> GetStoreInfo(CancellationToken cancellationToken)
     {
         try {
-            var subscriptionPlans = await _billingProvider.GetSubscriptionPlans(cancellationToken);
+            var subscriptionPlans = await GetSubscriptionPlans(cancellationToken);
             return new AppStoreInfo {
                 StoreName = _billingProvider.ProviderName,
                 SubscriptionPlans = subscriptionPlans,

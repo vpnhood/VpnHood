@@ -141,14 +141,18 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             }
 
             var authenticationExternalProvider = new GooglePlayAuthenticationProvider(appConfigs.GoogleSignInClientId);
-            var googlePlayBillingProvider = TryCreateBillingClient(appConfigs);
+            var googlePlayBillingProvider = TryCreateBillingClient();
 
             var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
                 appConfigs.PortalBaseUri, appConfigs.AppId, [authenticationExternalProvider],
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
+            // The portal owns the catalog: it maps each store product to the plan that redeems it, so a
+            // product it does not map cannot become an entitlement. The embedded ids are the fallback
+            // for when it cannot answer.
             return new PortalAccountProvider(portalAuthenticationProvider, googlePlayBillingProvider,
-                storeId: PortalStoreIds.GooglePlay, packageName: appConfigs.AppId);
+                storeId: PortalStoreIds.GooglePlay, packageName: appConfigs.AppId,
+                fallbackProductIds: appConfigs.GooglePlayProductIds);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create AppAccountService.");
@@ -156,10 +160,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         }
     }
 
-    private static IAppBillingProvider? TryCreateBillingClient(AppConfigs appConfigs)
+    private static IAppBillingProvider? TryCreateBillingClient()
     {
         try {
-            return new GooglePlayBillingProvider(appConfigs.GooglePlayProductIds);
+            return new GooglePlayBillingProvider();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create GooglePlayBillingProvider.");

@@ -10,11 +10,17 @@ namespace VpnHood.AppLib.Portal;
 /// directly (GET /account/entitlements) — no token-list walking; the portal never
 /// exposes backend ids on the wire.
 /// </summary>
+/// <param name="fallbackProductIds">
+/// The build's own store product ids, used only while the portal cannot answer — see
+/// <see cref="PortalProductCatalog" />. The portal is the catalog; this is the offline/first-run
+/// stand-in so an unreachable backend cannot empty the plans page.
+/// </param>
 public class PortalAccountProvider(
     PortalAuthenticationProvider authenticationProvider,
     IAppBillingProvider? billingProvider,
     string storeId,
-    string packageName)
+    string packageName,
+    IReadOnlyList<string> fallbackProductIds)
     : IAppAccountProvider, IDisposable
 {
     /// <summary>The SubscriptionId the app model uses when a portal entitlement is active.</summary>
@@ -25,7 +31,9 @@ public class PortalAccountProvider(
     public AppBilling? Billing { get; } = billingProvider != null
         ? new AppBilling {
             Provider = billingProvider,
-            OrderProcessor = new PortalOrderProcessor(authenticationProvider, storeId, packageName)
+            OrderProcessor = new PortalOrderProcessor(authenticationProvider, storeId, packageName),
+            ProductCatalog = new PortalProductCatalog(authenticationProvider.HttpClientWithoutAuth,
+                storeId, packageName, fallbackProductIds)
         }
         : null;
 

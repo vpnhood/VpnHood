@@ -38,6 +38,11 @@ internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountContr
             await ctx.SendNoContent();
         });
 
+        mapper.AddStatic(HttpMethod.DELETE, baseUrl, async ctx => {
+            await Delete(ctx.Token);
+            await ctx.SendNoContent();
+        });
+
         mapper.AddParam(HttpMethod.GET, baseUrl + "subscriptions/{subId}/access-keys", async ctx => {
             var subId = ctx.GetRouteParameter<string>("subId");
             var res = await ListAccessKeys(subId, ctx.Token);
@@ -69,6 +74,11 @@ internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountContr
     public Task SignOut(CancellationToken cancellationToken)
     {
         return AccountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, cancellationToken);
+    }
+
+    public Task Delete(CancellationToken cancellationToken)
+    {
+        return AccountService.DeleteAccount(AppUiContext.RequiredContext, cancellationToken);
     }
 
     public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)

@@ -16,7 +16,6 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 public class GooglePlayBillingProvider : IAppBillingProvider
 {
     private readonly Lazy<BillingClient> _billingClient;
-    private readonly IReadOnlyList<string> _productIds;
     private TaskCompletionSource<AppPurchaseResult>? _taskCompletionSource;
     public BillingPurchaseState PurchaseState { get; private set; }
     public string ProviderName => "GooglePlay";
@@ -26,7 +25,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
     // user's subscriptions including this app's.
     public Uri? SubscriptionManagementUrl => new("https://play.google.com/store/account/subscriptions");
 
-    public GooglePlayBillingProvider(IReadOnlyList<string> productIds)
+    public GooglePlayBillingProvider()
     {
         _billingClient = new Lazy<BillingClient>(() => {
             var builder = BillingClient.NewBuilder(Application.Context);
@@ -38,8 +37,6 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                 PendingPurchasesParams.NewBuilder().EnableOneTimeProducts().Build()
             ).Build();
         });
-
-        _productIds = productIds;
     }
 
     private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
@@ -71,7 +68,8 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         }
     }
 
-    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
+        CancellationToken cancellationToken)
     {
         var billingClient = await GetSafeBillingClient(cancellationToken).Vhc();
 
@@ -89,7 +87,7 @@ public class GooglePlayBillingProvider : IAppBillingProvider
 
         // Get products list from GooglePlay.
         try {
-            var products = await GetProducts(billingClient, _productIds);
+            var products = await GetProducts(billingClient, productIds);
 
             // One plan per (product, base plan) so every purchasable period surfaces. Which plans exist,
             // their order and labels are catalog decisions and must not be inferred here; the store only prices them.
@@ -187,8 +185,10 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         var accountId = purchaseParams.Attribution?.AccountId
             ?? throw new AuthenticationException("Could not purchase because the purchase attribution has no account id.");
 
-        // Get the product details for the selected plan
-        var products = await GetProducts(billingClient, _productIds).Vhc();
+        // Get the product details for the selected plan. Only the chosen product is queried: the plan
+        // token came from GetSubscriptionPlans, so re-reading the whole catalog here would put a
+        // catalog lookup — and its failure modes — inside the purchase flow for nothing.
+        var products = await GetProducts(billingClient, [subscriptionToken.ProductId]).Vhc();
         var product = products.SingleOrDefault(x => x.ProductId == subscriptionToken.ProductId)
                       ?? throw new ArgumentException($"Product with id {subscriptionToken.ProductId} not found.");
 

@@ -189,6 +189,17 @@ legal/accounting obligations (Apple says so explicitly, and GDPR Art. 17(3)(b)/(
 the user is told; the backend anonymises the personal data and keeps the financial records. Also
 disclose that deleting the account does **not** cancel the App Store subscription.
 
+*Implemented (2026-08-10).* The flow lives at **Account page → "Delete my account"** with a
+confirmation dialog that carries the disclosures Apple asks for: deletion applies to all devices,
+cannot be undone, does not cancel the subscription (cancel it in the store where purchased), paid
+access keeps working until the period ends, and invoices are retained anonymized. For App Review
+notes: state that path explicitly so the reviewer finds it. Google Play additionally requires a
+**web deletion path declared in the Data safety form**; use
+`https://www.vpnhood.com/user-account-deletion-request`, which explains the in-app route and links
+the sign-in–protected web deletion page. Deletion never touches a running service or a store
+subscription, and it is refused with an actionable message while the account still has active
+website-sold services (impossible for an account created in the app, so a reviewer cannot hit it).
+
 **Manifest status.** `Connect.Ios/PrivacyInfo.xcprivacy` and
 `Connect.Ios.Extension/PrivacyInfo.xcprivacy` now exist (the extension's stays collection-free — the
 tunnel process runs no analytics). The host app's manifest currently declares the four pre-billing

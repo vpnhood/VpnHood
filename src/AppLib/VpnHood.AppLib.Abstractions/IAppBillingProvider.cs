@@ -14,7 +14,13 @@ public interface IAppBillingProvider : IDisposable
     /// </summary>
     Uri? SubscriptionManagementUrl { get; }
 
-    Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(CancellationToken cancellationToken);
+    /// <summary>
+    /// Prices the given products. The store is not asked WHICH products exist — it cannot answer that
+    /// (neither StoreKit nor Play Billing can list an app's own catalog) and it is not the authority
+    /// on it either: the account backend decides what may be sold, this prices and localizes it.
+    /// </summary>
+    Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
+        CancellationToken cancellationToken);
 
     Task<AppPurchaseResult> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
         CancellationToken cancellationToken);

@@ -104,7 +104,7 @@ public class PortalTest
             CancellationToken.None);
 
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
-            PortalStoreIds.GooglePlay, PackageName);
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
         var account = await accountProvider.GetAccount(CancellationToken.None);
 
         Assert.IsNotNull(account);
@@ -142,7 +142,7 @@ public class PortalTest
         await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethods.Google },
             CancellationToken.None);
         using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
-            PortalStoreIds.GooglePlay, PackageName);
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
 
         var account = await accountProvider.GetAccount(CancellationToken.None);
         Assert.IsNotNull(account);
@@ -169,7 +169,7 @@ public class PortalTest
 
         using var authenticationProvider = CreateAuthenticationProvider();
         using var accountProvider = new PortalAccountProvider(authenticationProvider,
-            new TestBillingProvider(), PortalStoreIds.GooglePlay, PackageName);
+            new TestBillingProvider(), PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
         var orderProcessor = accountProvider.Billing?.OrderProcessor
             ?? throw new InvalidOperationException("Billing must exist when a provider is given.");
 
@@ -237,6 +237,55 @@ public class PortalTest
     }
 
     [TestMethod]
+    public async Task DeleteAccount_erases_the_account_and_this_device_forgets_it()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("DELETE /account", TestPortalServer.NoContent);
+        _portal.Enqueue(SignOutRoute, TestPortalServer.NoContent);
+
+        var externalProvider = new TestAuthenticationExternalProvider("google-id-token");
+        var authenticationProvider = CreateAuthenticationProvider(externalProvider);
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethods.Google },
+            CancellationToken.None);
+
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
+        await accountProvider.DeleteAccount(new TestUiContext(), CancellationToken.None);
+
+        Assert.IsNotNull(_portal.Requests.SingleOrDefault(x => x.Route == "DELETE /account"));
+        Assert.IsNull(authenticationProvider.UserId, "this device must be signed out");
+        Assert.AreEqual(1, externalProvider.SignOutCalls,
+            "the IdP credential must be dropped so the next sign-in is a deliberate act");
+        using var reloadedProvider = CreateAuthenticationProvider();
+        Assert.IsNull(reloadedProvider.UserId, "the session file must be gone");
+    }
+
+    [TestMethod]
+    public async Task DeleteAccount_blocked_by_web_services_keeps_the_session()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("DELETE /account", new TestPortalServer.ErrorScript {
+            Code = "deletion_blocked",
+            Detail = "This account has active web services. Cancel them in the web client area first, then delete the account.",
+            StatusCode = 409
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethods.Google },
+            CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
+
+        var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            accountProvider.DeleteAccount(new TestUiContext(), CancellationToken.None));
+
+        Assert.AreEqual(409, exception.StatusCode);
+        Assert.AreEqual("deletion_blocked", exception.Data["Code"], "clients branch on the machine code");
+        Assert.IsNotNull(authenticationProvider.UserId,
+            "a refused deletion must leave the session intact — the user needs it to come back and retry");
+    }
+
+    [TestMethod]
     public async Task GetAccount_offers_the_manage_page_only_when_this_store_billed_it()
     {
         object EntitlementData(string store) => new {
@@ -264,7 +313,7 @@ public class PortalTest
             CancellationToken.None);
         var billingProvider = new TestBillingProvider();
         using var accountProvider = new PortalAccountProvider(authenticationProvider, billingProvider,
-            PortalStoreIds.GooglePlay, PackageName);
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
 
         // this build's store billed the subscription → its manage page is offered
         var account = await accountProvider.GetAccount(CancellationToken.None);
@@ -309,6 +358,55 @@ public class PortalTest
         await authenticationProvider.SignOut(new TestUiContext(), CancellationToken.None);
         Assert.AreEqual(0, googleProvider.SignOutCalls);
         Assert.AreEqual(1, appleProvider.SignOutCalls);
+    }
+
+    [TestMethod]
+    public async Task GetProductIds_asks_the_portal_and_deduplicates_the_store_products()
+    {
+        _portal.Enqueue("GET /billing/plans", new {
+            items = new object[] {
+                new { planId = "premium/monthly", storeProductId = "premium", basePlanId = "monthly" },
+                new { planId = "premium/yearly", storeProductId = "premium", basePlanId = "yearly" },
+                new { planId = "premium_plus", storeProductId = "premium_plus", basePlanId = "" }
+            }
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: ["embedded-only"]);
+
+        var productIds = await accountProvider.GetProductIds(CancellationToken.None);
+
+        // the store is queried per product, so the two base plans of one product must collapse to one id
+        CollectionAssert.AreEqual(new[] { "premium", "premium_plus" }, productIds.ToArray());
+
+        // the catalog is public: it is read without a session, and the app+store select the rows
+        var request = _portal.Requests.Single(x => x.Route == "GET /billing/plans");
+        Assert.IsNull(request.Authorization, "the plans page renders before anyone signs in");
+        StringAssert.Contains(request.Query, $"store={PortalStoreIds.GooglePlay}");
+        StringAssert.Contains(request.Query, $"packageName={PackageName}");
+    }
+
+    [TestMethod]
+    public async Task GetProductIds_falls_back_to_the_embedded_ids_when_the_portal_cannot_answer()
+    {
+        _portal.Enqueue("GET /billing/plans",
+            new TestPortalServer.ErrorScript { Code = "not_found", Detail = "no portal here", StatusCode = 404 });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName,
+            fallbackProductIds: ["vpnhood_1_month_subscription", "vpnhood_1_year_subscription"]);
+
+        // an unreachable or outdated portal must not empty the plans page
+        var productIds = await accountProvider.GetProductIds(CancellationToken.None);
+        CollectionAssert.AreEqual(new[] { "vpnhood_1_month_subscription", "vpnhood_1_year_subscription" },
+            productIds.ToArray());
+
+        // ...but an answer of "nothing is sellable" is an answer, not a failure: falling back there would
+        // offer products the portal cannot redeem
+        _portal.Enqueue("GET /billing/plans", new { items = Array.Empty<object>() });
+        Assert.AreEqual(0, (await accountProvider.GetProductIds(CancellationToken.None)).Count);
     }
 
     [TestMethod]

@@ -35,6 +35,13 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
     public string? Email => Session?.Email;
     public HttpClient HttpClient { get; }
 
+    /// <summary>
+    /// For the portal resources that take no session (sign-in, the plan catalog). Deliberately not
+    /// <see cref="HttpClient" />: that one attaches the bearer and can stop to renew an expiring
+    /// session — work an anonymous call should never wait on.
+    /// </summary>
+    public HttpClient HttpClientWithoutAuth => _httpClientWithoutAuth;
+
     public PortalAuthenticationProvider(
         string storageFolderPath,
         Uri portalBaseUrl,

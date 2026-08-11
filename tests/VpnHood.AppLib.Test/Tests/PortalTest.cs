@@ -328,6 +328,78 @@ public class PortalTest
     }
 
     [TestMethod]
+    public async Task GetAccount_maps_a_cancelled_entitlement_as_premium_until_it_expires()
+    {
+        var expiresAt = DateTime.UtcNow.AddDays(12);
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("GET /account", new {
+            userId = ExternalUid.ToString(),
+            account = new { email = "buyer@example.com" }
+        });
+        // the store reports the cancellation as autoRenewing=false; the entitlement itself stands until expiresAt
+        _portal.Enqueue("GET /account/entitlements", new {
+            items = new object[] {
+                new {
+                    state = "provisioned",
+                    accessCode = "12345678901234567890",
+                    expiresAt = expiresAt.ToString("O"),
+                    purchasedAt = DateTime.UtcNow.AddDays(-18).ToString("O"),
+                    planId = "vh_premium/monthly",
+                    store = PortalStoreIds.GooglePlay,
+                    autoRenewing = false,
+                    priceAmount = 9.99,
+                    priceCurrency = "USD",
+                    billingPeriod = "P1M"
+                }
+            }
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethods.Google },
+            CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
+
+        var account = await accountProvider.GetAccount(CancellationToken.None);
+
+        Assert.IsNotNull(account);
+        Assert.AreEqual(PortalAccountProvider.PortalSubscriptionId, account.SubscriptionId,
+            "a cancelled but unexpired entitlement is still a subscription");
+        Assert.AreEqual(false, account.IsAutoRenew, "the UI must show 'ends on', not 'renews on'");
+        Assert.AreEqual(expiresAt.ToString("O"), account.ExpirationTime?.ToUniversalTime().ToString("O"));
+        Assert.AreEqual(9.99m, account.PriceAmount);
+        Assert.AreEqual("USD", account.PriceCurrency);
+        Assert.AreEqual("P1M", account.PriceBillingPeriod);
+        Assert.IsNotNull(account.SubscriptionManagementUrl,
+            "the buyer must still be able to reach the store page to resubscribe");
+    }
+
+    [TestMethod]
+    public async Task GetAccount_drops_the_subscription_once_the_portal_has_no_entitlement_left()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("GET /account", new {
+            userId = ExternalUid.ToString(),
+            account = new { email = "buyer@example.com" }
+        });
+        // after the cancelled period ran out the portal serves no entitlement at all
+        _portal.Enqueue("GET /account/entitlements", new { items = Array.Empty<object>() });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethods.Google },
+            CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, new TestBillingProvider(),
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
+
+        var account = await accountProvider.GetAccount(CancellationToken.None);
+
+        Assert.IsNotNull(account, "the person is still signed in");
+        Assert.IsNull(account.SubscriptionId, "the expired subscription must not linger");
+        Assert.IsNull(account.ExpirationTime);
+        Assert.IsNull(account.IsAutoRenew);
+    }
+
+    [TestMethod]
     public async Task SignIn_selects_the_external_provider_by_the_method_id()
     {
         _portal.Enqueue(SignInRoute, SignInData());

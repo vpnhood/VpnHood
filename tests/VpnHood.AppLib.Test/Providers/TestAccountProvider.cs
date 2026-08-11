@@ -7,6 +7,10 @@ internal class TestAccountProvider : IAppAccountProvider
 {
     public AppAccount? Account { get; set; }
     public int DeleteAccountCalls { get; private set; }
+
+    /// <summary>The access code the subscription delivers; empty means the backend has none to give.</summary>
+    public string AccessCode { get; set; } = string.Empty;
+    public int GetAccountCalls { get; private set; }
     public IReadOnlyList<string> ProductIds { get; set; } = ["test_plan_1m"];
     public TestAuthenticationProvider TestAuthenticationProvider { get; } = new();
     public TestBillingProvider TestBillingProvider { get; } = new();
@@ -31,6 +35,7 @@ internal class TestAccountProvider : IAppAccountProvider
 
     public Task<AppAccount?> GetAccount(CancellationToken cancellationToken)
     {
+        GetAccountCalls++;
         return Task.FromResult(Account);
     }
 
@@ -41,7 +46,7 @@ internal class TestAccountProvider : IAppAccountProvider
 
     public Task<string> GetAccessCode(string subscriptionId, CancellationToken cancellationToken)
     {
-        return Task.FromResult(string.Empty);
+        return Task.FromResult(AccessCode);
     }
 
     public Task DeleteAccount(IUiContext uiContext, CancellationToken cancellationToken)

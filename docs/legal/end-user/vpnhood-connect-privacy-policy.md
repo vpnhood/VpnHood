@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-08-10*
+*Effective: 2026-08-12*
 
 **PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CONNECT** app and to the VPN servers **we operate**. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -12,13 +12,13 @@ The app collects **anonymous usage and diagnostic data** and sends it to Google 
 
 Some data depends on **where you installed the app from**, because those builds contain different components:
 
-| | App&nbsp;Store (iOS), Windows, Linux | Google&nbsp;Play (Android) | Our&nbsp;website (Android) |
-| --- | --- | --- | --- |
-| Anonymous analytics | yes | yes | yes |
-| Crash reports | no | yes | no |
-| Advertisements | no | yes | no |
-| Optional sign-in and purchases | no | yes | no |
-| Install attribution | no | no | in China only |
+| | App&nbsp;Store (iOS) | Windows, Linux | Google&nbsp;Play (Android) | Our&nbsp;website (Android) |
+| --- | --- | --- | --- | --- |
+| Anonymous analytics | yes | yes | yes | yes |
+| Crash reports | no | no | yes | no |
+| Advertisements | no | no | yes | no |
+| Optional sign-in and purchases | yes | no | yes | no |
+| Install attribution | no | no | no | in China only |
 
 ### Your Client ID
 
@@ -58,9 +58,14 @@ Crash reports follow the same switch as analytics, and your choice is remembered
 
 The Google Play build shows advertisements, including rewarded ads you may choose to watch to extend a session. Ads are delivered by **Google AdMob**, which collects its own data under Google's policies to select and measure ads. Advertising is not part of the anonymous analytics above and is not controlled by the analytics switch. Ads are not shown in every country.
 
-### Optional sign-in and purchases (Google Play build)
+### Optional sign-in and purchases (App Store and Google Play builds)
 
-You can use the app without an account. If you choose to sign in with Google to manage a subscription, we receive your **email address and basic public profile information** from Google, and we store it with your account so your subscription follows you across devices. Payments are processed by **Google Play**; we never see your card details.
+You can use the app without an account. Signing in is only ever needed to buy or restore a subscription, and each build offers the one sign-in its platform provides:
+
+- **App Store build (iOS)** — **Sign in with Apple**. We receive your **email address**, which may be a private relay address that Apple generates for you (`…@privaterelay.appleid.com`) if you choose to hide your real one; a relay address works exactly as well for us. Payments are processed by **Apple**; we never see your card details.
+- **Google Play build (Android)** — **Sign in with Google**. We receive your **email address and basic public profile information** from Google. Payments are processed by **Google Play**; we never see your card details.
+
+Either way we store that email address with your account so your subscription follows you across your devices, and you can delete it at any time — see [Delete Your Account](#delete-your-account-forget-me). The Windows and Linux builds have no sign-in and no in-app purchases.
 
 ### Install attribution (website build for Android, China only)
 
@@ -120,7 +125,8 @@ record with us.
 
 These companies process data on our behalf or in their own right, and only for the purposes described above:
 
-- **Google LLC** — Google Analytics / Firebase (anonymous analytics), Firebase Crashlytics (crash reports, Google Play build), Firebase storage (reports and ratings you send), AdMob (advertising, Google Play build), Google Sign-In and Google Play billing (optional accounts and purchases)
+- **Google LLC** — Google Analytics / Firebase (anonymous analytics, all builds), Firebase Crashlytics (crash reports, Google Play build), Firebase storage (reports and ratings you send), AdMob (advertising, Google Play build), Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
+- **Apple Inc.** — Sign in with Apple and App Store billing (optional accounts and purchases, App Store build)
 - **AppsFlyer** — install attribution, website build for Android only
 
 They are obliged not to use the data for any purpose other than the one we assign them, except where they act as independent controllers under their own published policies (advertising and payments).

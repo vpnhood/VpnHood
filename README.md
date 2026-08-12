@@ -43,7 +43,7 @@ Available for Windows, Linux and Android. (iOS client is under development.)
 * Platforms: Windows 10/11/Server, Linux
 
 ## Developer Features
-* Open source (LGPL) – fully in .NET
+* Open source (LGPL) ï¿½ fully in .NET
 * MAUI support
 * Ads interface (AdMob, InMobi, Chartboost integrated)
 * Billing interface
@@ -78,6 +78,5 @@ Windows|Linux
 ## Special Thanks
 * [Advanced Installer](https://www.advancedinstaller.com): Installer tools for Windows.
 * [ReSharper](https://www.jetbrains.com/resharper/): Write, improve, and maintain C# code.
-* [BrowserStack](https://www.browserstack.com/): This project is tested with BrowserStack
 ---
 Enjoy VpnHood! Contributions, feedback and, stars are welcome.

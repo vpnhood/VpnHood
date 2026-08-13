@@ -330,9 +330,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
         }
 
-        // refresh account if legacy account exists, but no error if refresh failed
-        if (_refreshAccountLegacy && Services.AccountService != null)
-            await VhUtils.TryInvokeAsync("Refreshing Account", () => Services.AccountService.Refresh(CancellationToken.None));
+        // Refresh the account once per launch while signed in, and after a legacy migration. Without
+        // this the cached account is trusted until its own expiry and nothing ever asks the server,
+        // so an account deleted — or its sessions revoked — on another device would keep showing
+        // here indefinitely; this is the call that lets the backend's 401 become a local sign-out.
+        // No error if the refresh fails: an unreachable backend must not disturb startup, and it
+        // never reaches the 401 path.
+        var accountService = Services.AccountService;
+        if (accountService != null && (_refreshAccountLegacy || accountService.AuthenticationService.UserId != null))
+            await VhUtils.TryInvokeAsync("Refreshing Account", () => accountService.Refresh(CancellationToken.None));
     }
 
     private void ApplySettings()

@@ -299,15 +299,64 @@ public class BillingServiceTest : TestAppBase
         Assert.IsNull(account.SubscriptionId);
         Assert.IsNull(account.ExpirationTime);
 
-        // Current behaviour, recorded rather than endorsed: the account-sourced access code is left on
-        // the profile after the subscription ends (Refresh only strips it when the account itself goes
-        // away). The server stops honouring the code, but ClientProfile.IsPremium is "AccessCode != null",
-        // so the LOCAL premium gate (always-on, custom DNS, split tunneling…) stays open until the user
-        // removes the code by hand.
+        // The code the subscription delivered is spent, so it comes off the profile. Left there it
+        // would hold the LOCAL premium gate open (always-on, custom DNS, split tunneling…) — because
+        // ClientProfile.IsPremium is "AccessCode != null" — long after the server stopped honouring it.
         var profile = app.CurrentClientProfileInfo;
         Assert.IsNotNull(profile);
-        Assert.IsTrue(profile.IsAccessCodeFromAccount);
-        Assert.IsTrue(profile.IsPremium);
+        Assert.IsFalse(profile.IsAccessCodeFromAccount);
+        Assert.IsNull(profile.AccessCode, "an expired subscription leaves no access code behind");
+    }
+
+    [TestMethod]
+    public async Task Signing_out_takes_the_account_access_code_with_it()
+    {
+        var accountProvider = new TestAccountProvider { AccessCode = TestAppHelper.BuildAccessCode() };
+        await using var app = CreateAppWithAccount(accountProvider);
+        var accountService = GetAccountService(app);
+        await SignIn(accountService);
+
+        accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
+        await accountService.Refresh(CancellationToken.None);
+        Assert.IsTrue(app.CurrentClientProfileInfo?.IsAccessCodeFromAccount);
+
+        // the user's own choice, and a reversible one: signing in again fetches the code back, while
+        // keeping it would carry paid access into whatever account signs in next
+        await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
+
+        var profile = app.CurrentClientProfileInfo;
+        Assert.IsNotNull(profile);
+        Assert.IsNull(profile.AccessCode);
+        Assert.IsFalse(profile.IsAccessCodeFromAccount);
+    }
+
+    [TestMethod]
+    public async Task An_account_that_disappears_leaves_the_paid_access_code_on_this_device()
+    {
+        var accountProvider = new TestAccountProvider { AccessCode = TestAppHelper.BuildAccessCode() };
+        await using var app = CreateAppWithAccount(accountProvider);
+        var accountService = GetAccountService(app);
+        await SignIn(accountService);
+
+        accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
+        await accountService.Refresh(CancellationToken.None);
+        Assert.IsTrue(app.CurrentClientProfileInfo?.IsAccessCodeFromAccount);
+
+        // the account was deleted on ANOTHER device: nobody here asked for anything, and the paid
+        // period is still running, so the code is detached into a manual one instead of removed —
+        // it could never be fetched again
+        accountProvider.Account = null;
+        await accountService.Refresh(CancellationToken.None);
+
+        var profile = app.CurrentClientProfileInfo;
+        Assert.IsNotNull(profile);
+        Assert.IsFalse(profile.IsAccessCodeFromAccount, "there is no account left to own it");
+        Assert.IsNotNull(profile.AccessCode, "the wrong device must not lose what was already bought");
+
+        // ...and a later clean sign-out cannot take it away either: by then it is the user's own code
+        await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
+        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode,
+            "signing out of an account that no longer exists must not revoke a detached code");
     }
 
     [TestMethod]

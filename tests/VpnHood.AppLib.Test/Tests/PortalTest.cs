@@ -286,6 +286,56 @@ public class PortalTest
     }
 
     [TestMethod]
+    public async Task A_rejected_session_signs_this_device_out()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        // the account was deleted — or its sessions revoked — on another device, so the token this
+        // device still holds matches no session row any more
+        _portal.Enqueue("GET /account", new TestPortalServer.ErrorScript {
+            Code = "unauthorized",
+            Detail = "Unauthorized.",
+            StatusCode = 401
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethods.Google },
+            CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
+
+        var exception = await Assert.ThrowsExactlyAsync<ApiException>(() =>
+            accountProvider.GetAccount(CancellationToken.None));
+
+        Assert.AreEqual(401, exception.StatusCode);
+        Assert.IsNull(authenticationProvider.UserId,
+            "there is no refresh token, so a rejected session is gone for good");
+        using var reloadedProvider = CreateAuthenticationProvider();
+        Assert.IsNull(reloadedProvider.UserId, "the session file must be gone, not just the field");
+    }
+
+    [TestMethod]
+    public async Task A_failing_portal_keeps_the_session()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("GET /account", new TestPortalServer.ErrorScript {
+            Code = "internal_error",
+            Detail = "Something went wrong.",
+            StatusCode = 500
+        });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(), new AppSignInOptions { Method = AppSignInMethods.Google },
+            CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            PortalStoreIds.GooglePlay, PackageName, fallbackProductIds: []);
+
+        await Assert.ThrowsExactlyAsync<ApiException>(() => accountProvider.GetAccount(CancellationToken.None));
+
+        Assert.AreEqual(ExternalUid.ToString(), authenticationProvider.UserId,
+            "only 401 means 'this is not a session'; a broken backend must never sign anyone out");
+    }
+
+    [TestMethod]
     public async Task GetAccount_offers_the_manage_page_only_when_this_store_billed_it()
     {
         object EntitlementData(string store) => new {

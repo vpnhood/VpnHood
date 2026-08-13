@@ -19,6 +19,7 @@ public class AppAccountService
     // once per this interval, so the server is not hammered.
     private static readonly TimeSpan ExpiredAccountRecheckInterval = TimeSpan.FromMinutes(5);
 
+    private readonly AsyncLock _refreshLock = new();
     private AppAccount? _appAccount;
     private DateTime _lastRefreshAttemptTime = DateTime.MinValue;
     private readonly AppSettingsService _settingsService;
@@ -80,6 +81,16 @@ public class AppAccountService
             await Refresh(cancellationToken);
         }
         catch (Exception ex) when (_appAccount != null) {
+            // A rejected session is not an outage. The authentication provider has already dropped
+            // it, so the account held here belongs to someone the server no longer knows — serving
+            // the cache is what used to keep a deleted person on screen for good.
+            if (AuthenticationService.UserId == null) {
+                VhLogger.Instance.LogInformation(ex,
+                    "The account session is no longer valid. Forgetting the account on this device.");
+                ClearAccount();
+                return null;
+            }
+
             VhLogger.Instance.LogWarning(ex, "Could not refresh the account. Using the cached one.");
         }
         return _appAccount;
@@ -105,17 +116,19 @@ public class AppAccountService
     /// </summary>
     public async Task DeleteAccount(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        var currentProfile = GetCurrentProfile();
-        if (currentProfile is { IsAccessCodeFromAccount: true })
-            _clientProfileService.Update(currentProfile.ClientProfileId,
-                new ClientProfileUpdateParams { IsAccessCodeFromAccount = false });
-
+        DetachAccountAccessCode();
         await _accountProvider.DeleteAccount(uiContext, cancellationToken).Vhc();
         await Refresh(cancellationToken).Vhc();
     }
 
     public async Task Refresh(CancellationToken cancellationToken)
     {
+        // Serialized: this writes account.json and rewrites the current profile, and it is now
+        // reached from the background at startup as well as from the UI. Two at once collide on the
+        // file itself — the second writer finds it still open — and can leave the profile carrying
+        // the loser's access code.
+        using var refreshLock = await _refreshLock.LockAsync(cancellationToken).Vhc();
+
         _lastRefreshAttemptTime = DateTime.UtcNow;
         _appAccount = await _accountProvider.GetAccount(cancellationToken).Vhc();
         Directory.CreateDirectory(_storageFolderPath);
@@ -126,15 +139,12 @@ public class AppAccountService
         if (currentProfile is null)
             throw new InvalidOperationException("Could not refresh account when there is no current client profile.");
 
-        // remove AccessCode from Account if there is no account (signed out)
-        // keep it if account exists but there is no subscription or access code is empty, because user have to remove it manually
+        // No account: it was signed out, or the portal no longer honours this session. The access
+        // code is detached rather than removed — see DetachAccountAccessCode. The one case where the
+        // user asked for it to go is a deliberate sign-out, which removes it first
+        // (AppAuthenticationService.SignOut) and only then lands here.
         if (_appAccount is null) {
-            if (currentProfile.IsAccessCodeFromAccount)
-                _clientProfileService.Update(currentProfile.ClientProfileId,
-                    new ClientProfileUpdateParams {
-                        AccessCode = new Patch<string?>(null),
-                        IsAccessCodeFromAccount = false
-                    });
+            DetachAccountAccessCode();
             return;
         }
 
@@ -143,8 +153,14 @@ public class AppAccountService
             ? await _accountProvider.GetAccessCode(_appAccount.SubscriptionId, cancellationToken)
             : null;
 
-        if (string.IsNullOrEmpty(accessCode))
+        // The subscription is over, so the code it delivered is spent. Leaving it on the profile
+        // holds every LOCAL premium gate open — ClientProfile.IsPremium is true whenever an access
+        // code is set — while the server has already stopped honouring it, which is the app
+        // promising premium and then failing to connect. A code the user typed in stays untouched.
+        if (string.IsNullOrEmpty(accessCode)) {
+            RemoveAccountAccessCode();
             return;
+        }
 
         // override profiles if access code is from account, or if there is an access code from account to set (e.g. first time login or access code changed)
         _clientProfileService.Update(currentProfile.ClientProfileId,
@@ -154,26 +170,46 @@ public class AppAccountService
             });
     }
 
+    /// <summary>Forget the account on this device, keeping whatever it already paid for.</summary>
     private void ClearAccount()
     {
         if (File.Exists(_appAccountFilePath))
             File.Delete(_appAccountFilePath);
 
         _appAccount = null;
+        DetachAccountAccessCode();
+    }
 
-        // update profiles - only clear access code if it was set from the account
+    /// <summary>
+    /// Turn an account-sourced access code into a manual one: the code stays, its link to the account
+    /// does not. This is the answer whenever the account goes away for a reason the user did not
+    /// choose — deleted here or on another device, or a session the portal no longer honours. The
+    /// period the code opens is already paid for, and with the account gone it could never be fetched
+    /// again, so removing it would take away access that was bought.
+    /// </summary>
+    private void DetachAccountAccessCode()
+    {
         var currentProfile = GetCurrentProfile();
-        if (currentProfile is null)
-            return;
+        if (currentProfile is { IsAccessCodeFromAccount: true })
+            _clientProfileService.Update(currentProfile.ClientProfileId,
+                new ClientProfileUpdateParams { IsAccessCodeFromAccount = false });
+    }
 
-        // remove access code if it is from account (not custom access code)
-        if (!string.IsNullOrEmpty(currentProfile.AccessCode) && currentProfile.IsAccessCodeFromAccount) {
+    /// <summary>
+    /// Take the account-sourced access code away with the account. Unlike every other way an account
+    /// can disappear, a deliberate sign-out is the user's own choice and is reversible: signing in
+    /// again fetches the code back, while keeping it would carry paid access into whatever account
+    /// signs in next. A code the user typed in themselves is never touched.
+    /// </summary>
+    internal void RemoveAccountAccessCode()
+    {
+        var currentProfile = GetCurrentProfile();
+        if (currentProfile is { IsAccessCodeFromAccount: true })
             _clientProfileService.Update(currentProfile.ClientProfileId,
                 new ClientProfileUpdateParams {
                     AccessCode = new Patch<string?>(null),
                     IsAccessCodeFromAccount = false
                 });
-        }
     }
 
     private ClientProfile? GetCurrentProfile()

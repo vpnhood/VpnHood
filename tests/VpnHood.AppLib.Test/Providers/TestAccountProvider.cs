@@ -36,7 +36,9 @@ internal class TestAccountProvider : IAppAccountProvider
     public Task<AppAccount?> GetAccount(CancellationToken cancellationToken)
     {
         GetAccountCalls++;
-        return Task.FromResult(Account);
+        // an account provider answers for the SIGNED-IN person: no session, no account
+        // (PortalAccountProvider.GetAccount returns null the same way)
+        return Task.FromResult(TestAuthenticationProvider.UserId == null ? null : Account);
     }
 
     public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)

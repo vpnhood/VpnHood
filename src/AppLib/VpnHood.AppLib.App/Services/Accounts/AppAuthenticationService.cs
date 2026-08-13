@@ -22,6 +22,11 @@ public class AppAuthenticationService(
     public async Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)
     {
         await accountProvider.SignOut(uiContext, cancellationToken).Vhc();
+
+        // The user asked to leave, so the code the account delivered leaves with them. The refresh
+        // below would only DETACH it, because every other way an account disappears is not the
+        // user's choice — see AppAccountService.RemoveAccountAccessCode.
+        accountService.RemoveAccountAccessCode();
         await accountService.Refresh(cancellationToken).Vhc();
     }
 

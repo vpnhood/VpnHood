@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
@@ -22,6 +23,7 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
     private readonly IReadOnlyList<IAppAuthenticationExternalProvider> _authenticationExternalProviders;
     private readonly HttpClient _httpClientWithoutAuth;
     private readonly string _packageName;
+    private readonly Lock _sessionLock = new();
     private PortalSession? _session;
     private string SessionFilePath => Path.Combine(field, "account", "portalSession.json");
 
@@ -71,17 +73,45 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
     private PortalSession? Session {
         get => _session;
         set {
-            _session = value;
-            if (value == null) {
-                if (File.Exists(SessionFilePath))
-                    File.Delete(SessionFilePath);
-                return;
-            }
+            // the file and the field must not disagree: a rejected session can now be dropped from an
+            // in-flight request while the UI thread is signing in or out
+            lock (_sessionLock) {
+                _session = value;
+                if (value == null) {
+                    if (File.Exists(SessionFilePath))
+                        File.Delete(SessionFilePath);
+                    return;
+                }
 
-            var directoryPath = Path.GetDirectoryName(SessionFilePath)
-                ?? throw new InvalidOperationException("Could not get the folder of the portal session file.");
-            Directory.CreateDirectory(directoryPath);
-            File.WriteAllText(SessionFilePath, JsonSerializer.Serialize(value));
+                var directoryPath = Path.GetDirectoryName(SessionFilePath)
+                    ?? throw new InvalidOperationException("Could not get the folder of the portal session file.");
+                Directory.CreateDirectory(directoryPath);
+                File.WriteAllText(SessionFilePath, JsonSerializer.Serialize(value));
+            }
+        }
+    }
+
+    /// <summary>
+    /// The portal answered 401: it does not know this session any more. There is no refresh token to
+    /// fall back on, so the only honest local state is signed-out — the account was deleted, or its
+    /// sessions revoked, somewhere else. Dropping the session here is what stops this device from
+    /// showing a person the server has already forgotten.
+    /// <para>
+    /// The external identity provider is deliberately left signed in: revoking it needs a UI context
+    /// no HTTP response handler has, and the next deliberate sign-in re-establishes everything anyway.
+    /// </para>
+    /// </summary>
+    private void RejectSession(PortalSession rejectedSession)
+    {
+        lock (_sessionLock) {
+            // a sign-in may have replaced the session while that request was in flight; only the
+            // session the portal actually rejected is dropped
+            if (_session == null || _session.AccessToken != rejectedSession.AccessToken)
+                return;
+
+            VhLogger.Instance.LogWarning(
+                "The portal no longer accepts this session. Signing out on this device.");
+            Session = null;
         }
     }
 
@@ -201,7 +231,16 @@ public class PortalAuthenticationProvider : IAppAuthenticationProvider
             else {
                 request.Headers.Authorization = null;
             }
-            return await base.SendAsync(request, cancellationToken).Vhc();
+
+            var response = await base.SendAsync(request, cancellationToken).Vhc();
+
+            // 401 is the portal saying "this token is not a session" — never a transport failure,
+            // which throws instead of answering, and never a permission problem, which answers 403.
+            // So this cannot sign anyone out over an outage.
+            if (session != null && response.StatusCode == HttpStatusCode.Unauthorized)
+                authenticationProvider.RejectSession(session);
+
+            return response;
         }
     }
 }

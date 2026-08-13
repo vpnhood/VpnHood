@@ -6,11 +6,16 @@
 * Feature: Split tunneling master switch — one tap keeps all traffic inside the VPN and blocks what the server cannot carry
 * Feature: IPv6 option to block or bypass IPv6 when the server does not support it
 * Feature: Built-in report viewer — view and share diagnostic reports right inside the app
+* Improve: Sign out, delete account and remove premium code now show progress while they work #connect
+* Improve: Shorter first-run privacy summary, now translated into every supported language #connect
 * Improve: Android: Quick Launch tile reliability
 * Improve: Split tunneling
 * Improve: Initialization speed when using split tunneling by country
 * Improve: SOCKS & HTTP proxies stability
 * Improve: Memory usage & stability
+* Fix: Deleting your account on one device left it visible, and still signed in, on your other devices #connect
+* Fix: Signing out could take away an access code that was still paid for #connect
+* Fix: Premium features stayed unlocked locally after a subscription had expired
 * Fix: Windows and Linux shipped without the default server, leaving the server list empty on first run #connect
 * Fix: A stray UDP packet could permanently stop unrelated UDP flows sharing the same server port
 * Fix: UDP flows sending without replies for over a minute could no longer receive responses

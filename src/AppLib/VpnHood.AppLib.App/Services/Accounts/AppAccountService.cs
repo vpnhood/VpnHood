@@ -108,15 +108,17 @@ public class AppAccountService
     }
 
     /// <summary>
-    /// "Forget me": the backend erases the person everywhere, then this device forgets the account
-    /// like a sign-out — except an account-sourced access code is first detached into a manual one.
-    /// The paid period keeps working by policy (deletion erases the person, never the service), and
-    /// with the account gone the code could never be fetched again, so stripping it here would take
-    /// away access that was already bought.
+    /// "Forget me": the backend erases the person everywhere, then this device forgets the account —
+    /// premium included. The refresh below is what strips the account-sourced access code, because
+    /// an account-sourced code exists only while its account does.
+    /// <para>
+    /// The paid entitlement itself is not destroyed: the store still owns that subscription, and it
+    /// can be brought back with Restore Purchase onto a new account. What ends here is this device
+    /// serving premium off an account that no longer exists.
+    /// </para>
     /// </summary>
     public async Task DeleteAccount(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        DetachAccountAccessCode();
         await _accountProvider.DeleteAccount(uiContext, cancellationToken).Vhc();
         await Refresh(cancellationToken).Vhc();
     }
@@ -139,12 +141,11 @@ public class AppAccountService
         if (currentProfile is null)
             throw new InvalidOperationException("Could not refresh account when there is no current client profile.");
 
-        // No account: it was signed out, or the portal no longer honours this session. The access
-        // code is detached rather than removed — see DetachAccountAccessCode. The one case where the
-        // user asked for it to go is a deliberate sign-out, which removes it first
-        // (AppAuthenticationService.SignOut) and only then lands here.
+        // No account: signed out, deleted, or a session the portal no longer honours. An
+        // account-sourced code lives and dies with its account, so it goes — see
+        // RemoveAccountAccessCode.
         if (_appAccount is null) {
-            DetachAccountAccessCode();
+            RemoveAccountAccessCode();
             return;
         }
 
@@ -170,38 +171,29 @@ public class AppAccountService
             });
     }
 
-    /// <summary>Forget the account on this device, keeping whatever it already paid for.</summary>
+    /// <summary>Forget the account on this device, premium included.</summary>
     private void ClearAccount()
     {
         if (File.Exists(_appAccountFilePath))
             File.Delete(_appAccountFilePath);
 
         _appAccount = null;
-        DetachAccountAccessCode();
+        RemoveAccountAccessCode();
     }
 
     /// <summary>
-    /// Turn an account-sourced access code into a manual one: the code stays, its link to the account
-    /// does not. This is the answer whenever the account goes away for a reason the user did not
-    /// choose — deleted here or on another device, or a session the portal no longer honours. The
-    /// period the code opens is already paid for, and with the account gone it could never be fetched
-    /// again, so removing it would take away access that was bought.
+    /// Take the account-sourced access code away with the account. One rule, whatever made the
+    /// account go: signed out, deleted here, deleted on another device, a session the portal no
+    /// longer honours, or a subscription that ended. The code is the account's, not the device's —
+    /// leaving it behind would keep serving premium off an account that no longer exists, and would
+    /// carry paid access into whatever account signs in next.
+    /// <para>
+    /// The entitlement itself is not destroyed: the store still owns that subscription, so Restore
+    /// Purchase brings it back onto a new account. A code the user typed in themselves is never
+    /// touched.
+    /// </para>
     /// </summary>
-    private void DetachAccountAccessCode()
-    {
-        var currentProfile = GetCurrentProfile();
-        if (currentProfile is { IsAccessCodeFromAccount: true })
-            _clientProfileService.Update(currentProfile.ClientProfileId,
-                new ClientProfileUpdateParams { IsAccessCodeFromAccount = false });
-    }
-
-    /// <summary>
-    /// Take the account-sourced access code away with the account. Unlike every other way an account
-    /// can disappear, a deliberate sign-out is the user's own choice and is reversible: signing in
-    /// again fetches the code back, while keeping it would carry paid access into whatever account
-    /// signs in next. A code the user typed in themselves is never touched.
-    /// </summary>
-    internal void RemoveAccountAccessCode()
+    private void RemoveAccountAccessCode()
     {
         var currentProfile = GetCurrentProfile();
         if (currentProfile is { IsAccessCodeFromAccount: true })

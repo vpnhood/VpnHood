@@ -1,5 +1,6 @@
 using System.Net;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.UiContexts;
@@ -331,7 +332,7 @@ public class BillingServiceTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task An_account_that_disappears_leaves_the_paid_access_code_on_this_device()
+    public async Task An_account_that_disappears_takes_its_access_code_with_it()
     {
         var accountProvider = new TestAccountProvider { AccessCode = TestAppHelper.BuildAccessCode() };
         await using var app = CreateAppWithAccount(accountProvider);
@@ -342,21 +343,59 @@ public class BillingServiceTest : TestAppBase
         await accountService.Refresh(CancellationToken.None);
         Assert.IsTrue(app.CurrentClientProfileInfo?.IsAccessCodeFromAccount);
 
-        // the account was deleted on ANOTHER device: nobody here asked for anything, and the paid
-        // period is still running, so the code is detached into a manual one instead of removed —
-        // it could never be fetched again
+        // the account was deleted on ANOTHER device. An account-sourced code belongs to the account,
+        // so premium stops here too — the entitlement still exists at the store and comes back with
+        // Restore Purchase onto a new account.
         accountProvider.Account = null;
         await accountService.Refresh(CancellationToken.None);
 
         var profile = app.CurrentClientProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsFalse(profile.IsAccessCodeFromAccount, "there is no account left to own it");
-        Assert.IsNotNull(profile.AccessCode, "the wrong device must not lose what was already bought");
+        Assert.IsNull(profile.AccessCode, "premium must not outlive the account that granted it");
+    }
 
-        // ...and a later clean sign-out cannot take it away either: by then it is the user's own code
-        await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
+    [TestMethod]
+    public async Task Deleting_the_account_takes_premium_with_it()
+    {
+        var accountProvider = new TestAccountProvider { AccessCode = TestAppHelper.BuildAccessCode() };
+        await using var app = CreateAppWithAccount(accountProvider);
+        var accountService = GetAccountService(app);
+        await SignIn(accountService);
+
+        accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
+        await accountService.Refresh(CancellationToken.None);
+        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode);
+
+        await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
+
+        Assert.AreEqual(1, accountProvider.DeleteAccountCalls);
+        Assert.IsNull(await accountService.GetAccount(CancellationToken.None));
+        var profile = app.CurrentClientProfileInfo;
+        Assert.IsNotNull(profile);
+        Assert.IsNull(profile.AccessCode, "'delete my account' must not leave premium running");
+        Assert.IsFalse(profile.IsAccessCodeFromAccount);
+    }
+
+    [TestMethod]
+    public async Task Deleting_the_account_keeps_an_access_code_the_user_typed_in()
+    {
+        var accountProvider = new TestAccountProvider();
+        await using var app = CreateAppWithAccount(accountProvider);
+        var accountService = GetAccountService(app);
+        await SignIn(accountService);
+
+        // a code the user entered by hand: it was never the account's to take away
+        var profileId = app.CurrentClientProfileInfo?.ClientProfileId
+                        ?? throw new InvalidOperationException("No current client profile.");
+        app.ClientProfileService.Update(profileId, new ClientProfileUpdateParams {
+            AccessCode = TestAppHelper.BuildAccessCode()
+        });
+
+        await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
+
         Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode,
-            "signing out of an account that no longer exists must not revoke a detached code");
+            "only an account-sourced code goes with the account");
     }
 
     [TestMethod]

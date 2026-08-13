@@ -96,13 +96,14 @@ If you have signed in, you can permanently delete your account at any time:
 
 Deletion applies everywhere at once: you are signed out on all devices, your sign-in identity and
 email address are erased, and there is no way to restore the account — signing in again later
-creates a new, empty one.
+creates a new, empty one. Premium ends with the account on every device, because the premium access
+your app holds belongs to the account, not to the device.
 
 What deletion does **not** do:
 
 - It does not cancel a subscription. Subscriptions are billed by the store where you purchased
-  them, and only you can cancel there — before or after deleting. Access you have already paid for
-  keeps working until the current period ends.
+  them, and only you can cancel there — before or after deleting. A subscription that is still
+  running remains yours: create a new account and use **Restore purchase** to attach it again.
 - It does not erase invoices and payment records. We are legally required to keep them for
   accounting and tax purposes, but they are anonymized: your name and email address are replaced
   with placeholders.

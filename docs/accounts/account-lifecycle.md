@@ -628,7 +628,7 @@ choose it*. **The app never chooses, never lists and never asks**:
 
 | Situation, in order | What the app does |
 |---|---|
-| The device already runs on a **usable** code | Leave it alone |
+| The device runs on a code the person **typed**, and the account has no subscription | Leave it alone |
 | A **serving** subscription at this build's home store | Use it — the device's own store comes first (below) |
 | The account has a code | Use it — the server has chosen one (below) |
 | None | Signed in, not premium — as today |
@@ -704,10 +704,11 @@ often does not know yet who a code is for, and the answer can change the next da
 
 Three guardrails make the automatic part safe:
 
-1. **Never overwrite a code that still works.** If the device is running on a usable code — typed by
-   hand or applied earlier — signing in leaves it alone. Replacing a working code is the one genuinely
-   destructive move here. A code that has **expired** is not protected: it opens nothing, so
-   replacing it is a repair, not a loss.
+1. **A code the person typed is left alone — unless they are paying for a subscription.** Replacing a
+   working code is the one genuinely destructive move here, so signing in leaves a hand-typed code
+   where it is. The exception is the subscription they are paying for right now: its code is the one
+   that must connect, or the money buys nothing. A code the ACCOUNT applied is not protected at all —
+   it belongs to the account, and the account may re-choose it on any read.
 2. **The choice belongs to the account, not to the device.** Every device signed in to the same
    account lands on the same *chosen code*, and that is the intent rather than a compromise: two
    phones belonging to one person should share one code. Separate codes exist for separate *people*

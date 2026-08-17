@@ -3,7 +3,8 @@ using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.App.Connect.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
@@ -52,10 +53,16 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,
             AdjustForSystemBars = false,
             TrackerFactory = AppConfigs.IsDebug ? new NullTrackerFactory() : new FirebaseAnalyticsTrackerFactory(),
-            PremiumFeatures = ConnectAppResources.PremiumFeatures,
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
             WebUiPort = appConfigs.WebUiPort,
             AllowRecommendUserReviewByServer = true,
+            Premium = new AppPremiumOptions {
+                Features = ConnectAppResources.PremiumFeatures,
+                // nothing forbids a typed code on this channel (App Review 3.1.1 binds the App Store head only)
+                IsCodeSupported = true
+                // IsPurchaseUrlSupported stays false: Play forbids steering a buyer to an outside shop,
+                // so no operator token may raise a web-purchase link in this build
+            },
             AdOptions = new AppAdOptions {
                 PreloadAd = true,
                 RejectAdBlocker = true,
@@ -131,7 +138,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return [.. items];
     }
 
-    private static IAppAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
+    private static IAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
     {
         try {
             // no Portal configured — ship without account features rather than half-wired ones
@@ -148,19 +155,18 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
             // The portal owns the catalog: it maps each store product to the plan that redeems it, so a
-            // product it does not map cannot become an entitlement. The embedded ids are the fallback
-            // for when it cannot answer.
+            // product it does not map cannot become an entitlement — and cannot be sold here either.
             return new PortalAccountProvider(portalAuthenticationProvider, googlePlayBillingProvider,
-                storeId: PortalStoreIds.GooglePlay, packageName: appConfigs.AppId,
-                fallbackProductIds: appConfigs.GooglePlayProductIds);
+                portalBaseUrl: appConfigs.PortalBaseUri, packageName: appConfigs.AppId,
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not create AppAccountService.");
+            VhLogger.Instance.LogError(ex, "Could not create AccountService.");
             return null;
         }
     }
 
-    private static IAppBillingProvider? TryCreateBillingClient()
+    private static IBillingProvider? TryCreateBillingClient()
     {
         try {
             return new GooglePlayBillingProvider();

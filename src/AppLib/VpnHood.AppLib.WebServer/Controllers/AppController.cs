@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;

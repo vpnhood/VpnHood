@@ -1,15 +1,15 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using HttpMethod = WatsonWebserver.Core.HttpMethod;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Helpers;
 using VpnHood.Core.Client.Devices.UiContexts;
-using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
 internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountController
 {
-    private AppAccountService AccountService =>
+    private AccountService AccountService =>
         app.Services.AccountService ??
         throw new Exception("Account service is not available at this moment.");
 
@@ -28,9 +28,9 @@ internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountContr
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "sign-in", async ctx => {
-            var signInOptions = ctx.ReadJson<AppSignInOptions>();
-            await SignIn(signInOptions, ctx.Token);
-            await ctx.SendNoContent();
+            var signInOptions = ctx.ReadJson<SignInOptions>();
+            var res = await SignIn(signInOptions, ctx.Token);
+            await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.POST, baseUrl + "sign-out", async ctx => {
@@ -42,19 +42,13 @@ internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountContr
             await Delete(ctx.Token);
             await ctx.SendNoContent();
         });
-
-        mapper.AddParam(HttpMethod.GET, baseUrl + "subscriptions/{subId}/access-keys", async ctx => {
-            var subId = ctx.GetRouteParameter<string>("subId");
-            var res = await ListAccessKeys(subId, ctx.Token);
-            await ctx.SendJson(res);
-        });
     }
 
-    public Task<AppAccount?> Get(CancellationToken cancellationToken)
+    public Task<Account?> Get(CancellationToken cancellationToken)
     {
         return app.Services.AccountService != null
             ? app.Services.AccountService.GetAccount(cancellationToken)
-            : Task.FromResult<AppAccount?>(null);
+            : Task.FromResult<Account?>(null);
     }
 
     public Task Refresh(CancellationToken cancellationToken)
@@ -62,10 +56,10 @@ internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountContr
         return AccountService.Refresh(cancellationToken: cancellationToken);
     }
 
-    public Task SignIn(AppSignInOptions signInOptions, CancellationToken cancellationToken)
+    public Task<SignInResult> SignIn(SignInOptions signInOptions, CancellationToken cancellationToken)
     {
-        if (!AccountService.AuthenticationService.SignInMethods.Contains(signInOptions.Method))
-            throw new NotSupportedException($"Sign-in method is not supported. Method: {signInOptions.Method}");
+        if (!AccountService.AuthenticationService.ProviderIds.Contains(signInOptions.ProviderId))
+            throw new NotSupportedException($"Sign-in provider is not supported. ProviderId: {signInOptions.ProviderId}");
 
         return AccountService.AuthenticationService.SignIn(AppUiContext.RequiredContext, signInOptions,
             cancellationToken);
@@ -79,10 +73,5 @@ internal class AccountController(VpnHoodApp app) : ControllerBase, IAccountContr
     public Task Delete(CancellationToken cancellationToken)
     {
         return AccountService.DeleteAccount(AppUiContext.RequiredContext, cancellationToken);
-    }
-
-    public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
-    {
-        return AccountService.ListAccessKeys(subscriptionId, cancellationToken);
     }
 }

@@ -1,7 +1,7 @@
 # VpnHoodStoreKit — the StoreKit 2 Swift facade
 
 Microsoft.iOS does not bind StoreKit 2's Swift-async API, so this tiny Swift
-package exposes exactly the three calls the C# side needs over a **C ABI**
+package exposes exactly the four calls the C# side needs over a **C ABI**
 (`@_cdecl` functions + JSON strings + one completion callback):
 
 | C function | StoreKit 2 |
@@ -9,6 +9,7 @@ package exposes exactly the three calls the C# side needs over a **C ABI**
 | `vhsk_load_products` | `Product.products(for:)` + intro-offer eligibility |
 | `vhsk_purchase` | `product.purchase(options: [.appAccountToken(uuid)])` |
 | `vhsk_current_entitlement` | `Transaction.currentEntitlements` (newest) |
+| `vhsk_show_manage_subscriptions` | `AppStore.showManageSubscriptions(in: scene)` |
 
 The C# binding lives in `../StoreKitBridge/NativeStoreKitBridge.cs`; the two
 files are a matched pair — change the contract in both or not at all.

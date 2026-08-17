@@ -1,13 +1,13 @@
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
 
 /// <summary>The platform sign-in double: hands out a fixed id token.</summary>
 internal class TestAuthenticationExternalProvider(string idToken,
-    string signInMethod = AppSignInMethods.Google) : IAppAuthenticationExternalProvider
+    string providerId = AuthProviders.Google) : IAuthenticationExternalProvider
 {
-    public string SignInMethod => signInMethod;
+    public string ProviderId => providerId;
     public int SignInCalls { get; private set; }
     public int SignOutCalls { get; private set; }
 

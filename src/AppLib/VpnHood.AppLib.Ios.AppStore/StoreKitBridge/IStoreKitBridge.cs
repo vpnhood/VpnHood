@@ -15,4 +15,10 @@ public interface IStoreKitBridge
 
     /// <summary>The latest current entitlement, or null when the user owns nothing.</summary>
     Task<StoreKitPurchase?> CurrentEntitlement(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Presents Apple's manage-subscriptions sheet inside the app and returns when it is
+    /// dismissed. Nothing leaves the app: no browser, no switch to the App Store.
+    /// </summary>
+    Task ShowManageSubscriptions(CancellationToken cancellationToken);
 }

@@ -585,7 +585,6 @@ public class ClientProfileTest : TestAppBase
         Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.IsNull(purchaseOptions.PurchaseUrl);
-        Assert.AreEqual("Test", purchaseOptions.StoreName);
         Assert.IsNull(purchaseOptions.StoreError);
 
         // test default policy (billing error)
@@ -594,7 +593,6 @@ public class ClientProfileTest : TestAppBase
         Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.AreEqual(defaultPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
-        Assert.AreEqual("Test", purchaseOptions.StoreName);
         Assert.IsNotNull(purchaseOptions.StoreError);
         billingProvider.SubscriptionPlanException = null;
 
@@ -605,7 +603,6 @@ public class ClientProfileTest : TestAppBase
         Assert.AreEqual(caPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
         Assert.AreEqual(caPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.AreEqual(caPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
-        Assert.AreEqual("Test", purchaseOptions.StoreName);
         Assert.IsNull(purchaseOptions.StoreError);
 
         // test cn policy
@@ -614,7 +611,106 @@ public class ClientProfileTest : TestAppBase
         purchaseOptions = await app.GetPurchaseOptions(clientProfileInfo.ClientProfileId, TestCt);
         Assert.AreEqual(cnPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
         Assert.AreEqual(cnPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
-        Assert.IsNull(purchaseOptions.StoreName);
+        Assert.IsFalse(purchaseOptions.IsStoreAvailable, "HideStore must not offer the store at all");
         Assert.IsNull(purchaseOptions.StoreError);
+    }
+
+    [TestMethod]
+    [DoNotParallelize] // mutates the process-global AppRegionInfo
+    public async Task ClientPolicy_PurchaseUrl_is_never_shown_by_a_store_build()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+
+        // a build shipped through a store: it may not steer a buyer to an outside shop, whatever the
+        // token says — and the token is the one place the URL comes from, so this is the whole guard
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.Premium = new AppPremiumOptions { IsCodeSupported = true }; // and no outside shop
+        appOptions.AccountProvider = new TestAccountProvider();
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+
+        var token = CreateToken();
+        token.IsPublic = true;
+        token.ServerToken.ServerLocations = ["US/California"];
+        // HideStore is the demanding case: obeying it would hide the store on behalf of a link this
+        // build will not show, leaving the purchase page with nothing on it at all
+        token.ClientPolicies = [
+            new ClientPolicy {
+                ClientCountries = ["*"],
+                Normal = 10,
+                PremiumByPurchase = true,
+                PurchaseUrl = new Uri("http://localhost/shop"),
+                PurchaseUrlMode = PurchaseUrlMode.HideStore
+            }
+        ];
+
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        var clientProfileInfo = clientProfile.ToInfo(app.Features);
+
+        var purchaseOptions = await app.GetPurchaseOptions(clientProfile.ClientProfileId, TestCt);
+        Assert.IsNull(purchaseOptions.PurchaseUrl, "a store build must never surface an outside shop");
+        Assert.IsTrue(purchaseOptions.IsStoreAvailable, "the store must still be offered");
+
+        // and the route in: a location must not advertise a purchase this build cannot complete
+        Assert.IsTrue(clientProfileInfo.SelectedLocationInfo?.Options.PremiumByPurchase,
+            "the in-app store can complete it");
+
+        appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.Premium = new AppPremiumOptions { IsCodeSupported = true }; // and no outside shop
+        await using var appWithoutBilling = TestAppHelper.CreateClientApp(appOptions);
+        var profileWithoutBilling = appWithoutBilling.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var infoWithoutBilling = profileWithoutBilling.ToInfo(appWithoutBilling.Features);
+        Assert.IsFalse(infoWithoutBilling.SelectedLocationInfo?.Options.PremiumByPurchase,
+            "no store and no permitted shop leaves nothing to offer");
+    }
+
+    [TestMethod]
+    [DoNotParallelize] // mutates the process-global AppRegionInfo
+    public async Task ClientPolicy_sold_premium_is_ignored_by_a_build_without_premium()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+
+        // a CLIENT-like build: no premium tier at all, so it IS the full app and sells nothing —
+        // however hard the operator's policy advertises ways to buy one
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.Premium = null;
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+
+        var token = CreateToken();
+        token.IsPublic = true;
+        // ~#premium: the location serves both tiers, so the free plan and the trial both apply to it
+        token.ServerToken.ServerLocations = ["US/California [~#premium]"];
+        token.ClientPolicies = [
+            new ClientPolicy {
+                ClientCountries = ["*"],
+                Normal = 10,
+                PremiumByTrial = 30,
+                PremiumByPurchase = true,
+                PremiumByCode = true,
+                PurchaseUrl = new Uri("http://localhost/shop"),
+                PurchaseUrlMode = PurchaseUrlMode.WithStore
+            }
+        ];
+
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
+        var options = clientProfile.ToInfo(app.Features).SelectedLocationInfo?.Options
+                      ?? throw new InvalidOperationException("No selected location.");
+
+        // every SOLD route is gone; what the server gives away is not the tier's business
+        Assert.IsFalse(options.PremiumByPurchase);
+        Assert.IsFalse(options.PremiumByCode);
+        Assert.IsFalse(options.CanGoPremium, "nothing may draw a Go Premium button");
+        Assert.AreEqual(10, options.Normal, "the free plan is the server's business, not the tier's");
+        Assert.AreEqual(30, options.PremiumByTrial,
+            "a granted premium session costs nothing and passes through no store");
+        Assert.IsTrue(options.Prompt, "so the plan chooser still has something to offer");
+
+        // and the purchase page, should anything still reach it, has nothing on it
+        var purchaseOptions = await app.GetPurchaseOptions(clientProfile.ClientProfileId, TestCt);
+        Assert.IsNull(purchaseOptions.PurchaseUrl);
+        Assert.IsFalse(purchaseOptions.CanGoPremiumByCode);
+        Assert.IsFalse(purchaseOptions.IsStoreAvailable);
+        Assert.IsNull(purchaseOptions.StoreError, "a build that sells nothing has no store to fail");
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Portal.Dto;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
@@ -13,50 +14,37 @@ namespace VpnHood.AppLib.Portal;
 /// design). A short retry only covers the store-side "pending" state.
 /// </summary>
 internal class PortalOrderProcessor(
-    PortalAuthenticationProvider authenticationProvider,
+    HttpClient httpClient,
+    IAuthenticationProvider authenticationProvider,
     string storeId,
     string packageName)
-    : IAppOrderProcessor
+    : IOrderProcessor
 {
-    public Task<AppPurchaseAttribution> PreparePurchase(CancellationToken cancellationToken)
+    public Task<PurchaseAttribution> PreparePurchase(CancellationToken cancellationToken)
     {
-        // the portal's external uid is a UUID: GooglePlay obfuscatedAccountId
-        // AND (as a Guid) the Apple appAccountToken — the backend owns this mapping
+        // The portal's external uid is a UUID by contract, which is what lets every store take it as
+        // it is — Apple only accepts a UUID. Reshaping it is the billing provider's business.
         var userId = authenticationProvider.UserId
             ?? throw new AuthenticationException("Could not prepare the purchase because the user is not signed in.");
 
-        return Task.FromResult(new AppPurchaseAttribution {
-            AccountId = userId,
-            AppAccountToken = Guid.TryParse(userId, out var appAccountToken) ? appAccountToken : null
-        });
+        return Task.FromResult(new PurchaseAttribution { UserId = userId });
     }
 
-    public async Task CompleteOrder(AppPurchaseResult purchaseResult, CancellationToken cancellationToken)
+    public async Task CompleteOrder(PurchaseProof purchaseProof, CancellationToken cancellationToken)
     {
-        var purchaseData = purchaseResult.PurchaseData
-            ?? throw new InvalidOperationException("The store purchase carries no proof for verification.");
-
-        var apiClient = new PortalApiClient(authenticationProvider.HttpClient);
+        var apiClient = new PortalApiClient(httpClient, authenticationProvider);
         for (var counter = 0; ; counter++) {
-            var entitlement = await apiClient
-                .CreatePurchase(storeId, packageName, purchaseData, cancellationToken).Vhc();
+            var state = await apiClient
+                .CreatePurchase(storeId, packageName, purchaseProof.Value, cancellationToken).Vhc();
 
-            switch (entitlement.State) {
-                case PortalEntitlement.StateProvisioned:
-                    return;
+            if (state == PortalPurchaseState.Provisioned)
+                return;
 
-                case PortalEntitlement.StatePending:
-                    // store-side payment not complete yet — brief retry, then give up loudly
-                    VhLogger.Instance.LogWarning("Purchase is still pending at the store. Attempt: {Attempt}", counter + 1);
-                    if (counter == 2)
-                        throw new InvalidOperationException("The store has not completed the payment yet. Try again later.");
-                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).Vhc();
-                    break;
-
-                default:
-                    throw new InvalidOperationException($"Unexpected entitlement state: {entitlement.State}");
-            }
+            // store-side payment not complete yet — brief retry, then give up loudly
+            VhLogger.Instance.LogWarning("Purchase is still pending at the store. Attempt: {Attempt}", counter + 1);
+            if (counter == 2)
+                throw new InvalidOperationException("The store has not completed the payment yet. Try again later.");
+            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken).Vhc();
         }
     }
-
 }

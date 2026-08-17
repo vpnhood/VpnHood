@@ -14,6 +14,7 @@
 
 import Foundation
 import StoreKit
+import UIKit
 
 public typealias VhskCallback = @convention(c) (
     UnsafeMutableRawPointer?, UInt8, UnsafePointer<CChar>?
@@ -177,6 +178,33 @@ public func vhsk_current_entitlement(
             ]
             let json = try JSONSerialization.data(withJSONObject: payload)
             complete(context, callback, ok: true, String(data: json, encoding: .utf8) ?? "null")
+        } catch {
+            completeError(context, callback, error)
+        }
+    }
+}
+
+// ------------------------------------------------------- manage subscriptions --
+
+// Apple's own manage-subscriptions sheet, presented INSIDE the app: no browser, no
+// switch to the App Store. Returns once the sheet is dismissed. In the sandbox the
+// sheet is empty (StoreKit testing has no real subscriptions) — that is an
+// environment limit, not a failure, so it still completes successfully.
+@_cdecl("vhsk_show_manage_subscriptions")
+public func vhsk_show_manage_subscriptions(
+    _ context: UnsafeMutableRawPointer?,
+    _ callback: @escaping VhskCallback
+) {
+    Task { @MainActor in
+        do {
+            let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            guard let scene = scenes.first(where: { $0.activationState == .foregroundActive })
+                    ?? scenes.first else {
+                throw NSError(domain: "vhsk", code: 4,
+                              userInfo: [NSLocalizedDescriptionKey: "no window scene to present in"])
+            }
+            try await AppStore.showManageSubscriptions(in: scene)
+            complete(context, callback, ok: true, "null")
         } catch {
             completeError(context, callback, error)
         }

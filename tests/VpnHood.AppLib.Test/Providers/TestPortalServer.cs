@@ -33,7 +33,7 @@ public sealed class TestPortalServer : IDisposable
         "GET /system/status",
         "GET /openapi.json",
         "POST /auth/sessions",
-        "GET /billing/plans"
+        "GET /billing/products"
     ];
 
     public sealed class RecordedRequest
@@ -118,6 +118,15 @@ public sealed class TestPortalServer : IDisposable
         var path = context.Request.Url?.AbsolutePath ?? "";
         if (path.StartsWith("/api.php", StringComparison.Ordinal))
             path = path["/api.php".Length..];
+
+        // The version segment is required, not optional: dropping it would send every call to a
+        // resource the portal does not serve. Asserted here and then removed, so the enqueued
+        // routes below read as resources instead of repeating the version on every line.
+        const string versionPrefix = "/v1";
+        if (!path.StartsWith(versionPrefix + "/", StringComparison.Ordinal))
+            throw new InvalidOperationException($"The client called {path} without the {versionPrefix} segment.");
+        path = path[versionPrefix.Length..];
+
         var route = $"{method} {path}";
 
         var bodyText = await new StreamReader(context.Request.InputStream, Encoding.UTF8).ReadToEndAsync();

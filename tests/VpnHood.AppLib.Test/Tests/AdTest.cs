@@ -1,7 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Abstractions.Ads;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Dom;
@@ -28,7 +29,7 @@ public class AdTest : TestAppBase
 
         // create client app
         var appOptions = TestAppHelper.CreateAppOptions();
-        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        var adProvider = new TestAdProvider(accessManager, AdType.InterstitialAd);
         var adProviderItem = new AppAdProviderItem { AdProvider = adProvider, ProviderName = "UnitTestAd" };
         appOptions.AdProviderItems = [adProviderItem];
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions);
@@ -44,7 +45,7 @@ public class AdTest : TestAppBase
     [DoNotParallelize] // clears the process-global AppUiContext; parallel tests restore it
     public async Task flexible_ad_should_close_session_if_display_ad_failed()
     {
-        await using var appDom = await AppClientServerDom.Create(TestAppHelper, adProviderAdType: AppAdType.InterstitialAd);
+        await using var appDom = await AppClientServerDom.Create(TestAppHelper, adProviderAdType: AdType.InterstitialAd);
         var app = appDom.App;
         AppUiContext.Context = null;
 
@@ -237,7 +238,7 @@ public class AdTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdOptions.LoadAdPostDelay = TimeSpan.FromSeconds(60);
-        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        var adProvider = new TestAdProvider(accessManager, AdType.InterstitialAd);
         var adProviderItem = new AppAdProviderItem { AdProvider = adProvider };
         appOptions.AdProviderItems = [adProviderItem];
 
@@ -270,7 +271,7 @@ public class AdTest : TestAppBase
 
         // add provider
         var showAdCompletionSource = new TaskCompletionSource<ShowAdResult>();
-        var adProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd);
+        var adProvider = new TestAdProvider(accessManager, AdType.InterstitialAd);
         adProvider.ShowAdCompletionSource = showAdCompletionSource;
         adProvider.LoadAdCallback = () => {
             if (adProvider.LoadAdCount == 1) // fail first time to use after adapter load
@@ -325,7 +326,7 @@ public class AdTest : TestAppBase
 
         // simulate adblocker by making ad load to fail with adblocker exception and also blocking ad provider endpoint
         await using var appDom = await AppClientServerDom.Create(TestAppHelper, 
-            adProviderAdType: AppAdType.InterstitialAd, appOptions: appOptions);
+            adProviderAdType: AdType.InterstitialAd, appOptions: appOptions);
 
         var adProvider = appDom.TestAdProvider;
         var app = appDom.App;
@@ -371,7 +372,7 @@ public class AdTest : TestAppBase
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.AdOptions.PreloadAd = false;
         appOptions.AdOptions.LoadAdPostDelay = TimeSpan.Zero;
-        var testAdProvider = new TestAdProvider(accessManager, AppAdType.InterstitialAd) {
+        var testAdProvider = new TestAdProvider(accessManager, AdType.InterstitialAd) {
             FailLoad = true
         };
         appOptions.AdProviderItems = [

@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;

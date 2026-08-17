@@ -1,4 +1,5 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Services.Updaters;
@@ -32,7 +33,7 @@ public class AppState
     public required CountryInfo? ClientCountryInfo { get; init; }
     public required UiCultureInfo CurrentUiCultureInfo { get; init; }
     public required UiCultureInfo SystemUiCultureInfo { get; init; }
-    public required BillingPurchaseState? PurchaseState { get; init; }
+    public required PurchaseState? PurchaseState { get; init; }
     public required SystemBarsInfo SystemBarsInfo { get; init; }
     public required bool? IsNotificationEnabled { get; init; }
     public required PrivateDns? SystemPrivateDns { get; init; }

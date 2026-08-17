@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
+using SignInResult = VpnHood.AppLib.Abstractions.Accounts.SignInResult;
 
 namespace VpnHood.AppLib.Swagger.Controllers;
 
@@ -10,7 +11,7 @@ namespace VpnHood.AppLib.Swagger.Controllers;
 public class AccountController : ControllerBase, IAccountController
 {
     [HttpGet]
-    public Task<AppAccount?> Get(CancellationToken cancellationToken)
+    public Task<Account?> Get(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -23,7 +24,7 @@ public class AccountController : ControllerBase, IAccountController
 
 
     [HttpPost("sign-in")]
-    public Task SignIn(AppSignInOptions signInOptions, CancellationToken cancellationToken)
+    public Task<SignInResult> SignIn(SignInOptions signInOptions, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
@@ -40,9 +41,4 @@ public class AccountController : ControllerBase, IAccountController
         throw new SwaggerOnlyException();
     }
 
-    [HttpGet("subscriptions/{subscriptionId}/access-keys")]
-    public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
-    {
-        throw new SwaggerOnlyException();
-    }
 }

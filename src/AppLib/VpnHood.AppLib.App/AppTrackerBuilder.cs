@@ -1,5 +1,5 @@
 ﻿using Ga4.Trackers;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Ads;
 
 namespace VpnHood.AppLib;
 

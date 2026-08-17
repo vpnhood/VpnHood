@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-08-12*
+*Effective: 2026-08-14*
 
 **PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CONNECT** app and to the VPN servers **we operate**. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -22,9 +22,12 @@ Some data depends on **where you installed the app from**, because those builds 
 
 ### Your Client ID
 
-The app identifies itself with a **Client ID**. It is never your device's serial number, phone number, or advertising ID, and it is never sent in its raw form — what leaves your device is a one-way hash that also mixes in the app's identity, so two VpnHood apps on the same device have unrelated Client IDs and neither can be traced back to the original value.
+The app identifies itself with a **Client ID**. It is never your device's serial number, phone number, or advertising ID, and it is never sent in its raw form — what leaves your device is a one-way hash that also mixes in the app's identity, so two VpnHood apps on the same device have unrelated Client IDs, and we never receive or store the value it was built from.
 
-On most builds the underlying value is a random one created inside the app on first launch, so deleting and reinstalling the app produces a brand-new Client ID. On the Android build downloaded from our website, it is derived from the Android system identifier instead, which means it stays the same if you reinstall.
+What that underlying value is depends on your platform:
+
+- **iOS and Linux** — a random value created inside the app on first launch, so deleting and reinstalling the app produces a brand-new Client ID.
+- **Android and Windows** — derived from an identifier the operating system already provides, so it **stays the same if you reinstall the app**. On Android it changes when the device is factory reset; on Windows it follows your Windows user account.
 
 The Client ID labels the anonymous analytics below and is sent to our VPN servers for session management, quotas, and abuse prevention.
 
@@ -65,7 +68,7 @@ You can use the app without an account. Signing in is only ever needed to buy or
 - **App Store build (iOS)** — **Sign in with Apple**. We receive your **email address**, which may be a private relay address that Apple generates for you (`…@privaterelay.appleid.com`) if you choose to hide your real one; a relay address works exactly as well for us. Payments are processed by **Apple**; we never see your card details.
 - **Google Play build (Android)** — **Sign in with Google**. We receive your **email address and basic public profile information** from Google. Payments are processed by **Google Play**; we never see your card details.
 
-Either way we store that email address with your account so your subscription follows you across your devices, and you can delete it at any time — see [Delete Your Account](#delete-your-account-forget-me). The Windows and Linux builds have no sign-in and no in-app purchases.
+Either way we store that email address with your account so your subscription follows you across your devices, and you can delete it at any time — see [Delete Your Account](#delete-your-account). The Windows and Linux builds have no sign-in and no in-app purchases.
 
 ### Install attribution (website build for Android, China only)
 
@@ -79,15 +82,17 @@ When you connect, our servers record what any VPN server must see to run the ser
 - The technical information listed above
 - The amount of traffic (bytes sent and received), used for accounting and quotas
 - Your email address, if you have signed in
-- Your IP address and connection activity — the time and your client endpoint (IP address & port) — kept in server log files for **30 days**, without backups. If our hosting provider forwards a "Notice of Claimed Infringement," we use these log files to identify, notify, or suspend the offending account.
+- Your IP address and connection activity — the time and your client endpoint (IP address & port) — kept in server log files for **30 days** from the moment each entry is written, then deleted. These log files are never backed up. If our hosting provider forwards a "Notice of Claimed Infringement," we use them to trace the connection back to whoever made it, so we can notify or suspend them. Free use has no account behind it to suspend, so there the address itself is the only thing that lets us stop the abuse — which is why we keep it.
 
-**Important!** We do not record your browsing. Our servers never extract the destinations you visit — domains, URLs, or IP addresses — from your traffic, so there is nothing about them to log, store, or hand over.
+**One exception to the 30 days.** If we receive a legal preservation request, or a claim we have to defend, the records it covers stop expiring until the matter is resolved. That is the only thing that keeps an entry past its 30 days, and it applies whether or not the account behind it still exists — destroying records after being formally put on notice is not something we are permitted to do.
+
+**Important!** We do not record your browsing. Our servers never inspect your traffic for the domains or URLs you visit, so there is nothing about them to log, store, or hand over. Our server software *can* be configured to log the destination addresses your connections go to — the addresses only, never the content — and we keep that switched off. Because our code is open source, you can see both that the switch exists and exactly what it would record.
 
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 
 Connection activity stays only in server log files; it never enters our database. Our database stores the technical information associated with your Client ID, and your email address if you signed in.
 
-## Delete Your Account (Forget Me)
+## Delete Your Account
 
 If you have signed in, you can permanently delete your account at any time:
 
@@ -96,25 +101,44 @@ If you have signed in, you can permanently delete your account at any time:
 
 Deletion applies everywhere at once: you are signed out on all devices, your sign-in identity and
 email address are erased, and there is no way to restore the account — signing in again later
-creates a new, empty one. Premium ends with the account on every device, because the premium access
-your app holds belongs to the account, not to the device.
+creates a new, empty one. Premium granted by the account ends with it on every device. A premium
+code you bought is still yours — it keeps working until the period you paid for ends, and anyone
+you shared it with is unaffected — but a code the account had applied for you leaves your devices
+together with the account: enter it again, or import it into a new account, to keep using it. A
+code you typed in yourself stays on that device untouched.
+
+**Nothing blocks a deletion.** If you bought services on our website, their billing is cancelled at
+the end of the period already paid for, so no further invoice is generated and nothing you paid for
+is cut short; unpaid invoices are cancelled and your stored payment method is removed.
+
+**Before anything is erased, we send one final email to your address carrying every premium code
+you paid for** — the last message we will ever send there. The confirmation screen itself lists
+nothing; the email is the copy you can still find later. Save it: after deletion we can no longer
+look the codes up for you, and a saved code is the way back that always works, on any platform,
+years later.
 
 What deletion does **not** do:
 
-- It does not cancel a subscription. Subscriptions are billed by the store where you purchased
-  them, and only you can cancel there — before or after deleting. A subscription that is still
-  running remains yours: create a new account and use **Restore purchase** to attach it again.
-- It does not erase invoices and payment records. We are legally required to keep them for
-  accounting and tax purposes, but they are anonymized: your name and email address are replaced
-  with placeholders.
-- Residual copies of your data may remain in our server logs and backups for up to **30 days**
-  after deletion, after which they expire.
+- It does not cancel an app-store subscription. Subscriptions are billed by the store where you
+  purchased them, and only you can cancel one, in that store — before or after deleting. A
+  subscription that is still running remains yours: create a new account and use
+  **Restore purchase** to attach it again.
+- **A subscription whose payment has failed is still open.** It looks finished, but the store can
+  revive it and start charging again once the payment method works. Deleting the account does not
+  change that — cancel the subscription in the store if you do not want it back.
+- It does not erase invoices, and does not strip the name off them. We are legally required to
+  keep financial records, and a financial record has to say who bought — so invoices keep the name
+  they were issued with, frozen exactly as issued. They are kept because tax law requires it, for
+  as long as that law requires, and are used for nothing else: not for support, not for marketing,
+  only to satisfy that legal obligation.
+- **It does not erase everything the same instant.** Residual copies may remain for up to **30 days**
+  after deletion, after which they expire: connection records already written to our server log
+  files run out their own 30 days, and our database backups roll over within the same period.
+  Records held under a legal preservation request are the one exception, and are kept until the
+  matter is resolved.
 
-If you also have services purchased on our website, those form a separate billing relationship:
-deletion is refused until you cancel them in the web client area, so you are never left with a
-running payment you cannot manage. Companies that processed your data in their own right — your
-sign-in provider, the app store that billed you, and payment processors — retain their own records
-under their own published policies.
+Companies that processed your data in their own right — your sign-in provider, the app store that
+billed you, and payment processors — retain their own records under their own published policies.
 
 Separately from deletion: if we process a refund for a purchase made **on our website**, we keep an
 anonymous one-way hash of the refunded account's email address for up to **24 months**, used only to

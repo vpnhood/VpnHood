@@ -1,15 +1,15 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Services.Ads;
 
-public class InternalInAdProvider : IAppAdProvider
+public class InternalInAdProvider : IAdProvider
 {
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan => TimeSpan.FromMinutes(5);
     public string NetworkName => "InternalAd";
-    public AppAdType AdType => AppAdType.InterstitialAd;
+    public AdType AdType => AdType.InterstitialAd;
     public bool IsWaitingForAd => _showAdTask?.Task.IsCompleted is false;
 
     private TaskCompletionSource<ShowAdResult>? _showAdTask;

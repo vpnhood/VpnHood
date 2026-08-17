@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Converters;
 
@@ -12,14 +12,25 @@ public class AppFeatures
     public required bool IsExcludeAppsSupported { get; init; }
     public required bool IsIncludeAppsSupported { get; init; }
     public required string? UiName { get; init; }
-    public required bool IsPremiumFlagSupported { get; init; }
     public required bool IsAddAccessKeySupported { get; init; }
+
+    // This build's premium tier, or null when the product has none. Null is not "premium locked" —
+    // it is the FULL app: every premium-listed feature allowed, nothing sold, no crown, no page that
+    // promotes or bills, whatever routes the server's client policy offers. One nullable block
+    // rather than loose flags so a head cannot declare "no premium, but codes are fine": the code
+    // and purchase-url capabilities only exist inside a tier that gives them meaning.
+    public required AppPremiumOptions? Premium { get; init; }
     public required bool IsAccountSupported { get; init; }
     public required bool IsBillingSupported { get; init; }
-    // Sign-in method ids (see AppSignInMethods), self-declared by the app's auth provider. Strings,
-    // not an enum: third-party providers declare their own ids and the UI derives labels by
-    // convention (SIGN_IN_WITH_<UPPERCASE-ID>).
-    public required IReadOnlyList<string> SignInMethods { get; init; }
+    // Identity provider ids (see AuthProviders), self-declared by the app's auth provider — named
+    // for what they identify, because this class also stands in front of the ad, updater, culture
+    // and device-UI providers. Strings, not an enum: third-party providers declare their own ids
+    // and the UI derives labels by convention (SIGN_IN_WITH_<UPPERCASE-ID>).
+    public required IReadOnlyList<string> AuthProviderIds { get; init; }
+
+    // The human account website behind the auth provider — the password form's escape hatch
+    // ("forgot password?" opens it in the device browser). Null when no provider declares one.
+    public required Uri? AccountWebsiteUrl { get; init; }
     public required bool IsTcpProxySupported { get; init; }
     public required bool IsQuicSupported { get; init; }
     public required bool IsSplitDomainSupported { get; init; }
@@ -40,11 +51,9 @@ public class AppFeatures
     public required bool IsProxySupported { get; init; }
     public required bool AdjustForSystemBars { get; init; }
     public required bool AllowEndPointStrategy { get; init; }
-    public required bool AutoRemoveExpiredPremium { get; set; }
     public required bool IsAdSupported { get; set; }
     public required bool IsRewardedAdSupported { get; init; }
     public required int? WebUiPort { get; set; }
-    public required AppFeature[] PremiumFeatures { get; init; }
     public required IReadOnlyList<ChannelProtocol> ChannelProtocols { get; init; }
     public required object? CustomData { get; init; }
 

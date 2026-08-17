@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
@@ -20,6 +21,13 @@ public class TestAppHelper : TestHelper
     {
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
             IsSingleton = false, // tests run many concurrent apps in one process
+            // the test app stands for a CONNECT-like head no store forbids anything to; store-build
+            // restrictions and the premium-less CLIENT shape are exercised by the tests that
+            // reassign this block (or null it) explicitly
+            Premium = new AppPremiumOptions {
+                IsCodeSupported = true,
+                IsPurchaseUrlSupported = true
+            },
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
             SessionTimeout = TimeSpan.FromSeconds(2),
             DeviceUiProvider = new TestDeviceUiProvider(),

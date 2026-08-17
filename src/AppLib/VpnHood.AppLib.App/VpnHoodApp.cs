@@ -6,7 +6,10 @@ using System.Text;
 using System.Text.Json;
 using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
+using TaskExtensions = VpnHood.Core.Toolkit.Extensions.TaskExtensions;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Ads;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
@@ -38,7 +41,6 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Trackers;
 using VpnHood.Core.Toolkit.Utils;
-using TaskExtensions = VpnHood.Core.Toolkit.Extensions.TaskExtensions;
 
 namespace VpnHood.AppLib;
 
@@ -183,14 +185,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UserAgent = null //not set yet
         });
 
+        var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
+
         // initialize features
         Features = new AppFeatures {
             Version = appVersion,
             IsExcludeAppsSupported = _device.IsExcludeAppsSupported,
             IsIncludeAppsSupported = _device.IsIncludeAppsSupported,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
-            IsPremiumFlagSupported = !options.IsAddAccessKeySupported,
-            AutoRemoveExpiredPremium = options.AutoRemoveExpiredPremium,
+            Premium = options.Premium,
             AllowEndPointStrategy = options.AllowEndPointStrategy,
             IsTv = device.IsTv,
             OsType = GetOsType(),
@@ -198,7 +201,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             UiName = options.UiName,
             IsAccountSupported = options.AccountProvider != null,
             IsBillingSupported = options.AccountProvider?.Billing != null,
-            SignInMethods = options.AccountProvider?.AuthenticationProvider.SignInMethods ?? [],
+            AuthProviderIds = options.AccountProvider?.AuthenticationProvider.ProviderIds ?? [],
+            AccountWebsiteUrl = options.AccountProvider?.AuthenticationProvider.AccountWebsiteUrl,
             IsTcpProxySupported = device.IsTcpProxySupported,
             IsQuicSupported = device.IsQuicSupported,
             IsSplitDomainSupported = device.IsTcpProxySupported, // it needs TcpProxy
@@ -212,9 +216,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             DebugCommands = DebugCommands.All,
             IsDebugMode = options.IsDebugMode,
             CustomData = options.CustomData,
-            PremiumFeatures = options.PremiumFeatures,
             IsAdSupported = options.AdProviderItems.Any(),
-            IsRewardedAdSupported = options.AdProviderItems.Any(x => x.AdProvider.AdType == AppAdType.RewardedAd),
+            IsRewardedAdSupported = options.AdProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd),
             IsProxySupported = true,
             ChannelProtocols = [.. protocols]
         };
@@ -244,9 +247,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // set first built in profile as default if default is not set
         UserSettings.ClientProfileId ??= builtInProfileIds.FirstOrDefault()?.ClientProfileId;
 
-        // set the default server location if not set
-        var deviceUiProvider = options.DeviceUiProvider ?? new NullDeviceUiProvider();
-
         // initialize client manager
         _vpnServiceManager = new VpnServiceManager(device, options.EventWatcherInterval);
         _vpnServiceManager.StateChanged += VpnService_StateChanged;
@@ -264,7 +264,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 splitCountryService, splitIpViaAppService, splitDomainService),
             AccountService = options.AccountProvider is null
                 ? null
-                : new AppAccountService(
+                : new AccountService(
                     settingsService: settingsService,
                     accountProvider: options.AccountProvider,
                     clientProfileService: ClientProfileService,
@@ -1015,13 +1015,14 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 break;
 
             // remove the access code if it is rejected
-            case SessionErrorCode.AccessCodeRejected when Features.AutoRemoveExpiredPremium:
+            case SessionErrorCode.AccessCodeRejected when Features.Premium?.AutoRemoveExpiredAccessCode == true:
                 VhLogger.Instance.LogWarning("Access code rejected. Removing premium...");
                 RemovePremium(profileInfo.ClientProfileId);
                 break;
 
             // remove the client profile if access expired
-            case SessionErrorCode.AccessExpired when Features.AutoRemoveExpiredPremium && profileInfo.IsAccessCodeFromAccount:
+            case SessionErrorCode.AccessExpired when Features.Premium?.AutoRemoveExpiredAccessCode == true &&
+                                                    profileInfo.IsAccessCodeFromAccount:
                 VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
                 RemovePremium(profileInfo.ClientProfileId);
                 break;
@@ -1290,13 +1291,25 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         var profileInfo = ClientProfileService.GetInfo(clientProfileId);
         var clientPolicy = profileInfo.ClientPolicy;
-        var purchaseUrlMode = clientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore;
-        var purchaseUrl = clientPolicy?.PurchaseUrl;
+        var premium = Features.Premium;
 
-        // get subscription plans from the store
-        var storeInfo = purchaseUrlMode != PurchaseUrlMode.HideStore && Services.AccountService?.BillingService != null
+        // A build the stores forbid an outside shop to never sees one: the URL and its mode are
+        // dropped here, at the single place both are read, so the SPA keeps asking only "is there a
+        // purchase url?" and never has to know which store it is running in. Dropping the mode with
+        // it matters — HideStore would otherwise leave the page empty, hiding the store on behalf of
+        // a link that will not be shown.
+        var isPurchaseUrlSupported = premium?.IsPurchaseUrlSupported == true;
+        var purchaseUrl = isPurchaseUrlSupported ? clientPolicy?.PurchaseUrl : null;
+        var purchaseUrlMode = isPurchaseUrlSupported
+            ? clientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore
+            : PurchaseUrlMode.WhenNoStore;
+
+        // get subscription plans from the store — never asked in a build with no premium tier:
+        // there is nothing such a build could sell, so no store error may surface either
+        var storeInfo = premium != null && purchaseUrlMode != PurchaseUrlMode.HideStore &&
+                        Services.AccountService?.BillingService != null
             ? await Services.AccountService.BillingService.GetStoreInfo(cancellationToken)
-            : AppStoreInfo.Empty;
+            : StoreInfo.Empty;
 
         // calculate purchase url
         var externalUrl = purchaseUrlMode switch {
@@ -1307,12 +1320,13 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         };
 
         var purchaseOptions = new AppPurchaseOptions {
-            StoreName = storeInfo.StoreName,
             IsStoreAvailable = storeInfo.IsAvailable,
             SubscriptionPlans = storeInfo.SubscriptionPlans,
             StoreError = storeInfo.StoreError,
             PurchaseUrl = externalUrl,
-            CanGoPremiumByCode = clientPolicy?.PremiumByCode == true
+            // the remote policy offers it; the BUILD must also be allowed to take a typed code at
+            // all (lifecycle §9 — a per-build capability, false on the App Store build)
+            CanGoPremiumByCode = clientPolicy?.PremiumByCode == true && premium?.IsCodeSupported == true
         };
 
         return purchaseOptions;
@@ -1358,8 +1372,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public bool IsPremiumFeatureAllowed(AppFeature feature)
     {
-        // not a premium feature
-        if (!Features.PremiumFeatures.Contains(feature))
+        // a build with no premium tier IS the full app: every feature is everyone's
+        if (Features.Premium == null)
+            return true;
+
+        // not a feature this tier sells
+        if (!Features.Premium.Features.Contains(feature))
             return true;
 
         // check if the current profile is premium

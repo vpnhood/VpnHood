@@ -1,17 +1,25 @@
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
 
-internal class TestBillingProvider : IAppBillingProvider
+internal class TestBillingProvider : IBillingProvider
 {
     public Exception? PurchaseException { get; set; }
     public Exception? SubscriptionPlanException { get; set; }
-    public AppPurchaseResult? RestoreResult { get; set; }
+    public PurchaseProof? RestoreResult { get; set; }
     public PurchaseParams? LastPurchaseParams { get; private set; }
+    public PurchaseAttribution? LastAttribution { get; private set; }
 
-    public string ProviderName => "Test";
-    public Uri? SubscriptionManagementUrl => new("https://test.local/subscriptions");
+    public string ProviderId { get; set; } = StoreIds.GooglePlay;
+    public bool IsSubscriptionManagementSupported { get; set; } = true;
+    public bool WasSubscriptionManagementOpened { get; private set; }
+
+    public Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        WasSubscriptionManagementOpened = true;
+        return Task.CompletedTask;
+    }
 
     /// <summary>The product ids the catalog asked to be priced, as the store received them.</summary>
     public IReadOnlyList<string>? LastRequestedProductIds { get; private set; }
@@ -36,26 +44,24 @@ internal class TestBillingProvider : IAppBillingProvider
         ];
     }
 
-    public async Task<AppPurchaseResult> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
-        CancellationToken cancellationToken)
+    public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+        PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
         LastPurchaseParams = purchaseParams;
+        LastAttribution = attribution;
         if (PurchaseException != null)
             throw PurchaseException;
 
         await Task.CompletedTask;
-        return new AppPurchaseResult {
-            ProviderOrderId = Guid.NewGuid().ToString(),
-            PurchaseData = "test_purchase_data"
-        };
+        return new PurchaseProof { Value = "test_purchase_data" };
     }
 
-    public Task<AppPurchaseResult?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
     {
         return Task.FromResult(RestoreResult);
     }
 
-    public BillingPurchaseState PurchaseState => BillingPurchaseState.None;
+    public PurchaseState PurchaseState => PurchaseState.None;
 
     public void Dispose()
     {

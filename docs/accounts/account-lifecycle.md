@@ -1,6 +1,6 @@
 # Account lifecycle — business flow
 
-*Last reviewed: 2026-08-13*
+*Last reviewed: 2026-08-14*
 
 The life of a VpnHood! account in business terms: when one comes into existence, what it holds while
 it lives, what happens when someone deletes it, and how a paying customer gets back what they bought.
@@ -8,13 +8,6 @@ No implementation detail — this is the behaviour a support agent, a store revi
 to be able to predict, and the reference the in-app wording and the privacy policy must agree with.
 
 Applies to **VpnHood! CONNECT**, the only app with sign-in today.
-
-> **Two kinds of content, and one of them is temporary.** The numbered sections describe the
-> business and are permanent. Anything describing *what the software does today* is scaffolding for
-> the build and is **deleted once the work is done** — it is confined to **§12** and to the
-> indented notes that begin **Decided**, followed by a date, so it can be removed in one pass
-> without touching a line of the business rules. A merchant reading this after that point should
-> find no mention of implementation at all.
 
 ## Contents
 
@@ -26,17 +19,19 @@ Applies to **VpnHood! CONNECT**, the only app with sign-in today.
 6. [What deletion does not do](#6-what-deletion-does-not-do)
 7. [Coming back afterwards](#7-coming-back-afterwards)
 8. [Situations and answers](#8-situations-and-answers)
-9. [Where a person can do it](#9-where-a-person-can-do-it)
+9. [Where a person can do it, and what each store allows](#9-where-a-person-can-do-it-and-what-each-store-allows)
 10. [What we promise before they confirm](#10-what-we-promise-before-they-confirm)
 11. [Open questions](#11-open-questions)
-12. [Decided, but not built yet](#12-decided-but-not-built-yet)
-13. [Where the wording lives](#13-where-the-wording-lives)
+12. [Where the wording lives](#12-where-the-wording-lives)
 
 Section 8 answers these, in order:
 
 - They already have a subscription and try to buy again
 - They order a second subscription on our website
+- They bought in bulk, to resell
 - They bought on our website, then sign in to the app
+- They sign in with a different address than they bought with
+- They cannot reach us at all, because we are blocked where they are
 - Their subscription came from a different store than the app
 - They want to delete, and their subscription came from a different store
 - They want to delete, and they bought on our website
@@ -52,15 +47,18 @@ Section 8 answers these, in order:
 | Question | Answer | Where |
 |---|---|---|
 | Who has an account? | Only someone who signed in — and the only reason to sign in is to buy | §3 |
-| Website buyer signs in — premium? | **Not today** (they must paste the code). Decided: yes, automatically | §8 |
-| Which key, if they own several? | The first one they bought; later purchases never steal that slot; several unclaimed → ask, never guess | §8 |
-| Two subscriptions? | Any number on the website (for sharing); never more than one from a store | §8 |
-| Is a key safe to hand out? | Yes — it carries its own device limit, whoever holds it | §2 |
+| Website buyer signs in — premium? | Yes — on the code marked as theirs, automatically | §8 |
+| Which code, if they own several? | The device's own store's subscription first; among codes, we pick and never ask — the chosen one holds the slot until it dies, then the next usable takes over | §8 |
+| Can they change it in the app? | No list, no picker, ever. They type the code they want — and where a build cannot take one, they name it in the client area instead | §8, §9 |
+| Two subscriptions? | Any number of codes from the portal store (for sharing); one subscription per store — and one at each store can coexist: prevented up front, accepted and surfaced if it happens | §8 |
+| Do we ever refuse a purchase? | Never after the money moved. Prevention happens before the store's payment sheet; whatever arrives paid is provisioned | §8 |
+| Is a code safe to hand out? | Yes — it carries its own device limit, whoever holds it | §2 |
 | What does deletion erase? | The person, on every device. Premium granted by the account dies with it | §5 |
-| What does deletion keep? | Their store subscription, their website keys, and invoices frozen with the buyer's name | §6 |
-| What blocks deletion? | **Nothing.** Billing is cancelled at end of period instead (today it still refuses — being changed) | §8 |
-| Coming back? | A new, empty account — plus the code they saved on the way out, or the store asked at sign-in | §7 |
-| Does a refund end a key? | Only if we end it. Revoking is the default; keeping it is a choice | §8 |
+| What does deletion keep? | Their store subscription, the codes they bought on the website, and invoices frozen with the buyer's name | §6 |
+| What blocks deletion? | **Nothing.** Billing is cancelled at the end of its paid period instead | §8 |
+| Coming back? | A new, empty account — the store is asked at sign-in and gives the subscription back by itself; the code we emailed on the way out still works | §7 |
+| Blocked where they are, so they cannot sign in? | Connect first on the free or trial path, then sign in through the tunnel. The code then works to its expiry with no further contact | §8 |
+| Does a refund end a code? | Only if we end it. Revoking is the default; keeping it is a choice | §8 |
 
 ---
 
@@ -81,33 +79,71 @@ always comes from.
 | | What it is | Who owns it | Survives deletion? |
 |---|---|---|---|
 | **The person** | The account: the sign-in identity and the email address behind it | Us | **No** — erased |
-| **The subscription** | Proof that money was paid, and the promise to keep charging | The store (or our website) | **Yes** — we cannot cancel it |
-| **The premium code** | The credential that actually opens premium on a device | Us | **Yes**, on our servers — but it stops working on every device |
+| **The subscription** | Proof that money was paid, and the promise to keep charging | The store that sold it — our website is one of the stores (below) | **Yes** at an outside store — that store's account is not ours to touch, and signing in gets it back. At the portal store, the account being deleted *is* the store account, so its billing is cancelled at period end |
+| **The access code** | What we actually sell, and what opens premium on a device: a short, typable string carrying its own expiry and device limit | Us | **Yes**, on our servers — but it belongs to nobody, and stops working on every device |
 
-The premium code is deliberately **not** personal data: it is a random string that opens a gate. It
+### Our website is a store — the portal store
+
+Every subscription is born at a store, is managed and cancelled at that store, and lives exactly as
+long as the buyer's account **at that store**. Our website is one of those stores — the **portal
+store** — and every build of the app has a **home store**: the store that distributes it, or the
+portal store for the builds we distribute ourselves.
+
+The portal store differs from the app stores in two capabilities, both deliberate (§8): it sells
+**bearer codes in any quantity** — gifts, family, bulk — where an app store sells only a
+subscription on one store account; and it is the one store **we operate**, so it is the only place
+where a refund is our decision and where deletion can stop the billing itself.
+
+And one identity carries most of §5 and §6: **the portal store's account is the VpnHood account
+itself.** An Apple or Google identity merely attaches to our account; the portal credentials *are*
+it. That is why deleting the account cancels portal-store billing and touches nothing at any other
+store — it is one event seen from two sides: deleting your account at a store ends that store's
+subscriptions. Theirs when they delete their store account; ours when they delete ours.
+
+### What we call it: the access code
+
+**We sell access codes.** That is the unit a customer buys, holds, saves, types and gives away, and
+it is the word used everywhere below — shortened to **code** in ordinary sentences.
+
+Nothing here is called a "key" on its own. That word is already taken in this product by the
+**access key** — the long string carrying server addresses that lets a client connect at all, which
+is never sold and never personal, and which this document never means.
+
+The app says **premium code** where it speaks to a customer, and that is the same thing under a
+friendlier name — used below wherever the sentence is one a person actually reads.
+
+Whatever a code resolves to inside our servers is implementation. No customer and no merchant ever
+sees it, nothing is priced or sold in those terms, and not one answer below would change if it were
+built differently tomorrow. **The code is the product.**
+
+The access code is deliberately **not** personal data: it is a random string that opens a gate. It
 carries no name, no email, nothing about who holds it. That is why we can keep it after erasing the
 person — and why keeping it is not a privacy compromise.
 
-### Why the code can be handed around safely
+### Why a code can be handed around safely
 
-A premium code **carries its own device limit**, and that limit is enforced wherever the code is
-used, no matter which account — or how many accounts — hold it. Ten people with the same code still
-get the number of devices that code was sold for.
+A code **carries its own device limit**, and that limit is enforced wherever the code is used, no
+matter which account — or how many accounts — hold it. Ten people with the same code still get the
+number of devices that code was sold for.
 
-This is the quiet foundation under most of the answers below. It is why we can show a code to
+That is worth being exact about, because the intuitive reading is the dangerous one: a code is not a
+container of entitlement that copying multiplies. Every copy lands on the same allowance, so
+**copying it creates nothing.**
+
+This is the quiet foundation under most of the answers below. It is why we can mail a code to
 someone whose account is being erased, why a code can be pasted into a fresh install, and why nobody
 gains anything by holding the same code twice. **Sharing a code was never the risk.**
 
 **Who enforces it, and why nothing in this document decides it.** The limit is applied by the access
 manager at connection time, under its own policy — how many may connect at once, and how a device is
 counted. A device is recognised by a random identifier the app generates per installation, sent in a
-form only a server holding that code can read: no account, no name, nothing that identifies a
-person. The same device reconnecting does not consume a second place.
+form only a server that can resolve the code is able to read: no account, no name, nothing that
+identifies a person. The same device reconnecting does not consume a second place.
 
 That policy is deliberately **not** settled here. It belongs to the access manager, it can change
 without changing anything about accounts or purchases, and the app cannot see the count in any case.
-What this document depends on is only the guarantee above — that a code cannot be stretched by
-spreading it around — not the particular number or the way it is counted.
+What this document depends on is only the guarantee above — that a token cannot be stretched by
+spreading its code around — not the particular number or the way it is counted.
 
 The risk it does *not* cover is **minting** — one purchase producing two *different* codes, which
 would double the device limit. Hence the rule that matters:
@@ -117,8 +153,8 @@ would double the device limit. Hence the rule that matters:
 
 Two other things the device limit does not do, so they are handled separately:
 
-- **It does not limit time.** Every code must carry an expiry, and it stops when the paid period
-  ends. Nothing may ever be issued without one.
+- **It does not limit time.** Every code must carry an expiry, and it stops working when the paid
+  period ends. Nothing may ever be issued without one.
 - **It does not react to a refund.** A refund does not expire a code by itself — see §8.
 
 The subscription is the one thing we do not control. Whoever took the money owns the renewal.
@@ -142,21 +178,22 @@ device joins the same account.
 2. They buy through the store on their device. The store takes the money.
 3. We check the purchase with that store, and record that this account now holds a subscription.
 4. We attach a premium code to the account and the app starts using it.
-5. Every device signed in to that account picks up the same premium code, so premium follows the
-   person, not the device.
+5. Premium follows the person, not the device: every device signed in to the account is served —
+   by its own store's subscription where the account holds one, otherwise by the account's code
+   (§8).
 
 Renewals are the store's business. It tells us the subscription renewed; nothing on the device has
 to happen.
 
-### When a key starts counting down
+### When a code starts counting down
 
 Two different answers, and the difference is what was sold:
 
-- **A prepaid one-time key starts on first use.** Nothing is set when it is bought, so a key bought
-  in January and given away in June runs its full term from June. This is what makes a key a
+- **A prepaid one-time code starts on first use.** No expiry is set when it is bought, so one bought
+  in January and given away in June runs its full term from June. This is what makes a code a
   sensible gift.
 - **Anything billed on a cycle expires with the cycle.** A subscription is paid for a calendar
-  window — the store charged for March — so the key runs to the end of that window and is pushed
+  window — the store charged for March — so the code runs to the end of that window and is pushed
   forward each time it renews. It cannot start on first use: a cancelled subscription would then
   keep working past what was paid for, and anyone could park a subscription unused and stretch it
   indefinitely.
@@ -171,19 +208,19 @@ Both do the same thing — there is only one account.
 Before anything is erased, we tell them what it means (§10). Then, in this order:
 
 1. **Stop the money first.** Every service bought on our website is cancelled at the end of its paid
-   period, so no renewal invoice is ever generated and the key keeps working until the time they
+   period, so no renewal invoice is ever generated and the code keeps working until the time they
    bought runs out. Unpaid invoices are cancelled; paid ones are kept, and the stored payment method
    is dropped. Nothing here refuses the deletion — see §8.
-2. **Show them every key they paid for, one last time** — the keys from website purchases *and* the
-   code behind a store subscription — with a plain warning: *these keep working; save them now,
-   because after this we cannot show them to you again.* This is the last moment the link between
-   the person and their keys exists. See below for why this is safe, and §7 for what it buys them.
-3. **Send one final message to their address, before it is erased.** It carries the same keys and
-   the same warning about any subscription still running. The confirmation screen is seen once and
-   dismissed; an inbox is searchable a year later, which is when they will actually want the key.
-   This is the last legitimate use of that address — confirming an action they just asked for — and
-   it is not a new exposure, because a key bought on our website was delivered by mail in the first
-   place.
+2. **Warn them, without listing anything.** One serious sentence: *any premium code linked to this
+   account will be gone, and we will not be able to find it for you again.* No list of codes, no
+   count, no expiry dates — see below for why the screen deliberately shows nothing.
+3. **Send one final message to their address, before it is erased.** This is where the codes
+   actually go: every one they paid for — from website purchases *and* the code behind a store
+   subscription — with the same warning, plus a note about any subscription still running. The
+   confirmation screen is seen once and dismissed; an inbox is searchable a year later, which is
+   when they will actually want the code. This is the last legitimate use of that address —
+   confirming an action they just asked for — and it is not a new exposure, because a code bought on
+   our website was delivered by mail in the first place.
 4. **Erase the person.** Sign-in sessions on every device, the sign-in identity, the email address,
    the account itself.
 5. **Cut the account free from its premium code.** The code is kept on our side, but it now belongs
@@ -196,15 +233,23 @@ Before anything is erased, we tell them what it means (§10). Then, in this orde
    — so the anonymisation can be re-applied after a backup restore, and so a stray charge can still
    be traced to an agreement someone can cancel.
 
-**Why showing the codes is safe.** A code carries its own device limit (§2), so handing it back gives
-away nothing beyond what was already bought, and it still expires when the paid period ends. It is
-also the only thing that survives the erasure *usefully*: everything else we could keep to help them
-later would be a record of a person we just promised to forget.
+**Why the mail may carry the codes.** A code carries its own device limit (§2), so handing it back
+gives away nothing beyond what was already bought, and it still expires when the paid period ends.
+It is also the only thing that survives the erasure *usefully*: everything else we could keep to
+help them later would be a record of a person we just promised to forget.
+
+**Why the screen shows none of them.** Three reasons, all pointing the same way. A list on a screen
+is read once under pressure and then lost, while an inbox is searchable years later — so the screen
+is not the copy that would save anyone. Listing codes means the app must ask what the account holds,
+which drags the whole inventory question into a client that has no other use for it (§8). And on a
+platform where an app may not unlock anything with a code (§9), a screen full of codes is the one
+surface a reviewer will read as exactly that. **The screen warns; the mail delivers.** The warning
+must therefore be strong enough to stand alone, and it must not promise a recovery we cannot make.
 
 ### Why invoices keep the buyer's name
 
-> **Decided 2026-08-13 — reversing an earlier choice.** Invoices used to come out anonymous. They
-> now keep the name they were issued with, and only the *person* is erased.
+Invoices once came out anonymous. That choice was reversed: they keep the name they were issued
+with, and only the *person* is erased.
 
 Erasing someone was never supposed to reach financial records: the right to be forgotten does not
 override data we are legally obliged to retain, and tax retention is exactly that obligation. So
@@ -237,8 +282,8 @@ defending a chargeback.
 
 #### What we say, and why it names no number
 
-> **Decided 2026-08-13.** The wording is: *invoices are kept because tax law requires it, for as
-> long as that law requires, and are used for nothing else.*
+The wording is: *invoices are kept because tax law requires it, for as long as that law requires,
+and are used for nothing else.*
 
 Data-protection law asks for the retention period **or the criteria used to determine it** — the
 criteria are a permitted alternative, not a weaker substitute. Pointing at a specific legal
@@ -262,14 +307,36 @@ deletion of an invoice**: the day the number would matter is the day we start de
 not something we are building. Automatic destruction of financial records is the very thing the
 inalterability rules exist to prevent.
 
-**One ordering rule remains.** The privacy policy and the public deletion page currently promise
-anonymisation, in thirteen languages. They are corrected **before** the behaviour changes, never
-after — a window in which we keep data our own published policy says we destroyed is worse than
-either choice on its own.
-
 Billing is stopped first and identity erased last, on purpose: a half-finished deletion must never
 leave a live charge behind an account that no longer exists. If any step cannot be completed, the
 whole thing aborts with a message rather than half-deleting.
+
+### The one thing a deletion may not do: break a legal hold
+
+Our servers keep connection records — the time and the client endpoint — for 30 days, counted from
+when each entry is written. They are not part of the account, they are not in the database, and
+deletion does not reach into them: they simply run out their own 30 days and expire, which is what
+the privacy policy discloses.
+
+**A preservation request suspends that expiry.** If an authority formally asks us to preserve
+records, or a claim arrives that we have to defend, everything it covers stops expiring until the
+matter is resolved. The person is still erased on schedule — the hold protects log entries, never
+identity — but those entries are not destroyed while it is open.
+
+This is the single rule in this document that outranks a retention promise, and it is written down
+because the instinct runs the other way. **Destroying records after being put on notice is worse
+than keeping them**: routine expiry on a published schedule is a policy, the same deletion once a
+request has landed is spoliation, and a court treats the two very differently. A deletion feature
+that quietly kept working through a hold would turn our best privacy behaviour into our worst legal
+exposure.
+
+Two consequences worth stating plainly:
+
+- **Expiry has to be suspendable per record**, not only globally. A hold that can only be honoured
+  by stopping every rotation everywhere is one nobody will use.
+- **The hold outlives the account.** It is the one thing that may still exist after step 4 has
+  erased the person, and the only reason it is not a contradiction is that a held log entry no
+  longer resolves to anyone — the identity that would have made it personal is already gone.
 
 ### On the devices
 
@@ -286,9 +353,8 @@ simply never finds out; it holds a credential our servers no longer associate wi
 **That is not a leak, for two reasons.** A code does nothing while it sits on a device — it only has
 an effect at the moment of connecting, and connecting *is* the check. So there is no window in which
 holding a stale code is worth anything: the moment it is used, the server decides. And a device that
-does keep working is in exactly the position of someone who saved their key and entered it again,
-which is what we now deliberately offer everyone on the way out (step 2 above). What would once have
-looked like a gap is the behaviour we chose.
+does keep working is in exactly the position of someone who kept the code we mailed them (step 3
+above) and used it again. What would once have looked like a gap is the behaviour we chose.
 
 **So one rule carries all of this, and it is the one in §2: nothing may ever be issued without an
 expiry.** Every other protection here is a convenience. That one is not, and it is why it is written
@@ -300,19 +366,26 @@ connect.
 
 ## 6. What deletion does **not** do
 
-- **It does not cancel a subscription by itself.** Unless they ask us to and we are able to, the
-  store keeps charging until they cancel it there. We say this before they confirm — see §8 for
-  where we can offer to do it for them and where we cannot.
+- **It does not touch a subscription at any outside store.** That store's account still exists, so
+  the store keeps charging until the person cancels it there, and we deliberately do not try to
+  stop it for them — see §8. We say this before they confirm. Portal-store billing is the same rule
+  seen from the other side: the account being deleted *is* that store's account (§2), so its
+  billing is always cancelled — not a choice either.
 - **It does not refund anything.** Refunds are the store's decision for store purchases, and ours
   only for website purchases.
 - **It does not erase invoices, and does not strip the name off them.** We are legally required to
   keep financial records, and a financial record has to say who bought. They are frozen as issued and
   locked out of ordinary use — see §5. This is disclosed, with the retention period, before anyone
   confirms a deletion.
-- **It does not take back the keys they paid for.** They were shown them on the way out (§5), and
-  those keys run to the end of the period they were bought for.
-- **It does not reach into backups instantly.** Residual copies may remain for up to **30 days**,
-  after which they expire.
+- **It does not take back the codes they paid for.** They were mailed them on the way out (§5), and
+  those codes run to the end of the period they were bought for. (They do leave the person's own
+  signed-in devices with the account — re-entering the mailed code is what brings one back; §8.)
+- **It does not erase everything the same instant.** Connection records already written to our
+  server log files run out their own 30 days, and database backups roll over within the same
+  period. After that they expire.
+- **It does not break a legal hold.** Records covered by a preservation request or a live claim
+  stop expiring until the matter is resolved — the one thing that outlives an erasure, and the one
+  retention rule that outranks every other in this document. See §5.
 - **It does not erase what other companies hold in their own right** — the sign-in provider, the
   store that billed, the payment processor. They keep their own records under their own policies.
 
@@ -321,94 +394,124 @@ connect.
 Signing in again creates a **brand-new, empty account**. The old one is not restored, and we keep no
 way to recognise the returning person — that is deliberate.
 
-What they paid for is still theirs, and there are **two ways back to it**. Neither requires us to
-remember who they were.
+What they paid for is still theirs, and there are **three ways back to it**. None of them requires us
+to remember who they were, and the first two need nothing from the person but signing in.
 
-### The code they saved — the main route
+### Asking the store — the main route
 
-If they kept the code we showed them at deletion (§5, step 2), they simply **paste it in**. Nothing
-else is needed: no account, no store, no network round-trip to prove anything. The app files it as
-their own code, exactly as it treats a code from a gift or a promotion, and the device limit that
-came with it still applies.
+Anyone who bought in a store gets it back by signing in, and does nothing else. The app proves the
+purchase to the store, and we match that proof back to the code. **The same code comes back, not a
+new one** (§2) — otherwise every delete-and-return would mint a fresh service.
 
-This works on a phone that has never seen their account, on a platform they did not buy from, and
-years later. It is the reason step 2 of §5 exists — a person who saves their code can never be
-locked out by anything we do afterwards.
+It happens **as part of signing in**, quietly, with nothing to tap: right after the session is
+established the app asks the store what this store account owns and presents anything we do not
+already know. A **visible restore control stays** alongside it — Apple expects to find one, and it
+is the way out when the store account signed in on the device is not the one that bought.
 
-### Asking the store — the convenience route
+Four conditions make it safe to put in the sign-in path:
 
-For everyone who did not save it, the app can prove the purchase to the store instead, and we match
-that proof back to the code. **The same code comes back, not a new one** (§2) — otherwise every
-delete-and-return would mint a fresh service.
-
-> **Decided 2026-08-13 — how this should behave.** It happens **as part of signing in**, quietly,
-> with nothing to tap: right after the session is established the app asks the store what this store
-> account owns and presents anything we do not already know. A **visible restore control stays**
-> alongside it — Apple expects to find one, and it is the way out when the store account signed in
-> on the device is not the one that bought.
->
-> Four conditions make it safe to put in the sign-in path:
->
-> 1. It must be the **silent** kind of store query, the one that reads what the device already
->    knows. The older kind asks for the store password, and that must never happen on every sign-in.
-> 2. Presenting a purchase we already know is a **no-op**, never a second purchase.
-> 3. A failed store query **never fails the sign-in**. Offline just means not premium yet, and the
->    visible control is the retry.
-> 4. Sign-in **never waits** for it. It completes, and premium appears when the answer arrives.
+1. It must be the **silent** kind of store query, the one that reads what the device already
+   knows. The older kind asks for the store password, and that must never happen on every sign-in.
+2. Presenting a purchase we already know is a **no-op**, never a second purchase.
+3. A failed store query **never fails the sign-in**. Offline just means not premium yet, and the
+   visible control is the retry.
+4. Sign-in **never waits** for it. It completes, and premium appears when the answer arrives.
 
 **No ownership fight is possible**, and this is worth stating plainly for anyone reviewing the
 design: because the device limit rides on the code (§2), a code being reachable from more than one
 account grants nobody an extra device. There is nothing to take away from a previous holder, and no
 rule is needed about who wins.
 
+### Signing in to the website account — the route for a website buyer
+
+Asking the store only works for someone who bought in a store. A website buyer has no store purchase
+to prove, so they sign in **as their website account**, with the same credentials they bought with,
+and the code attached to that account is applied for them (§8).
+
+This is offered on **every platform**, not only where a code can be typed, and it is what makes the
+website channel work on a platform that forbids codes entirely (§9). It also removes a whole class
+of problem rather than working around it: the mismatch between "the address I bought with" and "the
+identity I signed in with" cannot occur when they are the same account by construction. Nothing to
+claim, nothing to attach, no support ticket.
+
+Two limits, both deliberate:
+
+- **Sign-in only.** No account creation and no pricing inside the app. Account-based access to
+  something already bought is expected; a signup or checkout path pointing away from the store is
+  not, outside the storefronts that now permit it (§9).
+- **It does not help someone who was given a code.** A gift recipient has no website account. Their
+  route is the third one below, or — where that does not exist — importing the code into an account
+  of their own in the client area first (§8). Importing consumes nothing: the friend who gave them
+  the code is unaffected, and so is anyone else already using it.
+
+### The code they kept — the route that needs no account at all
+
+If they kept the code we mailed at deletion (§5, step 3), or were handed one by a friend, they
+**paste it in**. Nothing else is needed: no account, no store, no network round-trip to prove
+anything. The app files it as their own code, exactly as it treats a code from a gift or a
+promotion, and the device limit that came with it still applies. The backend is told nothing —
+pasting is local, and it does not import the code into the account or move which code the account
+is served by (§8). Making it the account's code, so their *other* devices get it too, is the
+separate deliberate act on the client-area page.
+
+This works on a phone that has never seen their account, on a platform they did not buy from, and
+years later. It is the reason step 3 of §5 exists — a person who keeps their code can never be
+locked out by anything we do afterwards.
+
+**It is not available in every build.** Typing a code is a capability a build either has or does
+not, and on at least one platform it may not (§9). Where it is missing, the two routes above carry
+everything, and a bearer code reaches its holder through the website instead.
+
 ## 8. Situations and answers
 
 ### They already have a subscription and try to buy again — including from a different store
 
-**We refuse the purchase.** The subscription belongs to the account, not to the platform, so an
-account that already holds one cannot buy a second. The app says they already have an active
-subscription and sends them to their account page.
+**We prevent it before the money moves — and we never refuse it after.** A purchase that reaches us
+paid for is accepted, whatever else the account holds.
 
-This is what stops someone paying twice by subscribing on a phone and then again on a tablet from a
-different store.
+This is a reversal of an earlier design, in which the server refused the purchase after the fact
+and relied on the store to refund it. That refusal was safe on exactly one store: Google Play
+automatically refunds a purchase that is never acknowledged as delivered. Apple has no such
+mechanism — no acknowledgement deadline, no automatic refund, and no way for us to cancel or refund
+a subscription from our side. There, a refusal is us keeping someone's money and delivering
+nothing. A rule that can only be enforced by holding money that is not ours is not a rule we can
+have — so prevention carries the whole weight, and acceptance covers what prevention misses.
 
-#### It must be refused twice, in two different places
+#### Prevention, in both places it can exist
 
-Not offering it is **prevention**; refusing it is **enforcement**. They are not the same job and
-neither one covers for the other:
+| Layer | What it does |
+|---|---|
+| **The app** | Checkout never opens for an account that is already served. Signing in comes first, the server is asked what the account holds, and someone already premium sees that instead of a price. Prevention must finish **before the store's payment sheet appears**, because after it there is no undo |
+| **The portal store** | The checkout warning (below, *a second subscription*): someone already holding something active is told what they hold before they pay. It warns and never blocks — the portal sells codes in any number on purpose |
 
-| Layer | What it does | Why it is not enough alone |
-|---|---|---|
-| **The app** | Never shows checkout to someone who is already premium | An old build, an interrupted flow or a race gets past it — and it can only see what *this* device knows |
-| **Our server** | Refuses to turn the purchase into service | It is the last word, so it must be able to answer the question for the whole account, not one channel |
+The server is the single authority in both: *already served* is a question about the whole account,
+and only the server can answer it. The app never decides from what one device knows.
 
-> **Decided 2026-08-13 — the server refuses a store purchase when the account already holds a live
-> subscription from *either* channel: a store purchase, or a service bought on our website.** Today
-> it only counts store purchases, so a website customer can be sold a store subscription on top of
-> the one they already pay for.
+#### Acceptance, when a purchase arrives anyway
 
-**Refuse before provisioning, never after.** The order matters and is already right: the refusal
-happens before the purchase is finalised with the store, so it is never acknowledged, and the store
-**refunds it automatically**. The buyer is made whole without us ever holding money for a service
-they cannot use, and without anyone having to notice and act. A refusal issued *after* provisioning
-would leave us holding their money.
+An old build, an interrupted flow, a race — or simply a person who subscribed at one store and
+then, on another platform, subscribed again. Whatever arrives paid is provisioned like any other
+purchase: it belongs to the account, it is visible in the client area beside everything else, and
+it serves its own store's builds (*which code the account gets*, below).
 
-**Why this is worth doing even though "it is never offered".** Right now both layers are missing at
-once. The app's prevention depends on a website customer being premium the moment they sign in — and
-that behaviour is decided but **not yet built** (below). So today a website customer signing in on a
-fresh device is not premium there, is offered a store subscription, and the server accepts it. The
-two layers were meant to back each other up; neither is standing.
+**It is never silent.** A purchase landing on an account that already holds an active one is
+surfaced, not absorbed: the client area shows both, and one message says so plainly — what serves
+this device, and that each subscription is cancelled at the store that sold it. Both purchases are
+real — each store sold a subscription that genuinely serves that store's devices — so neither is a
+mistake to unwind by force. Whether to keep both is the person's decision; our job is to make it a
+decision rather than a surprise.
 
-**One case this can catch wrongly.** A person is allowed to hold several website subscriptions on
-purpose — for sharing (below). Someone who bought a key as a gift and then buys a store subscription
-for themselves would be refused by this rule. That is a false positive, and an acceptable one: it
-costs an annoyed customer and an automatic refund, while the false negative costs a real double
-charge and a support case we have to unwind by hand.
+#### Switching stores
 
-If it turns out to bite real buyers, the refinement is already in the design and needs no new
-machinery: block only when the existing subscription is the one **actually serving them** — their
-default key (below) — so a key they bought for someone else does not stand in their way. Ship the
-blunt rule; keep this in reserve.
+There is no way to move a subscription between stores — each belongs to the buyer's account *at
+that store* (§2). So switching is done the only honest way: **cancel at the store that billed, let
+the paid time run out, then subscribe at the new store.** The moment nothing serves the account any
+more, checkout opens again by itself. There is no button in the app for any of this, deliberately:
+the cancel lives in the old store, where all of that subscription's management does.
+
+A portal-store code is never a wall in the meantime: the portal sells any number of codes (below),
+so someone who wants another code buys one at any time. What waits for expiry is only a *store*
+subscription while something still serves the account — the store model working, not a gap in it.
 
 ### They order a second subscription on our website
 
@@ -417,16 +520,17 @@ account: a person can buy two, five or fifty, and each one is an independent ser
 code, its own billing cycle and its own cancel button. Selling many at once is an explicit product
 mode for resellers.
 
-The business reason is **sharing**: someone buys several keys and gives them to their family. The
+The business reason is **sharing**: someone buys several codes and gives them to their family. The
 stores cannot do this — a store subscription belongs to one store account — so the website is the
 only place it can happen, and the difference between the channels is deliberate, not an oversight.
 
-This is the deliberate opposite of the store rule above, and the difference is what is being sold:
+This is the portal store's deliberate difference from the app stores (§2), and the difference is
+what is being sold:
 
-| | Bought in a store | Bought on our website |
+| | Bought in an app store | Bought at the portal store |
 |---|---|---|
 | What the person gets | Premium on **their account** | A **code**, which they hold and can give away |
-| A second purchase | Refused — one account, one subscription | Allowed, any number |
+| A second purchase | Prevented up front; accepted and surfaced if it lands anyway (above) | Allowed, any number |
 | Who can use it | Whoever signs in to that account | Whoever has the code |
 | Cancelling | Only in that store | In the website client area |
 
@@ -436,9 +540,9 @@ member, and refusing that would break a normal sale.
 
 #### Should there be a limit?
 
-> **Decided 2026-08-13 — no limit. A warning at checkout instead.**
+**No limit. A warning at checkout instead.**
 
-A limit is the wrong tool. Nobody buys a fifth key by mistake; they buy a *second* one, because they
+A limit is the wrong tool. Nobody buys a fifth code by mistake; they buy a *second* one, because they
 forgot they had one or thought it had run out. A limit set at three does not prevent that, and a
 limit set at one destroys the product. It would also break the two cases the website exists to
 serve — buying for the family, and selling in bulk.
@@ -449,10 +553,10 @@ before they pay, and the wording depends on **whether what they hold will contin
 
 | What they already hold | Buying again is | What they are told |
 |---|---|---|
-| A subscription that renews itself | Usually a mistake | It renews on its own, and a second purchase is a separate key, not an extension |
-| A key they have never used | Almost certainly a mistake | They have a key they have not used yet |
-| A key in use with time left | Possibly deliberate — a gift, or family | What they hold, and when it runs out |
-| A key expiring or already expired | **The correct action** | Nothing at all |
+| A subscription that renews itself | Usually a mistake | It renews on its own, and a second purchase is a separate code, not an extension |
+| A code they have never used | Almost certainly a mistake | They have a code they have not used yet |
+| A code in use with time left | Possibly deliberate — a gift, or family | What they hold, and when it runs out |
+| A code expiring or already expired | **The correct action** | Nothing at all |
 
 Three rules govern it:
 
@@ -462,7 +566,7 @@ Three rules govern it:
    warning that fires when the purchase is correct teaches people to dismiss it unread, and then it
    no longer works for the case it was built for.
 3. **Where several are held, it describes the one that bears on the decision** — the longest-lived,
-   or the one that renews itself. Never an arbitrary one. Telling someone about an unused key while
+   or the one that renews itself. Never an arbitrary one. Telling someone about an unused code while
    their live service is days from lapsing is worse than saying nothing, because it suggests they
    are covered when they are about to lose it.
 
@@ -470,186 +574,239 @@ Bulk and reseller orders skip it entirely: there is no interactive checkout, and
 fifty times is noise.
 
 **One reason a limit gets proposed that it cannot solve.** An unlimited quantity field is a fraud
-amplifier — fifty keys bought on a stolen card and resold before the chargeback lands. That risk is
+amplifier — fifty codes bought on a stolen card and resold before the chargeback lands. That risk is
 real, but a per-person limit does not touch it, because fraud uses fifty accounts rather than one.
 Order velocity limits and manual review above a value threshold are the tools for it, and they
 belong with the payment controls, not here.
 
-The consequence for deletion is that "cancel your website subscription first" means **all** of them.
+The consequence for deletion is that the billing cancellation in §5 covers **all** of them.
 
 ### They bought in bulk, to resell
 
-> **Decided 2026-08-13.** Bulk selling is a separate product, offered only to merchants we choose,
-> and it behaves differently from every other sale in this document.
+Bulk selling is a separate product, offered only to merchants we choose, and it behaves differently
+from every other sale in this document.
 
-A bulk order is **stock, not service**. Someone buying fifty keys is buying inventory to sell, not
+A bulk order is **stock, not service**. Someone buying fifty codes is buying inventory to sell, not
 fifty things to use. Three consequences follow, and all of them are deliberate:
 
-1. **The keys are delivered as a file**, once, at purchase. There is no single code to look up
+1. **The codes are delivered as a file**, once, at purchase. There is no single code to look up
    afterwards, so the client area shows the delivery rather than a code.
-2. **Stock is never treated as the buyer's own key.** It is never offered in the app as "your key"
-   and never becomes their default. A reseller who wants to use one of their own keys enters it by
-   hand, like anyone else holding a code.
-3. **Suspending or cancelling a bulk order does not switch the keys off by itself.** They were
+2. **Stock is never treated as the buyer's own code.** It is never offered in the app as "your code"
+   and never becomes their default. A reseller who wants to use one of their own codes enters it by
+   hand, like anyone else holding one.
+3. **Suspending or cancelling a bulk order does not switch the codes off by itself.** They were
    handed over as a file and they keep working. **An administrator disables them directly, and the
    system says so loudly** — it refuses the operation with a message naming the batch, rather than
    reporting success for something that did not happen. Doing it by hand is the decision, not a
-   limitation: automating it would mean tracking every key in every batch, and the volume does not
+   limitation: automating it would mean tracking every code in every batch, and the volume does not
    justify that while bulk delivery goes only to merchants we have chosen.
 
 Point 3 is the one that matters commercially, so it is worth stating plainly: **a reseller who takes
-delivery and then does not pay keeps working keys until someone acts by hand.** That is a deliberate
+delivery and then does not pay keeps working codes until someone acts by hand.** That is a deliberate
 trade — bulk delivery is offered only to merchants we have chosen, and choosing them is the control.
 It is not something the billing system enforces on our behalf.
 
 ### They bought on our website, then sign in to the app
 
-**They get an account with no subscription, and the app shows them as not premium.** The two
-channels do not meet by themselves.
-
-What actually happens:
+**Signing in makes them premium, on the code that is theirs.** The two channels meet at the account:
 
 1. Signing in **attaches them to their existing website customer record if the email matches** — the
    one the sign-in provider proved. Signing in never creates a customer record on its own; that
    happens only at a first store purchase.
-2. The app then asks what the account holds — and that question is answered from the **store
-   purchase ledger only**. A website order is an ordinary service, not a store purchase, so nothing
-   comes back.
-3. Their code is sitting in the website client area. To use it they must **copy it into the app by
-   hand**, exactly as if a friend had given it to them.
-4. If they signed in with a different address than they bought with, they are simply two unrelated
-   customers to us.
+2. The app then asks what the account holds — the store purchases **and** the website codes the
+   account can see — and applies one by the rules below.
+3. If they signed in with a different address than they bought with, they are two unrelated
+   customers to us until they import their code — see *They sign in with a different
+   address* below.
 
-So a website purchase behaves like the bearer good it is: the account knows nothing about it, and
-the code is what carries the value. That is consistent, but two consequences are worth knowing.
+Most website buyers buy **one** code, for themselves. Making that person type a code they have
+already paid for would be a step with no purpose and a support ticket waiting to happen. So signing
+in makes them premium — and the ambiguity only appears when they hold more than one.
 
-**They can be charged twice.** The "you already have a subscription" refusal looks only at the store
-ledger, so a customer who already pays us monthly on the website can be sold a store subscription in
-the app without warning. Nothing detects it, and the person ends up paying us twice for the same
-thing.
-
-**Their website purchase blocks deletion — even a one-time one.** Any service we did not sell through
-a store, active or suspended, refuses the whole deletion. That is being replaced by cancelling the
-billing instead; see *They want to delete, and they bought on our website* below.
-
-#### How it should work — decided, not yet built
-
-> **Decided 2026-08-13.** This is the intended behaviour, not a proposal; nothing below is
-> implemented yet. What the app does today is described above.
-
-Most website buyers buy **one** key, for themselves. Making that person type a code they have
-already paid for is a step with no purpose and a support ticket waiting to happen. So signing in
-should make them premium — and the ambiguity only appears when they hold more than one.
-
-The rule that resolves it is *auto-apply when there is nothing to guess, ask when there is*. Only
-**usable** codes count — an expired or cancelled one is not a candidate for anything:
+The rule that resolves it is *the account always has exactly one code, and we are the ones who
+choose it*. **The app never chooses, never lists and never asks**:
 
 | Situation, in order | What the app does |
 |---|---|
 | The device already runs on a **usable** code | Leave it alone |
-| A store subscription | Use it — it belongs to the account and there is only ever one |
-| The buyer already chose a key, and it is still usable | Use that one |
-| Exactly one usable code | Apply it silently — there is nothing to choose |
-| Several usable codes | Sign them in, list the codes, let them pick |
+| A **serving** subscription at this build's home store | Use it — the device's own store comes first (below) |
+| The account has a code | Use it — the server has chosen one (below) |
 | None | Signed in, not premium — as today |
 
-Read top to bottom; the first row that matches wins. "Several" is the only row that ever asks a
-question, and it asks because we must not guess which key is theirs and which is their daughter's.
+Read top to bottom; the first row that matches wins. There is no row that asks a question, because
+the account is never handed more than one code to consider — see below.
+
+#### The app is told a code, not a list of codes
+
+**The app is handed one code or nothing.** No list crosses to the device, there is no picker, and
+there is no "several" case for it to reason about. The inventory question belongs to the side that
+holds the inventory.
+
+This is written as a rule rather than left to judgement, because the alternative looks more helpful
+than it is: hand the app everything the account holds, let it work out whether one is chosen or
+whether there are several, and show a picker when there are. Owning several codes is **rare** — it
+means buying for family or for friends — and a rare case does not justify permanent complexity in
+every copy of the app. A client that knows nothing about an account's inventory is a client that
+cannot get it wrong, on any platform, in any version still installed.
+
+**Where a person genuinely wants a code other than the one we chose, they have two routes, and which
+one they get depends on the build:**
+
+| Which build | How they change it | Why |
+|---|---|---|
+| One that takes a typed code | They type the code they want | It is the same control they already use for a gift or a promotion — a picker would be a second way to do one thing |
+| One that does not (§9) | They name the code in the **client area**, on the website | There is no code box to type into, so the choice has to live somewhere the store does not govern |
+
+That second row is a requirement, not a fallback. A platform that forbids unlocking with a code
+takes away the only in-app answer to *"that is the wrong code"*, so the client area has to carry it
+— without it, those people have no way to choose at all. It is the one piece of code management we
+keep, and it belongs in the place where someone who owns several codes is already looking: next to
+their invoices and their services.
+
+#### Which code the account gets, and who chooses it
+
+**A device asks its own store first.** Every build has a home store (§2): the store that
+distributes it, or the portal store for the builds we distribute ourselves. A subscription the
+account holds at that store, while it is **serving**, beats everything else for that device — it is
+what the person bought for exactly this platform, and it is the one subscription whose manage and
+cancel pages this device can actually open. *Serving* is the store's own state: a subscription in
+**grace** (the store is retrying a failed payment and access continues) is serving; one in **hold**
+is not, and the device falls back to the rules below until the payment recovers.
+
+One consequence is deliberate: two devices of one account, on two platforms, may be served by two
+different purchases. That is the nature of per-store subscriptions, not a defect — and the client
+area is where the whole account is visible in one place.
+
+**Among the account's codes, we choose — on the server, every time the question is asked.** Three
+rules, in order:
+
+1. **A purchase claims the slot only if the account has no usable code.** This is what stops a gift
+   from disturbing the buyer: someone happily running on their own code is not moved onto the one
+   they just bought for their daughter.
+2. **When the chosen code dies, the next usable one takes over, at the moment we are next asked.**
+   Nothing is scheduled and nothing runs nightly; the answer is simply recomputed when it is needed,
+   so an account can never be left pointing at a dead code. This is the rule that keeps "several
+   codes and none chosen" from arising at all — the only state that could force a question.
+3. **Among several, prefer the code that harms nobody.** One already running is the safest to take
+   — soonest expiry first, so the least future is consumed — and a prepaid code nobody has started
+   stays untouched until nothing else serves. Two things this avoids: starting the clock on a
+   prepaid code someone was saving (§4 — that is not reversible), and taking over a code already
+   handed to a friend, which would consume a device place on their side.
+
+Rule 3 is a best effort, not a guarantee, and it does not have to be perfect: a wrong choice costs
+one device place on a code that keeps working for its holder anyway (§2), and it is corrected by
+either route in the table above. It is written down because the *ordering* is what makes the failure
+cheap — and because on a build with no code box, that ordering is the only thing standing between a
+person and a trip to the website.
+
+**Nothing is ever asked at purchase time.** Checkout is the worst place to add a question, the buyer
+often does not know yet who a code is for, and the answer can change the next day.
 
 Three guardrails make the automatic part safe:
 
 1. **Never overwrite a code that still works.** If the device is running on a usable code — typed by
-   hand or chosen earlier — signing in leaves it alone. Replacing a working key is the one genuinely
+   hand or applied earlier — signing in leaves it alone. Replacing a working code is the one genuinely
    destructive move here. A code that has **expired** is not protected: it opens nothing, so
    replacing it is a repair, not a loss.
-2. **Always changeable.** Whatever is applied must be visible and switchable, so a wrong choice
-   costs one tap. That is what makes applying a code automatically an acceptable risk: it consumes
-   a device slot, it does not consume the key.
-3. **Record it as the buyer's own code, not as one the account granted.** A website key was bought
-   outright. If the app filed it as account-granted, deleting the account would confiscate a key the
-   person owns — see §5. It must be treated exactly like a code they typed in.
+2. **The choice belongs to the account, not to the device.** Every device signed in to the same
+   account lands on the same *chosen code*, and that is the intent rather than a compromise: two
+   phones belonging to one person should share one code. Separate codes exist for separate *people*
+   — the friends and family who do not use the account. The home-store preference above sits on top
+   of this and is per-platform by design.
+3. **Record it as a code the account granted, not as the person's own.** The account applied it, so
+   it leaves with the account: signing out or deleting takes it off the device, exactly like the
+   code behind a store subscription. Nothing is confiscated — the code itself keeps working for
+   everyone using it, the farewell mail carries it (§5), and typing it back in (or importing it in
+   the client area) makes it the person's own in the ordinary way. An earlier design recorded it as
+   the person's own so it would survive deletion; that put a bought-outright code under the app's
+   remove control and let account premium ride into whatever account signed in next — both problems
+   end with the flag.
 
-**The choice belongs to the account, not to the device.** Someone with three keys should answer
-"which one is mine" once, not on every phone they own. Remembering it against the account is what
-makes the picker a one-time event instead of a recurring annoyance.
+**And no removal act remains in the app.** A code the account applied is not the device's to
+remove — it leaves only with the account. A code the person typed is their own, and removing it is
+a local act that touches nothing on the account. Re-opening store buying is not a button either: it
+is the account ceasing to be served — the code expiring, or its billing cancelled at the store that
+owns it (*switching stores*, above).
 
-**The first key bought becomes the account's key, and no later purchase ever takes that over.** This
-is what stops a gift from disturbing the buyer: without it, someone happily running on their single
-key would be asked "which one is yours?" the moment they bought a second for their daughter — a
-question caused entirely by somebody else's present. Two rules keep it stable:
+Sharing is unaffected. The family member signs in to *their own* account, sees nothing of the
+buyer's, and uses the code the buyer sent them — which is right: we must never hand someone else's
+codes to whoever happens to sign in. Where their build cannot take a typed code, they import it into
+their own account in the client area first (§7, §9) — which takes nothing away from the buyer.
 
-- A purchase claims the slot **only if the account has no key set, or the one it has is no longer
-  usable**. The second half is the "mine ran out, I bought another" case, which would otherwise
-  leave the account pointing at a dead key.
-- When the app applies a key by itself (the "exactly one" row), it **records that as the choice**,
-  so the two routes converge and the count going from one to two never turns a settled account into
-  a question.
-
-Either way it stays a preference, not a reservation: naming a key as the account's does not lock it,
-and it must be changeable from the client area and from the app.
-
-**Nothing is asked at purchase time.** Checkout is the worst place to add a question, the buyer often
-does not know yet who a key is for, and the answer can change the next day. Instead the client area
-should let them **name** a key afterwards, and the picker falls back to product name, expiry and
-device usage when they have not — never an opaque id.
-
-What this needs on the website side is modest: list the customer's own active services with their
-codes (the module can already read a code from a service), remember which one they picked, and keep
-both behind the same signed-in session as everything else.
-
-Sharing is unaffected. The family member signs in with *their own* address, sees nothing, and types
-the key the buyer sent them — which is right: we must never hand someone else's key list to whoever
-happens to sign in.
-
-The **double-charge disappears for free.** Once an active website service makes the app premium, the
-purchase screen is not offered, and the existing "you already have a subscription" path covers it —
-no new refusal rule to write.
+**Double-charging is prevented, not policed.** An active code makes the app premium, so a store
+purchase is never offered — and anything that arrives paid anyway is accepted and surfaced rather
+than refused (above).
 
 ### They sign in with a different address than they bought with
 
-> **Decided 2026-08-13.** This is not an edge case, and it cannot be designed away at the identity
-> layer. Two causes make it structural: a person buying with a work address and signing in with a
-> personal one, and **Hide My Email** — Apple offers a private relay address on every sign-in, and a
-> relay address can never match a purchase made before it existed. On iOS we must offer Apple
-> sign-in once we offer any other, and the relay is the person's choice within it.
+This is not an edge case, and it cannot be designed away at the identity layer. Two causes make it
+structural: a person buying with a work address and signing in with a personal one, and
+**Hide My Email** — Apple offers a private relay address on every sign-in, and a relay address can
+never match a purchase made before it existed. On iOS we must offer Apple sign-in once we offer any
+other, and the relay is the person's choice within it.
 
 A relay address is **pseudonymous, not anonymous**: it forwards to their real inbox, so password
 recovery, support and invoices all reach them. What we lose is the *link* to an earlier purchase,
 not the ability to reach the person.
 
-Six rules, and one refusal:
+Seven rules, and one case deliberately left to support:
 
-1. **Claim by code — the main route.** They paste their key once, and the account records a pointer
-   to it. Possession of the code is the proof, and it is the only proof someone behind a relay
-   address can give. It is also a stronger proof than an address, which anyone can type.
-2. **Rename when the address is free.** If they later reveal their real address and nothing else
+1. **Sign in as the website account — the route that removes the problem.** A website buyer can sign
+   in with the credentials they bought with, on any platform (§7). Then there is no mismatch to
+   resolve: the buying identity and the sign-in identity are the same account by construction. This
+   is the answer to give first, because every rule below is repair work and this one avoids the
+   damage.
+2. **Import the code — the route for a bearer code, and it happens in the client area.** They enter
+   it once on the website and the account records a **pointer** to it. Possession of the code is the
+   proof, and it is the only proof someone behind a relay address can give — and a stronger one than
+   an address, which anyone can type.
+
+   **The app never imports.** Pasting a code in the app is a purely local act: that device becomes
+   premium and the backend is told nothing. This is deliberate, and the reason is that the app
+   cannot tell the person the truth about what happened — a portal can only match a code **it**
+   sold, so a promotional, admin-issued, partner or access-manager-issued code has nothing to point
+   at, and an app-side import would silently do nothing while the code itself worked perfectly.
+   Nobody could tell the two outcomes apart. The client-area page says *added* or *no code matches*,
+   to somebody who is looking at it.
+
+   **Importing is not redeeming, and the difference carries the whole design.** Nothing is consumed:
+   the code is untouched, keeps its own expiry, and goes on working for everyone already using it.
+   The same code may be imported into **any number of accounts**, anywhere, and nothing is taken
+   from whoever imported it before — because the device limit rides on the code, not on the account
+   (§2). What is created is a pointer, not a transfer of ownership.
+
+   A user-facing label may still read *redeem*, since that is the word people expect from a code
+   box, but it must never behave like one. A code that could be used up, or held exclusively by the
+   first account to enter it, would destroy gifting and family sharing at a stroke — and would break
+   §7, where a person coming back after deletion enters the very code their old account pointed at.
+3. **Rename when the address is free.** If they later reveal their real address and nothing else
    uses it, the account is simply renamed. No merge, no risk.
-3. **Link when it is not.** The login and the customer record are separate things, and one login can
+4. **Link when it is not.** The login and the customer record are separate things, and one login can
    own several customer records. Both are attached to the one login, and the person signs in once
    and sees both. Nothing is moved.
-4. **Invoices never move.** Each customer record keeps its own history exactly as issued (§5).
+5. **Invoices never move.** Each customer record keeps its own history exactly as issued (§5).
    Linking is what lets one person see everything without altering a single document — which is the
    whole reason it beats merging.
-5. **Identity is recognised by the provider and its subject, not by the address.** That is what keeps
+6. **Identity is recognised by the provider and its subject, not by the address.** That is what keeps
    an account stable when a provider changes the address it sends. A *new* provider joins an existing
    account by matching a verified address — and this is exactly what a relay address defeats, so
    signing in with Apple-plus-relay after having a Google account produces a **second account**.
-6. **Last-one-wins applies only to deliberate acts** — pasting a code, or choosing a default in the
-   portal. Never to automatic attachment, which must never overwrite a key that still works (above).
+7. **Last-one-wins applies only to deliberate acts** — pasting a code, or naming one in the client
+   area. Never to automatic attachment, which must never overwrite a code that still works (above).
 
-**The refusal: if both accounts hold an active *store* subscription, do not resolve it
-automatically.** Both are being paid for, and one account may never hold two store subscriptions
-(above). Merging them would break that rule and could cascade into a refusal or a refund. Tell the
-person plainly that they are paying twice and let support unwind it — that is a real double charge,
-and we want it surfaced rather than quietly absorbed.
+**One case is left alone on purpose: both accounts hold a live store subscription.** They are two
+accounts, each genuinely served, and nothing merges automatically (below). The person may well be
+paying twice; each purchase serves its own store's builds, each client area shows what its account
+holds, and the checkout warning and the purchase notice (above) are what surface it. Support
+unwinds it when asked — by moving a pointer, never by merging.
 
 **How much actually breaks, by case:**
 
 | They bought | What happens |
 |---|---|
 | In a store | **Nothing breaks.** Recovery asks the store, not us, so the address is irrelevant (§7) |
-| On our website | The link is lost. Claiming by code is the only route back |
-| Under another sign-in provider | The account splits, but whatever granted premium is recoverable by one of the two routes above |
+| On our website | **Nothing breaks if they sign in as their website account** (rule 1). If they signed in some other way, the link is lost until they import the code |
+| Under another sign-in provider | The account splits, but whatever granted premium is recoverable by one of the routes above |
 
 So premium always survives; what does not is account *continuity*, and rules 2 and 3 repair that
 afterwards.
@@ -659,10 +816,50 @@ system and it cannot be undone — services, invoices, balances and payment agre
 and one mistake charges the wrong person. Moving a pointer achieves nearly all of it at none of the
 risk. A true merge, if ever needed, is an administrator looking at both accounts.
 
-**What stays manual.** Someone who has lost their key, signed in with a different address and cannot
-reach the portal has nothing left to identify them by. That residue is accepted deliberately: the
-alternative is building an identity system to solve a problem the person can solve by keeping their
-key.
+**What stays manual.** Someone who has lost their code, signed in with a different address and
+cannot reach the portal has nothing left to identify them by. That residue is accepted deliberately:
+the alternative is building an identity system to solve a problem the person can solve by keeping
+their code.
+
+### They cannot reach us at all, because we are blocked where they are
+
+This is a VPN, so a share of our users are in exactly the places where our own servers are hardest
+to reach. **The portal can be blocked while the tunnel still works**, and that produces the one
+deadlock in this document: signing in needs the portal, and reaching the portal needs a connection.
+
+Nobody is stranded, because the app is useful before anyone signs in (§3):
+
+1. **Connect first, on the free or trial path.** Premium is not required to open a tunnel, and that
+   is what the trial is for — a person with no account and no code still has a way through.
+2. **Then sign in, through the tunnel.** With the connection up, the portal is reachable like any
+   other site, and everything in §7 and §8 proceeds normally.
+3. **Then it stays.** The code applied to the device keeps working until it expires, with no further
+   contact with us at all. Losing the portal again afterwards costs them nothing.
+
+**Point 3 is a promise, not a side effect, and it constrains the app: an unreachable portal must
+never remove premium.** A refresh that cannot reach us keeps what it already holds; only a portal
+that *answers*, and says the account or the subscription is gone, may take the code away (§5). The
+difference between *no answer* and *the answer is no* is the whole of it, and confusing the two
+would switch off paying customers in precisely the regions that most need us.
+
+**A typed code is the stronger route here**, on a build that has one (§9). It needs no portal at
+all, not even once: somebody who already holds a code is premium on a fresh install with no network
+round-trip of any kind (§7). That is the case where losing the code box costs most — so on a build
+without one, the connect-first route above is not a convenience, it is the only door, and it has to
+keep working.
+
+What genuinely waits for a reachable portal is anything that **changes what the account holds**:
+signing in, buying, and being told that a different code has been chosen for them (§8). Those are
+exactly the moments when steps 1 and 2 are available again, so nothing is permanently lost — but the
+app must not present the wait as an expiry, and must not offer a purchase it cannot complete.
+
+**A renewal is not on that list**, and this is the part worth being precise about, because it is
+where most of the anxiety would otherwise sit. The portal and the access manager are different
+servers: the portal handles accounts and money, and the access manager decides at connection time
+whether a code still opens anything (§2). A renewal extends the same code rather than issuing a new
+one (§2), and the access manager learns the new expiry from our side — so a subscription renewing
+while the portal is unreachable keeps working with nothing asked of the app or the person. Only the
+*display* can lag, which §5 already covers.
 
 ### Their subscription came from a different store than the app they are using
 
@@ -676,32 +873,30 @@ place.
 ### They want to delete, and their subscription came from a different store
 
 Deletion works normally — there is one account regardless of who billed it. But the warning matters
-more here: we cannot cancel a subscription in **any** store, and the store they must go to is the
-one they bought from, which may not be the platform they are holding.
+more here: we cancel a subscription in **no** store (§8), and the store they must go to is the one
+they bought from, which may not be the platform they are holding.
 
-The code shown on the way out (§5) matters more here too. Asking the store only works on the
-platform that sold it; a saved code works anywhere, so for a cross-platform buyer it is the route
-that will actually be available to them.
+The code we mail on the way out (§5, step 3) matters more here too. Asking the store at sign-in only
+works on the platform that sold it; a kept code works anywhere, so for a cross-platform buyer it is
+the route most likely to be available to them — provided their build can take one (§9).
 
 ### They want to delete, and they bought on our website
 
-> **Decided 2026-08-13 — not how it works today.** Today deletion is *refused* while any website
-> service is active, which forces an unfair choice: cancel a key you already paid for, or keep an
-> account you want gone. For a one-year key that means waiting a year, and a deletion you must wait
-> a year for is not a deletion the stores accept.
-
-**Deletion goes ahead. A website purchase never blocks it.** The old refusal existed to stop a card
-charge being orphaned behind an erased person — and cancelling the billing does that directly, so
-the refusal has nothing left to protect.
+**Deletion goes ahead. A website purchase never blocks it.** A refusal here would force an unfair
+choice — cancel a code you already paid for, or keep an account you want gone — and a deletion you
+must wait a year for is not a deletion the stores accept. The only thing a refusal ever protected
+was a card charge being orphaned behind an erased person, and cancelling the billing does that
+directly.
 
 1. **Cancel the billing, do not terminate the service.** Every website-billed service is set to
-   cancel at the **end of its paid period**, so no renewal invoice is ever generated and the key
+   cancel at the **end of its paid period**, so no renewal invoice is ever generated and the code
    still runs out the time it was bought for. Immediate termination would destroy something they
    paid for, which is the one thing we never do.
-2. **Show the keys one last time** (§5, step 2), with a plain warning: *these stay active; save them
-   now, because after this we cannot show them to you again.* Then delete. This is not special
-   treatment for website buyers — a store subscription's code is shown the same way, for the same
-   reason.
+2. **Warn on the screen, mail the codes** (§5, steps 2 and 3). The confirmation says only that any
+   code linked to the account will be gone and we will not be able to find it again; the codes
+   themselves go to their address, with the same warning, before it is erased. Then delete. This is
+   not special treatment for website buyers — a store subscription's code is mailed the same way,
+   for the same reason.
 3. **Drop the stored payment method.** Even with nothing scheduling a charge, a card token attached
    to an erased customer must not survive.
 4. **Keep the agreement reference, not the person.** The deletion journal holds the gateway's
@@ -722,10 +917,11 @@ the refusal has nothing left to protect.
    deletion means — so the refund receipt reaches them from the gateway instead, which is right: it
    comes from whoever is actually holding the money.
 
-Step 2 is what makes this fair. The policy is sound — a bearer key is theirs to keep safe, and
-whether they saved it is not our business — but it has to be *said once, at the only moment it
-matters*. Without that, every case becomes a support request we can never resolve, because the link
-between the person and the key is exactly what deletion destroys.
+Rule 2 is what makes this fair. The policy is sound — a bearer code is theirs to keep safe, and
+whether they kept it is not our business — but it has to be *said once, at the only moment it
+matters*, and the code itself has to arrive somewhere they can still find it. Without both, every
+case becomes a support request we can never resolve, because the link between the person and the
+code is exactly what deletion destroys.
 
 **Why nothing needs to block.** Most gateways charge only when WHMCS asks them to, so cancelling the
 billing ends it outright. A gateway that keeps its own schedule can still send one more charge — and
@@ -733,11 +929,14 @@ rule 5 catches it: refund, alert, cancel. Every gateway lets a merchant end an a
 dashboard, and many expose it through an API that WHMCS can call where the module supports it. So an
 un-cancellable gateway is a tooling gap to close, never a reason to trap someone in an account.
 
-**Their keys are untouched, and so is the device they deleted from.** The codes those services
-delivered were sold to the buyer, not lent to the account, so they keep running to the end of what
-was paid for — and because a website key is filed as the buyer's own code (§8), the device that
-deleted the account carries on working. Only account-granted premium dies with the account. We take
-back what the account lent, never what the person bought.
+**Their codes are untouched on our side — but they leave the person's own devices with the
+account.** The codes those services delivered were sold outright, and they keep running to the end
+of what was paid for: a friend already using one notices nothing. On the buyer's own devices,
+though, the code was applied *by the account*, so it goes when the account goes — the device that
+deleted drops premium like every other signed-in device (§5, §8). The mailed codes are the way
+back: type one in where the build takes codes, or import it into a new account in the client area
+(§7, §9). We take back what the account applied, never what the person bought — and what the
+person bought is in their inbox.
 
 ### They delete while the subscription is between payments
 
@@ -745,8 +944,8 @@ Two states a store puts a subscription into when a payment fails. **Grace**: the
 and access continues. **Hold**: the retries failed, access has stopped, but the subscription is still
 open and can come back to life for about a month if they fix their card.
 
-> **Decided 2026-08-13.** Deleting in either state is an **ordinary deletion**. Nothing special
-> happens, and nothing is blocked.
+Deleting in either state is an **ordinary deletion**. Nothing special happens, and nothing is
+blocked.
 
 The subscription belongs to the store and stays in whatever state it is in. The code's expiry is
 untouched either way — it runs on the store's clock, not ours. In grace it is still valid; in hold it
@@ -763,28 +962,42 @@ the most.
 
 ### They want us to stop the payments, not just the account
 
-**We can always stop the service. We cannot always stop the money.** Keeping those two apart is what
-makes the rest of this section work:
+**We can always stop the service. Whether we stop the money depends on who is holding it**, and the
+answer is fixed per channel — it is never a question put to the person:
 
 | | Stop their service | Stop their billing |
 |---|---|---|
-| **Our website** | Ours | **Ours** — cancelled at end of period |
-| **One store** | Ours | **Ours** — the subscription can be cancelled on our side, and stays valid to its expiry |
-| **The other store** | Ours | **Not possible.** Only the person can cancel |
+| **The portal store (our website)** | Ours | **Always cancelled.** At end of period, no choice offered — the deleted account *is* this store's account (§2) |
+| **An outside store** | Ours | **We do not.** Only the person can, in that store |
 
-So the rule:
+So the rule, and it is two lines rather than three:
 
-1. **Where we can cancel, offer it** — at deletion, as a plain choice, ticked by default, and act on
-   it. Nothing they paid for is lost: a cancelled subscription still runs to the end of its period.
-2. **Where we cannot, say so.** The option is simply not shown, and the warning carries the whole
-   weight.
-3. **Never claim to have done something we did not.** The person is told what actually happened, on
-   whichever platform they are using.
+1. **Website billing is always cancelled at the end of its paid period.** Nobody is asked. Somebody
+   deleting their account is leaving, and nothing they paid for is lost — the code runs out the time
+   it was bought for either way (§8, *they bought on our website*). An unpaid renewal that would
+   otherwise be generated is exactly the orphaned charge deletion is supposed to prevent.
+2. **A store subscription is left exactly as it is.** We do not cancel it even on the store that
+   would let us.
+
+**Why we do not offer to cancel a store subscription**, even where the store permits it. Because
+signing in again brings it back by itself (§7). The store is asked at every sign-in and hands the
+entitlement over silently, so a subscription that survives deletion is not a loose end — it is the
+thing that makes coming back work. Cancelling it on the way out would quietly destroy the very asset
+we would otherwise return, in exchange for a saving the person can make themselves in two taps in
+their store.
+
+Offering it would also mean offering something honest on one platform and impossible on the other:
+either we explain the difference — naming stores, which we may not do (§10) — or we show a control
+that silently does nothing. Neither is acceptable. **One rule that is true everywhere beats a
+correct rule the person cannot be told.**
+
+**Never claim to have done something we did not.** The confirmation says plainly that the
+subscription is not cancelled and where to cancel it, in words that name no store.
 
 **Why not something cleverer.** A store that takes the money before telling us leaves no moment to
 refuse a renewal — the payment has already happened by the time we hear about it. Withdrawing a whole
 plan from sale does stop renewals, but it stops them for **every** subscriber at once, which is a
-tool for retiring a product rather than for one person. So the honest levers are the three above, and
+tool for retiring a product rather than for one person. So the honest levers are the two above, and
 a design that assumed any more would break on the platform that gives us least.
 
 **Ending someone's service for abuse works the same way.** The code is revoked immediately — that is
@@ -814,11 +1027,11 @@ purchase, we decide — and if we refund, we keep an anonymous one-way fingerpri
 account for up to 24 months, purely to judge future refund requests. It cannot be turned back into
 an address and it survives deletion; this is disclosed at refund time.
 
-**Refunding money does not switch a key off.** A key stops on its expiry date, and a refund is not
-an expiry date — so unless someone ends the key, a refunded customer keeps working service until the
+**Refunding money does not switch a code off.** A code stops on its expiry date, and a refund is not
+an expiry date — so unless someone ends the code, a refunded customer keeps working service until the
 period they were refunded for runs out. Two deliberate outcomes, and the merchant picks:
 
-| | When | What happens to the key |
+| | When | What happens to the code |
 |---|---|---|
 | **Refund and revoke** | The normal case, and the default: the sale is being undone | Ended, so the money and the service go back together |
 | **Refund and keep** | A goodwill gesture — an apology, a partial refund, a customer we want to keep | Left running to its original expiry, on purpose |
@@ -826,11 +1039,11 @@ period they were refunded for runs out. Two deliberate outcomes, and the merchan
 Both are legitimate; what must never happen is the second one **by accident**. So revoking is the
 default and keeping it is the deliberate choice, never the other way round.
 
-A store-issued refund is the store's decision, not ours, and it arrives as a notification — the key
+A store-issued refund is the store's decision, not ours, and it arrives as a notification — the code
 is ended when the store says the entitlement is gone. **Refund and keep is a website-side option
 only**, because only there are we the merchant.
 
-## 9. Where a person can do it
+## 9. Where a person can do it, and what each store allows
 
 | Route | Who it is for | Why it must exist |
 |---|---|---|
@@ -864,30 +1077,83 @@ deletion started in the app reaches all the way into the website side.
 What is **not** expected is that we delete accounts the app cannot see. A person who bought with an
 address that does not match their sign-in is invisible to the app — that is what the web page is for.
 
-**This is why the refusal had to go.** It told the person to *cancel them in the web client area
-first, then delete* — sending someone to a website to finish deleting is the precise pattern the
-rule exists to prevent, and for a customer whose account began on the website that was the normal
-path, not an edge case. §8 replaces it with cancelling the billing outright, so the in-app deletion
-always completes.
+**This is also why deletion may never be refused into the web client area.** A refusal that says
+*cancel your web services first, then delete* sends someone to a website to finish deleting — the
+precise pattern the rule exists to prevent, and for a customer whose account began on the website
+it would be the normal path, not an edge case. §8 cancels the billing outright instead, so the
+in-app deletion always completes.
+
+### Typing a code is not allowed everywhere
+
+The two stores disagree about the one mechanism this document leans on most, and the disagreement is
+not a grey area on either side.
+
+**Apple forbids it.** Guideline 3.1.1 says an app may not use *its own mechanisms to unlock content
+or functionality, such as license keys, augmented reality markers, QR codes* — a premium code is a
+license key by any reading. Guideline 3.1.3(b) does permit an app to let people **reach** what they
+bought on our website, but it permits the *access*, not the *mechanism*: the route Apple accepts is
+signing in, where the server decides what the person owns and the app unlocks nothing by itself.
+Apps have been refused on exactly our shape, including a free VPN client whose only paid keys came
+from elsewhere. The US-storefront changes of 2025 do not help — they lifted the rules about linking
+out to other ways of paying, and left this sentence untouched.
+
+**Google permits it.** Play's payments policy has no equivalent sentence. It requires Play billing
+for purchases made *inside* the app, and explicitly allows an app to be consumption-only — someone
+logs in, or otherwise brings in what they paid for elsewhere. Since late 2025 it does not require
+Play billing at all for US users. Nothing there is troubled by a code box.
+
+Four consequences, and they are the reason several sections above are written the way they are:
+
+1. **The code box is a capability of the build, not a check on the operating system.** It is
+   configured per app, the way every other optional capability is. Writing it as *if this is
+   platform X* would be wrong twice over: the same platform can carry a build that is allowed one
+   (sideloaded, or distributed by us), and the rule can change on either store without the platform
+   changing at all.
+2. **Signing in to the website account must exist on every platform** (§7). It is the only route
+   from a website purchase into a build that cannot take a code, and it is the mechanism Apple's own
+   3.1.3(b) points at.
+3. **A bearer code needs a home that is not the app.** Someone handed a code by a friend has no
+   website account and, on a codeless build, nowhere to type it. They **import** it into an account
+   of their own in the client area, then sign in. Importing consumes nothing and may be done from
+   any number of accounts (§8), so the friend who gave the code loses nothing by it. Without that
+   page, a codeless build simply loses gifting.
+4. **The client area must let a person name their code** (§8). Typing a code is how everyone else
+   says *that is the wrong one*; a build that cannot take one has no in-app answer at all, so the
+   website has to hold the only picker there is. This is the single piece of code management that
+   survives, and it lives on the website precisely because the store does not govern it.
+
+The wording rule is separate and stands on its own: **compare stores, never name one.** Anything the
+person reads inside the app — including everything in §10 — must be true on every platform without
+naming a competitor's store, because the same app ships to all of them.
 
 ## 10. What we promise before they confirm
 
-The confirmation must carry the whole contract, in store-neutral words — it ships in one app on
-every platform, and naming a competing store is itself a store violation. It must say:
+The confirmation must carry the whole contract in a few lines, in store-neutral words — it ships in
+one app on every platform, and naming a competing store is itself a store violation (§9). It must
+say:
 
-- The account and personal data are permanently deleted and cannot be restored.
-- Every signed-in device is signed out and loses premium immediately.
-- This does **not** cancel the subscription by itself — it belongs to the store where it was bought
-  and may keep renewing until cancelled there. Where we are able to stop it for them, that is
-  offered as a plain choice and they are told what actually happened.
-- A subscription whose payment has failed is **still open** and can start charging again. This is
-  said most clearly of all, because it is the case where they are least likely to expect it.
-- While that subscription is still running, it can be brought back onto a new account.
+- **This cannot be undone.** The account and personal data are permanently deleted.
+- Every signed-in device is signed out and loses premium.
+- Any premium code linked to the account will be gone — from their own devices too — **and we will
+  not be able to find it for them again**; the farewell mail is the only copy. A code in someone
+  else's hands keeps working for them until it expires.
+- A subscription bought in the app is **not cancelled by this**. Signing in again brings it back on
+  the new account; cancelling it is done in their store's own settings. A subscription whose payment
+  has failed is **still open** and can start charging again — said plainly, because it is the case
+  they are least likely to expect.
 - Invoices are kept for legal reasons.
 
-And it must **show them their keys at that moment**, with the warning that this is the last time we
-can (§5). A promise to forget someone is also a promise to stop being able to help them, and the
-only honest place to say so is before they confirm — not in a support reply afterwards.
+**It shows no codes and no counts** (§5) — a promise to forget someone is also a promise to stop
+being able to help them, and the warning above is where that is said. The codes themselves go by mail
+instead, which is where they are still findable a year later.
+
+**It offers to cancel nothing**, because we do not (§8). A control that silently does nothing
+on the platform the person happens to be holding is worse than one honest sentence.
+
+**It is confirmed by an explicit acknowledgement, not by answering a question.** A tick box reading
+*I understand*, and a button that names the act. Never a Yes/No pair: yes and no are read as fast as
+they are tapped, whereas a box that must be ticked and a button reading *Delete account* cannot be
+completed absent-mindedly — and that is what a reviewer expects to find guarding a destructive act.
 
 The privacy policy and the public deletion page must say the same thing. If any of the three
 disagree, the one that promises the most is the one we are held to.
@@ -907,120 +1173,53 @@ These came up and are now settled — kept here only so they are not re-opened.
 
 | Question | Answer |
 |---|---|
-| What brings a returning person back to premium? | The code they saved, first; asking the store at sign-in, second — §7 |
+| What brings a returning person back to premium? | Signing in — the store is asked automatically, and a website buyer signs in as their website account. The code we mailed them is the third route — §7 |
 | Can two accounts hold the same code? | Yes, harmlessly — the device limit rides on the code, so there is nothing to fight over — §2, §7 |
 | Could delete-and-recreate farm duplicate services? | No. The same purchase always returns the same code — §2 |
-| Does a refund switch a key off? | Only if someone ends it. Revoking is the default; keeping it is a deliberate goodwill choice — §8 |
+| Does a refund switch a code off? | Only if someone ends it. Revoking is the default; keeping it is a deliberate goodwill choice — §8 |
 | Does a website purchase block deletion? | No. Billing is cancelled instead — §8 |
 | Should a one-time purchase block it? | No. Nothing blocks it — §8 |
 | Can a merchant end a gateway agreement? | Always, from the gateway's own dashboard; an administrator does it when alerted — §8 |
 | Who pays for a refunded stray charge? | We do, once — which is why it comes with a cancellation, so it can never repeat — §8 |
 | A renewal arriving after deletion | Recorded, the entitlement stays alive for later recovery, and the person is never resurrected — §7 |
-| Does the app help someone holding several codes? | Yes — §8 |
-| Do we refuse a store purchase to an existing website customer? | Yes, twice: the app never offers it, and the server refuses it whichever channel the existing subscription came from — §8 |
-| What if the store places the order anyway? | The server refuses before provisioning, so the purchase is never acknowledged and the store refunds it automatically — §8 |
+| Does the app help someone holding several codes? | It does not need to. The server hands it one code, so the app never sees a list and never asks — §8 |
+| Who chooses which code serves the account? | We do, on the server, recomputed whenever it is asked. A purchase claims an empty slot; a dead code is replaced by the next usable one — §8 |
+| Does the app show the person their codes? | No. Not on the account page and not at deletion. The only listing is the mail sent on the way out — §5, §8 |
+| Can a premium code be typed into every build? | No. One store forbids unlocking with a code at all, so it is a per-build capability — §9 |
+| Where does someone change which code serves them? | By typing the one they want. On a build that cannot take a typed code, in the client area — the only picker we keep, and the reason it has to exist — §8, §9 |
+| Can the account's code be removed in the app? | No. The app owns no code management; a code the account applied leaves only with the account. Leaving a store subscription means cancelling it at its store and letting the paid time run out — §8 |
+| Do we refuse a store purchase to an existing website customer? | We prevent it: checkout never opens while the account is served, checked with the server before the store's payment sheet. Nothing is refused after payment — §8 |
+| What if the store places the order anyway? | It is accepted and provisioned — the account holds both, the client area shows both, and a message says where each is cancelled — §8 |
+| Why not refuse and let the store refund? | Only one store refunds an unacknowledged purchase by itself; the other keeps the buyer's money and gives us no way to return it. Prevention costs nobody anything — §8 |
+| Which purchase serves a device? | Its home store's subscription while it is serving — grace counts, hold does not — otherwise the account's chosen code — §8 |
+| How does someone switch stores? | Cancel at the store that billed, let the paid time run out, subscribe at the new one. Nothing moves a subscription between stores — §8 |
 | Should invoices be anonymised? | No. They keep the buyer's name, frozen as issued and locked out of ordinary use — §5 |
 | How many years do we keep an invoice? | We do not publish a figure. The policy names the legal obligation as the criterion, which is what the law asks for and what our market does — §5 |
-| What if they sign in with a different address than they bought with? | Claim by code; rename the account when the address is free, link the records when it is not — §8 |
+| What if they sign in with a different address than they bought with? | Sign in as the website account instead; failing that, import the code — then rename the account when the address is free, link the records when it is not — §8 |
+| Does entering a code use it up, or tie it to one account? | Neither. It creates a pointer, consumes nothing, and the same code may be imported into any number of accounts — §2, §8 |
+| What if our portal is blocked where they are? | Connect on the free or trial path first, then sign in through the tunnel; the applied code then runs to its expiry with no further contact — §8 |
+| Can an unreachable portal drop someone's premium? | Never. Only a portal that answers, and says the account or subscription is gone, may take a code away — §5, §8 |
+| Does a renewal need the portal? | No. It extends the same code, and the access manager — a different server — honours the new expiry without the app being told — §2, §8 |
 | Do we ever merge two accounts? | No, never automatically. A pointer moves; customer records and invoices never do — §8 |
 | How many devices may share a code? | The access manager's policy, not ours. It counts installations pseudonymously and this document never depends on the number — §2 |
 | Should the website limit how many one person may buy? | No. A warning at checkout instead, and it never blocks — §8 |
-| Does a reseller's stock show up as their own key? | No. Stock is never offered as a personal key and never becomes a default — §8 |
-| Does suspending a bulk order stop the keys? | No. An administrator disables them by hand, and the system says so rather than claiming success — §8 |
+| Does a reseller's stock show up as their own code? | No. Stock is never offered as a personal code and never becomes a default — §8 |
+| Does suspending a bulk order stop the codes? | No. An administrator disables them by hand, and the system says so rather than claiming success — §8 |
 | Deleting while a payment has failed — special case? | No, an ordinary deletion. Only the warning changes, and it gets stronger — §8 |
-| Can we stop a store charging them? | On one store yes, offered as a choice at deletion; on the other only the person can — §8 |
+| Can we stop a store charging them? | We do not try, on any store. Signing in again gives the subscription back, so cancelling it on the way out would destroy what we would otherwise return — §8 |
 | Can we refuse a renewal as it happens? | No. The money moves before we are told. Cancelling beforehand is the only lever — §8 |
 | A device that never comes back online | Not a leak. A code only acts at the moment of connecting, and connecting is the check — §5 |
+| Does deletion erase our connection logs? | No, and it does not need to. They run out their own 30 days and expire — §5, §6 |
+| Can a deletion destroy records under a preservation request? | No. A legal hold suspends expiry until the matter is resolved, and it outranks every retention rule here — §5 |
 | Is a bulk order revocable? | Yes, by an administrator, by hand. The system refuses loudly rather than pretending it worked. Automating it is not worth the volume — §8 |
-| When does a key start counting down? | A prepaid one-time key on first use; anything billed on a cycle expires with the cycle — §4 |
+| When does a code start counting down? | A prepaid one-time code on first use; anything billed on a cycle expires with the cycle — §4 |
 
-## 12. Decided, but not built yet
-
-> **This whole section is temporary — delete it when the work is done.** It exists for the people
-> building, not for the people the document is written for. Once every row is true of the software,
-> this section and the dated notes elsewhere go, and what remains is a description of the business
-> with nothing in it about how the software got there.
-
-Everything above describes how the business **should** work. Several of those decisions are ahead of
-the code, and they are collected here so nobody has to hunt for them section by section. Nothing on
-this list is an open question — each one is settled; only the work is outstanding.
-
-| What was decided | Where | What the code does today |
-|---|---|---|
-| A website buyer is premium the moment they sign in, on the key marked as theirs by default | §8 | Nothing — they must paste the code by hand |
-| The first key bought becomes the default at purchase time | §8 | No default is recorded |
-| The server refuses a store purchase when a live subscription exists in **either** channel | §8 | It counts store purchases only, so a website customer can be sold a second one |
-| Deletion cancels website billing at end of period instead of refusing | §8 | Deletion is refused while any website service is active |
-| Every key the person paid for is shown once, on the way out | §5, §10 | Nothing is shown; the link between person and key is simply destroyed |
-| A returning person is offered their subscription back at sign-in, silently, with a visible control beside it | §7 | The matching exists on our side; nothing asks the store |
-| A refund revokes the key by default, with *refund and keep* as a deliberate choice | §8 | A refund does neither — the key runs on to its original expiry |
-| No service is ever issued without an expiry | §2 | Believed true; worth confirming rather than assuming |
-| Invoices are frozen with the buyer's name; only the customer record is erased | §5 | Erasing the customer record strips the name off the invoices with it |
-| Checkout warns someone who already holds something active, and never blocks | §8 | Nothing is said; a second purchase goes through in silence |
-| A person signing in with a different address can claim their purchase with its code | §8 | No route exists; they become a second, unrelated customer |
-| A bulk order is marked as stock when it is sold | §8 | Nothing marks it; it is only distinguishable by having no single key recorded |
-| Suspend, cancel and renew on a bulk order report an error naming the batch, and change nothing | §8 | They send an incomplete request that silently does nothing, while the panel reports success |
-| The client area shows a bulk order as a file delivery, not as a code | §8 | It tries to fetch a code that does not exist |
-| Deletion offers "also stop future renewals" where the store allows it, and acts on it | §8 | No such option; the store is never asked to cancel |
-| One final message goes to their address at deletion, carrying their keys and the warning | §5 | Nothing is sent; the confirmation screen is the only chance they get |
-| The confirmation states that a subscription in grace or hold is still open and will charge again | §8, §10 | The warning does not vary, so the case most likely to cost them money reads like every other |
-
-Two of these protect money directly — the double-sale refusal and the refund revoke — and two
-protect the promise we make to the person: showing the keys before erasing them, and giving them a
-way back afterwards.
-
-### Defects found while writing this
-
-These are not decisions waiting to be built — they are things that should already work and do not.
-They came out of walking the sign-in flow while answering §8, and they belong in the same pass.
-
-**1. A returning person is matched against a stale address, which is a way into someone else's
-account.** A new sign-in method joins an existing account when its verified address matches — but
-the address it matches is the one the account was *created* with, and that snapshot is never
-updated when the provider later reports a different one. So an address the owner abandoned years
-ago still opens their account. Work and education addresses are reassigned to new staff as a matter
-of routine, and lapsed domains can simply be bought. The person who receives that old address next
-signs in normally, matches, and lands inside the previous owner's account, with their premium,
-their purchase history, and the ability to delete it.
-
-The existing defence — refusing sign-ins the provider has not marked as verified — stops someone
-*claiming* an address they do not control. It does nothing against someone who genuinely controls an
-address that used to belong to somebody else.
-
-The fix needs no new data: match against the addresses the **sign-in methods currently report**,
-which are already kept up to date, instead of the account's original snapshot. A stale address then
-stops matching by itself.
-
-**2. Joining a new sign-in method to an account is silent.** Nobody is told. Any takeover — by the
-route above or another — leaves nothing the owner would notice. One message, *"a new sign-in method
-was added to your account"*, is the ordinary safeguard.
-
-**3. Where two accounts share an address, one of them is unreachable.** Resolution takes the
-lowest-numbered match, so the other owner is silently shown an account that is not theirs, with no
-error raised. Older installations can contain such pairs.
-
-**4. An account can be permanently keyed on an address that stops working.** A private relay address
-is a legitimate verified mailbox and is treated as one — correctly — but because the account keeps
-the address it was created with, an account can end up keyed forever on a relay the person later
-switches off. It then holds their premium and cannot be reached by any message we send. Fix 1 helps
-here too, and it is one more reason the code is the real way back (§7).
-
-Only the first is urgent, and its fix is a change to one lookup rather than a redesign.
-
-### Sequencing
-
-**The invoice one has an order of operations.** The privacy policy and the public deletion page are
-corrected first, in all thirteen languages; only then does the behaviour change. Shipping the code
-first would open a period in which we keep data our own published policy says we destroyed — worse
-than either choice on its own. Nothing waits on an outside opinion: the wording names the legal
-obligation rather than a number of years (§5), so it can be written today.
-
-## 13. Where the wording lives
+## 12. Where the wording lives
 
 Three places must agree, and all three are translated:
 
 - The confirmation the app shows before deleting.
-- The **Delete Your Account (Forget Me)** section of the CONNECT privacy policy.
+- The **Delete Your Account** section of the CONNECT privacy policy.
 - The public account-deletion page on our website.
 
 Change one, change all three. The English is authored once and every other language is generated

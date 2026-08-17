@@ -1,4 +1,6 @@
 ﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
@@ -39,10 +41,15 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public string? Ga4MeasurementId { get; set; } = "G-4LE99XKZYE";
     public string? UiName { get; set; }
     public bool IsAddAccessKeySupported { get; set; } = true;
+
+    // This build's premium tier, or null when the product has none (the CLIENT apps): the app then
+    // runs as the FULL app — every feature on, nothing sold, no promotion — however the server's
+    // client policies tempt it. See AppPremiumOptions for the per-member rules.
+    public AppPremiumOptions? Premium { get; set; }
     public string[] AccessKeys { get; set; } = [];
     public IDeviceUiProvider? DeviceUiProvider { get; set; }
     public IAppCultureProvider? CultureProvider { get; set; }
-    public IAppAccountProvider? AccountProvider { get; set; }
+    public IAccountProvider? AccountProvider { get; set; }
     public IAppUserReviewProvider? UserReviewProvider { get; set; }
     public IReadOnlyList<AppAdProviderItem> AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
@@ -65,8 +72,6 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public bool AdjustForSystemBars { get; set; } = true;
     public bool AllowEndPointStrategy { get; set; }
     public object? CustomData { get; set; }
-    public bool AutoRemoveExpiredPremium { get; set; } // auto remove premium on access code reject
-    public AppFeature[] PremiumFeatures { get; init; } = [];
     public bool AllowRecommendUserReviewByServer { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
     public int? WebUiPort { get; set; }

@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
@@ -8,13 +8,13 @@ using VpnHood.Test.AccessManagers;
 
 namespace VpnHood.AppLib.Test.Providers;
 
-public class TestAdProvider(TestAccessManager accessManager, AppAdType adType = AppAdType.RewardedAd)
-    : IAppAdProvider
+public class TestAdProvider(TestAccessManager accessManager, AdType adType = AdType.RewardedAd)
+    : IAdProvider
 {
     public bool FailShow { get; set; }
     public bool FailLoad { get; set; }
     public string NetworkName => "UnitTestNetwork";
-    public AppAdType AdType => adType;
+    public AdType AdType => adType;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan { get; } = TimeSpan.FromMinutes(60);
     public TaskCompletionSource<ShowAdResult>? ShowAdCompletionSource { get; set; }

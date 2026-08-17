@@ -1,7 +1,7 @@
 ﻿using AuthenticationServices;
 using Foundation;
 using UIKit;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Ios.AppStore;
@@ -11,9 +11,9 @@ namespace VpnHood.AppLib.Ios.AppStore;
 /// Microsoft.iOS, no Swift needed). Returns the identity token JWS, which the
 /// portal's POST /auth/sessions verifies against Apple's published keys.
 /// </summary>
-public class AppleAuthenticationProvider : IAppAuthenticationExternalProvider
+public class AppleAuthenticationProvider : IAuthenticationExternalProvider
 {
-    public string SignInMethod => AppSignInMethods.Apple;
+    public string ProviderId => AuthProviders.Apple;
 
     public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin, CancellationToken cancellationToken)
     {

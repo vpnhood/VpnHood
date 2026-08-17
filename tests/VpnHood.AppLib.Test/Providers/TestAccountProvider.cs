@@ -1,22 +1,21 @@
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
 
-internal class TestAccountProvider : IAppAccountProvider
+internal class TestAccountProvider : IAccountProvider
 {
-    public AppAccount? Account { get; set; }
+    public Account? Account { get; set; }
     public int DeleteAccountCalls { get; private set; }
 
-    /// <summary>The access code the subscription delivers; empty means the backend has none to give.</summary>
-    public string AccessCode { get; set; } = string.Empty;
     public int GetAccountCalls { get; private set; }
     public IReadOnlyList<string> ProductIds { get; set; } = ["test_plan_1m"];
     public TestAuthenticationProvider TestAuthenticationProvider { get; } = new();
     public TestBillingProvider TestBillingProvider { get; } = new();
     public TestOrderProcessor TestOrderProcessor { get; } = new();
 
-    public IAppAuthenticationProvider AuthenticationProvider => TestAuthenticationProvider;
+    public IAuthenticationProvider AuthenticationProvider => TestAuthenticationProvider;
 
     public AppBilling? Billing { get; }
 
@@ -33,7 +32,7 @@ internal class TestAccountProvider : IAppAccountProvider
         return Task.FromResult(ProductIds);
     }
 
-    public Task<AppAccount?> GetAccount(CancellationToken cancellationToken)
+    public Task<Account?> GetAccount(CancellationToken cancellationToken)
     {
         GetAccountCalls++;
         // an account provider answers for the SIGNED-IN person: no session, no account
@@ -41,19 +40,15 @@ internal class TestAccountProvider : IAppAccountProvider
         return Task.FromResult(TestAuthenticationProvider.UserId == null ? null : Account);
     }
 
-    public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
-    {
-        return Task.FromResult<IReadOnlyList<string>>([]);
-    }
+    /// <summary>Set to make the backend refuse the deletion (the portal's "deletion_blocked").</summary>
+    public Exception? DeleteAccountException { get; set; }
 
-    public Task<string> GetAccessCode(string subscriptionId, CancellationToken cancellationToken)
-    {
-        return Task.FromResult(AccessCode);
-    }
-
-    public Task DeleteAccount(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task DeleteAccount(CancellationToken cancellationToken)
     {
         DeleteAccountCalls++;
+        if (DeleteAccountException != null)
+            return Task.FromException(DeleteAccountException);
+
         Account = null;
         return Task.CompletedTask;
     }

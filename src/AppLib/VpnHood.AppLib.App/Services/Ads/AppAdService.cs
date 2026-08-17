@@ -1,6 +1,8 @@
 ﻿using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Abstractions.Ads;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
@@ -17,11 +19,11 @@ public class AppAdService(
     private AppCompositeAdService? _currentCompositeAdService;
 
     private readonly AppCompositeAdService _compositeInterstitialAdService = new(
-        [.. adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.InterstitialAd)],
+        [.. adProviderItems.Where(x => x.AdProvider.AdType == AdType.InterstitialAd)],
         tracker);
 
     private readonly AppCompositeAdService _compositeRewardedAdService = new(
-        [.. adProviderItems.Where(x => x.AdProvider.AdType == AppAdType.RewardedAd)],
+        [.. adProviderItems.Where(x => x.AdProvider.AdType == AdType.RewardedAd)],
         tracker);
 
     private InternalInAdProvider? ActiveInternalAdProvider => (InternalInAdProvider?)adProviderItems
@@ -43,20 +45,20 @@ public class AppAdService(
             item.IsEnabled = value;
     }
 
-    private bool CanShowOverVpn(AppAdType adType) =>
+    private bool CanShowOverVpn(AdType adType) =>
         adProviderItems.Any(x => x.AdProvider.AdType == adType && x.CanShowOverVpn);
 
     public bool CanShowOverVpn(AdRequestType adRequestType)
     {
         return adRequestType switch {
-            AdRequestType.Interstitial => CanShowOverVpn(AppAdType.InterstitialAd),
-            AdRequestType.Rewarded => CanShowOverVpn(AppAdType.RewardedAd),
+            AdRequestType.Interstitial => CanShowOverVpn(AdType.InterstitialAd),
+            AdRequestType.Rewarded => CanShowOverVpn(AdType.RewardedAd),
             _ => throw new ArgumentOutOfRangeException(nameof(adRequestType), adRequestType, null)
         };
     }
 
-    public bool CanShowInterstitial => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.InterstitialAd);
-    public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AppAdType.RewardedAd);
+    public bool CanShowInterstitial => adProviderItems.Any(x => x.AdProvider.AdType == AdType.InterstitialAd);
+    public bool CanShowRewarded => adProviderItems.Any(x => x.AdProvider.AdType == AdType.RewardedAd);
 
     public async Task LoadInterstitialAd(IUiContext uiContext, bool useFallback, CancellationToken cancellationToken)
     {

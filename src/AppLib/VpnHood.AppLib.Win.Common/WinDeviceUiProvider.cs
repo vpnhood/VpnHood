@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions.Device;
 
 namespace VpnHood.AppLib.Win.Common;
 

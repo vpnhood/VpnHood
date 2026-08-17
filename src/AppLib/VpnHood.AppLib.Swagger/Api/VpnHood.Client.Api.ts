@@ -23,7 +23,7 @@ export class AccountClient {
 
     }
 
-    get( cancelToken?: CancelToken): Promise<AppAccount> {
+    get( cancelToken?: CancelToken): Promise<Account> {
         let url_ = this.baseUrl + "/api/account";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -47,7 +47,7 @@ export class AccountClient {
         });
     }
 
-    protected processGet(response: AxiosResponse): Promise<AppAccount> {
+    protected processGet(response: AxiosResponse): Promise<Account> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -61,14 +61,14 @@ export class AccountClient {
             const _responseText = response.data;
             let result200: any = null;
             let resultData200  = _responseText;
-            result200 = AppAccount.fromJS(resultData200);
-            return Promise.resolve<AppAccount>(result200);
+            result200 = Account.fromJS(resultData200);
+            return Promise.resolve<Account>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<AppAccount>(null as any);
+        return Promise.resolve<Account>(null as any);
     }
 
     delete( cancelToken?: CancelToken): Promise<void> {
@@ -159,7 +159,7 @@ export class AccountClient {
         return Promise.resolve<void>(null as any);
     }
 
-    signIn(signInOptions: AppSignInOptions, cancelToken?: CancelToken): Promise<void> {
+    signIn(signInOptions: SignInOptions, cancelToken?: CancelToken): Promise<SignInResult> {
         let url_ = this.baseUrl + "/api/account/sign-in";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -171,6 +171,7 @@ export class AccountClient {
             url: url_,
             headers: {
                 "Content-Type": "application/json",
+                "Accept": "application/json"
             },
             cancelToken
         };
@@ -186,7 +187,7 @@ export class AccountClient {
         });
     }
 
-    protected processSignIn(response: AxiosResponse): Promise<void> {
+    protected processSignIn(response: AxiosResponse): Promise<SignInResult> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -198,13 +199,16 @@ export class AccountClient {
         }
         if (status === 200) {
             const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = SignInResult.fromJS(resultData200);
+            return Promise.resolve<SignInResult>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SignInResult>(null as any);
     }
 
     signOut( cancelToken?: CancelToken): Promise<void> {
@@ -249,64 +253,6 @@ export class AccountClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
         return Promise.resolve<void>(null as any);
-    }
-
-    listAccessKeys(subscriptionId: string, cancelToken?: CancelToken): Promise<string[]> {
-        let url_ = this.baseUrl + "/api/account/subscriptions/{subscriptionId}/access-keys";
-        if (subscriptionId === undefined || subscriptionId === null)
-            throw new globalThis.Error("The parameter 'subscriptionId' must be defined.");
-        url_ = url_.replace("{subscriptionId}", encodeURIComponent("" + subscriptionId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "GET",
-            url: url_,
-            headers: {
-                "Accept": "application/json"
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processListAccessKeys(_response);
-        });
-    }
-
-    protected processListAccessKeys(response: AxiosResponse): Promise<string[]> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(item);
-            }
-            else {
-                result200 = null as any;
-            }
-            return Promise.resolve<string[]>(result200);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<string[]>(null as any);
     }
 }
 
@@ -1751,7 +1697,7 @@ export class BillingClient {
         return Promise.resolve<SubscriptionPlan[]>(null as any);
     }
 
-    purchase(purchaseParams: PurchaseParams, cancelToken?: CancelToken): Promise<string> {
+    purchase(purchaseParams: PurchaseParams, cancelToken?: CancelToken): Promise<void> {
         let url_ = this.baseUrl + "/api/billing/purchase";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1763,7 +1709,6 @@ export class BillingClient {
             url: url_,
             headers: {
                 "Content-Type": "application/json",
-                "Accept": "application/json"
             },
             cancelToken
         };
@@ -1779,7 +1724,7 @@ export class BillingClient {
         });
     }
 
-    protected processPurchase(response: AxiosResponse): Promise<string> {
+    protected processPurchase(response: AxiosResponse): Promise<void> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1791,20 +1736,16 @@ export class BillingClient {
         }
         if (status === 200) {
             const _responseText = response.data;
-            let result200: any = null;
-            let resultData200  = _responseText;
-                result200 = resultData200 !== undefined ? resultData200 : null as any;
-    
-            return Promise.resolve<string>(result200);
+            return Promise.resolve<void>(null as any);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<string>(null as any);
+        return Promise.resolve<void>(null as any);
     }
 
-    restorePurchase( cancelToken?: CancelToken): Promise<string> {
+    restorePurchase( cancelToken?: CancelToken): Promise<boolean> {
         let url_ = this.baseUrl + "/api/billing/restore-purchase";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1828,7 +1769,7 @@ export class BillingClient {
         });
     }
 
-    protected processRestorePurchase(response: AxiosResponse): Promise<string> {
+    protected processRestorePurchase(response: AxiosResponse): Promise<boolean> {
         const status = response.status;
         let _headers: any = {};
         if (response.headers && typeof response.headers === "object") {
@@ -1844,13 +1785,57 @@ export class BillingClient {
             let resultData200  = _responseText;
                 result200 = resultData200 !== undefined ? resultData200 : null as any;
     
-            return Promise.resolve<string>(result200);
+            return Promise.resolve<boolean>(result200);
 
         } else if (status !== 200 && status !== 204) {
             const _responseText = response.data;
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
         }
-        return Promise.resolve<string>(null as any);
+        return Promise.resolve<boolean>(null as any);
+    }
+
+    openSubscriptionManagement( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/billing/subscription-management";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processOpenSubscriptionManagement(_response);
+        });
+    }
+
+    protected processOpenSubscriptionManagement(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
     }
 
     getPurchaseOptions(clientProfileId: string, cancelToken?: CancelToken): Promise<AppPurchaseOptions> {
@@ -3237,22 +3222,14 @@ export class ProxyEndPointClient {
     }
 }
 
-export class AppAccount implements IAppAccount {
+export class Account implements IAccount {
     userId!: string;
     name?: string | null;
     email?: string | null;
-    subscriptionId?: string | null;
-    providerPlanId?: string | null;
-    createdTime?: Date | null;
-    expirationTime?: Date | null;
-    priceAmount?: number | null;
-    priceCurrency?: string | null;
-    priceBillingPeriod?: string | null;
-    isAutoRenew?: boolean | null;
-    providerSubscriptionId?: string | null;
-    subscriptionManagementUrl?: string | null;
+    subscription?: Subscription | null;
+    accessCodeInfo?: AccessCodeInfo | null;
 
-    constructor(data?: IAppAccount) {
+    constructor(data?: IAccount) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -3266,22 +3243,14 @@ export class AppAccount implements IAppAccount {
             this.userId = _data["userId"] !== undefined ? _data["userId"] : null as any;
             this.name = _data["name"] !== undefined ? _data["name"] : null as any;
             this.email = _data["email"] !== undefined ? _data["email"] : null as any;
-            this.subscriptionId = _data["subscriptionId"] !== undefined ? _data["subscriptionId"] : null as any;
-            this.providerPlanId = _data["providerPlanId"] !== undefined ? _data["providerPlanId"] : null as any;
-            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : null as any;
-            this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : null as any;
-            this.priceAmount = _data["priceAmount"] !== undefined ? _data["priceAmount"] : null as any;
-            this.priceCurrency = _data["priceCurrency"] !== undefined ? _data["priceCurrency"] : null as any;
-            this.priceBillingPeriod = _data["priceBillingPeriod"] !== undefined ? _data["priceBillingPeriod"] : null as any;
-            this.isAutoRenew = _data["isAutoRenew"] !== undefined ? _data["isAutoRenew"] : null as any;
-            this.providerSubscriptionId = _data["providerSubscriptionId"] !== undefined ? _data["providerSubscriptionId"] : null as any;
-            this.subscriptionManagementUrl = _data["subscriptionManagementUrl"] !== undefined ? _data["subscriptionManagementUrl"] : null as any;
+            this.subscription = _data["subscription"] ? Subscription.fromJS(_data["subscription"]) : null as any;
+            this.accessCodeInfo = _data["accessCodeInfo"] ? AccessCodeInfo.fromJS(_data["accessCodeInfo"]) : null as any;
         }
     }
 
-    static fromJS(data: any): AppAccount {
+    static fromJS(data: any): Account {
         data = typeof data === 'object' ? data : {};
-        let result = new AppAccount();
+        let result = new Account();
         result.init(data);
         return result;
     }
@@ -3291,42 +3260,31 @@ export class AppAccount implements IAppAccount {
         data["userId"] = this.userId !== undefined ? this.userId : null as any;
         data["name"] = this.name !== undefined ? this.name : null as any;
         data["email"] = this.email !== undefined ? this.email : null as any;
-        data["subscriptionId"] = this.subscriptionId !== undefined ? this.subscriptionId : null as any;
-        data["providerPlanId"] = this.providerPlanId !== undefined ? this.providerPlanId : null as any;
-        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : null as any;
-        data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : null as any;
-        data["priceAmount"] = this.priceAmount !== undefined ? this.priceAmount : null as any;
-        data["priceCurrency"] = this.priceCurrency !== undefined ? this.priceCurrency : null as any;
-        data["priceBillingPeriod"] = this.priceBillingPeriod !== undefined ? this.priceBillingPeriod : null as any;
-        data["isAutoRenew"] = this.isAutoRenew !== undefined ? this.isAutoRenew : null as any;
-        data["providerSubscriptionId"] = this.providerSubscriptionId !== undefined ? this.providerSubscriptionId : null as any;
-        data["subscriptionManagementUrl"] = this.subscriptionManagementUrl !== undefined ? this.subscriptionManagementUrl : null as any;
+        data["subscription"] = this.subscription ? this.subscription.toJSON() : null as any;
+        data["accessCodeInfo"] = this.accessCodeInfo ? this.accessCodeInfo.toJSON() : null as any;
         return data;
     }
 }
 
-export interface IAppAccount {
+export interface IAccount {
     userId: string;
     name?: string | null;
     email?: string | null;
-    subscriptionId?: string | null;
-    providerPlanId?: string | null;
+    subscription?: Subscription | null;
+    accessCodeInfo?: AccessCodeInfo | null;
+}
+
+export class Subscription implements ISubscription {
+    storeId!: string;
     createdTime?: Date | null;
     expirationTime?: Date | null;
     priceAmount?: number | null;
     priceCurrency?: string | null;
-    priceBillingPeriod?: string | null;
+    billingPeriod?: string | null;
     isAutoRenew?: boolean | null;
-    providerSubscriptionId?: string | null;
-    subscriptionManagementUrl?: string | null;
-}
+    management!: SubscriptionManagement;
 
-export class AppSignInOptions implements IAppSignInOptions {
-    method!: string;
-    userName?: string | null;
-    password?: string | null;
-
-    constructor(data?: IAppSignInOptions) {
+    constructor(data?: ISubscription) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -3337,32 +3295,186 @@ export class AppSignInOptions implements IAppSignInOptions {
 
     init(_data?: any) {
         if (_data) {
-            this.method = _data["method"] !== undefined ? _data["method"] : null as any;
-            this.userName = _data["userName"] !== undefined ? _data["userName"] : null as any;
-            this.password = _data["password"] !== undefined ? _data["password"] : null as any;
+            this.storeId = _data["storeId"] !== undefined ? _data["storeId"] : null as any;
+            this.createdTime = _data["createdTime"] ? new Date(_data["createdTime"].toString()) : null as any;
+            this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : null as any;
+            this.priceAmount = _data["priceAmount"] !== undefined ? _data["priceAmount"] : null as any;
+            this.priceCurrency = _data["priceCurrency"] !== undefined ? _data["priceCurrency"] : null as any;
+            this.billingPeriod = _data["billingPeriod"] !== undefined ? _data["billingPeriod"] : null as any;
+            this.isAutoRenew = _data["isAutoRenew"] !== undefined ? _data["isAutoRenew"] : null as any;
+            this.management = _data["management"] !== undefined ? _data["management"] : null as any;
         }
     }
 
-    static fromJS(data: any): AppSignInOptions {
+    static fromJS(data: any): Subscription {
         data = typeof data === 'object' ? data : {};
-        let result = new AppSignInOptions();
+        let result = new Subscription();
         result.init(data);
         return result;
     }
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["method"] = this.method !== undefined ? this.method : null as any;
-        data["userName"] = this.userName !== undefined ? this.userName : null as any;
-        data["password"] = this.password !== undefined ? this.password : null as any;
+        data["storeId"] = this.storeId !== undefined ? this.storeId : null as any;
+        data["createdTime"] = this.createdTime ? this.createdTime.toISOString() : null as any;
+        data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : null as any;
+        data["priceAmount"] = this.priceAmount !== undefined ? this.priceAmount : null as any;
+        data["priceCurrency"] = this.priceCurrency !== undefined ? this.priceCurrency : null as any;
+        data["billingPeriod"] = this.billingPeriod !== undefined ? this.billingPeriod : null as any;
+        data["isAutoRenew"] = this.isAutoRenew !== undefined ? this.isAutoRenew : null as any;
+        data["management"] = this.management !== undefined ? this.management : null as any;
         return data;
     }
 }
 
-export interface IAppSignInOptions {
-    method: string;
+export interface ISubscription {
+    storeId: string;
+    createdTime?: Date | null;
+    expirationTime?: Date | null;
+    priceAmount?: number | null;
+    priceCurrency?: string | null;
+    billingPeriod?: string | null;
+    isAutoRenew?: boolean | null;
+    management: SubscriptionManagement;
+}
+
+export enum SubscriptionManagement {
+    AnotherStore = 0,
+    NotOnThisDevice = 1,
+    Available = 2,
+}
+
+export class AccessCodeInfo implements IAccessCodeInfo {
+    accessCode!: string;
+    expirationTime?: Date | null;
+
+    constructor(data?: IAccessCodeInfo) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.accessCode = _data["accessCode"] !== undefined ? _data["accessCode"] : null as any;
+            this.expirationTime = _data["expirationTime"] ? new Date(_data["expirationTime"].toString()) : null as any;
+        }
+    }
+
+    static fromJS(data: any): AccessCodeInfo {
+        data = typeof data === 'object' ? data : {};
+        let result = new AccessCodeInfo();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["accessCode"] = this.accessCode !== undefined ? this.accessCode : null as any;
+        data["expirationTime"] = this.expirationTime ? this.expirationTime.toISOString() : null as any;
+        return data;
+    }
+}
+
+export interface IAccessCodeInfo {
+    accessCode: string;
+    expirationTime?: Date | null;
+}
+
+export class SignInResult implements ISignInResult {
+    state!: SignInState;
+    newBackupCode?: string | null;
+
+    constructor(data?: ISignInResult) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.state = _data["state"] !== undefined ? _data["state"] : null as any;
+            this.newBackupCode = _data["newBackupCode"] !== undefined ? _data["newBackupCode"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): SignInResult {
+        data = typeof data === 'object' ? data : {};
+        let result = new SignInResult();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["state"] = this.state !== undefined ? this.state : null as any;
+        data["newBackupCode"] = this.newBackupCode !== undefined ? this.newBackupCode : null as any;
+        return data;
+    }
+}
+
+export interface ISignInResult {
+    state: SignInState;
+    newBackupCode?: string | null;
+}
+
+export enum SignInState {
+    SignedIn = "SignedIn",
+    TotpRequired = "TotpRequired",
+}
+
+export class SignInOptions implements ISignInOptions {
+    providerId!: string;
     userName?: string | null;
     password?: string | null;
+    twoFactorCode?: string | null;
+
+    constructor(data?: ISignInOptions) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.providerId = _data["providerId"] !== undefined ? _data["providerId"] : null as any;
+            this.userName = _data["userName"] !== undefined ? _data["userName"] : null as any;
+            this.password = _data["password"] !== undefined ? _data["password"] : null as any;
+            this.twoFactorCode = _data["twoFactorCode"] !== undefined ? _data["twoFactorCode"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): SignInOptions {
+        data = typeof data === 'object' ? data : {};
+        let result = new SignInOptions();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["providerId"] = this.providerId !== undefined ? this.providerId : null as any;
+        data["userName"] = this.userName !== undefined ? this.userName : null as any;
+        data["password"] = this.password !== undefined ? this.password : null as any;
+        data["twoFactorCode"] = this.twoFactorCode !== undefined ? this.twoFactorCode : null as any;
+        return data;
+    }
+}
+
+export interface ISignInOptions {
+    providerId: string;
+    userName?: string | null;
+    password?: string | null;
+    twoFactorCode?: string | null;
 }
 
 export class AppData implements IAppData {
@@ -3457,11 +3569,12 @@ export class AppFeatures implements IAppFeatures {
     isExcludeAppsSupported!: boolean;
     isIncludeAppsSupported!: boolean;
     uiName!: string | null;
-    isPremiumFlagSupported!: boolean;
     isAddAccessKeySupported!: boolean;
+    premium!: AppPremiumOptions | null;
     isAccountSupported!: boolean;
     isBillingSupported!: boolean;
-    signInMethods!: string[];
+    authProviderIds!: string[];
+    accountWebsiteUrl!: string | null;
     isTcpProxySupported!: boolean;
     isQuicSupported!: boolean;
     isSplitDomainSupported!: boolean;
@@ -3476,11 +3589,9 @@ export class AppFeatures implements IAppFeatures {
     isProxySupported!: boolean;
     adjustForSystemBars!: boolean;
     allowEndPointStrategy!: boolean;
-    autoRemoveExpiredPremium!: boolean;
     isAdSupported!: boolean;
     isRewardedAdSupported!: boolean;
     webUiPort!: number | null;
-    premiumFeatures!: AppFeature[];
     channelProtocols!: ChannelProtocol[];
     customData!: any | null;
     version!: string;
@@ -3493,9 +3604,8 @@ export class AppFeatures implements IAppFeatures {
             }
         }
         if (!data) {
-            this.signInMethods = [];
+            this.authProviderIds = [];
             this.debugCommands = [];
-            this.premiumFeatures = [];
             this.channelProtocols = [];
         }
     }
@@ -3507,18 +3617,19 @@ export class AppFeatures implements IAppFeatures {
             this.isExcludeAppsSupported = _data["isExcludeAppsSupported"] !== undefined ? _data["isExcludeAppsSupported"] : null as any;
             this.isIncludeAppsSupported = _data["isIncludeAppsSupported"] !== undefined ? _data["isIncludeAppsSupported"] : null as any;
             this.uiName = _data["uiName"] !== undefined ? _data["uiName"] : null as any;
-            this.isPremiumFlagSupported = _data["isPremiumFlagSupported"] !== undefined ? _data["isPremiumFlagSupported"] : null as any;
             this.isAddAccessKeySupported = _data["isAddAccessKeySupported"] !== undefined ? _data["isAddAccessKeySupported"] : null as any;
+            this.premium = _data["premium"] ? AppPremiumOptions.fromJS(_data["premium"]) : null as any;
             this.isAccountSupported = _data["isAccountSupported"] !== undefined ? _data["isAccountSupported"] : null as any;
             this.isBillingSupported = _data["isBillingSupported"] !== undefined ? _data["isBillingSupported"] : null as any;
-            if (Array.isArray(_data["signInMethods"])) {
-                this.signInMethods = [] as any;
-                for (let item of _data["signInMethods"])
-                    this.signInMethods!.push(item);
+            if (Array.isArray(_data["authProviderIds"])) {
+                this.authProviderIds = [] as any;
+                for (let item of _data["authProviderIds"])
+                    this.authProviderIds!.push(item);
             }
             else {
-                this.signInMethods = null as any;
+                this.authProviderIds = null as any;
             }
+            this.accountWebsiteUrl = _data["accountWebsiteUrl"] !== undefined ? _data["accountWebsiteUrl"] : null as any;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
             this.isQuicSupported = _data["isQuicSupported"] !== undefined ? _data["isQuicSupported"] : null as any;
             this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
@@ -3540,18 +3651,9 @@ export class AppFeatures implements IAppFeatures {
             this.isProxySupported = _data["isProxySupported"] !== undefined ? _data["isProxySupported"] : null as any;
             this.adjustForSystemBars = _data["adjustForSystemBars"] !== undefined ? _data["adjustForSystemBars"] : null as any;
             this.allowEndPointStrategy = _data["allowEndPointStrategy"] !== undefined ? _data["allowEndPointStrategy"] : null as any;
-            this.autoRemoveExpiredPremium = _data["autoRemoveExpiredPremium"] !== undefined ? _data["autoRemoveExpiredPremium"] : null as any;
             this.isAdSupported = _data["isAdSupported"] !== undefined ? _data["isAdSupported"] : null as any;
             this.isRewardedAdSupported = _data["isRewardedAdSupported"] !== undefined ? _data["isRewardedAdSupported"] : null as any;
             this.webUiPort = _data["webUiPort"] !== undefined ? _data["webUiPort"] : null as any;
-            if (Array.isArray(_data["premiumFeatures"])) {
-                this.premiumFeatures = [] as any;
-                for (let item of _data["premiumFeatures"])
-                    this.premiumFeatures!.push(item);
-            }
-            else {
-                this.premiumFeatures = null as any;
-            }
             if (Array.isArray(_data["channelProtocols"])) {
                 this.channelProtocols = [] as any;
                 for (let item of _data["channelProtocols"])
@@ -3579,15 +3681,16 @@ export class AppFeatures implements IAppFeatures {
         data["isExcludeAppsSupported"] = this.isExcludeAppsSupported !== undefined ? this.isExcludeAppsSupported : null as any;
         data["isIncludeAppsSupported"] = this.isIncludeAppsSupported !== undefined ? this.isIncludeAppsSupported : null as any;
         data["uiName"] = this.uiName !== undefined ? this.uiName : null as any;
-        data["isPremiumFlagSupported"] = this.isPremiumFlagSupported !== undefined ? this.isPremiumFlagSupported : null as any;
         data["isAddAccessKeySupported"] = this.isAddAccessKeySupported !== undefined ? this.isAddAccessKeySupported : null as any;
+        data["premium"] = this.premium ? this.premium.toJSON() : null as any;
         data["isAccountSupported"] = this.isAccountSupported !== undefined ? this.isAccountSupported : null as any;
         data["isBillingSupported"] = this.isBillingSupported !== undefined ? this.isBillingSupported : null as any;
-        if (Array.isArray(this.signInMethods)) {
-            data["signInMethods"] = [];
-            for (let item of this.signInMethods)
-                data["signInMethods"].push(item);
+        if (Array.isArray(this.authProviderIds)) {
+            data["authProviderIds"] = [];
+            for (let item of this.authProviderIds)
+                data["authProviderIds"].push(item);
         }
+        data["accountWebsiteUrl"] = this.accountWebsiteUrl !== undefined ? this.accountWebsiteUrl : null as any;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
         data["isQuicSupported"] = this.isQuicSupported !== undefined ? this.isQuicSupported : null as any;
         data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
@@ -3606,15 +3709,9 @@ export class AppFeatures implements IAppFeatures {
         data["isProxySupported"] = this.isProxySupported !== undefined ? this.isProxySupported : null as any;
         data["adjustForSystemBars"] = this.adjustForSystemBars !== undefined ? this.adjustForSystemBars : null as any;
         data["allowEndPointStrategy"] = this.allowEndPointStrategy !== undefined ? this.allowEndPointStrategy : null as any;
-        data["autoRemoveExpiredPremium"] = this.autoRemoveExpiredPremium !== undefined ? this.autoRemoveExpiredPremium : null as any;
         data["isAdSupported"] = this.isAdSupported !== undefined ? this.isAdSupported : null as any;
         data["isRewardedAdSupported"] = this.isRewardedAdSupported !== undefined ? this.isRewardedAdSupported : null as any;
         data["webUiPort"] = this.webUiPort !== undefined ? this.webUiPort : null as any;
-        if (Array.isArray(this.premiumFeatures)) {
-            data["premiumFeatures"] = [];
-            for (let item of this.premiumFeatures)
-                data["premiumFeatures"].push(item);
-        }
         if (Array.isArray(this.channelProtocols)) {
             data["channelProtocols"] = [];
             for (let item of this.channelProtocols)
@@ -3632,11 +3729,12 @@ export interface IAppFeatures {
     isExcludeAppsSupported: boolean;
     isIncludeAppsSupported: boolean;
     uiName: string | null;
-    isPremiumFlagSupported: boolean;
     isAddAccessKeySupported: boolean;
+    premium: AppPremiumOptions | null;
     isAccountSupported: boolean;
     isBillingSupported: boolean;
-    signInMethods: string[];
+    authProviderIds: string[];
+    accountWebsiteUrl: string | null;
     isTcpProxySupported: boolean;
     isQuicSupported: boolean;
     isSplitDomainSupported: boolean;
@@ -3651,23 +3749,74 @@ export interface IAppFeatures {
     isProxySupported: boolean;
     adjustForSystemBars: boolean;
     allowEndPointStrategy: boolean;
-    autoRemoveExpiredPremium: boolean;
     isAdSupported: boolean;
     isRewardedAdSupported: boolean;
     webUiPort: number | null;
-    premiumFeatures: AppFeature[];
     channelProtocols: ChannelProtocol[];
     customData: any | null;
     version: string;
 }
 
-export enum AppOsType {
-    Unknown = "Unknown",
-    Windows = "Windows",
-    Linux = "Linux",
-    Android = "Android",
-    Ios = "Ios",
-    MacOs = "MacOs",
+export class AppPremiumOptions implements IAppPremiumOptions {
+    features!: AppFeature[];
+    isCodeSupported!: boolean;
+    isPurchaseUrlSupported!: boolean;
+    autoRemoveExpiredAccessCode!: boolean;
+
+    constructor(data?: IAppPremiumOptions) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.features = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            if (Array.isArray(_data["features"])) {
+                this.features = [] as any;
+                for (let item of _data["features"])
+                    this.features!.push(item);
+            }
+            else {
+                this.features = null as any;
+            }
+            this.isCodeSupported = _data["isCodeSupported"] !== undefined ? _data["isCodeSupported"] : null as any;
+            this.isPurchaseUrlSupported = _data["isPurchaseUrlSupported"] !== undefined ? _data["isPurchaseUrlSupported"] : null as any;
+            this.autoRemoveExpiredAccessCode = _data["autoRemoveExpiredAccessCode"] !== undefined ? _data["autoRemoveExpiredAccessCode"] : null as any;
+        }
+    }
+
+    static fromJS(data: any): AppPremiumOptions {
+        data = typeof data === 'object' ? data : {};
+        let result = new AppPremiumOptions();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        if (Array.isArray(this.features)) {
+            data["features"] = [];
+            for (let item of this.features)
+                data["features"].push(item);
+        }
+        data["isCodeSupported"] = this.isCodeSupported !== undefined ? this.isCodeSupported : null as any;
+        data["isPurchaseUrlSupported"] = this.isPurchaseUrlSupported !== undefined ? this.isPurchaseUrlSupported : null as any;
+        data["autoRemoveExpiredAccessCode"] = this.autoRemoveExpiredAccessCode !== undefined ? this.autoRemoveExpiredAccessCode : null as any;
+        return data;
+    }
+}
+
+export interface IAppPremiumOptions {
+    features: AppFeature[];
+    isCodeSupported: boolean;
+    isPurchaseUrlSupported: boolean;
+    autoRemoveExpiredAccessCode: boolean;
 }
 
 export enum AppFeature {
@@ -3680,6 +3829,15 @@ export enum AppFeature {
     SplitCountry = "SplitCountry",
 }
 
+export enum AppOsType {
+    Unknown = "Unknown",
+    Windows = "Windows",
+    Linux = "Linux",
+    Android = "Android",
+    Ios = "Ios",
+    MacOs = "MacOs",
+}
+
 export enum ChannelProtocol {
     Quic = "Quic",
     Udp = "Udp",
@@ -3688,6 +3846,7 @@ export enum ChannelProtocol {
 
 export class DeviceIntentFeatures implements IDeviceIntentFeatures {
     isUserReviewSupported!: boolean;
+    isWebBrowserSupported!: boolean;
     isQuickLaunchSupported!: boolean;
     isRequestQuickLaunchSupported!: boolean;
     isRequestNotificationSupported!: boolean;
@@ -3710,6 +3869,7 @@ export class DeviceIntentFeatures implements IDeviceIntentFeatures {
     init(_data?: any) {
         if (_data) {
             this.isUserReviewSupported = _data["isUserReviewSupported"] !== undefined ? _data["isUserReviewSupported"] : null as any;
+            this.isWebBrowserSupported = _data["isWebBrowserSupported"] !== undefined ? _data["isWebBrowserSupported"] : null as any;
             this.isQuickLaunchSupported = _data["isQuickLaunchSupported"] !== undefined ? _data["isQuickLaunchSupported"] : null as any;
             this.isRequestQuickLaunchSupported = _data["isRequestQuickLaunchSupported"] !== undefined ? _data["isRequestQuickLaunchSupported"] : null as any;
             this.isRequestNotificationSupported = _data["isRequestNotificationSupported"] !== undefined ? _data["isRequestNotificationSupported"] : null as any;
@@ -3732,6 +3892,7 @@ export class DeviceIntentFeatures implements IDeviceIntentFeatures {
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
         data["isUserReviewSupported"] = this.isUserReviewSupported !== undefined ? this.isUserReviewSupported : null as any;
+        data["isWebBrowserSupported"] = this.isWebBrowserSupported !== undefined ? this.isWebBrowserSupported : null as any;
         data["isQuickLaunchSupported"] = this.isQuickLaunchSupported !== undefined ? this.isQuickLaunchSupported : null as any;
         data["isRequestQuickLaunchSupported"] = this.isRequestQuickLaunchSupported !== undefined ? this.isRequestQuickLaunchSupported : null as any;
         data["isRequestNotificationSupported"] = this.isRequestNotificationSupported !== undefined ? this.isRequestNotificationSupported : null as any;
@@ -3747,6 +3908,7 @@ export class DeviceIntentFeatures implements IDeviceIntentFeatures {
 
 export interface IDeviceIntentFeatures {
     isUserReviewSupported: boolean;
+    isWebBrowserSupported: boolean;
     isQuickLaunchSupported: boolean;
     isRequestQuickLaunchSupported: boolean;
     isRequestNotificationSupported: boolean;
@@ -3782,7 +3944,7 @@ export class AppState implements IAppState {
     clientCountryInfo!: CountryInfo | null;
     currentUiCultureInfo!: UiCultureInfo;
     systemUiCultureInfo!: UiCultureInfo;
-    purchaseState!: BillingPurchaseState | null;
+    purchaseState!: PurchaseState | null;
     systemBarsInfo!: SystemBarsInfo;
     isNotificationEnabled!: boolean | null;
     systemPrivateDns!: PrivateDns | null;
@@ -3922,7 +4084,7 @@ export interface IAppState {
     clientCountryInfo: CountryInfo | null;
     currentUiCultureInfo: UiCultureInfo;
     systemUiCultureInfo: UiCultureInfo;
-    purchaseState: BillingPurchaseState | null;
+    purchaseState: PurchaseState | null;
     systemBarsInfo: SystemBarsInfo;
     isNotificationEnabled: boolean | null;
     systemPrivateDns: PrivateDns | null;
@@ -5222,7 +5384,7 @@ export interface IUiCultureInfo {
     nativeName: string;
 }
 
-export enum BillingPurchaseState {
+export enum PurchaseState {
     None = "None",
     Started = "Started",
     Processing = "Processing",
@@ -6534,8 +6696,7 @@ export interface ISubscriptionPlan {
 }
 
 export class PurchaseParams implements IPurchaseParams {
-    purchaseToken!: string;
-    attribution?: AppPurchaseAttribution | null;
+    planToken!: string;
 
     constructor(data?: IPurchaseParams) {
         if (data) {
@@ -6548,8 +6709,7 @@ export class PurchaseParams implements IPurchaseParams {
 
     init(_data?: any) {
         if (_data) {
-            this.purchaseToken = _data["purchaseToken"] !== undefined ? _data["purchaseToken"] : null as any;
-            this.attribution = _data["attribution"] ? AppPurchaseAttribution.fromJS(_data["attribution"]) : null as any;
+            this.planToken = _data["planToken"] !== undefined ? _data["planToken"] : null as any;
         }
     }
 
@@ -6562,63 +6722,16 @@ export class PurchaseParams implements IPurchaseParams {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["purchaseToken"] = this.purchaseToken !== undefined ? this.purchaseToken : null as any;
-        data["attribution"] = this.attribution ? this.attribution.toJSON() : null as any;
+        data["planToken"] = this.planToken !== undefined ? this.planToken : null as any;
         return data;
     }
 }
 
 export interface IPurchaseParams {
-    purchaseToken: string;
-    attribution?: AppPurchaseAttribution | null;
-}
-
-export class AppPurchaseAttribution implements IAppPurchaseAttribution {
-    accountId?: string | null;
-    appAccountToken?: string | null;
-    storeServiceTicket?: string | null;
-
-    constructor(data?: IAppPurchaseAttribution) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (this as any)[property] = (data as any)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.accountId = _data["accountId"] !== undefined ? _data["accountId"] : null as any;
-            this.appAccountToken = _data["appAccountToken"] !== undefined ? _data["appAccountToken"] : null as any;
-            this.storeServiceTicket = _data["storeServiceTicket"] !== undefined ? _data["storeServiceTicket"] : null as any;
-        }
-    }
-
-    static fromJS(data: any): AppPurchaseAttribution {
-        data = typeof data === 'object' ? data : {};
-        let result = new AppPurchaseAttribution();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["accountId"] = this.accountId !== undefined ? this.accountId : null as any;
-        data["appAccountToken"] = this.appAccountToken !== undefined ? this.appAccountToken : null as any;
-        data["storeServiceTicket"] = this.storeServiceTicket !== undefined ? this.storeServiceTicket : null as any;
-        return data;
-    }
-}
-
-export interface IAppPurchaseAttribution {
-    accountId?: string | null;
-    appAccountToken?: string | null;
-    storeServiceTicket?: string | null;
+    planToken: string;
 }
 
 export class AppPurchaseOptions implements IAppPurchaseOptions {
-    storeName!: string | null;
     isStoreAvailable!: boolean;
     storeError!: ApiError | null;
     subscriptionPlans!: SubscriptionPlan[];
@@ -6639,7 +6752,6 @@ export class AppPurchaseOptions implements IAppPurchaseOptions {
 
     init(_data?: any) {
         if (_data) {
-            this.storeName = _data["storeName"] !== undefined ? _data["storeName"] : null as any;
             this.isStoreAvailable = _data["isStoreAvailable"] !== undefined ? _data["isStoreAvailable"] : null as any;
             this.storeError = _data["storeError"] ? ApiError.fromJS(_data["storeError"]) : null as any;
             if (Array.isArray(_data["subscriptionPlans"])) {
@@ -6664,7 +6776,6 @@ export class AppPurchaseOptions implements IAppPurchaseOptions {
 
     toJSON(data?: any) {
         data = typeof data === 'object' ? data : {};
-        data["storeName"] = this.storeName !== undefined ? this.storeName : null as any;
         data["isStoreAvailable"] = this.isStoreAvailable !== undefined ? this.isStoreAvailable : null as any;
         data["storeError"] = this.storeError ? this.storeError.toJSON() : null as any;
         if (Array.isArray(this.subscriptionPlans)) {
@@ -6679,7 +6790,6 @@ export class AppPurchaseOptions implements IAppPurchaseOptions {
 }
 
 export interface IAppPurchaseOptions {
-    storeName: string | null;
     isStoreAvailable: boolean;
     storeError: ApiError | null;
     subscriptionPlans: SubscriptionPlan[];

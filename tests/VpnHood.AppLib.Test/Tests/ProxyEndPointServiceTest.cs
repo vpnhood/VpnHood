@@ -1,13 +1,13 @@
 using System.Net;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Utils;
 using VpnHood.Core.Client.Abstractions.Exceptions;
+using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Proxies.Management.Abstractions.Options;
-using VpnHood.Core.Proxies.HttpProxyServers;
 using VpnHood.Core.Proxies.Socks5ProxyServers;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Test;

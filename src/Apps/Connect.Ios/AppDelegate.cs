@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Ios.AppStore;
 using VpnHood.AppLib.Ios.Common;
 using VpnHood.AppLib.Portal;
@@ -80,7 +81,12 @@ public class AppDelegate : UIApplicationDelegate
             // Loopback port for the in-process SPA web server (the WKWebView loads from here).
             WebUiPort = appConfigs.WebUiPort,
             IsAddAccessKeySupported = false,
-            PremiumFeatures = ConnectAppResources.PremiumFeatures,
+            // IsCodeSupported and IsPurchaseUrlSupported stay at their default (false): App Review
+            // 3.1.1 forbids unlocking with a license key — a premium code is one by Apple's reading —
+            // and 3.1.3 forbids steering a buyer to an outside shop, so this build ships with neither
+            // a code box nor a web-purchase link, whatever an operator's token offers (lifecycle §9).
+            // Website purchases arrive via sign-in and the server-chosen code instead.
+            Premium = new AppPremiumOptions { Features = ConnectAppResources.PremiumFeatures },
             // Sign in with Apple + StoreKit billing on the Portal backend. Null when PortalBaseUri is
             // absent from the embedded appsettings: the app then runs sign-in-less (fail-soft, the
             // same contract as Connect.Android.Google).
@@ -123,7 +129,7 @@ public class AppDelegate : UIApplicationDelegate
     // Mirrors Connect.Android.Google's CreateAppAccountProvider, with the Apple pieces swapped in:
     // Sign in with Apple (email scope only — the no-name policy in APP_STORE_PRIVACY.md) as the
     // external identity, StoreKit 2 as the billing provider, the Portal as the account backend.
-    private static IAppAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
+    private static IAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
     {
         try {
             // no Portal configured — ship without account features rather than half-wired ones
@@ -140,11 +146,10 @@ public class AppDelegate : UIApplicationDelegate
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
             // The portal owns the catalog: it maps each store product to the plan that redeems it, so a
-            // product it does not map cannot become an entitlement. The embedded ids are the fallback
-            // for when it cannot answer.
+            // product it does not map cannot become an entitlement — and cannot be sold here either.
             return new PortalAccountProvider(portalAuthenticationProvider, appStoreBillingProvider,
-                storeId: PortalStoreIds.AppStore, packageName: appConfigs.AppId,
-                fallbackProductIds: appConfigs.AppStoreProductIds);
+                portalBaseUrl: appConfigs.PortalBaseUri, packageName: appConfigs.AppId,
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not create the account provider.");

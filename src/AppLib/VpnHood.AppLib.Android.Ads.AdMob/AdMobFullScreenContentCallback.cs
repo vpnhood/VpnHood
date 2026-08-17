@@ -1,6 +1,6 @@
 ﻿using Google.Android.Gms.Ads;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Abstractions.Ads;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob;
 

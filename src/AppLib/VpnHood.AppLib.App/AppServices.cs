@@ -1,5 +1,6 @@
 using Ga4.Trackers;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Services.Proxies;
@@ -9,7 +10,7 @@ namespace VpnHood.AppLib;
 
 public class AppServices : IDisposable
 {
-    public required AppAccountService? AccountService { get; init; }
+    public required AccountService? AccountService { get; init; }
     public required AppUpdaterService? UpdaterService { get; init; }
     public required AppProxyEndPointService ProxyEndPointService { get; init; }
     public required SplitCountryService SplitCountryService { get; init; }

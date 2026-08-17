@@ -24,10 +24,16 @@ public class App : Application
             Ga4MeasurementId = appConfigs.Ga4MeasurementId,
             WebUiPort = appConfigs.WebUiPort,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
-            PremiumFeatures = ConnectAppResources.PremiumFeatures,
             AllowRecommendUserReviewByServer = true,
             LogServiceOptions = {
                 SingleLineConsole = false
+            },
+            Premium = new AppPremiumOptions {
+                Features = ConnectAppResources.PremiumFeatures,
+                // nothing forbids a typed code on this channel (App Review 3.1.1 binds the App Store head only)
+                IsCodeSupported = true,
+                // not shipped through a store, so an operator may point its buyers at its own shop
+                IsPurchaseUrlSupported = true
             },
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,

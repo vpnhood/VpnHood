@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.Core.Common.Tokens;
 
 namespace VpnHood.AppLib.ClientProfiles;
@@ -69,18 +70,32 @@ public class ClientServerLocationInfo : ServerLocationInfo
             return;
         }
 
-        var isBillingSupported = appFeatures.IsBillingSupported;
         var isRewardedAdSupported = appFeatures.IsRewardedAdSupported;
         Options.Normal = Options.HasFree ? policy.Normal : null;
         Options.NormalByRewardedAd = Options.HasFree && isRewardedAdSupported ? policy.NormalByRewardedAd : null;
+
+        // A GIVEN premium session — a better location for a while — survives a build with no premium
+        // tier: it costs the person nothing, passes through no store, and is the server's to hand
+        // out, exactly like NormalByRewardedAd above. What a tier is needed for is SELLING one.
         Options.PremiumByTrial = Options.HasPremium ? policy.PremiumByTrial : null;
         Options.PremiumByRewardedAd = Options.HasPremium && isRewardedAdSupported ? policy.PremiumByRewardedAd : null;
-        Options.PremiumByPurchase = policy.PremiumByPurchase && (isBillingSupported || policy.PurchaseUrl != null);
-        Options.PremiumByCode = policy.PremiumByCode;
+
+        // The two SOLD routes. Each is offered only where this BUILD can finish it: a purchase needs
+        // a store or an outside shop the build may open, a code needs a build allowed to take one,
+        // and both need a build that sells premium at all. The policy speaks for the operator that
+        // issued the token and knows nothing about how this build was shipped, so what it offers is
+        // intersected with what the build permits — otherwise a head advertises a route that ends on
+        // an empty purchase page, or none at all.
+        var premium = appFeatures.Premium;
+        var isPurchasableHere = premium != null && (appFeatures.IsBillingSupported ||
+                                                    (premium.IsPurchaseUrlSupported && policy.PurchaseUrl != null));
+        Options.PremiumByPurchase = policy.PremiumByPurchase && isPurchasableHere;
+        Options.PremiumByCode = policy.PremiumByCode && premium?.IsCodeSupported == true;
 
         Options.Prompt = Options.PremiumByTrial != null || Options.PremiumByRewardedAd != null ||
                          Options.NormalByRewardedAd != null;
-        Options.CanGoPremium = policy.PremiumByCode || policy.PremiumByPurchase; // can go premium and remove ad
+        // can go premium and remove ad
+        Options.CanGoPremium = Options.PremiumByCode || Options.PremiumByPurchase;
     }
 
     private static ClientServerLocationInfo[] AddCategoryGaps(string[] serverLocations, string[]? freeLocations)

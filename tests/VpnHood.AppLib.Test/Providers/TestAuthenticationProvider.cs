@@ -1,18 +1,29 @@
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Test.Providers;
 
-internal class TestAuthenticationProvider : IAppAuthenticationProvider
+internal class TestAuthenticationProvider : IAuthenticationProvider
 {
-    public IReadOnlyList<string> SignInMethods => [AppSignInMethods.Google];
+    public IReadOnlyList<string> ProviderIds => [AuthProviders.Google];
+    public Uri? AccountWebsiteUrl => null;
     public string? UserId { get; private set; }
-    public HttpClient HttpClient { get; } = new();
 
-    public Task SignIn(IUiContext uiContext, AppSignInOptions signInOptions, CancellationToken cancellationToken)
+    public Task<string?> GetAccessToken(CancellationToken cancellationToken)
+    {
+        return Task.FromResult(UserId == null ? null : "test-access-token");
+    }
+
+    public void InvalidateAccessToken(string accessToken)
+    {
+        UserId = null;
+    }
+
+    public Task<SignInResult> SignIn(IUiContext uiContext, SignInOptions signInOptions,
+        CancellationToken cancellationToken)
     {
         UserId = Guid.Empty.ToString();
-        return Task.CompletedTask;
+        return Task.FromResult(new SignInResult { State = SignInState.SignedIn });
     }
 
     public Task SignOut(IUiContext uiContext, CancellationToken cancellationToken)

@@ -45,6 +45,13 @@ public class NativeStoreKitBridge : IStoreKitBridge
             : JsonSerializer.Deserialize<StoreKitPurchase>(resultJson, JsonOptions);
     }
 
+    public async Task ShowManageSubscriptions(CancellationToken cancellationToken)
+    {
+        await Invoke(
+            contextHandle => vhsk_show_manage_subscriptions(contextHandle, CompletedDelegate),
+            cancellationToken).ConfigureAwait(false);
+    }
+
     // ------------------------------------------------------------ plumbing --
 
     private sealed class PendingCall
@@ -103,4 +110,7 @@ public class NativeStoreKitBridge : IStoreKitBridge
 
     [DllImport("__Internal", CallingConvention = CallingConvention.Cdecl)]
     private static extern void vhsk_current_entitlement(nint context, CompletionDelegate callback);
+
+    [DllImport("__Internal", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void vhsk_show_manage_subscriptions(nint context, CompletionDelegate callback);
 }

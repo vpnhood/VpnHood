@@ -62,7 +62,10 @@ public class AccessCodeTest : TestAppBase
 
         // create access code
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.AutoRemoveExpiredPremium = true; // auto remove premium on access code reject
+        appOptions.Premium = new AppPremiumOptions {
+            IsCodeSupported = true,
+            AutoRemoveExpiredAccessCode = true // drop the code by itself when the server rejects it
+        };
 
         await using var app = TestAppHelper.CreateClientApp(appOptions);
         var clientProfile = app.ClientProfileService.ImportAccessKey(token1.ToAccessKey());

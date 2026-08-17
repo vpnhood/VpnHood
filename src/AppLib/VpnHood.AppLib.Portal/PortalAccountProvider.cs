@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Portal.Dto;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
@@ -8,138 +9,130 @@ using VpnHood.Core.Toolkit.Logging;
 namespace VpnHood.AppLib.Portal;
 
 /// <summary>
-/// Account facade over the Portal API. Entitlements carry their access code
-/// directly (GET /account/entitlements) — no token-list walking; the portal never
-/// exposes backend ids on the wire.
+/// Account facade over the Portal API. One read (GET /account) answers the whole account —
+/// identity, THE one access code serving it and the store subscription behind it — because the
+/// portal ranks and chooses server-side; no device walks a list, and no backend id is ever on
+/// the wire.
 /// </summary>
-/// <param name="fallbackProductIds">
-/// The build's own store product ids, used only while the portal cannot answer — see
-/// <see cref="GetProductIds" />. The portal is the catalog; this is the offline/first-run
-/// stand-in so an unreachable backend cannot empty the plans page.
-/// </param>
-public class PortalAccountProvider(
-    PortalAuthenticationProvider authenticationProvider,
-    IAppBillingProvider? billingProvider,
-    string storeId,
-    string packageName,
-    IReadOnlyList<string> fallbackProductIds)
-    : IAppAccountProvider, IDisposable
+public class PortalAccountProvider : IAccountProvider, IDisposable
 {
-    /// <summary>The SubscriptionId the app model uses when a portal entitlement is active.</summary>
-    public const string PortalSubscriptionId = "portal";
+    private readonly IAuthenticationProvider _authenticationProvider;
+    private readonly IBillingProvider? _billingProvider;
+    private readonly string _packageName;
 
-    public IAppAuthenticationProvider AuthenticationProvider { get; } = authenticationProvider;
+    // Which store this build sells through, taken from the billing provider rather than passed in
+    // beside it: the provider cannot be wrong about which store it is, and a second statement of
+    // the same fact is one that can disagree. Null means this build has no store at all.
+    private readonly string? _storeId;
 
-    public AppBilling? Billing { get; } = billingProvider != null
-        ? new AppBilling {
-            Provider = billingProvider,
-            OrderProcessor = new PortalOrderProcessor(authenticationProvider, storeId, packageName)
-        }
-        : null;
+    // This provider owns its transport: base address, TLS policy and lifetime are decided here, and
+    // the credential is asked for per call. Handing a ready-made client between components is what
+    // used to make those three someone else's decision.
+    private readonly HttpClient _httpClient;
+
+    public PortalAccountProvider(
+        IAuthenticationProvider authenticationProvider,
+        IBillingProvider? billingProvider,
+        Uri portalBaseUrl,
+        string packageName,
+        bool ignoreSslVerification = false)
+    {
+        _authenticationProvider = authenticationProvider;
+        _billingProvider = billingProvider;
+        _storeId = billingProvider?.ProviderId;
+        _packageName = packageName;
+
+        var handler = new HttpClientHandler();
+        if (ignoreSslVerification) handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+        _httpClient = new HttpClient(handler) { BaseAddress = portalBaseUrl };
+
+        Billing = billingProvider != null
+            ? new AppBilling {
+                Provider = billingProvider,
+                OrderProcessor = new PortalOrderProcessor(_httpClient, authenticationProvider,
+                    billingProvider.ProviderId, packageName)
+            }
+            : null;
+    }
+
+    public IAuthenticationProvider AuthenticationProvider => _authenticationProvider;
+
+    public AppBilling? Billing { get; }
 
     /// <summary>
-    /// The sellable products according to the portal (GET /billing/plans), which is where the
+    /// The sellable products according to the portal (GET /billing/products), which is where the
     /// mapping from a store product to a plan already lives: a product the portal does not map
     /// cannot be redeemed, so asking it — rather than trusting the build's own list — is what keeps
     /// a purchase from landing on a plan the backend has never heard of. Read anonymously: the
     /// resource takes no session, and a plans page renders before anyone signs in.
     /// <para>
-    /// The fallback ids stand in whenever the portal cannot answer (offline, first run, an older
-    /// module): a backend outage must not empty the plans page. An answered-but-empty catalog is
-    /// honoured as given — the portal saying "nothing is sellable here" is an answer, and falling
-    /// back there would offer products no payment could be redeemed against.
+    /// A portal that cannot answer is a failure, not an empty catalog, and it is deliberately not
+    /// softened with the build's own ids: the payment sheet would still open, the store would still
+    /// charge, and the proof would then have nowhere to be redeemed. The UI turns this into "the
+    /// store is unavailable, try again", which is the only honest offer while the backend is down.
+    /// An answered-but-empty catalog is a different thing and is honoured as given — the portal
+    /// saying "nothing is sellable here" is an answer.
     /// </para>
     /// </summary>
     public async Task<IReadOnlyList<string>> GetProductIds(CancellationToken cancellationToken)
     {
-        try {
-            var apiClient = new PortalApiClient(authenticationProvider.HttpClientWithoutAuth);
-            var plans = await apiClient.ListPlans(storeId, packageName, cancellationToken).Vhc();
+        var storeId = _storeId
+            ?? throw new InvalidOperationException("This build has no store, so it sells nothing.");
 
-            // a store product may carry several plans (Play base plans); the store is queried per product
-            var productIds = plans.Items.Select(x => x.StoreProductId).Distinct().ToArray();
-            if (productIds.Length == 0)
-                VhLogger.Instance.LogWarning(
-                    "The portal maps no sellable product for this app. Store: {Store}, PackageName: {PackageName}",
-                    storeId, packageName);
+        // no authentication provider passed: the catalog takes no session, so no token is fetched
+        // and no 401 here could ever be mistaken for a dead one
+        var apiClient = new PortalApiClient(_httpClient);
+        var productIds = await apiClient.ListProducts(storeId, _packageName, cancellationToken).Vhc();
+        if (productIds.Count == 0)
+            VhLogger.Instance.LogWarning(
+                "The portal maps no sellable product for this app. StoreId: {StoreId}, PackageName: {PackageName}",
+                storeId, _packageName);
 
-            return productIds;
-        }
-        catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex,
-                "Could not read the product catalog from the portal; falling back to the embedded ids. " +
-                "Store: {Store}, PackageName: {PackageName}", storeId, packageName);
-            return fallbackProductIds;
-        }
+        return productIds;
     }
 
-    public async Task<AppAccount?> GetAccount(CancellationToken cancellationToken)
+    public async Task<Account?> GetAccount(CancellationToken cancellationToken)
     {
         if (AuthenticationProvider.UserId == null)
             return null;
 
-        var apiClient = new PortalApiClient(AuthenticationProvider.HttpClient);
-        var me = await apiClient.GetAccount(cancellationToken).Vhc();
-        var entitlement = await TryGetEntitlement(apiClient, cancellationToken).Vhc();
-
-        return new AppAccount {
-            UserId = me.UserId,
-            Email = me.Account.Email,
-            SubscriptionId = entitlement != null ? PortalSubscriptionId : null,
-            ProviderPlanId = entitlement?.PlanId,
-            ExpirationTime = entitlement?.ExpiresAt,
-            // this provider has no account-level record to expose, so the account IS the
-            // subscription here: CreatedTime is when the subscription started, and the
-            // price is the store's own charge for the current period
-            CreatedTime = entitlement?.PurchasedAt,
-            IsAutoRenew = entitlement?.AutoRenewing,
-            PriceAmount = entitlement?.PriceAmount,
-            PriceCurrency = entitlement?.PriceCurrency,
-            PriceBillingPeriod = entitlement?.BillingPeriod,
-            // the build's store page is offered only when that same store billed the entitlement;
-            // a cross-store subscription gets no link and the UI falls back to a neutral sentence
-            SubscriptionManagementUrl = entitlement?.Store == storeId
-                ? billingProvider?.SubscriptionManagementUrl
-                : null
-        };
+        // The wire maps the app model 1:1 and arrives fully ranked (the portal chose THE one access
+        // code, the app never picks). The single fact the portal cannot know is composed here:
+        // whether this device can manage the subscription, which needs both that this build's store
+        // billed it and that the store app on this device can show the screen — a cross-store
+        // subscription is managed where it was bought, and the UI says so.
+        var apiClient = new PortalApiClient(_httpClient, _authenticationProvider);
+        var account = await apiClient.GetAccount(cancellationToken).Vhc();
+        if (account.Subscription != null)
+            account.Subscription.Management = ResolveManagement(account.Subscription.StoreId);
+        return account;
     }
 
-    public Task<IReadOnlyList<string>> ListAccessKeys(string subscriptionId, CancellationToken cancellationToken)
+    private SubscriptionManagement ResolveManagement(string subscriptionStoreId)
     {
-        // the portal delivers access codes, never raw access keys
-        return Task.FromResult<IReadOnlyList<string>>([]);
+        // A store this build does not ship to billed it — bought on Android, now signed in on an
+        // iPhone. Nothing here can manage it, and nothing may name the store that can.
+        if (_billingProvider == null || subscriptionStoreId != _billingProvider.ProviderId)
+            return SubscriptionManagement.AnotherStore;
+
+        return _billingProvider.IsSubscriptionManagementSupported
+            ? SubscriptionManagement.Available
+            : SubscriptionManagement.NotOnThisDevice;
     }
 
-    public async Task DeleteAccount(IUiContext uiContext, CancellationToken cancellationToken)
+    public Task DeleteAccount(CancellationToken cancellationToken)
     {
-        var apiClient = new PortalApiClient(AuthenticationProvider.HttpClient);
-        await apiClient.DeleteAccount(cancellationToken).Vhc();
-
-        // The account is gone server-side; make this device forget it too. SignOut deletes the
-        // session file and drops the external IdP's cached credential, so the next sign-in is a
-        // deliberate act that knowingly creates a brand-new account. Its server-side revoke is a
-        // harmless 204 — the portal already deleted every session.
-        await authenticationProvider.SignOut(uiContext, cancellationToken).Vhc();
-    }
-
-    public async Task<string> GetAccessCode(string subscriptionId, CancellationToken cancellationToken)
-    {
-        var apiClient = new PortalApiClient(AuthenticationProvider.HttpClient);
-        var entitlement = await TryGetEntitlement(apiClient, cancellationToken).Vhc();
-        return entitlement?.AccessCode
-            ?? throw new InvalidOperationException("There is no delivered entitlement for this account.");
-    }
-
-    private static async Task<PortalEntitlement?> TryGetEntitlement(PortalApiClient apiClient,
-        CancellationToken cancellationToken)
-    {
-        var entitlements = await apiClient.ListEntitlements(cancellationToken).Vhc();
-        return entitlements.Items.FirstOrDefault(x => x.AccessCode != null);
+        // The portal erases the person and every session with them; this device is signed out by
+        // AccountService once this returns, which is also what drops the external IdP's cached
+        // credential so the next sign-in is a deliberate act creating a brand-new account.
+        var apiClient = new PortalApiClient(_httpClient, _authenticationProvider);
+        return apiClient.DeleteAccount(cancellationToken);
     }
 
     public void Dispose()
     {
         Billing?.Provider.Dispose();
-        AuthenticationProvider.Dispose();
+        _authenticationProvider.Dispose();
+        _httpClient.Dispose();
     }
 }

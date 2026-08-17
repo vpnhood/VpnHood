@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Ios.AppStore.StoreKitBridge;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
@@ -12,15 +12,22 @@ namespace VpnHood.AppLib.Ios.AppStore;
 /// a pointer and re-fetches server-to-server.
 /// </summary>
 public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
-    : IAppBillingProvider
+    : IBillingProvider
 {
     private readonly IStoreKitBridge _bridge = bridge ?? new NativeStoreKitBridge();
 
-    public string ProviderName => "AppStore";
-    public BillingPurchaseState PurchaseState { get; private set; }
+    public PurchaseState PurchaseState { get; private set; }
+    public string ProviderId => StoreIds.AppStore;
 
-    // Apple's system page for every subscription on the Apple ID; there is no per-product deep link.
-    public Uri SubscriptionManagementUrl => new("https://apps.apple.com/account/subscriptions");
+    // StoreKit presents Apple's own sheet inside the app, so nothing here opens a URL and the user
+    // never leaves. Available since iOS 15, which is this project's minimum — no fallback path, and
+    // no store address anywhere in the codebase.
+    public bool IsSubscriptionManagementSupported => true;
+
+    public Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        return _bridge.ShowManageSubscriptions(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
         CancellationToken cancellationToken)
@@ -40,25 +47,25 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
             .ToArray();
     }
 
-    public async Task<AppPurchaseResult> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
-        CancellationToken cancellationToken)
+    public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+        PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
-        // Apple binds the purchase to the account via appAccountToken — the portal's
-        // external uid, provided by the order processor's attribution
-        var appAccountToken = purchaseParams.Attribution?.AppAccountToken
-            ?? throw new InvalidOperationException(
-                "The purchase has no appAccountToken attribution. Sign in before purchasing.");
+        // Apple binds the purchase to the account via appAccountToken, and accepts only a UUID —
+        // the shaping happens here, where that constraint lives. A backend whose account ids are
+        // not UUIDs fails with that as the reason, rather than looking like nobody is signed in.
+        if (!Guid.TryParse(attribution.UserId, out var appAccountToken))
+            throw new InvalidOperationException(
+                $"The App Store needs the account id as a UUID. UserId: {attribution.UserId}");
 
-        PurchaseState = BillingPurchaseState.Started;
+        PurchaseState = PurchaseState.Started;
         try {
             var purchase = await _bridge
-                .Purchase(purchaseParams.PurchaseToken, appAccountToken, cancellationToken).Vhc();
+                .Purchase(purchaseParams.PlanToken, appAccountToken, cancellationToken).Vhc();
 
             return purchase.State switch {
-                StoreKitPurchase.StatePurchased => new AppPurchaseResult {
-                    ProviderOrderId = purchase.TransactionId
-                        ?? throw new InvalidOperationException("StoreKit returned no transaction id."),
-                    PurchaseData = purchase.Jws
+                StoreKitPurchase.StatePurchased => new PurchaseProof {
+                    Value = purchase.Jws
+                            ?? throw new InvalidOperationException("StoreKit returned no signed transaction.")
                 },
                 StoreKitPurchase.StateCancelled => throw new OperationCanceledException("The purchase was cancelled."),
                 _ => throw new InvalidOperationException(
@@ -66,21 +73,16 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
             };
         }
         finally {
-            PurchaseState = BillingPurchaseState.None;
+            PurchaseState = PurchaseState.None;
         }
     }
 
     /// <summary>Apple review requirement: surface previously purchased items without a new charge.</summary>
-    public async Task<AppPurchaseResult?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
     {
         var entitlement = await _bridge.CurrentEntitlement(cancellationToken).Vhc();
-        if (entitlement?.TransactionId == null)
-            return null;
-
-        return new AppPurchaseResult {
-            ProviderOrderId = entitlement.TransactionId,
-            PurchaseData = entitlement.Jws
-        };
+        var jws = entitlement?.Jws;
+        return jws == null ? null : new PurchaseProof { Value = jws };
     }
 
     public void Dispose()

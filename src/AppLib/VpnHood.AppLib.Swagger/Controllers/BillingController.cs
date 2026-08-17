@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Swagger.Exceptions;
 using VpnHood.AppLib.WebServer.Api;
 
@@ -16,13 +16,19 @@ public class BillingController : ControllerBase, IBillingController
     }
 
     [HttpPost("purchase")]
-    public Task<string> Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
+    public Task Purchase(PurchaseParams purchaseParams, CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }
 
     [HttpPost("restore-purchase")]
-    public Task<string?> RestorePurchase(CancellationToken cancellationToken)
+    public Task<bool> RestorePurchase(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("subscription-management")]
+    public Task OpenSubscriptionManagement(CancellationToken cancellationToken)
     {
         throw new SwaggerOnlyException();
     }

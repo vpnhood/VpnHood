@@ -1,10 +1,18 @@
-﻿namespace VpnHood.AppLib.Portal.Dto;
+namespace VpnHood.AppLib.Portal.Dto;
 
-/// <summary>POST /auth/sessions response.</summary>
+/// <summary>
+/// POST /auth/sessions response. Either a session (AccessToken set) or, for the password form when
+/// a second factor is due, only <see cref="Challenge"/> — the fields are exclusive.
+/// </summary>
 public class PortalSignInResponse
 {
-    public required string AccessToken { get; init; }
+    public string? AccessToken { get; init; }
     public DateTime? ExpiresAt { get; init; }
-    public required string UserId { get; init; }
-    public required PortalAccount Account { get; init; }
+    public string? UserId { get; init; }
+
+    /// <summary>Password form only: the second factor due before any session exists.</summary>
+    public PortalSignInChallenge? Challenge { get; init; }
+
+    /// <summary>Only after a challenge completion that spent the backup code: the replacement, shown once.</summary>
+    public string? NewBackupCode { get; init; }
 }

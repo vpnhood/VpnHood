@@ -1,6 +1,6 @@
 using System.Net.Mime;
 using Microsoft.AspNetCore.Mvc;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.AppLib.Swagger.Exceptions;

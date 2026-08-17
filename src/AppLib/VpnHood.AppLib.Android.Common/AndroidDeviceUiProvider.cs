@@ -3,7 +3,9 @@ using Android.Content;
 using Android.Net;
 using Android.Views;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
+using Permission = Android.Content.PM.Permission;
+using VpnHood.AppLib.Abstractions.Device;
+using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.AppLib.Exceptions;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
@@ -11,7 +13,6 @@ using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
-using Permission = Android.Content.PM.Permission;
 
 namespace VpnHood.AppLib.Droid.Common;
 
@@ -38,6 +39,10 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
 
     public bool IsRequestNotificationSupported =>
         OperatingSystem.IsAndroidVersionAtLeast(33) && !IsTv;
+
+    // Asked of the system, not derived from IsTv: a television with a browser installed can open a
+    // page. See AndroidBrowserUtils for why the answer is not simply "did anything resolve".
+    public bool IsWebBrowserSupported => AndroidBrowserUtils.IsExternalBrowserAvailable();
 
     public bool IsAppNotificationSettingsSupported => !IsTv;
     public bool IsSettingsSupported => !IsTv;

@@ -1,7 +1,8 @@
-using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Abstractions;

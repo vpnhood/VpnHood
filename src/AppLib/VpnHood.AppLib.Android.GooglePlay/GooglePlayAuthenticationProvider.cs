@@ -1,7 +1,7 @@
 using System.Security.Authentication;
 using AndroidX.Credentials;
 using AndroidX.Credentials.Exceptions;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.UiContexts;
@@ -9,9 +9,9 @@ using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 
-public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAppAuthenticationExternalProvider
+public class GooglePlayAuthenticationProvider(string googleSignInClientId) : IAuthenticationExternalProvider
 {
-    public string SignInMethod => AppSignInMethods.Google;
+    public string ProviderId => AuthProviders.Google;
 
     public async Task<string> SignIn(IUiContext uiContext, bool isSilentLogin, 
         CancellationToken cancellationToken)

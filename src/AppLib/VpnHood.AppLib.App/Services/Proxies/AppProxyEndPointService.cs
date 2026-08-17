@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.VpnServices.Manager;
 using VpnHood.Core.IpLocations;

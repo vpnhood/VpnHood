@@ -1,29 +1,69 @@
-using System.Security.Authentication;
 using System.Text.Json;
 using Android.BillingClient.Api;
+using Android.Content;
 using Android.Gms.Common;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.Droid.Common.Utils;
 using VpnHood.AppLib.Droid.GooglePlay.Exceptions;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
+using PurchaseState = VpnHood.AppLib.Abstractions.Billing.PurchaseState;
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 
-public class GooglePlayBillingProvider : IAppBillingProvider
+public class GooglePlayBillingProvider : IBillingProvider
 {
     private readonly Lazy<BillingClient> _billingClient;
-    private TaskCompletionSource<AppPurchaseResult>? _taskCompletionSource;
-    public BillingPurchaseState PurchaseState { get; private set; }
-    public string ProviderName => "GooglePlay";
+    private TaskCompletionSource<PurchaseProof>? _taskCompletionSource;
+    public PurchaseState PurchaseState { get; private set; }
+    public string ProviderId => StoreIds.GooglePlay;
 
-    // Play's account-wide subscriptions page. Deliberately not the per-sku deep link (it needs the
-    // purchased sku + package at render time, data the UI should not assemble); this page lists the
-    // user's subscriptions including this app's.
-    public Uri? SubscriptionManagementUrl => new("https://play.google.com/store/account/subscriptions");
+    // Google's documented deep link, and the only mechanism Play offers — the Billing library has no
+    // manage-subscriptions call, unlike StoreKit. The account-wide screen is the fallback; the
+    // targeted form below opens the app's own subscription directly.
+    private const string SubscriptionsUrl = "https://play.google.com/store/account/subscriptions";
+
+    // Play has no native subscriptions screen on a television: it accepts the deep link and forwards
+    // it to a browser. So what decides this is whether a browser exists, not whether the device is a
+    // TV — a television with one installed reaches the same web page a phone would.
+    public bool IsSubscriptionManagementSupported => AndroidBrowserUtils.IsExternalBrowserAvailable();
+
+    public async Task OpenSubscriptionManagement(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        var url = await BuildSubscriptionManagementUrl(cancellationToken).Vhc();
+
+        // An implicit view, the way every other outbound link in the app travels: Play holds
+        // verified app links for this host and claims it. Naming the package instead would buy
+        // determinism at the price of a visibility declaration, and it is not worth that.
+        var appUiContext = (AndroidUiContext)uiContext;
+        appUiContext.Activity.StartActivity(new Intent(Intent.ActionView, Android.Net.Uri.Parse(url)));
+    }
+
+    /// <summary>
+    /// The deep link straight to THIS app's subscription when the store owns one, so the user lands
+    /// on the thing they asked to manage instead of a list. Naming it needs the owned product id,
+    /// which only the store can answer — and failing to get it is not a reason to refuse: the
+    /// account-wide screen still manages the subscription, one tap further along.
+    /// </summary>
+    private async Task<string> BuildSubscriptionManagementUrl(CancellationToken cancellationToken)
+    {
+        try {
+            var packageName = Application.Context.PackageName;
+            var productId = (await GetOwnedSubscription(cancellationToken).Vhc())?.Products.FirstOrDefault();
+            return productId == null || packageName == null
+                ? SubscriptionsUrl
+                : $"{SubscriptionsUrl}?sku={Uri.EscapeDataString(productId)}&package={Uri.EscapeDataString(packageName)}";
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex,
+                "Could not name the owned subscription; opening the account-wide screen instead.");
+            return SubscriptionsUrl;
+        }
+    }
 
     public GooglePlayBillingProvider()
     {
@@ -49,11 +89,11 @@ public class GooglePlayBillingProvider : IAppBillingProvider
                     break;
                 }
 
+                // Play sets no order id while a purchase is still pending; the token alone cannot
+                // tell the two apart, so the order id stays the pending probe even though only the
+                // token travels onward
                 if (purchasedItem.OrderId != null)
-                    _taskCompletionSource?.TrySetResult(new AppPurchaseResult {
-                        ProviderOrderId = purchasedItem.OrderId,
-                        PurchaseData = purchasedItem.PurchaseToken
-                    });
+                    _taskCompletionSource?.TrySetResult(new PurchaseProof { Value = purchasedItem.PurchaseToken });
                 else
                     // Based on Google document, orderId is null on pending state.
                     // The pending state must be handled in the UI to let the user know their subscription will be
@@ -174,16 +214,14 @@ public class GooglePlayBillingProvider : IAppBillingProvider
         return [.. productDetailsResult.ProductDetails];
     }
 
-    public async Task<AppPurchaseResult> Purchase(IUiContext uiContext, PurchaseParams purchaseParams, CancellationToken cancellationToken)
+    public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
+        PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
         var appUiContext = (AndroidUiContext)uiContext;
         using var partialActivityScope = AppUiContext.CreatePartialIntentScope();
-        var subscriptionToken = JsonUtils.Deserialize<SubscriptionPlanToken>(purchaseParams.PurchaseToken);
+        var subscriptionToken = JsonUtils.Deserialize<SubscriptionPlanToken>(purchaseParams.PlanToken);
 
         var billingClient = await GetSafeBillingClient(cancellationToken).Vhc();
-
-        var accountId = purchaseParams.Attribution?.AccountId
-            ?? throw new AuthenticationException("Could not purchase because the purchase attribution has no account id.");
 
         // Get the product details for the selected plan. Only the chosen product is queried: the plan
         // token came from GetSubscriptionPlans, so re-reading the whole catalog here would put a
@@ -198,21 +236,21 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             .SetOfferToken(subscriptionToken.OfferToken)
             .Build();
 
+        // Play takes the account id verbatim as the obfuscated account id
         var billingFlowParams = BillingFlowParams.NewBuilder()
-            .SetObfuscatedAccountId(accountId)
+            .SetObfuscatedAccountId(attribution.UserId)
             .SetProductDetailsParamsList([productParam])
             .Build();
 
         try {
-            PurchaseState = BillingPurchaseState.Started;
-            _taskCompletionSource = new TaskCompletionSource<AppPurchaseResult>();
+            PurchaseState = PurchaseState.Started;
+            _taskCompletionSource = new TaskCompletionSource<PurchaseProof>();
             var billingResult = billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
                 throw GoogleBillingException.Create(billingResult);
 
-            var purchaseResult = await _taskCompletionSource.Task.WaitAsync(cancellationToken).Vhc();
-            return purchaseResult;
+            return await _taskCompletionSource.Task.WaitAsync(cancellationToken).Vhc();
         }
         catch (TaskCanceledException ex) {
             VhLogger.Instance.LogError(ex, "The google play purchase task was canceled by the user");
@@ -223,14 +261,38 @@ public class GooglePlayBillingProvider : IAppBillingProvider
             throw;
         }
         finally {
-            PurchaseState = BillingPurchaseState.None;
+            PurchaseState = PurchaseState.None;
         }
     }
 
-    public Task<AppPurchaseResult?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
+    public async Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        // GooglePlay purchases are reconciled by the backend via real-time developer notifications
-        return Task.FromResult<AppPurchaseResult?>(null);
+        // The SILENT ownership query (lifecycle §7): reads what the device already knows and never
+        // prompts, so it is safe on every sign-in as well as behind the visible Restore control.
+        // Renewals still arrive via real-time developer notifications; what only this query can do
+        // is hand an owned subscription to a BRAND-NEW account — the way back after a deletion.
+        // The backend treats a re-presented purchase as an idempotent replay, so returning the
+        // newest owned subscription either recovers it or changes nothing.
+        var purchase = await GetOwnedSubscription(cancellationToken).Vhc();
+        return purchase == null ? null : new PurchaseProof { Value = purchase.PurchaseToken };
+    }
+
+    /// <summary>The newest subscription this store account already owns, or null when it owns none.</summary>
+    private async Task<Purchase?> GetOwnedSubscription(CancellationToken cancellationToken)
+    {
+        var billingClient = await GetSafeBillingClient(cancellationToken).Vhc();
+        var queryPurchasesParams = QueryPurchasesParams.NewBuilder()
+            .SetProductType(BillingClient.ProductType.Subs)
+            .Build();
+
+        var queryResult = await billingClient.QueryPurchasesAsync(queryPurchasesParams).Vhc();
+        if (queryResult.Result.ResponseCode != BillingResponseCode.Ok)
+            throw GoogleBillingException.Create(queryResult.Result);
+
+        return queryResult.Purchases
+            .Where(x => x.OrderId != null) // Play sets no order id while a purchase is still pending
+            .OrderByDescending(x => x.PurchaseTime)
+            .FirstOrDefault();
     }
 
     private async Task<BillingClient> GetSafeBillingClient(CancellationToken cancellationToken)

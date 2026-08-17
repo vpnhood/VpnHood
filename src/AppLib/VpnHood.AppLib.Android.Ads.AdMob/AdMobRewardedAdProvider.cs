@@ -1,7 +1,7 @@
 ﻿using Google.Android.Gms.Ads;
 using Google.Android.Gms.Ads.Rewarded;
-using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
+using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackShim;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
@@ -9,11 +9,11 @@ using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Droid.Ads.VhAdMob;
 
-public class AdMobRewardedAdProvider(string adUnitId) : IAppAdProvider
+public class AdMobRewardedAdProvider(string adUnitId) : IAdProvider
 {
     private RewardedAd? _loadedAd;
     public string NetworkName => "AdMob";
-    public AppAdType AdType => AppAdType.RewardedAd;
+    public AdType AdType => AdType.RewardedAd;
     public DateTime? AdLoadedTime { get; private set; }
     public TimeSpan AdLifeSpan => AdMobUtil.DefaultAdTimeSpan;
     public TimeSpan AdEarnedTimeout { get; set; } = TimeSpan.FromSeconds(3);

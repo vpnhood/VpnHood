@@ -1,4 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
@@ -25,7 +25,7 @@ public class AppClientServerDom : IAsyncDisposable, IDisposable
         TestAccessManager accessManager,
         VpnHoodServer server,
         AppOptions appOptions,
-        AppAdType adProviderAdType,
+        AdType adProviderAdType,
         IDevice? device)
     {
         TestAppHelper = testAppHelper;
@@ -66,14 +66,14 @@ public class AppClientServerDom : IAsyncDisposable, IDisposable
             accessManager: accessManager,
             server: server,
             device: null,
-            adProviderAdType: AppAdType.RewardedAd,
+            adProviderAdType: AdType.RewardedAd,
             appOptions: appOptions);
     }
 
     public static async Task<AppClientServerDom> Create(
         TestAppHelper testAppHelper,
         TestVpnAdapterOptions? adapterOptions = null,
-        AppAdType adProviderAdType = AppAdType.RewardedAd,
+        AdType adProviderAdType = AdType.RewardedAd,
         FileAccessManagerOptions? fileAccessManagerOptions = null,
         AppOptions? appOptions = null)
     {

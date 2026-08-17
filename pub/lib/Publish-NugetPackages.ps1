@@ -50,38 +50,8 @@ foreach ($p in $projectFiles) {
 Set-Content -LiteralPath $tmpSln -Value $sb.ToString() -Encoding utf8;
 
 try {
-	# MSBuild keeps its worker nodes alive after a build returns so the next build can reuse them, and
-	# those nodes hold open handles on the Android .aar outputs. A single `dotnet pack` never noticed
-	# (one MSBuild session did everything), but signing forces build and pack into TWO invocations, and
-	# the second then dies with "XARLP7024: The file is locked by MSBuild.dll". Disable node reuse so
-	# every invocation's nodes exit with it.
-	$env:MSBUILDDISABLENODEREUSE = "1";
-
-	# Build first, then sign the outputs, then pack WITHOUT rebuilding — a plain `dotnet pack` would
-	# compile and zip in one pass, leaving no point at which the assemblies exist on disk unsigned-yet-
-	# unpacked. -p:Version must match between the two calls so pack picks up exactly what build produced.
-	Write-Host "Building $($projectFiles.Count) projects in one pass..." -ForegroundColor Cyan;
-	dotnet build $tmpSln -c Release `
-		-p:Version=$nugetVersion -p:SolutionDir=$solutionDir;
-	if ($LASTEXITCODE -gt 0) { throw "dotnet build failed with exit code $LASTEXITCODE."; }
-
-	# Sign each project's OWN assembly (per TFM), so consumers get publisher-verifiable DLLs. Matching
-	# on the project file's base name deliberately skips the dependency COPIES strewn across bin dirs
-	# (each project's bin holds copies of every VpnHood.* it references — signing those would burn
-	# quota on files that never enter a package) and the ref/ reference assemblies (compile-time only,
-	# not packed). Invoke-VhSign additionally drops anything already signed; no-op when signing is off.
-	$packAssemblies = foreach ($p in $projectFiles) {
-		$binDir = Join-Path $p.DirectoryName "bin/Release";
-		if (Test-Path $binDir) {
-			Get-ChildItem $binDir -Recurse -File -Filter "$($p.BaseName).dll" |
-				Where-Object { $_.FullName -notmatch "[\\/]ref[\\/]" } |
-				Select-Object -ExpandProperty FullName;
-		}
-	}
-	Invoke-VhSign $packAssemblies;
-
-	Write-Host "Packing $($projectFiles.Count) projects (no rebuild) -> $packDir" -ForegroundColor Cyan;
-	dotnet pack $tmpSln -c Release -o $packDir --no-build `
+	Write-Host "Packing $($projectFiles.Count) projects in one pass -> $packDir" -ForegroundColor Cyan;
+	dotnet pack $tmpSln -c Release -o $packDir `
 		-p:Version=$nugetVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -p:SolutionDir=$solutionDir;
 	if ($LASTEXITCODE -gt 0) { throw "dotnet pack failed with exit code $LASTEXITCODE."; }
 }
@@ -91,6 +61,18 @@ finally {
 
 # Push everything produced (pushing a .nupkg also pushes its adjacent .snupkg symbols).
 $packages = Get-ChildItem -Path $packDir -File | Where-Object { $_.Extension -eq ".nupkg" };
+
+# Sign the assemblies INSIDE the finished packages, so consumers get publisher-verifiable DLLs.
+# This deliberately happens AFTER pack rather than between a build and a `pack --no-build`: splitting
+# the single MSBuild invocation in two makes the second one race the first over the android .aar
+# outputs ("XARLP7024: The file is locked by ..."), a failure that only appears at CI's 57-project
+# parallelism and never reproduces locally. Packing once sidesteps that class of failure entirely.
+# The author signature that --recurse-containers adds to each package is removed again — see
+# Remove-VhNuGetAuthorSignature. Both calls are no-ops when signing is not configured.
+if ($signEnabled) {
+	Invoke-VhSign $packages.FullName -recurseContainers;
+	Remove-VhNuGetAuthorSignature $packages.FullName;
+}
 Write-Host "Pushing $($packages.Count) package(s)..." -ForegroundColor Cyan;
 foreach ($pkg in $packages) {
 	dotnet nuget push $pkg.FullName --source "https://api.nuget.org/v3/index.json" --api-key $nugetApiKey --skip-duplicate;

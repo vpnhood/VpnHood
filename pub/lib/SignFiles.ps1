@@ -77,7 +77,8 @@ if ($signCredentialSet -ne $signTargetSet) {
 
 $signEnabled = $signCredentialSet -and $signTargetSet;
 $script:signToolReady = $false;
-function Invoke-VhSign([string[]]$files) {
+# -recurseContainers signs the files INSIDE each container (.nupkg/.vsix) as well as the container.
+function Invoke-VhSign([string[]]$files, [switch]$recurseContainers) {
 	# An empty set is a legitimate no-op (everything was already signed); the CLI would error on it.
 	if (-not $signEnabled -or -not $files) { return; }
 
@@ -114,11 +115,37 @@ function Invoke-VhSign([string[]]$files) {
 	# Every file costs two network round-trips (sign request + RFC3161 timestamp), so signing is
 	# concurrent. The CLI already parallelises at 4; 8 roughly halves the wall-clock on a full publish
 	# and stays well under the service's per-profile throttling.
-	sign code artifact-signing $pending `
-		--artifact-signing-account "$signAccount" `
-		--artifact-signing-certificate-profile "$signProfile" `
-		--artifact-signing-endpoint "$signEndpoint" `
-		--max-concurrency 8;
+	$signArgs = @("code", "artifact-signing") + $pending + @(
+		"--artifact-signing-account", $signAccount,
+		"--artifact-signing-certificate-profile", $signProfile,
+		"--artifact-signing-endpoint", $signEndpoint,
+		"--max-concurrency", "8");
+	if ($recurseContainers) { $signArgs += "--recurse-containers"; }
+	& sign @signArgs;
 	if ($LASTEXITCODE -ne 0) { Throw "Code signing failed (exit $LASTEXITCODE)."; }
+}
+
+# `sign --recurse-containers` signs the assemblies inside a .nupkg, but it also AUTHOR-signs the
+# package itself, and that signature must not survive: nuget.org only accepts an author signature
+# whose certificate is registered on the account, and Trusted Signing rotates certificates every ~3
+# days so no stable one can be registered (NuGetGallery#10027). Dropping the entry returns the
+# package to the unsigned state nuget.org has always received and repository-signs at ingestion.
+# The assemblies inside keep their Authenticode signatures — those are independent of this entry.
+function Remove-VhNuGetAuthorSignature([string[]]$packages) {
+	if (-not $packages) { return; }
+	Add-Type -AssemblyName System.IO.Compression.FileSystem;
+	$stripped = 0;
+	foreach ($package in $packages) {
+		$zip = [IO.Compression.ZipFile]::Open($package, "Update");
+		try {
+			# Materialise with @() before deleting — Entries is live and mutating it while enumerating throws.
+			foreach ($entry in @($zip.Entries | Where-Object { $_.FullName -eq ".signature.p7s" })) {
+				$entry.Delete();
+				$stripped++;
+			}
+		}
+		finally { $zip.Dispose(); }
+	}
+	Write-Host "Removed the author signature from $stripped package(s); nuget.org repository-signs them." -ForegroundColor DarkGray;
 }
 if (-not $signEnabled) { Write-Host "Code signing skipped: no signing credentials configured (unsigned build)." -ForegroundColor Yellow; }

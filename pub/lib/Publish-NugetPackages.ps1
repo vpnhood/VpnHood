@@ -50,6 +50,13 @@ foreach ($p in $projectFiles) {
 Set-Content -LiteralPath $tmpSln -Value $sb.ToString() -Encoding utf8;
 
 try {
+	# MSBuild keeps its worker nodes alive after a build returns so the next build can reuse them, and
+	# those nodes hold open handles on the Android .aar outputs. A single `dotnet pack` never noticed
+	# (one MSBuild session did everything), but signing forces build and pack into TWO invocations, and
+	# the second then dies with "XARLP7024: The file is locked by MSBuild.dll". Disable node reuse so
+	# every invocation's nodes exit with it.
+	$env:MSBUILDDISABLENODEREUSE = "1";
+
 	# Build first, then sign the outputs, then pack WITHOUT rebuilding — a plain `dotnet pack` would
 	# compile and zip in one pass, leaving no point at which the assemblies exist on disk unsigned-yet-
 	# unpacked. -p:Version must match between the two calls so pack picks up exactly what build produced.

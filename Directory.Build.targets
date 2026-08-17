@@ -19,9 +19,14 @@
        (the "app-ness" is tracked by $(AndroidApplication), not OutputType), so a '$(OutputType)==Exe'
        check never matches and ApplicationVersion silently defaults to 1. Setting these on an Android
        *library* is harmless (a library produces no manifest/versionCode). -->
+  <!-- $(Version) is not always a bare X.Y.Z: a NuGet smoke publish stamps X.Y.Z.<run>-prerelease, and
+       System.Version cannot parse a semver suffix. That failure happens during EVALUATION, so every
+       android project errors out before a single target runs — it broke smoke publishing outright.
+       Strip the suffix before parsing; a stable X.Y.Z is unaffected (Split returns it unchanged). -->
   <PropertyGroup Condition="$(TargetFramework.Contains('-android'))">
     <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
-    <ApplicationVersion>$([System.Version]::Parse('$(Version)').Build)</ApplicationVersion>
+    <VersionNumeric>$(Version.Split('-')[0])</VersionNumeric>
+    <ApplicationVersion>$([System.Version]::Parse('$(VersionNumeric)').Build)</ApplicationVersion>
   </PropertyGroup>
 
 </Project>

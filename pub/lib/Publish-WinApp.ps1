@@ -65,99 +65,11 @@ $module_updaterConfigFile = [System.IO.Path]::ChangeExtension($module_infoFile, 
 $module_infoFileName = $(Split-Path "$module_infoFile" -leaf);
 $module_packageFileName = $(Split-Path "$module_packageFile" -leaf);
 
-# --- Resolve the Azure signing credential from a single consolidated source ----------
-# The Azure service principal is supplied as ONE JSON credential — exactly the file you download
-# from Azure (e.g. `az ad sp create-for-rbac ...`). In CI it arrives as the single
-# AZURE_SIGNING_CREDENTIAL secret; locally it's read from .user/azure_signing_credential.json. It
-# carries AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET (any other fields are ignored).
-# The Trusted Signing target (Endpoint/CodeSigningAccountName/CertificateProfileName) is NOT part of this file and stays
-# separate. Explicit AZURE_* env vars (if already set) win; this only fills them in when absent.
-if (-not ($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET)) {
-	$azCredRaw =
-		if ($env:AZURE_SIGNING_CREDENTIAL) { $env:AZURE_SIGNING_CREDENTIAL }
-		elseif (Test-Path "$userDir/azure_signing_credential.json") { Get-Content "$userDir/azure_signing_credential.json" -Raw }
-		else { $null };
-	if ($azCredRaw) {
-		try { $azCred = $azCredRaw | ConvertFrom-Json }
-		catch { Throw "Azure signing credential is not valid JSON: $($_.Exception.Message)"; }
-		foreach ($k in "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET") {
-			if ($azCred.$k) {
-				# Register the value as a masked secret in CI logs before it lands in the process env.
-				if ($env:GITHUB_ACTIONS -eq "true") { Write-Host "::add-mask::$($azCred.$k)"; }
-				Set-Item -Path "Env:$k" -Value ([string]$azCred.$k);
-			}
-		}
-	}
-}
-
-# --- Resolve the Trusted Signing target from a single consolidated source ------------
-# The Trusted Signing target is supplied as ONE JSON in Azure's own metadata.json schema (the file
-# signtool's dlib consumes): { Endpoint, CodeSigningAccountName, CertificateProfileName }. In CI it
-# arrives as the AZURE_SIGNING_TARGET variable; locally it's read from .user/azure_signing_target.json.
-# These are identifiers (not the Azure secret).
-$signAccount = $null; $signProfile = $null; $signEndpoint = $null;
-$signTargetRaw =
-	if ($env:AZURE_SIGNING_TARGET) { $env:AZURE_SIGNING_TARGET }
-	elseif (Test-Path "$userDir/azure_signing_target.json") { Get-Content "$userDir/azure_signing_target.json" -Raw }
-	else { $null };
-if ($signTargetRaw) {
-	try { $signTarget = $signTargetRaw | ConvertFrom-Json }
-	catch { Throw "AZURE_SIGNING_TARGET is not valid JSON: $($_.Exception.Message)"; }
-	$signAccount  = $signTarget.CodeSigningAccountName;
-	$signProfile  = $signTarget.CertificateProfileName;
-	$signEndpoint = $signTarget.Endpoint;
-}
-
-# --- Optional code signing (Microsoft Trusted Signing) ---
-# Runs ONLY when the signing credentials are provided: the Azure service principal (resolved above
-# from AZURE_SIGNING_CREDENTIAL) plus the Trusted Signing target (from AZURE_SIGNING_TARGET). Without
-# them the build is intentionally UNSIGNED and does not fail. When signing IS configured, any
-# failure is fatal so a silently-unsigned package is never shipped.
-$signCredentialSet = [bool]($env:AZURE_TENANT_ID -and $env:AZURE_CLIENT_ID -and $env:AZURE_CLIENT_SECRET);
-$signTargetSet     = [bool]($signAccount -and $signProfile -and $signEndpoint);
-
-# HALF-configured is an error, not a warning. "No signing configured at all" is the documented
-# fork-friendly path (warn + unsigned + green), but ONE of the two halves present means somebody
-# intended to sign and the other half is missing or malformed — that is "present but failing", which
-# ships an unsigned installer from a green run. It stayed hidden exactly that way: the org held
-# AZURE_SIGNING_CREDENTIAL while AZURE_SIGNING_TARGET was never set anywhere, so every release built
-# unsigned and nothing went red.
-if ($signCredentialSet -ne $signTargetSet) {
-	$missing = if ($signCredentialSet) { "AZURE_SIGNING_TARGET" } else { "AZURE_SIGNING_CREDENTIAL" };
-	$present = if ($signCredentialSet) { "AZURE_SIGNING_CREDENTIAL" } else { "AZURE_SIGNING_TARGET" };
-	Throw ("Azure Trusted Signing is half-configured: $present is set but $missing is missing or " +
-		"incomplete, so the installer would ship UNSIGNED from a passing build. Set both (see " +
-		".github/DEPLOYMENT.md), or unset both to build unsigned on purpose. " +
-		"AZURE_SIGNING_TARGET must be JSON with Endpoint, CodeSigningAccountName and CertificateProfileName.");
-}
-
-$signEnabled = $signCredentialSet -and $signTargetSet;
-$script:signToolReady = $false;
-function Invoke-VhSign([string[]]$files) {
-	if (-not $signEnabled) { return; }
-	if (-not $script:signToolReady) {
-		# Ensure the dotnet global-tools dir is on PATH for THIS process — a freshly
-		# installed global tool is not added to the current process's PATH automatically.
-		$toolsDir = if ($env:USERPROFILE) { Join-Path $env:USERPROFILE ".dotnet\tools" } else { Join-Path $env:HOME ".dotnet/tools" };
-		$sep = [IO.Path]::PathSeparator;
-		if (($env:PATH -split [regex]::Escape($sep)) -notcontains $toolsDir) { $env:PATH = "$toolsDir$sep$env:PATH"; }
-		# Install the Microsoft 'sign' CLI. It ships ONLY as prerelease NuGet versions,
-		# so --prerelease is required. Capture output so a failure is diagnosable.
-		$installLog = dotnet tool install --global sign --prerelease 2>&1;
-		if (-not (Get-Command sign -ErrorAction SilentlyContinue)) {
-			Write-Host ($installLog -join "`n");
-			Throw "The 'sign' CLI is not available after 'dotnet tool install --global sign --prerelease' (check PATH/install).";
-		}
-		$script:signToolReady = $true;
-	}
-	Write-Host "Signing via Trusted Signing: $($files -join ', ')" -ForegroundColor Cyan;
-	sign code trusted-signing $files `
-		--trusted-signing-account "$signAccount" `
-		--trusted-signing-certificate-profile "$signProfile" `
-		--trusted-signing-endpoint "$signEndpoint";
-	if ($LASTEXITCODE -ne 0) { Throw "Code signing failed (exit $LASTEXITCODE)."; }
-}
-if (-not $signEnabled) { Write-Host "Code signing skipped: no signing credentials configured (unsigned build)." -ForegroundColor Yellow; }
+# --- Optional code signing (Azure Trusted/Artifact Signing) ---
+# SignFiles.ps1 resolves AZURE_SIGNING_CREDENTIAL / AZURE_SIGNING_TARGET (secrets in CI, .user/
+# files locally), enforces the all-or-nothing pair rule, and provides $signEnabled + Invoke-VhSign.
+# Shared with Publish-NugetPackages.ps1 so app binaries and NuGet assemblies sign identically.
+. "$PSScriptRoot/SignFiles.ps1"
 
 # =====================================================================================
 # Stage: publish — compile the self-contained Windows binary
@@ -182,8 +94,22 @@ if ($doPublish) {
 
 	if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 
-	# sign the published executable before packaging, so the MSI contains a signed exe
-	Invoke-VhSign @("$publishDir/$assemblyName.exe");
+	# Sign every published binary before packaging, so the MSI carries signed content. The publish is
+	# self-contained and NOT single-file, so "$assemblyName.exe" is only the apphost stub: all of our own
+	# code lives in the sibling VpnHood*.dll files. Signing the exe alone made the installer look signed
+	# while every managed assembly it loads stayed unverifiable.
+	# User-mode binaries only. Kernel drivers (WinDivert64.sys and its catalog) must KEEP their Microsoft
+	# attestation signature: re-signing a driver with our cert makes Windows refuse to load it. Do not
+	# widen this list to "*" or add .sys/.cat. Already-signed files are dropped inside Invoke-VhSign,
+	# so the vendor-signed .NET runtime and WinDivert.dll pass straight through untouched.
+	Invoke-VhSign (Get-ChildItem $publishDir -File -Recurse -Include "*.exe", "*.dll" |
+		Select-Object -ExpandProperty FullName);
+
+	# The apphost is the file Windows shows in the UAC/SmartScreen prompt, so it must never slip through
+	# unsigned when signing is configured (a renamed AssemblyName would silently miss the glob above).
+	if ($signEnabled -and -not (Get-AuthenticodeSignature "$publishDir/$assemblyName.exe").SignerCertificate) {
+		Throw "Signing is configured but '$assemblyName.exe' is still unsigned after the signing step.";
+	}
 }
 
 # =====================================================================================

@@ -209,8 +209,17 @@ The MSI is built with **Advanced Installer** on a `windows-latest` runner.
 
 **Code signing (optional, `publish_client.yml` (in `Vpnhood.App.Client`)):** signing is **off unless the Azure
 credential and the Trusted Signing target are both present**, in which case the build signs
-the executable and the MSI via Microsoft Trusted Signing (`sign` CLI) and a signing failure is
-fatal. They are an all-or-nothing **pair**: with **neither** set the MSI is built **unsigned** with a
+every published binary that does not already carry a vendor signature (the apphost `.exe` plus our
+own `VpnHood*.dll` assemblies; the .NET runtime, WinDivert and Advanced Installer's `updater.exe`
+keep their Microsoft/vendor signatures) and then the MSI, via Azure Trusted Signing — now surfaced as
+**Artifact Signing** (`sign code artifact-signing`; the old `trusted-signing` verb still works but the
+CLI marks it obsolete). Any file that already carries a signature is never re-signed, and a signing
+failure is fatal. The same pair (via `SignFiles.ps1`) is honoured by `publish_nugets.yml`, which
+signs each package's own assembly between build and pack. The `.nupkg` wrapper is deliberately left
+to nuget.org's own repository signature, applied at ingestion. Do NOT add author signing: it requires
+registering a long-lived certificate on the nuget.org account, after which *every* future push must
+be signed with it — impossible with Trusted Signing's ~3-day rotating certificates, so the whole
+suite would stop publishing at the next rotation (NuGetGallery#10027). They are an all-or-nothing **pair**: with **neither** set the MSI is built **unsigned** with a
 warning (the fork-friendly path), but with **exactly one** set the build **fails** — a half-configured
 signer otherwise ships an unsigned installer from a green run, which is how every release before
 8.1.843 went out unsigned unnoticed (the org had the credential; the target was never set anywhere).

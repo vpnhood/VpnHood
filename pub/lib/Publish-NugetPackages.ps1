@@ -6,6 +6,9 @@ param(
 );
 
 . "$PSScriptRoot/Common.ps1"
+# Optional Authenticode signing of the packaged assemblies (same pair rule and identity as the
+# Windows app build — see SignFiles.ps1). Absent credentials -> unsigned packages, exactly as before.
+. "$PSScriptRoot/SignFiles.ps1"
 
 if ($smoke) {
 	if ([string]::IsNullOrWhiteSpace($revision)) {
@@ -47,8 +50,31 @@ foreach ($p in $projectFiles) {
 Set-Content -LiteralPath $tmpSln -Value $sb.ToString() -Encoding utf8;
 
 try {
-	Write-Host "Packing $($projectFiles.Count) projects in one pass -> $packDir" -ForegroundColor Cyan;
-	dotnet pack $tmpSln -c Release -o $packDir `
+	# Build first, then sign the outputs, then pack WITHOUT rebuilding — a plain `dotnet pack` would
+	# compile and zip in one pass, leaving no point at which the assemblies exist on disk unsigned-yet-
+	# unpacked. -p:Version must match between the two calls so pack picks up exactly what build produced.
+	Write-Host "Building $($projectFiles.Count) projects in one pass..." -ForegroundColor Cyan;
+	dotnet build $tmpSln -c Release `
+		-p:Version=$nugetVersion -p:SolutionDir=$solutionDir;
+	if ($LASTEXITCODE -gt 0) { throw "dotnet build failed with exit code $LASTEXITCODE."; }
+
+	# Sign each project's OWN assembly (per TFM), so consumers get publisher-verifiable DLLs. Matching
+	# on the project file's base name deliberately skips the dependency COPIES strewn across bin dirs
+	# (each project's bin holds copies of every VpnHood.* it references — signing those would burn
+	# quota on files that never enter a package) and the ref/ reference assemblies (compile-time only,
+	# not packed). Invoke-VhSign additionally drops anything already signed; no-op when signing is off.
+	$packAssemblies = foreach ($p in $projectFiles) {
+		$binDir = Join-Path $p.DirectoryName "bin/Release";
+		if (Test-Path $binDir) {
+			Get-ChildItem $binDir -Recurse -File -Filter "$($p.BaseName).dll" |
+				Where-Object { $_.FullName -notmatch "[\\/]ref[\\/]" } |
+				Select-Object -ExpandProperty FullName;
+		}
+	}
+	Invoke-VhSign $packAssemblies;
+
+	Write-Host "Packing $($projectFiles.Count) projects (no rebuild) -> $packDir" -ForegroundColor Cyan;
+	dotnet pack $tmpSln -c Release -o $packDir --no-build `
 		-p:Version=$nugetVersion -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -p:SolutionDir=$solutionDir;
 	if ($LASTEXITCODE -gt 0) { throw "dotnet pack failed with exit code $LASTEXITCODE."; }
 }

@@ -15,6 +15,10 @@ public static class DebugCommands
     public const string DisableWebSocket = "/disable-websocket";
     public const string OsTcpStack = "/os-tcp-stack";
 
+    // Read by the SPA only: it reveals the Starlink Tools page in Settings. The app itself never
+    // acts on it.
+    public const string Starlink = "/starlink";
+
     public static string[] All => [
         CaptureContext,
         DropUdp,
@@ -27,6 +31,7 @@ public static class DebugCommands
         WinDivert,
         RemoteAccess,
         DisableWebSocket,
-        OsTcpStack
+        OsTcpStack,
+        Starlink
     ];
 }

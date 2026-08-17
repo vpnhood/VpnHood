@@ -1,0 +1,83 @@
+name: App Store · In-App Purchases
+
+# Reports (and later configures) the App Store in-app-purchase products an app needs. Runs the
+# read-only inventory by default: it never mutates the store, so it is safe to dispatch at any time.
+#
+# WHY THIS RUNS IN CI, NOT ON A LAPTOP: the App Store Connect API key is a store credential and lives
+# in GitHub secrets, the same posture as every other store operation in this repo (see CLAUDE.md —
+# "Fastlane publishing … run on GitHub Actions, never from a developer machine").
+#
+# TWO WAYS TO RUN IT, because the APPSTORE_CONNECT_* secrets are org-level and may only be exposed to
+# the brand repos:
+#   1. Dispatch it HERE (Actions → this workflow → Run workflow). Works if the secrets are visible to
+#      vpnhood/VpnHood.
+#   2. If they are not, add a three-line stub to the brand repo (vpnhood/Vpnhood.App.Connect) that
+#      calls this workflow with `secrets: inherit` — the same pattern publish_listing.yml uses:
+#
+#         name: App Store IAP
+#         on: { workflow_dispatch: { inputs: { app_identifier: { type: string, required: true } } } }
+#         jobs:
+#           iap:
+#             uses: vpnhood/VpnHood/.github/workflows/appstore_iap.yml@main
+#             with: { app_identifier: "${{ inputs.app_identifier }}" }
+#             secrets: inherit
+#
+# Unlike the listing workflows, a MISSING key here is a hard failure rather than a green skip: this
+# workflow only ever runs because a human asked for the answer, so silently reporting nothing would
+# be worse than stopping.
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_identifier:
+        description: "iOS bundle identifier to inspect."
+        type: string
+        required: false
+        default: com.vpnhood.connect.ios
+  workflow_call:
+    inputs:
+      app_identifier:
+        description: "iOS bundle identifier to inspect."
+        type: string
+        required: false
+        default: com.vpnhood.connect.ios
+
+jobs:
+  iap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
+      APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
+      APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # Fail loudly and specifically: an absent key here is a setup problem to fix, not a fork that
+      # ships elsewhere. Naming the two remedies saves a round-trip to the docs.
+      - name: Require App Store credentials
+        if: env.APPSTORE_CONNECT_API_KEY == ''
+        run: |
+          echo "::error title=No App Store Connect key::APPSTORE_CONNECT_API_KEY is not visible to this repository. Either expose the org secrets APPSTORE_CONNECT_API_KEY/_API_KEY_ID/_ISSUER_ID to vpnhood/VpnHood, or dispatch this workflow from the brand repo via a workflow_call stub (see the header of this file)."
+          exit 1
+
+      # The script uses Node built-ins only (crypto for the ES256 JWT, global fetch) — nothing to install.
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Report the in-app-purchase inventory
+        run: node .github/scripts/asc-iap.mjs report --bundle-id "${{ inputs.app_identifier }}" | tee report.txt
+
+      # Put the answer on the run summary so it is readable without opening the job log.
+      - name: Publish the report to the run summary
+        if: always()
+        run: |
+          {
+            echo '## App Store in-app-purchase inventory'
+            echo '```'
+            cat report.txt 2>/dev/null || echo '(the report did not run)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -4,7 +4,7 @@ How to build the App + Network Extension, install/run on device, stream logs, an
 
 > **Framework note:** the target is **`net11.0-ios` / CoreCLR** — this is what fixed the jetsam crash and
 > proxy-mode throughput. Build with **`~/.dotnet11/dotnet`** (the system `dotnet` can't target `net11.0-ios`).
-> .NET 11 is still a **preview SDK** (11.0.100-preview.6) — a shippable/App-Store build needs .NET 11 GA. See
+> .NET 11 is still a **preview SDK** (11.0.100-preview.7) — a shippable/App-Store build needs .NET 11 GA. See
 > [ios-extension-memory-and-throughput.md](ios-extension-memory-and-throughput.md) for the runtime/memory rationale.
 
 ## Project layout (in this monorepo)
@@ -19,7 +19,7 @@ The host references the extension as an `IsAppExtension` `ProjectReference`, so 
 and bundles the appex**. All iOS build settings are inlined per-csproj (no shared props file).
 
 ## Prerequisites
-- macOS + Xcode matching the workload's recommended version (currently Xcode 26.6 with preview.6 — no
+- macOS + Xcode matching the workload's recommended version (currently Xcode 26.6 with preview.7 — no
   version override needed; if a future workload pins an older Xcode again, set `ValidateXcodeVersion=false`
   per csproj as a temporary bridge).
 - Physical iPhone registered in the Apple Developer account (team `6KKW3MKLR7`, OmegaHood LLC) with, for **both**

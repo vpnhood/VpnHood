@@ -3,7 +3,9 @@
 **Status:** proxy mode working on iOS with good throughput + bounded memory (on .NET 11 preview).
 **Investigation:** 2026-06-16 → 2026-06-19 • **Device:** iPhone 11 (A13, 16 KB pages, iOS 26.5),
 hardware UDID `00008030-001544500A38802E` • **Builds with:** `~/.dotnet11/dotnet`
-(SDK 11.0.100-preview.5, iOS workload `26.5.11546-net11-p5`).
+(the measurements below were taken on SDK 11.0.100-preview.5, iOS workload `26.5.11546-net11-p5`; the
+repo now builds on **preview.7** / `26.5.11997-net11-p7` — the numbers have not been re-measured since,
+so treat them as the preview.5 baseline).
 
 > This file merges the three working docs (`ios-memory-jetsam-investigation`, `ios-net11-coreclr-proxy-speed`,
 > and Gemini's `upload-speed-and-memory-stabilization`) into one accurate record. Code changes live in the

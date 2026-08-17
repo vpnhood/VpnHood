@@ -121,6 +121,30 @@ public class BillingServiceTest : TestAppBase
     }
 
     [TestMethod]
+    public async Task Purchase_is_not_redeemed_when_the_account_changed_while_the_store_answered()
+    {
+        var accountProvider = new TestAccountProvider();
+        await using var app = CreateAppWithAccount(accountProvider);
+        var accountService = GetAccountService(app);
+        var billingService = GetBillingService(app);
+        await SignIn(accountService);
+
+        // the store's sheet outlives the session that opened it: someone signs out mid-purchase.
+        // Whoever is signed in when the store finally answers is not who bought, so the proof must
+        // NOT be redeemed here — it stays valid, and Restore presents it again under the right one.
+        accountProvider.TestBillingProvider.WhileStoreIsAnswering = () =>
+            accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
+
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            billingService.Purchase(AppUiContext.RequiredContext,
+                new PurchaseParams { PlanToken = "test_plan_1m" }, CancellationToken.None));
+
+        Assert.IsEmpty(accountProvider.TestOrderProcessor.CompletedOrders,
+            "paid access must never land in a stranger's account");
+        Assert.AreEqual(PurchaseState.None, billingService.PurchaseState);
+    }
+
+    [TestMethod]
     public async Task OpenSubscriptionManagement_is_refused_when_the_store_cannot_show_it()
     {
         // The SPA withholds the control in this state, but withholding is not enforcement: a stale

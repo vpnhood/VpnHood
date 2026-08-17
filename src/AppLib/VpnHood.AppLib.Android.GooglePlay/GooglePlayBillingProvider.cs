@@ -244,6 +244,14 @@ public class GooglePlayBillingProvider : IBillingProvider
 
         try {
             PurchaseState = PurchaseState.Started;
+
+            // Play reports every purchase to ONE listener, so this provider can only track one flow
+            // at a time: starting a second would leave the first caller waiting on a source nothing
+            // completes. The app serializes store calls, so this is the fail-loud backstop for a
+            // caller that does not.
+            if (_taskCompletionSource is { Task.IsCompleted: false })
+                throw new InvalidOperationException("A purchase is already in progress.");
+
             _taskCompletionSource = new TaskCompletionSource<PurchaseProof>();
             var billingResult = billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 

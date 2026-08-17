@@ -44,6 +44,9 @@ internal class TestBillingProvider : IBillingProvider
         ];
     }
 
+    /// <summary>Runs while the store's sheet would be open — the window a real one leaves the app in.</summary>
+    public Func<Task>? WhileStoreIsAnswering { get; set; }
+
     public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,
         PurchaseAttribution attribution, CancellationToken cancellationToken)
     {
@@ -52,7 +55,9 @@ internal class TestBillingProvider : IBillingProvider
         if (PurchaseException != null)
             throw PurchaseException;
 
-        await Task.CompletedTask;
+        if (WhileStoreIsAnswering != null)
+            await WhileStoreIsAnswering().ConfigureAwait(false);
+
         return new PurchaseProof { Value = "test_purchase_data" };
     }
 

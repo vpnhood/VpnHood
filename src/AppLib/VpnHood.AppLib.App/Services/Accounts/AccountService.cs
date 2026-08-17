@@ -12,12 +12,13 @@ namespace VpnHood.AppLib.Services.Accounts;
 
 public class AccountService
 {
-    // A cached account is only trusted while its own expiry lies in the future.
-    // After the store renews a subscription, the new expiry exists only on the
-    // server — serving the stale cache forever would show "expired" and offer a
-    // re-purchase the store rejects. Genuinely expired accounts re-check at most
-    // once per this interval, so the server is not hammered.
-    private static readonly TimeSpan ExpiredAccountRecheckInterval = TimeSpan.FromMinutes(5);
+    // How long a cached account may be served before the server is asked again. An expiry that has
+    // passed is not the only way an account goes stale: the person can buy on the website, be given
+    // a code, or have the backend re-choose one, and NOTHING about that reaches this device — no
+    // expiry moves, no local act happens. So the cache ages out on the clock as well, and an
+    // account holding no expiry at all (a free one, a code that never runs out) ages out with it
+    // rather than living untouched until the app is restarted.
+    private static readonly TimeSpan AccountRecheckInterval = TimeSpan.FromMinutes(5);
 
     private readonly AsyncLock _refreshLock = new();
     private Account? _account;
@@ -86,7 +87,10 @@ public class AccountService
         // Get from local cache
         if (useCache) {
             _account ??= JsonUtils.TryDeserializeFile<Account>(_accountFilePath, logger: VhLogger.Instance);
-            if (_account != null && (IsCacheCurrent(_account) || !IsRecheckDue()))
+            // BOTH must hold: nothing it carries has expired, AND it is younger than the recheck
+            // interval. Either one alone leaves a whole class of change invisible — an expiry that
+            // passed, or a change the server made that no expiry announces.
+            if (_account != null && IsCacheCurrent(_account) && !IsRecheckDue())
                 return _account;
         }
 
@@ -122,7 +126,7 @@ public class AccountService
 
     private bool IsRecheckDue()
     {
-        return DateTime.UtcNow - _lastRefreshAttemptTime >= ExpiredAccountRecheckInterval;
+        return DateTime.UtcNow - _lastRefreshAttemptTime >= AccountRecheckInterval;
     }
 
     /// <summary>

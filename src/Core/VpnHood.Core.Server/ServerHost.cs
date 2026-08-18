@@ -448,7 +448,7 @@ public class ServerHost : IDisposable, IAsyncDisposable
 
         // Report new session
         var clientIpText = _sessionManager.TrackingOptions.TrackClientIpValue
-            ? VhLogger.Format(clientIp)
+            ? Redactor.Default.RedactIpAddress(clientIp)
             : "*";
 
         // report in main log

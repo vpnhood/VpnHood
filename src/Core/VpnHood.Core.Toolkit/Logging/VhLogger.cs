@@ -20,7 +20,16 @@ public static class VhLogger
     }
 
     public static EventId TcpCloseEventId { get; set; }
-    public static bool IsAnonymousMode { get; set; } = true;
+
+    // kept here because every caller reaches redaction through VhLogger; Redactor owns the state, and the
+    // mode is fixed per instance, so changing it swaps the default redactor rather than mutating one
+    public static bool IsAnonymousMode {
+        get => Redactor.Default.IsAnonymousMode;
+        set {
+            if (Redactor.Default.IsAnonymousMode != value)
+                Redactor.Default = new Redactor(value);
+        }
+    }
 
     public static LogLevel MinLogLevel { get; set; } = LogLevel.Information;
 
@@ -30,47 +39,39 @@ public static class VhLogger
         return new VhConsoleLogger(singleLine);
     }
 
-    public static string Format(EndPoint? endPoint)
+    public static Redactor.RedactedValue<EndPoint> Format(EndPoint? endPoint)
     {
-        if (endPoint == null) return "<null>";
-        return endPoint is IPEndPoint ipEndPoint ? Format(ipEndPoint) : endPoint.ToString() ?? "<null>";
+        return Redactor.Default.Format(endPoint);
     }
 
-    public static string Format(IpEndPointValue? endPoint)
+    public static Redactor.RedactedValue<EndPoint> Format(IPEndPoint? endPoint)
     {
-        return Format(endPoint?.ToIPEndPoint());
+        return Redactor.Default.Format(endPoint);
     }
 
-    public static string Format(IPEndPoint? endPoint)
+    public static Redactor.RedactedValue<EndPoint> Format(IpEndPointValue? endPoint)
     {
-        if (endPoint == null) return "<null>";
-
-        if (endPoint.AddressFamily is AddressFamily.InterNetwork or AddressFamily.InterNetworkV6)
-            return $"{Format(endPoint.Address)}:{endPoint.Port}";
-
-        return endPoint.ToString();
+        return Redactor.Default.Format(endPoint);
     }
 
-    public static string Format(IEnumerable<IPAddress> ipAddresses)
+    public static Redactor.RedactedValue<IPAddress> Format(IPAddress? ipAddress)
     {
-        return string.Join(", ", ipAddresses.Select(Format));
+        return Redactor.Default.Format(ipAddress);
     }
 
-    public static string Format(IPAddress? ipAddress)
+    public static Redactor.RedactedValue<IpNetwork> Format(IpNetwork? ipNetwork)
     {
-        if (ipAddress == null) return "<null>";
-        return IsAnonymousMode ? VhUtils.RedactIpAddress(ipAddress) : ipAddress.ToString();
+        return Redactor.Default.Format(ipNetwork);
     }
 
-    public static string Format(IEnumerable<IpNetwork> ipNetworks)
+    public static Redactor.RedactedValue<IReadOnlyList<IPAddress>> Format(IEnumerable<IPAddress> ipAddresses)
     {
-        return string.Join(", ", ipNetworks.Select(Format));
+        return Redactor.Default.Format(ipAddresses);
     }
 
-    public static string Format(IpNetwork? ipNetwork)
+    public static Redactor.RedactedValue<IReadOnlyList<IpNetwork>> Format(IEnumerable<IpNetwork> ipNetworks)
     {
-        if (ipNetwork == null) return "<null>";
-        return $"{Format(ipNetwork.Prefix)}/{ipNetwork.PrefixLength}";
+        return Redactor.Default.Format(ipNetworks);
     }
 
     public static string FormatType(object? obj)
@@ -85,10 +86,7 @@ public static class VhLogger
 
     public static string FormatId(object? id)
     {
-        if (id == null) return "<null>";
-
-        var str = id.ToString() ?? "";
-        return IsAnonymousMode ? "**" + str[(str.Length / 2)..] : str;
+        return Redactor.Default.RedactId(id);
     }
 
     public static string FormatSessionId(object? id)
@@ -98,10 +96,7 @@ public static class VhLogger
 
     public static string FormatHostName(string? dnsName)
     {
-        if (dnsName == null) return "<null>";
-        if (IPAddress.TryParse(dnsName, out var ipAddress)) return Format(ipAddress);
-        if (IPEndPoint.TryParse(dnsName, out var ipEndPoint)) return Format(ipEndPoint);
-        return IsAnonymousMode ? VhUtils.RedactHostName(dnsName) : dnsName;
+        return Redactor.Default.RedactHostName(dnsName);
     }
 
     public static string FormatHostName(string? dnsName, int port)
@@ -111,34 +106,7 @@ public static class VhLogger
 
     public static string FormatIpPacket(string ipPacketText)
     {
-        if (!IsAnonymousMode)
-            return ipPacketText;
-
-        ipPacketText = RedactIpAddress(ipPacketText, "SourceAddress");
-        ipPacketText = RedactIpAddress(ipPacketText, "DestinationAddress");
-        ipPacketText = RedactIpAddress(ipPacketText, "Src");
-        ipPacketText = RedactIpAddress(ipPacketText, "Dst");
-        return ipPacketText;
-    }
-
-    private static string RedactIpAddress(string text, string keyText)
-    {
-        try {
-            var start = text.IndexOf($"{keyText}=", StringComparison.Ordinal) + 1;
-            if (start == -1)
-                return text;
-            start += keyText.Length;
-
-            var end = text.IndexOf(",", start, StringComparison.Ordinal);
-            var ipAddressText = text[start..end];
-            var ipAddress = IPAddress.Parse(ipAddressText);
-
-            text = text[..start] + Format(ipAddress) + text[end..];
-            return text;
-        }
-        catch {
-            return "*";
-        }
+        return Redactor.Default.RedactPacketText(ipPacketText);
     }
 
     public static bool IsSocketCloseException(Exception ex)

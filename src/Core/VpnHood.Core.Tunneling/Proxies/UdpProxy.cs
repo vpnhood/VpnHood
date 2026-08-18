@@ -110,10 +110,9 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
                 // Reaching this requires a client advertising an EDNS buffer above this worker's size
                 // (real resolvers advertise 1232-1440); the Debug line reports if it ever happens
                 if ((udpResult.SocketFlags & SocketFlags.Truncated) != 0) {
-                    if (VhLogger.MinLogLevel <= LogLevel.Debug)
-                        VhLogger.Instance.LogDebug(GeneralEventId.Udp,
-                            "Dropped a truncated UDP datagram. RemoteEndPoint: {RemoteEndPoint}, BufferSize: {BufferSize}",
-                            VhLogger.Format(remoteEndPoint), _receiveBuffer.Length);
+                    VhLogger.Instance.LogDebug(GeneralEventId.Udp,
+                        "Dropped a truncated UDP datagram. RemoteEndPoint: {RemoteEndPoint}, BufferSize: {BufferSize}",
+                        VhLogger.Format(remoteEndPoint), _receiveBuffer.Length);
                     continue;
                 }
 
@@ -121,10 +120,9 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
                 // mapping timed out) and keep receiving; other flows still rely on this shared socket.
                 // Unmapped packets must not refresh LastUsedTime, or noise would pin idle workers
                 if (!DestinationEndPointMap.TryGetValue(remoteEndPoint, out var sourceEndPoint)) {
-                    if (VhLogger.MinLogLevel <= LogLevel.Debug)
-                        VhLogger.Instance.LogDebug(GeneralEventId.Udp,
-                            "Dropped a UDP packet from an unmapped remote endpoint. RemoteEndPoint: {RemoteEndPoint}",
-                            VhLogger.Format(remoteEndPoint));
+                    VhLogger.Instance.LogDebug(GeneralEventId.Udp,
+                        "Dropped a UDP packet from an unmapped remote endpoint. RemoteEndPoint: {RemoteEndPoint}",
+                        VhLogger.Format(remoteEndPoint));
                     continue;
                 }
 

@@ -292,7 +292,7 @@ public class Session : IDisposable
 
         if (destinationEndPoint != null) {
             destinationIpStr = _trackingOptions.TrackDestinationIpValue
-                ? VhUtils.RedactIpAddress(destinationEndPoint.Value.Address)
+                ? Redactor.Default.RedactIpAddress(destinationEndPoint.Value.Address)
                 : "*";
             destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Value.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint.Value).ToString() ?? "*";

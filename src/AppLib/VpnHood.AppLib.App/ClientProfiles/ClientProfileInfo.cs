@@ -61,19 +61,19 @@ public class ClientProfileInfo(ClientProfile clientProfile, AppFeatures appFeatu
             return token.Name;
 
         if (token.ServerToken is { IsValidHostName: false, HostEndPoints.Length: > 0 })
-            return VhUtils.RedactEndPoint(token.ServerToken.HostEndPoints.First());
+            return Redactor.Always.RedactEndPoint(token.ServerToken.HostEndPoints.First());
 
-        return VhUtils.RedactHostName(token.ServerToken.HostName);
+        return Redactor.Always.RedactHostName(token.ServerToken.HostName);
     }
 
     private static string[] GetEndPoints(ServerToken serverToken)
     {
         var hostNames = new List<string>();
         if (serverToken.IsValidHostName)
-            hostNames.Add(VhUtils.RedactHostName(serverToken.HostName));
+            hostNames.Add(Redactor.Always.RedactHostName(serverToken.HostName));
 
         if (serverToken.HostEndPoints != null)
-            hostNames.AddRange(serverToken.HostEndPoints.Select(x => VhUtils.RedactIpAddress(x.Address)));
+            hostNames.AddRange(serverToken.HostEndPoints.Select(x => Redactor.Always.RedactIpAddress(x.Address)));
 
         return [.. hostNames];
     }

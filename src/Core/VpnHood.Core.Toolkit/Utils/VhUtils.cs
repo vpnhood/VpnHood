@@ -259,36 +259,6 @@ public static class VhUtils
         return length is null ? hash : hash[..length.Value];
     }
 
-    public static string RedactHostName(string hostName)
-    {
-        return hostName.Length <= 8
-            ? "***" + hostName[^4..]
-            : hostName[..2] + "***" + hostName[^4..];
-    }
-
-
-    public static string RedactEndPoint(IPEndPoint ipEndPoint)
-    {
-        return RedactIpAddress(ipEndPoint.Address) + ":" + ipEndPoint.Port;
-    }
-
-    public static string RedactIpAddress(IPAddress ipAddress)
-    {
-        var addressBytes = ipAddress.GetAddressBytesFast(stackalloc byte[16]);
-
-        if (ipAddress.IsV4() &&
-            !ipAddress.Equals(IPAddress.Any) &&
-            !ipAddress.Equals(IPAddress.Loopback))
-            return $"{addressBytes[0]}.*.*.{addressBytes[3]}";
-
-        if (ipAddress.IsV6() &&
-            !ipAddress.Equals(IPAddress.IPv6Any) &&
-            !ipAddress.Equals(IPAddress.IPv6Loopback))
-            return $"{addressBytes[0]:x2}{addressBytes[1]:x2}:***:{addressBytes[14]:x2}{addressBytes[15]:x2}";
-
-        return ipAddress.ToString();
-    }
-
     private static double Round(double value, bool round)
     {
         return round ? Math.Round(value) : value;

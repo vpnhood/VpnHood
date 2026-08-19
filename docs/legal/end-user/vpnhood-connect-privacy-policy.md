@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-08-18*
+*Effective: 2026-08-18.*
 
 **PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CONNECT** app and to the VPN servers **we operate**. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -90,7 +90,7 @@ When you connect, our servers record what any VPN server must see to run the ser
 
 **Diagnostic logs.** Apart from the connection records above, our servers keep technical logs used to find faults — failed connections, protocol errors, and the like. These are kept for **14 days** from the moment each entry is written, then deleted, and they are never backed up.
 
-Network addresses inside them are not written down as addresses. Each one is replaced by a short token produced with a random key that is created when the server process starts, exists only in memory, and is never saved anywhere. The same address gives the same token while that process runs, which is what lets an engineer follow one connection through a file; when the process stops, the key ceases to exist, so nothing afterwards can turn a token back into an address — not us, not anyone we hand a file to. Tokens from two different runs cannot be matched to each other either. Addresses that identify nobody are left readable, because they help us diagnose faults and reveal nothing: the local network addresses of your own device and network.
+Network addresses inside them are not written down as addresses. Each one is replaced by a short token produced with a random key that is created when the server process starts, exists only in memory, and is never saved anywhere. The same address gives the same token while that process runs, which is what lets an engineer follow one connection through a file; when the process stops, the key ceases to exist, so nothing afterwards can turn a token back into an address — not us, not anyone we hand a file to. Tokens from two different runs cannot be matched to each other either. Addresses that identify nobody are left readable, because they help us diagnose faults and reveal nothing: loopback and private-range addresses, which belong to a machine's own network and point at no one on the internet.
 
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 

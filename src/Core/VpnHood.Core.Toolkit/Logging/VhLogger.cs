@@ -21,13 +21,20 @@ public static class VhLogger
 
     public static EventId TcpCloseEventId { get; set; }
 
-    // kept here because every caller reaches redaction through VhLogger; Redactor owns the state, and the
-    // mode is fixed per instance, so changing it swaps the default redactor rather than mutating one
+    /// <summary>
+    /// The redactor this logger applies to the values passed through <c>Format</c>. Set only through
+    /// <see cref="IsAnonymousMode" />, so that turning redaction off stays a single deliberate switch
+    /// rather than something any caller can install. Callers that must redact whatever the logging
+    /// settings say use <see cref="Utils.Redactor.Always" /> instead of this one.
+    /// </summary>
+    public static Redactor Redactor { get; private set; } = new(isAnonymousMode: true);
+
+    // the mode is fixed per redactor, so changing it swaps the instance rather than mutating one
     public static bool IsAnonymousMode {
-        get => Redactor.Default.IsAnonymousMode;
+        get => Redactor.IsAnonymousMode;
         set {
-            if (Redactor.Default.IsAnonymousMode != value)
-                Redactor.Default = new Redactor(value);
+            if (Redactor.IsAnonymousMode != value)
+                Redactor = new Redactor(value);
         }
     }
 
@@ -41,37 +48,37 @@ public static class VhLogger
 
     public static Redactor.RedactedValue<EndPoint> Format(EndPoint? endPoint)
     {
-        return Redactor.Default.Format(endPoint);
+        return Redactor.Format(endPoint);
     }
 
     public static Redactor.RedactedValue<EndPoint> Format(IPEndPoint? endPoint)
     {
-        return Redactor.Default.Format(endPoint);
+        return Redactor.Format(endPoint);
     }
 
     public static Redactor.RedactedValue<EndPoint> Format(IpEndPointValue? endPoint)
     {
-        return Redactor.Default.Format(endPoint);
+        return Redactor.Format(endPoint);
     }
 
     public static Redactor.RedactedValue<IPAddress> Format(IPAddress? ipAddress)
     {
-        return Redactor.Default.Format(ipAddress);
+        return Redactor.Format(ipAddress);
     }
 
     public static Redactor.RedactedValue<IpNetwork> Format(IpNetwork? ipNetwork)
     {
-        return Redactor.Default.Format(ipNetwork);
+        return Redactor.Format(ipNetwork);
     }
 
     public static Redactor.RedactedValue<IReadOnlyList<IPAddress>> Format(IEnumerable<IPAddress> ipAddresses)
     {
-        return Redactor.Default.Format(ipAddresses);
+        return Redactor.Format(ipAddresses);
     }
 
     public static Redactor.RedactedValue<IReadOnlyList<IpNetwork>> Format(IEnumerable<IpNetwork> ipNetworks)
     {
-        return Redactor.Default.Format(ipNetworks);
+        return Redactor.Format(ipNetworks);
     }
 
     public static string FormatType(object? obj)
@@ -86,7 +93,7 @@ public static class VhLogger
 
     public static string FormatId(object? id)
     {
-        return Redactor.Default.RedactId(id);
+        return Redactor.RedactId(id);
     }
 
     public static string FormatSessionId(object? id)
@@ -96,7 +103,7 @@ public static class VhLogger
 
     public static string FormatHostName(string? dnsName)
     {
-        return Redactor.Default.RedactHostName(dnsName);
+        return Redactor.RedactHostName(dnsName);
     }
 
     public static string FormatHostName(string? dnsName, int port)
@@ -106,7 +113,7 @@ public static class VhLogger
 
     public static string FormatIpPacket(string ipPacketText)
     {
-        return Redactor.Default.RedactPacketText(ipPacketText);
+        return Redactor.RedactPacketText(ipPacketText);
     }
 
     public static bool IsSocketCloseException(Exception ex)

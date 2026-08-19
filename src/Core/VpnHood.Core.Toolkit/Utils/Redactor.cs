@@ -59,27 +59,12 @@ public class Redactor(bool isAnonymousMode)
     // mid-run — destroying the within-run linkability the whole design exists to provide.
     private static readonly byte[] IpRedactionKey = RandomNumberGenerator.GetBytes(32);
 
-    // Addresses that are worth reading verbatim and cannot expose anybody. Knowing a client used a public
-    // resolver says nothing about what it looked up, while "is DNS going where it should" is a question
-    // you would otherwise have to answer by squinting at a token. Replace the set to add your own
-    // infrastructure — assign a new one rather than mutating, since it is read from every thread.
-    private static readonly IReadOnlySet<IPAddress> WellKnownResolvers = new HashSet<IPAddress> {
-        IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4"), // Google
-        IPAddress.Parse("1.1.1.1"), IPAddress.Parse("1.0.0.1"), // Cloudflare
-        IPAddress.Parse("9.9.9.9"), IPAddress.Parse("149.112.112.112"), // Quad9
-        IPAddress.Parse("208.67.222.222"), IPAddress.Parse("208.67.220.220"), // OpenDNS
-        IPAddress.Parse("2001:4860:4860::8888"), IPAddress.Parse("2001:4860:4860::8844"),
-        IPAddress.Parse("2606:4700:4700::1111"), IPAddress.Parse("2606:4700:4700::1001"),
-        IPAddress.Parse("2620:fe::fe"), IPAddress.Parse("2620:fe::9")
-    };
-
-    public static IReadOnlySet<IPAddress> PassThroughAddresses { get; set; } = WellKnownResolvers;
-
     /// <summary>Follows the process-wide anonymous mode; replaced when that mode changes.</summary>
     public static Redactor Default { get; set; } = new(isAnonymousMode: true);
 
     /// <summary>Redacts unconditionally, for callers whose output must never depend on a logging setting.</summary>
     public static Redactor Always { get; } = new(isAnonymousMode: true);
+
 
     public bool IsAnonymousMode { get; } = isAnonymousMode;
 
@@ -197,9 +182,6 @@ public class Redactor(bool isAnonymousMode)
         // LAN. None of them can point at a subscriber or at a site, and an operator needs to read them as
         // they are — split routing and adapter faults are far harder to diagnose without them.
         if (!IsGloballyRoutable(addressBytes, isV4))
-            return ipAddress.ToString();
-
-        if (PassThroughAddresses.Contains(ipAddress))
             return ipAddress.ToString();
 
         // the family byte separates the two address spaces, so a 4-byte and a 16-byte input can never

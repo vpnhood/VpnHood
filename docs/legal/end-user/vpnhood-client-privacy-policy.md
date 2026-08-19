@@ -1,6 +1,6 @@
 # VpnHood! CLIENT - Privacy Policy
 
-*Effective: 2026-08-06*
+*Effective: 2026-08-18*
 
 **PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CLIENT** app. VpnHood! CLIENT works with an access key you obtain yourself; your VPN traffic is handled by the server that key belongs to, under its operator's privacy policy, which is beyond our control.
 
@@ -46,6 +46,8 @@ VpnHood! CLIENT ships with no server and no access key — you choose the server
 
 **Your destinations are never recorded.** The official VpnHood server implementation does not extract the domains, URLs, or IP addresses you visit from your traffic, so there is nothing about them to log, store, or hand over — that holds on any server running the official implementation, whoever operates it. When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN; that happens inside the app, on your device, and is never sent anywhere.
 
+The app keeps its own technical log on your device to help diagnose faults, and that log does record the addresses your connections went to — but not as addresses. Each one is replaced by a short token produced with a random key that is created when the app starts, exists only in memory, and is never saved. The same address gives the same token while the app is running, so a fault can be traced through the file; once the app closes the key is gone, and nothing can turn a token back into an address afterwards. This log stays on your device unless you choose to send it to us (see "Client Feedback & Bug Report").
+
 ## Service Providers
 
 The only third party that processes app data on our behalf is **Google LLC**: Google Analytics/Firebase for the anonymous analytics described above, and Google Firebase storage for the reports and ratings you choose to send. Google processes this data to provide these services to us and is not permitted to use it for other purposes.
@@ -60,7 +62,9 @@ Our services are not directed to anyone under the age of 18. We do not knowingly
 
 ## Client Feedback & Bug Report
 
-The app lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us. The log file contains basic technical information, and sensitive details that are not required for debugging, such as your IP address, are automatically removed before sending.
+The app lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us.
+
+The log file contains basic technical information and never the content of your traffic. Network addresses in it — yours, and those of the servers your device connected to — are replaced by tokens as described under "VPN Servers", using a key that is never saved and never sent with the file, so the copy you send us cannot be turned back into addresses by us or by anybody else. Local network addresses stay readable, as they identify nobody. If you switch on verbose diagnostics yourself while reproducing a problem, the file can additionally contain host names in a shortened form.
 
 ## Changes to This Privacy Policy
 

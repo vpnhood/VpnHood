@@ -291,9 +291,11 @@ public class Session : IDisposable
             localPortStr = _trackingOptions.TrackLocalPortValue ? localEndPoint.Value.Port.ToString() : "*";
 
         if (destinationEndPoint != null) {
-            destinationIpStr = _trackingOptions.TrackDestinationIpValue
-                ? Redactor.Default.RedactIpAddress(destinationEndPoint.Value.Address)
-                : "*";
+            // Redacted unless the log is running non-anonymous, unlike the client IP in the session log,
+            // which is recorded as-is because tracing a connection back to whoever made it is the entire
+            // reason that record exists. A destination never serves that purpose — an abuse report already
+            // names its target — so all anyone needs here is to tell one destination from another.
+            destinationIpStr = Redactor.Default.RedactIpAddress(destinationEndPoint.Value.Address);
             destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Value.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint.Value).ToString() ?? "*";
         }

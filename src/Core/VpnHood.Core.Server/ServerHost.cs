@@ -447,8 +447,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
                 "This client is outdated and not supported anymore! Please update your app.");
 
         // Report new session
+        // as-is for the same reason as the tracked destination: this record exists to trace a connection
+        // back to whoever made it, which a token cannot do
         var clientIpText = _sessionManager.TrackingOptions.TrackClientIpValue
-            ? Redactor.Default.RedactIpAddress(clientIp)
+            ? clientIp.ToString()
             : "*";
 
         // report in main log

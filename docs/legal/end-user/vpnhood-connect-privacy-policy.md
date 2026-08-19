@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-08-14*
+*Effective: 2026-08-18*
 
 **PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CONNECT** app and to the VPN servers **we operate**. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -86,7 +86,11 @@ When you connect, our servers record what any VPN server must see to run the ser
 
 **One exception to the 30 days.** If we receive a legal preservation request, or a claim we have to defend, the records it covers stop expiring until the matter is resolved. That is the only thing that keeps an entry past its 30 days, and it applies whether or not the account behind it still exists — destroying records after being formally put on notice is not something we are permitted to do.
 
-**Important!** We do not record your browsing. Our servers never inspect your traffic for the domains or URLs you visit, so there is nothing about them to log, store, or hand over. Our server software *can* be configured to log the destination addresses your connections go to — the addresses only, never the content — and we keep that switched off. Because our code is open source, you can see both that the switch exists and exactly what it would record.
+**Important!** We do not record your browsing. Our servers never inspect your traffic for the domains or URLs you visit, and we do not record the addresses your connections go to. There is nothing about your destinations to log, store, or hand over. Our code is open source, so you can verify this for yourself.
+
+**Diagnostic logs.** Apart from the connection records above, our servers keep technical logs used to find faults — failed connections, protocol errors, and the like. These are kept for **14 days** from the moment each entry is written, then deleted, and they are never backed up.
+
+Network addresses inside them are not written down as addresses. Each one is replaced by a short token produced with a random key that is created when the server process starts, exists only in memory, and is never saved anywhere. The same address gives the same token while that process runs, which is what lets an engineer follow one connection through a file; when the process stops, the key ceases to exist, so nothing afterwards can turn a token back into an address — not us, not anyone we hand a file to. Tokens from two different runs cannot be matched to each other either. Addresses that identify nobody are left readable, because they help us diagnose faults and reveal nothing: the local network addresses of your own device and network.
 
 When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN. That happens inside the app, on your device, and is never sent to us.
 
@@ -166,7 +170,9 @@ Our services are not directed to anyone under the age of 18. We do not knowingly
 
 ## Client Feedback & Bug Report
 
-The app lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us. The log file contains basic technical information, and sensitive details that are not required for debugging, such as your IP address, are automatically removed before sending.
+The app lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us.
+
+The log file contains basic technical information and never the content of your traffic. Network addresses in it — yours, and those of the servers your device connected to — are replaced by tokens the same way as on our servers, using a key created inside the app that is never saved and never sent with the file, so the copy you send us cannot be turned back into addresses by us or by anybody else. Local network addresses stay readable, as they identify nobody. If you switch on verbose diagnostics yourself while reproducing a problem, the file can additionally contain host names in a shortened form.
 
 ## Changes to This Privacy Policy
 

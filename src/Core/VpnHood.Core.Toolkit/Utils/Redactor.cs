@@ -59,9 +59,6 @@ public class Redactor(bool isAnonymousMode)
     // mid-run — destroying the within-run linkability the whole design exists to provide.
     private static readonly byte[] IpRedactionKey = RandomNumberGenerator.GetBytes(32);
 
-    /// <summary>Follows the process-wide anonymous mode; replaced when that mode changes.</summary>
-    public static Redactor Default { get; set; } = new(isAnonymousMode: true);
-
     /// <summary>Redacts unconditionally, for callers whose output must never depend on a logging setting.</summary>
     public static Redactor Always { get; } = new(isAnonymousMode: true);
 

@@ -1,6 +1,6 @@
 # Account lifecycle — business flow
 
-*Last reviewed: 2026-08-14*
+*Last reviewed: 2026-08-18*
 
 The life of a VpnHood! account in business terms: when one comes into existence, what it holds while
 it lives, what happens when someone deletes it, and how a paying customer gets back what they bought.
@@ -30,6 +30,7 @@ Section 8 answers these, in order:
 - They order a second subscription on our website
 - They bought in bulk, to resell
 - They bought on our website, then sign in to the app
+- Their serving credential is refused
 - They sign in with a different address than they bought with
 - They cannot reach us at all, because we are blocked where they are
 - Their subscription came from a different store than the app
@@ -46,10 +47,10 @@ Section 8 answers these, in order:
 
 | Question | Answer | Where |
 |---|---|---|
-| Who has an account? | Only someone who signed in — and the only reason to sign in is to buy | §3 |
+| Who has an account? | Only someone who signed in — to buy, restore, or carry one importable code across devices | §3 |
 | Website buyer signs in — premium? | Yes — on the code marked as theirs, automatically | §8 |
-| Which code, if they own several? | The device's own store's subscription first; among codes, we pick and never ask — the chosen one holds the slot until it dies, then the next usable takes over | §8 |
-| Can they change it in the app? | No list, no picker, ever. They type the code they want — and where a build cannot take one, they name it in the client area instead | §8, §9 |
+| Which code, if they own several? | The device's own store's subscription first; otherwise the last deliberate account selection. Saving the one imported code or choosing a purchased code changes it; expiry never promotes another by itself | §8 |
+| Can they change it in the app? | No list or picker. They may type a code locally and explicitly save or replace the account's one imported code; builds without a code box use the client area | §8, §9 |
 | Two subscriptions? | Any number of codes from the portal store (for sharing); one subscription per store — and one at each store can coexist: prevented up front, accepted and surfaced if it happens | §8 |
 | Do we ever refuse a purchase? | Never after the money moved. Prevention happens before the store's payment sheet; whatever arrives paid is provisioned | §8 |
 | Is a code safe to hand out? | Yes — it carries its own device limit, whoever holds it | §2 |
@@ -57,7 +58,7 @@ Section 8 answers these, in order:
 | What does deletion keep? | Their store subscription, the codes they bought on the website, and invoices frozen with the buyer's name | §6 |
 | What blocks deletion? | **Nothing.** Billing is cancelled at the end of its paid period instead | §8 |
 | Coming back? | A new, empty account — the store is asked at sign-in and gives the subscription back by itself; the code we emailed on the way out still works | §7 |
-| Blocked where they are, so they cannot sign in? | Connect first on the free or trial path, then sign in through the tunnel. The code then works to its expiry with no further contact | §8 |
+| Blocked where they are, so they cannot sign in? | Connect first on the free or trial path, then sign in through the tunnel. No portal clock removes the applied code; only an access-server refusal starts the ending flow | §8 |
 | Does a refund end a code? | Only if we end it. Revoking is the default; keeping it is a choice | §8 |
 
 ---
@@ -163,8 +164,9 @@ The subscription is the one thing we do not control. Whoever took the money owns
 
 Most people never do. The app works without one.
 
-An account is created the first moment someone signs in — and the only reason to sign in is to buy
-a subscription or to bring one back. So:
+An account is created the first moment someone signs in. The reasons are to buy a subscription,
+bring one back, receive a website purchase, or carry one importable code across devices — including
+into a codeless build. So:
 
 - Never signed in → **there is nothing to delete**, and the app should not offer it.
 - Signed in → exactly **one** account, whichever platform they signed in from.
@@ -441,18 +443,23 @@ Two limits, both deliberate:
   not, outside the storefronts that now permit it (§9).
 - **It does not help someone who was given a code.** A gift recipient has no website account. Their
   route is the third one below, or — where that does not exist — importing the code into an account
-  of their own in the client area first (§8). Importing consumes nothing: the friend who gave them
-  the code is unaffected, and so is anyone else already using it.
+  of their own from a typed-code build or the client area first (§8). Importing consumes nothing:
+  the friend who gave them the code is unaffected, and so is anyone else already using it.
 
 ### The code they kept — the route that needs no account at all
 
 If they kept the code we mailed at deletion (§5, step 3), or were handed one by a friend, they
 **paste it in**. Nothing else is needed: no account, no store, no network round-trip to prove
 anything. The app files it as their own code, exactly as it treats a code from a gift or a
-promotion, and the device limit that came with it still applies. The backend is told nothing —
-pasting is local, and it does not import the code into the account or move which code the account
-is served by (§8). Making it the account's code, so their *other* devices get it too, is the
-separate deliberate act on the client-area page.
+promotion, and the device limit that came with it still applies. Pasting is local first: the code
+works on that device whether or not an account exists.
+
+On a signed-in device, the app then offers a **separate deliberate act**: save this code as the
+account's one imported code, so the person's other devices — including a build that cannot take a
+typed code — can receive it (§8). It is never automatic. The portal can only attach an individual
+code it can match to a service; a promotion, access-manager-issued code or reseller CSV code may
+therefore keep working locally while the save answers honestly that it cannot be attached. The
+local success never depends on the account save.
 
 This works on a phone that has never seen their account, on a platform they did not buy from, and
 years later. It is the reason step 3 of §5 exists — a person who keeps their code can never be
@@ -481,11 +488,12 @@ have — so prevention carries the whole weight, and acceptance covers what prev
 
 | Layer | What it does |
 |---|---|
-| **The app** | Checkout never opens for an account that is already served. Signing in comes first, the server is asked what the account holds, and someone already premium sees that instead of a price. Prevention must finish **before the store's payment sheet appears**, because after it there is no undo |
+| **The app** | Checkout never opens for an account that is currently served. Signing in comes first, the account is resolved, and someone whose credential still succeeds sees premium instead of a price. After `AccessExpired` or `AccessCodeRejected`, **Restore Premium** may offer a purchase even though the refused code remains stored. Prevention must finish **before the store's payment sheet appears**, because after it there is no undo |
 | **The portal store** | The checkout warning (below, *a second subscription*): someone already holding something active is told what they hold before they pay. It warns and never blocks — the portal sells codes in any number on purpose |
 
-The server is the single authority in both: *already served* is a question about the whole account,
-and only the server can answer it. The app never decides from what one device knows.
+The servers are authoritative in both: the portal says what the whole account holds, and the access
+server says whether the serving credential is actually accepted. The app never infers the answer
+from a displayed expiry or its own clock.
 
 #### Acceptance, when a purchase arrives anyway
 
@@ -623,18 +631,21 @@ Most website buyers buy **one** code, for themselves. Making that person type a 
 already paid for would be a step with no purpose and a support ticket waiting to happen. So signing
 in makes them premium — and the ambiguity only appears when they hold more than one.
 
-The rule that resolves it is *the account always has exactly one code, and we are the ones who
-choose it*. **The app never chooses, never lists and never asks**:
+The rule that resolves it is *the account exposes exactly one selected code, and inventory stays
+server-side*. The selection is changed by deliberate acts — saving the one imported code or
+choosing a purchased code in the client area — never by handing an inventory to the app:
 
 | Situation, in order | What the app does |
 |---|---|
-| The device runs on a code the person **typed**, and the account has no subscription | Leave it alone |
 | A **serving** subscription at this build's home store | Use it — the device's own store comes first (below) |
+| The device runs on a code the person **typed** | Leave it alone |
 | The account has a code | Use it — the server has chosen one (below) |
 | None | Signed in, not premium — as today |
 
-Read top to bottom; the first row that matches wins. There is no row that asks a question, because
-the account is never handed more than one code to consider — see below.
+Read top to bottom; the first row that matches wins. The only question a typed-code build may ask
+is whether to save that local code to the account (§8, *the one imported-code slot*). It never asks
+the person to choose from an inventory, because the account is never handed more than one code to
+consider — see below.
 
 #### The app is told a code, not a list of codes
 
@@ -654,7 +665,7 @@ one they get depends on the build:**
 
 | Which build | How they change it | Why |
 |---|---|---|
-| One that takes a typed code | They type the code they want | It is the same control they already use for a gift or a promotion — a picker would be a second way to do one thing |
+| One that takes a typed code | They type the code they want; saving it to the account is a separate confirmation | Typing changes this device immediately. Saving deliberately makes the same code the account selection for other devices |
 | One that does not (§9) | They name the code in the **client area**, on the website | There is no code box to type into, so the choice has to live somewhere the store does not govern |
 
 That second row is a requirement, not a fallback. A platform that forbids unlocking with a code
@@ -677,30 +688,29 @@ One consequence is deliberate: two devices of one account, on two platforms, may
 different purchases. That is the nature of per-store subscriptions, not a defect — and the client
 area is where the whole account is visible in one place.
 
-**Among the account's codes, we choose — on the server, every time the question is asked.** Three
-rules, in order:
+**Among the account's codes, the last deliberate selection wins.** There is no expiry-driven
+promotion scan and no server guess among several purchased codes:
 
-1. **A purchase claims the slot only if the account has no usable code.** This is what stops a gift
-   from disturbing the buyer: someone happily running on their own code is not moved onto the one
-   they just bought for their daughter.
-2. **When the chosen code dies, the next usable one takes over, at the moment we are next asked.**
-   Nothing is scheduled and nothing runs nightly; the answer is simply recomputed when it is needed,
-   so an account can never be left pointing at a dead code. This is the rule that keeps "several
-   codes and none chosen" from arising at all — the only state that could force a question.
-3. **Among several, prefer the code that harms nobody.** One already running is the safest to take
-   — soonest expiry first, so the least future is consumed — and a prepaid code nobody has started
-   stays untouched until nothing else serves. Two things this avoids: starting the clock on a
-   prepaid code someone was saving (§4 — that is not reversible), and taking over a code already
-   handed to a friend, which would consume a device place on their side.
-
-Rule 3 is a best effort, not a guarantee, and it does not have to be perfect: a wrong choice costs
-one device place on a code that keeps working for its holder anyway (§2), and it is corrected by
-either route in the table above. It is written down because the *ordering* is what makes the failure
-cheap — and because on a build with no code box, that ordering is the only thing standing between a
-person and a trip to the website.
+1. **A purchase selects itself only if the account has no selection or the purchase is an explicit
+   repair.** A website order opened through **Restore Premium** carries that intent, so its new code
+   becomes the selection before the app returns. An ordinary additional purchase does not disturb
+   someone happily using one code merely because they bought another for their daughter.
+2. **The account has one imported-code slot.** Saving a typed code records a pointer, consumes
+   nothing and selects it whenever no serving subscription outranks it. Saving the same code is
+   idempotent. Saving a different one requires a second, explicit replacement confirmation; the
+   server never evicts one on the person's behalf.
+3. **Choosing a purchased code is also deliberate.** The client-area picker selects it without
+   deleting the imported slot. The imported slot participates in the same **Make active** picker,
+   so returning to it does not require replacing or re-entering it.
+4. **A date never changes the selection.** Expiry displayed by the portal or device is advisory.
+   The selected credential stays selected until the access server refuses it during a connection,
+   the person changes it, or a serving subscription outranks it. Refusal and repair are handled
+   below; the portal does not silently choose a different purchased code.
 
 **Nothing is ever asked at purchase time.** Checkout is the worst place to add a question, the buyer
 often does not know yet who a code is for, and the answer can change the next day.
+Entering website checkout through **Restore Premium** needs no extra question: the path already says
+this purchase is for repairing the account, so its new code becomes the deliberate selection.
 
 Three guardrails make the automatic part safe:
 
@@ -708,35 +718,93 @@ Three guardrails make the automatic part safe:
    working code is the one genuinely destructive move here, so signing in leaves a hand-typed code
    where it is. The exception is the subscription they are paying for right now: its code is the one
    that must connect, or the money buys nothing. A code the ACCOUNT applied is not protected at all —
-   it belongs to the account, and the account may re-choose it on any read.
-2. **The choice belongs to the account, not to the device.** Every device signed in to the same
-   account lands on the same *chosen code*, and that is the intent rather than a compromise: two
-   phones belonging to one person should share one code. Separate codes exist for separate *people*
-   — the friends and family who do not use the account. The home-store preference above sits on top
-   of this and is per-platform by design.
+   it belongs to the account and follows the account's deliberate selection.
+2. **The account selection belongs to the account, not to one device.** Every account-applied device
+   lands on the same selected code, and that is the intent rather than a compromise: two phones
+   belonging to one person should share one code. Separate codes exist for separate *people* — the
+   friends and family who do not use the account. A serving home-store subscription and an explicit
+   local typed code sit above this selection by the precedence table.
 3. **Record it as a code the account granted, not as the person's own.** The account applied it, so
    it leaves with the account: signing out or deleting takes it off the device, exactly like the
    code behind a store subscription. Nothing is confiscated — the code itself keeps working for
-   everyone using it, the farewell mail carries it (§5), and typing it back in (or importing it in
-   the client area) makes it the person's own in the ordinary way. An earlier design recorded it as
-   the person's own so it would survive deletion; that put a bought-outright code under the app's
-   remove control and let account premium ride into whatever account signed in next — both problems
-   end with the flag.
+   everyone using it, the farewell mail carries it (§5), and typing it back in — then optionally
+   saving it from the app or client area — makes it the person's own in the ordinary way. An earlier
+   design recorded it as the person's own so it would survive deletion; that put a bought-outright
+   code under the app's remove control and let account premium ride into whatever account signed in
+   next — both problems end with the flag.
 
-**And no removal act remains in the app.** A code the account applied is not the device's to
-remove — it leaves only with the account. A code the person typed is their own, and removing it is
-a local act that touches nothing on the account. Re-opening store buying is not a button either: it
-is the account ceasing to be served — the code expiring, or its billing cancelled at the store that
-owns it (*switching stores*, above).
+**And no account-removal act lives in the app.** The app can offer to save or explicitly replace the
+one imported code, but removing that account pointer stays in the client area. A code the person
+typed is their own, and removing its local copy touches nothing on the account. If the imported
+code is the account's last premium source, the web confirmation says plainly that removing it also
+switches the account to the free edition; pressing **Remove** is already that explicit choice, so
+no second Premium Ended question repeats it.
 
 Sharing is unaffected. The family member signs in to *their own* account, sees nothing of the
 buyer's, and uses the code the buyer sent them — which is right: we must never hand someone else's
-codes to whoever happens to sign in. Where their build cannot take a typed code, they import it into
-their own account in the client area first (§7, §9) — which takes nothing away from the buyer.
+codes to whoever happens to sign in. They may save an importable individual code to their own
+account from a typed-code build or the client area, which takes nothing away from the buyer. A
+reseller CSV code has no portal record and remains local-only (§7, §9).
 
-**Double-charging is prevented, not policed.** An active code makes the app premium, so a store
-purchase is never offered — and anything that arrives paid anyway is accepted and surfaced rather
-than refused (above).
+**Double-charging is prevented, not policed.** A credential the access server still accepts makes
+the app premium, so a store purchase is not offered. A retained code marked `AccessExpired` or
+`AccessCodeRejected` does not block **Restore Premium** from offering a purchase — and anything
+that arrives paid anyway is accepted and surfaced rather than refused (above).
+
+### Their serving credential is refused
+
+**Only the access server can infer that an existing premium credential stopped working.** An
+expiry displayed by the device or portal, a billing date, the device clock, a timeout, maintenance,
+an unreachable portal or a failed refresh cannot make that decision. The passive ending flow starts
+only when a connection reaches the access server and returns `AccessExpired` or
+`AccessCodeRejected` for the serving credential. Other connection errors do not mean premium ended.
+
+The two refusal codes make the current code a good candidate for repair or replacement, but neither
+deletes it:
+
+1. **Retain and mark it.** Keep a locally typed code on the device and keep an imported code in the
+   account's one slot. Record the refusal reason and observation time. Say *expired* only for
+   `AccessExpired`; describe `AccessCodeRejected` as a rejection.
+2. **Resolve the account before showing stale news.** Refresh the account first. A newly active
+   subscription outranks the refused code and is tried. A meaningful account change — a purchase
+   or renewal — may justify one guarded retry of the same underlying code because that act may have
+   extended it. A website code bought through **Restore Premium** is already the new deliberate
+   selection and is tried instead. Otherwise a different deliberate account selection may be
+   tried. The portal never guesses another purchased code merely because a date passed.
+3. **Success repairs without a fork.** A successful connection clears the refused mark and returns
+   directly to premium. At most, leave a durable explanation on the account page; do not block a
+   person who just bought premium with the old code's refusal.
+4. **Failure opens Premium Ended, not free.** If no repair succeeds — including when the account
+   cannot be refreshed after the authoritative refusal — stop claiming an active premium
+   entitlement but do not load the free edition. Present **Restore Premium** and **Switch to the
+   free version**. Closing, restarting or walking away chooses neither; the fork waits. Restore may
+   retry the retained code, refresh the account, renew, buy or accept a new code as the build
+   permits. While the fork waits, a successful repair returns directly to premium. After the person
+   explicitly switches to free, the app does not silently reverse that edition choice; retrying the
+   retained credential starts from **Restore Premium**.
+5. **Revival proves itself by connection.** If the issuer later extends the retained code, a
+   successful retry returns to premium. When a repairing subscription later stops serving, the
+   retained imported code may be tried again; a new refusal is a new ending and may be announced
+   again.
+
+Without a prior access-server refusal, no response is not a refusal and the last effective edition
+state is preserved. After a refusal, a failed portal refresh cannot undo what the access server
+already said; retry remains available from Premium Ended.
+
+There is one direct route to free that does not need this fork. Removing the imported code in the
+client area, when it is the account's last premium source, shows one loud confirmation: *"Remove
+this saved code and switch this account to the free edition?"* Pressing **Remove** is the explicit
+free choice. A second question asking whether to stop premium would only repeat the same
+consequence.
+
+**A refused code followed by a subscription is therefore unambiguous:** on return or foreground,
+refresh the account before presenting the old refusal, try the subscription credential, and return
+directly to premium when it succeeds. The refused imported code stays in its one slot, inactive and
+available for Replace or Remove. It is not deleted merely because the subscription repaired access.
+For a website code rather than an account subscription, entering checkout through **Restore
+Premium** carries the same repair intent: the newly provisioned code becomes the deliberate
+selection and is tried before the old refusal is shown. An ordinary second website purchase still
+leaves the existing selection alone for gifting.
 
 ### They sign in with a different address than they bought with
 
@@ -757,24 +825,25 @@ Seven rules, and one case deliberately left to support:
    resolve: the buying identity and the sign-in identity are the same account by construction. This
    is the answer to give first, because every rule below is repair work and this one avoids the
    damage.
-2. **Import the code — the route for a bearer code, and it happens in the client area.** They enter
-   it once on the website and the account records a **pointer** to it. Possession of the code is the
-   proof, and it is the only proof someone behind a relay address can give — and a stronger one than
-   an address, which anyone can type.
+2. **Import the code — the route for a bearer code, from the app or client area.** Possession of the
+   exact code is the proof, and it is the only proof someone behind a relay address can give — and a
+   stronger one than an address, which anyone can type. The account records one **pointer**, never
+   the ownership of the billing behind it.
 
-   **The app never imports.** Pasting a code in the app is a purely local act: that device becomes
-   premium and the backend is told nothing. This is deliberate, and the reason is that the app
-   cannot tell the person the truth about what happened — a portal can only match a code **it**
-   sold, so a promotional, admin-issued, partner or access-manager-issued code has nothing to point
-   at, and an app-side import would silently do nothing while the code itself worked perfectly.
-   Nobody could tell the two outcomes apart. The client-area page says *added* or *no code matches*,
-   to somebody who is looking at it.
+   Pasting in the app remains a local act first: the device uses the code whether or not the account
+   can attach it. On a signed-in device the app then asks explicitly whether to save it to the
+   account. The API reports *saved*, *replace the existing imported code?*, or *no code matches*;
+   the app never swallows the outcome. A portal can only match a code **it** sold individually, so
+   a promotional, admin-issued, partner, access-manager-issued or reseller CSV code may work on the
+   device while honestly failing to save to the account.
 
    **Importing is not redeeming, and the difference carries the whole design.** Nothing is consumed:
-   the code is untouched, keeps its own expiry, and goes on working for everyone already using it.
+   the code is untouched, keeps its own clock, and goes on working for everyone already using it.
    The same code may be imported into **any number of accounts**, anywhere, and nothing is taken
    from whoever imported it before — because the device limit rides on the code, not on the account
-   (§2). What is created is a pointer, not a transfer of ownership.
+   (§2). What is created is a pointer, not a transfer of ownership. Each account has exactly one
+   imported-code slot. Saving the same code is idempotent; saving another requires explicit
+   replacement and never evicts a code by policy or expiry.
 
    A user-facing label may still read *redeem*, since that is the word people expect from a code
    box, but it must never behave like one. A code that could be used up, or held exclusively by the
@@ -792,8 +861,10 @@ Seven rules, and one case deliberately left to support:
    an account stable when a provider changes the address it sends. A *new* provider joins an existing
    account by matching a verified address — and this is exactly what a relay address defeats, so
    signing in with Apple-plus-relay after having a Google account produces a **second account**.
-7. **Last-one-wins applies only to deliberate acts** — pasting a code, or naming one in the client
-   area. Never to automatic attachment, which must never overwrite a code that still works (above).
+7. **Selection changes only through deliberate acts.** Saving or explicitly replacing the imported
+   code selects it when no subscription outranks it; the client-area picker may select a purchased
+   code or the existing imported slot without deleting either. No automatic attachment or
+   expiry-driven scan overwrites the selection.
 
 **One case is left alone on purpose: both accounts hold a live store subscription.** They are two
 accounts, each genuinely served, and nothing merges automatically (below). The person may well be
@@ -834,14 +905,17 @@ Nobody is stranded, because the app is useful before anyone signs in (§3):
    is what the trial is for — a person with no account and no code still has a way through.
 2. **Then sign in, through the tunnel.** With the connection up, the portal is reachable like any
    other site, and everything in §7 and §8 proceeds normally.
-3. **Then it stays.** The code applied to the device keeps working until it expires, with no further
-   contact with us at all. Losing the portal again afterwards costs them nothing.
+3. **Then it stays.** The code applied to the device remains the credential until the access server
+   explicitly refuses it during a connection, with no portal clock deciding on its behalf. Losing
+   the portal again afterwards costs them nothing.
 
 **Point 3 is a promise, not a side effect, and it constrains the app: an unreachable portal must
-never remove premium.** A refresh that cannot reach us keeps what it already holds; only a portal
-that *answers*, and says the account or the subscription is gone, may take the code away (§5). The
-difference between *no answer* and *the answer is no* is the whole of it, and confusing the two
-would switch off paying customers in precisely the regions that most need us.
+never remove premium.** A refresh that cannot reach us keeps what it already holds. A displayed
+expiry or a portal answer about billing may change what the account page says, but it does not infer
+that the serving credential failed; only `AccessExpired` or `AccessCodeRejected` returned by the
+access server during a connection starts the passive ending flow. Explicit sign-out, account
+deletion and removal remain explicit acts with their own stated consequences. Confusing an outage
+with a refusal would switch off paying customers in precisely the regions that most need us.
 
 **A typed code is the stronger route here**, on a build that has one (§9). It needs no portal at
 all, not even once: somebody who already holds a code is premium on a fresh install with no network
@@ -850,9 +924,10 @@ without one, the connect-first route above is not a convenience, it is the only 
 keep working.
 
 What genuinely waits for a reachable portal is anything that **changes what the account holds**:
-signing in, buying, and being told that a different code has been chosen for them (§8). Those are
-exactly the moments when steps 1 and 2 are available again, so nothing is permanently lost — but the
-app must not present the wait as an expiry, and must not offer a purchase it cannot complete.
+signing in, buying, attaching or replacing the imported code, and choosing a purchased code (§8).
+Those are exactly the moments when steps 1 and 2 are available again, so nothing is permanently
+lost — but the app must not present the wait as a refusal, and must not offer a purchase it cannot
+complete.
 
 **A renewal is not on that list**, and this is the part worth being precise about, because it is
 where most of the anxiety would otherwise sit. The portal and the access manager are different
@@ -935,9 +1010,9 @@ account.** The codes those services delivered were sold outright, and they keep 
 of what was paid for: a friend already using one notices nothing. On the buyer's own devices,
 though, the code was applied *by the account*, so it goes when the account goes — the device that
 deleted drops premium like every other signed-in device (§5, §8). The mailed codes are the way
-back: type one in where the build takes codes, or import it into a new account in the client area
-(§7, §9). We take back what the account applied, never what the person bought — and what the
-person bought is in their inbox.
+back: type one in where the build takes codes and optionally save it to the new account, or import
+it through the client area for a codeless build (§7, §9). We take back what the account applied,
+never what the person bought — and what the person bought is in their inbox.
 
 ### They delete while the subscription is between payments
 
@@ -1184,11 +1259,12 @@ These came up and are now settled — kept here only so they are not re-opened.
 | Who pays for a refunded stray charge? | We do, once — which is why it comes with a cancellation, so it can never repeat — §8 |
 | A renewal arriving after deletion | Recorded, the entitlement stays alive for later recovery, and the person is never resurrected — §7 |
 | Does the app help someone holding several codes? | It does not need to. The server hands it one code, so the app never sees a list and never asks — §8 |
-| Who chooses which code serves the account? | We do, on the server, recomputed whenever it is asked. A purchase claims an empty slot; a dead code is replaced by the next usable one — §8 |
-| Does the app show the person their codes? | No. Not on the account page and not at deletion. The only listing is the mail sent on the way out — §5, §8 |
+| How many imported codes can one account hold? | One. Saving another is an explicit replacement; purchased services are separate inventory — §8 |
+| Who chooses which code serves the account? | The last deliberate account act: saving/replacing the one imported code, choosing a purchased code, or buying through Restore Premium. An ordinary purchase fills only an empty selection; dates and refusals never make the portal guess another purchased code — §8 |
+| Does the app show the person their codes? | No inventory crosses to the app. The client area lists purchased services and the one imported slot; deletion still mails the codes before erasing the account — §5, §8 |
 | Can a premium code be typed into every build? | No. One store forbids unlocking with a code at all, so it is a per-build capability — §9 |
-| Where does someone change which code serves them? | By typing the one they want. On a build that cannot take a typed code, in the client area — the only picker we keep, and the reason it has to exist — §8, §9 |
-| Can the account's code be removed in the app? | No. The app owns no code management; a code the account applied leaves only with the account. Leaving a store subscription means cancelling it at its store and letting the paid time run out — §8 |
+| Where does someone change which code serves them? | Type it locally and explicitly save/replace the one imported code, or choose a purchased code or the imported slot in the client-area picker. Builds without a code box use the client area — §8, §9 |
+| Can the account's imported code be removed in the app? | No. Remove stays in the client area. If it is the account's last premium source, its loud confirmation also makes the explicit switch to free; account-applied code also leaves on sign-out or deletion — §8 |
 | Do we refuse a store purchase to an existing website customer? | We prevent it: checkout never opens while the account is served, checked with the server before the store's payment sheet. Nothing is refused after payment — §8 |
 | What if the store places the order anyway? | It is accepted and provisioned — the account holds both, the client area shows both, and a message says where each is cancelled — §8 |
 | Why not refuse and let the store refund? | Only one store refunds an unacknowledged purchase by itself; the other keeps the buyer's money and gives us no way to return it. Prevention costs nobody anything — §8 |
@@ -1198,8 +1274,12 @@ These came up and are now settled — kept here only so they are not re-opened.
 | How many years do we keep an invoice? | We do not publish a figure. The policy names the legal obligation as the criterion, which is what the law asks for and what our market does — §5 |
 | What if they sign in with a different address than they bought with? | Sign in as the website account instead; failing that, import the code — then rename the account when the address is free, link the records when it is not — §8 |
 | Does entering a code use it up, or tie it to one account? | Neither. It creates a pointer, consumes nothing, and the same code may be imported into any number of accounts — §2, §8 |
-| What if our portal is blocked where they are? | Connect on the free or trial path first, then sign in through the tunnel; the applied code then runs to its expiry with no further contact — §8 |
-| Can an unreachable portal drop someone's premium? | Never. Only a portal that answers, and says the account or subscription is gone, may take a code away — §5, §8 |
+| What if our portal is blocked where they are? | Connect on the free or trial path first, then sign in through the tunnel; the applied code stays until the access server explicitly refuses it during a connection — §8 |
+| Can an unreachable portal drop someone's premium? | Never. Without `AccessExpired` or `AccessCodeRejected`, an outage preserves the last effective edition state. Explicit sign-out, deletion and removal keep their stated consequences — §5, §8 |
+| What passively ends premium? | Only `AccessExpired` or `AccessCodeRejected` returned by the access server during a connection. A displayed date or failed refresh does not — §8 |
+| What happens after that refusal? | Repair first; if nothing succeeds, Premium Ended waits for Restore Premium or an explicit switch to free — §8 |
+| They buy premium after a refusal — show the old error? | No. Resolve the changed account first and try the subscription or repair purchase. Success returns directly to premium; the refused import stays stored — §8 |
+| Removing the account's last imported code — ask twice? | No. The loud Remove confirmation includes the switch to free, so Remove is already the explicit edition choice — §8 |
 | Does a renewal need the portal? | No. It extends the same code, and the access manager — a different server — honours the new expiry without the app being told — §2, §8 |
 | Do we ever merge two accounts? | No, never automatically. A pointer moves; customer records and invoices never do — §8 |
 | How many devices may share a code? | The access manager's policy, not ours. It counts installations pseudonymously and this document never depends on the number — §2 |

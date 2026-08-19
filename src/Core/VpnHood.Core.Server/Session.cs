@@ -295,7 +295,7 @@ public class Session : IDisposable
             // which is recorded as-is because tracing a connection back to whoever made it is the entire
             // reason that record exists. A destination never serves that purpose — an abuse report already
             // names its target — so all anyone needs here is to tell one destination from another.
-            destinationIpStr = Redactor.Default.RedactIpAddress(destinationEndPoint.Value.Address);
+            destinationIpStr = VhLogger.Redactor.RedactIpAddress(destinationEndPoint.Value.Address);
             destinationPortStr = _trackingOptions.TrackDestinationPortValue ? destinationEndPoint.Value.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint.Value).ToString() ?? "*";
         }

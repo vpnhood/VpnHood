@@ -270,6 +270,31 @@ public class PortalTest
     }
 
     [TestMethod]
+    public async Task SetAccessCode_uses_one_put_for_a_code_and_null_removal()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        // the answer carries nothing: what the account serves afterwards is read from GET /account
+        _portal.Enqueue("PUT /account/access-code", new { });
+        _portal.Enqueue("PUT /account/access-code", new { });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(),
+            new SignInOptions { ProviderId = AuthProviders.Google }, CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+
+        await accountProvider.SetAccessCode("TEST-CODE", CancellationToken.None);
+        await accountProvider.SetAccessCode(null, CancellationToken.None);
+
+        var requests = _portal.Requests.Where(x => x.Route == "PUT /account/access-code").ToArray();
+        Assert.AreEqual("TEST-CODE", requests[0].Body.GetProperty("accessCode").GetString());
+        Assert.AreEqual(JsonValueKind.Null, requests[1].Body.GetProperty("accessCode").ValueKind,
+            "null is the resource's explicit empty value; there is no separate remove endpoint");
+        Assert.IsFalse(requests[0].Body.TryGetProperty("modifiedTime", out _),
+            "nothing is ordered by time: whichever upload arrives last wins, and that is the whole protocol");
+    }
+
+    [TestMethod]
     public async Task DeleteAccount_blocked_by_web_services_keeps_the_session()
     {
         _portal.Enqueue(SignInRoute, SignInData());

@@ -40,6 +40,56 @@ internal class TestAccountProvider : IAccountProvider
         return Task.FromResult(TestAuthenticationProvider.UserId == null ? null : Account);
     }
 
+    public List<string?> SetAccessCodeCalls { get; } = [];
+
+    /// <summary>Set to make the upload fail the way a network outage does.</summary>
+    public Exception? SetAccessCodeException { get; set; }
+
+    /// <summary>The uploaded code, as the portal's single slot would hold it.</summary>
+    public string? UploadedAccessCode { get; private set; }
+
+    /// <summary>
+    /// Stands in for the portal's slot and ranking (keyring plan §2, §5). Nothing is ordered by time:
+    /// whichever upload arrives last wins, which is the whole protocol.
+    /// </summary>
+    public Task SetAccessCode(string? accessCode, CancellationToken cancellationToken)
+    {
+        SetAccessCodeCalls.Add(accessCode);
+        if (SetAccessCodeException != null)
+            return Task.FromException(SetAccessCodeException);
+
+        var account = Account ?? throw new InvalidOperationException("There is no account to upload to.");
+        UploadedAccessCode = accessCode;
+        RankAccessCode(account);
+        return Task.CompletedTask;
+    }
+
+    public List<(string AccessCode, DateTime ExpirationTime)> ReportedExpirations { get; } = [];
+
+    public Task ReportAccessCodeExpiration(string accessCode, DateTime expirationTime,
+        CancellationToken cancellationToken)
+    {
+        ReportedExpirations.Add((accessCode, expirationTime));
+
+        // an expiry the account already knows to be past takes the code out of the ranking, and the
+        // uploaded code is the only one this fake holds
+        if (Account is { } account && UploadedAccessCode == accessCode)
+            RankAccessCode(account);
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>What the account serves: a store subscription's own code first, else the upload.</summary>
+    private void RankAccessCode(Account account)
+    {
+        if (account.Subscription != null)
+            return;
+
+        account.AccessCodeInfo = UploadedAccessCode == null
+            ? null
+            : new AccessCodeInfo { AccessCode = UploadedAccessCode };
+    }
+
     /// <summary>Set to make the backend refuse the deletion (the portal's "deletion_blocked").</summary>
     public Exception? DeleteAccountException { get; set; }
 

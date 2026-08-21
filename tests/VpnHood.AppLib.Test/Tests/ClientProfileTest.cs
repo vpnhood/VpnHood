@@ -256,7 +256,6 @@ public class ClientProfileTest : TestAppBase
             IsPremiumLocationSelected = true,
             SelectedLocation = "us/california",
             AccessCode = TestAppHelper.BuildAccessCode(),
-            IsAccessCodeFromAccount = true,
             CustomServerEndpoints = new Patch<string[]?>(["1.1.1.1:200", "1.1.1.2:200"]),
             IsCustomServerEndpointsEnabled = false
         };
@@ -271,7 +270,8 @@ public class ClientProfileTest : TestAppBase
         Assert.AreEqual(updateParams.IsPremiumLocationSelected.Value, clientProfile.IsPremiumLocationSelected);
         Assert.AreEqual(updateParams.SelectedLocation.Value, clientProfile.SelectedLocation);
         Assert.AreEqual(updateParams.AccessCode.Value, clientProfile.AccessCode);
-        Assert.AreEqual(updateParams.IsAccessCodeFromAccount.Value, clientProfile.IsAccessCodeFromAccount);
+        Assert.IsFalse(clientProfile.IsAccessCodeSynced,
+            "a code that appears here owes the account an upload — the service marks it, callers do not");
         Assert.AreEqual(AccessCodeUtils.Redact(updateParams.AccessCode.Value), clientProfile.ToInfo(app.Features).AccessCode);
 
         // ************
@@ -624,7 +624,7 @@ public class ClientProfileTest : TestAppBase
         // a build shipped through a store: it may not steer a buyer to an outside shop, whatever the
         // token says — and the token is the one place the URL comes from, so this is the whole guard
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.Premium = new AppPremiumOptions { IsCodeSupported = true }; // and no outside shop
+        appOptions.Premium = new AppPremiumOptions { AllowImportAccessCode = true }; // and no outside shop
         appOptions.AccountProvider = new TestAccountProvider();
         await using var app = TestAppHelper.CreateClientApp(appOptions);
 
@@ -656,12 +656,48 @@ public class ClientProfileTest : TestAppBase
             "the in-app store can complete it");
 
         appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.Premium = new AppPremiumOptions { IsCodeSupported = true }; // and no outside shop
+        appOptions.Premium = new AppPremiumOptions { AllowImportAccessCode = true }; // and no outside shop
         await using var appWithoutBilling = TestAppHelper.CreateClientApp(appOptions);
         var profileWithoutBilling = appWithoutBilling.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         var infoWithoutBilling = profileWithoutBilling.ToInfo(appWithoutBilling.Features);
         Assert.IsFalse(infoWithoutBilling.SelectedLocationInfo?.Options.PremiumByPurchase,
             "no store and no permitted shop leaves nothing to offer");
+    }
+
+    [TestMethod]
+    public async Task A_build_that_takes_no_typed_code_still_shows_the_code_it_holds()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+
+        // the App Store head: App Review 3.1.1 reads a typed premium code as a license key, so this
+        // build ships no box to type one — but the buyer's own subscription still produced a code,
+        // and it is what they carry to their Android or Windows device, where typing it IS allowed
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.Premium = new AppPremiumOptions { AllowImportAccessCode = false };
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+
+        var token = CreateToken();
+        token.IsPublic = true;
+        token.ClientPolicies = [new ClientPolicy { ClientCountries = ["*"], Normal = 10, PremiumByCode = true }];
+
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        var clientProfileInfo = clientProfile.ToInfo(app.Features);
+        Assert.IsFalse(clientProfileInfo.CanImportAccessCode, "this build offers no box to type a code in");
+        Assert.IsTrue(clientProfileInfo.CanViewAccessCode, "the operator allows codes, so the held one may be read");
+
+        // the same token on a head that does take codes: both doors open
+        var codeOptions = TestAppHelper.CreateAppOptions();
+        codeOptions.Premium = new AppPremiumOptions { AllowImportAccessCode = true };
+        await using var codeApp = TestAppHelper.CreateClientApp(codeOptions);
+        var codeProfileInfo = codeApp.ClientProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(codeApp.Features);
+        Assert.IsTrue(codeProfileInfo.CanImportAccessCode);
+        Assert.IsTrue(codeProfileInfo.CanViewAccessCode);
+
+        // an operator that sells no codes closes both, whatever the build can do
+        token.ClientPolicies = [new ClientPolicy { ClientCountries = ["*"], Normal = 10, PremiumByCode = false }];
+        var noCodeInfo = codeApp.ClientProfileService.ImportAccessKey(token.ToAccessKey()).ToInfo(codeApp.Features);
+        Assert.IsFalse(noCodeInfo.CanImportAccessCode);
+        Assert.IsFalse(noCodeInfo.CanViewAccessCode, "there is no code of theirs to read");
     }
 
     [TestMethod]

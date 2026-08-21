@@ -5,8 +5,10 @@ using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Test.Tests;
 
@@ -302,7 +304,7 @@ public class BillingServiceTest : TestAppBase
         // and the entitlement reaches the connection itself, as an account-sourced access code
         var profile = app.CurrentClientProfileInfo;
         Assert.IsNotNull(profile);
-        Assert.IsTrue(profile.IsAccessCodeFromAccount, "the code is owned by the account, not typed by the user");
+        Assert.IsNotNull(profile.AccessCode, "the subscription's own code is what the backend ranked first");
         Assert.IsTrue(profile.IsPremium);
     }
 
@@ -340,7 +342,7 @@ public class BillingServiceTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task Cancelled_subscription_loses_premium_after_the_expiry_date()
+    public async Task Expired_subscription_leaves_its_code_for_the_server_to_refuse()
     {
         var accountProvider = new TestAccountProvider();
         await using var app = CreateAppWithAccount(accountProvider);
@@ -365,13 +367,24 @@ public class BillingServiceTest : TestAppBase
         Assert.IsNull(account.Subscription);
         Assert.IsNull(account.Subscription?.ExpirationTime);
 
-        // The code the subscription delivered is spent, so it comes off the profile. Left there it
-        // would hold the LOCAL premium gate open (always-on, custom DNS, split tunneling…) — because
-        // ClientProfile.IsPremium is "AccessCode != null" — long after the server stopped honouring it.
+        // The spent code STAYS. Taking it off here would drop ClientProfile.IsPremium and demote the
+        // build to its own free edition — premium locations gone, promotion banner back — with nobody
+        // told and nobody having chosen it (keyring plan §8). The account is still here; it simply has
+        // nothing ranked, which is not the same as being gone.
         var profile = app.CurrentClientProfileInfo;
         Assert.IsNotNull(profile);
-        Assert.IsFalse(profile.IsAccessCodeFromAccount);
-        Assert.IsNull(profile.AccessCode, "an expired subscription leaves no access code behind");
+        Assert.IsNotNull(profile.AccessCode, "an expired subscription must not silently disarm premium");
+        Assert.IsTrue(profile.IsPremium);
+
+        // Leaving it costs nothing, because the access server is the real gate: the spent code is
+        // refused at connect time, and THAT is what the person is told — the same road a refusal
+        // already takes, with Restore Premium and (where the build allows codes) Change code.
+        app.ClientProfileService.MarkAccessCodeRefused(profile.ClientProfileId, SessionErrorCode.AccessExpired);
+
+        profile = app.CurrentClientProfileInfo;
+        Assert.IsNotNull(profile);
+        Assert.AreEqual(SessionErrorCode.AccessExpired, profile.AccessCodeRefusal?.ErrorCode,
+            "the refusal is the record that premium ended; no second flag carries the same news");
     }
 
     [TestMethod]
@@ -384,16 +397,13 @@ public class BillingServiceTest : TestAppBase
 
         accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
         await accountService.Refresh(CancellationToken.None);
-        Assert.IsTrue(app.CurrentClientProfileInfo?.IsAccessCodeFromAccount);
+        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode);
 
         // the user's own choice, and a reversible one: signing in again fetches the code back, while
         // keeping it would carry paid access into whatever account signs in next
         await accountService.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
 
-        var profile = app.CurrentClientProfileInfo;
-        Assert.IsNotNull(profile);
-        Assert.IsNull(profile.AccessCode);
-        Assert.IsFalse(profile.IsAccessCodeFromAccount);
+        Assert.IsNull(app.CurrentClientProfileInfo?.AccessCode);
     }
 
     [TestMethod]
@@ -406,17 +416,16 @@ public class BillingServiceTest : TestAppBase
 
         accountProvider.Account = CreateSubscribedAccount(DateTime.UtcNow.AddDays(30), isAutoRenew: true);
         await accountService.Refresh(CancellationToken.None);
-        Assert.IsTrue(app.CurrentClientProfileInfo?.IsAccessCodeFromAccount);
+        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode);
 
-        // the account was deleted on ANOTHER device. An account-sourced code belongs to the account,
-        // so premium stops here too — the entitlement still exists at the store and comes back with
+        // the account was deleted on ANOTHER device. A signed-in device holds only account state, so
+        // premium stops here too — the entitlement still exists at the store and comes back with
         // Restore Purchase onto a new account.
         accountProvider.Account = null;
         await accountService.Refresh(CancellationToken.None);
 
         var profile = app.CurrentClientProfileInfo;
         Assert.IsNotNull(profile);
-        Assert.IsFalse(profile.IsAccessCodeFromAccount, "there is no account left to own it");
         Assert.IsNull(profile.AccessCode, "premium must not outlive the account that granted it");
     }
 
@@ -439,28 +448,33 @@ public class BillingServiceTest : TestAppBase
         var profile = app.CurrentClientProfileInfo;
         Assert.IsNotNull(profile);
         Assert.IsNull(profile.AccessCode, "'delete my account' must not leave premium running");
-        Assert.IsFalse(profile.IsAccessCodeFromAccount);
     }
 
     [TestMethod]
-    public async Task Deleting_the_account_keeps_an_access_code_the_user_typed_in()
+    public async Task Deleting_the_account_takes_a_code_it_had_taken()
     {
-        var accountProvider = new TestAccountProvider();
+        var accountProvider = new TestAccountProvider { Account = new Account { UserId = Guid.Empty.ToString() } };
         await using var app = CreateAppWithAccount(accountProvider);
         var accountService = GetAccountService(app);
         await SignIn(accountService);
 
-        // a code the user entered by hand: it was never the account's to take away
-        var profileId = app.CurrentClientProfileInfo?.ClientProfileId
-                        ?? throw new InvalidOperationException("No current client profile.");
-        app.ClientProfileService.Update(profileId, new ClientProfileUpdateParams {
-            AccessCode = TestAppHelper.BuildAccessCode()
-        });
+        // A code uploaded while signed in became the account's (keyring plan §6), so there is nothing
+        // to keep back — the person still has it wherever it reached them from. Only a code the
+        // account never took stays behind, and this one was taken.
+        // Address the profile directly: CurrentClientProfileInfo needs UserSettings.ClientProfileId,
+        // which a freshly built test app may not have set yet, while AccountService falls back to the
+        // first profile — so asking the app makes this test race its own startup.
+        var profileId = app.ClientProfileService.List().First().ClientProfileId;
+        app.ClientProfileService.Update(profileId,
+            new ClientProfileUpdateParams { AccessCode = new Patch<string?>(TestAppHelper.BuildAccessCode()) });
+        await accountService.Refresh(CancellationToken.None);
+        Assert.IsNotNull(app.ClientProfileService.Get(profileId).AccessCode);
+        Assert.IsTrue(app.ClientProfileService.Get(profileId).IsAccessCodeSynced);
 
         await accountService.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
 
-        Assert.IsNotNull(app.CurrentClientProfileInfo?.AccessCode,
-            "only an account-sourced code goes with the account");
+        Assert.IsNull(app.ClientProfileService.Get(profileId).AccessCode,
+            "the account is gone, and a code it had taken goes with it");
     }
 
     [TestMethod]

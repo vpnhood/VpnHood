@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using VpnHood.AppLib.ClientProfiles;
@@ -49,7 +50,7 @@ public class AccessCodeTest : TestAppBase
     }
 
     [TestMethod]
-    public async Task AccessCode_reject_and_remove_from_profile()
+    public async Task AccessCode_reject_keeps_the_code_and_marks_it_refused()
     {
         using var accessManager = TestHelper.CreateAccessManager();
         await using var server = await TestHelper.CreateServer(accessManager);
@@ -63,8 +64,7 @@ public class AccessCodeTest : TestAppBase
         // create access code
         var appOptions = TestAppHelper.CreateAppOptions();
         appOptions.Premium = new AppPremiumOptions {
-            IsCodeSupported = true,
-            AutoRemoveExpiredAccessCode = true // drop the code by itself when the server rejects it
+            AllowImportAccessCode = true
         };
 
         await using var app = TestAppHelper.CreateClientApp(appOptions);
@@ -77,15 +77,69 @@ public class AccessCodeTest : TestAppBase
         var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(clientProfile.ClientProfileId));
         Assert.AreEqual(SessionErrorCode.AccessCodeRejected, ex.SessionResponse.ErrorCode);
 
-        // code must be removed
+        // The code is KEPT — refusal never deletes a credential (its issuer may extend it) — but
+        // marked refused, so the profile stops claiming premium instead of failing every connect.
         clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
+        Assert.IsNotNull(clientProfile.AccessCode, "A refused access code must be kept on the profile.");
+        Assert.IsNotNull(clientProfile.AccessCodeRefusal, "The refusal must be recorded on the profile.");
+        Assert.AreEqual(SessionErrorCode.AccessCodeRejected, clientProfile.AccessCodeRefusal.ErrorCode);
 
-        Assert.IsNull(clientProfile.AccessCode, "Access code must be removed from profile.");
+        // typing a different code is a new credential — the old refusal is not its story
+        app.ClientProfileService.Update(clientProfile.ClientProfileId, new ClientProfileUpdateParams {
+            AccessCode = TestAppHelper.BuildAccessCode()
+        });
+        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
+        Assert.IsNull(clientProfile.AccessCodeRefusal, "A changed code must clear the refused mark.");
 
         // code should not exist any return objects
         var hasAccessCode = ex.Data.Contains("AccessCode");
         Assert.IsFalse(hasAccessCode);
         Assert.AreNotEqual(true, app.State.LastError?.Data.ContainsKey("AccessCode"));
+    }
+
+    [TestMethod]
+    public async Task A_refused_code_is_kept_and_keeps_claiming_premium()
+    {
+        var randomId = Guid.NewGuid();
+        var token = new Token {
+            Name = "Refused Code Test",
+            IssuedAt = DateTime.UtcNow,
+            SupportId = "refused-code-test",
+            TokenId = randomId.ToString(),
+            Secret = randomId.ToByteArray(),
+            IsPublic = true, // a CONNECT-style profile: premium comes solely from the code
+            ServerToken = new ServerToken {
+                HostEndPoints = [IPEndPoint.Parse("127.0.0.1:443")],
+                CertificateHash = randomId.ToByteArray(),
+                HostName = randomId.ToString(),
+                HostPort = 443,
+                Secret = randomId.ToByteArray(),
+                CreatedTime = DateTime.UtcNow,
+                IsValidHostName = false
+            }
+        };
+
+        await using var app = TestAppHelper.CreateClientApp();
+        var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
+        app.ClientProfileService.Update(clientProfile.ClientProfileId,
+            new ClientProfileUpdateParams { AccessCode = TestAppHelper.BuildAccessCode() });
+        Assert.IsTrue(app.ClientProfileService.Get(clientProfile.ClientProfileId).IsPremium);
+
+        app.ClientProfileService.MarkAccessCodeRefused(clientProfile.ClientProfileId,
+            SessionErrorCode.AccessExpired);
+        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
+        Assert.IsNotNull(clientProfile.AccessCode, "the code itself is kept — a refusal deletes nothing");
+        Assert.IsNotNull(clientProfile.AccessCodeRefusal, "and the refusal is recorded beside it");
+        Assert.IsTrue(clientProfile.IsPremium,
+            "a refusal must NOT flip the local premium gates: doing so turns the build into its own " +
+            "free edition — premium locations gone, promotion banner back — on nobody's decision " +
+            "(keyring plan §8). The app announces the ending instead.");
+
+        // revival proves itself: a successful premium session clears the mark
+        app.ClientProfileService.ClearAccessCodeRefused(clientProfile.ClientProfileId);
+        clientProfile = app.ClientProfileService.Get(clientProfile.ClientProfileId);
+        Assert.IsNull(clientProfile.AccessCodeRefusal);
+        Assert.IsTrue(clientProfile.IsPremium);
     }
 
     [TestMethod]

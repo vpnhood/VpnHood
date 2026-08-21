@@ -25,7 +25,7 @@ public class TestAppHelper : TestHelper
             // restrictions and the premium-less CLIENT shape are exercised by the tests that
             // reassign this block (or null it) explicitly
             Premium = new AppPremiumOptions {
-                IsCodeSupported = true,
+                AllowImportAccessCode = true,
                 IsPurchaseUrlSupported = true
             },
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),

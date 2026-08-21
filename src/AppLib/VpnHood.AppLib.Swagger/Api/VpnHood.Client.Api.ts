@@ -1579,54 +1579,6 @@ export class AppClient {
         }
         return Promise.resolve<void>(null as any);
     }
-
-    removePremium(profileId: string, cancelToken?: CancelToken): Promise<void> {
-        let url_ = this.baseUrl + "/api/app/remove-premium?";
-        if (profileId === undefined || profileId === null)
-            throw new globalThis.Error("The parameter 'profileId' must be defined and cannot be null.");
-        else
-            url_ += "profileId=" + encodeURIComponent("" + profileId) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: AxiosRequestConfig = {
-            method: "POST",
-            url: url_,
-            headers: {
-            },
-            cancelToken
-        };
-
-        return this.instance.request(options_).catch((_error: any) => {
-            if (isAxiosError(_error) && _error.response) {
-                return _error.response;
-            } else {
-                throw _error;
-            }
-        }).then((_response: AxiosResponse) => {
-            return this.processRemovePremium(_response);
-        });
-    }
-
-    protected processRemovePremium(response: AxiosResponse): Promise<void> {
-        const status = response.status;
-        let _headers: any = {};
-        if (response.headers && typeof response.headers === "object") {
-            for (const k in response.headers) {
-                if (response.headers.hasOwnProperty(k)) {
-                    _headers[k] = response.headers[k];
-                }
-            }
-        }
-        if (status === 200) {
-            const _responseText = response.data;
-            return Promise.resolve<void>(null as any);
-
-        } else if (status !== 200 && status !== 204) {
-            const _responseText = response.data;
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-        }
-        return Promise.resolve<void>(null as any);
-    }
 }
 
 export class BillingClient {
@@ -3759,9 +3711,8 @@ export interface IAppFeatures {
 
 export class AppPremiumOptions implements IAppPremiumOptions {
     features!: AppFeature[];
-    isCodeSupported!: boolean;
+    allowImportAccessCode!: boolean;
     isPurchaseUrlSupported!: boolean;
-    autoRemoveExpiredAccessCode!: boolean;
 
     constructor(data?: IAppPremiumOptions) {
         if (data) {
@@ -3785,9 +3736,8 @@ export class AppPremiumOptions implements IAppPremiumOptions {
             else {
                 this.features = null as any;
             }
-            this.isCodeSupported = _data["isCodeSupported"] !== undefined ? _data["isCodeSupported"] : null as any;
+            this.allowImportAccessCode = _data["allowImportAccessCode"] !== undefined ? _data["allowImportAccessCode"] : null as any;
             this.isPurchaseUrlSupported = _data["isPurchaseUrlSupported"] !== undefined ? _data["isPurchaseUrlSupported"] : null as any;
-            this.autoRemoveExpiredAccessCode = _data["autoRemoveExpiredAccessCode"] !== undefined ? _data["autoRemoveExpiredAccessCode"] : null as any;
         }
     }
 
@@ -3805,18 +3755,16 @@ export class AppPremiumOptions implements IAppPremiumOptions {
             for (let item of this.features)
                 data["features"].push(item);
         }
-        data["isCodeSupported"] = this.isCodeSupported !== undefined ? this.isCodeSupported : null as any;
+        data["allowImportAccessCode"] = this.allowImportAccessCode !== undefined ? this.allowImportAccessCode : null as any;
         data["isPurchaseUrlSupported"] = this.isPurchaseUrlSupported !== undefined ? this.isPurchaseUrlSupported : null as any;
-        data["autoRemoveExpiredAccessCode"] = this.autoRemoveExpiredAccessCode !== undefined ? this.autoRemoveExpiredAccessCode : null as any;
         return data;
     }
 }
 
 export interface IAppPremiumOptions {
     features: AppFeature[];
-    isCodeSupported: boolean;
+    allowImportAccessCode: boolean;
     isPurchaseUrlSupported: boolean;
-    autoRemoveExpiredAccessCode: boolean;
 }
 
 export enum AppFeature {
@@ -4970,9 +4918,11 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
     isPremiumLocationSelected!: boolean;
     isPremium!: boolean;
     hasAccessCode!: boolean;
-    isAccessCodeFromAccount!: boolean;
+    accessCodeRefusal!: AccessCodeRefusal | null;
     canGoPremium!: boolean;
     canTryPremium!: boolean;
+    canImportAccessCode!: boolean;
+    canViewAccessCode!: boolean;
     selectedLocationInfo!: ClientServerLocationInfo | null;
     customServerEndpoints!: string[] | null;
     isCustomServerEndpointsEnabled!: boolean;
@@ -4995,9 +4945,11 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] !== undefined ? _data["isPremiumLocationSelected"] : null as any;
             this.isPremium = _data["isPremium"] !== undefined ? _data["isPremium"] : null as any;
             this.hasAccessCode = _data["hasAccessCode"] !== undefined ? _data["hasAccessCode"] : null as any;
-            this.isAccessCodeFromAccount = _data["isAccessCodeFromAccount"] !== undefined ? _data["isAccessCodeFromAccount"] : null as any;
+            this.accessCodeRefusal = _data["accessCodeRefusal"] ? AccessCodeRefusal.fromJS(_data["accessCodeRefusal"]) : null as any;
             this.canGoPremium = _data["canGoPremium"] !== undefined ? _data["canGoPremium"] : null as any;
             this.canTryPremium = _data["canTryPremium"] !== undefined ? _data["canTryPremium"] : null as any;
+            this.canImportAccessCode = _data["canImportAccessCode"] !== undefined ? _data["canImportAccessCode"] : null as any;
+            this.canViewAccessCode = _data["canViewAccessCode"] !== undefined ? _data["canViewAccessCode"] : null as any;
             this.selectedLocationInfo = _data["selectedLocationInfo"] ? ClientServerLocationInfo.fromJS(_data["selectedLocationInfo"]) : null as any;
             if (Array.isArray(_data["customServerEndpoints"])) {
                 this.customServerEndpoints = [] as any;
@@ -5027,9 +4979,11 @@ export class ClientProfileBaseInfo implements IClientProfileBaseInfo {
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected !== undefined ? this.isPremiumLocationSelected : null as any;
         data["isPremium"] = this.isPremium !== undefined ? this.isPremium : null as any;
         data["hasAccessCode"] = this.hasAccessCode !== undefined ? this.hasAccessCode : null as any;
-        data["isAccessCodeFromAccount"] = this.isAccessCodeFromAccount !== undefined ? this.isAccessCodeFromAccount : null as any;
+        data["accessCodeRefusal"] = this.accessCodeRefusal ? this.accessCodeRefusal.toJSON() : null as any;
         data["canGoPremium"] = this.canGoPremium !== undefined ? this.canGoPremium : null as any;
         data["canTryPremium"] = this.canTryPremium !== undefined ? this.canTryPremium : null as any;
+        data["canImportAccessCode"] = this.canImportAccessCode !== undefined ? this.canImportAccessCode : null as any;
+        data["canViewAccessCode"] = this.canViewAccessCode !== undefined ? this.canViewAccessCode : null as any;
         data["selectedLocationInfo"] = this.selectedLocationInfo ? this.selectedLocationInfo.toJSON() : null as any;
         if (Array.isArray(this.customServerEndpoints)) {
             data["customServerEndpoints"] = [];
@@ -5049,12 +5003,78 @@ export interface IClientProfileBaseInfo {
     isPremiumLocationSelected: boolean;
     isPremium: boolean;
     hasAccessCode: boolean;
-    isAccessCodeFromAccount: boolean;
+    accessCodeRefusal: AccessCodeRefusal | null;
     canGoPremium: boolean;
     canTryPremium: boolean;
+    canImportAccessCode: boolean;
+    canViewAccessCode: boolean;
     selectedLocationInfo: ClientServerLocationInfo | null;
     customServerEndpoints: string[] | null;
     isCustomServerEndpointsEnabled: boolean;
+}
+
+export class AccessCodeRefusal implements IAccessCodeRefusal {
+    errorCode!: SessionErrorCode;
+    refusedTime!: Date;
+
+    constructor(data?: IAccessCodeRefusal) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.errorCode = _data["errorCode"] !== undefined ? _data["errorCode"] : null as any;
+            this.refusedTime = _data["refusedTime"] ? new Date(_data["refusedTime"].toString()) : null as any;
+        }
+    }
+
+    static fromJS(data: any): AccessCodeRefusal {
+        data = typeof data === 'object' ? data : {};
+        let result = new AccessCodeRefusal();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["errorCode"] = this.errorCode !== undefined ? this.errorCode : null as any;
+        data["refusedTime"] = this.refusedTime ? this.refusedTime.toISOString() : null as any;
+        return data;
+    }
+}
+
+export interface IAccessCodeRefusal {
+    errorCode: SessionErrorCode;
+    refusedTime: Date;
+}
+
+export enum SessionErrorCode {
+    Ok = "Ok",
+    AccessError = "AccessError",
+    PlanRejected = "PlanRejected",
+    GeneralError = "GeneralError",
+    SessionClosed = "SessionClosed",
+    SessionSuppressedBy = "SessionSuppressedBy",
+    SessionError = "SessionError",
+    SessionExpired = "SessionExpired",
+    AccessExpired = "AccessExpired",
+    AccessCodeRejected = "AccessCodeRejected",
+    AccessLocked = "AccessLocked",
+    AccessTrafficOverflow = "AccessTrafficOverflow",
+    DailyLimitExceeded = "DailyLimitExceeded",
+    NoServerAvailable = "NoServerAvailable",
+    PremiumLocation = "PremiumLocation",
+    AdError = "AdError",
+    RewardedAdRejected = "RewardedAdRejected",
+    Maintenance = "Maintenance",
+    RedirectHost = "RedirectHost",
+    UnsupportedClient = "UnsupportedClient",
+    UnsupportedServer = "UnsupportedServer",
 }
 
 export class ClientServerLocationInfo extends ServerLocationInfo implements IClientServerLocationInfo {
@@ -5973,10 +5993,12 @@ export class ClientProfileInfo implements IClientProfileInfo {
     isValidHostName!: boolean;
     isBuiltIn!: boolean;
     accessCode?: string | null;
-    isAccessCodeFromAccount!: boolean;
+    accessCodeRefusal?: AccessCodeRefusal | null;
     locationInfos!: ClientServerLocationInfo[];
     canGoPremium!: boolean;
     canTryPremium!: boolean;
+    canImportAccessCode!: boolean;
+    canViewAccessCode!: boolean;
     customServerEndpoints?: string[] | null;
     isCustomServerEndpointsEnabled!: boolean;
     selectedLocationInfo?: ClientServerLocationInfo | null;
@@ -6015,7 +6037,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
             this.isValidHostName = _data["isValidHostName"] !== undefined ? _data["isValidHostName"] : null as any;
             this.isBuiltIn = _data["isBuiltIn"] !== undefined ? _data["isBuiltIn"] : null as any;
             this.accessCode = _data["accessCode"] !== undefined ? _data["accessCode"] : null as any;
-            this.isAccessCodeFromAccount = _data["isAccessCodeFromAccount"] !== undefined ? _data["isAccessCodeFromAccount"] : null as any;
+            this.accessCodeRefusal = _data["accessCodeRefusal"] ? AccessCodeRefusal.fromJS(_data["accessCodeRefusal"]) : null as any;
             if (Array.isArray(_data["locationInfos"])) {
                 this.locationInfos = [] as any;
                 for (let item of _data["locationInfos"])
@@ -6026,6 +6048,8 @@ export class ClientProfileInfo implements IClientProfileInfo {
             }
             this.canGoPremium = _data["canGoPremium"] !== undefined ? _data["canGoPremium"] : null as any;
             this.canTryPremium = _data["canTryPremium"] !== undefined ? _data["canTryPremium"] : null as any;
+            this.canImportAccessCode = _data["canImportAccessCode"] !== undefined ? _data["canImportAccessCode"] : null as any;
+            this.canViewAccessCode = _data["canViewAccessCode"] !== undefined ? _data["canViewAccessCode"] : null as any;
             if (Array.isArray(_data["customServerEndpoints"])) {
                 this.customServerEndpoints = [] as any;
                 for (let item of _data["customServerEndpoints"])
@@ -6064,7 +6088,7 @@ export class ClientProfileInfo implements IClientProfileInfo {
         data["isValidHostName"] = this.isValidHostName !== undefined ? this.isValidHostName : null as any;
         data["isBuiltIn"] = this.isBuiltIn !== undefined ? this.isBuiltIn : null as any;
         data["accessCode"] = this.accessCode !== undefined ? this.accessCode : null as any;
-        data["isAccessCodeFromAccount"] = this.isAccessCodeFromAccount !== undefined ? this.isAccessCodeFromAccount : null as any;
+        data["accessCodeRefusal"] = this.accessCodeRefusal ? this.accessCodeRefusal.toJSON() : null as any;
         if (Array.isArray(this.locationInfos)) {
             data["locationInfos"] = [];
             for (let item of this.locationInfos)
@@ -6072,6 +6096,8 @@ export class ClientProfileInfo implements IClientProfileInfo {
         }
         data["canGoPremium"] = this.canGoPremium !== undefined ? this.canGoPremium : null as any;
         data["canTryPremium"] = this.canTryPremium !== undefined ? this.canTryPremium : null as any;
+        data["canImportAccessCode"] = this.canImportAccessCode !== undefined ? this.canImportAccessCode : null as any;
+        data["canViewAccessCode"] = this.canViewAccessCode !== undefined ? this.canViewAccessCode : null as any;
         if (Array.isArray(this.customServerEndpoints)) {
             data["customServerEndpoints"] = [];
             for (let item of this.customServerEndpoints)
@@ -6096,10 +6122,12 @@ export interface IClientProfileInfo {
     isValidHostName: boolean;
     isBuiltIn: boolean;
     accessCode?: string | null;
-    isAccessCodeFromAccount: boolean;
+    accessCodeRefusal?: AccessCodeRefusal | null;
     locationInfos: ClientServerLocationInfo[];
     canGoPremium: boolean;
     canTryPremium: boolean;
+    canImportAccessCode: boolean;
+    canViewAccessCode: boolean;
     customServerEndpoints?: string[] | null;
     isCustomServerEndpointsEnabled: boolean;
     selectedLocationInfo?: ClientServerLocationInfo | null;
@@ -6566,30 +6594,6 @@ export enum ExceptionType {
     VpnServiceRevoked = "VpnServiceRevokedException",
 }
 
-export enum SessionErrorCode {
-    Ok = "Ok",
-    AccessError = "AccessError",
-    PlanRejected = "PlanRejected",
-    GeneralError = "GeneralError",
-    SessionClosed = "SessionClosed",
-    SessionSuppressedBy = "SessionSuppressedBy",
-    SessionError = "SessionError",
-    SessionExpired = "SessionExpired",
-    AccessExpired = "AccessExpired",
-    AccessCodeRejected = "AccessCodeRejected",
-    AccessLocked = "AccessLocked",
-    AccessTrafficOverflow = "AccessTrafficOverflow",
-    DailyLimitExceeded = "DailyLimitExceeded",
-    NoServerAvailable = "NoServerAvailable",
-    PremiumLocation = "PremiumLocation",
-    AdError = "AdError",
-    RewardedAdRejected = "RewardedAdRejected",
-    Maintenance = "Maintenance",
-    RedirectHost = "RedirectHost",
-    UnsupportedClient = "UnsupportedClient",
-    UnsupportedServer = "UnsupportedServer",
-}
-
 export class AppUserReview implements IAppUserReview {
     rating!: number;
     reviewText!: string;
@@ -6804,7 +6808,6 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
     customData?: PatchOfString | null;
     isPremiumLocationSelected?: PatchOfBoolean | null;
     accessCode?: PatchOfString | null;
-    isAccessCodeFromAccount?: PatchOfBoolean | null;
     customServerEndpoints?: PatchOfStringOf | null;
     isCustomServerEndpointsEnabled?: PatchOfBoolean | null;
 
@@ -6825,7 +6828,6 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
             this.customData = _data["customData"] ? PatchOfString.fromJS(_data["customData"]) : null as any;
             this.isPremiumLocationSelected = _data["isPremiumLocationSelected"] ? PatchOfBoolean.fromJS(_data["isPremiumLocationSelected"]) : null as any;
             this.accessCode = _data["accessCode"] ? PatchOfString.fromJS(_data["accessCode"]) : null as any;
-            this.isAccessCodeFromAccount = _data["isAccessCodeFromAccount"] ? PatchOfBoolean.fromJS(_data["isAccessCodeFromAccount"]) : null as any;
             this.customServerEndpoints = _data["customServerEndpoints"] ? PatchOfStringOf.fromJS(_data["customServerEndpoints"]) : null as any;
             this.isCustomServerEndpointsEnabled = _data["isCustomServerEndpointsEnabled"] ? PatchOfBoolean.fromJS(_data["isCustomServerEndpointsEnabled"]) : null as any;
         }
@@ -6846,7 +6848,6 @@ export class ClientProfileUpdateParams implements IClientProfileUpdateParams {
         data["customData"] = this.customData ? this.customData.toJSON() : null as any;
         data["isPremiumLocationSelected"] = this.isPremiumLocationSelected ? this.isPremiumLocationSelected.toJSON() : null as any;
         data["accessCode"] = this.accessCode ? this.accessCode.toJSON() : null as any;
-        data["isAccessCodeFromAccount"] = this.isAccessCodeFromAccount ? this.isAccessCodeFromAccount.toJSON() : null as any;
         data["customServerEndpoints"] = this.customServerEndpoints ? this.customServerEndpoints.toJSON() : null as any;
         data["isCustomServerEndpointsEnabled"] = this.isCustomServerEndpointsEnabled ? this.isCustomServerEndpointsEnabled.toJSON() : null as any;
         return data;
@@ -6860,7 +6861,6 @@ export interface IClientProfileUpdateParams {
     customData?: PatchOfString | null;
     isPremiumLocationSelected?: PatchOfBoolean | null;
     accessCode?: PatchOfString | null;
-    isAccessCodeFromAccount?: PatchOfBoolean | null;
     customServerEndpoints?: PatchOfStringOf | null;
     isCustomServerEndpointsEnabled?: PatchOfBoolean | null;
 }

@@ -10,10 +10,12 @@ Undetectable VPN for ordinary users and experts. VpnHood! is a solution to bypas
 [![NuGet](https://img.shields.io/badge/NuGet-Packages-blue?logo=nuget)](https://www.nuget.org/profiles/VpnHood)
 
 ## Get VpnHood
-Available for Windows, Linux and Android. (iOS client is under development.)
+Available for Windows, Linux, Android and iOS.
 
 <a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android">
 <img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" alt="Download for Google Play" width="200"/></a>
+<a href="https://apps.apple.com/app/id6788176050">
+<img src="https://github.com/vpnhood/VpnHood/wiki/images/download-app-store.png" alt="Download on the App Store" width="200"/></a>
 <a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-win-x64.msi">
 <img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" alt="Download for Windows" width="200"/></a>
 <a href="https://github.com/vpnhood/VpnHood/wiki/Install-VpnHood-Client-for-Linux">
@@ -29,7 +31,7 @@ Available for Windows, Linux and Android. (iOS client is under development.)
 * Protocols: UDP, TCP, Cloaked, Combination
 * Split tunneling (Apps & Countries)
 * Custom DNS
-* Platforms: Windows (10/11 x64), Android (Phone / TV), Linux
+* Platforms: Windows (10/11 x64), Android (Phone / TV), iOS (iPhone / iPad), Linux
 * Multi-language
 * IPv4 / IPv6
 
@@ -43,7 +45,7 @@ Available for Windows, Linux and Android. (iOS client is under development.)
 * Platforms: Windows 10/11/Server, Linux
 
 ## Developer Features
-* Open source (LGPL) – fully in .NET
+* Open source (LGPL) â€” fully in .NET
 * MAUI support
 * Ads interface (AdMob, InMobi, Chartboost integrated)
 * Billing interface

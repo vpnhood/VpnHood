@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json.Serialization;
 using VpnHood.Core.Toolkit.Converters;
 
@@ -13,9 +13,11 @@ public class ClientProfileBaseInfo
     public required bool IsPremiumLocationSelected { get; init; }
     public required bool IsPremium { get; init; }
     public required bool HasAccessCode { get; init; }
-    public required bool IsAccessCodeFromAccount { get; set; }
+    public required AccessCodeRefusal? AccessCodeRefusal { get; init; }
     public required bool CanGoPremium { get; init; }
     public required bool CanTryPremium { get; init; }
+    public required bool CanImportAccessCode { get; init; }
+    public required bool CanViewAccessCode { get; init; }
     public required ClientServerLocationInfo? SelectedLocationInfo { get; init; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

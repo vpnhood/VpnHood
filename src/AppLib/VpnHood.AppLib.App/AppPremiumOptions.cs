@@ -16,12 +16,18 @@ public class AppPremiumOptions
     public IReadOnlyList<AppFeature> Features { get; init; } = [];
 
     /// <summary>
-    /// Whether this build may take a typed premium code. Default FALSE, because the store that
+    /// Whether this build may take a typed premium code IN. Default FALSE, because the store that
     /// forbids it refuses the whole app for it: App Review 3.1.1 reads a premium code as a license
     /// key, so a head that never considered the question must not ship a code box by accident.
     /// A per-build capability, never an OS check — a sideloaded iOS build may lawfully keep the box.
+    /// <para>
+    /// Importing only. Showing the code this device already holds is the operator's call alone
+    /// (<see cref="ClientProfiles.ClientProfileInfo.CanViewAccessCode" />): a build with no code box
+    /// still shows the buyer the credential their own purchase produced, because that is what they
+    /// carry to the devices where typing it is allowed.
+    /// </para>
     /// </summary>
-    public bool IsCodeSupported { get; init; }
+    public bool AllowImportAccessCode { get; init; }
 
     /// <summary>
     /// Whether this build may send a buyer to an outside shop. Default FALSE for the same reason
@@ -31,7 +37,4 @@ public class AppPremiumOptions
     /// sold through either never opts in and the link stays dark whatever the token says.
     /// </summary>
     public bool IsPurchaseUrlSupported { get; init; }
-
-    /// <summary>Drop the profile's access code by itself when the server rejects or expires it.</summary>
-    public bool AutoRemoveExpiredAccessCode { get; init; }
 }

@@ -116,6 +116,30 @@ public class PortalApiClient : ApiClientBase
     }
 
     /// <summary>
+    /// PUT /account/access-code — upload a code into the account's ONE slot, or empty it with null.
+    /// The portal takes the code on trust and never looks it up to approve it, so there is no
+    /// <c>code_not_found</c> to catch here any more and the only failure is a transport one. The
+    /// answer carries nothing: what the account serves afterwards is read from GET /account, and it
+    /// need not be the code just uploaded.
+    /// </summary>
+    public Task SetAccessCode(string? accessCode, CancellationToken cancellationToken)
+    {
+        return HttpPutAsync("account/access-code", null, new { accessCode }, cancellationToken);
+    }
+
+    /// <summary>
+    /// POST /account/code-expiration — tell the portal what a connection revealed about a code's
+    /// clock, which is the only way it ever learns one. The code travels in the body and never in
+    /// the path: a URL is logged and cached in places a bearer credential must not appear.
+    /// </summary>
+    public Task ReportAccessCodeExpiration(string accessCode, DateTime expirationTime,
+        CancellationToken cancellationToken)
+    {
+        return HttpPostAsync("account/code-expiration", null,
+            new { accessCode, expirationTime }, cancellationToken);
+    }
+
+    /// <summary>
     /// GET /billing/products — the distinct store product ids this app may sell in that store. The
     /// app asks its own store to price them, and the store itself enumerates the base plans within
     /// a product, so a plan never appears here in its own right.

@@ -182,9 +182,4 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
-    [HttpPost("remove-premium")]
-    public Task RemovePremium(Guid profileId, CancellationToken cancellationToken)
-    {
-        throw new SwaggerOnlyException();
-    }
 }

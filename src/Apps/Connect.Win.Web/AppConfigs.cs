@@ -20,6 +20,14 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 
     public int? WebUiPort { get; set; } = IsDebugMode ? 7701 : 7770;
     public string? DefaultAccessKey { get; set; } = IsDebugMode ? ClientOptions.SampleAccessKey : null;
+
+    // Supplied by the embedded AppSettings (the private .user folder), never in code: a fork has no
+    // portal of ours to point at, and a hard-coded host would send its users to a server that is not
+    // theirs. Null here means the app ships WITHOUT account features — App.cs builds no account
+    // provider at all — which is the right default for anyone building this tree without our config.
+    public Uri? PortalBaseUri { get; set; }
+
+    public bool PortalIgnoreSslVerification { get; set; }
     public string? Ga4MeasurementId { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
     public bool AllowEndPointTracker { get; set; }

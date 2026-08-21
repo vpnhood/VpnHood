@@ -120,6 +120,19 @@ public class PortalAccountProvider : IAccountProvider, IDisposable
             : SubscriptionManagement.NotOnThisDevice;
     }
 
+    public Task SetAccessCode(string? accessCode, CancellationToken cancellationToken)
+    {
+        var apiClient = new PortalApiClient(_httpClient, _authenticationProvider);
+        return apiClient.SetAccessCode(accessCode, cancellationToken);
+    }
+
+    public Task ReportAccessCodeExpiration(string accessCode, DateTime expirationTime,
+        CancellationToken cancellationToken)
+    {
+        var apiClient = new PortalApiClient(_httpClient, _authenticationProvider);
+        return apiClient.ReportAccessCodeExpiration(accessCode, expirationTime, cancellationToken);
+    }
+
     public Task DeleteAccount(CancellationToken cancellationToken)
     {
         // The portal erases the person and every session with them; this device is signed out by

@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AppLib.ClientProfiles;
+namespace VpnHood.AppLib.ClientProfiles;
 
 public static class ClientProfileExtensions
 {
@@ -15,14 +15,16 @@ public static class ClientProfileExtensions
             SupportId = clientProfileInfo.SupportId,
             CustomData = clientProfileInfo.CustomData,
             IsPremiumLocationSelected = clientProfileInfo.IsPremiumLocationSelected,
-            IsAccessCodeFromAccount = clientProfileInfo.IsAccessCodeFromAccount,
+            AccessCodeRefusal = clientProfileInfo.AccessCodeRefusal,
             IsPremium = clientProfileInfo.IsPremium,
             SelectedLocationInfo = clientProfileInfo.SelectedLocationInfo,
             HasAccessCode = !string.IsNullOrEmpty(clientProfileInfo.AccessCode),
             CustomServerEndpoints = clientProfileInfo.CustomServerEndpoints,
             IsCustomServerEndpointsEnabled = clientProfileInfo.IsCustomServerEndpointsEnabled,
             CanGoPremium = clientProfileInfo.CanGoPremium,
-            CanTryPremium = clientProfileInfo.CanTryPremium
+            CanTryPremium = clientProfileInfo.CanTryPremium,
+            CanImportAccessCode = clientProfileInfo.CanImportAccessCode,
+            CanViewAccessCode = clientProfileInfo.CanViewAccessCode
         };
     }
 }

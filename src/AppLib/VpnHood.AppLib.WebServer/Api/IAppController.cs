@@ -38,5 +38,4 @@ public interface IAppController
     Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken);
     Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken);
     Task InternalAdError(string errorMessage, CancellationToken cancellationToken);
-    Task RemovePremium(Guid profileId, CancellationToken cancellationToken);
 }

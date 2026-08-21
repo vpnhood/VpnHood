@@ -157,12 +157,6 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
             await ctx.SendNoContent();
         });
 
-        mapper.AddStatic(HttpMethod.POST, baseUrl + "remove-premium", async ctx => {
-            var id = ctx.GetQueryParameter<Guid>("profileId");
-            await RemovePremium(id, ctx.Token);
-            await ctx.SendNoContent();
-        });
-
         mapper.AddStatic(HttpMethod.GET, baseUrl + "countries", async ctx => {
             var res = await GetCountries(ctx.Token);
             await ctx.SendJson(res);
@@ -351,12 +345,6 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
     public Task InternalAdError(string errorMessage, CancellationToken cancellationToken)
     {
         app.AdManager.AdService.InternalAdError(new Exception(errorMessage));
-        return Task.CompletedTask;
-    }
-
-    public Task RemovePremium(Guid profileId, CancellationToken cancellationToken)
-    {
-        app.RemovePremium(profileId);
         return Task.CompletedTask;
     }
 

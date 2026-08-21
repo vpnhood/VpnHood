@@ -81,7 +81,7 @@ public class AppDelegate : UIApplicationDelegate
             // Loopback port for the in-process SPA web server (the WKWebView loads from here).
             WebUiPort = appConfigs.WebUiPort,
             IsAddAccessKeySupported = false,
-            // IsCodeSupported and IsPurchaseUrlSupported stay at their default (false): App Review
+            // AllowImportAccessCode and IsPurchaseUrlSupported stay at their default (false): App Review
             // 3.1.1 forbids unlocking with a license key — a premium code is one by Apple's reading —
             // and 3.1.3 forbids steering a buyer to an outside shop, so this build ships with neither
             // a code box nor a web-purchase link, whatever an operator's token offers (lifecycle §9).

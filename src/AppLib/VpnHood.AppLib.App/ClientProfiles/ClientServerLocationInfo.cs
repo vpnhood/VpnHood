@@ -90,7 +90,7 @@ public class ClientServerLocationInfo : ServerLocationInfo
         var isPurchasableHere = premium != null && (appFeatures.IsBillingSupported ||
                                                     (premium.IsPurchaseUrlSupported && policy.PurchaseUrl != null));
         Options.PremiumByPurchase = policy.PremiumByPurchase && isPurchasableHere;
-        Options.PremiumByCode = policy.PremiumByCode && premium?.IsCodeSupported == true;
+        Options.PremiumByCode = policy.PremiumByCode && premium?.AllowImportAccessCode == true;
 
         Options.Prompt = Options.PremiumByTrial != null || Options.PremiumByRewardedAd != null ||
                          Options.NormalByRewardedAd != null;

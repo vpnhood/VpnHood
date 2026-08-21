@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Ga4.Trackers;
@@ -74,7 +73,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private readonly VpnServiceManager _vpnServiceManager;
     private readonly ITrackerFactory _trackerFactory;
     private readonly IDevice _device;
-    private readonly bool _refreshAccountLegacy;
     private readonly IIpRangeLocationProvider? _ipRangeLocationProvider;
     private bool _isDisconnecting;
     private AppConnectionState? _lastConnectionState;
@@ -177,7 +175,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // Created before the features because only the tracker knows whether this build collects anything:
         // a missing measurement id or a debug build collapses to a NullTracker.
-        var clientId = CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId);
+        var clientId = AppUtils.CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId);
         var tracker = _trackerFactory.TryCreateTracker(new TrackerCreateParams {
             ClientId = clientId,
             ClientVersion = appVersion,
@@ -196,7 +194,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Premium = options.Premium,
             AllowEndPointStrategy = options.AllowEndPointStrategy,
             IsTv = device.IsTv,
-            OsType = GetOsType(),
+            OsType = AppUtils.GetOsType(),
             AdjustForSystemBars = options.AdjustForSystemBars,
             UiName = options.UiName,
             IsAccountSupported = options.AccountProvider != null,
@@ -227,17 +225,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
         // add a default test public server if not added yet
         var builtInProfileIds = ClientProfileService.ImportBuiltInAccessKeys(options.AccessKeys);
-
-        // remove all legacy the client profile for single profile app
-#pragma warning disable CS0618 // Type or member is obsolete
-        if (options.AccountProvider != null) {
-            var profileIds = ClientProfileService.List().Where(x => x is { IsForAccount: true, IsBuiltIn: false }).Select(x => x.ClientProfileId);
-            foreach (var profileId in profileIds.ToArray()) {
-                _refreshAccountLegacy = true;
-                ClientProfileService.Delete(profileId);
-            }
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
 
         // remove default client profile if not exists
         if (UserSettings.ClientProfileId != null &&
@@ -330,15 +317,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             VhLogger.Instance.LogError(ex, "Could not sent first launch tracker.");
         }
 
-        // Refresh the account once per launch while signed in, and after a legacy migration. Without
-        // this the cached account is trusted until its own expiry and nothing ever asks the server,
-        // so an account deleted — or its sessions revoked — on another device would keep showing
-        // here indefinitely; this is the call that lets the backend's 401 become a local sign-out.
-        // No error if the refresh fails: an unreachable backend must not disturb startup, and it
-        // never reaches the 401 path.
-        var accountService = Services.AccountService;
-        if (accountService != null && (_refreshAccountLegacy || accountService.AuthenticationService.UserId != null))
-            await VhUtils.TryInvokeAsync("Refreshing Account", () => accountService.Refresh(CancellationToken.None));
+        // Deliberately NO account refresh here. Launching the app is not a reason to call the portal:
+        // a credential that still works needs no permission to go on working, and the people with no
+        // premium at all are the many — every one of their launches would be pure load for an answer
+        // nobody was waiting for. The account is asked when something actually depends on it: an
+        // expiry that has passed, a code typed in, a refusal from the access server, a purchase, or
+        // the person pressing refresh.
     }
 
     private void ApplySettings()
@@ -965,8 +949,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             throw PremiumOnlyException.Create(AppFeature.AlwaysOn);
         }
         catch (Exception ex) {
-            if (ex is SessionException sessionException)
-                ProcessSessionException(sessionException, profileInfo);
+            if (ex is SessionException sessionException &&
+                await ProcessSessionException(sessionException, profileInfo, cancellationToken).Vhc()) {
+                // Account refresh supplied a different, non-refused credential. Repair is complete
+                // before the refusal reaches the UI, so retry once with the working alternative.
+                var repairedProfile = ClientProfileService.FindById(profileInfo.ClientProfileId)!;
+                await ConnectInternal2(token,
+                        serverLocation: serverLocation,
+                        userAgent: userAgent,
+                        planId: planId,
+                        accessCode: repairedProfile.AccessCode,
+                        allowUpdateToken: false,
+                        cancellationToken: cancellationToken)
+                    .Vhc();
+                return;
+            }
 
             // try to update the token from url after connection or error if ResponseAccessKey is not set
             if (ex is not NoInternetException && // diagnoser
@@ -991,7 +988,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private void ProcessSessionException(SessionException sessionException, ClientProfileInfo profileInfo)
+    private async Task<bool> ProcessSessionException(SessionException sessionException, ClientProfileInfo profileInfo,
+        CancellationToken cancellationToken)
     {
         // update the access token if AccessKey is set
         if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {
@@ -1014,18 +1012,44 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     new ClientProfileUpdateParams { SelectedLocation = new Patch<string?>(null) });
                 break;
 
-            // remove the access code if it is rejected
-            case SessionErrorCode.AccessCodeRejected when Features.Premium?.AutoRemoveExpiredAccessCode == true:
-                VhLogger.Instance.LogWarning("Access code rejected. Removing premium...");
-                RemovePremium(profileInfo.ClientProfileId);
-                break;
+            // An authoritative refusal of the profile's access code (keyring plan §6): KEEP the
+            // code — its issuer may extend it and a later retry revives it by itself — but mark it
+            // refused, so the profile stops claiming premium and precedence lets a working account
+            // code take over. Then try the repair: refresh the account, whose code application
+            // yields past a refused typed code. Nothing is ever auto-removed.
+            case SessionErrorCode.AccessCodeRejected or SessionErrorCode.AccessExpired
+                when profileInfo.AccessCode != null:
+                VhLogger.Instance.LogWarning(
+                    "The access server refused the profile's access code. Keeping the code and marking it refused. ErrorCode: {ErrorCode}",
+                    sessionException.SessionResponse.ErrorCode);
+                ClientProfileService.MarkAccessCodeRefused(profileInfo.ClientProfileId,
+                    sessionException.SessionResponse.ErrorCode);
+                return await TryRepairRefusedAccessCode(profileInfo, cancellationToken).Vhc();
+        }
 
-            // remove the client profile if access expired
-            case SessionErrorCode.AccessExpired when Features.Premium?.AutoRemoveExpiredAccessCode == true &&
-                                                    profileInfo.IsAccessCodeFromAccount:
-                VhLogger.Instance.LogWarning("Access expired. Removing the premium profile.");
-                RemovePremium(profileInfo.ClientProfileId);
-                break;
+        return false;
+    }
+
+    // Resolve the account before surfacing a refusal. A different account credential repairs and
+    // reconnects immediately; refresh failures and unchanged/refused codes preserve the original
+    // authoritative access-server error for the UI.
+    private async Task<bool> TryRepairRefusedAccessCode(ClientProfileInfo refusedProfile,
+        CancellationToken cancellationToken)
+    {
+        var accountService = Services.AccountService;
+        if (accountService == null)
+            return false;
+
+        try {
+            await accountService.Refresh(cancellationToken).Vhc();
+            var repaired = ClientProfileService.FindById(refusedProfile.ClientProfileId);
+            return repaired is { AccessCode: not null, AccessCodeRefusal: null } &&
+                   repaired.AccessCode != refusedProfile.AccessCode;
+        }
+        catch (Exception ex) {
+            // No response is not a removal or an entitlement verdict; the refused mark stands.
+            VhLogger.Instance.LogWarning(ex, "Could not refresh the account after a refused access code.");
+            return false;
         }
     }
 
@@ -1141,6 +1165,21 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // check the version after the first connection
         if (ConnectionState is AppConnectionState.Connected)
             _ = Services.UpdaterService?.TryCheckForUpdate(false, CancellationToken.None);
+
+        // Revival proves itself (keyring plan §6 step 4): a PREMIUM session on a profile whose
+        // code stood refused clears the mark — the issuer extended it, and it is premium again
+        // with no re-entering. A free session proves nothing about the code and clears nothing.
+        if (ConnectionState is AppConnectionState.Connected &&
+            ConnectionInfo.SessionInfo?.IsPremiumSession == true &&
+            CurrentClientProfileInfo is { AccessCodeRefusal: not null } refusedProfile) {
+            ClientProfileService.ClearAccessCodeRefused(refusedProfile.ClientProfileId);
+        }
+
+        // A code typed while the portal was blocked has been waiting for exactly this moment: we are
+        // connected, so the portal is reachable again (keyring plan §6). Best-effort and detached —
+        // the person's connection succeeded and must not be soured by a background upload.
+        if (ConnectionState is AppConnectionState.Connected)
+            _ = Services.AccountService?.TryUploadPendingAccessCode(CancellationToken.None);
 
         // fire connection state changed
         FireConnectionStateChanged();
@@ -1326,48 +1365,36 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             PurchaseUrl = externalUrl,
             // the remote policy offers it; the BUILD must also be allowed to take a typed code at
             // all (lifecycle §9 — a per-build capability, false on the App Store build)
-            CanGoPremiumByCode = clientPolicy?.PremiumByCode == true && premium?.IsCodeSupported == true
+            CanGoPremiumByCode = clientPolicy?.PremiumByCode == true && premium?.AllowImportAccessCode == true
         };
 
         return purchaseOptions;
     }
 
-    // Mac Catalyst is checked BEFORE iOS on purpose: OperatingSystem.IsIOS() reports true for Catalyst
-    // too, so testing iOS first would label a Mac build as an iPhone and hide/show the wrong content.
-    private static AppOsType GetOsType()
+    /// <summary>
+    /// Update a profile, and — when the change carries an access code and somebody is signed in —
+    /// hand that code to the account. The order is the design's (keyring plan §6, §7): a code is
+    /// typed into a PROFILE, which is what makes it work on this device, and the account hears about
+    /// it afterwards. The refresh offers the pending code and then applies whatever the account
+    /// ranks, which need not be the code just typed — hence the re-read before returning.
+    /// <para>
+    /// Best-effort: VpnHood is used where the portal itself is blocked, so an upload that cannot land
+    /// is the ordinary case rather than an error. It stays pending for the next refresh or the next
+    /// successful connection. This lives here because <see cref="ClientProfileService" /> cannot
+    /// reach the account service — that dependency runs the other way.
+    /// </para>
+    /// </summary>
+    public async Task<ClientProfileInfo> UpdateClientProfile(Guid clientProfileId,
+        ClientProfileUpdateParams updateParams, CancellationToken cancellationToken)
     {
-        if (OperatingSystem.IsAndroid()) return AppOsType.Android;
-        if (OperatingSystem.IsMacCatalyst()) return AppOsType.MacOs;
-        if (OperatingSystem.IsIOS()) return AppOsType.Ios;
-        if (OperatingSystem.IsWindows()) return AppOsType.Windows;
-        if (OperatingSystem.IsMacOS()) return AppOsType.MacOs;
-        if (OperatingSystem.IsLinux()) return AppOsType.Linux;
-        return AppOsType.Unknown;
-    }
+        ClientProfileService.Update(clientProfileId, updateParams);
 
-    private static string CreateClientId(string appId, string deviceId)
-    {
-        // Convert the combined string to bytes
-        var uid = $"{appId}:{deviceId}";
-        var uiBytes = Encoding.UTF8.GetBytes(uid);
+        var accountService = Services.AccountService;
+        if (updateParams.AccessCode != null && accountService?.AuthenticationService.UserId != null)
+            await VhUtils.TryInvokeAsync("Handing the typed access code to the account",
+                () => accountService.Refresh(cancellationToken));
 
-        // Create an MD5 instance and compute the hash
-        using var md5 = MD5.Create();
-        var hashBytes = md5.ComputeHash(uiBytes);
-
-        // convert to Guid for compatibility
-        var guid = new Guid(hashBytes);
-        return guid.ToString();
-    }
-
-    public void RemovePremium(Guid profileId)
-    {
-        var profileInfo = ClientProfileService.GetInfo(profileId);
-        if (profileInfo.AccessCode != null) {
-            VhLogger.Instance.LogWarning("Access code is removed from the profile.");
-            ClientProfileService.Update(profileInfo.ClientProfileId,
-                new ClientProfileUpdateParams { AccessCode = new Patch<string?>(null) });
-        }
+        return ClientProfileService.GetInfo(clientProfileId);
     }
 
     public bool IsPremiumFeatureAllowed(AppFeature feature)

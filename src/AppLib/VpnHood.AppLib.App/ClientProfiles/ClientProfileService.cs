@@ -1,8 +1,9 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Device;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
@@ -16,6 +17,18 @@ public class ClientProfileService
     private const string FilenameProfiles = "vpn_profiles.json";
     private List<ClientProfile> _clientProfiles;
     private readonly Lock _updateByUrlLock = new();
+
+    /// <summary>
+    /// Owns the whole store: the in-memory list AND the file behind it. Every mutation, every read
+    /// and <see cref="Save" /> itself run under it, so a mutate-then-write is one atomic act.
+    /// <para>
+    /// Without it two threads land here at once — the account refresh runs in the background while
+    /// the UI edits a profile — and one meets the other's open file handle. That surfaces as an
+    /// IOException from a background task on a device where nothing looks wrong, or worse, as a lost
+    /// write. The lock is re-entrant, so the mutators may call Save() while already holding it.
+    /// </para>
+    /// </summary>
+    private readonly Lock _storeLock = new();
     private readonly AppFeatures _appFeatures;
     private ClientProfileInfo? _cashInfo;
     private string? _cashInfoRegion;
@@ -31,16 +44,18 @@ public class ClientProfileService
 
     public ClientProfileInfo? FindInfo(Guid clientProfileId)
     {
-        // the cached info bakes in the client country (policy & locations), so it is only valid
-        // while the region it was built for is still the current one
-        if (_cashInfo?.ClientProfileId == clientProfileId &&
-            _cashInfoRegion == AppRegionInfo.CurrentRegion.Name)
-            return _cashInfo;
+        lock (_storeLock) {
+            // the cached info bakes in the client country (policy & locations), so it is only valid
+            // while the region it was built for is still the current one
+            if (_cashInfo?.ClientProfileId == clientProfileId &&
+                _cashInfoRegion == AppRegionInfo.CurrentRegion.Name)
+                return _cashInfo;
 
-        var clientProfile = FindById(clientProfileId);
-        _cashInfoRegion = AppRegionInfo.CurrentRegion.Name;
-        _cashInfo = clientProfile?.ToInfo(_appFeatures);
-        return _cashInfo;
+            var clientProfile = FindById(clientProfileId);
+            _cashInfoRegion = AppRegionInfo.CurrentRegion.Name;
+            _cashInfo = clientProfile?.ToInfo(_appFeatures);
+            return _cashInfo;
+        }
     }
 
     public ClientProfileInfo GetInfo(Guid clientProfileId)
@@ -51,12 +66,14 @@ public class ClientProfileService
 
     public ClientProfile? FindById(Guid clientProfileId)
     {
-        return _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId);
+        lock (_storeLock)
+            return _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId);
     }
 
     public ClientProfile? FindByTokenId(string tokenId)
     {
-        return _clientProfiles.SingleOrDefault(x => x.Token.TokenId == tokenId);
+        lock (_storeLock)
+            return _clientProfiles.SingleOrDefault(x => x.Token.TokenId == tokenId);
     }
 
     public ClientProfile Get(Guid clientProfileId)
@@ -74,30 +91,35 @@ public class ClientProfileService
 
     public ClientProfile[] List()
     {
-        return [.. _clientProfiles];
+        lock (_storeLock)
+            return [.. _clientProfiles];
     }
 
     public void Delete(Guid clientProfileId)
     {
-        var item =
-            _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
-            ?? throw new NotExistsException();
+        lock (_storeLock) {
+            var item =
+                _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
+                ?? throw new NotExistsException();
 
-        // BuiltInToken should not be removed
-        if (item.IsBuiltIn)
-            throw new InvalidOperationException("Can not delete built-In tokens.");
+            // BuiltInToken should not be removed
+            if (item.IsBuiltIn)
+                throw new InvalidOperationException("Can not delete built-In tokens.");
 
-        _clientProfiles.Remove(item);
-        Save();
+            _clientProfiles.Remove(item);
+            Save();
+        }
     }
 
     public void TryRemoveByTokenId(string tokenId)
     {
-        var items = _clientProfiles.Where(x => x.Token.TokenId == tokenId).ToArray();
-        foreach (var item in items)
-            _clientProfiles.Remove(item);
+        lock (_storeLock) {
+            var items = _clientProfiles.Where(x => x.Token.TokenId == tokenId).ToArray();
+            foreach (var item in items)
+                _clientProfiles.Remove(item);
 
-        Save();
+            Save();
+        }
     }
 
     private static IPEndPoint ParseEndPoint(string endpoint)
@@ -113,7 +135,38 @@ public class ClientProfileService
 
     public ClientProfile Update(Guid clientProfileId, ClientProfileUpdateParams updateParams)
     {
-        var item = _clientProfiles.SingleOrDefault(x => x.ClientProfileId == clientProfileId)
+        lock (_storeLock) {
+            var item = ApplyUpdate(clientProfileId, updateParams);
+            Save();
+            return item;
+        }
+    }
+
+    /// <summary>
+    /// The account holds this code — it either ranked it for this device, or has just taken the one
+    /// typed here — so the device owes no upload for it (keyring plan §6).
+    /// <para>
+    /// Deliberately NOT a field on <see cref="ClientProfileUpdateParams" />: those params are
+    /// reachable from the web API, and anything able to claim <i>already synced</i> could make a code
+    /// typed while the portal was blocked never reach the account at all. Only the account service
+    /// knows this, and only it can say it.
+    /// </para>
+    /// </summary>
+    public void SetAccountAccessCode(Guid clientProfileId, string accessCode)
+    {
+        lock (_storeLock) {
+            var item = ApplyUpdate(clientProfileId,
+                new ClientProfileUpdateParams { AccessCode = new Patch<string?>(accessCode) });
+
+            // set even when the code did not change: that IS the upload landing on a code already here
+            item.IsAccessCodeSynced = true;
+            Save();
+        }
+    }
+
+    private ClientProfile ApplyUpdate(Guid clientProfileId, ClientProfileUpdateParams updateParams)
+    {
+        var item = FindById(clientProfileId)
                    ?? throw new NotExistsException(
                        "ClientProfile does not exists. ClientProfileId: {clientProfileId}");
 
@@ -143,24 +196,69 @@ public class ClientProfileService
         if (updateParams.SelectedLocation != null)
             item.SelectedLocation = updateParams.SelectedLocation;
 
-        if (updateParams.IsAccessCodeFromAccount != null)
-            item.IsAccessCodeFromAccount = updateParams.IsAccessCodeFromAccount.Value;
-
-        if (updateParams.AccessCode != null && updateParams.AccessCode.Value != item.AccessCode) {
-            item.AccessCode = string.IsNullOrEmpty(updateParams.AccessCode.Value)
+        if (updateParams.AccessCode != null) {
+            // compare the NORMALIZED forms. Validate strips the dashes, so the same code typed again
+            // as "1614-2791-…" would otherwise read as a different credential and clear a refusal
+            // that still applies to it.
+            var accessCode = string.IsNullOrEmpty(updateParams.AccessCode.Value)
                 ? null
                 : AccessCodeUtils.Validate(updateParams.AccessCode.Value);
 
-            // reset premium location selection if access code is removed
-            if (item.AccessCode is null) {
-                item.IsPremiumLocationSelected = false;
-                item.SelectedLocation = null;
-                item.IsAccessCodeFromAccount = false;
+            if (accessCode != item.AccessCode) {
+                item.AccessCode = accessCode;
+
+                // this component's invariant, not a caller ritual: a code that appears here owes the
+                // account an upload until somebody says otherwise, and clearing one owes nothing (§6)
+                item.IsAccessCodeSynced = accessCode == null;
+
+                // a different (or no) code is a different credential — the old refusal is not its story
+                item.AccessCodeRefusal = null;
+
+                // reset premium location selection if access code is removed
+                if (item.AccessCode is null) {
+                    item.IsPremiumLocationSelected = false;
+                    item.SelectedLocation = null;
+                }
             }
         }
 
-        Save();
         return item;
+    }
+
+    /// <summary>
+    /// The access server refused this profile's code (keyring plan §8): KEEP the code and record the
+    /// refusal. The profile goes on claiming premium — a refusal must never turn the build into its
+    /// own free edition on nobody's decision — and what the mark buys instead is the truth: the app
+    /// can say <i>expired</i> rather than <i>rejected</i>, and stay quiet at the next sign-in about a
+    /// code the server has never heard of. Idempotent; the first refusal's story stands until the
+    /// code changes or a connection succeeds.
+    /// </summary>
+    public void MarkAccessCodeRefused(Guid clientProfileId, SessionErrorCode errorCode)
+    {
+        lock (_storeLock) {
+            var item = FindById(clientProfileId);
+            if (item?.AccessCode == null || item.AccessCodeRefusal != null)
+                return;
+
+            item.AccessCodeRefusal = new AccessCodeRefusal { ErrorCode = errorCode, RefusedTime = DateTime.UtcNow };
+            Save();
+        }
+    }
+
+    /// <summary>
+    /// A connection with this profile's code succeeded — revival proves itself (keyring plan §8):
+    /// the refusal mark clears by itself, with nothing to re-enter.
+    /// </summary>
+    public void ClearAccessCodeRefused(Guid clientProfileId)
+    {
+        lock (_storeLock) {
+            var item = FindById(clientProfileId);
+            if (item?.AccessCodeRefusal == null)
+                return;
+
+            item.AccessCodeRefusal = null;
+            Save();
+        }
     }
 
     public ClientProfile ImportAccessKey(string accessKey)
@@ -175,14 +273,12 @@ public class ClientProfileService
         }
     }
 
-    private readonly Lock _importLock = new();
-
     // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer, 
-        bool allowOverwriteBuiltIn, 
+    private ClientProfile ImportAccessToken(Token token, bool overwriteNewer,
+        bool allowOverwriteBuiltIn,
         bool isBuiltIn = false)
     {
-        lock (_importLock) {
+        lock (_storeLock) {
             // make sure no one overwrites built-in tokens
             if (!allowOverwriteBuiltIn && _clientProfiles.Any(x => x.IsBuiltIn && x.Token.TokenId == token.TokenId))
                 throw new UnauthorizedAccessException("Could not overwrite BuiltIn tokens.");
@@ -216,17 +312,21 @@ public class ClientProfileService
 
     internal ClientProfile[] ImportBuiltInAccessKeys(string[] accessKeys)
     {
-        // insert & update new built-in access tokens
-        var accessTokens = accessKeys.Select(Token.FromAccessKey);
-        var clientProfiles = accessTokens.Select(token =>
-            ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true, isBuiltIn: true));
+        lock (_storeLock) {
+            // insert & update new built-in access tokens
+            var accessTokens = accessKeys.Select(Token.FromAccessKey);
+            var clientProfiles = accessTokens
+                .Select(token =>
+                    ImportAccessToken(token, overwriteNewer: false, allowOverwriteBuiltIn: true, isBuiltIn: true))
+                .ToArray();
 
-        // remove old built-in client profiles that does not exist in the new list
-        if (_clientProfiles.RemoveAll(x =>
-                x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId)) > 0)
-            Save();
+            // remove old built-in client profiles that does not exist in the new list
+            if (_clientProfiles.RemoveAll(x =>
+                    x.IsBuiltIn && clientProfiles.All(y => y.ClientProfileId != x.ClientProfileId)) > 0)
+                Save();
 
-        return [.. clientProfiles];
+            return clientProfiles;
+        }
     }
 
     public bool TryUpdateTokenByAccessKey(string tokenId, string accessKey)
@@ -322,17 +422,21 @@ public class ClientProfileService
 
     private void Save()
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(ClientProfilesFilePath)!);
-        File.WriteAllText(ClientProfilesFilePath, JsonSerializer.Serialize(_clientProfiles));
+        lock (_storeLock) {
+            Directory.CreateDirectory(Path.GetDirectoryName(ClientProfilesFilePath)!);
+            File.WriteAllText(ClientProfilesFilePath, JsonSerializer.Serialize(_clientProfiles));
 
-        // clear cache
-        _cashInfo = null;
+            // clear cache
+            _cashInfo = null;
+        }
     }
 
     public void Reload()
     {
-        _clientProfiles = [.. Load()];
-        _cashInfo = null;
+        lock (_storeLock) {
+            _clientProfiles = [.. Load()];
+            _cashInfo = null;
+        }
     }
 
     private IEnumerable<ClientProfile> Load()

@@ -15,11 +15,13 @@ public class Account
     /// <summary>The store subscription serving this account, or null when none does.</summary>
     public Subscription? Subscription { get; set; }
 
-    // THE one access code serving this account, or null — whichever channel delivered it. The backend
-    // chooses and ranks it, recomputing the choice on every read (lifecycle §8: the app is told a
-    // code, not a list). Subscription says how forcefully to apply it: backed by one, it outranks even
-    // a code the person typed, because they are paying for it right now; otherwise it only fills a
-    // device that has no code at all. Either way it is ACCOUNT-granted and leaves with the account —
-    // only a typed code is the person's own to keep.
+    /// <summary>
+    /// THE one code this account serves, or null when it serves none. The backend ranks everything
+    /// the account holds — whatever is being paid for right now first, then the best of the rest —
+    /// and recomputes the winner on every read, so the app is handed a code and never a list, and
+    /// never picks (keyring plan §2). Its expiry is what some device last reported and is advisory;
+    /// only an access-server refusal ends use of a credential.
+    /// </summary>
     public AccessCodeInfo? AccessCodeInfo { get; set; }
+
 }

@@ -270,6 +270,17 @@ public class ApiClientBase : ApiClientCommon
             };
             if (code != null)
                 apiError.Data["Code"] = code;
+
+            // RFC 9457 extension members (e.g. a conflict's existingCodeSuffix) ride
+            // beside the standard fields; carry the scalar ones so callers can branch
+            // on them the same way they branch on Data["Code"].
+            foreach (var member in problem.RootElement.EnumerateObject()) {
+                if (member.Name is "type" or "title" or "status" or "code" or "detail" or "instance")
+                    continue;
+                if (member.Value.ValueKind is JsonValueKind.String or JsonValueKind.Number
+                    or JsonValueKind.True or JsonValueKind.False)
+                    apiError.Data[member.Name] = member.Value.ToString();
+            }
             return apiError;
         }
         catch (JsonException) {

@@ -638,7 +638,7 @@ choosing a purchased code in the client area — never by handing an inventory t
 | Situation, in order | What the app does |
 |---|---|
 | A **serving** subscription at this build's home store | Use it — the device's own store comes first (below) |
-| The device runs on a code the person **typed** | Leave it alone |
+| The device runs on a code the person **typed** that has not been refused | Leave it alone |
 | The account has a code | Use it — the server has chosen one (below) |
 | None | Signed in, not premium — as today |
 
@@ -733,12 +733,24 @@ Three guardrails make the automatic part safe:
    code under the app's remove control and let account premium ride into whatever account signed in
    next — both problems end with the flag.
 
+   Because sign-out is an explicit act, its consequence must be explicit too. If signing out would
+   leave this device in the free edition — by removing its last effective premium source or by
+   resolving Premium Ended — the confirmation says so; confirming is the edition choice. When a
+   valid locally typed code will survive and continue serving, there is no free switch to warn
+   about.
+
 **And no account-removal act lives in the app.** The app can offer to save or explicitly replace the
 one imported code, but removing that account pointer stays in the client area. A code the person
 typed is their own, and removing its local copy touches nothing on the account. If the imported
 code is the account's last premium source, the web confirmation says plainly that removing it also
 switches the account to the free edition; pressing **Remove** is already that explicit choice, so
 no second Premium Ended question repeats it.
+
+That removal choice is made once for the account. Other signed-in devices apply it on their next
+successful account refresh and do not ask the same question again. A device whose effective source
+changes shows *"Your account removed its saved code"* and follows the new account state; if no
+valid local source remains, it switches to free without opening Premium Ended. An unreachable
+portal changes nothing until a refresh succeeds.
 
 Sharing is unaffected. The family member signs in to *their own* account, sees nothing of the
 buyer's, and uses the code the buyer sent them — which is right: we must never hand someone else's
@@ -764,7 +776,10 @@ deletes it:
 
 1. **Retain and mark it.** Keep a locally typed code on the device and keep an imported code in the
    account's one slot. Record the refusal reason and observation time. Say *expired* only for
-   `AccessExpired`; describe `AccessCodeRejected` as a rejection.
+   `AccessExpired`; describe `AccessCodeRejected` as a rejection. Persist the mark with the code's
+   identity and apply it during precedence on every launch. A refused typed code yields to a
+   working subscription or account selection after restart and becomes effective again only after
+   a retry permitted by this refusal flow succeeds.
 2. **Resolve the account before showing stale news.** Refresh the account first. A newly active
    subscription outranks the refused code and is tried. A meaningful account change — a purchase
    or renewal — may justify one guarded retry of the same underlying code because that act may have
@@ -1278,8 +1293,11 @@ These came up and are now settled — kept here only so they are not re-opened.
 | Can an unreachable portal drop someone's premium? | Never. Without `AccessExpired` or `AccessCodeRejected`, an outage preserves the last effective edition state. Explicit sign-out, deletion and removal keep their stated consequences — §5, §8 |
 | What passively ends premium? | Only `AccessExpired` or `AccessCodeRejected` returned by the access server during a connection. A displayed date or failed refresh does not — §8 |
 | What happens after that refusal? | Repair first; if nothing succeeds, Premium Ended waits for Restore Premium or an explicit switch to free — §8 |
+| Can restarting revive a refused typed code above a working account code? | No. The refused mark is persisted with that code and participates in precedence until a retry permitted by the refusal flow succeeds — §8 |
 | They buy premium after a refusal — show the old error? | No. Resolve the changed account first and try the subscription or repair purchase. Success returns directly to premium; the refused import stays stored — §8 |
 | Removing the account's last imported code — ask twice? | No. The loud Remove confirmation includes the switch to free, so Remove is already the explicit edition choice — §8 |
+| What do the account's other devices do after removal? | Apply it on their next successful refresh and show a removal notice if their effective source changed. They do not ask for the account decision again — §8 |
+| Can sign-out silently switch this device to free? | No. Whenever sign-out would leave the device in the free edition, the confirmation says so and confirming is the explicit edition choice — §8 |
 | Does a renewal need the portal? | No. It extends the same code, and the access manager — a different server — honours the new expiry without the app being told — §2, §8 |
 | Do we ever merge two accounts? | No, never automatically. A pointer moves; customer records and invoices never do — §8 |
 | How many devices may share a code? | The access manager's policy, not ours. It counts installations pseudonymously and this document never depends on the number — §2 |

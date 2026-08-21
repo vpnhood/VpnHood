@@ -67,10 +67,10 @@ internal class ClientProfileController(VpnHoodApp app) : ControllerBase, IClient
         return Task.FromResult(clientProfile.AccessCode ?? string.Empty);
     }
 
-    public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams, CancellationToken cancellationToken)
+    public Task<ClientProfileInfo> Update(Guid clientProfileId, ClientProfileUpdateParams updateParams,
+        CancellationToken cancellationToken)
     {
-        var clientProfile = app.ClientProfileService.Update(clientProfileId, updateParams);
-        return Task.FromResult(clientProfile.ToInfo(app.Features));
+        return app.UpdateClientProfile(clientProfileId, updateParams, cancellationToken);
     }
 
     public async Task Delete(Guid clientProfileId, CancellationToken cancellationToken)

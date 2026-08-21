@@ -37,7 +37,7 @@ internal static class App
             Premium = new AppPremiumOptions {
                 Features = ConnectAppResources.PremiumFeatures,
                 // nothing forbids a typed code on this channel (App Review 3.1.1 binds the App Store head only)
-                IsCodeSupported = true,
+                AllowImportAccessCode = true,
                 // not shipped through a store, so an operator may point its buyers at its own shop
                 IsPurchaseUrlSupported = true
             },

@@ -59,7 +59,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             Premium = new AppPremiumOptions {
                 Features = ConnectAppResources.PremiumFeatures,
                 // nothing forbids a typed code on this channel (App Review 3.1.1 binds the App Store head only)
-                IsCodeSupported = true
+                AllowImportAccessCode = true
                 // IsPurchaseUrlSupported stays false: Play forbids steering a buyer to an outside shop,
                 // so no operator token may raise a web-purchase link in this build
             },

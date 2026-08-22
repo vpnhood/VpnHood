@@ -2,7 +2,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>VpnHood! Client Extension</string>
+	<string>VpnHood! CLIENT Extension</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.vpnhood.client.ios.networkextension</string>
 	<!-- false = "no encryption requiring Apple export-compliance documentation" — mirrors the host app;

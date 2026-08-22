@@ -55,14 +55,15 @@ public class AppDelegate : UIApplicationDelegate
 
     private static AppOptions BuildAppOptions(AppConfigs appConfigs)
     {
-        var storageFolderPath = AppOptions.BuildStorageFolderPath(AppConfigs.AppName);
+        var storageFolderPath = AppOptions.BuildStorageFolderPath(AppConfigs.StorageFolderName);
 
         // Shared client resources bundle the SPA (SpaZipData) served by VpnHoodAppWebServer and
         // shown in the WKWebView. Without SpaZipData the web server cannot start.
         var resources = AppConfigs.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
 
-        return new AppOptions(appId: appConfigs.AppId, AppConfigs.AppName, isDebugMode: AppConfigs.IsDebugMode) {
+        return new AppOptions(appId: appConfigs.AppId, storageFolderName: AppConfigs.StorageFolderName,
+            isDebugMode: AppConfigs.IsDebugMode) {
             StorageFolderPath = storageFolderPath,
             // Product settings sourced from the embedded ".user" appsettings (parity with Client.Android.Web).
             CustomData = appConfigs.CustomData,

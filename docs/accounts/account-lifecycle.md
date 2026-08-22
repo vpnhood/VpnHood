@@ -718,8 +718,8 @@ code that dies leaves nothing to repair (keyring plan §2):
 4. **The account has one upload slot, and it is a stored string.** Uploading takes any well-formed
    code on trust — validity is settled at use time by the access server, never at save time by the
    portal — so there is no *not found* answer and nothing to inspect in the reply. Uploading a
-   different code replaces what is there; uploading a code the account already owns does not consume
-   the slot and turns that code back on for the ranking instead. There is no prompt: typing a code
+   different code replaces what is there, and every typed code fills the slot — one the account
+   already owns included, so typing always means *use this one*. There is no prompt: typing a code
    *is* choosing to use it. The one question that remains is asked BEFORE signing in, where the
    choice is still free — sync it, sign in without it, or cancel.
 
@@ -811,49 +811,42 @@ an unreachable portal or a failed refresh cannot make that decision. The passive
 only when a connection reaches the access server and returns `AccessExpired` or
 `AccessCodeRejected` for the serving credential. Other connection errors do not mean premium ended.
 
-The two refusal codes make the current code a good candidate for repair or replacement, but neither
-deletes it:
+The two refusal codes make the current code a candidate for repair, and neither deletes it
+(keyring plan §4, §8):
 
-1. **Retain and mark it.** Keep a locally typed code on the device and keep an imported code in the
-   account's one slot. Record the refusal reason and observation time. Say *expired* only for
-   `AccessExpired`; describe `AccessCodeRejected` as a rejection. Persist the mark with the code's
-   identity on every launch. It becomes effective again only after a retry succeeds.
-2. **Resolve the account before showing stale news.** Refresh the account first. A newly active
-   subscription outranks the refused code and is tried. A meaningful account change — a purchase
-   or renewal — may justify one guarded retry of the same underlying code because that act may have
-   extended it. A website code bought through **Restore Premium** is already the new deliberate
-   selection and is tried instead. Otherwise a different deliberate account selection may be
-   tried. The portal never guesses another purchased code merely because a date passed.
-3. **Success repairs without a fork.** A successful connection clears the refused mark and returns
-   directly to premium. At most, leave a durable explanation on the account page; do not block a
-   person who just bought premium with the old code's refusal.
-4. **Failure shows the concrete recovery actions.** Stop claiming that the refused credential is
-   currently valid. Present **Retry/Restore**, **Change code** where the build supports it, and
-   **Remove access code** where the credential is a removable local or imported code. Do not offer
-   **Switch to the free version**: some builds have no free edition, and removal already names the
-   actual state change. If the person removes an account-saved code, the app performs the same
-   account-wide null Set described above. If they retain it, Restore may retry it, refresh the account,
-   renew, buy or accept a new code as the build permits.
-5. **Revival proves itself by connection.** If the issuer later extends the retained code, a
-   successful retry returns to premium. When a repairing subscription later stops serving, the
-   retained imported code may be tried again; a new refusal is a new ending and may be announced
-   again.
+1. **Keep the code, mark it refused.** The mark is a boolean on the profile — no reason taxonomy
+   and no observation timestamp, because nothing ever read them. The wording differs at the edge
+   only: `AccessExpired` is said as *expired*, `AccessCodeRejected` as a rejection, and a paying
+   subscriber is told the device could not be given access — never that their access ended.
+2. **Report, then refresh.** The device tells the account the code was refused — one bit, named by
+   the code itself — and then refreshes. The report is what moves the account on: a refusal demotes
+   the code below every working one for all their devices at once, and there is no stored
+   "deliberate selection" to repair, because the ranking is recomputed on every read.
+3. **One swap per press.** If the refresh hands back a different code, the app reconnects with it
+   once, silently. If the account held its ground — the same code back, or the one replacement is
+   refused too — the app says so and stops. It never walks the keyring in one press, and the
+   account never cycles through refused codes hoping one works: whoever tops a code up knows which
+   one they paid, and typing it is what selects it.
+4. **What is offered is what exists.** **Restore Premium**, and **Change code** where the build
+   takes typed codes (`CanImportAccessCode`). There is no **Remove** while signed in — the ranking
+   escapes a stuck credential by itself, which is the job removal existed to do — and no *Switch to
+   the free version*: some builds have no free edition, and no flag records such a choice anywhere.
+5. **Revival proves itself by connection.** A premium session on a profile whose code stood refused
+   clears the mark — the issuer extended it, and it is premium again with nothing re-entered.
+   Typing the code again does the same on the account side: writing a code clears its rejection,
+   which is the whole of Retry, with no endpoint of its own.
 
-Without a prior access-server refusal, no response is not a refusal and the last effective edition
-state is preserved. After a refusal, a failed portal refresh cannot undo what the access server
-already said; retry and removal remain available. There is no separate Premium Ended edition state
-or `IsFreeEditionChosen` setting. With no effective credential, a build that has free service may
-behave as free and a build that does not may show no access; that distinction belongs to build
-capabilities, not account lifecycle.
+Without a prior access-server refusal, no response is not a refusal and the last effective state is
+preserved. After a refusal, a failed portal refresh cannot undo what the access server already
+said. There is no separate Premium Ended edition state or `IsFreeEditionChosen` setting. With no
+effective credential, a build that has free service may behave as free and a build that does not
+may show no access; that distinction belongs to build capabilities, not account lifecycle.
 
-**A refused code followed by a subscription is therefore unambiguous:** on return or foreground,
-refresh the account before presenting the old refusal, try the subscription credential, and return
-directly to premium when it succeeds. The refused imported code stays in its one slot, inactive and
-available for Replace or account-wide Remove. It is not deleted merely because the subscription repaired access.
-For a website code rather than an account subscription, entering checkout through **Restore
-Premium** carries the same repair intent: the newly provisioned code becomes the deliberate
-selection and is tried before the old refusal is shown. An ordinary second website purchase still
-leaves the existing selection alone for gifting.
+**A refused code followed by a subscription is therefore unambiguous:** the refresh that follows
+the report hands back the subscription's code, the app reconnects with it, and premium returns with
+nobody asked anything. The refused imported code stays in its one slot — demoted, not deleted — and
+is served again by itself when everything above it stops working. An ordinary second website
+purchase still leaves a working code alone for gifting (§8 rule 1).
 
 ### They sign in with a different address than they bought with
 
@@ -1337,7 +1330,7 @@ These came up and are now settled — kept here only so they are not re-opened.
 | Somebody types a code while their account already holds one — which is used? | The one they typed. Typing a code means *use this one*, so it outranks every code nobody is being billed for, including ones we sold them. The old code is not consumed; it waits and is served again if the typed one stops working — §8 |
 | …and if they have a live subscription? | The subscription still wins, and the typed code is never tried against it. The app saves the code, keeps the subscription's own code in place, and says so on the spot: a fresh code is never spent on top of something they are already paying for. It is served automatically once the subscription ends, or right away if they sign out and enter it on the device — §8 |
 | Every code somebody holds is refused — do they get nothing? | No. A refusal pushes a code below every working one, but it is never taken away: with nothing left the account keeps handing back the last refused code, so they meet the same honest error until they act. Nothing else is tried behind their back — whoever tops a code up knows which one they paid, and typing it selects it — §8 |
-| A subscription ends — what happens to its code? | It stops being one of their codes on the next read. We ended it and we know when, so nothing waits for a refusal; their devices fall through to whatever else they hold, or are told they have nothing. Cancelling is not ending: the period already paid for is theirs — §8 |
+| A subscription ends — what happens to its code? | The account stops handing it out on the next read — we ended it and we know when, so nothing waits for a refusal. But a device already holding the code keeps it and keeps connecting until the access server refuses it: the account decides what is handed out, never what a device already holds. Cancelling is not ending: the period already paid for is theirs — §8 |
 | A PAYING person's code is refused — do we give them another? | No. They are paid up and the credential we provisioned does not work, so support fixes it at the source. Substituting another code they hold would spend a code they were saving and hide our own fault. The app says the device could not be given access, never that their access ended — §8 |
 | What happens after that refusal? | Repair first; if nothing succeeds, retain the code and offer Retry/Restore, Change code where supported, and Remove access code where removable. There is no separate free-edition choice — §8 |
 | Can restarting revive a refused typed code above a working account code? | No. The refused mark is persisted with that code and participates in precedence until a retry permitted by the refusal flow succeeds — §8 |

@@ -14,9 +14,17 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     // ---- iOS platform constants (referenced statically by the bootstrap; not sourced from settings) ----
 
-    // Display name (UI + on-disk storage folder + NEVPNManager localized description).
+    // Display name (UI + NEVPNManager localized description). Capitalized "CLIENT" to match the other
+    // CLIENT apps (Client.Android.Web / Client.Android.Google / Client.Win.Web) — the product brand.
     // ReSharper disable once HeuristicUnreachableCode
-    public const string AppName = IsDebugMode ? "VpnHood! Client (DEBUG)" : "VpnHood! Client";
+    public const string AppName = IsDebugMode ? "VpnHOOD! CLIENT (DEBUG)" : "VpnHood! CLIENT";
+
+    // On-disk storage folder inside the app sandbox. Deliberately SEPARATE from AppName (same split as
+    // Client.Win.Web's StorageFolderName): iOS paths are case-sensitive and Application Support survives
+    // app updates, so renaming this orphans every existing install's settings and saved access keys.
+    // Keep these literals frozen — rebrand AppName instead.
+    // ReSharper disable once HeuristicUnreachableCode
+    public const string StorageFolderName = IsDebugMode ? "VpnHood! Client (DEBUG)" : "VpnHood! Client";
 
     // App Group enabled on BOTH bundle ids (App + Extension Entitlements.plist). This is the only IPC
     // channel between the host app and the Network Extension.

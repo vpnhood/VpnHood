@@ -17,6 +17,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- the shape vectors the portal's unit suite reads too: the two validators must not drift -->
+		<None Update="Fixtures/access-code-vectors.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.742" />
 		<PackageReference Include="VpnHood.Core.Proxies" Version="8.0.835" />
 	</ItemGroup>

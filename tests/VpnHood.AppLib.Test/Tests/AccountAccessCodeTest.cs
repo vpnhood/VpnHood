@@ -4,6 +4,8 @@ using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Common.Exceptions;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -393,5 +395,86 @@ public class AccountAccessCodeTest : TestAppBase
             "sign-in put the account's ranked code on the device, so the dead one never reaches a connection");
         Assert.IsNull(profile.AccessCodeRefusal);
         Assert.IsNull(accountProvider.UploadedAccessCode, "a code removed at the prompt is never uploaded");
+    }
+
+    [TestMethod]
+    public async Task A_refused_account_code_is_reported_so_the_account_stops_handing_it_out()
+    {
+        using var accessManager = TestHelper.CreateAccessManager();
+        await using var server = await TestHelper.CreateServer(accessManager);
+        var baseToken = TestHelper.CreateAccessToken(server);
+
+        // the account's code, and the access server has never heard of it
+        var deadCode = TestAppHelper.BuildAccessCode();
+        var accountProvider = new TestAccountProvider { Account = CreateFreeAccount() };
+        await accountProvider.SetAccessCode(deadCode, CancellationToken.None);
+
+        var appOptions = TestAppHelper.CreateAppOptions();
+        appOptions.AccountProvider = accountProvider;
+        appOptions.AccessKeys = [baseToken.ToAccessKey()];
+        appOptions.Premium = new AppPremiumOptions { AllowImportAccessCode = true };
+        await using var app = TestAppHelper.CreateClientApp(appOptions);
+
+        var profileId = app.ClientProfileService.List().First().ClientProfileId;
+        await SignIn(GetAccountService(app));
+        Assert.AreEqual(deadCode, app.ClientProfileService.Get(profileId).AccessCode,
+            "the account handed its code down before anything was tried");
+
+        var ex = await Assert.ThrowsExactlyAsync<SessionException>(() => app.Connect(profileId));
+        Assert.AreEqual(SessionErrorCode.AccessCodeRejected, ex.SessionResponse.ErrorCode);
+
+        // ONE bit of news, and the code is what names it (keyring plan §4)
+        Assert.HasCount(1, accountProvider.ReportedRejections);
+        Assert.AreEqual(deadCode, accountProvider.ReportedRejections[0]);
+
+        // …and the point of telling it: every other device asks the same account, and it now knows
+        // this code was refused, so it ranks past it in favour of anything else the person holds.
+        // Here there IS nothing else, and a refusal demotes a code rather than taking it away
+        // (keyring plan §4) — so the same code keeps coming back, and so does the same honest error.
+        Assert.IsTrue(accountProvider.RejectedCodes.Contains(deadCode),
+            "the account must remember that the access server refused this code");
+        Assert.AreEqual(deadCode, accountProvider.Account?.AccessCodeInfo?.AccessCode,
+            "with nothing to fall back to the account keeps serving it: it is still the person's code");
+
+        // nothing was deleted anywhere (§3): the code is still in the slot, and still on the device
+        Assert.AreEqual(deadCode, accountProvider.UploadedAccessCode);
+        var profile = app.ClientProfileService.Get(profileId);
+        Assert.AreEqual(deadCode, profile.AccessCode);
+        Assert.IsNotNull(profile.AccessCodeRefusal);
+
+        // Retry, with no second endpoint: writing the code again lifts the refusal, so the code
+        // stops being demoted at all
+        await accountProvider.SetAccessCode(deadCode, CancellationToken.None);
+        Assert.IsFalse(accountProvider.RejectedCodes.Contains(deadCode));
+        Assert.AreEqual(deadCode, accountProvider.Account?.AccessCodeInfo?.AccessCode);
+    }
+
+    [TestMethod]
+    public async Task A_refused_code_the_account_is_not_serving_is_never_reported()
+    {
+        // The account serves one code; a refusal arrives for a DIFFERENT one — a code typed on this
+        // device and never uploaded, or one left over from before a replacement. Reporting it would
+        // disable a credential the account is serving perfectly well, so the guard is the app's as
+        // well as the backend's (§4).
+        var accountCode = TestAppHelper.BuildAccessCode();
+        var strangerCode = BuildDistinctAccessCode(accountCode);
+        var accountProvider = new TestAccountProvider { Account = CreateFreeAccount() };
+        await accountProvider.SetAccessCode(accountCode, CancellationToken.None);
+
+        await using var app = CreateAppWithAccount(accountProvider);
+        var accountService = GetAccountService(app);
+        await SignIn(accountService);
+
+        await accountService.TryReportAccessCodeRejected(strangerCode, CancellationToken.None);
+
+        Assert.IsEmpty(accountProvider.ReportedRejections,
+            "a code the account is not serving must never be reported against the account's own");
+        Assert.AreEqual(accountCode, accountProvider.Account?.AccessCodeInfo?.AccessCode,
+            "the account's own code is untouched by another code's refusal");
+
+        // and the one it IS serving goes through
+        await accountService.TryReportAccessCodeRejected(accountCode, CancellationToken.None);
+        Assert.HasCount(1, accountProvider.ReportedRejections);
+        Assert.IsTrue(accountProvider.RejectedCodes.Contains(accountCode));
     }
 }

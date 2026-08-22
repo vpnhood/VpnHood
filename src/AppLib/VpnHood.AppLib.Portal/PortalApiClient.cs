@@ -128,15 +128,15 @@ public class PortalApiClient : ApiClientBase
     }
 
     /// <summary>
-    /// POST /account/code-expiration — tell the portal what a connection revealed about a code's
-    /// clock, which is the only way it ever learns one. The code travels in the body and never in
-    /// the path: a URL is logged and cached in places a bearer credential must not appear.
+    /// POST /account/access-code/rejected — tell the portal the access server refused the code it
+    /// is serving. The code rides in the BODY and never in the path: a URL is logged, cached and
+    /// proxied in places a bearer credential must not appear. Answers 204 whether or not the report
+    /// still applies, so there is nothing here to inspect.
     /// </summary>
-    public Task ReportAccessCodeExpiration(string accessCode, DateTime expirationTime,
-        CancellationToken cancellationToken)
+    public Task ReportAccessCodeRejected(string accessCode, CancellationToken cancellationToken)
     {
-        return HttpPostAsync("account/code-expiration", null,
-            new { accessCode, expirationTime }, cancellationToken);
+        return HttpPostAsync("account/access-code/rejected", null,
+            new { accessCode }, cancellationToken);
     }
 
     /// <summary>

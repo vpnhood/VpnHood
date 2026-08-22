@@ -56,20 +56,26 @@ public interface IAccountProvider
     Task SetAccessCode(string? accessCode, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Tell the account what a connection attempt revealed about a code's clock. This is the ONLY
-    /// way the backend ever learns an expiry: it cannot look one up for a code it never sold, and
-    /// choosing not to discover expiries is what keeps uploaded codes free of special rules
-    /// (keyring plan §4).
+    /// Tell the account that the access server REFUSED its imported code — the only thing a device
+    /// ever reports, and the whole of what the backend's ranking needs. Every code an account holds
+    /// is either eligible or rejected: no expiry dates, no reasons, no observation times, and no
+    /// successful-connection counterpart to this call (keyring plan §4).
     /// <para>
-    /// Called after a successful connection with the expiry the access server gave, and after an
-    /// authoritative refusal with the moment of the refusal — a code that was just refused has
-    /// expired as of now, whatever the portal believes. The backend records it against THIS account
-    /// only, and it never moves the upload slot's own stamp.
+    /// The backend applies it only while this is still the account's CURRENT code, so a delayed
+    /// refusal that has been overtaken by a different one changes nothing. It is recorded against
+    /// THIS account alone — the same bearer code may be serving somebody else perfectly well — and
+    /// against every entry holding that string, because identical codes are the same credential.
     /// </para>
+    /// <para>
+    /// Rejection skips a code, it never deletes one. Uploading the code again through
+    /// <see cref="SetAccessCode" /> clears it, which is all that <i>Retry</i> needs to be — and the
+    /// reason the one edge case here is survivable: remove-then-re-add of the same string can be
+    /// caught by a late report, and one more retry undoes it.
+    /// </para>
+    /// The code travels in the authenticated request body and never in a URL.
     /// A provider with no account-side code storage throws <see cref="NotSupportedException" />.
     /// </summary>
-    Task ReportAccessCodeExpiration(string accessCode, DateTime expirationTime,
-        CancellationToken cancellationToken);
+    Task ReportAccessCodeRejected(string accessCode, CancellationToken cancellationToken);
 
     /// <summary>
     /// Delete the signed-in account everywhere: the backend erases the person, every device is

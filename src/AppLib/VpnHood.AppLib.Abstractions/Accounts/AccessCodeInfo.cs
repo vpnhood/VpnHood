@@ -12,15 +12,10 @@ public class AccessCodeInfo
     public required string AccessCode { get; set; }
 
     /// <summary>
-    /// What this account last learned about the code's clock, or null when nobody has connected with
-    /// it yet — which is also why an unknown expiry ranks first: trying the code is how the expiry
-    /// gets learned.
-    /// <para>
-    /// The backend does not discover this. A device reports the expiry it saw after a connection or
-    /// an authoritative refusal, and the value is kept PER ACCOUNT: the same bearer code may live in
-    /// other accounts, and one account's stale report must never blank the code for someone else who
-    /// is using it perfectly well (keyring plan §4).
-    /// </para>
+    /// The code's own clock where the backend can read it, else null. ADVISORY DISPLAY ONLY: it
+    /// never decides anything here, and nothing reports one back. Whether a code still works is the
+    /// access server's verdict at connect time, and the account's own answer to that is
+    /// <i>eligible or rejected</i> — one bit, with no dates in it (keyring plan §4).
     /// </summary>
     public DateTime? ExpirationTime { get; set; }
 }

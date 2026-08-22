@@ -126,11 +126,10 @@ public class PortalAccountProvider : IAccountProvider, IDisposable
         return apiClient.SetAccessCode(accessCode, cancellationToken);
     }
 
-    public Task ReportAccessCodeExpiration(string accessCode, DateTime expirationTime,
-        CancellationToken cancellationToken)
+    public Task ReportAccessCodeRejected(string accessCode, CancellationToken cancellationToken)
     {
         var apiClient = new PortalApiClient(_httpClient, _authenticationProvider);
-        return apiClient.ReportAccessCodeExpiration(accessCode, expirationTime, cancellationToken);
+        return apiClient.ReportAccessCodeRejected(accessCode, cancellationToken);
     }
 
     public Task DeleteAccount(CancellationToken cancellationToken)

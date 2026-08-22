@@ -788,6 +788,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     planId: connectOptions.PlanId,
                     accessCode: clientProfile.AccessCode,
                     allowUpdateToken: true,
+                    allowAccessCodeRepair: true,
                     cancellationToken: linkedCts.Token)
                 .Vhc();
         }
@@ -813,7 +814,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     }
 
     private async Task ConnectInternal2(Token token, string? serverLocation, string? userAgent,
-        ConnectPlanId planId, string? accessCode, bool allowUpdateToken, CancellationToken cancellationToken)
+        ConnectPlanId planId, string? accessCode, bool allowUpdateToken, bool allowAccessCodeRepair,
+        CancellationToken cancellationToken)
     {
         var profileInfo = CurrentClientProfileInfo ?? throw new NotExistsException("ClientProfile is not set.");
 
@@ -950,16 +952,23 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex) {
             if (ex is SessionException sessionException &&
-                await ProcessSessionException(sessionException, profileInfo, cancellationToken).Vhc()) {
+                await ProcessSessionException(sessionException, profileInfo, allowAccessCodeRepair,
+                    cancellationToken).Vhc()) {
                 // Account refresh supplied a different, non-refused credential. Repair is complete
                 // before the refusal reaches the UI, so retry once with the working alternative.
-                var repairedProfile = ClientProfileService.FindById(profileInfo.ClientProfileId)!;
+                // ONE swap per connect (allowAccessCodeRepair: false below): when every code the
+                // account holds has been refused it hands them out in turns, so chaining repairs
+                // would walk the whole keyring in a single press — and then walk it for ever. The
+                // next press takes the next turn.
+                var repairedProfile = ClientProfileService.FindById(profileInfo.ClientProfileId) ??
+                                      throw new NotExistsException("The repaired profile has disappeared.");
                 await ConnectInternal2(token,
                         serverLocation: serverLocation,
                         userAgent: userAgent,
                         planId: planId,
                         accessCode: repairedProfile.AccessCode,
                         allowUpdateToken: false,
+                        allowAccessCodeRepair: false,
                         cancellationToken: cancellationToken)
                     .Vhc();
                 return;
@@ -979,6 +988,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                         planId: planId,
                         accessCode: accessCode,
                         allowUpdateToken: false,
+                        allowAccessCodeRepair: allowAccessCodeRepair,
                         cancellationToken: cancellationToken)
                     .Vhc();
                 return;
@@ -988,8 +998,8 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
     }
 
-    private async Task<bool> ProcessSessionException(SessionException sessionException, ClientProfileInfo profileInfo,
-        CancellationToken cancellationToken)
+    private async Task<bool> ProcessSessionException(SessionException sessionException,
+        ClientProfileInfo profileInfo, bool allowAccessCodeRepair, CancellationToken cancellationToken)
     {
         // update the access token if AccessKey is set
         if (!string.IsNullOrWhiteSpace(sessionException.SessionResponse.AccessKey)) {
@@ -1024,7 +1034,12 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                     sessionException.SessionResponse.ErrorCode);
                 ClientProfileService.MarkAccessCodeRefused(profileInfo.ClientProfileId,
                     sessionException.SessionResponse.ErrorCode);
-                return await TryRepairRefusedAccessCode(profileInfo, cancellationToken).Vhc();
+                // The refusal is REPORTED either way — that report is what moves the account on to
+                // the next code — but only the first refusal of a connect reconnects. Otherwise a
+                // keyring whose codes have all been refused would be walked end to end, and then
+                // round again, without the person ever seeing the error.
+                var repaired = await TryRepairRefusedAccessCode(profileInfo, cancellationToken).Vhc();
+                return allowAccessCodeRepair && repaired;
         }
 
         return false;
@@ -1040,11 +1055,22 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         if (accountService == null)
             return false;
 
+        // Tell the account BEFORE asking it again (keyring plan §4). Without this the refresh below
+        // ranks the same dead code straight back, and every device the person owns keeps meeting it:
+        // the account is the only place that can rule a code out for all of them. The refused code
+        // is read from the store rather than from refusedProfile, whose AccessCode is redacted.
+        var refusedCode = ClientProfileService.FindById(refusedProfile.ClientProfileId)?.AccessCode;
+        if (refusedCode != null)
+            await accountService.TryReportAccessCodeRejected(refusedCode, cancellationToken).Vhc();
+
         try {
             await accountService.Refresh(cancellationToken).Vhc();
             var repaired = ClientProfileService.FindById(refusedProfile.ClientProfileId);
+            // compared against the RAW refused code: ClientProfileInfo.AccessCode is redacted, so
+            // comparing with it made every refresh look like a repair and reconnected with the same
+            // dead credential
             return repaired is { AccessCode: not null, AccessCodeRefusal: null } &&
-                   repaired.AccessCode != refusedProfile.AccessCode;
+                   repaired.AccessCode != refusedCode;
         }
         catch (Exception ex) {
             // No response is not a removal or an entitlement verdict; the refused mark stands.

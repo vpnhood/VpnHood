@@ -295,6 +295,29 @@ public class PortalTest
     }
 
     [TestMethod]
+    public async Task ReportAccessCodeRejected_sends_the_code_in_the_body_and_nothing_else()
+    {
+        _portal.Enqueue(SignInRoute, SignInData());
+        _portal.Enqueue("POST /account/access-code/rejected", new { });
+
+        using var authenticationProvider = CreateAuthenticationProvider();
+        await authenticationProvider.SignIn(new TestUiContext(),
+            new SignInOptions { ProviderId = AuthProviders.Google }, CancellationToken.None);
+        using var accountProvider = new PortalAccountProvider(authenticationProvider, null,
+            _portal.BaseUrl, PackageName);
+
+        await accountProvider.ReportAccessCodeRejected("12345678901234567890", CancellationToken.None);
+
+        var request = _portal.Requests.Single(x => x.Route == "POST /account/access-code/rejected");
+        Assert.AreEqual("12345678901234567890", request.Body.GetProperty("accessCode").GetString());
+        Assert.DoesNotContain("12345678901234567890", request.Route,
+            "a bearer credential must never appear in a path: URLs are logged, cached and proxied");
+        foreach (var absent in new[] { "expirationTime", "reason", "errorCode", "observedTime", "revision" })
+            Assert.IsFalse(request.Body.TryGetProperty(absent, out _),
+                $"eligibility is one bit: '{absent}' is exactly the machinery this replaced");
+    }
+
+    [TestMethod]
     public async Task DeleteAccount_blocked_by_web_services_keeps_the_session()
     {
         _portal.Enqueue(SignInRoute, SignInData());

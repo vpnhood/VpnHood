@@ -49,7 +49,7 @@ Section 8 answers these, in order:
 |---|---|---|
 | Who has an account? | Only someone who signed in — to buy, restore, or carry one importable code across devices | §3 |
 | Website buyer signs in — premium? | Yes — on the code marked as theirs, automatically | §8 |
-| Which code, if they own several? | Ranked on every read: the device's own store's subscription first, then any portal code being paid for right now, then the best of the rest — unknown expiry first, then soonest. Nothing is stored as the selection | §8 |
+| Which code, if they own several? | Ranked on every read: the device's own store's subscription first, then any portal code being paid for right now, then the other portal codes known to be valid, then the imported one. Deterministic, with no dates in it. Nothing is stored as the selection | §8 |
 | Can they change it in the app? | No list or picker. Where code entry is supported they type one into the profile and the app uploads it; signed-in Remove does not exist, and inventory lives in the client area | §7, §8, §9 |
 | Two subscriptions? | Any number of codes from the portal store (for sharing); one subscription per store — and one at each store can coexist: prevented up front, accepted and surfaced if it happens | §8 |
 | Do we ever refuse a purchase? | Never after the money moved. Prevention happens before the store's payment sheet; whatever arrives paid is provisioned | §8 |
@@ -698,12 +698,21 @@ selection: the portal ranks what the account holds and recomputes the winner on 
 code that dies leaves nothing to repair (keyring plan §2):
 
 1. **Whatever is being paid for right now comes first** — the store subscription for that device's
-   own store, otherwise a portal code with live recurring billing. Someone who is paying never does
-   code management, and an ordinary additional purchase cannot displace it.
-2. **Then the best of the rest** — unknown expiry first, then soonest expiry, so nothing is wasted.
-   Unknown sorts first because an uploaded code is one somebody chose to *use* rather than to store,
-   and because trying it is how its expiry gets learned.
+   own store while the store is still charging for it, otherwise a portal code with live recurring
+   billing. Someone who is paying never does code management, and an ordinary additional purchase
+   cannot displace it. A subscription that has **ended** — refunded, expired, or simply run out —
+   stops being one of their codes the moment it ends; cancelling is not ending, because the period
+   already paid for is theirs.
+2. **Then the other portal codes**, and last **the imported code** while it is eligible. Within a
+   group, a started clock before one that has not begun — an unused one-time code is worth more
+   unspent — and then oldest purchase first.
 3. **Then nothing.**
+
+   No dates steer any of this. An expiry the portal can read is *display*: a clock that could retire
+   a code could equally start an unused one early, and only the access server knows. A code leaves
+   the ranking when the person parks it, or when a device reports a refusal — and never when it is
+   the thing being paid for right now, because downgrading a payer to a lesser code would hide our
+   own provisioning fault. That last rule is also what makes renewal recover by itself.
 4. **The account has one upload slot, and it is a stored string.** Uploading takes any well-formed
    code on trust — validity is settled at use time by the access server, never at save time by the
    portal — so there is no *not found* answer and nothing to inspect in the reply. Uploading a
@@ -714,14 +723,20 @@ code that dies leaves nothing to repair (keyring plan §2):
 
 **Two reversible marks steer the ranking, and neither deletes anything:** `isAutoSelectable`, set in
 the client area and **true by default**, is how somebody protects a code they bought to give away;
-and a known expiry in the past. If an issuer extends a dead code the expiry moves and the code
-becomes eligible again by itself, with nothing to re-enter. The system never removes a code — the
-only thing that leaves is the upload slot's previous occupant.
+and **rejected**, set by the system when a device meets an access-server refusal. They stay apart on
+purpose — a refusal must not erase a deliberate *keep this for later*, and a retry must not re-arm a
+code somebody parked. Adding a code again clears its rejection, which is the whole of Retry. The
+system never removes a code — the only thing that leaves is the upload slot's previous occupant.
 
-**Expiry is learned from devices, per account.** The portal does not discover it: a device reports
-what the access server said after a connection or a refusal (`POST /v1/account/code-expiration`), and
-it is recorded per account, because a code is a bearer string many accounts may hold and one
-account's stale report must never blank a code for somebody else using it perfectly well.
+**Eligibility is one boolean, and a device is the only thing that sets it.** A device reports that
+the access server refused the code it was serving (`POST /v1/account/access-code/rejected`) — no
+expiry, no reason, no timestamp, and nothing at all when a connection succeeds. It is applied only
+while that is still the account's current code, and it covers every entry holding that string,
+because identical access codes are the same credential. Recorded per account, because a code is a
+bearer string many accounts may hold and one account's report must never disable it for somebody
+else using it perfectly well. One case is accepted rather than solved: remove a code and add the
+same string back, and a delayed refusal from the old attempt can land on the restored one — the
+recovery is one more Retry, and the alternative was an identity system for codes.
 
 This replaces two earlier designs in turn (decided 2026-08-20). Expiry-driven **promotion** shipped
 first and was retired because a prepaid code starts its clock on first use (§4), so a silent
@@ -735,7 +750,8 @@ quietly becoming its own free edition.
 **Nothing is ever asked at purchase time.** Checkout is the worst place to add a question, the buyer
 often does not know yet who a code is for, and the answer can change the next day.
 Entering website checkout through **Restore Premium** needs no extra question: the path already says
-this purchase is for repairing the account, so its new code becomes the deliberate selection.
+this purchase is for repairing the account, and the ranking picks its new code up by itself — a
+purchase being paid for right now outranks everything else the account holds.
 
 Three guardrails make the automatic part safe:
 
@@ -1296,7 +1312,7 @@ These came up and are now settled — kept here only so they are not re-opened.
 | A renewal arriving after deletion | Recorded, the entitlement stays alive for later recovery, and the person is never resurrected — §7 |
 | Does the app help someone holding several codes? | It does not need to. The server hands it one code, so the app never sees a list and never asks — §8 |
 | How many uploaded codes can one account hold? | One. Uploading another replaces it; purchased services are separate inventory — §8 |
-| Who chooses which code serves the account? | Nobody — it is ranked on every read: whatever is being paid for right now, then the best of the rest (unknown expiry first, then soonest). Nothing is stored as the selection, so nothing goes stale — §8 |
+| Who chooses which code serves the account? | Nobody — it is ranked on every read: whatever is being paid for right now, then the other portal codes known to be valid, then the imported one. Deterministic, no dates. Nothing is stored as the selection, so nothing goes stale — §8 |
 | Why did expiry stop promoting the next code? | Promotion shipped and was reversed (it could spend an unstarted prepaid code), and its replacement — a stored last deliberate choice — was reversed in turn, because a dead choice had to be repaired by hand on every device. The ranking has neither problem — §8 |
 | Does an ordinary subscriber ever manage codes? | No. What they are paying for is ranked first, and there is no prompt at all: typing a code IS choosing to use it — §8 |
 | Does the app show the person their codes? | No inventory crosses to the app. The client area lists purchased services and the one uploaded code; deletion still mails the purchased ones before erasing the account — §5, §8 |
@@ -1316,6 +1332,11 @@ These came up and are now settled — kept here only so they are not re-opened.
 | What if our portal is blocked where they are? | Connect on the free or trial path first, then sign in through the tunnel; the applied code stays until the access server explicitly refuses it during a connection — §8 |
 | Can an unreachable portal drop someone's premium? | Never. Without `AccessExpired` or `AccessCodeRejected`, an outage preserves the last effective edition state. Explicit sign-out, deletion and removal keep their stated consequences — §5, §8 |
 | What passively ends premium? | Only `AccessExpired` or `AccessCodeRejected` returned by the access server during a connection. A displayed date or failed refresh does not — §8 |
+| Somebody types a code while their account already holds one — which is used? | The one they typed. Typing a code means *use this one*, so it outranks every code nobody is being billed for, including ones we sold them. The old code is not consumed; it waits and is served again if the typed one stops working — §8 |
+| …and if they have a live subscription? | The subscription still wins. The typed code is saved and connects on the spot, but the next account read hands the subscription's code back and the device follows it: a fresh code is never spent on top of something they are already paying for. It is served automatically once the subscription ends, or right away if they sign out and enter it on the device — §8 |
+| Every code somebody holds is refused — do they get nothing? | No. A refusal pushes a code below every working one, but it is never taken away: once they have all been refused the codes take turns, least recently refused first, so the account always hands one back and they get the same honest error until one works, they replace them, or they sign out. It is also how a topped-up code returns by itself, and the app takes one turn per press — §8 |
+| A subscription ends — what happens to its code? | It stops being one of their codes on the next read. We ended it and we know when, so nothing waits for a refusal; their devices fall through to whatever else they hold, or are told they have nothing. Cancelling is not ending: the period already paid for is theirs — §8 |
+| A PAYING person's code is refused — do we give them another? | No. They are paid up and the credential we provisioned does not work, so support fixes it at the source. Substituting another code they hold would spend a code they were saving and hide our own fault. The app says the device could not be given access, never that their access ended — §8 |
 | What happens after that refusal? | Repair first; if nothing succeeds, retain the code and offer Retry/Restore, Change code where supported, and Remove access code where removable. There is no separate free-edition choice — §8 |
 | Can restarting revive a refused typed code above a working account code? | No. The refused mark is persisted with that code and participates in precedence until a retry permitted by the refusal flow succeeds — §8 |
 | They buy premium after a refusal — show the old error? | No. Resolve the changed account first and try the subscription or repair purchase. Success returns directly to premium; the refused import stays stored — §8 |

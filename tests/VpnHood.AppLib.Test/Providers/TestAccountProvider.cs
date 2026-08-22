@@ -60,26 +60,43 @@ internal class TestAccountProvider : IAccountProvider
 
         var account = Account ?? throw new InvalidOperationException("There is no account to upload to.");
         UploadedAccessCode = accessCode;
+        // typing a code is saying "use this", so it is also the whole of Retry: writing a code puts
+        // it back in the ranking (keyring plan §4)
+        if (accessCode != null)
+            RejectedCodes.Remove(accessCode);
         RankAccessCode(account);
         return Task.CompletedTask;
     }
 
-    public List<(string AccessCode, DateTime ExpirationTime)> ReportedExpirations { get; } = [];
+    /// <summary>The codes this account has had refused, as the portal keeps them: per account, and
+    /// covering every entry holding that string, because identical codes are the same credential.</summary>
+    public HashSet<string> RejectedCodes { get; } = [];
 
-    public Task ReportAccessCodeExpiration(string accessCode, DateTime expirationTime,
-        CancellationToken cancellationToken)
+    public List<string> ReportedRejections { get; } = [];
+
+    /// <summary>
+    /// Stands in for the portal's eligibility bit (keyring plan §4). Applied only while the report
+    /// is still about the account's CURRENT code, so a refusal overtaken by a different code does
+    /// nothing at all.
+    /// </summary>
+    public Task ReportAccessCodeRejected(string accessCode, CancellationToken cancellationToken)
     {
-        ReportedExpirations.Add((accessCode, expirationTime));
+        ReportedRejections.Add(accessCode);
 
-        // an expiry the account already knows to be past takes the code out of the ranking, and the
-        // uploaded code is the only one this fake holds
-        if (Account is { } account && UploadedAccessCode == accessCode)
+        if (Account is { } account && account.AccessCodeInfo?.AccessCode == accessCode) {
+            RejectedCodes.Add(accessCode);
             RankAccessCode(account);
+        }
 
         return Task.CompletedTask;
     }
 
-    /// <summary>What the account serves: a store subscription's own code first, else the upload.</summary>
+    /// <summary>
+    /// What the account serves: a store subscription's own code first, else the upload — refused or
+    /// not. A refusal DEMOTES a code behind everything else the account holds, but never takes it
+    /// away (keyring plan §4), and this account holds exactly one, so its turn comes round every
+    /// time. Deterministic, with no dates in it (§2).
+    /// </summary>
     private void RankAccessCode(Account account)
     {
         if (account.Subscription != null)

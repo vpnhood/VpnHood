@@ -199,18 +199,27 @@ public class AccountService
     }
 
     /// <summary>
-    /// Tell the account what a connection revealed about the serving code's clock — the only way the
-    /// backend ever learns one (keyring plan §4). Best-effort by design: the connection already
-    /// happened, and failing to report must never turn into an error the person sees.
+    /// The access server refused a code on this device: tell the account, so the ranking stops
+    /// handing the same dead credential to every device the person owns (keyring plan §4).
+    /// <para>
+    /// Reported only when the refused code IS the one the account is serving. A code typed on this
+    /// device and never uploaded is nobody's business but this device's, and the backend checks the
+    /// same thing again atomically — a report overtaken by a different code is dropped there rather
+    /// than guessed about here.
+    /// </para>
+    /// Best-effort by design: the refusal has already been recorded on the profile and shown to the
+    /// person, and failing to tell the account must never become a second error on top of it.
     /// </summary>
-    public async Task ReportAccessCodeExpiration(string accessCode, DateTime expirationTime,
-        CancellationToken cancellationToken)
+    public async Task TryReportAccessCodeRejected(string refusedAccessCode, CancellationToken cancellationToken)
     {
+        if (_account?.AccessCodeInfo?.AccessCode != refusedAccessCode)
+            return;
+
         try {
-            await _accountProvider.ReportAccessCodeExpiration(accessCode, expirationTime, cancellationToken).Vhc();
+            await _accountProvider.ReportAccessCodeRejected(refusedAccessCode, cancellationToken).Vhc();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogWarning(ex, "Could not report the access code expiration to the account.");
+            VhLogger.Instance.LogWarning(ex, "Could not tell the account that its access code was refused.");
         }
     }
 

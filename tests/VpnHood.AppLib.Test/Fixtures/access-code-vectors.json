@@ -1,0 +1,30 @@
+{
+  "_": [
+    "Shared access-code SHAPE vectors. The portal (IapRepository::normalizeAccessCode) and the apps",
+    "(VpnHood.Core.Toolkit AccessCodeUtils.Validate) must agree exactly: a code one accepts and the",
+    "other refuses is a person who cannot use a code they legitimately hold. They drifted once —",
+    "the portal required all-digits while the apps allow letters after the checksum.",
+    "",
+    "A TWIN OF THIS FILE lives at VpnHood/tests/VpnHood.Test/Fixtures/access-code-vectors.json and",
+    "must stay identical. The repos ship separately, so it is copied rather than referenced; both",
+    "suites read their copy, so a change on one side fails the other's tests."
+  ],
+  "valid": [
+    { "code": "12125638402680515648", "why": "all digits, as the access manager issues them" },
+    { "code": "1212-5638-4026-8051-5648", "why": "separators are decoration and are stripped" },
+    { "code": "  12125638402680515648  ", "why": "surrounding space is trimmed" },
+    { "code": "19ABCDEFGHIJKLMNOPQR", "why": "letters are legal after the checksum — it sums character codes" },
+    { "code": "19abcdefghijklmnopqr", "why": "lowercase too, and case is never folded" },
+    { "code": "19AAAAAAAAAAAAAAAAAA", "why": "a repeated letter still has to check out" }
+  ],
+  "invalid": [
+    { "code": "", "why": "empty" },
+    { "code": "1212563840268051564", "why": "19 characters — version 1 is exactly 20" },
+    { "code": "121256384026805156489", "why": "21 characters" },
+    { "code": "22125638402680515648", "why": "version must be 1" },
+    { "code": "1X125638402680515648", "why": "the checksum position must be a digit" },
+    { "code": "13125638402680515648", "why": "checksum does not match the rest" },
+    { "code": "19ABCDEFGHIJKLMNOPQZ", "why": "one character changed, so the checksum no longer matches" },
+    { "code": "1212563840268051564!", "why": "a separator is stripped, leaving 19 characters" }
+  ]
+}

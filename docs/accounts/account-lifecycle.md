@@ -49,7 +49,7 @@ Section 8 answers these, in order:
 |---|---|---|
 | Who has an account? | Only someone who signed in — to buy, restore, or carry one importable code across devices | §3 |
 | Website buyer signs in — premium? | Yes — on the code marked as theirs, automatically | §8 |
-| Which code, if they own several? | Ranked on every read: the device's own store's subscription first, then any portal code being paid for right now, then the code they typed in themselves, then the other portal codes known to be valid. Deterministic, with no dates in it. Nothing is stored as the selection | §8 |
+| Which code, if they own several? | Ranked on every read: the device's own store's subscription first, then any portal code being paid for right now, then the code they typed in themselves, then the other portal codes known to be valid. Deterministic — no expiry or current-time comparison anywhere; stable purchase order is allowed. Nothing is stored as the selection | §8 |
 | Can they change it in the app? | No list or picker. Where code entry is supported they type one into the profile and the app uploads it; signed-in Remove does not exist, and inventory lives in the client area | §7, §8, §9 |
 | Two subscriptions? | Any number of codes from the portal store (for sharing); one subscription per store — and one at each store can coexist: prevented up front, accepted and surfaced if it happens | §8 |
 | Do we ever refuse a purchase? | Never after the money moved. Prevention happens before the store's payment sheet; whatever arrives paid is provisioned | §8 |
@@ -711,14 +711,18 @@ code that dies leaves nothing to repair (keyring plan §2):
    an unused one-time code is worth more unspent — and then oldest purchase first.
 4. **Then nothing.**
 
-   No dates steer any of this. An expiry the portal can read is *display*: a clock that could retire
-   a code could equally start an unused one early, and only the access server knows. A code leaves
-   the ranking only when the person parks it. A reported refusal DEMOTES instead — below every
-   eligible code, never off the list, and never while that code is the thing being paid for right
-   now, because downgrading a payer to a lesser code would hide our own provisioning fault. That
-   last rule is also what makes renewal recover by itself; and with everything refused, the account
-   holds its ground on the last refused code rather than answering "you hold nothing".
-4. **The account has one upload slot, and it is a stored string.** Uploading takes any well-formed
+   Nothing here compares against the current time or does expiry arithmetic — stable *order*
+   (bought, refused) is allowed, a clock is not. An expiry the portal can read is *display*: a
+   clock that could retire a code could equally start an unused one early, and only the access
+   server knows. A code leaves the ranking only when the person parks it. A reported refusal
+   DEMOTES instead — below every eligible code, never off the list, and never while that code is
+   the thing being paid for right now, because downgrading a payer to a lesser code would hide our
+   own provisioning fault. That last rule is also what makes renewal recover by itself; and with
+   everything refused, the account holds its ground on the last refused code rather than answering
+   "you hold nothing". *Last* is arrival order, never a timestamp: a repeated refusal is written
+   anew rather than updated, so the newest record is the latest refusal on every read and for
+   every device alike (keyring plan §4).
+5. **The account has one upload slot, and it is a stored string.** Uploading takes any well-formed
    code on trust — validity is settled at use time by the access server, never at save time by the
    portal — so there is no *not found* answer and nothing to inspect in the reply. Uploading a
    different code replaces what is there, and every typed code fills the slot — one the account
@@ -791,7 +795,7 @@ Three guardrails make the automatic part safe:
 out, Remove clears this device's own copy; signed in there is no Remove). The confirmation says that the account and its signed-in devices
 will stop using the saved code, while the bearer code itself keeps working for anyone who still has
 it. It never says **Switch to the free version**. What remains after deletion — a subscription,
-another selected purchased code, a free capability, or no access — determines the resulting UI.
+another ranked purchased code, a free capability, or no access — determines the resulting UI.
 
 Removal is one account decision. Other signed-in devices apply it on their next successful account
 refresh and do not ask again. It cannot be instantaneous on an offline device without revoking the

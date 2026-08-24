@@ -44,8 +44,9 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     // Connect app's port so both can coexist on one device.
     public int? WebUiPort { get; set; } = 9580;
 
-    // iOS updates through the App Store, so there is no GitHub update feed here (unlike Android). The
-    // property is required by IRequiredAppConfigs; left null so no in-app updater is wired.
+    // iOS updates through the App Store: AppStoreAppUpdaterProvider (wired in AppDelegate) checks the
+    // released store version, so no GitHub update feed is needed here (unlike Android). Left null; the
+    // ".user" appsettings may supply a feed as a fallback for when the store lookup fails.
     public Uri? UpdateInfoUrl { get; set; }
 
     // Client is "bring your own key": no built-in production server. Debug builds seed the shared sample key

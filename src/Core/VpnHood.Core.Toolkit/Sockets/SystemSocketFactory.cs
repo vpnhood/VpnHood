@@ -9,12 +9,12 @@ public class SystemSocketFactory : ISocketFactory
     public virtual TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {
         var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
-        var sendBufferSize = options?.SendBufferSize;
-        var receiveBufferSize = options?.ReceiveBufferSize;
-        if (sendBufferSize is > 0)
-            tcpClient.SendBufferSize = sendBufferSize.Value;
-        if (receiveBufferSize is > 0)
-            tcpClient.ReceiveBufferSize = receiveBufferSize.Value;
+        if (options?.BufferSize is { } bufferSize) {
+            if (bufferSize.Send > 0)
+                tcpClient.SendBufferSize = bufferSize.Send;
+            if (bufferSize.Receive > 0)
+                tcpClient.ReceiveBufferSize = bufferSize.Receive;
+        }
         return tcpClient;
     }
 

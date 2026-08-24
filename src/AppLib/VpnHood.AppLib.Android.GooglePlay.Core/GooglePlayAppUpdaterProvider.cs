@@ -50,16 +50,17 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             //    return false;
             //}
 
-            // Show Google Play update dialog
+            // Show Google Play update dialog. Start the flow on the UI thread, then await the Play task
+            // here so completion, cancellation and failures flow back to this method (an async lambda
+            // would run as async-void: unawaited and crashing the UI thread on error).
             VhLogger.Instance.LogDebug("Google Play update is available, starting update flow...");
-            await AndroidUtils.RunOnUiThread(appUiContext.Activity, async () => {
-                // flexible update requires much more handling 
-                var updateFlowPlayTask = appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
-                    AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build());
+            // flexible update requires much more handling
+            var updateFlowPlayTask = await AndroidUtils.RunOnUiThread(appUiContext.Activity, () =>
+                appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
+                    AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build())).ConfigureAwait(false);
 
-                if (updateFlowPlayTask != null)
-                    await updateFlowPlayTask.AsAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
-            });
+            if (updateFlowPlayTask != null)
+                await updateFlowPlayTask.AsAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
 
             return true;
         }

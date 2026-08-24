@@ -1,3 +1,4 @@
+using VpnHood.Core.Toolkit.Net;
 using System.Net;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;

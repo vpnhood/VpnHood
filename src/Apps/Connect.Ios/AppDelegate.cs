@@ -1,3 +1,4 @@
+using VpnHood.Core.Toolkit.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
@@ -6,8 +7,8 @@ using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Ios.AppStore;
 using VpnHood.AppLib.Ios.Common;
 using VpnHood.AppLib.Portal;
+using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Devices.Ios;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Ios;
@@ -126,6 +127,15 @@ public class AppDelegate : UIApplicationDelegate
             // "+CONN/-CONN" and [VHQUIC] +CONN/-CONN/brake lines (EventIds "TcpStack"/"Quic") plus ext-mem.log.
             LogServiceOptions = new LogServiceOptions {
                 MinLogLevel = LogLevel.Information
+            },
+            // Update check via the App Store (parity with Connect.Android.Google's Google Play provider):
+            // the provider looks up the released store version by bundle id and opens the App Store page
+            // when an update is due. While Connect iOS is TestFlight-only the lookup finds no listing and
+            // the check is a no-op; it starts working with the first App Store release. UpdateInfoUrl is
+            // a fallback feed and stays null unless the ".user" appsettings supply one (see AppConfigs).
+            UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+                UpdaterProvider = new AppStoreAppUpdaterProvider()
             }
         };
     }

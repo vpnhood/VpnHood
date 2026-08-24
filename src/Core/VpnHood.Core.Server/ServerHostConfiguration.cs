@@ -1,6 +1,6 @@
 ﻿using System.Net;
+using VpnHood.Core.Toolkit.Net;
 using System.Security.Cryptography.X509Certificates;
-using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.Core.Server;
 

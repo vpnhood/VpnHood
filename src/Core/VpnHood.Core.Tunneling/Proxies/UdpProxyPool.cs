@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Net;

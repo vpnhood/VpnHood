@@ -112,8 +112,8 @@ public class AppUpdaterService : IDisposable
 
         try {
             // check by provider
-            if (await TryUpdateByProvider(force, cancellationToken) ||
-                await TryUpdateByPublishInfoUrl(cancellationToken)) {
+            if (await TryUpdateByProvider(force, cancellationToken).Vhc() ||
+                await TryUpdateByPublishInfoUrl(cancellationToken).Vhc()) {
                 Data.CheckedTime = DateTime.Now;
             }
         }
@@ -137,9 +137,9 @@ public class AppUpdaterService : IDisposable
             // update available time if not set
             Data.UpdaterAvailableSince ??= DateTime.Now;
 
-            // check if the update is available for the given delay
-            if (!force && !IsInPostponeTime &&
-                DateTime.Now - Data.UpdaterAvailableSince < _updateOptions.PromptDelay)
+            // wait while the user's postpone is active or the auto-updater has not had its chance yet
+            if (!force && (IsInPostponeTime ||
+                           DateTime.Now - Data.UpdaterAvailableSince < _updateOptions.PromptDelay))
                 return true; // handled
 
             // update available, try to update

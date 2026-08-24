@@ -1,11 +1,11 @@
 ﻿using VpnHood.AppLib.Abstractions;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 

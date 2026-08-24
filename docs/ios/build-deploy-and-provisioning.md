@@ -55,6 +55,36 @@ xcrun devicectl device install app     --device $DEVICE "$APP"
 xcrun devicectl device process launch  --device $DEVICE com.vpnhood.client.ios
 ```
 
+## Run on a Mac (Apple silicon) — no iPhone needed
+The stock `ios-arm64` Release build runs natively on an Apple-silicon Mac ("iPad app on Mac") — same
+binary, same NE appex (macOS supports packet-tunnel **app** extensions only via this route; a native
+Mac app would need a system extension). Verified working 2026-08-24 (M2 Pro, Client app). One-time setup:
+1. Register the Mac as a **macOS** device in the portal — its **Provisioning UDID** is in
+   About This Mac → System Report → Hardware.
+2. Add the Mac to **both** dev profiles (App + Extension): Profiles → Edit → tick the Mac → Save →
+   Download (profiles are never retrofitted — regenerating is required; **don't rename**, renames mint a
+   new identity). Install the downloads to `~/Library/MobileDevice/Provisioning Profiles/<UUID>.mobileprovision`
+   and delete the stale same-name copies so the build can't pick an old one.
+
+Then build exactly as above (no `_DeviceName` needed). macOS refuses to launch a raw iOS `.app`
+(“incorrect executable format”) — it must sit in the wrapper bundle Xcode/the App Store normally create:
+```bash
+APP=src/Apps/Client.Ios/bin/Release/net11.0-ios/ios-arm64/VpnHood.App.Client.Ios.app
+WRAP=".working/mac-run/VpnHood Client.app"
+rm -rf .working/mac-run && mkdir -p "$WRAP/Wrapper"
+cp -R "$APP" "$WRAP/Wrapper/"
+ln -s "Wrapper/VpnHood.App.Client.Ios.app" "$WRAP/WrappedBundle"
+open "$WRAP"
+```
+- Verify first with the "Diagnose a stale profile" commands below — both `embedded.mobileprovision`
+  files must list the Mac's provisioning UDID or the launch is refused.
+- The VPN approval prompt appears in **System Settings → VPN**; extension logs are readable live in
+  Console.app (no container-pull needed).
+- macOS has no ~52 MB jetsam ceiling — a build that runs here can still die on device; keep tuning
+  against the iOS limit.
+- App Store availability on Mac is a separate, server-side switch (App Store Connect → Pricing and
+  Availability → Apple silicon Mac availability); nothing in the build changes for it.
+
 ## Streaming logs
 `devicectl device` has **no `syslog`** subcommand. The **App** uses a console logger (readable stdout) — attach with `--console`:
 ```bash

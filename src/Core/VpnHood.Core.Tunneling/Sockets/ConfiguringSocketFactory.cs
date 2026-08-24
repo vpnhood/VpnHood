@@ -1,6 +1,6 @@
+using VpnHood.Core.Toolkit.Net;
 using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
@@ -21,10 +21,9 @@ public class ConfiguringSocketFactory(ISocketFactory inner) : ISocketFactory
 
     public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {
-        // Per-call values win independently; omitted values inherit the configured factory defaults.
+        // A per-call buffer size wins as a whole pair; otherwise the configured factory default applies.
         var effectiveOptions = new TcpClientOptions {
-            SendBufferSize = options?.SendBufferSize ?? TcpKernelBufferSize?.Send,
-            ReceiveBufferSize = options?.ReceiveBufferSize ?? TcpKernelBufferSize?.Receive
+            BufferSize = options?.BufferSize ?? TcpKernelBufferSize
         };
         var tcpClient = inner.CreateTcpClient(ipEndPoint, effectiveOptions);
 

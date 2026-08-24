@@ -1,9 +1,10 @@
+using VpnHood.Core.Toolkit.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Ios.Common;
 using VpnHood.AppLib.Services.Ads;
+using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Devices.Ios;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Client.Ios;
@@ -125,6 +126,14 @@ public class AppDelegate : UIApplicationDelegate
             },
             AdOptions = new AppAdOptions {
                 PreloadAd = false
+            },
+            // Update check via the App Store (parity with Client.Android.Google's Google Play provider):
+            // the provider looks up the released store version by bundle id and opens the App Store page
+            // when an update is due. UpdateInfoUrl is a fallback feed and stays null unless the embedded
+            // ".user" appsettings supply one (see AppConfigs).
+            UpdaterOptions = new AppUpdaterOptions {
+                UpdateInfoUrl = appConfigs.UpdateInfoUrl,
+                UpdaterProvider = new AppStoreAppUpdaterProvider()
             }
         };
     }

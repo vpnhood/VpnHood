@@ -1,4 +1,4 @@
-using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Sockets;
 

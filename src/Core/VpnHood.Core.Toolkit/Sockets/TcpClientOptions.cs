@@ -1,3 +1,5 @@
+using VpnHood.Core.Toolkit.Net;
+
 namespace VpnHood.Core.Toolkit.Sockets;
 
 /// <summary>
@@ -6,6 +8,8 @@ namespace VpnHood.Core.Toolkit.Sockets;
 /// </summary>
 public sealed class TcpClientOptions
 {
-    public int? SendBufferSize { get; init; }
-    public int? ReceiveBufferSize { get; init; }
+    /// <summary>
+    /// Kernel send/receive buffer sizes, set as a pair: null leaves both at the OS default.
+    /// </summary>
+    public TransferBufferSize? BufferSize { get; init; }
 }

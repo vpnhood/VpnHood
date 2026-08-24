@@ -1,8 +1,8 @@
+using VpnHood.Core.Toolkit.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
-using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
@@ -41,10 +41,7 @@ internal class TcpStreamConnectionFactory(
                 // need a larger BDP window than proxy/control and direct/split-flow sockets. Apply the
                 // override before ConnectAsync because TCP window scaling is negotiated in the handshake.
                 var socketOptions = isTcpPacketChannel && tcpPacketChannelKernelBufferSize != null
-                    ? new TcpClientOptions {
-                        SendBufferSize = tcpPacketChannelKernelBufferSize.Value.Send,
-                        ReceiveBufferSize = tcpPacketChannelKernelBufferSize.Value.Receive
-                    }
+                    ? new TcpClientOptions { BufferSize = tcpPacketChannelKernelBufferSize }
                     : null;
                 tcpClient = socketFactory.CreateTcpClient(tcpEndPoint, socketOptions);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();

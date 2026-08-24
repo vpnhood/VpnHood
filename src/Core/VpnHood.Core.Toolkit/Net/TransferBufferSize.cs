@@ -1,5 +1,3 @@
-﻿namespace VpnHood.Core.Common.Messaging;
+namespace VpnHood.Core.Toolkit.Net;
 
 public readonly record struct TransferBufferSize(int Send, int Receive);
-
-

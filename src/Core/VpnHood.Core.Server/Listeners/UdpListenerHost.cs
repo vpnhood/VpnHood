@@ -1,3 +1,4 @@
+using VpnHood.Core.Toolkit.Net;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Messaging;

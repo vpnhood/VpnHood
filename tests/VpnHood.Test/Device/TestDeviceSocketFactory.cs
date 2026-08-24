@@ -1,33 +1,32 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Quic.MsQuic;
 using VpnHood.Core.Toolkit.Sockets;
 
 namespace VpnHood.Test.Device;
 
-public class TestDeviceSocketFactory(TestDevice testDevice) : ISocketFactory
+public class TestDeviceSocketFactory(TestDevice testDevice) : MsQuicSocketFactory
 {
-    private readonly ISocketFactory _quicFactory = new MsQuicSocketFactory();
-
-    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
+    public override TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {
-        var tcpClient = new TcpClient(ipEndPoint.AddressFamily);
-        if (testDevice.VpnService?.CurrentVpnAdapter?.CanProtectSocket == true)
-            testDevice.VpnService?.CurrentVpnAdapter.ProtectSocket(tcpClient.Client);
-
+        var tcpClient = base.CreateTcpClient(ipEndPoint, options);
+        ProtectSocket(tcpClient.Client);
         return tcpClient;
     }
 
-    public UdpClient CreateUdpClient(AddressFamily addressFamily)
+    public override UdpClient CreateUdpClient(AddressFamily addressFamily)
     {
-        var udpClient = new UdpClient(addressFamily);
-        if (testDevice.VpnService?.CurrentVpnAdapter?.CanProtectSocket == true)
-            testDevice.VpnService?.CurrentVpnAdapter.ProtectSocket(udpClient.Client);
-
+        var udpClient = base.CreateUdpClient(addressFamily);
+        ProtectSocket(udpClient.Client);
         return udpClient;
     }
 
-    public bool IsQuicSupported => _quicFactory.IsQuicSupported;
-    public IQuicClient CreateQuicClient() => _quicFactory.CreateQuicClient();
+    // The base returns a raw unprotected socket; route through CreateUdpClient so it gets protected.
+    public override Socket CreateUdpSocket(AddressFamily addressFamily) => CreateUdpClient(addressFamily).Client;
+
+    private void ProtectSocket(Socket socket)
+    {
+        if (testDevice.VpnService?.CurrentVpnAdapter?.CanProtectSocket == true)
+            testDevice.VpnService?.CurrentVpnAdapter.ProtectSocket(socket);
+    }
 }

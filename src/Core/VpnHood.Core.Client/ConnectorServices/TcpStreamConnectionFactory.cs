@@ -2,12 +2,13 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using Microsoft.Extensions.Logging;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Proxies.Management.Abstractions;
-using VpnHood.Core.Tunneling;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
+using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
-using VpnHood.Core.Toolkit.Extensions;
 
 namespace VpnHood.Core.Client.ConnectorServices;
 
@@ -15,11 +16,12 @@ internal class TcpStreamConnectionFactory(
     ISocketFactory socketFactory,
     IProxyConnector? proxyConnector,
     VpnEndPoint vpnEndPoint,
-    RemoteCertificateValidationCallback certificateValidationCallback)
+    RemoteCertificateValidationCallback certificateValidationCallback,
+    TransferBufferSize? tcpPacketChannelKernelBufferSize)
     : IDisposable
 {
-    public async Task<IStreamConnection> CreateConnection(string connectionId, Action? onConnectAttempt,
-        CancellationToken cancellationToken)
+    public async Task<IStreamConnection> CreateConnection(string connectionId, bool isTcpPacketChannel,
+        Action? onConnectAttempt, CancellationToken cancellationToken)
     {
         var tcpEndPoint = vpnEndPoint.TcpEndPoint;
 
@@ -29,10 +31,22 @@ internal class TcpStreamConnectionFactory(
                 "Establishing a new TCP to the Server... EndPoint: {EndPoint}", VhLogger.Format(tcpEndPoint));
 
             if (proxyConnector is { IsEnabled: true })
+                // The proxy connector creates the socket internally, so the packet-channel kernel-buffer
+                // override cannot reach it; proxied packet channels keep the factory-default buffer and
+                // whatever throughput ceiling comes with it.
                 tcpClient = await proxyConnector
                     .ConnectAsync(socketFactory, tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
             else {
-                tcpClient = socketFactory.CreateTcpClient(tcpEndPoint);
+                // Packet mode multiplexes every inner TCP flow over this one outer connection, so it can
+                // need a larger BDP window than proxy/control and direct/split-flow sockets. Apply the
+                // override before ConnectAsync because TCP window scaling is negotiated in the handshake.
+                var socketOptions = isTcpPacketChannel && tcpPacketChannelKernelBufferSize != null
+                    ? new TcpClientOptions {
+                        SendBufferSize = tcpPacketChannelKernelBufferSize.Value.Send,
+                        ReceiveBufferSize = tcpPacketChannelKernelBufferSize.Value.Receive
+                    }
+                    : null;
+                tcpClient = socketFactory.CreateTcpClient(tcpEndPoint, socketOptions);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();
             }
 

@@ -437,10 +437,9 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
                 : TimeSpan.FromSeconds(new Random().Next((int)Config.MinPacketChannelLifespan.TotalSeconds,
                     (int)Config.MaxPacketChannelLifespan.TotalSeconds));
 
-            // PacketChannel should not be reused, otherwise its timespan will be meaningless
-            if (lifespan != null) {
-                requestResult.StreamConnection.PreventReuse();
-            }
+            // Packet channels have transport-specific socket sizing and must never return to the
+            // generic proxy/control pool. This also keeps a finite channel lifespan meaningful.
+            requestResult.StreamConnection.PreventReuse();
 
             // add the new channel
             var channel = new StreamPacketChannel(new StreamPacketChannelOptions {

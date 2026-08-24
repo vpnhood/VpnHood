@@ -8,9 +8,9 @@ namespace VpnHood.Core.Client;
 
 public class AdapterSocketFactory(ISocketFactory socketFactory, IVpnAdapter vpnAdapter) : ISocketFactory
 {
-    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
+    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {
-        var tcpClient = socketFactory.CreateTcpClient(ipEndPoint);
+        var tcpClient = socketFactory.CreateTcpClient(ipEndPoint, options);
         vpnAdapter.ProtectSocket(tcpClient.Client, ipEndPoint.Address);
         return tcpClient;
     }

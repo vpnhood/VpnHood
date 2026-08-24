@@ -78,7 +78,9 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
             requestEx.PostBuffer.Span.CopyTo(payload.AsSpan(2 + requestBuffer.Length)); // post buffer
 
             // ReSharper disable once AccessToDisposedClosure
-            var ret = await SendRequest<T>(payload, request.RequestId, OnAttempt, requestCts.Token).Vhc();
+            var isTcpPacketChannel = request.RequestCode == (byte)RequestCode.TcpPacketChannel;
+            var ret = await SendRequest<T>(payload, request.RequestId, isTcpPacketChannel,
+                OnAttempt, requestCts.Token).Vhc();
 
             // log the response
             VhLogger.Instance.LogDebug(eventId, "Received a response... ErrorCode: {ErrorCode}.",
@@ -94,11 +96,13 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
     }
 
     private async Task<ConnectorRequestResult<T>> SendRequest<T>(ReadOnlyMemory<byte> request, string requestId,
-        Action onAttempt, CancellationToken cancellationToken)
+        bool isTcpPacketChannel, Action onAttempt, CancellationToken cancellationToken)
         where T : SessionResponse
     {
-        // try reuse
-        var reusableConnection = ConnectorService.GetFreeConnection();
+        // A packet channel must be created with its packet-channel kernel buffer before the TCP
+        // handshake. Never promote a pooled proxy/control connection whose window was negotiated with
+        // the general socket setting.
+        var reusableConnection = isTcpPacketChannel ? null : ConnectorService.GetFreeConnection();
         if (reusableConnection != null) {
             try {
                 VhLogger.Instance.LogDebug(GeneralEventId.Stream,
@@ -131,8 +135,8 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
         }
 
         // create a new connection
-        var connection = await ConnectorService.GetConnectionToServer(requestId + ":tunnel", request.Length,
-            onAttempt, cancellationToken).Vhc();
+        var connection = await ConnectorService.GetConnectionToServer(
+            requestId + ":tunnel", request.Length, isTcpPacketChannel, onAttempt, cancellationToken).Vhc();
 
         // send request
         try {

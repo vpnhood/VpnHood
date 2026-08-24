@@ -74,7 +74,8 @@ internal class ConnectorService : IDisposable
             options.SocketFactory,
             options.ProxyConnector,
             options.VpnEndPoint,
-            UserCertificateValidationCallback);
+            UserCertificateValidationCallback,
+            options.TcpPacketChannelKernelBufferSize);
 
         _quicConnectionFactory = options.SocketFactory.IsQuicSupported
             ? new QuicStreamConnectionFactory(
@@ -223,7 +224,7 @@ internal class ConnectorService : IDisposable
     private const double ConnectMemoryLimitMb = 41.0;
 
     public async Task<IStreamConnection> GetConnectionToServer(string streamId, int contentLength,
-        Action? onConnectAttempt, CancellationToken cancellationToken)
+        bool isTcpPacketChannel, Action? onConnectAttempt, CancellationToken cancellationToken)
     {
         // Create raw stream connection from appropriate factory
         if (UseQuic && _quicConnectionFactory == null)
@@ -236,7 +237,8 @@ internal class ConnectorService : IDisposable
 
             var rawConnection = UseQuic
                 ? await _quicConnectionFactory!.CreateConnection(streamId, cancellationToken).Vhc()
-                : await _tcpConnectionFactory.CreateConnection(streamId, onConnectAttempt, cancellationToken).Vhc();
+                : await _tcpConnectionFactory.CreateConnection(
+                    streamId, isTcpPacketChannel, onConnectAttempt, cancellationToken).Vhc();
 
             try {
                 // Apply HTTP framing on top of the raw connection

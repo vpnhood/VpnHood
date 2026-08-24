@@ -1,3 +1,4 @@
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.Sockets;
 
@@ -10,4 +11,5 @@ internal class ConnectorServiceOptions
     public required ISocketFactory SocketFactory { get; init; }
     public required TimeSpan RequestTimeout { get; init; }
     public required bool AllowChannelReuse { get; init; }
+    public TransferBufferSize? TcpPacketChannelKernelBufferSize { get; init; }
 }

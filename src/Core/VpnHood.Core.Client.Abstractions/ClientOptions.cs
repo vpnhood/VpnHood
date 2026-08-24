@@ -100,6 +100,12 @@ public class ClientOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
 
+    // Optional kernel buffer used only by TCP connections to the VPN server. This lets
+    // memory-constrained clients keep direct/split-flow sockets small without throttling the
+    // packet channel, where one outer TCP connection carries all tunneled flows.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public TransferBufferSize? TcpPacketChannelKernelBufferSize { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public EndPointStrategy EndPointStrategy { get; set; }
 

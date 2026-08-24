@@ -176,7 +176,9 @@ GlobalReceiveBudget − totalPipeBuffered)`; `UpdateAdvertisedWindow()` tracks `
 `OnAppConsumed` sends a window-update when `(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`.
 
 **Host** — `src/Apps/Client.Ios/AppDelegate.cs`: `MaxPacketChannelCount=1`, `PacketChannelBufferSize=16 KB`,
-`UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude socket buffers).
+`UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude
+socket buffers), and `TcpPacketChannelKernelBufferSize=256 KB` (the single outer TCP packet channel needs a larger
+BDP window; using the shared 64 KB cap limited TCP packet mode to roughly 10–15 Mbps at typical WAN RTTs).
 TFM `net11.0-ios` on App + Extension + the 3 iOS core libs (Devices.Ios, IosTun, AppLib.Ios.Common).
 
 ---

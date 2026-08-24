@@ -101,7 +101,8 @@ internal class ClientSessionBuilder(
                     SocketFactory = socketFactory,
                     VpnEndPoint = vpnEndPoint,
                     RequestTimeout = config.TcpConnectTimeout,
-                    AllowChannelReuse = false
+                    AllowChannelReuse = false,
+                    TcpPacketChannelKernelBufferSize = config.TcpPacketChannelKernelBufferSize
                 });
             requestSender = new RequestSender(connectorService);
 

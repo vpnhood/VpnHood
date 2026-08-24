@@ -8,9 +8,9 @@ namespace VpnHood.Core.Tunneling.Sockets;
 
 public class BindingSocketFactory(ISocketFactory socketFactory) : ISocketFactory
 {
-    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
+    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {
-        var client = socketFactory.CreateTcpClient(ipEndPoint);
+        var client = socketFactory.CreateTcpClient(ipEndPoint, options);
         if (client.Client is null)
             throw new Exception("TcpClient socket is null.");
 

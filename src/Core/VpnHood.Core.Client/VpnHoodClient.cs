@@ -117,6 +117,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             UserReview = options.UserReview,
             StreamProxyBufferSize = options.StreamProxyBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize,
             TcpKernelBufferSize = options.TcpKernelBufferSize,
+            TcpPacketChannelKernelBufferSize = options.TcpPacketChannelKernelBufferSize,
             UdpProxyBufferSize = options.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
             MaxUdpClientCount = options.MaxUdpClientCount ?? TunnelDefaults.MaxUdpClientCount,
             MaxUdpDnsClientCount = options.MaxUdpDnsClientCount ?? TunnelDefaults.MaxUdpDnsClientCount,

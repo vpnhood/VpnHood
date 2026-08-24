@@ -116,6 +116,10 @@ public class AppDelegate : UIApplicationDelegate
             // worst case to ~5 MB while still allowing ~25 Mbps per flow at 20 ms RTT (in-country hosts
             // are low-RTT). Desktop/Android are unaffected — this is iOS-only config.
             TcpKernelBufferSize = new TransferBufferSize(64 * 1024, 64 * 1024),
+            // Packet mode multiplexes every inner TCP flow over one outer TCP connection on iOS.
+            // Keep direct/split-flow sockets at 64 KB, but give the single server tunnel socket enough
+            // BDP window to avoid the observed 10-15 Mbps TCP-mode ceiling.
+            TcpPacketChannelKernelBufferSize = new TransferBufferSize(256 * 1024, 256 * 1024),
             // Log level: Information in production. To investigate, add the "/log:debug" debug command in
             // the UI (Debug Data 1) — the iOS diagnostics gates are computed from VhLogger.MinLogLevel, so
             // below-Information logging auto-enables them in the extension: vpn-ext.log carries the TcpStack

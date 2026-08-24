@@ -19,23 +19,18 @@ public class ConfiguringSocketFactory(ISocketFactory inner) : ISocketFactory
     // Settable so the size can be adjusted at runtime (e.g. server reconfiguration).
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
 
-    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint)
+    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {
-        return CreateTcpClient(ipEndPoint, tcpKernelBufferSize: null);
-    }
+        // Per-call values win independently; omitted values inherit the configured factory defaults.
+        var effectiveOptions = new TcpClientOptions {
+            SendBufferSize = options?.SendBufferSize ?? TcpKernelBufferSize?.Send,
+            ReceiveBufferSize = options?.ReceiveBufferSize ?? TcpKernelBufferSize?.Receive
+        };
+        var tcpClient = inner.CreateTcpClient(ipEndPoint, effectiveOptions);
 
-    // Per-call buffer size wins; when null the class-level TcpKernelBufferSize is used.
-    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TransferBufferSize? tcpKernelBufferSize)
-    {
-        var tcpClient = inner.CreateTcpClient(ipEndPoint);
-
-        // Apply keep-alive / no-delay and the configured kernel socket buffer sizes. Null buffer leaves
-        // the OS defaults/auto-tuning untouched; memory-constrained hosts can set small values to bound
-        // the per-connection kernel memory charged to the process.
-        var bufferSize = tcpKernelBufferSize ?? TcpKernelBufferSize;
+        // Buffer settings were applied by the inner factory before returning the socket. Apply the
+        // remaining common behavior here without overwriting those effective values.
         VhUtils.ConfigTcpClient(tcpClient,
-            sendBufferSize: bufferSize?.Send,
-            receiveBufferSize: bufferSize?.Receive,
             keepAlive: KeepAlive ? true : null,
             noDelay: NoDelay);
 

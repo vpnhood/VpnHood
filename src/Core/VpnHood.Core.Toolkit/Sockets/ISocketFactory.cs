@@ -6,7 +6,7 @@ namespace VpnHood.Core.Toolkit.Sockets;
 
 public interface ISocketFactory
 {
-    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint);
+    public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null);
     public UdpClient CreateUdpClient(AddressFamily addressFamily);
 
     // Raw UDP socket for workers that manage their own receive buffer: UdpClient pins a fixed 64 KB

@@ -80,14 +80,22 @@ private func mapProduct(_ product: Product) async throws -> [String: Any] {
 
     var item: [String: Any] = [
         "id": product.id,
-        "price": NSDecimalNumber(decimal: product.price).doubleValue,
-        "currentPrice": NSDecimalNumber(decimal: currentPrice).doubleValue,
+        "price": decimalToDouble(product.price),
+        "currentPrice": decimalToDouble(currentPrice),
         "periodIso": isoDuration(subscription.subscriptionPeriod),
         "currencyCode": product.priceFormatStyle.currencyCode,
         "currencySymbol": product.priceFormatStyle.locale.currencySymbol ?? product.priceFormatStyle.currencyCode
     ]
     if let trialPeriodIso { item["trialPeriodIso"] = trialPeriodIso }
     return item
+}
+
+// NSDecimalNumber.doubleValue is lossy (46.99 becomes 46.989999999999995 — it multiplies the
+// mantissa out by powers of ten), and that noise rides the JSON all the way into the price UI.
+// Round-tripping through Decimal's canonical string yields the nearest double, which formats
+// back to the exact store price.
+private func decimalToDouble(_ value: Decimal) -> Double {
+    Double("\(value)") ?? NSDecimalNumber(decimal: value).doubleValue
 }
 
 private func isoDuration(_ period: Product.SubscriptionPeriod) -> String {

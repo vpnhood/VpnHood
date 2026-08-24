@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Personal Claude Code settings (may contain approved local commands); team settings live in .claude/settings.json
 .claude/settings.local.json
+
+# Swift Package Manager derived data (VpnHoodStoreKit facade builds)
+.build/

@@ -115,11 +115,10 @@ code you typed in yourself stays on that device untouched.
 the end of the period already paid for, so no further invoice is generated and nothing you paid for
 is cut short; unpaid invoices are cancelled and your stored payment method is removed.
 
-**Before anything is erased, we send one final email to your address carrying every premium code
-you paid for** — the last message we will ever send there. The confirmation screen itself lists
-nothing; the email is the copy you can still find later. Save it: after deletion we can no longer
-look the codes up for you, and a saved code is the way back that always works, on any platform,
-years later.
+**Save your codes before you delete.** The confirmation screen lists nothing and nothing is
+emailed to you on the way out: after deletion we can no longer look your codes up for you. A copy
+you already hold — the order email that delivered a code you bought, or one saved from the client
+area — is the way back that always works, on any platform, years later.
 
 What deletion does **not** do:
 

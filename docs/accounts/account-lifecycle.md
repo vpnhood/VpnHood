@@ -57,7 +57,7 @@ Section 8 answers these, in order:
 | What does deletion erase? | The person, on every device. Premium granted by the account dies with it | §5 |
 | What does deletion keep? | Their store subscription, the codes they bought on the website, and invoices frozen with the buyer's name | §6 |
 | What blocks deletion? | **Nothing.** Billing is cancelled at the end of its paid period instead | §8 |
-| Coming back? | A new, empty account — the store is asked at sign-in and gives the subscription back by itself; the code we emailed on the way out still works | §7 |
+| Coming back? | A new, empty account — the store is asked at sign-in and gives the subscription back by itself; a code they kept still works | §7 |
 | Blocked where they are, so they cannot sign in? | Connect first on the free or trial path, then sign in through the tunnel. No portal clock removes the applied code; only an access-server refusal starts the ending flow | §8 |
 | Does a refund end a code? | Only if we end it. Revoking is the default; keeping it is a choice | §8 |
 
@@ -216,37 +216,30 @@ Before anything is erased, we tell them what it means (§10). Then, in this orde
 2. **Warn them, without listing anything.** One serious sentence: *any premium code linked to this
    account will be gone, and we will not be able to find it for you again.* No list of codes, no
    count, no expiry dates — see below for why the screen deliberately shows nothing.
-3. **Send one final message to their address, before it is erased.** This is where the codes
-   actually go: every one they paid for — from website purchases *and* the code behind a store
-   subscription — with the same warning, plus a note about any subscription still running. The
-   confirmation screen is seen once and dismissed; an inbox is searchable a year later, which is
-   when they will actually want the code. This is the last legitimate use of that address —
-   confirming an action they just asked for — and it is not a new exposure, because a code bought on
-   our website was delivered by mail in the first place.
-4. **Erase the person.** Sign-in sessions on every device, the sign-in identity, the email address,
+3. **Erase the person.** Sign-in sessions on every device, the sign-in identity, the email address,
    the account itself.
-5. **Cut the account free from its premium code.** The code is kept on our side, but it now belongs
+4. **Cut the account free from its premium code.** The code is kept on our side, but it now belongs
    to nobody.
-6. **Freeze the invoices, then erase the customer.** Each invoice is archived exactly as it was
+5. **Freeze the invoices, then erase the customer.** Each invoice is archived exactly as it was
    issued — buyer's name included — and the customer record and client-area login are then
    overwritten. The person disappears from the live system; the financial documents keep the
    identity the law requires them to carry. See below for why this replaced anonymising them.
-7. **Write the journal entry** — numeric ids and the gateway's agreement reference, no personal data
+6. **Write the journal entry** — numeric ids and the gateway's agreement reference, no personal data
    — so the anonymisation can be re-applied after a backup restore, and so a stray charge can still
    be traced to an agreement someone can cancel.
 
-**Why the mail may carry the codes.** A code carries its own device limit (§2), so handing it back
-gives away nothing beyond what was already bought, and it still expires when the paid period ends.
-It is also the only thing that survives the erasure *usefully*: everything else we could keep to
-help them later would be a record of a person we just promised to forget.
-
-**Why the screen shows none of them.** Three reasons, all pointing the same way. A list on a screen
-is read once under pressure and then lost, while an inbox is searchable years later — so the screen
-is not the copy that would save anyone. Listing codes means the app must ask what the account holds,
-which drags the whole inventory question into a client that has no other use for it (§8). And on a
-platform where an app may not unlock anything with a code (§9), a screen full of codes is the one
-surface a reviewer will read as exactly that. **The screen warns; the mail delivers.** The warning
-must therefore be strong enough to stand alone, and it must not promise a recovery we cannot make.
+**Why the screen shows none of them, and nothing is sent.** A list on a screen is read once under
+pressure and then lost, so it is not a copy that would save anyone. Listing codes means the app must
+ask what the account holds, which drags the whole inventory question into a client that has no other
+use for it (§8). And on a platform where an app may not unlock anything with a code (§9), a screen
+full of codes is the one surface a reviewer will read as exactly that. There is no farewell mail
+either — deletion forfeits the codes, plainly warned, the same pattern the rest of our industry
+follows. Sending one would mean deciding, at deletion time, which codes are still live — a question
+the deletion flow has no business answering — and mailing credentials on the way out is its own
+exposure. What survives without our help already covers the honest cases: a website purchase was
+delivered to the buyer's inbox when it was bought, a store subscription comes back by asking the
+store (§7), and a code in someone else's hands keeps working regardless. **The warning must
+therefore be strong enough to stand alone, and it must not promise a recovery we cannot make.**
 
 ### Why invoices keep the buyer's name
 
@@ -336,7 +329,7 @@ Two consequences worth stating plainly:
 
 - **Expiry has to be suspendable per record**, not only globally. A hold that can only be honoured
   by stopping every rotation everywhere is one nobody will use.
-- **The hold outlives the account.** It is the one thing that may still exist after step 4 has
+- **The hold outlives the account.** It is the one thing that may still exist after step 3 has
   erased the person, and the only reason it is not a contradiction is that a held log entry no
   longer resolves to anyone — the identity that would have made it personal is already gone.
 
@@ -355,8 +348,8 @@ simply never finds out; it holds a credential our servers no longer associate wi
 **That is not a leak, for two reasons.** A code does nothing while it sits on a device — it only has
 an effect at the moment of connecting, and connecting *is* the check. So there is no window in which
 holding a stale code is worth anything: the moment it is used, the server decides. And a device that
-does keep working is in exactly the position of someone who kept the code we mailed them (step 3
-above) and used it again. What would once have looked like a gap is the behaviour we chose.
+does keep working is in exactly the position of someone who kept the code from the mail that
+delivered it at purchase and used it again. What would once have looked like a gap is the behaviour we chose.
 
 **So one rule carries all of this, and it is the one in §2: nothing may ever be issued without an
 expiry.** Every other protection here is a convenience. That one is not, and it is why it is written
@@ -379,9 +372,10 @@ connect.
   keep financial records, and a financial record has to say who bought. They are frozen as issued and
   locked out of ordinary use — see §5. This is disclosed, with the retention period, before anyone
   confirms a deletion.
-- **It does not take back the codes they paid for.** They were mailed them on the way out (§5), and
-  those codes run to the end of the period they were bought for. (They do leave the person's own
-  signed-in devices with the account — re-entering the mailed code is what brings one back; §8.)
+- **It does not take back the codes they paid for.** Those codes run to the end of the period they
+  were bought for, and the copy a website buyer got in their inbox at purchase stays theirs. (They
+  do leave the person's own signed-in devices with the account — re-entering a kept code is what
+  brings one back; §8.)
 - **It does not erase everything the same instant.** Connection records already written to our
   server log files run out their own 30 days, and database backups roll over within the same
   period. After that they expire.
@@ -448,7 +442,7 @@ Two limits, both deliberate:
 
 ### The code they kept — the route that needs no account at all
 
-If they kept the code we mailed at deletion (§5, step 3), or were handed one by a friend, they
+If they kept the code from the mail that delivered it at purchase, or were handed one by a friend, they
 **paste it in**. Nothing else is needed: no account, no store, no network round-trip to prove
 anything. The app files it as their own code, exactly as it treats a code from a gift or a
 promotion, and the device limit that came with it still applies. Pasting is local first: the code
@@ -465,8 +459,7 @@ at connect time, not the portal's at save time. There is no *cannot be attached*
 local success never depended on the account save anyway.
 
 This works on a phone that has never seen their account, on a platform they did not buy from, and
-years later. It is the reason step 3 of §5 exists — a person who keeps their code can never be
-locked out by anything we do afterwards.
+years later. A person who keeps their code can never be locked out by anything we do afterwards.
 
 **It is not available in every build.** Typing a code is a capability a build either has or does
 not, and on at least one platform it may not (§9). Where it is missing, the two routes above carry
@@ -779,9 +772,8 @@ Three guardrails make the automatic part safe:
    it leaves with the account: signing out or deleting takes it off the device, exactly like the
    code behind a store subscription. Nothing is confiscated — the code itself keeps working for
    everyone using it, and typing it back in makes it the person's own again in the ordinary way.
-   The farewell mail carries the codes **bought here** (§5); the upload slot is NOT mailed back —
-   the person still has that string wherever it reached them from, which is why the deletion
-   dialog, not the upload, says so. An earlier
+   Nothing is mailed at deletion (§5); the person still has that string wherever it reached them
+   from, which is why the deletion dialog, not the upload, says so. An earlier
    design recorded it as the person's own so it would survive deletion; that put a bought-outright
    code under the app's remove control and let account premium ride into whatever account signed in
    next — both problems end with the flag.
@@ -1010,7 +1002,7 @@ Deletion works normally — there is one account regardless of who billed it. Bu
 more here: we cancel a subscription in **no** store (§8), and the store they must go to is the one
 they bought from, which may not be the platform they are holding.
 
-The code we mail on the way out (§5, step 3) matters more here too. Asking the store at sign-in only
+A code they kept (§7) matters more here too. Asking the store at sign-in only
 works on the platform that sold it; a kept code works anywhere, so for a cross-platform buyer it is
 the route most likely to be available to them — provided their build can take one (§9).
 
@@ -1026,11 +1018,10 @@ directly.
    cancel at the **end of its paid period**, so no renewal invoice is ever generated and the code
    still runs out the time it was bought for. Immediate termination would destroy something they
    paid for, which is the one thing we never do.
-2. **Warn on the screen, mail the codes** (§5, steps 2 and 3). The confirmation says only that any
-   code linked to the account will be gone and we will not be able to find it again; the codes
-   themselves go to their address, with the same warning, before it is erased. Then delete. This is
-   not special treatment for website buyers — a store subscription's code is mailed the same way,
-   for the same reason.
+2. **Warn on the screen** (§5, step 2). The confirmation says that any code linked to the account
+   will be gone and we will not be able to find it again. Then delete. The copy that survives is
+   the one delivery already made: the order mail that carried the code when it was bought, and
+   whatever the person saved from the client area.
 3. **Drop the stored payment method.** Even with nothing scheduling a charge, a card token attached
    to an erased customer must not survive.
 4. **Keep the agreement reference, not the person.** The deletion journal holds the gateway's
@@ -1053,9 +1044,9 @@ directly.
 
 Rule 2 is what makes this fair. The policy is sound — a bearer code is theirs to keep safe, and
 whether they kept it is not our business — but it has to be *said once, at the only moment it
-matters*, and the code itself has to arrive somewhere they can still find it. Without both, every
-case becomes a support request we can never resolve, because the link between the person and the
-code is exactly what deletion destroys.
+matters*, while they can still copy the code from the client area or find the order mail that
+delivered it. Unsaid, every case becomes a support request we can never resolve, because the link
+between the person and the code is exactly what deletion destroys.
 
 **Why nothing needs to block.** Most gateways charge only when WHMCS asks them to, so cancelling the
 billing ends it outright. A gateway that keeps its own schedule can still send one more charge — and
@@ -1067,10 +1058,11 @@ un-cancellable gateway is a tooling gap to close, never a reason to trap someone
 account.** The codes those services delivered were sold outright, and they keep running to the end
 of what was paid for: a friend already using one notices nothing. On the buyer's own devices,
 though, the code was applied *by the account*, so it goes when the account goes — the device that
-deleted drops premium like every other signed-in device (§5, §8). The mailed codes are the way
-back: type one in where the build takes codes and optionally save it to the new account, or import
-it through the client area for a codeless build (§7, §9). We take back what the account applied,
-never what the person bought — and what the person bought is in their inbox.
+deleted drops premium like every other signed-in device (§5, §8). A kept code is the way back:
+type one in where the build takes codes and optionally save it to the new account, or import it
+through the client area for a codeless build (§7, §9). We take back what the account applied,
+never what the person bought — and what the person bought was delivered to their inbox when they
+bought it.
 
 ### They delete while the subscription is between payments
 
@@ -1275,17 +1267,16 @@ say:
 - **This cannot be undone.** The account and personal data are permanently deleted.
 - Every signed-in device is signed out and loses premium.
 - Any premium code linked to the account will be gone — from their own devices too — **and we will
-  not be able to find it for them again**; the farewell mail is the only copy. A code in someone
-  else's hands keeps working for them until it expires.
+  not be able to find it for them again**; whatever copy they already hold is the only copy. A
+  code in someone else's hands keeps working for them until it expires.
 - A subscription bought in the app is **not cancelled by this**. Signing in again brings it back on
   the new account; cancelling it is done in their store's own settings. A subscription whose payment
   has failed is **still open** and can start charging again — said plainly, because it is the case
   they are least likely to expect.
 - Invoices are kept for legal reasons.
 
-**It shows no codes and no counts** (§5) — a promise to forget someone is also a promise to stop
-being able to help them, and the warning above is where that is said. The codes themselves go by mail
-instead, which is where they are still findable a year later.
+**It shows no codes and no counts, and sends nothing** (§5) — a promise to forget someone is also
+a promise to stop being able to help them, and the warning above is where that is said.
 
 **It offers to cancel nothing**, because we do not (§8). A control that silently does nothing
 on the platform the person happens to be holding is worse than one honest sentence.
@@ -1313,7 +1304,7 @@ These came up and are now settled — kept here only so they are not re-opened.
 
 | Question | Answer |
 |---|---|
-| What brings a returning person back to premium? | Signing in — the store is asked automatically, and a website buyer signs in as their website account. The code we mailed them is the third route — §7 |
+| What brings a returning person back to premium? | Signing in — the store is asked automatically, and a website buyer signs in as their website account. A code they kept is the third route — §7 |
 | Can two accounts hold the same code? | Yes, harmlessly — the device limit rides on the code, so there is nothing to fight over — §2, §7 |
 | Could delete-and-recreate farm duplicate services? | No. The same purchase always returns the same code — §2 |
 | Does a refund switch a code off? | Only if someone ends it. Revoking is the default; keeping it is a deliberate goodwill choice — §8 |
@@ -1327,11 +1318,11 @@ These came up and are now settled — kept here only so they are not re-opened.
 | Who chooses which code serves the account? | Nobody — it is ranked on every read: whatever is being paid for right now, then the code they typed in themselves, then the other portal codes known to be valid. Deterministic, no dates. Nothing is stored as the selection, so nothing goes stale — §8 |
 | Why did expiry stop promoting the next code? | Promotion shipped and was reversed (it could spend an unstarted prepaid code), and its replacement — a stored last deliberate choice — was reversed in turn, because a dead choice had to be repaired by hand on every device. The ranking has neither problem — §8 |
 | Does an ordinary subscriber ever manage codes? | No. What they are paying for is ranked first, and there is no prompt at all: typing a code IS choosing to use it — §8 |
-| Does the app show the person their codes? | No inventory crosses to the app. The client area lists purchased services and the one uploaded code; deletion still mails the purchased ones before erasing the account — §5, §8 |
+| Does the app show the person their codes? | No inventory crosses to the app. The client area lists purchased services and the one uploaded code; deletion sends nothing — the warning is the whole story — §5, §8 |
 | Can a premium code be typed into every build? | No. One store forbids unlocking with a code at all, so it is a per-build capability, ANDed with the token's own policy — §9 |
 | Where does someone change which code serves them? | They type a code — into the profile, the one door, signed in or out. Signed in the app uploads it by itself. Which code then serves is the ranking's answer, not theirs — §8, §9 |
 | Can the account's uploaded code be removed in the app? | No. Signed out, Remove clears this device's own copy; signed in there is no Remove at all — the ranking replaces a dead code by itself, and emptying the account's slot is the client area's job — §7, §8 |
-| Does an uploaded code come back in the farewell mail? | No. Only what they bought here is mailed; an uploaded code is still theirs wherever it reached them from, and the deletion dialog says so — §5, §8 |
+| Is anything mailed at deletion? | No. Codes are forfeited with the account, plainly warned; an uploaded code is still theirs wherever it reached them from, and the deletion dialog says so — §5, §8 |
 | Do we refuse a store purchase to an existing website customer? | We prevent it: checkout never opens while the account is served, checked with the server before the store's payment sheet. Nothing is refused after payment — §8 |
 | What if the store places the order anyway? | It is accepted and provisioned — the account holds both, the client area shows both, and a message says where each is cancelled — §8 |
 | Why not refuse and let the store refund? | Only one store refunds an unacknowledged purchase by itself; the other keeps the buyer's money and gives us no way to return it. Prevention costs nobody anything — §8 |

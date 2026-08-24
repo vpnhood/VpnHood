@@ -53,6 +53,10 @@ truth — follow them, and when a new durable convention is agreed, update this 
   can't target it). Don't commit a test `AccessKey` in `AppConfigs.cs` (production defaults to `null`).
 - When asked to build/run/launch an app without naming the product, use the **Client** app
   (`src/Apps/Client.Ios`), not Connect.
+- Updates come from the **App Store only**: wire `AppStoreAppUpdaterProvider`, and keep `UpdateInfoUrl`
+  **null in the iOS config** (`AppConfigs`) rather than dropping it from the wiring — options still read
+  it from config, as on every other platform. That feed describes downloadable packages, so a non-null
+  value makes the SPA offer a direct download — wrong channel on iOS, and an App Review problem.
 
 ## CI/CD & publishing
 - All app **builds** (`.ipa`/AAB/MSI/Linux) and **Fastlane publishing** (Google Play, TestFlight/App Store,

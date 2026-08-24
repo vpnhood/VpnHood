@@ -45,8 +45,9 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public int? WebUiPort { get; set; } = 9580;
 
     // iOS updates through the App Store: AppStoreAppUpdaterProvider (wired in AppDelegate) checks the
-    // released store version, so no GitHub update feed is needed here (unlike Android). Left null; the
-    // ".user" appsettings may supply a feed as a fallback for when the store lookup fails.
+    // released store version, so there is no GitHub update feed here (unlike Android). KEEP THIS NULL on
+    // iOS: the feed describes downloadable packages, so a non-null value makes the SPA offer a direct
+    // download — the wrong install channel here, and an App Review problem.
     public Uri? UpdateInfoUrl { get; set; }
 
     // Client is "bring your own key": no built-in production server. Debug builds seed the shared sample key

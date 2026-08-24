@@ -33,22 +33,24 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
 
             _storeApp = storeApp;
 
-            // CFBundleShortVersionString is the store-facing version, so compare against it rather
-            // than the assembly version
-            var currentVersionString = NSBundle.MainBundle
-                .ObjectForInfoDictionary("CFBundleShortVersionString")?.ToString();
-
-            if (!Version.TryParse(storeApp.Version, out var storeVersion) ||
-                !Version.TryParse(currentVersionString, out var currentVersion)) {
+            // Compare against the assembly version — the same source AppUpdaterService and the UI use.
+            // NOT CFBundleShortVersionString: the .NET iOS SDK injects that from ApplicationDisplayVersion,
+            // which only pub/lib/Publish-IosApp.ps1 sets, so every non-CI build reports the SDK default
+            // "1.0" and would see the live store listing as an endless update.
+            var currentVersion = typeof(VpnHoodApp).Assembly.GetName().Version;
+            if (!Version.TryParse(storeApp.Version, out var storeVersion) || currentVersion == null) {
                 VhLogger.Instance.LogDebug(
                     "App Store update is not available. Could not parse versions. Store: {Store}, Current: {Current}",
-                    storeApp.Version, currentVersionString);
+                    storeApp.Version, currentVersion);
                 return false;
             }
 
             VhLogger.Instance.LogDebug("App Store version: {StoreVersion}, Current version: {CurrentVersion}",
                 storeVersion, currentVersion);
-            return storeVersion > currentVersion;
+
+            // Compare Major.Minor.Build only: the store's marketing version has no revision field, so an
+            // unnormalized compare comes out on the undefined revision (-1) rather than the real numbers.
+            return Normalize(storeVersion) > Normalize(currentVersion);
         }
         catch (Exception ex) {
             // return false to allow the alternative way
@@ -82,6 +84,9 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
             return false;
         }
     }
+
+    private static Version Normalize(Version version) =>
+        new(version.Major, version.Minor, Math.Max(version.Build, 0));
 
     private static async Task<AppStoreAppInfo?> FetchStoreAppInfo(CancellationToken cancellationToken)
     {

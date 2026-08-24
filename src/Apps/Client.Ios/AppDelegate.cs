@@ -129,8 +129,8 @@ public class AppDelegate : UIApplicationDelegate
             },
             // Update check via the App Store (parity with Client.Android.Google's Google Play provider):
             // the provider looks up the released store version by bundle id and opens the App Store page
-            // when an update is due. UpdateInfoUrl is a fallback feed and stays null unless the embedded
-            // ".user" appsettings supply one (see AppConfigs).
+            // when an update is due. UpdateInfoUrl comes from config, which keeps it null on iOS (see
+            // AppConfigs) — the store is the only install channel here.
             UpdaterOptions = new AppUpdaterOptions {
                 UpdateInfoUrl = appConfigs.UpdateInfoUrl,
                 UpdaterProvider = new AppStoreAppUpdaterProvider()

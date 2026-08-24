@@ -1267,8 +1267,10 @@ say:
 - **This cannot be undone.** The account and personal data are permanently deleted.
 - Every signed-in device is signed out and loses premium.
 - Any premium code linked to the account will be gone — from their own devices too — **and we will
-  not be able to find it for them again**; whatever copy they already hold is the only copy. A
-  code in someone else's hands keeps working for them until it expires.
+  not be able to find it for them again**; whatever copy they already hold is the only copy. Say
+  also that deletion **does not cancel a code**: one they have a copy of runs to the end of the
+  time they paid for (§6). Without that sentence the screen reads as though we destroy what they
+  bought, which is the opposite of what step 4 does.
 - A subscription bought in the app is **not cancelled by this**. Signing in again brings it back on
   the new account; cancelling it is done in their store's own settings. A subscription whose payment
   has failed is **still open** and can start charging again — said plainly, because it is the case
@@ -1277,6 +1279,20 @@ say:
 
 **It shows no codes and no counts, and sends nothing** (§5) — a promise to forget someone is also
 a promise to stop being able to help them, and the warning above is where that is said.
+
+**It talks about codes, never about devices.** The distinction is the whole reason the wording is
+hard. *A code* keeps working after deletion — that is true everywhere and worth saying, because it
+is what someone who saved a code needs to know. *A device* is where it goes wrong: everyone reaching
+this screen is signed in, and on a signed-in device a typed code was uploaded to the account slot
+the moment it was entered (§7), so it leaves with the account like any other. A line promising that
+"a code you typed in keeps working" is therefore read as being about *their* phone, where it is
+false. So the screen says the code survives and stays silent on which devices can still use it; the
+per-device detail belongs in the privacy policy, where there is room to name whose device it means.
+
+**It gives no instruction for using a saved code**, even though one still works. Entering a code is
+a per-build capability and at least one store forbids unlocking with one at all (§9) — so a
+confirmation shipped in every build cannot tell anyone to go and type it in. It states the fact and
+stops.
 
 **It offers to cancel nothing**, because we do not (§8). A control that silently does nothing
 on the platform the person happens to be holding is worse than one honest sentence.

@@ -109,7 +109,7 @@ creates a new, empty one. Premium granted by the account ends with it on every d
 code you bought is still yours — it keeps working until the period you paid for ends, and anyone
 you shared it with is unaffected — but a code the account had applied for you leaves your devices
 together with the account: enter it again, or import it into a new account, to keep using it. A
-code you typed in yourself stays on that device untouched.
+code you typed in on a device that is not signed in stays on that device untouched.
 
 **Nothing blocks a deletion.** If you bought services on our website, their billing is cancelled at
 the end of the period already paid for, so no further invoice is generated and nothing you paid for

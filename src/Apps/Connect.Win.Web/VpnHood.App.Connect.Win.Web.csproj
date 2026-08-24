@@ -20,10 +20,6 @@
 
 	<PropertyGroup>
 		<StartupObject></StartupObject>
-		<!-- Anchored to THIS FILE, not to $(SolutionDir): that property is empty whenever the project
-		     is built on its own (dotnet build <csproj>, an IDE single-project build), which silently
-		     embedded nothing and left the app running on whatever in-code defaults happened to exist. -->
-		<VhUserDir Condition="'$(VhUserDir)' == ''">$(MSBuildThisFileDirectory)..\..\..\..\.user</VhUserDir>
 	</PropertyGroup>
 
 	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.

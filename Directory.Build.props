@@ -27,6 +27,17 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!-- The Vh checkout root (this repo's parent), defined ONCE for every project: the private
+         ".user" folder and the sibling repos (VpnHood.Client.WebUI, …) are all found from here,
+         so no csproj ever counts "..\" again and a clone works wherever it lands. Anchored to
+         THIS FILE, never to $(SolutionDir) — that property is empty when a project is built on
+         its own (dotnet build <csproj>, an IDE single-project build), which silently embedded
+         nothing. An environment variable of the same name still overrides either value. -->
+    <VhDir Condition="'$(VhDir)' == ''">$(MSBuildThisFileDirectory)..</VhDir>
+    <VhUserDir Condition="'$(VhUserDir)' == ''">$(VhDir)\.user</VhUserDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <!-- Shared package metadata (identical across every project; only Description stays per-project). -->
     <Company>OmegaHood LLC</Company>
     <Copyright>© OmegaHood LLC. All rights reserved.</Copyright>

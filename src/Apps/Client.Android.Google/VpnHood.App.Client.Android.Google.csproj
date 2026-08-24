@@ -10,6 +10,7 @@
 		<DebugSymbols>True</DebugSymbols>
 	</PropertyGroup>
 
+
 	<PropertyGroup Condition="'$(Configuration)'=='Debug'">
 		<RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
 	</PropertyGroup>
@@ -39,12 +40,12 @@
 	<!-- Optional private app settings (from the external ".user" folder) embedded as resources.
 	     Conditional so a fork without them still builds; AppConfigs reads them at startup. -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json"
+		<EmbeddedResource Include="$(VhUserDir)\VpnHoodClient\appsettings.json"
 			LogicalName="AppSettings.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.json')" />
-		<EmbeddedResource Include="$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json"
+			Condition="Exists('$(VhUserDir)\VpnHoodClient\appsettings.json')" />
+		<EmbeddedResource Include="$(VhUserDir)\VpnHoodClient\appsettings.$(Configuration).json"
 			LogicalName="AppSettings_Environment.json"
-			Condition="Exists('$(SolutionDir)\..\.user\VpnHoodClient\appsettings.$(Configuration).json')" />
+			Condition="Exists('$(VhUserDir)\VpnHoodClient\appsettings.$(Configuration).json')" />
 	</ItemGroup>
 
 	<ItemGroup>

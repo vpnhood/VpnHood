@@ -670,6 +670,15 @@ takes away the only in-app answer to *"that is the wrong code"*, so the client a
 keep, and it belongs in the place where someone who owns several codes is already looking: next to
 their invoices and their services.
 
+**How a store-created account gets into the client area at all.** An account born from a store
+purchase signed in with Google or Apple and never set a website password — yet the client area's
+door is a password form. The path is the ordinary one, not a special mechanism: **the password
+reset, sent to the address on file.** That address always reaches the person, including behind
+Apple's Hide My Email — a relay address is pseudonymous, not anonymous (below): it forwards to
+their real inbox, so the reset lands exactly where any other mail for that account does. Nothing
+new to build and nothing to explain in the app; support answers "use the password reset on the
+website" and it is true for every account we have.
+
 #### Which code the account gets, and whose choice it is
 
 **The ranking answers for the device's own store first — but it is the PORTAL's ranking, not a

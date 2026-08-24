@@ -105,3 +105,65 @@ At [developer.apple.com](https://developer.apple.com) (OmegaHood LLC, team `6KKW
    `~/Library/MobileDevice/Provisioning Profiles/` (named by UUID).
 5. Rebuild and re-verify with the `codesign`/`security cms` commands above (the group must appear in **both** the
    signed binary and the embedded profile).
+
+## Enable in-app purchase (Connect-style apps; white-label/fork checklist)
+Everything a branded app needs so StoreKit purchases reach the account portal (WHMCS `vpnhoodiap`) and
+come back as provisioned subscriptions. Substitute your own bundle id, team and portal host throughout.
+Learned the hard way on 2026-08-23 — the quirks called out below are all real.
+
+### 1. App Store Connect — products
+- Create the auto-renewable subscriptions (one subscription group). The **product id IS the plan+cycle**
+  (`vpnhood_1_month_subscription`, `vpnhood_1_year_subscription`); it must match the portal's catalog
+  mapping (store `appstore` + your bundle id) EXACTLY — the app carries no fallback ids.
+- Each subscription needs a price, at least one localization, and an **App Review screenshot**, or it sits
+  in `MISSING_METADATA` and cannot be sold. `.github/scripts/asc-iap.mjs report` audits all of this.
+
+### 2. App ID capabilities (developer portal)
+- `IN_APP_PURCHASE` is on by default; accounts also need **Sign in with Apple** on the App ID.
+- **Changing capabilities INVALIDATES every existing profile on that App ID** (dev + App Store; extension
+  profiles on the other App ID survive). Regenerate profiles and refresh the CI signing secret
+  (`IOS_PROVISION_APP_BASE64`) afterwards — Apple never retrofits a profile in place.
+- **API-enable quirk:** enabling Sign in with Apple via the ASC API can leave a half-propagated record —
+  everything reads enabled, profiles even mint with the entitlement, but real sign-ins fail with Apple's
+  "Sign Up Not Completed" alert (surfaces as `ASAuthorizationError 1001`). Fix: uncheck + save + re-check
+  the capability in the **portal UI** (then regenerate profiles again). Always verify with a real
+  on-device sign-in before calling it done.
+- Renaming a profile in the portal UI **regenerates it** (new UUID) — re-download and reinstall.
+
+### 3. Portal credentials — use a scoped key
+- Generate an **In-App Purchase key** (App Store Connect → Users and Access → Integrations →
+  In-App Purchase), NOT a full App Store Connect API key: it can only call the App Store Server API
+  (validate transactions / read subscription status), so a portal-server compromise cannot touch
+  certificates, profiles or apps. It is team-wide — Apple has no per-app scoping.
+- Store it on the portal's app row (encrypted) as
+  `{ "issuerId": "…", "keyId": "…", "privateKey": "-----BEGIN PRIVATE KEY-----…" }`.
+- **Unpublished-app quirk (handled in vpnhoodiap ≥ the 2026-08 fix):** for an app that has never been
+  published to the App Store (TestFlight-only), the **production** App Store Server API answers a bare
+  `401` (empty body) even with valid credentials; the sandbox host must be retried on 401 as well as 404.
+
+### 4. Server notifications (no Pub/Sub — Apple posts directly)
+App Store Connect → the app → App Information → **App Store Server Notifications** (V2): set the
+Sandbox and Production URLs to the portal webhook —
+`https://<portal-host>/modules/addons/vpnhoodiap/webhook.php?store=appstore&t=<app row's webhook_token>`.
+Notifications are the freshness channel only (renewals/refunds/grace); purchases complete without them
+via `POST /v1/billing/purchases` + the daily reconciliation.
+
+### 5. Sandbox testing
+- Create a **sandbox tester** (Users and Access → Sandbox). On the device, sign it in under
+  **Settings → Developer → Sandbox Apple Account** (moved from Settings → App Store on modern iOS).
+  Purchases in dev-signed builds then bill that tester automatically — Sign in with Apple, by contrast,
+  always uses the phone's real Apple ID; the two never mix.
+- **Sandbox clocks are compressed:** a 1-month subscription renews every 5 minutes, up to 12 times, then
+  the whole lineage is `expired` (~1 h). A proof validated after that is correctly refused
+  (`purchase_inactive`) — buy again instead of debugging.
+- A stuck tester ("already subscribed", expired lineages) is reset by **clearing its purchase history**
+  (ASC UI, or API `POST /v2/sandboxTestersClearPurchaseHistoryRequest`); the device app then needs an
+  uninstall/reinstall to drop its cached StoreKit state.
+- A brand-new sandbox transaction can briefly answer `Transaction id not found` on the server API —
+  retry the purchase/restore before suspecting configuration.
+
+### 6. The StoreKit facade
+Billing goes through `VpnHoodStoreKit.xcframework` (Swift, `src/AppLib/VpnHood.AppLib.Ios.AppStore/swift/`).
+It is committed so CI needs no Swift toolchain; rebuild with `./build-xcframework.sh` only when
+`StoreKitBridge.swift` changes, and verify the four `vhsk_*` symbols with
+`nm -gU …/VpnHoodStoreKit.framework/VpnHoodStoreKit | grep vhsk`.

@@ -82,6 +82,10 @@ public class AppDelegate : UIApplicationDelegate
             // Loopback port for the in-process SPA web server (the WKWebView loads from here).
             WebUiPort = appConfigs.WebUiPort,
             IsAddAccessKeySupported = false,
+            // Native in-app rating dialog + server-recommended review prompts (parity with
+            // Connect.Android.Google's Google Play review wiring).
+            UserReviewProvider = new AppStoreInAppUserReviewProvider(),
+            AllowRecommendUserReviewByServer = true,
             // AllowImportAccessCode and IsPurchaseUrlSupported stay at their default (false): App Review
             // 3.1.1 forbids unlocking with a license key — a premium code is one by Apple's reading —
             // and 3.1.3 forbids steering a buyer to an outside shop, so this build ships with neither

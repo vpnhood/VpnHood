@@ -4,6 +4,7 @@ using Google.Android.Play.Core.Review.Testing;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
 using VpnHood.Core.Client.Devices.Droid;
+using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Logging;
 
@@ -25,7 +26,13 @@ public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUser
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        await reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo)
+        // Launch presents the Play review dialog, so start it on the UI thread (this method is called
+        // from a web-server request thread) and await the Play task here — same pattern as
+        // GooglePlayAppUpdaterProvider's update flow.
+        var launchReviewPlayTask = await AndroidUtils.RunOnUiThread(appUiContext.Activity, () =>
+            reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo)).ConfigureAwait(false);
+
+        await launchReviewPlayTask
             .AsAsync()
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);

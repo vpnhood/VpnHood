@@ -80,6 +80,16 @@ open "$WRAP"
   files must list the Mac's provisioning UDID or the launch is refused.
 - The VPN approval prompt appears in **System Settings → VPN**; extension logs are readable live in
   Console.app (no container-pull needed).
+- **Dev-signed limit — the packet-tunnel extension will NOT spawn** (verified 2026-08-24): the app
+  runs, the NE config saves, approval works, `StartVpnTunnel` is accepted — then launchd's spawn of
+  the `.appex` is vetoed by AMFI with `-413 No matching profile found` (watch it live:
+  `/usr/bin/log stream --predicate 'process IN {"amfid","neagent"}'` — note `/usr/bin/log`, since
+  zsh shadows `log` with a builtin that silently no-ops). The appex needs its iOS provisioning
+  profile **installed in misagent's store** (`/var/db/MobileIdentityService/Profiles`), which is
+  SIP-protected; only Xcode's deploy step or App Store/TestFlight installs can write it —
+  `profiles install -type=provisioning` rejects iOS profiles (-214) and `devicectl` can't target
+  the local Mac. So a dev-signed Mac run validates UI/billing/SIWA/approval only; test the actual
+  tunnel on macOS with a **TestFlight for Mac** build (store-signed, no dev profiles involved).
 - macOS has no ~52 MB jetsam ceiling — a build that runs here can still die on device; keep tuning
   against the iOS limit.
 - App Store availability on Mac is a separate, server-side switch (App Store Connect → Pricing and

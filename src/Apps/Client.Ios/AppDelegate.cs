@@ -78,6 +78,9 @@ public class AppDelegate : UIApplicationDelegate
             // Loopback port for the in-process SPA web server (the WKWebView loads from here).
             WebUiPort = appConfigs.WebUiPort,
             IsAddAccessKeySupported = true,
+            // Native in-app rating dialog (parity with Client.Android.Google's Google Play provider).
+            // Like Android Client, AllowRecommendUserReviewByServer stays at its default (false).
+            UserReviewProvider = new AppStoreInAppUserReviewProvider(),
             // The WKWebView renders edge-to-edge (fills the whole window incl. the status-bar and
             // home-indicator safe areas). false = "don't let the native side pad to the safe area;
             // instead publish the inset sizes (SystemBarsInfo) so the SPA pads itself" — matching the

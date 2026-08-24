@@ -80,16 +80,24 @@ open "$WRAP"
   files must list the Mac's provisioning UDID or the launch is refused.
 - The VPN approval prompt appears in **System Settings → VPN**; extension logs are readable live in
   Console.app (no container-pull needed).
-- **Dev-signed limit — the packet-tunnel extension will NOT spawn** (verified 2026-08-24): the app
-  runs, the NE config saves, approval works, `StartVpnTunnel` is accepted — then launchd's spawn of
-  the `.appex` is vetoed by AMFI with `-413 No matching profile found` (watch it live:
-  `/usr/bin/log stream --predicate 'process IN {"amfid","neagent"}'` — note `/usr/bin/log`, since
-  zsh shadows `log` with a builtin that silently no-ops). The appex needs its iOS provisioning
-  profile **installed in misagent's store** (`/var/db/MobileIdentityService/Profiles`), which is
-  SIP-protected; only Xcode's deploy step or App Store/TestFlight installs can write it —
-  `profiles install -type=provisioning` rejects iOS profiles (-214) and `devicectl` can't target
-  the local Mac. So a dev-signed Mac run validates UI/billing/SIWA/approval only; test the actual
-  tunnel on macOS with a **TestFlight for Mac** build (store-signed, no dev profiles involved).
+- **One-time unlock per profile generation — the Xcode shim** (proven 2026-08-24, full tunnel
+  Connected on an M2): out of the box the appex will NOT spawn — AMFI vetoes it with
+  `-413 No matching profile found` (watch live: `/usr/bin/log stream --predicate 'process IN
+  {"amfid","neagent"}'` — full path required; zsh shadows `log` with a builtin that silently
+  no-ops). The appex's iOS profile must be in misagent's SIP-protected store
+  (`/var/db/MobileIdentityService/Profiles`); the ONLY user-space writer is **Xcode's
+  run-on-"My Mac (Designed for iPad)" action** (`profiles install -type=provisioning` rejects iOS
+  profiles with -214; `devicectl` can't target the local Mac). Fix: open
+  [`src/Apps/MacShim/Shim.xcodeproj`](../../src/Apps/MacShim/) — a stub app+appex using the real
+  bundle ids, team and dev profiles (see its README, incl. the Client retarget) — select
+  **My Mac (Designed for iPad)**, **⌘R once, then Stop**. Redo after every profile regeneration.
+  After the shim run, clean up or the real app won't launch (`open` fails with -1712):
+  **Stop the shim in Xcode** (its debug session squats on the bundle id; even SIGKILL won't clear
+  it), delete `~/Library/Developer/Xcode/DerivedData/Shim-*`, then point pluginkit back at the real
+  appex: `pluginkit -a "<wrapper>/Wrapper/<app>.app/PlugIns/<ext>.appex"` (verify with
+  `pluginkit -m -v -i <ext-bundle-id>` — the shim's registration wins until swapped).
+- Extension logs on the Mac are plain files — `~/Library/GroupContainersAlias/group.<bundle-id>/
+  vpn-service/vpn.log` (+ `vpn.status`) — no container pull, `tail -f` works.
 - macOS has no ~52 MB jetsam ceiling — a build that runs here can still die on device; keep tuning
   against the iOS limit.
 - App Store availability on Mac is a separate, server-side switch (App Store Connect → Pricing and

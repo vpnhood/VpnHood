@@ -1,0 +1,262 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA00000000000000000001B1 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000001F1 /* App.swift */; };
+		AA00000000000000000002B1 /* PacketTunnelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000002F1 /* PacketTunnelProvider.swift */; };
+		AA00000000000000000003B1 /* ShimExt.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = AA00000000000000000002P1 /* ShimExt.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA00000000000000000004C1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA00000000000000000000P0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA00000000000000000002T0;
+			remoteInfo = ShimExt;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AA00000000000000000005E1 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AA00000000000000000003B1 /* ShimExt.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		AA00000000000000000001F1 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		AA00000000000000000001F2 /* ShimApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShimApp.entitlements; sourceTree = "<group>"; };
+		AA00000000000000000001P1 /* ShimApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShimApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA00000000000000000002F1 /* PacketTunnelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PacketTunnelProvider.swift; sourceTree = "<group>"; };
+		AA00000000000000000002F2 /* ShimExt.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShimExt.entitlements; sourceTree = "<group>"; };
+		AA00000000000000000002F3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA00000000000000000002P1 /* ShimExt.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShimExt.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		AA00000000000000000000G0 = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000001G0 /* ShimApp */,
+				AA00000000000000000002G0 /* ShimExt */,
+				AA00000000000000000003G0 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA00000000000000000001G0 /* ShimApp */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000001F1 /* App.swift */,
+				AA00000000000000000001F2 /* ShimApp.entitlements */,
+			);
+			path = ShimApp;
+			sourceTree = "<group>";
+		};
+		AA00000000000000000002G0 /* ShimExt */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000002F1 /* PacketTunnelProvider.swift */,
+				AA00000000000000000002F2 /* ShimExt.entitlements */,
+				AA00000000000000000002F3 /* Info.plist */,
+			);
+			path = ShimExt;
+			sourceTree = "<group>";
+		};
+		AA00000000000000000003G0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000001P1 /* ShimApp.app */,
+				AA00000000000000000002P1 /* ShimExt.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA00000000000000000001T0 /* ShimApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA00000000000000000001L0 /* Build configuration list for PBXNativeTarget "ShimApp" */;
+			buildPhases = (
+				AA00000000000000000001S1 /* Sources */,
+				AA00000000000000000005E1 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA00000000000000000004D1 /* PBXTargetDependency */,
+			);
+			name = ShimApp;
+			productName = ShimApp;
+			productReference = AA00000000000000000001P1 /* ShimApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AA00000000000000000002T0 /* ShimExt */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA00000000000000000002L0 /* Build configuration list for PBXNativeTarget "ShimExt" */;
+			buildPhases = (
+				AA00000000000000000002S1 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShimExt;
+			productName = ShimExt;
+			productReference = AA00000000000000000002P1 /* ShimExt.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA00000000000000000000P0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = AA00000000000000000000L0 /* Build configuration list for PBXProject "Shim" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA00000000000000000000G0;
+			productRefGroup = AA00000000000000000003G0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA00000000000000000001T0 /* ShimApp */,
+				AA00000000000000000002T0 /* ShimExt */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA00000000000000000001S1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000000000000000001B1 /* App.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA00000000000000000002S1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000000000000000002B1 /* PacketTunnelProvider.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA00000000000000000004D1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA00000000000000000002T0 /* ShimExt */;
+			targetProxy = AA00000000000000000004C1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AA00000000000000000000C1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Manual;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 6KKW3MKLR7;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA00000000000000000001C1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShimApp/ShimApp.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vpnhood.connect.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "VpnHood Connect Dev Profile";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		AA00000000000000000002C1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShimExt/ShimExt.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				INFOPLIST_FILE = ShimExt/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vpnhood.connect.ios.networkextension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "VpnHood Connect Extension Dev Profile";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA00000000000000000000L0 /* Build configuration list for PBXProject "Shim" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000000000000000000C1 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AA00000000000000000001L0 /* Build configuration list for PBXNativeTarget "ShimApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000000000000000001C1 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AA00000000000000000002L0 /* Build configuration list for PBXNativeTarget "ShimExt" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA00000000000000000002C1 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AA00000000000000000000P0 /* Project object */;
+}

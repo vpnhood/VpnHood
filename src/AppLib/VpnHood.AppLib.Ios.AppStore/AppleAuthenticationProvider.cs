@@ -2,6 +2,7 @@
 using Foundation;
 using UIKit;
 using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.Core.Client.Devices.Ios.Extensions;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.Ios.AppStore;
@@ -71,32 +72,12 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
             // 1001 = ASAuthorizationError.Canceled. Apple reports Canceled BOTH when the user dismisses
             // the sheet and when its own server-side check fails ("Sign Up Not Completed") and the user
             // dismisses that alert, so the flattened detail is the only way to tell the two apart.
-            var detail = Describe(error);
             if (error.Code == (long)ASAuthorizationError.Canceled)
-                Completion.TrySetException(new OperationCanceledException($"Apple sign-in was cancelled. {detail}"));
+                Completion.TrySetException(
+                    new OperationCanceledException($"Apple sign-in was cancelled. {error.Describe()}"));
             else
-                Completion.TrySetException(new InvalidOperationException($"Apple sign-in failed: {detail}"));
-        }
-
-        /// <summary>
-        /// Flattens an NSError with its userInfo and NSUnderlyingError chain. Apple puts the actionable
-        /// reason (an AKAuthenticationError code, a server message) in the chain, never in Code/Description.
-        /// </summary>
-        private static string Describe(NSError? error)
-        {
-            var parts = new List<string>();
-            for (var depth = 0; error != null && depth < 4; depth++) {
-                parts.Add($"[{error.Domain} {error.Code}] {error.LocalizedDescription}");
-                var info = error.UserInfo;
-                if (info != null!)
-                    foreach (var key in info.Keys) {
-                        var name = key.ToString();
-                        if (name != "NSUnderlyingError")
-                            parts.Add($"{name}={info.ObjectForKey(key)}");
-                    }
-                error = info?.ObjectForKey(new NSString("NSUnderlyingError")) as NSError;
-            }
-            return string.Join(" | ", parts);
+                Completion.TrySetException(
+                    new InvalidOperationException($"Apple sign-in failed: {error.Describe()}"));
         }
 
         public UIWindow GetPresentationAnchor(ASAuthorizationController controller)

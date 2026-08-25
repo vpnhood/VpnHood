@@ -29,8 +29,10 @@ public class GooglePlayInAppUserReviewProvider(bool testMode = false) : IAppUser
         // Launch presents the Play review dialog, so start it on the UI thread (this method is called
         // from a web-server request thread) and await the Play task here — same pattern as
         // GooglePlayAppUpdaterProvider's update flow.
+        // ReSharper disable AccessToDisposedClosure
         var launchReviewPlayTask = await AndroidUtils.RunOnUiThread(appUiContext.Activity, () =>
             reviewManager.LaunchReviewFlow(appUiContext.Activity, reviewInfo)).ConfigureAwait(false);
+        // ReSharper restore AccessToDisposedClosure
 
         await launchReviewPlayTask
             .AsAsync()

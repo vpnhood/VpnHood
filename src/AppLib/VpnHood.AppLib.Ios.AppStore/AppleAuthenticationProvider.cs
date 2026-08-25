@@ -88,7 +88,7 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
             for (var depth = 0; error != null && depth < 4; depth++) {
                 parts.Add($"[{error.Domain} {error.Code}] {error.LocalizedDescription}");
                 var info = error.UserInfo;
-                if (info != null)
+                if (info != null!)
                     foreach (var key in info.Keys) {
                         var name = key.ToString();
                         if (name != "NSUnderlyingError")

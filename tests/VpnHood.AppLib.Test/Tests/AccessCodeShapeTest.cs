@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -19,6 +20,8 @@ namespace VpnHood.AppLib.Test.Tests;
 [TestClass]
 public class AccessCodeShapeTest
 {
+    // ReSharper disable once ClassNeverInstantiated.Local
+    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
     private class Vector
     {
         public string Code { get; init; } = "";

@@ -11,8 +11,7 @@ namespace VpnHood.Core.Toolkit.Utils;
 /// Whether redaction applies is carried by the instance, not by the method you pick, so a call site states
 /// its own guarantee. <see cref="Always" /> redacts whatever the settings say — the app UI and the tracking
 /// log need that, since neither should start printing real addresses because logging was switched out of
-/// anonymous mode. <see cref="Default" /> follows the process-wide anonymous mode and is what
-/// <see cref="Logging.VhLogger" /> uses.
+/// anonymous mode. 
 /// </para>
 /// <para>
 /// <c>Redact*</c> produces a string now; <c>Format*</c> wraps the same work in a <see cref="RedactedValue{T}" />

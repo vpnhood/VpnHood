@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
@@ -103,12 +104,15 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
         return lookupResult.Results.FirstOrDefault();
     }
 
+    [SuppressMessage("ReSharper", "ClassNeverInstantiated.Local")]
     private class AppStoreLookupResult
     {
         [JsonPropertyName("results")]
         public AppStoreAppInfo[] Results { get; init; } = [];
     }
 
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Local")]
+    [SuppressMessage("ReSharper", "ClassNeverInstantiated.Local")]
     private class AppStoreAppInfo
     {
         [JsonPropertyName("version")]

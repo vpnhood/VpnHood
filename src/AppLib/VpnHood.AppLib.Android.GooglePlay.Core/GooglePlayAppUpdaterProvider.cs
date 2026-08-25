@@ -54,10 +54,13 @@ public class GooglePlayAppUpdaterProvider : IAppUpdaterProvider
             // here so completion, cancellation and failures flow back to this method (an async lambda
             // would run as async-void: unawaited and crashing the UI thread on error).
             VhLogger.Instance.LogDebug("Google Play update is available, starting update flow...");
+
             // flexible update requires much more handling
+            // ReSharper disable AccessToDisposedClosure
             var updateFlowPlayTask = await AndroidUtils.RunOnUiThread(appUiContext.Activity, () =>
                 appUpdateManager.StartUpdateFlow(appUpdateInfo, appUiContext.Activity,
                     AppUpdateOptions.NewBuilder(AppUpdateType.Immediate).Build())).ConfigureAwait(false);
+            // ReSharper restore AccessToDisposedClosure
 
             if (updateFlowPlayTask != null)
                 await updateFlowPlayTask.AsAsync().WaitAsync(cancellationToken).ConfigureAwait(false);

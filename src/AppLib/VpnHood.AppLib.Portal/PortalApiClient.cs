@@ -34,6 +34,7 @@ public class PortalApiClient : ApiClientBase
 
     private readonly IAuthenticationProvider? _authenticationProvider;
 
+    /// <param name="httpClient">The HTTP client used to make requests to the portal API.</param>
     /// <param name="authenticationProvider">
     /// Attaches the session credential to every call made through this instance, and invalidates it
     /// when the portal refuses it. Omit it for the resources that take no session — sign-in and the

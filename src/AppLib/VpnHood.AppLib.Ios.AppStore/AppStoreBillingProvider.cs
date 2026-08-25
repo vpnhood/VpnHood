@@ -1,5 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.Ios.AppStore.StoreKitBridge;
+using VpnHood.AppLib.Ios.StoreKitNative;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 

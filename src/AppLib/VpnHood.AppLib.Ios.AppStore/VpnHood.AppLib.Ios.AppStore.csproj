@@ -10,16 +10,12 @@
 		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
 	</ItemGroup>
 
-	<!-- The StoreKit 2 facade: Microsoft.iOS does not bind SK2's Swift-async API, so a
-	     small Swift xcframework exposes it over a C ABI (see swift/README.md for the
-	     one-command build on a Mac). Conditional so the project still compiles before
-	     the xcframework has been built — the provider then throws at runtime with a
-	     pointed message instead of the whole solution failing. -->
-	<ItemGroup Condition="Exists('swift\VpnHoodStoreKit.xcframework')">
-		<NativeReference Include="swift\VpnHoodStoreKit.xcframework">
-			<Kind>Framework</Kind>
-			<SmartLink>true</SmartLink>
-		</NativeReference>
+	<!-- The StoreKit 2 facade (Swift xcframework + C# P/Invoke binding) lives in its own
+	     repo/NuGet so the native contract versions atomically; the package is a binding
+	     project, so the xcframework flows into the app link automatically. Pinned exact —
+	     upgrades are deliberate and announced, never floated. -->
+	<ItemGroup>
+		<PackageReference Include="VpnHood.AppLib.Ios.StoreKitNative" Version="8.0.4" />
 	</ItemGroup>
 
 </Project>

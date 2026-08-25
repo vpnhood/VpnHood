@@ -59,26 +59,13 @@
     <!-- iOS shared app code: VpnHoodIosApp bootstrap + the WKWebView SPA host. -->
     <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Ios.Common\VpnHood.AppLib.Ios.Common.csproj" />
     <!-- StoreKit 2 billing + Sign in with Apple (AppStoreBillingProvider / AppleAuthenticationProvider).
-         Compiles without the VpnHoodStoreKit.xcframework (its NativeReference is conditional); billing
-         then fails at first use with a pointed message, so the Swift facade must be built before a
-         store-ready release — see that project's swift/README.md. -->
+         The Swift facade + binding come from the VpnHood.AppLib.Ios.StoreKitNative NuGet it
+         references; being a binding package, its xcframework links into the app automatically. -->
     <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Ios.AppStore\VpnHood.AppLib.Ios.AppStore.csproj" />
     <!-- Portal (WHMCS vpnhoodiap) account backend: sign-in sessions, entitlements, purchase verify. -->
     <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
     <!-- Shared client resources: embedded SPA (SpaZipData) + IP-location db + ConnectAppResources. -->
     <ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
-  </ItemGroup>
-
-  <!-- The StoreKit facade must be referenced from the APP project: a plain class library's
-       NativeReference does not flow through ProjectReference (only binding projects package a
-       .resources sidecar), so without this the app link drops the vhsk_* symbols and every
-       DllImport("__Internal") in NativeStoreKitBridge fails to link. Same conditional as the
-       lib: buildable before the xcframework exists, billing then throws at first use. -->
-  <ItemGroup Condition="Exists('..\..\AppLib\VpnHood.AppLib.Ios.AppStore\swift\VpnHoodStoreKit.xcframework')">
-    <NativeReference Include="..\..\AppLib\VpnHood.AppLib.Ios.AppStore\swift\VpnHoodStoreKit.xcframework">
-      <Kind>Framework</Kind>
-      <SmartLink>true</SmartLink>
-    </NativeReference>
   </ItemGroup>
 
   <ItemGroup>

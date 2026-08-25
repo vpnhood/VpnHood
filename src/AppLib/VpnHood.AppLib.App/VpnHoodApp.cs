@@ -49,30 +49,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     private const string FileNameLog = "app.log";
     private const string FileNamePersistState = "state.json";
     private const string FolderNameProfiles = "profiles";
-    private readonly bool _disconnectOnDispose;
-    private readonly bool _autoDiagnose;
-    private readonly bool _allowEndPointTracker;
-    private readonly bool _allowRecommendUserReviewByServer;
-    private readonly string? _ga4MeasurementId;
-    private readonly TimeSpan _unstableTimeout;
-    private readonly TimeSpan _autoWaitTimeout;
-    private readonly TimeSpan _serverQueryTimeout;
-    private readonly TimeSpan _connectTimeout;
-    private readonly TimeSpan _sessionTimeout;
-    private readonly TimeSpan _tcpTimeout;
-    private readonly TransferBufferSize? _packetChannelBufferSize;
-    private readonly TransferBufferSize? _udpProxyBufferSize;
-    private readonly TransferBufferSize? _streamProxyBufferSize;
-    private readonly int? _maxUdpClientCount;
-    private readonly int? _maxUdpDnsClientCount;
-    private readonly int? _udpProxyQueueCapacity;
-    private readonly TransferBufferSize? _tcpKernelBufferSize;
-    private readonly TransferBufferSize? _tcpPacketChannelKernelBufferSize;
     private readonly LogService _logService;
-    private readonly LogServiceOptions _logServiceOptions;
     private readonly AppPersistState _appPersistState;
     private readonly VpnServiceManager _vpnServiceManager;
-    private readonly ITrackerFactory _trackerFactory;
     private readonly IDevice _device;
     private readonly IIpRangeLocationProvider? _ipRangeLocationProvider;
     private bool _isDisconnecting;
@@ -95,6 +74,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     public AppSettings Settings => SettingsService.Settings;
     public UserSettings UserSettings => SettingsService.UserSettings;
     public AppFeatures Features { get; }
+    public VpnHoodAppConfig Config { get; }
     public ClientProfileService ClientProfileService { get; }
     public Diagnoser Diagnoser { get; } = new();
     public AppResources Resources { get; }
@@ -119,29 +99,34 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         SettingsService.BeforeSave += SettingsBeforeSave;
         _device = device;
         _appPersistState = AppPersistState.Load(Path.Combine(StorageFolderPath, FileNamePersistState));
-        _ga4MeasurementId = options.Ga4MeasurementId;
-        _unstableTimeout = options.UnstableTimeout;
-        _autoWaitTimeout = options.AutoWaitTimeout;
-        _tcpTimeout = options.TcpTimeout;
-        _packetChannelBufferSize = options.PacketChannelBufferSize;
-        _udpProxyBufferSize = options.UdpProxyBufferSize;
-        _streamProxyBufferSize = options.StreamProxyBufferSize;
-        _maxUdpClientCount = options.MaxUdpClientCount;
-        _maxUdpDnsClientCount = options.MaxUdpDnsClientCount;
-        _udpProxyQueueCapacity = options.UdpProxyQueueCapacity;
-        _tcpKernelBufferSize = options.TcpKernelBufferSize;
-        _tcpPacketChannelKernelBufferSize = options.TcpPacketChannelKernelBufferSize;
-        _autoDiagnose = options.AutoDiagnose;
-        _serverQueryTimeout = options.ServerQueryTimeout;
-        _connectTimeout = options.ConnectTimeout;
-        _allowEndPointTracker = options.AllowEndPointTracker;
-        _disconnectOnDispose = options.DisconnectOnDispose;
-        _logServiceOptions = options.LogServiceOptions;
         _logService = logService;
-        _sessionTimeout = options.SessionTimeout;
-        _allowRecommendUserReviewByServer = options.AllowRecommendUserReviewByServer;
-        _trackerFactory = options.TrackerFactory ??
-                          (options.IsDebugMode ? new NullTrackerFactory() : new BuiltInTrackerFactory());
+        var trackerFactory = options.TrackerFactory ??
+                             (options.IsDebugMode ? new NullTrackerFactory() : new BuiltInTrackerFactory());
+
+        Config = new VpnHoodAppConfig {
+            DisconnectOnDispose = options.DisconnectOnDispose,
+            AutoDiagnose = options.AutoDiagnose,
+            AllowEndPointTracker = options.AllowEndPointTracker,
+            AllowRecommendUserReviewByServer = options.AllowRecommendUserReviewByServer,
+            ConnectTimeout = options.ConnectTimeout,
+            LogServiceOptions = options.LogServiceOptions,
+            TrackerFactoryAssemblyQualifiedName = trackerFactory.GetType().AssemblyQualifiedName,
+            Transport = new AppTransportConfig {
+                SessionTimeout = options.SessionTimeout,
+                UnstableTimeout = options.UnstableTimeout,
+                AutoWaitTimeout = options.AutoWaitTimeout,
+                TcpConnectTimeout = options.TcpTimeout,
+                ServerQueryTimeout = options.ServerQueryTimeout,
+                PacketChannelBufferSize = options.PacketChannelBufferSize,
+                UdpProxyBufferSize = options.UdpProxyBufferSize,
+                StreamProxyBufferSize = options.StreamProxyBufferSize,
+                TcpKernelBufferSize = options.TcpKernelBufferSize,
+                TcpPacketChannelKernelBufferSize = options.TcpPacketChannelKernelBufferSize,
+                MaxUdpClientCount = options.MaxUdpClientCount,
+                MaxUdpDnsClientCount = options.MaxUdpDnsClientCount,
+                UdpProxyQueueCapacity = options.UdpProxyQueueCapacity
+            }
+        };
 
         _ipRangeLocationProvider = options.Resources.IpLocationZipData is { } ipLocationZipData
             ? new LocalIpRangeLocationProvider(
@@ -178,7 +163,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // Created before the features because only the tracker knows whether this build collects anything:
         // a missing measurement id or a debug build collapses to a NullTracker.
         var clientId = AppUtils.CreateClientId(options.AppId, options.DeviceId ?? Settings.ClientId);
-        var tracker = _trackerFactory.TryCreateTracker(new TrackerCreateParams {
+        var tracker = trackerFactory.TryCreateTracker(new TrackerCreateParams {
             ClientId = clientId,
             ClientVersion = appVersion,
             Ga4MeasurementId = options.Ga4MeasurementId,
@@ -650,7 +635,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     private LogServiceOptions GetLogOptions()
     {
-        return GetLogOptions(UserSettings, _logServiceOptions, Features.IsDebugMode);
+        return GetLogOptions(UserSettings, Config.LogServiceOptions, Features.IsDebugMode);
     }
 
     private static LogServiceOptions GetLogOptions(UserSettings userSettings, LogServiceOptions appLogOptions,
@@ -736,7 +721,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             // set timeout
             _connectTimeoutCts = new CancellationTokenSource(
-                connectOptions.Diagnose ? _connectTimeout * 3 : _connectTimeout);
+                connectOptions.Diagnose ? Config.ConnectTimeout * 3 : Config.ConnectTimeout);
 
             // create cancellationToken after disconnecting previous connection
             using var linkedCts =
@@ -803,7 +788,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (Exception ex) {
             // check no internet connection, use the original cancellation token to avoid timeout exception
-            if (_autoDiagnose && !_appPersistState.HasDiagnoseRequested &&
+            if (Config.AutoDiagnose && !_appPersistState.HasDiagnoseRequested &&
                 ex is not UserCanceledException && ex is not SessionException) {
                 VhLogger.Instance.LogDebug("Start checking client network...");
 
@@ -859,25 +844,25 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AppName = Resources.Strings.AppName,
                 ClientId = Features.ClientId,
                 AccessKey = token.ToAccessKey(),
-                SessionTimeout = _sessionTimeout,
-                UnstableTimeout = _unstableTimeout,
-                AutoWaitTimeout = _autoWaitTimeout,
+                SessionTimeout = Config.Transport.SessionTimeout,
+                UnstableTimeout = Config.Transport.UnstableTimeout,
+                AutoWaitTimeout = Config.Transport.AutoWaitTimeout,
                 SplitLocalNetwork = splitTunneling.UseLocalNetwork,
                 SplitDnsMode = splitTunneling.DnsMode,
                 UnroutedIpMode = splitTunneling.UnroutedIpMode,
                 UnsupportedIpV6Mode = splitTunneling.UnsupportedIpV6Mode,
                 IncludeIpRangesByDevice = [.. vpnAdapterIpRanges],
                 MaxPacketChannelCount = UserSettings.MaxPacketChannelCount,
-                PacketChannelBufferSize = _packetChannelBufferSize,
-                UdpProxyBufferSize = _udpProxyBufferSize,
-                StreamProxyBufferSize = _streamProxyBufferSize,
-                MaxUdpClientCount = _maxUdpClientCount,
-                MaxUdpDnsClientCount = _maxUdpDnsClientCount,
-                UdpProxyQueueCapacity = _udpProxyQueueCapacity,
-                TcpKernelBufferSize = _tcpKernelBufferSize,
-                TcpPacketChannelKernelBufferSize = _tcpPacketChannelKernelBufferSize,
-                ConnectTimeout = _tcpTimeout,
-                ServerQueryTimeout = _serverQueryTimeout,
+                PacketChannelBufferSize = Config.Transport.PacketChannelBufferSize,
+                UdpProxyBufferSize = Config.Transport.UdpProxyBufferSize,
+                StreamProxyBufferSize = Config.Transport.StreamProxyBufferSize,
+                MaxUdpClientCount = Config.Transport.MaxUdpClientCount,
+                MaxUdpDnsClientCount = Config.Transport.MaxUdpDnsClientCount,
+                UdpProxyQueueCapacity = Config.Transport.UdpProxyQueueCapacity,
+                TcpKernelBufferSize = Config.Transport.TcpKernelBufferSize,
+                TcpPacketChannelKernelBufferSize = Config.Transport.TcpPacketChannelKernelBufferSize,
+                ConnectTimeout = Config.Transport.TcpConnectTimeout,
+                ServerQueryTimeout = Config.Transport.ServerQueryTimeout,
                 UseNullCapture = HasDebugCommand(DebugCommands.NullCapture),
                 UseTcpProxy = UserSettings.UseTcpProxy,
                 DropQuic = UserSettings.DropQuic,
@@ -888,15 +873,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
                 AccessCode = accessCode,
                 IsTcpProxySupported = Features.IsTcpProxySupported,
                 AllowAnonymousTracker = UserSettings.AllowAnonymousTracker,
-                AllowEndPointTracker = UserSettings.AllowAnonymousTracker && _allowEndPointTracker,
+                AllowEndPointTracker = UserSettings.AllowAnonymousTracker && Config.AllowEndPointTracker,
                 AllowChannelReuse = !HasDebugCommand(DebugCommands.NoChannelReuse),
                 ExcludeApps = splitTunneling.AppMode == SplitAppMode.Exclude ? [.. splitTunneling.Apps] : null,
                 IncludeApps = splitTunneling.AppMode == SplitAppMode.Include ? [.. splitTunneling.Apps] : null,
                 DnsServers = dnsServers,
                 LogServiceOptions = GetLogOptions(),
-                Ga4MeasurementId = _ga4MeasurementId,
+                Ga4MeasurementId = Features.GaMeasurementId,
                 Version = Features.Version,
-                TrackerFactoryAssemblyQualifiedName = _trackerFactory.GetType().AssemblyQualifiedName,
+                TrackerFactoryAssemblyQualifiedName = Config.TrackerFactoryAssemblyQualifiedName,
                 UserAgent = userAgent ?? ClientOptions.Default.UserAgent,
                 EndPointStrategy = Features.AllowEndPointStrategy
                     ? UserSettings.EndPointStrategy
@@ -918,7 +903,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
             VhLogger.Instance.LogDebug(
                 "Launching VpnService ... DiagnoseMode: {DiagnoseMode}, AutoDiagnose: {AutoDiagnose}",
-                _appPersistState.HasDiagnoseRequested, _autoDiagnose);
+                _appPersistState.HasDiagnoseRequested, Config.AutoDiagnose);
 
             // start to diagnose if requested
             if (_appPersistState.HasDiagnoseRequested) {
@@ -948,7 +933,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         }
         catch (OperationCanceledException ex) when (_connectTimeoutCts.IsCancellationRequested) {
             throw new ConnectionTimeoutException(
-                $"Could not establish the connection in {_connectTimeout.TotalSeconds} seconds.", ex);
+                $"Could not establish the connection in {Config.ConnectTimeout.TotalSeconds} seconds.", ex);
         }
         catch (AlwaysOnNotAllowedException) {
             throw PremiumOnlyException.Create(AppFeature.AlwaysOn);
@@ -1279,7 +1264,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // set review needed after disconnecting. It must be in connected state
             var sessionUserReviewRecommended = ConnectionInfo.SessionStatus?.UserReviewRecommended ?? 0;
             if (state.ConnectionState is AppConnectionState.Connected &&
-                _appPersistState.LastError is null && _allowRecommendUserReviewByServer &&
+                _appPersistState.LastError is null && Config.AllowRecommendUserReviewByServer &&
                 Features.IsUserReviewSupported && sessionUserReviewRecommended > 0)
                 _userReviewRecommended = sessionUserReviewRecommended;
 
@@ -1448,7 +1433,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
 
     public async ValueTask DisposeAsync()
     {
-        if (_disconnectOnDispose && ConnectionState.CanDisconnect())
+        if (Config.DisconnectOnDispose && ConnectionState.CanDisconnect())
             await TryDisconnect().Vhc();
 
         Dispose();

@@ -225,6 +225,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     /// </summary>
     private static NotSupportedException UnsupportedTwoFactor(string challengeType)
     {
+        // ReSharper disable once UseObjectOrCollectionInitializer
         var exception = new NotSupportedException(
             $"This app cannot answer the account's second factor. Type: {challengeType}");
         exception.Data["Code"] = "unsupported_two_factor";

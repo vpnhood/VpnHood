@@ -53,6 +53,7 @@ public interface IAccountProvider
     /// A provider with no account-side code storage throws <see cref="NotSupportedException" />.
     /// </summary>
     /// <param name="accessCode">The code to upload, or null to idempotently empty the slot.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     Task SetAccessCode(string? accessCode, CancellationToken cancellationToken);
 
     /// <summary>

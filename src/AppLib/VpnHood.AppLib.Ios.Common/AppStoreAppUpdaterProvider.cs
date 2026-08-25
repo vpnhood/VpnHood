@@ -105,6 +105,7 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
     }
 
     [SuppressMessage("ReSharper", "ClassNeverInstantiated.Local")]
+    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
     private class AppStoreLookupResult
     {
         [JsonPropertyName("results")]

@@ -100,9 +100,9 @@ internal class ClientSessionBuilder(
                     ProxyConnector = proxyConnector,
                     SocketFactory = socketFactory,
                     VpnEndPoint = vpnEndPoint,
-                    RequestTimeout = config.TcpConnectTimeout,
+                    RequestTimeout = config.Transport.TcpConnectTimeout,
                     AllowChannelReuse = false,
-                    TcpPacketChannelKernelBufferSize = config.TcpPacketChannelKernelBufferSize
+                    TcpPacketChannelKernelBufferSize = config.Transport.TcpPacketChannelKernelBufferSize
                 });
             requestSender = new RequestSender(connectorService);
 
@@ -344,17 +344,7 @@ internal class ClientSessionBuilder(
                     MaxSpeedMbps = helloResponse.AccessInfo?.MaxSpeedMbps,
                     MaxPacketChannelLifespan = config.MaxPacketChannelLifespan,
                     MinPacketChannelLifespan = config.MinPacketChannelLifespan,
-                    SessionTimeout = config.SessionTimeout,
-                    TcpConnectTimeout = config.TcpConnectTimeout,
-                    StreamProxyBufferSize = config.StreamProxyBufferSize,
-                    TcpKernelBufferSize = config.TcpKernelBufferSize,
-                    UdpProxyBufferSize = config.UdpProxyBufferSize,
-                    MaxUdpClientCount = config.MaxUdpClientCount,
-                    MaxUdpDnsClientCount = config.MaxUdpDnsClientCount,
-                    UdpProxyQueueCapacity = config.UdpProxyQueueCapacity,
-                    PacketChannelBufferSize = config.PacketChannelBufferSize,
-                    UnstableTimeout = config.UnstableTimeout,
-                    AutoWaitTimeout = config.AutoWaitTimeout,
+                    Transport = config.Transport,
                     DnsConfig = dnsConfig,
                     IsTcpProxySupported = config.IsTcpProxySupported,
                     HostTcpEndPoint = connectorService.VpnEndPoint.TcpEndPoint,

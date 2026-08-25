@@ -27,7 +27,7 @@ internal static class ClientHelper
         return new ConfiguringSocketFactory(new BindingSocketFactory(socketFactory)) {
             KeepAlive = true,
             NoDelay = true,
-            TcpKernelBufferSize = options.TcpKernelBufferSize
+            TcpKernelBufferSize = options.Transport.TcpKernelBufferSize
         };
     }
 

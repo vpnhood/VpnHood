@@ -34,10 +34,9 @@ public class ClientOptions
     public bool DropQuic { get; set; }
     public bool DropUdp { get; set; }
     public bool AutoDisposeVpnAdapter { get; set; } = true;
-    public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromDays(3);
-    public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromSeconds(30);
-    public TimeSpan UnstableTimeout { get; set; } = TimeSpan.FromSeconds(60); // connect timeout before pause
-    public TimeSpan AutoWaitTimeout { get; set; } = TimeSpan.FromSeconds(30); // auto resume after pause
+
+    // Transport tuning, shared by reference with the app and the session config.
+    public ClientTransportOptions Transport { get; set; } = new();
     public bool SplitLocalNetwork { get; set; }
     public SplitDnsMode SplitDnsMode { get; set; }
     public SplitUnsupportedIpMode UnroutedIpMode { get; set; }
@@ -59,7 +58,6 @@ public class ClientOptions
     public string? ServerLocation { get; set; }
     public ConnectPlanId PlanId { get; set; }
     public bool ForceLogSni { get; set; }
-    public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(5);
     public string? AccessCode { get; set; }
     public string? SessionName { get; set; }
     public string[]? ExcludeApps { get; set; }
@@ -78,33 +76,6 @@ public class ClientOptions
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? DebugData2 { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public TransferBufferSize? UdpProxyBufferSize { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? MaxUdpClientCount { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? MaxUdpDnsClientCount { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? UdpProxyQueueCapacity { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public TransferBufferSize? StreamProxyBufferSize { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public TransferBufferSize? PacketChannelBufferSize { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public TransferBufferSize? TcpKernelBufferSize { get; set; }
-
-    // Optional kernel buffer used only by TCP connections to the VPN server. This lets
-    // memory-constrained clients keep direct/split-flow sockets small without throttling the
-    // packet channel, where one outer TCP connection carries all tunneled flows.
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public TransferBufferSize? TcpPacketChannelKernelBufferSize { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public EndPointStrategy EndPointStrategy { get; set; }

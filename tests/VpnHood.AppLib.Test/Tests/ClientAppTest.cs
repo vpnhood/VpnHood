@@ -91,9 +91,9 @@ public class ClientAppTest : TestAppBase
 
         // create app & connect
         var appOptions = TestAppHelper.CreateAppOptions();
-        appOptions.SessionTimeout = TimeSpan.FromSeconds(20);
-        appOptions.UnstableTimeout = TimeSpan.FromSeconds(1);
-        appOptions.AutoWaitTimeout = TimeSpan.FromSeconds(2);
+        appOptions.Transport.SessionTimeout = TimeSpan.FromSeconds(20);
+        appOptions.Transport.UnstableTimeout = TimeSpan.FromSeconds(1);
+        appOptions.Transport.AutoWaitTimeout = TimeSpan.FromSeconds(2);
         await using var app = TestAppHelper.CreateClientApp(appOptions: appOptions, device: TestHelper.CreateDevice());
         var clientProfile = app.ClientProfileService.ImportAccessKey(token.ToAccessKey());
         await app.Connect(clientProfile.ClientProfileId, cancellationToken: TestContext.CancellationToken);

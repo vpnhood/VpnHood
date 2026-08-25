@@ -1,4 +1,4 @@
-﻿using Ga4.Trackers;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Common.Messaging;
@@ -90,8 +90,8 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             MinPacketChannelLifespan = options.MinPacketChannelTimespan,
             MaxPacketChannelLifespan = options.MaxPacketChannelTimespan,
             AutoDisposeVpnAdapter = options.AutoDisposeVpnAdapter,
+            Transport = options.Transport,
             MaxPacketChannelCount = options.MaxPacketChannelCount,
-            TcpConnectTimeout = options.ConnectTimeout,
             PlanId = options.PlanId,
             AccessCode = options.AccessCode,
             ExcludeApps = options.ExcludeApps,
@@ -100,12 +100,9 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             DnsServers = options.DnsServers,
             SessionName = options.SessionName,
             AllowStreamReuse = options.AllowChannelReuse,
-            UnstableTimeout = options.UnstableTimeout,
-            AutoWaitTimeout = options.AutoWaitTimeout,
             Version = options.Version,
             UserAgent = options.UserAgent,
             ClientId = options.ClientId,
-            SessionTimeout = options.SessionTimeout,
             IncludeLocalNetwork = options.SplitLocalNetwork,
             SplitDnsMode = options.SplitDnsMode,
             UnroutedIpMode = options.UnroutedIpMode,
@@ -115,14 +112,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             DropUdp = options.DropUdp,
             DropQuic = options.DropQuic,
             UserReview = options.UserReview,
-            StreamProxyBufferSize = options.StreamProxyBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize,
-            TcpKernelBufferSize = options.TcpKernelBufferSize,
-            TcpPacketChannelKernelBufferSize = options.TcpPacketChannelKernelBufferSize,
-            UdpProxyBufferSize = options.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
-            MaxUdpClientCount = options.MaxUdpClientCount ?? TunnelDefaults.MaxUdpClientCount,
-            MaxUdpDnsClientCount = options.MaxUdpDnsClientCount ?? TunnelDefaults.MaxUdpDnsClientCount,
-            UdpProxyQueueCapacity = options.UdpProxyQueueCapacity ?? TunnelDefaults.ProxyPacketQueueCapacity,
-            PacketChannelBufferSize = options.PacketChannelBufferSize,
             UseWebSocket = options.DebugData1?.Contains("/disable-WebSocket", StringComparison.OrdinalIgnoreCase) is null or false
         };
 
@@ -158,7 +147,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         // server finder
         _serverFinder = new ServerFinder(socketFactory,
             serverLocation: options.ServerLocation,
-            serverQueryTimeout: options.ServerQueryTimeout,
+            serverQueryTimeout: options.Transport.ServerQueryTimeout,
             endPointStrategy: options.EndPointStrategy,
             customServerEndpoints: options.CustomServerEndpoints ?? [],
             tracker: options.AllowEndPointTracker ? tracker : null,

@@ -1,3 +1,4 @@
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib;
@@ -14,5 +15,5 @@ public class VpnHoodAppConfig
     public required TimeSpan ConnectTimeout { get; init; }
     public required LogServiceOptions LogServiceOptions { get; init; }
     public required string? TrackerFactoryAssemblyQualifiedName { get; init; }
-    public required AppTransportConfig Transport { get; init; }
+    public required ClientTransportOptions Transport { get; init; }
 }

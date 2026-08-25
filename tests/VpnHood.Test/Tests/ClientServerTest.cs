@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
@@ -285,7 +285,7 @@ public class ClientServerTest : TestBase
 
         // create client
         var clientOptions = TestHelper.CreateClientOptions(token);
-        clientOptions.SessionTimeout = TimeSpan.FromSeconds(1);
+        clientOptions.Transport.SessionTimeout = TimeSpan.FromSeconds(1);
         await using var client = await TestHelper.CreateClient(
             vpnAdapter: TestHelper.CreateTestVpnAdapter(), clientOptions: clientOptions);
 
@@ -428,7 +428,7 @@ public class ClientServerTest : TestBase
         Task<Core.Client.VpnHoodClient> CreateClientAsync(bool autoConnect)
         {
             var clientOptions = TestHelper.CreateClientOptions(token);
-            clientOptions.ConnectTimeout = TimeSpan.FromSeconds(30);
+            clientOptions.Transport.TcpConnectTimeout = TimeSpan.FromSeconds(30);
             return TestHelper.CreateClient(clientOptions, new TestNullVpnAdapter(), autoConnect);
         }
 

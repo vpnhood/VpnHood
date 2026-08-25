@@ -13,6 +13,8 @@ using VpnHood.Test;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
 
+using VpnHood.Core.Client.Abstractions;
+
 namespace VpnHood.AppLib.Test;
 
 public class TestAppHelper : TestHelper
@@ -29,17 +31,19 @@ public class TestAppHelper : TestHelper
                 IsPurchaseUrlSupported = true
             },
             StorageFolderPath = Path.Combine(WorkingPath, "AppData_" + Guid.CreateVersion7()),
-            SessionTimeout = TimeSpan.FromSeconds(2),
             DeviceUiProvider = new TestDeviceUiProvider(),
             EventWatcherInterval = TimeSpan.FromMilliseconds(200), // no SPA in test, so we need to use event watcher
             Ga4MeasurementId = null,
             TrackerFactory = new TestTrackerFactory(),
             AllowEndPointTracker = true,
-            ServerQueryTimeout = TimeSpan.FromSeconds(2),
             AutoDiagnose = false,
             DisconnectOnDispose = true,
             ConnectTimeout = TimeSpan.FromSeconds(5).WhenNoDebugger(),
-            TcpTimeout = TimeSpan.FromSeconds(2).WhenNoDebugger(),
+            Transport = new ClientTransportOptions {
+                SessionTimeout = TimeSpan.FromSeconds(2),
+                ServerQueryTimeout = TimeSpan.FromSeconds(2),
+                TcpConnectTimeout = TimeSpan.FromSeconds(2).WhenNoDebugger()
+            },
             Resources = new AppResources(),
             AdOptions = new AppAdOptions {
                 ShowAdPostDelay = TimeSpan.Zero,

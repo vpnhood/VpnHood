@@ -7,6 +7,8 @@ using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Devices.Ios;
 using VpnHood.Core.Toolkit.Logging;
 
+using VpnHood.Core.Client.Abstractions;
+
 namespace VpnHood.App.Client.Ios;
 
 [Register("AppDelegate")]
@@ -87,39 +89,41 @@ public class AppDelegate : UIApplicationDelegate
             // Android clients. With the default (true), SystemBarsInfo is suppressed and the SPA's
             // bottom content slides under the home indicator.
             AdjustForSystemBars = false,
-            // iOS Network Extension runs under a ~52 MB jetsam limit. Shrink the transport coalescing
-            // buffers (iOS-only) to keep memory usage low; these flow to the extension via vpn.config.
-            // Desktop/Android keep the 256 KB default. 64 KB holds ~45 MTU packets with negligible
-            // throughput impact below ~200 Mbps.
-            PacketChannelBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
-            UdpProxyBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
-            // A post-kill reconnect opens one direct UdpClient per excluded UDP flow (exclude-country
-            // sends carrier DNS + in-country UDP outside the tunnel): the 2026-07-17 capture died in
-            // ~20 s at 222 proxies × 200-packet queues, all managed memory. The desktop-scale defaults
-            // (100 × 200) never engage before jetsam; bound the fleet and the per-proxy queue instead.
-            MaxUdpClientCount = 50,
-            // DNS workers are segregated, tiny (4 KB) and recycle every UdpDnsTimeout (10 s), so this
-            // bounds a DNS storm without letting it starve the general pool above
-            MaxUdpDnsClientCount = 100,
-            UdpProxyQueueCapacity = 16,
-            // UPLOAD/DOWNLOAD SPEED: the proxy copy pump is a serial read→write→flush loop, so per-flow
-            // throughput ≈ StreamProxyBufferSize / RTT. 2 KB capped it at ~2 Mbps. 32 KB lifts that ~16×.
-            // (Memory is per-ACTIVE-flow: 2 buffers × 32 KB; the many-idle-flows case is bounded separately.)
-            StreamProxyBufferSize = new TransferBufferSize(32 * 1024, 32 * 1024),
-            // Kernel buffer for EVERY managed TCP socket the client opens — the transport connections
-            // to the server AND the per-flow direct sockets of split/exclude ("passthru") flows. The
-            // passthru sockets are the sizing constraint: unlike tunneled flows (QUIC streams bounded
-            // tunnel-wide by IosQuicClient's 256 KB aggregate window), each excluded flow pins its own
-            // socket buffers, up to the TcpStack's 40-connection cap. The former 256 KB let a
-            // split-country browse pin ~40 × 512 KB ≈ 20 MB and jetsam the extension; 64 KB bounds the
-            // worst case to ~5 MB while still allowing ~25 Mbps per flow at 20 ms RTT (in-country hosts
-            // are low-RTT). Desktop/Android are unaffected — this is iOS-only config.
-            TcpKernelBufferSize = new TransferBufferSize(64 * 1024, 64 * 1024),
-            // Packet mode multiplexes every inner TCP flow over one outer TCP connection on iOS.
-            // A 64 KB outer socket window caps that entire tunnel near 10-15 Mbps at common WAN RTTs.
-            // Give only the server tunnel socket a 256 KB BDP window; direct/split-flow sockets retain
-            // the 64 KB cap above, preserving the per-flow jetsam memory bound.
-            TcpPacketChannelKernelBufferSize = new TransferBufferSize(256 * 1024, 256 * 1024),
+            Transport = new ClientTransportOptions {
+                // iOS Network Extension runs under a ~52 MB jetsam limit. Shrink the transport coalescing
+                // buffers (iOS-only) to keep memory usage low; these flow to the extension via vpn.config.
+                // Desktop/Android keep the 256 KB default. 64 KB holds ~45 MTU packets with negligible
+                // throughput impact below ~200 Mbps.
+                PacketChannelBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
+                UdpProxyBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
+                // A post-kill reconnect opens one direct UdpClient per excluded UDP flow (exclude-country
+                // sends carrier DNS + in-country UDP outside the tunnel): the 2026-07-17 capture died in
+                // ~20 s at 222 proxies × 200-packet queues, all managed memory. The desktop-scale defaults
+                // (100 × 200) never engage before jetsam; bound the fleet and the per-proxy queue instead.
+                MaxUdpClientCount = 50,
+                // DNS workers are segregated, tiny (4 KB) and recycle every UdpDnsTimeout (10 s), so this
+                // bounds a DNS storm without letting it starve the general pool above
+                MaxUdpDnsClientCount = 100,
+                UdpProxyQueueCapacity = 16,
+                // UPLOAD/DOWNLOAD SPEED: the proxy copy pump is a serial read→write→flush loop, so per-flow
+                // throughput ≈ StreamProxyBufferSize / RTT. 2 KB capped it at ~2 Mbps. 32 KB lifts that ~16×.
+                // (Memory is per-ACTIVE-flow: 2 buffers × 32 KB; the many-idle-flows case is bounded separately.)
+                StreamProxyBufferSize = new TransferBufferSize(32 * 1024, 32 * 1024),
+                // Kernel buffer for EVERY managed TCP socket the client opens — the transport connections
+                // to the server AND the per-flow direct sockets of split/exclude ("passthru") flows. The
+                // passthru sockets are the sizing constraint: unlike tunneled flows (QUIC streams bounded
+                // tunnel-wide by IosQuicClient's 256 KB aggregate window), each excluded flow pins its own
+                // socket buffers, up to the TcpStack's 40-connection cap. The former 256 KB let a
+                // split-country browse pin ~40 × 512 KB ≈ 20 MB and jetsam the extension; 64 KB bounds the
+                // worst case to ~5 MB while still allowing ~25 Mbps per flow at 20 ms RTT (in-country hosts
+                // are low-RTT). Desktop/Android are unaffected — this is iOS-only config.
+                TcpKernelBufferSize = new TransferBufferSize(64 * 1024, 64 * 1024),
+                // Packet mode multiplexes every inner TCP flow over one outer TCP connection on iOS.
+                // A 64 KB outer socket window caps that entire tunnel near 10-15 Mbps at common WAN RTTs.
+                // Give only the server tunnel socket a 256 KB BDP window; direct/split-flow sockets retain
+                // the 64 KB cap above, preserving the per-flow jetsam memory bound.
+                TcpPacketChannelKernelBufferSize = new TransferBufferSize(256 * 1024, 256 * 1024)
+            },
             // Log level: Information in production. To investigate, add the "/log:debug" debug command in
             // the UI (Debug Data 1) — the iOS diagnostics gates are computed from VhLogger.MinLogLevel, so
             // below-Information logging auto-enables them in the extension: vpn-ext.log carries the TcpStack

@@ -105,12 +105,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             IsPingSupported = false,
             PacketProxyCallbacks = null,
             UdpTimeout = TunnelDefaults.UdpTimeout,
-            MaxUdpClientCount = Config.MaxUdpClientCount,
-            MaxUdpDnsClientCount = Config.MaxUdpDnsClientCount,
+            MaxUdpClientCount = Config.Transport.MaxUdpClientCount ?? TunnelDefaults.MaxUdpClientCount,
+            MaxUdpDnsClientCount = Config.Transport.MaxUdpDnsClientCount ?? TunnelDefaults.MaxUdpDnsClientCount,
             MaxPingClientCount = TunnelDefaults.MaxPingClientCount,
-            PacketQueueCapacity = Config.UdpProxyQueueCapacity,
+            PacketQueueCapacity = Config.Transport.UdpProxyQueueCapacity ?? TunnelDefaults.ProxyPacketQueueCapacity,
             IcmpTimeout = TunnelDefaults.IcmpTimeout,
-            UdpBufferSize = Config.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
+            UdpBufferSize = Config.Transport.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
             LogScope = null,
             AutoDisposePackets = true
         });
@@ -124,10 +124,10 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             domainFilterService: options.DomainFilteringService,
             socketFactory: _socketFactory,
             tunnel: _tunnel,
-            tcpConnectTimeout: Config.TcpConnectTimeout,
+            tcpConnectTimeout: Config.Transport.TcpConnectTimeout,
             proxyManager: _proxyManager,
             netFilter: _netFilter,
-            streamProxyBufferSize: Config.StreamProxyBufferSize,
+            streamProxyBufferSize: Config.Transport.StreamProxyBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize,
             passthroughState: PassthroughState);
 
         // proxy host
@@ -353,7 +353,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         // stop traffic if the client is paused and unpause after AutoPauseTimeout
         if (_autoWaitTime != null) {
-            if (FastDateTime.Now - _autoWaitTime.Value < Config.AutoWaitTimeout)
+            if (FastDateTime.Now - _autoWaitTime.Value < Config.Transport.AutoWaitTimeout)
                 throw new PacketDropException("Connection is paused. The packet has been dropped.");
 
             // resume connection if the client is paused and AutoWaitTimeout is not set
@@ -444,7 +444,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             // add the new channel
             var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
                 StreamConnection = requestResult.StreamConnection,
-                BufferSize = Config.PacketChannelBufferSize ?? TunnelDefaults.ConnectionPacketBufferSize,
+                BufferSize = Config.Transport.PacketChannelBufferSize ?? TunnelDefaults.ConnectionPacketBufferSize,
                 ChannelId = request.ChannelId,
                 RequestTime = request.RequestTime,
                 Blocking = true,
@@ -543,11 +543,11 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             _lastConnectionErrorTime ??= now;
 
             // dispose by session timeout and must before pause because SessionTimeout is bigger than ReconnectTimeout
-            if (now - _lastConnectionErrorTime.Value > Config.SessionTimeout)
+            if (now - _lastConnectionErrorTime.Value > Config.Transport.SessionTimeout)
                 await DisposeAsync(ex);
 
             // pause after retry limit
-            else if (now - _lastConnectionErrorTime.Value > Config.UnstableTimeout) {
+            else if (now - _lastConnectionErrorTime.Value > Config.Transport.UnstableTimeout) {
                 _autoWaitTime = now;
                 _status.WaitingCount++;
                 State = ClientState.Waiting;

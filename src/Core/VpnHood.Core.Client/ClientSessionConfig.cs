@@ -11,21 +11,11 @@ public class ClientSessionConfig
     public required VpnAdapterOptions AdapterOptions { get; init; }
     public required ulong SessionId { get; init; }
     public required ReadOnlyMemory<byte> SessionKey { get; init; }
-    public required TimeSpan TcpConnectTimeout { get; init; }
-    public required TransferBufferSize? UdpProxyBufferSize { get; init; }
-    public required int MaxUdpClientCount { get; init; }
-    public required int MaxUdpDnsClientCount { get; init; }
-    public required int UdpProxyQueueCapacity { get; init; }
-    public required TransferBufferSize StreamProxyBufferSize { get; init; }
-    public required TransferBufferSize? TcpKernelBufferSize { get; init; }
-    public required TransferBufferSize? PacketChannelBufferSize { get; init; }
+    public required ClientTransportOptions Transport { get; init; }
     public required int MaxPacketChannelCount { get; init; }
     public required Traffic? MaxSpeedMbps { get; init; }
     public required TimeSpan MaxPacketChannelLifespan { get; init; }
     public required TimeSpan MinPacketChannelLifespan { get; init; }
-    public required TimeSpan SessionTimeout { get; init; }
-    public required TimeSpan UnstableTimeout { get; init; }
-    public required TimeSpan AutoWaitTimeout { get; init; }
     public required DnsConfig DnsConfig { get; init; }
     public required bool IsTcpProxySupported { get; init; }
     public required IPEndPoint? HostTcpEndPoint { get; init; }

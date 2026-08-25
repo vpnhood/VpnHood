@@ -1,5 +1,4 @@
-﻿using VpnHood.AppLib.Abstractions;
-using VpnHood.Core.Toolkit.Net;
+using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Services.Ads;
@@ -33,7 +32,10 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // registration; production keeps the single-instance guarantee and VpnHoodApp.Instance.
     internal bool IsSingleton { get; set; } = true;
     public string StorageFolderPath { get; set; } = BuildStorageFolderPath(storageFolderName);
-    public TimeSpan SessionTimeout { get; set; } = ClientOptions.Default.SessionTimeout;
+
+    // Transport tuning handed to the client untouched. Its timeouts default themselves; the buffer
+    // and count knobs stay null so each core component applies its own default at first use.
+    public ClientTransportOptions Transport { get; set; } = new();
     public AppUpdaterOptions? UpdaterOptions { get; set; }
     public AppResources Resources { get; set; } = new();
 
@@ -53,15 +55,13 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public IAppUserReviewProvider? UserReviewProvider { get; set; }
     public IReadOnlyList<AppAdProviderItem> AdProviderItems { get; set; } = [];
     public ITrackerFactory? TrackerFactory { get; set; }
-    public TimeSpan UnstableTimeout { get; set; } = ClientOptions.Default.UnstableTimeout;
-    public TimeSpan AutoWaitTimeout { get; set; } = ClientOptions.Default.AutoWaitTimeout;
 
     public bool? LogAnonymous { get; set; } =
         isDebugMode ? false : null; // it follows user's settings if it set to null
 
-    public TimeSpan ServerQueryTimeout { get; set; } = ClientOptions.Default.ServerQueryTimeout;
+    // The whole-connect deadline for the app (tripled when diagnosing) - not the per-TCP connect
+    // timeout, which is Transport.TcpConnectTimeout.
     public TimeSpan ConnectTimeout { get; set; } = TimeSpan.FromMinutes(4).WhenNoDebugger();
-    public TimeSpan TcpTimeout { get; set; } = ClientOptions.Default.ConnectTimeout;
     public bool AutoDiagnose { get; set; } = true;
     public AppAdOptions AdOptions { get; set; } = new();
     public bool AllowEndPointTracker { get; set; }
@@ -76,19 +76,4 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public Uri? RemoteSettingsUrl { get; set; }
     public int? WebUiPort { get; set; }
     public string? WebUiHostName { get; set; }
-
-    // Optional per-platform transport buffer sizes. Leave null to use the core defaults.
-    // Low-memory clients (e.g. iOS Network Extension under the ~50 MB jetsam limit) can lower these.
-    public TransferBufferSize? PacketChannelBufferSize { get; set; }
-    public TransferBufferSize? UdpProxyBufferSize { get; set; }
-
-    // Optional per-platform UDP proxy scaling. Leave null to use the core defaults (500 clients /
-    // 200-packet queues). Low-memory clients cap the direct-UDP socket fleet and per-proxy packet
-    // queue so a post-kill reconnect flow-storm stays bounded.
-    public int? MaxUdpClientCount { get; set; }
-    public int? MaxUdpDnsClientCount { get; set; }
-    public int? UdpProxyQueueCapacity { get; set; }
-    public TransferBufferSize? StreamProxyBufferSize { get; set; }
-    public TransferBufferSize? TcpKernelBufferSize { get; set; }
-    public TransferBufferSize? TcpPacketChannelKernelBufferSize { get; set; }
 }

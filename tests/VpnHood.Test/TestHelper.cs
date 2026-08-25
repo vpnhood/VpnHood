@@ -1,4 +1,4 @@
-﻿using Ga4.Trackers;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using VpnHood.Core.Client;
@@ -324,7 +324,7 @@ public class TestHelper : IDisposable
             MaxPacketChannelCount = 1,
             IncludeIpRangesByDevice = [.. TestIps.AllRemoteTestIps.ToIpRanges()],
             SplitLocalNetwork = true,
-            ConnectTimeout = TimeSpan.FromSeconds(3),
+            Transport = new ClientTransportOptions { TcpConnectTimeout = TimeSpan.FromSeconds(3) },
             ChannelProtocol = channelProtocol,
             UseTcpProxy = useTcpProxy,
             AccessKey = token?.ToAccessKey() ?? "" // set it later
@@ -343,7 +343,7 @@ public class TestHelper : IDisposable
             ProxyMode.Managed => await ManagedProxyConnector.Create(
                 proxyOptions: proxyOptions,
                 store: new ProxyEndPointStore(Path.Combine(WorkingPath, "ClientCore", "proxies", "proxies.db")),
-                serverCheckTimeout: clientOptions.ServerQueryTimeout),
+                serverCheckTimeout: clientOptions.Transport.ServerQueryTimeout),
             _ => null
         };
     }

@@ -1,4 +1,4 @@
-﻿using Ga4.Trackers;
+using Ga4.Trackers;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Quic.Abstractions;
 using VpnHood.Core.Server.Abstractions;
@@ -8,6 +8,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Server;
 
@@ -34,8 +35,8 @@ public class ServerOptions
     public ServerConfig? Config { get; init; }
     public TimeSpan DeadSessionTimeout { get; init; } = TimeSpan.FromMinutes(5);
     public TimeSpan HeartbeatInterval { get; init; } = TimeSpan.FromMinutes(1);
-    public IpNetwork VirtualIpNetworkV4 { get; init; } = TunnelDefaults.VirtualIpNetworkV4;
-    public IpNetwork VirtualIpNetworkV6 { get; init; } = TunnelDefaults.VirtualIpNetworkV6;
+    public IpNetwork VirtualIpNetworkV4 { get; init; } = ServerTunnelDefaults.VirtualIpNetworkV4;
+    public IpNetwork VirtualIpNetworkV6 { get; init; } = ServerTunnelDefaults.VirtualIpNetworkV6;
     public bool Http01ChallengeThrottling { get; init; } = true;
     public TimeSpan ConfigErrorStrikeDuration { get; init; } = TimeSpan.FromDays(7);
     public TimeSpan ConfigErrorRetryInterval { get; init; } = TimeSpan.FromMinutes(30); //todo: consider 6 hour

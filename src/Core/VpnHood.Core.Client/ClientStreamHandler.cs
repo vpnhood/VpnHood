@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Filtering.Abstractions;
@@ -14,6 +14,7 @@ using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Client;
 

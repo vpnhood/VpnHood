@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Net.Sockets;
 using System.Text;
 using VpnHood.Core.Toolkit.Extensions;
@@ -6,6 +6,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 

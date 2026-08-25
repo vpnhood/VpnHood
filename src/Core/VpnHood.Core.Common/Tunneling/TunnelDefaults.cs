@@ -1,17 +1,27 @@
-﻿using System.Net;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Tunneling;
+namespace VpnHood.Core.Common.Tunneling;
 
+/// <summary>
+/// What both sides of the tunnel share: the fixed values a client and a server must agree on, and
+/// the fallbacks for knobs nobody supplied. Anything only one side reads lives with that side
+/// instead — <c>ClientTransportOptions</c> and <c>ServerTunnelDefaults</c>.
+/// </summary>
 public static class TunnelDefaults
 {
     public const int MaxPacketSize = 1500;
-    public const int MaxPacketChannelCount = 8;
     public const int MtuOverhead = 60 + 20 + 40; // 60 for ip header + 20 for (TCP or UDP) + 40 for session header
     public const int MtuSafety = 100;
     public const int MtuServer = MaxPacketSize;
     public const int MtuClient = MaxPacketSize - MtuSafety;
     public const string HttpPassCheck = "VpnHoodPassCheck";
+    public const int MaxUdpDatagramSize = 64 * 1024;
+
+    // Covers any response a real-world resolver exchanges over UDP (post-DNS-Flag-Day defaults are
+    // ~1232 bytes; 4096 is the common EDNS ceiling, though the protocol permits more). A rare larger
+    // reply is detected via MSG_TRUNC and dropped like packet loss — see UdpProxy.
+    public const int UdpDnsBufferSize = 4 * 1024;
+    public const int MaxPacketChannelCount = 8;
     public const int StreamSmallReadCacheSize = 512;
     public const int ProxyPacketQueueCapacity = 200;
     public const int TunnelPacketQueueCapacity = 200;
@@ -21,34 +31,10 @@ public static class TunnelDefaults
     public const int MaxUdpDnsClientCount = 70;
     public const int MaxPingClientCount = 10;
     public const int PrefetchStreamBufferSize = 1024 * 4;
-    // Covers any response a real-world resolver exchanges over UDP (post-DNS-Flag-Day defaults are
-    // ~1232 bytes; 4096 is the common EDNS ceiling, though the protocol permits more). A rare larger
-    // reply is detected via MSG_TRUNC and dropped like packet loss — see UdpProxy.
-    public const int UdpDnsBufferSize = 4 * 1024;
-    public const int MaxUdpDatagramSize = 64 * 1024;
-
-    public static TransferBufferSize ClientStreamProxyBufferSize { get; } =
-        new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive
-
-    public static TransferBufferSize ServerStreamProxyBufferSize { get; } =
-        new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive
-
-    public static TransferBufferSize? ClientUdpProxyBufferSize { get; set; } =
-        new(1024 * 1024 * 1, 1024 * 1024 * 1); // 1MB send, 1MB receive
-
-    public static TransferBufferSize? ServerUdpProxyBufferSize { get; set; } = null; // system default
 
     public static TransferBufferSize ConnectionPacketBufferSize { get; } =
         new(0xFFFF * 4, 0xFFFF * 4); // 256KB send, 256KB receive
 
-    public static TransferBufferSize ServerStreamPacketBufferSize { get; } =
-        new(0xFFFF / 4, 0xFFFF / 4); // 16KB send, 16KB receive
-
-    public static TransferBufferSize? ClientUdpChannelBufferSize { get; set; } =
-        new(1024 * 1024 * 1, 1024 * 1024 * 1); // 1MB send, 1MB receive
-
-    public static TransferBufferSize? ServerUdpChannelBufferSize { get; set; } = null; // system default
-    public static TransferBufferSize? ServerTcpKernelBufferSize { get; set; } = null; // system default
     public static TimeSpan PingTimeout { get; set; } = TimeSpan.FromSeconds(5);
     public static TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     // DNS is one request/response round trip; holding its mapping for the full UdpTimeout lets a DNS
@@ -59,7 +45,4 @@ public static class TunnelDefaults
     public static TimeSpan TcpCheckInterval { get; set; } = TimeSpan.FromMinutes(15);
     public static TimeSpan TcpGracefulTimeout { get; set; } = TimeSpan.FromSeconds(15);
     public static TimeSpan ByeTimeout { get; set; } = TimeSpan.FromSeconds(2);
-    public static TimeSpan ClientRequestTimeoutDelta { get; set; } = TimeSpan.FromSeconds(10);
-    public static IpNetwork VirtualIpNetworkV4 { get; } = new(IPAddress.Parse("10.240.0.1"), 12); //1M (enough for reservation)
-    public static IpNetwork VirtualIpNetworkV6 { get; } = new(IPAddress.Parse("fd12:2020::1"), 48);
 }

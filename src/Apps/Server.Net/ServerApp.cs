@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.Net;
 using System.Runtime.InteropServices;
 using Ga4.Trackers;
@@ -24,6 +24,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.LinuxTun;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.App.Server;
 
@@ -280,8 +281,8 @@ public class ServerApp : IDisposable
 
 
             // run server
-            var virtualIpNetworkV4 = TunnelDefaults.VirtualIpNetworkV4;
-            var virtualIpNetworkV6 = TunnelDefaults.VirtualIpNetworkV6;
+            var virtualIpNetworkV4 = ServerTunnelDefaults.VirtualIpNetworkV4;
+            var virtualIpNetworkV6 = ServerTunnelDefaults.VirtualIpNetworkV6;
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
                 VpnAdapter = await CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6, cancellationToken),

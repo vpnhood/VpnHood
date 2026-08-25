@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Exceptions;
@@ -19,6 +19,7 @@ using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Server;
 
@@ -502,10 +503,10 @@ public class ServerHost : IDisposable, IAsyncDisposable
             IsIpV6Supported = IsIpV6Supported,
             // client should wait more to get session exception replies
             RequestTimeout = _sessionManager.SessionOptions.TcpConnectTimeoutValue +
-                             TunnelDefaults.ClientRequestTimeoutDelta,
+                             ServerTunnelDefaults.ClientRequestTimeoutDelta,
             // client should wait less to make sure server is not closing the connection
             ChannelIdleTimeout = _sessionManager.SessionOptions.ChannelIdleTimeoutValue -
-                              TunnelDefaults.ClientRequestTimeoutDelta,
+                              ServerTunnelDefaults.ClientRequestTimeoutDelta,
             AccessKey = sessionResponseEx.AccessKey,
             DnsServers = DnsServers,
             AdRequirement = sessionResponseEx.AdRequirement,

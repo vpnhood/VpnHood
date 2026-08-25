@@ -1,4 +1,4 @@
-﻿using Ga4.Trackers;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net;
@@ -23,6 +23,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Server;
 
@@ -413,7 +414,7 @@ public class VpnHoodServer : IAsyncDisposable
             return configValue.Value;
 
         if (totalMemory == null)
-            return TunnelDefaults.ServerStreamProxyBufferSize;
+            return ServerTunnelDefaults.StreamProxyBufferSize;
 
         var bufferSize = (long)Math.Round((double)totalMemory / 0x80000000) * 4096;
         bufferSize = Math.Max(bufferSize, 8192);

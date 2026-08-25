@@ -21,6 +21,7 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Client;
 
@@ -105,12 +106,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             IsPingSupported = false,
             PacketProxyCallbacks = null,
             UdpTimeout = TunnelDefaults.UdpTimeout,
-            MaxUdpClientCount = Config.Transport.MaxUdpClientCount ?? TunnelDefaults.MaxUdpClientCount,
-            MaxUdpDnsClientCount = Config.Transport.MaxUdpDnsClientCount ?? TunnelDefaults.MaxUdpDnsClientCount,
+            MaxUdpClientCount = Config.Transport.MaxUdpClientCount,
+            MaxUdpDnsClientCount = Config.Transport.MaxUdpDnsClientCount,
             MaxPingClientCount = TunnelDefaults.MaxPingClientCount,
-            PacketQueueCapacity = Config.Transport.UdpProxyQueueCapacity ?? TunnelDefaults.ProxyPacketQueueCapacity,
+            PacketQueueCapacity = Config.Transport.UdpProxyQueueCapacity,
             IcmpTimeout = TunnelDefaults.IcmpTimeout,
-            UdpBufferSize = Config.Transport.UdpProxyBufferSize ?? TunnelDefaults.ClientUdpProxyBufferSize,
+            UdpBufferSize = Config.Transport.UdpProxyBufferSize,
             LogScope = null,
             AutoDisposePackets = true
         });
@@ -127,7 +128,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             tcpConnectTimeout: Config.Transport.TcpConnectTimeout,
             proxyManager: _proxyManager,
             netFilter: _netFilter,
-            streamProxyBufferSize: Config.Transport.StreamProxyBufferSize ?? TunnelDefaults.ClientStreamProxyBufferSize,
+            streamProxyBufferSize: Config.Transport.StreamProxyBufferSize,
             passthroughState: PassthroughState);
 
         // proxy host
@@ -444,7 +445,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             // add the new channel
             var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
                 StreamConnection = requestResult.StreamConnection,
-                BufferSize = Config.Transport.PacketChannelBufferSize ?? TunnelDefaults.ConnectionPacketBufferSize,
+                BufferSize = Config.Transport.PacketChannelBufferSize,
                 ChannelId = request.ChannelId,
                 RequestTime = request.RequestTime,
                 Blocking = true,
@@ -472,7 +473,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             sessionId: Config.SessionId,
             sessionKey: Config.SessionKey.Span,
             remoteEndPoint: Config.HostUdpEndPoint,
-            bufferSize: TunnelDefaults.ClientUdpChannelBufferSize);
+            bufferSize: Config.Transport.UdpChannelBufferSize);
 
         // create udp channel
         var udpChannel = new UdpChannel(_udpTransmitter.UdpTransport, new UdpChannelOptions {

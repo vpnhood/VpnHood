@@ -1,4 +1,4 @@
-﻿using Ga4.Trackers;
+using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Net;
@@ -21,6 +21,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Server;
 

@@ -1,6 +1,7 @@
-﻿using System.Buffers;
+using System.Buffers;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Streams;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Tunneling;
 

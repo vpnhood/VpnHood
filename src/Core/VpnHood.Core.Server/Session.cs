@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Common.Exceptions;
@@ -24,6 +24,7 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Server;
 
@@ -101,7 +102,7 @@ public class Session : IDisposable
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
             MaxPingClientCount = options.MaxIcmpClientCountValue,
-            UdpBufferSize = options.UdpProxyBufferSizeValue ?? TunnelDefaults.ServerUdpProxyBufferSize,
+            UdpBufferSize = options.UdpProxyBufferSizeValue ?? ServerTunnelDefaults.UdpProxyBufferSize,
             LogScope = logScope,
             IsPingSupported = true,
             PacketProxyCallbacks = new PacketProxyCallbacks(this),
@@ -112,7 +113,7 @@ public class Session : IDisposable
         _trackingOptions = trackingOptions;
         _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
-        _streamProxyBufferSize = options.StreamProxyBufferSize ?? TunnelDefaults.ServerStreamProxyBufferSize;
+        _streamProxyBufferSize = options.StreamProxyBufferSize ?? ServerTunnelDefaults.StreamProxyBufferSize;
         _tcpKernelBufferSize = options.TcpKernelBufferSize;
         _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -323,7 +324,7 @@ public class Session : IDisposable
             "Creating a TcpPacketChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
         var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
-            BufferSize = TunnelDefaults.ServerStreamPacketBufferSize,
+            BufferSize = ServerTunnelDefaults.StreamPacketBufferSize,
             RequestTime = request.RequestTime,
             Blocking = false,
             AutoDisposePackets = true,

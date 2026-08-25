@@ -1,6 +1,7 @@
-﻿using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Tunneling.Connections;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Tunneling.Channels;
 

@@ -12,6 +12,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Connections;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Server.Listeners;
 
@@ -100,7 +101,7 @@ internal class TcpListenerHost(
                 var tcpClient = await listener.AcceptTcpClientAsync(ct).Vhc();
 
                 var tcpKernelBufferSize = sessionManager.SessionOptions.TcpKernelBufferSize ??
-                                          TunnelDefaults.ServerTcpKernelBufferSize;
+                                          ServerTunnelDefaults.TcpKernelBufferSize;
                 VhUtils.ConfigTcpClient(tcpClient,
                     sendBufferSize: tcpKernelBufferSize?.Send,
                     receiveBufferSize: tcpKernelBufferSize?.Receive);

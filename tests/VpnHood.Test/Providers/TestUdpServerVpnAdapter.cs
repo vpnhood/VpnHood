@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Packets;
@@ -11,6 +11,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Test.Providers;
 

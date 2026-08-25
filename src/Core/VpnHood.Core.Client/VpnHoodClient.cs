@@ -15,6 +15,7 @@ using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.VpnAdapters.Abstractions;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Client;
 

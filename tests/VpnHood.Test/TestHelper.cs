@@ -29,6 +29,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Test;
 

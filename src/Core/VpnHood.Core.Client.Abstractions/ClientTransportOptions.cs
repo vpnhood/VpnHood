@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using VpnHood.Core.Common.Tunneling;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Client.Abstractions;
@@ -7,10 +8,9 @@ namespace VpnHood.Core.Client.Abstractions;
 /// The transport knobs the app tunes and the client forwards, held by reference from
 /// <c>AppOptions</c> all the way down to the session config so no layer restates them.
 /// <para>
-/// The timeouts carry their default here because it is a plain literal. The buffer and count knobs
-/// stay null instead: their defaults live in <c>TunnelDefaults</c>, which this project cannot see,
-/// so null means "the consumer decides" and each one is resolved once, where its component is
-/// constructed. Never resolve a null on the way through — only at the point of use.
+/// Every knob carries its own default, so the value and the knob live in one place and no consumer
+/// has to resolve anything on the way through. The two kernel-buffer knobs are the exception: null
+/// there is a real value meaning "leave the socket at the operating system's own size".
 /// </para>
 /// </summary>
 public class ClientTransportOptions
@@ -21,17 +21,18 @@ public class ClientTransportOptions
     public TimeSpan AutoWaitTimeout { get; set; } = TimeSpan.FromSeconds(30); // auto resume after pause
     public TimeSpan ServerQueryTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
-    // Optional per-platform transport buffer sizes. Low-memory clients (e.g. the iOS Network
-    // Extension under the ~50 MB jetsam limit) lower these.
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public TransferBufferSize? StreamProxyBufferSize { get; set; }
+    // Per-platform transport buffer sizes. Low-memory clients (e.g. the iOS Network Extension
+    // under the ~50 MB jetsam limit) lower these. The three below are the client's alone, so they
+    // carry their own default rather than deferring to a shared constant.
+    public TransferBufferSize StreamProxyBufferSize { get; set; } = new(0xFFFF / 8, 0xFFFF / 8); // 8KB/8KB
+    public TransferBufferSize UdpProxyBufferSize { get; set; } = new(1024 * 1024, 1024 * 1024);
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public TransferBufferSize? UdpProxyBufferSize { get; set; }
+    // Kernel buffer of the UDP socket carrying the udp channel to the server.
+    public TransferBufferSize UdpChannelBufferSize { get; set; } = new(1024 * 1024, 1024 * 1024);
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public TransferBufferSize? PacketChannelBufferSize { get; set; }
+    public TransferBufferSize PacketChannelBufferSize { get; set; } = TunnelDefaults.ConnectionPacketBufferSize;
 
+    // Null on these two means "leave the socket at the system default" — a real value, not "unset".
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
 
@@ -41,16 +42,11 @@ public class ClientTransportOptions
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? TcpPacketChannelKernelBufferSize { get; set; }
 
-    // Optional per-platform UDP proxy scaling. Low-memory clients cap the direct-UDP socket fleet
-    // and per-proxy packet queue so a post-kill reconnect flow-storm stays bounded.
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? MaxUdpClientCount { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? MaxUdpDnsClientCount { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public int? UdpProxyQueueCapacity { get; set; }
+    // Per-platform UDP proxy scaling. Low-memory clients cap the direct-UDP socket fleet and the
+    // per-proxy packet queue so a post-kill reconnect flow-storm stays bounded.
+    public int MaxUdpClientCount { get; set; } = TunnelDefaults.MaxUdpClientCount;
+    public int MaxUdpDnsClientCount { get; set; } = TunnelDefaults.MaxUdpDnsClientCount;
+    public int UdpProxyQueueCapacity { get; set; } = TunnelDefaults.ProxyPacketQueueCapacity;
 
     /// <summary>
     /// Full-size transport: every knob left null so each core component applies its own default.

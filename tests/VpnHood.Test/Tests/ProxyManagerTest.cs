@@ -6,6 +6,7 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Test.Providers;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Test.Tests;
 

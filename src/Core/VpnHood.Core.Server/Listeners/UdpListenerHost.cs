@@ -7,6 +7,7 @@ using VpnHood.Core.Toolkit.ApiClients;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Channels;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Server.Listeners;
 
@@ -64,7 +65,7 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
 
         // reconfigure all transmitters
         foreach (var transmitter in _transmitters)
-            transmitter.BufferSize = bufferSize ?? TunnelDefaults.ServerUdpChannelBufferSize;
+            transmitter.BufferSize = bufferSize ?? ServerTunnelDefaults.UdpChannelBufferSize;
 
         IReadOnlyList<ServerHostEndPointStatus> ret = endPointStatuses;
         return Task.FromResult(ret);

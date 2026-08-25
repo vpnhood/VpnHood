@@ -6,12 +6,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="Exceptions\**" />
-		<EmbeddedResource Remove="Exceptions\**" />
-		<None Remove="Exceptions\**" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.Core.IpLocations\VpnHood.Core.IpLocations.csproj" />
 	  <ProjectReference Include="..\VpnHood.Core.Server.Access\VpnHood.Core.Server.Access.csproj" />
 	</ItemGroup>

@@ -1,5 +1,6 @@
-﻿using System.Net;
+using System.Net;
 using VpnHood.Core.Tunneling.Cryptography;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Tunneling.Channels;
 

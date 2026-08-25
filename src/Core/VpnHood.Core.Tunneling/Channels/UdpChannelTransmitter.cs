@@ -1,4 +1,4 @@
-﻿using System.Buffers.Binary;
+using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -9,6 +9,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Cryptography;
 using VpnHood.Core.Tunneling.Utils;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Tunneling.Channels;
 

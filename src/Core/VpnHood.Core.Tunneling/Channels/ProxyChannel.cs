@@ -9,6 +9,7 @@ using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Tunneling.Channels;
 

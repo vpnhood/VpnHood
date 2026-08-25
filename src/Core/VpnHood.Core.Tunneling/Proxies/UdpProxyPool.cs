@@ -13,6 +13,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Exceptions;
+using VpnHood.Core.Common.Tunneling;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 

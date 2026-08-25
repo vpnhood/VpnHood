@@ -5,7 +5,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.WebSockets;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 // ReSharper disable InconsistentlySynchronizedField
 
@@ -31,7 +31,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
 
     public WebSocketStream(Stream sourceStream, string streamId, bool useBuffer, bool isServer)
         : base(useBuffer
-            ? new ReadBufferedStream(sourceStream, leaveOpen: false, bufferSize: TunnelDefaults.StreamSmallReadCacheSize)
+            ? new ReadBufferedStream(sourceStream, leaveOpen: false, bufferSize: TransportDefaults.StreamSmallReadCacheSize)
             : sourceStream, streamId)
     {
         _isServer = isServer;
@@ -304,7 +304,7 @@ public class WebSocketStream : ChunkStream, IPreservedChunkStream
     private async Task CloseStreamInternal()
     {
         try {
-            using var timeoutCts = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
+            using var timeoutCts = new CancellationTokenSource(TransportDefaults.TcpGracefulTimeout);
 
             // wait for write to finish and write the terminator
             await _writeTask.AsTask().WaitAsync(timeoutCts.Token).Vhc();

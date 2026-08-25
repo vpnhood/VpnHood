@@ -21,7 +21,7 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Client;
 
@@ -89,7 +89,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         // Tunnel
         _tunnel = new Tunnel(new TunnelOptions {
             AutoDisposePackets = true,
-            PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
+            PacketQueueCapacity = TransportDefaults.TunnelPacketQueueCapacity,
             MaxPacketChannelCount = _channelProtocol is ChannelProtocol.Udp ? 1 : Config.MaxPacketChannelCount,
             Mtu = config.Mtu
         });
@@ -105,12 +105,12 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
         _proxyManager = new ProxyManager(_socketFactory, new ProxyManagerOptions {
             IsPingSupported = false,
             PacketProxyCallbacks = null,
-            UdpTimeout = TunnelDefaults.UdpTimeout,
+            UdpTimeout = TransportDefaults.UdpTimeout,
             MaxUdpClientCount = Config.Transport.MaxUdpClientCount,
             MaxUdpDnsClientCount = Config.Transport.MaxUdpDnsClientCount,
-            MaxPingClientCount = TunnelDefaults.MaxPingClientCount,
+            MaxPingClientCount = TransportDefaults.MaxPingClientCount,
             PacketQueueCapacity = Config.Transport.UdpProxyQueueCapacity,
-            IcmpTimeout = TunnelDefaults.IcmpTimeout,
+            IcmpTimeout = TransportDefaults.IcmpTimeout,
             UdpBufferSize = Config.Transport.UdpProxyBufferSize,
             LogScope = null,
             AutoDisposePackets = true
@@ -632,7 +632,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             VhLogger.Instance.LogInformation("Sending bye to the server...");
             try {
                 // don't use SendRequest because it can be disposed
-                var byeTimeout = TunnelDefaults.ByeTimeout.WhenNoDebugger();
+                var byeTimeout = TransportDefaults.ByeTimeout.WhenNoDebugger();
                 using var byteCts = new CancellationTokenSource(byeTimeout);
                 using var requestResult = await _requestSender.SendRequest<SessionResponse>(
                         new ByeRequest {

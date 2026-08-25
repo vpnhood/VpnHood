@@ -14,7 +14,7 @@ using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Exceptions;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Client;
 
@@ -184,7 +184,7 @@ internal class ClientStreamHandler(
             // handle small buffer for tiny TLS hello or small HTTP request to remove bidirectional pattern
             // wait just 100ms, because is some case such as FTPS with explicit encryption, client waits for server data
             // before sending the TLS hello, so there is no initial data to prefetch
-            var memory = new Memory<byte>(new byte[TunnelDefaults.PrefetchStreamBufferSize]);
+            var memory = new Memory<byte>(new byte[TransportDefaults.PrefetchStreamBufferSize]);
             var read = await stream.ReadAsync(memory, linkedCts.Token);
             var initContents = memory[..read];
             return initContents;

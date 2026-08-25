@@ -13,7 +13,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Exceptions;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
@@ -34,7 +34,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
     private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
     private readonly EventReporter _maxWorkerEventReporter;
     private readonly TimeSpan _udpTimeout;
-    private readonly TimeSpan _dnsTimeout = TunnelDefaults.UdpDnsTimeout;
+    private readonly TimeSpan _dnsTimeout = TransportDefaults.UdpDnsTimeout;
     private readonly int _maxClientCount;
     private readonly int _maxDnsClientCount;
     private readonly int _packetQueueCapacity;
@@ -171,7 +171,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
             // create a new worker
             udpProxy = new UdpProxy(CreateUdpSocket(addressFamily), proxyTimeout, _packetQueueCapacity,
                 _autoDisposeSentPackets,
-                isDns ? TunnelDefaults.UdpDnsBufferSize : TunnelDefaults.MaxUdpDatagramSize);
+                isDns ? TransportDefaults.UdpDnsBufferSize : TransportDefaults.MaxUdpDatagramSize);
             udpProxy.PacketReceived += UdpProxy_OnPacketReceived;
             proxies.Add(udpProxy);
             isNewLocalEndPoint = true;

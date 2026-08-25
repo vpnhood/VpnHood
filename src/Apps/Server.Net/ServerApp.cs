@@ -24,7 +24,7 @@ using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Core.VpnAdapters.LinuxTun;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.App.Server;
 
@@ -281,8 +281,8 @@ public class ServerApp : IDisposable
 
 
             // run server
-            var virtualIpNetworkV4 = ServerTunnelDefaults.VirtualIpNetworkV4;
-            var virtualIpNetworkV6 = ServerTunnelDefaults.VirtualIpNetworkV6;
+            var virtualIpNetworkV4 = ServerTransportDefaults.VirtualIpNetworkV4;
+            var virtualIpNetworkV6 = ServerTransportDefaults.VirtualIpNetworkV6;
             _vpnHoodServer = new VpnHoodServer(AccessManager, new ServerOptions {
                 Tracker = _tracker,
                 VpnAdapter = await CreateTunProvider(virtualIpNetworkV4, virtualIpNetworkV6, cancellationToken),
@@ -341,7 +341,7 @@ public class ServerApp : IDisposable
                 VhLogger.Instance.LogInformation("Starting VpnAdapter...");
                 await vpnAdapter.Start(new VpnAdapterOptions {
                     SessionName = "VpnHoodServer",
-                    Mtu = TunnelDefaults.MtuServer,
+                    Mtu = TransportDefaults.MtuServer,
                     UseNat = true,
                     VirtualIpNetworkV4 = virtualIpNetworkV4,
                     VirtualIpNetworkV6 = virtualIpNetworkV6

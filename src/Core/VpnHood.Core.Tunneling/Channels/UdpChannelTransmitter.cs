@@ -9,7 +9,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Cryptography;
 using VpnHood.Core.Tunneling.Utils;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
@@ -29,7 +29,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 
     private readonly EventReporter _udpSignReporter = new("Invalid udp signature.", GeneralEventId.UdpSign);
     private readonly EventReporter _invalidSessionReporter = new("Invalid UDP session.", GeneralEventId.UdpSign);
-    private readonly Memory<byte> _sendBuffer = new byte[TunnelDefaults.MaxPacketSize];
+    private readonly Memory<byte> _sendBuffer = new byte[TransportDefaults.MaxPacketSize];
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
     private static ulong _sendSequenceNumber;
@@ -39,7 +39,7 @@ public abstract class UdpChannelTransmitter : IDisposable
 
     protected abstract SessionUdpTransport? SessionIdToUdpTransport(ulong sessionId);
 
-    public int MaxPacketSize { get; set; } = TunnelDefaults.MaxPacketSize;
+    public int MaxPacketSize { get; set; } = TransportDefaults.MaxPacketSize;
     public const int HeaderLength = TagOffset + TagLength; // size: 1 + 8 + 8 + 16 = 33 bytes
     public IPEndPoint LocalEndPoint { get; }
     public bool Connected => !_disposed;

@@ -3,7 +3,7 @@ using VpnHood.Core.Packets.Extensions;
 using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Tunneling.Channels;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -56,7 +56,7 @@ public class Tunnel : PassthroughPacketTransport
     private void SendPacketInternal(IpPacket ipPacket)
     {
         var channel = FindChannelForPacket(ipPacket);
-        VerifyMtu(ipPacket, TunnelDefaults.MtuOverhead);
+        VerifyMtu(ipPacket, TransportDefaults.MtuOverhead);
         channel.SendPacketQueued(ipPacket);
     }
 

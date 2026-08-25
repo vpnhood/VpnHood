@@ -1,6 +1,6 @@
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Messaging;
 
@@ -16,5 +16,5 @@ public class HelloRequest()
     public bool? IsIpV6Supported { get; init; }
     public string? AccessCode { get; set; }
     public UserReview? UserReview { get; init; }
-    public int Mtu { get; init; } = TunnelDefaults.MtuClient;
+    public int Mtu { get; init; } = TransportDefaults.MtuClient;
 }

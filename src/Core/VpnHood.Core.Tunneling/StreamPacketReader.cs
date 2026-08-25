@@ -1,7 +1,7 @@
 using System.Buffers;
 using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Streams;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling;
 
@@ -27,7 +27,7 @@ public class StreamPacketReader(Stream stream, int bufferSize) : IDisposable
         var packetLength = PacketUtil.ReadPacketLength(_minHeader.Span);
 
         // check packet length
-        if (packetLength > TunnelDefaults.MaxPacketSize)
+        if (packetLength > TransportDefaults.MaxPacketSize)
             throw new InvalidOperationException(
                 $"Packet size exceeds the maximum allowed limit. PacketLength: {packetLength}");
 

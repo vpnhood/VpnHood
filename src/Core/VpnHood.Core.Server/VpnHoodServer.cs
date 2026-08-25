@@ -23,7 +23,7 @@ using VpnHood.Core.Toolkit.Net;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Sockets;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;
 
@@ -414,7 +414,7 @@ public class VpnHoodServer : IAsyncDisposable
             return configValue.Value;
 
         if (totalMemory == null)
-            return ServerTunnelDefaults.StreamProxyBufferSize;
+            return ServerTransportDefaults.StreamProxyBufferSize;
 
         var bufferSize = (long)Math.Round((double)totalMemory / 0x80000000) * 4096;
         bufferSize = Math.Max(bufferSize, 8192);

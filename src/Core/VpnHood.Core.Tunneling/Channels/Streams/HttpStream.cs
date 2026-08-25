@@ -6,7 +6,7 @@ using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Streams;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Utils;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels.Streams;
 
@@ -31,7 +31,7 @@ public class HttpStream : ChunkStream
     private bool IsServer => _host == null;
 
     public HttpStream(Stream sourceStream, string streamId, string? host, bool keepSourceOpen = false)
-        : base(new ReadBufferedStream(sourceStream, keepSourceOpen, bufferSize: TunnelDefaults.StreamSmallReadCacheSize),
+        : base(new ReadBufferedStream(sourceStream, keepSourceOpen, bufferSize: TransportDefaults.StreamSmallReadCacheSize),
             streamId)
     {
         _host = host;
@@ -258,8 +258,8 @@ public class HttpStream : ChunkStream
     private async Task CloseStream(CancellationToken cancellationToken)
     {
         // cancel writing requests. 
-        _readCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
-        _writeCts.CancelAfter(TunnelDefaults.TcpGracefulTimeout);
+        _readCts.CancelAfter(TransportDefaults.TcpGracefulTimeout);
+        _writeCts.CancelAfter(TransportDefaults.TcpGracefulTimeout);
 
         try {
             await _writeTask.Vhc();
@@ -322,7 +322,7 @@ public class HttpStream : ChunkStream
         // close stream
         if (!_hasError && !_isConnectionClosed) {
             // create a new cancellation token for CloseStream
-            using var cancellationTokenSource = new CancellationTokenSource(TunnelDefaults.TcpGracefulTimeout);
+            using var cancellationTokenSource = new CancellationTokenSource(TransportDefaults.TcpGracefulTimeout);
             await CloseStream(cancellationTokenSource.Token).Vhc();
         }
 

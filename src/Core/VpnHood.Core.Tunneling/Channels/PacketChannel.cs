@@ -7,7 +7,7 @@ using VpnHood.Core.Toolkit.Jobs;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.DatagramMessaging;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
@@ -124,7 +124,7 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
         }
 
         // dispose if _closeMessageTime is set and more than graceful timeout
-        if (FastDateTime.Now - _closeSentTime > TunnelDefaults.TcpGracefulTimeout)
+        if (FastDateTime.Now - _closeSentTime > TransportDefaults.TcpGracefulTimeout)
             Dispose();
 
         return default;

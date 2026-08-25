@@ -15,7 +15,7 @@ using VpnHood.Core.Toolkit.Sockets;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Client;
 
@@ -162,7 +162,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         _domainFilteringService = new DomainFilteringService(
             NetFilter.DomainFilter,
             sniEventId: GeneralEventId.Sni,
-            tlsBufferSize: TunnelDefaults.PrefetchStreamBufferSize);
+            tlsBufferSize: TransportDefaults.PrefetchStreamBufferSize);
         var forceLogSni = options.ForceLogSni;
         _domainFilteringService.IsEnabled = forceLogSni || !NetFilter.DomainFilter.IsEmpty;
         NetFilter.DomainFilter.Changed += (_, _) =>

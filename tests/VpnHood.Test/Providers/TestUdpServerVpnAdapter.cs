@@ -11,7 +11,7 @@ using VpnHood.Core.Tunneling;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Sockets;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Test.Providers;
 
@@ -30,9 +30,9 @@ public class TestUdpServerVpnAdapter : PacketTransport, IVpnAdapter, IPacketProx
         _proxyPool = new UdpProxyPool(new UdpProxyPoolOptions {
             SocketFactory = new BindingSocketFactory(new SystemSocketFactory()),
             PacketProxyCallbacks = this,
-            UdpTimeout = TunnelDefaults.UdpTimeout,
-            MaxClientCount = TunnelDefaults.MaxUdpClientCount,
-            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            UdpTimeout = TransportDefaults.UdpTimeout,
+            MaxClientCount = TransportDefaults.MaxUdpClientCount,
+            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
             BufferSize = null,
             AutoDisposePackets = true,
             LogScope = null

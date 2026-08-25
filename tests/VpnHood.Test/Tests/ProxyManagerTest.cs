@@ -6,7 +6,7 @@ using VpnHood.Core.Tunneling.Channels;
 using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Test.Providers;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Test.Tests;
 
@@ -30,11 +30,11 @@ public class ProxyManagerTest
         return new ProxyManager(new TestSocketFactory(), new ProxyManagerOptions {
             IsPingSupported = false,
             PacketProxyCallbacks = null,
-            UdpTimeout = TunnelDefaults.UdpTimeout,
-            IcmpTimeout = TunnelDefaults.IcmpTimeout,
-            MaxUdpClientCount = TunnelDefaults.MaxUdpClientCount,
-            MaxPingClientCount = TunnelDefaults.MaxPingClientCount,
-            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            UdpTimeout = TransportDefaults.UdpTimeout,
+            IcmpTimeout = TransportDefaults.IcmpTimeout,
+            MaxUdpClientCount = TransportDefaults.MaxUdpClientCount,
+            MaxPingClientCount = TransportDefaults.MaxPingClientCount,
+            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
             UdpBufferSize = null,
             LogScope = null,
             AutoDisposePackets = true

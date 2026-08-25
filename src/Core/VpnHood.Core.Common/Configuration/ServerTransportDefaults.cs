@@ -1,15 +1,15 @@
 using System.Net;
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Common.Tunneling;
+namespace VpnHood.Core.Common.Configuration;
 
 /// <summary>
-/// Tunnel defaults only the server applies. They live here, not in <c>TunnelDefaults</c>, so the
-/// client cannot reach them: nothing outside this project has any business reading them, and a
-/// shared class made that a matter of discipline rather than of compilation.
+/// Transport defaults only the server applies — the counterpart of <c>ClientTransportOptions</c>,
+/// kept as a static holder rather than an options object because the values it falls back to
+/// arrive from the access manager over the wire, so a null there is genuinely "not configured".
 /// <para>A null buffer size means "leave the socket at the system default".</para>
 /// </summary>
-public static class ServerTunnelDefaults
+public static class ServerTransportDefaults
 {
     public static TransferBufferSize StreamProxyBufferSize { get; } =
         new(0xFFFF / 8, 0xFFFF / 8); // 8KB send, 8KB receive

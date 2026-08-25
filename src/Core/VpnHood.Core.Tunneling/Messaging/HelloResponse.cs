@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.Converters;
 using VpnHood.Core.Toolkit.Net;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Messaging;
 
@@ -39,7 +39,7 @@ public class HelloResponse : SessionResponse
     public AccessInfo? AccessInfo { get; set; }
     public bool IsTcpProxySupported { get; set; } = true;
     public bool IsTcpPacketSupported { get; set; }
-    public int Mtu { get; set; } = TunnelDefaults.MtuServer;
+    public int Mtu { get; set; } = TransportDefaults.MtuServer;
 
     [Obsolete("Use IsTcpPacketSupported")]
     public bool IsTunProviderSupported {

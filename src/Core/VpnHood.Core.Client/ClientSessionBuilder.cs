@@ -23,7 +23,7 @@ using VpnHood.Core.Tunneling.Connections;
 using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Client;
 
@@ -126,7 +126,7 @@ internal class ClientSessionBuilder(
                 AllowRedirect = allowRedirect,
                 IsIpV6Supported = vpnAdapter.IsIpVersionSupported(IpVersion.IPv6),
                 UserReview = config.UserReview,
-                Mtu = TunnelDefaults.MtuClient
+                Mtu = TransportDefaults.MtuClient
             };
 
             using var requestResult = await requestSender.SendRequest<HelloResponse>(helloRequest, cancellationToken).Vhc();
@@ -311,7 +311,7 @@ internal class ClientSessionBuilder(
 
             var adapterOptions = new VpnAdapterOptions {
                 ServerIp = connectorService.VpnEndPoint.TcpEndPoint.Address,
-                Mtu = mtu - TunnelDefaults.MtuOverhead,
+                Mtu = mtu - TransportDefaults.MtuOverhead,
                 DnsServers = dnsConfig.DnsServers,
                 VirtualIpNetworkV4 = networkV4,
                 VirtualIpNetworkV6 = networkV6,

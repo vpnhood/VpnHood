@@ -9,7 +9,7 @@ using VpnHood.Core.Toolkit.Memory;
 using VpnHood.Core.Toolkit.Utils;
 using VpnHood.Core.Tunneling.Channels.Streams;
 using VpnHood.Core.Tunneling.Connections;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
@@ -51,7 +51,7 @@ public class ProxyChannel : IProxyChannel
                 $"Proxy send buffer size must be greater than or equal to {BufferSizeMin} and less than {BufferSizeMax}. It was {_tunnelBufferSize.Send}");
 
         ChannelId = channelId;
-        _checkAliveJob = new Job(CheckAlive, TunnelDefaults.TcpCheckInterval, nameof(ProxyChannel));
+        _checkAliveJob = new Job(CheckAlive, TransportDefaults.TcpCheckInterval, nameof(ProxyChannel));
     }
 
     public Traffic Traffic {

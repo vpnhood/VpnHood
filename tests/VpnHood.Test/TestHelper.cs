@@ -29,7 +29,7 @@ using VpnHood.Core.VpnAdapters.Abstractions;
 using VpnHood.Test.AccessManagers;
 using VpnHood.Test.Device;
 using VpnHood.Test.Providers;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Test;
 
@@ -53,7 +53,7 @@ public class TestHelper : IDisposable
 
     public TestHelper()
     {
-        TunnelDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
+        TransportDefaults.TcpGracefulTimeout = TimeSpan.FromSeconds(10);
         VhLogger.Instance = VhLogger.CreateConsoleLogger(); // min level is controlled by VhLogger.MinLevel
         VhLogger.MinLogLevel = LogLevel.Debug;
         VhLogger.IsAnonymousMode = false;
@@ -289,9 +289,9 @@ public class TestHelper : IDisposable
             PacketProxyCallbacks = callbacks,
             SocketFactory = new BindingSocketFactory(new TestSocketFactory()),
             AutoDisposePackets = false,
-            UdpTimeout = TunnelDefaults.UdpTimeout,
+            UdpTimeout = TransportDefaults.UdpTimeout,
             MaxClientCount = 10,
-            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
+            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
             BufferSize = null,
             LogScope = null
         };
@@ -303,9 +303,9 @@ public class TestHelper : IDisposable
     {
         var tunnelOptions = new TunnelOptions {
             AutoDisposePackets = true,
-            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity,
-            MaxPacketChannelCount = TunnelDefaults.MaxPacketChannelCount,
-            Mtu = TunnelDefaults.MtuClient
+            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity,
+            MaxPacketChannelCount = TransportDefaults.MaxPacketChannelCount,
+            Mtu = TransportDefaults.MtuClient
         };
         return tunnelOptions;
     }

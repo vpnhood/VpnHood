@@ -3,13 +3,13 @@ using VpnHood.Core.Packets;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling.Utils;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Channels;
 
 public class UdpChannel : PacketChannel
 {
-    private readonly Memory<byte> _buffer = new byte[TunnelDefaults.MaxPacketSize];
+    private readonly Memory<byte> _buffer = new byte[TransportDefaults.MaxPacketSize];
     private readonly TaskCompletionSource<bool> _readingTask = new();
     private readonly bool _leaveUdpTransportOpen;
 

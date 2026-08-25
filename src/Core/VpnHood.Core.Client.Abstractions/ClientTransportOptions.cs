@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 using VpnHood.Core.Toolkit.Net;
 
 namespace VpnHood.Core.Client.Abstractions;
@@ -30,7 +30,7 @@ public class ClientTransportOptions
     // Kernel buffer of the UDP socket carrying the udp channel to the server.
     public TransferBufferSize UdpChannelBufferSize { get; set; } = new(1024 * 1024, 1024 * 1024);
 
-    public TransferBufferSize PacketChannelBufferSize { get; set; } = TunnelDefaults.ConnectionPacketBufferSize;
+    public TransferBufferSize PacketChannelBufferSize { get; set; } = TransportDefaults.ConnectionPacketBufferSize;
 
     // Null on these two means "leave the socket at the system default" — a real value, not "unset".
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -44,9 +44,9 @@ public class ClientTransportOptions
 
     // Per-platform UDP proxy scaling. Low-memory clients cap the direct-UDP socket fleet and the
     // per-proxy packet queue so a post-kill reconnect flow-storm stays bounded.
-    public int MaxUdpClientCount { get; set; } = TunnelDefaults.MaxUdpClientCount;
-    public int MaxUdpDnsClientCount { get; set; } = TunnelDefaults.MaxUdpDnsClientCount;
-    public int UdpProxyQueueCapacity { get; set; } = TunnelDefaults.ProxyPacketQueueCapacity;
+    public int MaxUdpClientCount { get; set; } = TransportDefaults.MaxUdpClientCount;
+    public int MaxUdpDnsClientCount { get; set; } = TransportDefaults.MaxUdpDnsClientCount;
+    public int UdpProxyQueueCapacity { get; set; } = TransportDefaults.ProxyPacketQueueCapacity;
 
     /// <summary>
     /// Full-size transport: every knob left null so each core component applies its own default.

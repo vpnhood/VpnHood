@@ -6,7 +6,7 @@ using VpnHood.Core.PacketTransports;
 using VpnHood.Core.Toolkit.Collections;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.Toolkit.Extensions;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Tunneling.Proxies;
 
@@ -20,7 +20,7 @@ public class PingProxy(bool autoDisposePackets)
 {
     private readonly Ping _ping = new();
     public void Cancel() => _ping.SendAsyncCancel();
-    public TimeSpan PingTimeout { get; set; } = TunnelDefaults.PingTimeout;
+    public TimeSpan PingTimeout { get; set; } = TransportDefaults.PingTimeout;
     public DateTime LastUsedTime { get; set; }
     public new bool IsDisposed => base.IsDisposed;
 

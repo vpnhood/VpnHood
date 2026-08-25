@@ -24,7 +24,7 @@ using VpnHood.Core.Tunneling.Messaging;
 using VpnHood.Core.Tunneling.Proxies;
 using VpnHood.Core.Tunneling.Utils;
 using VpnHood.Core.VpnAdapters.Abstractions;
-using VpnHood.Core.Common.Tunneling;
+using VpnHood.Core.Common.Configuration;
 
 namespace VpnHood.Core.Server;
 
@@ -102,18 +102,18 @@ public class Session : IDisposable
             IcmpTimeout = options.IcmpTimeoutValue,
             MaxUdpClientCount = options.MaxUdpClientCountValue,
             MaxPingClientCount = options.MaxIcmpClientCountValue,
-            UdpBufferSize = options.UdpProxyBufferSizeValue ?? ServerTunnelDefaults.UdpProxyBufferSize,
+            UdpBufferSize = options.UdpProxyBufferSizeValue ?? ServerTransportDefaults.UdpProxyBufferSize,
             LogScope = logScope,
             IsPingSupported = true,
             PacketProxyCallbacks = new PacketProxyCallbacks(this),
             AutoDisposePackets = true,
-            PacketQueueCapacity = TunnelDefaults.ProxyPacketQueueCapacity
+            PacketQueueCapacity = TransportDefaults.ProxyPacketQueueCapacity
         });
         _proxyManager.PacketReceived += Proxy_PacketsReceived;
         _trackingOptions = trackingOptions;
         _maxTcpConnectWaitCount = options.MaxTcpConnectWaitCountValue;
         _maxTcpChannelCount = options.MaxTcpChannelCountValue;
-        _streamProxyBufferSize = options.StreamProxyBufferSize ?? ServerTunnelDefaults.StreamProxyBufferSize;
+        _streamProxyBufferSize = options.StreamProxyBufferSize ?? ServerTransportDefaults.StreamProxyBufferSize;
         _tcpKernelBufferSize = options.TcpKernelBufferSize;
         _netFilter = netFilter;
         _netScanExceptionReporter.LogScope.Data.AddRange(logScope.Data);
@@ -131,9 +131,9 @@ public class Session : IDisposable
 
         Tunnel = new Tunnel(new TunnelOptions {
             MaxPacketChannelCount = options.MaxPacketChannelCountValue,
-            PacketQueueCapacity = TunnelDefaults.TunnelPacketQueueCapacity,
+            PacketQueueCapacity = TransportDefaults.TunnelPacketQueueCapacity,
             AutoDisposePackets = true,
-            Mtu = Math.Min(TunnelDefaults.MtuServer, extraData.Mtu)
+            Mtu = Math.Min(TransportDefaults.MtuServer, extraData.Mtu)
         });
 
         if (sessionResponseEx.AccessInfo?.MaxSpeedMbps?.Sent > 0 || sessionResponseEx.AccessInfo?.MaxSpeedMbps?.Received > 0)
@@ -324,7 +324,7 @@ public class Session : IDisposable
             "Creating a TcpPacketChannel channel. SessionId: {SessionId}", VhLogger.FormatSessionId(SessionId));
 
         var channel = new StreamPacketChannel(new StreamPacketChannelOptions {
-            BufferSize = ServerTunnelDefaults.StreamPacketBufferSize,
+            BufferSize = ServerTransportDefaults.StreamPacketBufferSize,
             RequestTime = request.RequestTime,
             Blocking = false,
             AutoDisposePackets = true,

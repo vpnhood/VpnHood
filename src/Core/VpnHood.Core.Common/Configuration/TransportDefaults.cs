@@ -1,13 +1,13 @@
 using VpnHood.Core.Toolkit.Net;
 
-namespace VpnHood.Core.Common.Tunneling;
+namespace VpnHood.Core.Common.Configuration;
 
 /// <summary>
-/// What both sides of the tunnel share: the fixed values a client and a server must agree on, and
-/// the fallbacks for knobs nobody supplied. Anything only one side reads lives with that side
-/// instead — <c>ClientTransportOptions</c> and <c>ServerTunnelDefaults</c>.
+/// What both sides of the transport share: the fixed values a client and a server must agree on,
+/// and the fallbacks for knobs nobody supplied. Anything only one side reads lives with that side
+/// instead — <c>ClientTransportOptions</c> and <c>ServerTransportDefaults</c>.
 /// </summary>
-public static class TunnelDefaults
+public static class TransportDefaults
 {
     public const int MaxPacketSize = 1500;
     public const int MtuOverhead = 60 + 20 + 40; // 60 for ip header + 20 for (TCP or UDP) + 40 for session header

@@ -35,7 +35,8 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
 
     // Transport tuning handed to the client untouched. Its timeouts default themselves; the buffer
     // and count knobs stay null so each core component applies its own default at first use.
-    public ClientTransportOptions Transport { get; set; } = new();
+    // Starts at the preset for this platform, so a memory-capped head is safe without opting in.
+    public ClientTransportOptions Transport { get; set; } = ClientTransportOptions.ForCurrentPlatform();
     public AppUpdaterOptions? UpdaterOptions { get; set; }
     public AppResources Resources { get; set; } = new();
 

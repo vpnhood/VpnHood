@@ -1,4 +1,4 @@
-using VpnHood.Core.Toolkit.Net;
+using Foundation;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
@@ -10,7 +10,6 @@ using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Devices.Ios;
 using VpnHood.Core.Toolkit.Logging;
-
 using VpnHood.Core.Client.Abstractions;
 
 namespace VpnHood.App.Connect.Ios;
@@ -104,31 +103,13 @@ public class AppDelegate : UIApplicationDelegate
             // Android clients. With the default (true), SystemBarsInfo is suppressed and the SPA's
             // bottom content slides under the home indicator.
             AdjustForSystemBars = false,
-            Transport = new ClientTransportOptions {
-                // iOS Network Extension runs under a ~52 MB jetsam limit. Shrink the transport coalescing
-                // buffers (iOS-only) to keep memory usage low; these flow to the extension via vpn.config.
-                // Desktop/Android keep the 256 KB default. 64 KB holds ~45 MTU packets with negligible
-                // throughput impact below ~200 Mbps.
-                PacketChannelBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
-                UdpProxyBufferSize = new TransferBufferSize(16 * 1024, 16 * 1024),
-                // UPLOAD/DOWNLOAD SPEED: the proxy copy pump is a serial read→write→flush loop, so per-flow
-                // throughput ≈ StreamProxyBufferSize / RTT. 2 KB capped it at ~2 Mbps. 32 KB lifts that ~16×.
-                // (Memory is per-ACTIVE-flow: 2 buffers × 32 KB; the many-idle-flows case is bounded separately.)
-                StreamProxyBufferSize = new TransferBufferSize(32 * 1024, 32 * 1024),
-                // Kernel buffer for EVERY managed TCP socket the client opens — the transport connections
-                // to the server AND the per-flow direct sockets of split/exclude ("passthru") flows. The
-                // passthru sockets are the sizing constraint: unlike tunneled flows (QUIC streams bounded
-                // tunnel-wide by IosQuicClient's 256 KB aggregate window), each excluded flow pins its own
-                // socket buffers, up to the TcpStack's 40-connection cap. The former 256 KB let a
-                // split-country browse pin ~40 × 512 KB ≈ 20 MB and jetsam the extension; 64 KB bounds the
-                // worst case to ~5 MB while still allowing ~25 Mbps per flow at 20 ms RTT (in-country hosts
-                // are low-RTT). Desktop/Android are unaffected — this is iOS-only config.
-                TcpKernelBufferSize = new TransferBufferSize(64 * 1024, 64 * 1024),
-                // Packet mode multiplexes every inner TCP flow over one outer TCP connection on iOS.
-                // Keep direct/split-flow sockets at 64 KB, but give the single server tunnel socket enough
-                // BDP window to avoid the observed 10-15 Mbps TCP-mode ceiling.
-                TcpPacketChannelKernelBufferSize = new TransferBufferSize(256 * 1024, 256 * 1024)
-            },
+            // State only the exception ForCurrentPlatform cannot see: "Designed for iPad" on Apple
+            // Silicon runs the extension without the iOS jetsam cap, yet reports IsIOS() with no
+            // Mac Catalyst marker. Only Foundation can tell it from a real device; everything else
+            // stays the platform's own choice.
+            Transport = NSProcessInfo.ProcessInfo.IsiOSApplicationOnMac
+                ? ClientTransportOptions.HighMemory
+                : ClientTransportOptions.ForCurrentPlatform(),
             // Log level: Information in production. To investigate, add the "/log:debug" debug command in
             // the UI (Debug Data 1) — the iOS diagnostics gates are computed from VhLogger.MinLogLevel, so
             // below-Information logging auto-enables them in the extension: vpn-ext.log carries the TcpStack

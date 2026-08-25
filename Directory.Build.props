@@ -51,7 +51,11 @@
 
   <!-- Deterministic source paths in Release builds. -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <PathMap>$(SolutionDir)=.</PathMap>
+    <!-- SolutionDir is undefined when a project is built directly instead of through the .slnx,
+         producing the invalid compiler option "=." (CS8101). This props file sits next to
+         VpnHood.slnx at the repository root, so its own directory is the identical, stable
+         mapping source for both build styles. -->
+    <PathMap>$(MSBuildThisFileDirectory)=.</PathMap>
   </PropertyGroup>
 
   <!-- Android store version code + display version are derived from $(Version) in

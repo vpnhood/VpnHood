@@ -13,7 +13,7 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
 
     public string AppId { get; set; } =
-        IsDebugMode ? "com.vpnhood.connect.windows.debug" : "com.vpnhood.connect.windows";
+        IsDebugMode ? "com.vpnhood.connect.windows.web.debug" : "com.vpnhood.connect.windows.web";
 
     public Uri? UpdateInfoUrl { get; set; } =
         new("https://github.com/vpnhood/VpnHood.App.Connect/releases/latest/download/VpnHoodConnect-win-x64.json");

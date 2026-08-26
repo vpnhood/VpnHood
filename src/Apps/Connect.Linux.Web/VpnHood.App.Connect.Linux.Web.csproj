@@ -40,6 +40,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

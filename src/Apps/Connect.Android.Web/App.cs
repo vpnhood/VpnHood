@@ -1,10 +1,14 @@
 ﻿using Android.Runtime;
+using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
+using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
+using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Devices.Droid.Utils;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Connect.Droid.Web;
 
@@ -25,7 +29,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         var resources = ConnectAppResources.Resources;
         resources.Strings.AppName = AppConfigs.AppName;
 
-        return new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
+        var appOptions = new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             DeviceId = AndroidUtils.GetDeviceId(this), //this will be hashed using AppId
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
@@ -49,6 +53,36 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
                 PromptDelay = TimeSpan.FromDays(1)
             }
         };
+
+        appOptions.AccountProvider = CreateAppAccountProvider(appConfigs, appOptions.StorageFolderPath);
+        return appOptions;
+    }
+
+    private static IAccountProvider? CreateAppAccountProvider(AppConfigs appConfigs, string storageFolderPath)
+    {
+        try {
+            // no Portal configured — ship without account features rather than half-wired ones
+            if (appConfigs.PortalBaseUri == null) {
+                VhLogger.Instance.LogWarning("PortalBaseUri is not configured. Account features are disabled.");
+                return null;
+            }
+
+            // No Google sign-in on this head, deliberately: an Android OAuth client is bound to a
+            // package name AND signing certificate, and this sideloaded build shares neither with
+            // the Play build. The portal's own password sign-in serves, and nothing is sold here,
+            // so there is no billing provider either.
+            var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
+                appConfigs.PortalBaseUri, appConfigs.AppId, [],
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
+
+            return new PortalAccountProvider(portalAuthenticationProvider, billingProvider: null,
+                portalBaseUrl: appConfigs.PortalBaseUri, packageName: appConfigs.AppId,
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not create AccountService.");
+            return null;
+        }
     }
 
     public override void OnCreate()

@@ -12,6 +12,12 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
 {
     public const string AppName = IsDebugMode ? "VpnHOOD! CONNECT (DEBUG)" : "VpnHood! CONNECT";
 
+    // `.web` marks the direct-download channel, leaving the bare `com.vpnhood.connect.windows` free
+    // for a Microsoft Store build later. NOTE: the app id is hashed into the client identity
+    // (AppUtils.CreateClientId = MD5("appId:deviceId")), so renaming it from the shipped
+    // `com.vpnhood.connect.windows` makes every existing install register as a NEW device against
+    // the access code's device limit until the stale entries pass deviceLifeSpan. Accepted by the
+    // owner on 2026-08-26.
     public string AppId { get; set; } =
         IsDebugMode ? "com.vpnhood.connect.windows.web.debug" : "com.vpnhood.connect.windows.web";
 

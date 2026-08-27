@@ -85,7 +85,7 @@ public class GooglePlayBillingProvider : IBillingProvider
             case BillingResponseCode.Ok:
                 var purchasedItem = purchases.FirstOrDefault();
                 if (purchasedItem == null) {
-                    _taskCompletionSource?.TrySetException(GoogleBillingException.Create(billingResult));
+                    _taskCompletionSource?.TrySetException(GoogleBillingErrors.Create(billingResult));
                     break;
                 }
 
@@ -99,11 +99,11 @@ public class GooglePlayBillingProvider : IBillingProvider
                     // The pending state must be handled in the UI to let the user know their subscription will be
                     // available when Google accepts payment and changes the purchase state to PURCHASES.
                     _taskCompletionSource?.TrySetException(
-                        GoogleBillingException.Create(billingResult, purchasedItem.PurchaseState));
+                        GoogleBillingErrors.Create(billingResult, purchasedItem.PurchaseState));
                 break;
 
             default:
-                _taskCompletionSource?.TrySetException(GoogleBillingException.Create(billingResult));
+                _taskCompletionSource?.TrySetException(GoogleBillingErrors.Create(billingResult));
                 break;
         }
     }
@@ -118,7 +118,7 @@ public class GooglePlayBillingProvider : IBillingProvider
             var isDeviceSupportSubscription =
                 billingClient.IsFeatureSupported(BillingClient.FeatureType.Subscriptions);
             if (isDeviceSupportSubscription.ResponseCode == BillingResponseCode.FeatureNotSupported)
-                throw GoogleBillingException.Create(isDeviceSupportSubscription);
+                throw GoogleBillingErrors.Create(isDeviceSupportSubscription);
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not check supported feature with google play.");
@@ -256,7 +256,7 @@ public class GooglePlayBillingProvider : IBillingProvider
             var billingResult = billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
-                throw GoogleBillingException.Create(billingResult);
+                throw GoogleBillingErrors.Create(billingResult);
 
             return await _taskCompletionSource.Task.WaitAsync(cancellationToken).Vhc();
         }
@@ -295,7 +295,7 @@ public class GooglePlayBillingProvider : IBillingProvider
 
         var queryResult = await billingClient.QueryPurchasesAsync(queryPurchasesParams).Vhc();
         if (queryResult.Result.ResponseCode != BillingResponseCode.Ok)
-            throw GoogleBillingException.Create(queryResult.Result);
+            throw GoogleBillingErrors.Create(queryResult.Result);
 
         return queryResult.Purchases
             .Where(x => x.OrderId != null) // Play sets no order id while a purchase is still pending
@@ -314,11 +314,11 @@ public class GooglePlayBillingProvider : IBillingProvider
             var googleApiAvailability = GoogleApiAvailability.Instance;
             var result = googleApiAvailability.IsGooglePlayServicesAvailable(Application.Context);
             if (result != ConnectionResult.Success)
-                throw new GooglePlayUnavailableException();
+                throw GoogleBillingErrors.PlayUnavailable();
 
             var billingResult = await _billingClient.Value.StartConnectionAsync().Vhc();
             if (billingResult.ResponseCode != BillingResponseCode.Ok)
-                throw GoogleBillingException.Create(billingResult);
+                throw GoogleBillingErrors.Create(billingResult);
 
             return _billingClient.Value;
         }

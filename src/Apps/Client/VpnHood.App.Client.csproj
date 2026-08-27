@@ -8,7 +8,7 @@
 
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.742" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.744" />
 	</ItemGroup>
 	<!-- Production: reference the zip-only package. It ships no DLL — its build/*.targets embeds
 	     spa.zip into THIS assembly as 'VpnHood.App.Client.spa.zip' (see SpaAsset). -->

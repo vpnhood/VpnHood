@@ -13,7 +13,7 @@
 		    RID-specific .android / .ios natives — fixing GHSA-2m69-gcr7-jv3q (e_sqlite3 <= 2.1.11) at every head
 		    with no per-RID override. See VpnHood.Core.Filtering.Sqlite.csproj for the full rationale; keep the
 		    two projects' versions in sync.-->
-		<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.11" />
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
 	</ItemGroup>
 

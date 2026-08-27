@@ -21,10 +21,7 @@
 		<RuntimeIdentifier>android-arm64</RuntimeIdentifier>
 		<RuntimeIdentifiers>android-arm64;android-x64;android-arm</RuntimeIdentifiers>
 		<PublishTrimmed>True</PublishTrimmed>
-		<!-- TEMP-CI-AOT-OFF: AOT disabled to speed up CI release builds while the Android
-		     pipeline is being wired up. REVERT to True (grep "TEMP-CI-AOT-OFF") before
-		     shipping a production release. -->
-		<RunAOTCompilation>False</RunAOTCompilation>
+		<RunAOTCompilation>True</RunAOTCompilation>
 		<!--<AndroidLinkTool>r8</AndroidLinkTool>-->
 	</PropertyGroup>
 

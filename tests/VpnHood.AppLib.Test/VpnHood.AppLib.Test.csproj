@@ -24,7 +24,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.742" />
+		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.744" />
 		<PackageReference Include="VpnHood.Core.Proxies" Version="8.0.835" />
 	</ItemGroup>
 
@@ -37,7 +37,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+	  <PackageReference Update="Microsoft.NET.Test.Sdk" Version="18.9.0" />
 	</ItemGroup>
 
 </Project>

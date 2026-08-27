@@ -7,7 +7,7 @@
 		<!--MSTest.Sdk injects the test packages implicitly; override its bundled versions via these properties, NOT
 		    PackageReference Update (which is a no-op against the SDK's late .targets Include). MSTestVersion defaults to
 		    the SDK's bundled version, so only the VSTest platform needs pinning to the latest.-->
-		<MicrosoftNETTestSdkVersion>18.7.0</MicrosoftNETTestSdkVersion>
+		<MicrosoftNETTestSdkVersion>18.9.0</MicrosoftNETTestSdkVersion>
 	</PropertyGroup>
 
   <ItemGroup>

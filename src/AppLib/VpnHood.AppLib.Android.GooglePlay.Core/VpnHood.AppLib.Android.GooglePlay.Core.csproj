@@ -11,8 +11,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Xamarin.Google.Android.Play.App.Update" Version="2.1.0.18" />
-	  <PackageReference Include="Xamarin.Google.Android.Play.Review" Version="2.0.2.8" />
+	  <PackageReference Include="Xamarin.Google.Android.Play.App.Update" Version="2.1.0.19" />
+	  <PackageReference Include="Xamarin.Google.Android.Play.Review" Version="2.0.2.9" />
 	</ItemGroup>
 
 	<ItemGroup>

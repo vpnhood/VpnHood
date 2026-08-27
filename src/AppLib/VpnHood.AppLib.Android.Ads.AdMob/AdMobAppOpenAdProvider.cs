@@ -2,7 +2,6 @@ using Google.Android.Gms.Ads;
 using Google.Android.Gms.Ads.AppOpen;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackShim;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
@@ -87,12 +86,12 @@ public class AdMobAppOpenAdProvider(string adUnitId) : IAdProvider
         }
     }
 
-    private class MyAppOpenAdLoadCallback : AppOpenAdLoadCallbackShim
+    private class MyAppOpenAdLoadCallback : AppOpenAd.AppOpenAdLoadCallback
     {
         private readonly TaskCompletionSource<AppOpenAd> _loadedCompletionSource = new();
         public Task<AppOpenAd> Task => _loadedCompletionSource.Task;
 
-        protected override void OnAdLoaded(AppOpenAd appOpenAd)
+        public override void OnAdLoaded(AppOpenAd appOpenAd)
         {
             _loadedCompletionSource.TrySetResult(appOpenAd);
         }

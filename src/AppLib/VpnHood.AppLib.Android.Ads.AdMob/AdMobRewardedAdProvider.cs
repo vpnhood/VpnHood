@@ -2,7 +2,6 @@
 using Google.Android.Gms.Ads.Rewarded;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackShim;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
@@ -103,12 +102,12 @@ public class AdMobRewardedAdProvider(string adUnitId) : IAdProvider
     }
 
 
-    private class MyRewardedAdLoadCallback : RewardedAdLoadCallbackShim
+    private class MyRewardedAdLoadCallback : RewardedAdLoadCallback
     {
         private readonly TaskCompletionSource<RewardedAd> _loadedCompletionSource = new();
         public Task<RewardedAd> Task => _loadedCompletionSource.Task;
 
-        protected override void OnAdLoaded(RewardedAd rewardedAd)
+        public override void OnAdLoaded(RewardedAd rewardedAd)
         {
             _loadedCompletionSource.TrySetResult(rewardedAd);
         }

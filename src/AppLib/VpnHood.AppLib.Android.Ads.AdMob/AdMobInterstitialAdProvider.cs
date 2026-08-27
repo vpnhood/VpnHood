@@ -2,7 +2,6 @@
 using Google.Android.Gms.Ads.Interstitial;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.Droid.Ads.VhAdMob.AdNetworkCallBackShim;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Client.Devices.UiContexts;
@@ -88,12 +87,12 @@ public class AdMobInterstitialAdProvider(string adUnitId) : IAdProvider
         }
     }
 
-    private class MyInterstitialAdLoadCallback : InterstitialAdLoadCallbackShim
+    private class MyInterstitialAdLoadCallback : InterstitialAdLoadCallback
     {
         private readonly TaskCompletionSource<InterstitialAd> _loadedCompletionSource = new();
         public Task<InterstitialAd> Task => _loadedCompletionSource.Task;
 
-        protected override void OnAdLoaded(InterstitialAd interstitialAd)
+        public override void OnAdLoaded(InterstitialAd interstitialAd)
         {
             _loadedCompletionSource.TrySetResult(interstitialAd);
         }

@@ -7,7 +7,7 @@ namespace VpnHood.AppLib.Abstractions.Billing;
 /// how that store spells its errors. Data carries the code and the store's own message across
 /// the client API (the UI reads Data["BillingErrorCode"] / Data["StoreMessage"]).
 /// </summary>
-public class BillingException : Exception
+public sealed class BillingException : Exception
 {
     public BillingErrorCode Code { get; }
 

@@ -152,6 +152,7 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
             var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
                 appConfigs.PortalBaseUri, appConfigs.AppId, [authenticationExternalProvider],
+                restoreCredentialProvider: new GoogleRestoreCredentialProvider(),
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
             // The portal owns the catalog: it maps each store product to the plan that redeems it, so a

@@ -28,6 +28,7 @@ public class AccessCodeShapeTest
         public string Why { get; init; } = "";
     }
 
+    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
     private class Vectors
     {
         public Vector[] Valid { get; init; } = [];

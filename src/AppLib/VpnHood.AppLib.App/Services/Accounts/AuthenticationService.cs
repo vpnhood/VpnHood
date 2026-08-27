@@ -14,6 +14,20 @@ public class AuthenticationService(
     public IReadOnlyList<string> ProviderIds => accountProvider.ProviderIds;
     public string? UserId => accountProvider.UserId;
 
+    /// <summary>
+    /// Zero-tap sign-in restoration probe: when nobody is signed in, asking the provider for an
+    /// access token is its cue to try re-establishing a session silently (a restored device may
+    /// hold a credential that signs back in with no interaction). Cheap after the first call - the
+    /// provider attempts it once per process. True when a session exists afterwards.
+    /// </summary>
+    public async Task<bool> TryRestoreSession(CancellationToken cancellationToken)
+    {
+        if (UserId != null)
+            return true;
+        var accessToken = await accountProvider.GetAccessToken(cancellationToken).Vhc();
+        return accessToken != null;
+    }
+
     public async Task<SignInResult> SignIn(IUiContext uiContext, SignInOptions signInOptions,
         CancellationToken cancellationToken)
     {

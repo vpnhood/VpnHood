@@ -19,7 +19,18 @@ namespace VpnHood.AppLib.Portal;
 /// </summary>
 public class PortalAuthenticationProvider : IAuthenticationProvider
 {
+    /// <summary>
+    /// The method id a restore-credential session is recorded under. Local bookkeeping only - it is
+    /// never a wire discriminator (the restore form has its own request shape) and never a UI
+    /// choice, so it deliberately does not appear in AuthProviders.
+    /// </summary>
+    private const string RestoreCredentialMethodId = "restorecredential";
+
     private bool _disposed;
+    private bool _restoreSignInAttempted;
+    private bool _restoreEnrolAttempted;
+    private Task? _restoreEnrolTask;
+    private readonly IRestoreCredentialProvider? _restoreCredentialProvider;
     private readonly IReadOnlyList<IAuthenticationExternalProvider> _authenticationExternalProviders;
     private readonly HttpClient _httpClient;
     private readonly string _packageName;
@@ -47,11 +58,13 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         Uri portalBaseUrl,
         string packageName,
         IReadOnlyList<IAuthenticationExternalProvider> authenticationExternalProviders,
+        IRestoreCredentialProvider? restoreCredentialProvider = null,
         bool ignoreSslVerification = false)
     {
         SessionFilePath = storageFolderPath;
         _packageName = packageName;
         _authenticationExternalProviders = authenticationExternalProviders;
+        _restoreCredentialProvider = restoreCredentialProvider;
         ProviderIds = authenticationExternalProviders.Select(x => x.ProviderId)
             .Append(AuthProviders.Password)
             .ToArray();
@@ -116,9 +129,19 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
 
     private async Task<PortalSession?> TryGetSession(IUiContext? uiContext, CancellationToken cancellationToken)
     {
-        // null if it has not been signed in yet
+        // nobody is signed in: the one chance for zero-tap sign-in restoration - a restored
+        // device may hold a credential that signs back in with no interaction at all
         if (Session == null)
-            return null;
+            return await TryRestoreSignIn(uiContext, cancellationToken).Vhc();
+
+        // opportunistic enrolment for sessions that predate zero-tap restoration: a device that is
+        // already signed in never signs in again, so this is its only chance to grow a restore key.
+        // Once per process, fire-and-forget - enrolment is silent and must never delay a caller.
+        if (Session.RestoreCredentialId == null && !_restoreEnrolAttempted &&
+            _restoreCredentialProvider != null && uiContext != null) {
+            _restoreEnrolAttempted = true;
+            _ = TryRegisterRestoreCredential(uiContext, CancellationToken.None);
+        }
 
         // opaque tokens are long-lived; renew a day before expiry
         if (Session.ExpiresAt == null || Session.ExpiresAt - TimeSpan.FromDays(1) > DateTime.UtcNow)
@@ -132,8 +155,12 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
             // renew only via the provider that established the session; a different IdP could land in
             // a different account
             var externalProvider = FindExternalProvider(Session.ProviderId);
-            if (externalProvider == null)
+            if (externalProvider == null) {
+                // a restore-credential session renews the way it was born - silently, via the key
+                if (Session.ProviderId == RestoreCredentialMethodId)
+                    return await SignInWithRestoreCredential(uiContext, cancellationToken).Vhc() ?? Session;
                 return Session; // no way to renew; use it until the portal rejects it
+            }
 
             var idToken = await externalProvider.SignIn(uiContext, true, cancellationToken).Vhc();
             if (!string.IsNullOrWhiteSpace(idToken))
@@ -161,7 +188,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         CancellationToken cancellationToken)
     {
         if (signInOptions.ProviderId == AuthProviders.Password)
-            return await SignInWithPassword(signInOptions, cancellationToken).Vhc();
+            return await SignInWithPassword(uiContext, signInOptions, cancellationToken).Vhc();
 
         // Method selects among the wired providers by their self-declared ids — never a hardcoded one.
         var externalProvider = FindExternalProvider(signInOptions.ProviderId)
@@ -169,6 +196,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
 
         var idToken = await externalProvider.SignIn(uiContext, false, cancellationToken).Vhc();
         await SignInToPortal(externalProvider, idToken, cancellationToken).Vhc();
+        await TryRegisterRestoreCredential(uiContext, cancellationToken).Vhc();
         return new SignInResult { State = SignInState.SignedIn };
     }
 
@@ -178,7 +206,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
     /// TwoFactorCode and completes the challenge held here. The portal never creates an account for
     /// this method, and its 401 is one answer for unknown email and wrong password alike.
     /// </summary>
-    private async Task<SignInResult> SignInWithPassword(SignInOptions signInOptions,
+    private async Task<SignInResult> SignInWithPassword(IUiContext uiContext, SignInOptions signInOptions,
         CancellationToken cancellationToken)
     {
         var apiClient = new PortalApiClient(_httpClient);
@@ -212,6 +240,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
 
         _pendingChallenge = null;
         Session = BuildSession(response, AuthProviders.Password);
+        await TryRegisterRestoreCredential(uiContext, cancellationToken).Vhc();
         return new SignInResult {
             State = SignInState.SignedIn,
             NewBackupCode = response.NewBackupCode
@@ -239,6 +268,9 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         if (session != null) {
             try {
                 var apiClient = new PortalApiClient(_httpClient, this);
+                // retire this device's restore key first - it needs the session that is about to die
+                if (session.RestoreCredentialId != null)
+                    await apiClient.DeleteRestoreCredential(session.RestoreCredentialId, cancellationToken).Vhc();
                 await apiClient.DeleteCurrentSession(cancellationToken).Vhc();
             }
             catch (Exception ex) {
@@ -246,6 +278,17 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
             }
         }
         Session = null; // the setter deletes the session file
+
+        // the device-held restore key must not outlive a deliberate sign-out: it would silently
+        // sign the person back in on the next restored device
+        if (_restoreCredentialProvider != null) {
+            try {
+                await _restoreCredentialProvider.Clear(uiContext, cancellationToken).Vhc();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogWarning(ex, "Could not clear the device's restore credential.");
+            }
+        }
 
         // Sign out the provider that established the session. With no session there is nothing to
         // target, so every provider is cleared instead — a local sign-out must leave no cached
@@ -285,6 +328,115 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
         };
     }
 
+    /// <summary>
+    /// The one automatic attempt at zero-tap sign-in restoration, made the first time anything asks
+    /// for a session while nobody is signed in. Once per process on purpose: a negative answer
+    /// (fresh install, no restored credential) will not change until the next restore, and a person
+    /// who signed out deliberately must stay signed out.
+    /// </summary>
+    private async Task<PortalSession?> TryRestoreSignIn(IUiContext? uiContext, CancellationToken cancellationToken)
+    {
+        if (_restoreSignInAttempted || _restoreCredentialProvider == null || uiContext == null)
+            return null;
+        _restoreSignInAttempted = true;
+
+        try {
+            var session = await SignInWithRestoreCredential(uiContext, cancellationToken).Vhc();
+            if (session != null)
+                VhLogger.Instance.LogInformation("Signed in via the restored credential (zero-tap).");
+            return session;
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex, "The restore-credential sign-in did not complete.");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The restore-credential ceremony: the portal's request options go to the platform verbatim,
+    /// its assertion comes back verbatim, and the answer is the same session every other form
+    /// returns. Null when this device holds no restore credential.
+    /// </summary>
+    private async Task<PortalSession?> SignInWithRestoreCredential(IUiContext uiContext,
+        CancellationToken cancellationToken)
+    {
+        if (_restoreCredentialProvider == null)
+            return null;
+
+        var apiClient = new PortalApiClient(_httpClient);
+        var options = await apiClient.CreateRestoreCredentialAssertionOptions(_packageName, cancellationToken).Vhc();
+        var assertionResponseJson = await _restoreCredentialProvider
+            .TryGet(uiContext, options.RequestJson, cancellationToken).Vhc();
+        if (assertionResponseJson == null)
+            return null;
+
+        var response = await apiClient
+            .CreateSessionWithRestoreCredential(assertionResponseJson, _packageName, cancellationToken).Vhc();
+        Session = BuildSession(response, RestoreCredentialMethodId);
+
+        // re-register so the chain continues from THIS device - and so the session learns the
+        // credential id it must retire on sign-out
+        await TryRegisterRestoreCredential(uiContext, cancellationToken).Vhc();
+        return Session;
+    }
+
+    /// <summary>
+    /// Register (or silently replace) this device's restore credential for the signed-in session -
+    /// what makes the NEXT device's zero-tap sign-in possible. Best-effort by design: a person who
+    /// just signed in must never be signed out again because a background enrolment failed.
+    /// </summary>
+    private Task TryRegisterRestoreCredential(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        // Single-flight: the zero-tap path and the opportunistic path can both ask for enrolment in
+        // the same startup, and each platform Create mints a NEW key - two racing enrolments leave a
+        // dead credential row behind. One at a time, and a session that already carries its
+        // credential id needs nothing.
+        lock (_sessionLock) {
+            if (_restoreEnrolTask is { IsCompleted: false })
+                return _restoreEnrolTask;
+            if (_restoreCredentialProvider == null || Session == null || Session.RestoreCredentialId != null)
+                return Task.CompletedTask;
+            // before the core runs: its own authenticated calls re-enter TryGetSession on this very
+            // thread (the lock is reentrant), and without the flag the opportunistic trigger there
+            // would start a SECOND enrolment before this one's task is even assigned
+            _restoreEnrolAttempted = true;
+            _restoreEnrolTask = RegisterRestoreCredentialCore(uiContext, cancellationToken);
+            return _restoreEnrolTask;
+        }
+    }
+
+    private async Task RegisterRestoreCredentialCore(IUiContext uiContext, CancellationToken cancellationToken)
+    {
+        var session = Session;
+        if (_restoreCredentialProvider == null || session == null)
+            return;
+
+        try {
+            var apiClient = new PortalApiClient(_httpClient, this);
+            var options = await apiClient.CreateRestoreCredentialRegistrationOptions(cancellationToken).Vhc();
+            var responseJson = await _restoreCredentialProvider
+                .Create(uiContext, options.RequestJson, cancellationToken).Vhc();
+            var registered = await apiClient.CreateRestoreCredential(responseJson, cancellationToken).Vhc();
+
+            lock (_sessionLock) {
+                // a sign-in may have replaced the session while the enrolment was in flight; the
+                // credential id belongs only to the session it was registered under
+                if (_session?.AccessToken == session.AccessToken)
+                    Session = new PortalSession {
+                        AccessToken = session.AccessToken,
+                        UserId = session.UserId,
+                        ExpiresAt = session.ExpiresAt,
+                        ProviderId = session.ProviderId,
+                        RestoreCredentialId = registered.CredentialId
+                    };
+            }
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogWarning(ex,
+                "Could not register the restore credential. Zero-tap sign-in restoration will not cover this device.");
+        }
+    }
+
     private IAuthenticationExternalProvider? FindExternalProvider(string providerId)
     {
         return _authenticationExternalProviders.FirstOrDefault(x => x.ProviderId == providerId);
@@ -297,6 +449,7 @@ public class PortalAuthenticationProvider : IAuthenticationProvider
 
         foreach (var externalProvider in _authenticationExternalProviders)
             externalProvider.Dispose();
+        _restoreCredentialProvider?.Dispose();
         _httpClient.Dispose();
     }
 }

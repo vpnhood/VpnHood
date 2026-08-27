@@ -76,7 +76,8 @@ public class AccountService
 
     private async Task<Account?> GetAccount(bool useCache, CancellationToken cancellationToken)
     {
-        if (AuthenticationService.UserId == null) {
+        if (AuthenticationService.UserId == null &&
+            !await AuthenticationService.TryRestoreSession(cancellationToken).Vhc()) {
             ClearAccount();
             return null;
         }

@@ -34,14 +34,13 @@ public static class NsErrorExtensions
                 // UserInfo is declared non-nullable by the binding but is null for errors built
                 // without one.
                 var userInfo = current.UserInfo;
-                if (userInfo is not null)
-                    foreach (var key in userInfo.Keys) {
-                        var name = key.ToString();
-                        if (name != UnderlyingErrorKey)
-                            parts.Add($"{name}={userInfo.ObjectForKey(key)}");
-                    }
+                foreach (var key in userInfo.Keys) {
+                    var name = key.ToString();
+                    if (name != UnderlyingErrorKey)
+                        parts.Add($"{name}={userInfo.ObjectForKey(key)}");
+                }
 
-                current = userInfo?.ObjectForKey(new NSString(UnderlyingErrorKey)) as NSError;
+                current = userInfo.ObjectForKey(new NSString(UnderlyingErrorKey)) as NSError;
             }
 
             return string.Join(" | ", parts);

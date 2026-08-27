@@ -94,6 +94,64 @@ public class PortalApiClient : ApiClientBase
     }
 
     /// <summary>
+    /// POST /auth/sessions, the restore-credential form — a WebAuthn assertion from the restore key
+    /// this device carried over from its predecessor (zero-tap sign-in restoration). Sign-in only;
+    /// every failure is one neutral 401 `invalid_restore_credential`.
+    /// </summary>
+    public Task<PortalSignInResponse> CreateSessionWithRestoreCredential(string assertionResponseJson,
+        string packageName, CancellationToken cancellationToken)
+    {
+        return HttpPostAsync<PortalSignInResponse>("auth/sessions", null,
+            new { assertionResponseJson, packageName }, cancellationToken);
+    }
+
+    /// <summary>
+    /// POST /auth/restore-credentials/registration-options — WebAuthn creation options for this
+    /// device's restore key. Session-authenticated: the session is the trust root of the
+    /// registration. The RequestJson goes to the platform credential API verbatim.
+    /// </summary>
+    public Task<PortalRestoreCredentialOptions> CreateRestoreCredentialRegistrationOptions(
+        CancellationToken cancellationToken)
+    {
+        // data must be an empty object, not null: null serializes to the JSON literal `null`,
+        // which the portal rightly refuses as a body
+        return HttpPostAsync<PortalRestoreCredentialOptions>("auth/restore-credentials/registration-options",
+            null, new { }, cancellationToken);
+    }
+
+    /// <summary>
+    /// POST /auth/restore-credentials — store the key the platform just registered. Re-registering
+    /// an existing credential replaces it in place, so calling this on every sign-in is safe.
+    /// </summary>
+    public Task<PortalRestoreCredentialRegistered> CreateRestoreCredential(string responseJson,
+        CancellationToken cancellationToken)
+    {
+        return HttpPostAsync<PortalRestoreCredentialRegistered>("auth/restore-credentials", null,
+            new { responseJson }, cancellationToken);
+    }
+
+    /// <summary>
+    /// POST /auth/restore-credentials/assertion-options — WebAuthn request options for the zero-tap
+    /// sign-in. Anonymous by nature (nobody is signed in yet), app-gated like sign-in itself.
+    /// </summary>
+    public Task<PortalRestoreCredentialOptions> CreateRestoreCredentialAssertionOptions(string packageName,
+        CancellationToken cancellationToken)
+    {
+        return HttpPostAsync<PortalRestoreCredentialOptions>("auth/restore-credentials/assertion-options",
+            null, new { packageName }, cancellationToken);
+    }
+
+    /// <summary>
+    /// DELETE /auth/restore-credentials?credentialId=… — retire this device's restore key on
+    /// sign-out, alongside clearing it locally. Idempotent on the portal side.
+    /// </summary>
+    public Task DeleteRestoreCredential(string credentialId, CancellationToken cancellationToken)
+    {
+        return HttpDeleteAsync("auth/restore-credentials",
+            new Dictionary<string, object?> { ["credentialId"] = credentialId }, cancellationToken);
+    }
+
+    /// <summary>
     /// GET /account — the complete snapshot, and the wire maps <see cref="Account" /> 1:1, so it
     /// deserializes straight into the app model: identity, THE one access code serving the account
     /// (server-ranked — an active subscription's code outranks the website choice; the app never

@@ -22,7 +22,10 @@
 		<RuntimeIdentifiers>android-arm64;android-x64;android-arm</RuntimeIdentifiers>
 		<PublishTrimmed>True</PublishTrimmed>
 		<RunAOTCompilation>True</RunAOTCompilation>
-		<!--<AndroidLinkTool>r8</AndroidLinkTool> debugging-->
+		<!-- Play DEX-optimization requirement (Feb 2027): R8 shrinks the Java side.
+		     Shrink-only: the SDK's generated rules already pass -dontobfuscate,
+		     so names survive and JNI/reflection lookups stay valid. -->
+		<AndroidLinkTool>r8</AndroidLinkTool>
 	</PropertyGroup>
 
 	<PropertyGroup>

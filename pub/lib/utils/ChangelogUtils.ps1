@@ -75,8 +75,10 @@ function Changelog_GetRecentSecion([string]$fullContent, [string[]]$excludeLines
             # Clean the line: remove hashtags at end and normalize spaces
             $cleanedLine = $current
             
-            # Remove hashtags at the end of the line (e.g., "text #aaa" -> "text")
-            $cleanedLine = $cleanedLine -replace '\s*#\w*\s*$', ''
+            # Remove the trailing tag run (e.g., "text #connect #android" -> "text"). A line may
+            # carry several routing tags (product + platform + #store — see pub/RELEASE-STRATEGY.md),
+            # all line-trailing by convention, and none belongs in a release note.
+            $cleanedLine = $cleanedLine -replace '(\s*#\w*)+\s*$', ''
             
             # Replace multiple spaces with single space (including tabs)
             $cleanedLine = $cleanedLine -replace '\s+', ' '

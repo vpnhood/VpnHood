@@ -58,6 +58,11 @@ jobs:
     outputs:
       appstore: ${{ steps.decide.outputs.appstore }}
       play: ${{ steps.decide.outputs.play }}
+    env:
+      # For the whatsNew probe below; mapped to env so steps can test presence in `if:`.
+      APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
+      APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
+      APPSTORE_CONNECT_ISSUER_ID: ${{ secrets.APPSTORE_CONNECT_ISSUER_ID }}
     steps:
       - name: Checkout the store assets (caller repo)
         uses: actions/checkout@v5
@@ -80,13 +85,37 @@ jobs:
         id: state
         run: node .webui/e2e/store-publish-state.mjs --root "$GITHUB_WORKSPACE"
 
+      # Apple never carries "What's New" over to a newly created version — the field starts empty
+      # and is required per localization — while the fingerprint above compares only repo content.
+      # So an unchanged listing plus a fresh version would be skipped here and the empty field would
+      # later block the submission. Ask the live listing: needing a fill counts as a change. Runs
+      # only when the fingerprint alone would skip; no ASC credentials (a Play-only fork) or a
+      # locked listing means there is nothing to fill.
+      - name: Does the editable App Store version still need its release notes?
+        id: whatsnew
+        if: steps.state.outputs.ios_changed != 'true' && inputs.force != true && inputs.skip_metadata != true && inputs.skip_screenshots != true && env.APPSTORE_CONNECT_API_KEY != ''
+        run: |
+          set +e
+          node .webui/e2e/store-asc-screenshots.mjs --bundle-id "${{ inputs.app_identifier }}" --root "$GITHUB_WORKSPACE" --whatsnew-check
+          rc=$?
+          set -e
+          if [ "$rc" = "4" ]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice title=App Store release notes backfill::The editable version's \"What's New\" is empty; the otherwise-unchanged listing text will be pushed to fill it."
+          elif [ "$rc" = "0" ] || [ "$rc" = "3" ]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            exit "$rc"
+          fi
+
       # One decision per store, so the module conditions stay readable. A partial App Store pass
       # states its own intent and therefore bypasses the gate.
       - name: Decide which stores to publish
         id: decide
         run: |
           if [ "${{ steps.state.outputs.ios_changed }}" = "true" ] || [ "${{ inputs.force }}" = "true" ] \
-             || [ "${{ inputs.skip_metadata }}" = "true" ] || [ "${{ inputs.skip_screenshots }}" = "true" ]; then
+             || [ "${{ inputs.skip_metadata }}" = "true" ] || [ "${{ inputs.skip_screenshots }}" = "true" ] \
+             || [ "${{ steps.whatsnew.outputs.needed }}" = "true" ]; then
             echo "appstore=true" >> "$GITHUB_OUTPUT"
           else
             echo "appstore=false" >> "$GITHUB_OUTPUT"

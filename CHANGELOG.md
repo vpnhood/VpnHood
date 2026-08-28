@@ -1,22 +1,22 @@
 # Latest
 
-* Feature: Support QUIC on All Platfroms
-* Feature: Split DNS — DNS queries now follow your split tunneling rules, so bypassed apps and sites resolve outside the tunnel
+* Feature: Support QUIC on all platforms #store
+* Feature: Split DNS — DNS queries now follow your split tunneling rules, so bypassed apps and sites resolve outside the tunnel #store
 * Feature: Unrouted IP protection — choose to block or bypass destinations the server cannot route, so traffic never leaks silently
 * Feature: Split tunneling master switch — one tap keeps all traffic inside the VPN and blocks what the server cannot carry
 * Feature: IPv6 option to block or bypass IPv6 when the server does not support it
 * Feature: Built-in report viewer — view and share diagnostic reports right inside the app
 * Improve: Sign out, delete account and remove premium code now show progress while they work #connect
 * Improve: Shorter first-run privacy summary, now translated into every supported language #connect
-* Improve: Android: Quick Launch tile reliability
+* Improve: Quick Launch tile reliability #android
 * Improve: Split tunneling
 * Improve: Initialization speed when using split tunneling by country
 * Improve: SOCKS & HTTP proxies stability
-* Improve: Memory usage & stability
+* Improve: Memory usage & stability #store
 * Fix: Deleting your account on one device left it visible, and still signed in, on your other devices #connect
 * Fix: Signing out could take away an access code that was still paid for #connect
 * Fix: Premium features stayed unlocked locally after a subscription had expired
-* Fix: Windows and Linux shipped without the default server, leaving the server list empty on first run #connect
+* Fix: Windows and Linux shipped without the default server, leaving the server list empty on first run #connect #windows #linux
 * Fix: A stray UDP packet could permanently stop unrelated UDP flows sharing the same server port
 * Fix: UDP flows sending without replies for over a minute could no longer receive responses
 * Update: Removed the legacy UDP proxy and the server's UseUdpProxy2 option; the shared UDP proxy is now always used and behaves as a port-restricted NAT

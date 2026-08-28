@@ -107,11 +107,16 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
 ## How to release (current flow)
 
 1. Maintain the CHANGELOG **by hand**: put the next release's notes under a leading `# Latest`
-   heading in `CHANGELOG.md` (tag lines `#client` / `#connect` so each product's release note is
-   filtered correctly; server notes go in `CHANGELOG.Server.md`). CI never rewrites the changelog —
-   at release time it extracts whatever the first H1 (`#`) section is for the GitHub release note, and
-   Google Play uses the same exclude-phrases pass. Update the `# Latest` section yourself each cycle.
-   Commit + push as normal work.
+   heading in `CHANGELOG.md` (server notes go in `CHANGELOG.Server.md`). Lines route themselves with
+   **trailing tags**: `#client` / `#connect` pick the product; `#android #ios #windows #linux` limit
+   platforms (inclusive — no platform tag = every platform, `#android #ios` ships to both); `#store`
+   marks the few lines for Google Play's short per-release note (Play caps it at 500 characters).
+   CI never rewrites the changelog — at release time the first H1 (`#`) section becomes the GitHub
+   release note (the other product's lines dropped, tags stripped), and the **store release notes**
+   are generated from the same section by each store repo's `update-release-notes.yml` (extract →
+   vhtranslator → fastlane; see the store pipeline README in VpnHood.Client.WebUI `e2e/store/`) —
+   run it after editing the section, before publishing. Update the `# Latest` section yourself each
+   cycle. Commit + push as normal work.
 2. Run `pub/Client/PublishByGithub.ps1` (or `pub/Connect/PublishByGithub.ps1`). It prompts for the
    channel and the Play audience ratio, dispatches **Bump Version** (`bump.yml`) here, waits for it,
    then dispatches that app's publish workflow — which lives in its brand repo — against the freshly

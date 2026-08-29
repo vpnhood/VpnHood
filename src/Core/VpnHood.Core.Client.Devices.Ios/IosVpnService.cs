@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using NetworkExtension;
 using ObjCRuntime;
 using VpnHood.Core.Client.VpnServices.Abstractions;
+using VpnHood.Core.Client.VpnServices.Abstractions.Exceptions;
 using VpnHood.Core.Client.VpnServices.Host;
 using VpnHood.Core.Quic.Ios;
 using VpnHood.Core.Toolkit.Extensions;
@@ -140,7 +141,25 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
     public override void StopTunnel(NEProviderStopReason reason, Action completionHandler)
     {
         VhLogger.Instance.LogWarning("iOS requested StopTunnel. Reason: {Reason}", reason);
-        _ = StopTunnelAsync(completionHandler);
+        _ = StopTunnelAsync(completionHandler, ToStopException(reason));
+    }
+
+    // Android's OnRevoke equivalent: the reasons that mean the tunnel was taken away — by another
+    // VPN app (Superceded) or by the user/system acting outside this app (Settings toggles, profile
+    // removal, logout/user switch) — must surface in the app, or the disconnect looks like a silent
+    // self-cancel. UserInitiated is the app's own stopVPNTunnel and stays a clean disconnect;
+    // failure reasons (network loss, provider crash) keep their own error paths.
+    private static Exception? ToStopException(NEProviderStopReason reason)
+    {
+        return reason switch {
+            NEProviderStopReason.Superseded or
+                NEProviderStopReason.ProviderDisabled or
+                NEProviderStopReason.ConfigurationDisabled or
+                NEProviderStopReason.ConfigurationRemoved or
+                NEProviderStopReason.UserLogout or
+                NEProviderStopReason.UserSwitch => new VpnServiceRevokedException(),
+            _ => null
+        };
     }
 
     public VpnHoodClientFactory CreateClientFactory()
@@ -148,11 +167,11 @@ public class IosVpnService : NEPacketTunnelProvider, IVpnServiceHandler
         return new VpnHoodClientFactory();
     }
 
-    private async Task StopTunnelAsync(Action completionHandler)
+    private async Task StopTunnelAsync(Action completionHandler, Exception? stopException)
     {
         try {
             if (_vpnServiceHost != null)
-                await _vpnServiceHost.TryDisconnect().Vhc();
+                await _vpnServiceHost.TryDisconnect(stopException).Vhc();
         }
         catch (Exception ex) {
             VhLogger.Instance.LogError(ex, "Could not cleanly stop the iOS VPN tunnel.");

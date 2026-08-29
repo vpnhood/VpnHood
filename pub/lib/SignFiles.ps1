@@ -71,7 +71,7 @@ if ($signCredentialSet -ne $signTargetSet) {
 	$present = if ($signCredentialSet) { "AZURE_SIGNING_CREDENTIAL" } else { "AZURE_SIGNING_TARGET" };
 	Throw ("Azure signing is half-configured: $present is set but $missing is missing or " +
 		"incomplete, so the artifacts would ship UNSIGNED from a passing build. Set both (see " +
-		".github/DEPLOYMENT.md), or unset both to build unsigned on purpose. " +
+		"docs/cicd/deployment.md), or unset both to build unsigned on purpose. " +
 		"AZURE_SIGNING_TARGET must be JSON with Endpoint, CodeSigningAccountName and CertificateProfileName.");
 }
 

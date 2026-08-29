@@ -56,11 +56,11 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `ANDROID_KEYSTORE_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (Android signing) | Base64 of the keystore that signs the Client Web + Web-arm64 APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. |
 | `ANDROID_KEYSTORE_CONNECT_GOOGLE_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (Android signing) | Base64 of the keystore that signs the Connect Google AAB, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Web. |
 | `ANDROID_KEYSTORE_CONNECT_WEB_BASE64` / `_PASSWORD` (+ optional `_ALIAS`) | `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (Android signing) | Base64 of the keystore that signs the Connect Web APKs, plus its store password. Alias auto-detected; set `_ALIAS` only for a multi-entry keystore. May reuse the same keystore as Connect Google. |
-| `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
-| `IOS_PROVISION_APP_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app (`com.vpnhood.client.ios`). |
-| `IOS_PROVISION_EXT_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the Network Extension (`com.vpnhood.client.ios.networkextension`). The extension needs its own profile. |
+| `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. ONE cert signs every app of the team — set it as an **organization** secret visible to both app repos (or repeat it per repo). Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
+| `IOS_PROVISION_APP_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app. Per-app **repository** secret — the profile is minted for that repo's own bundle id (Client `com.vpnhood.client.ios`, Connect `com.vpnhood.connect.ios`). |
+| `IOS_PROVISION_EXT_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for that app's Network Extension (`…ios.networkextension`). The extension needs its own profile. |
 | `ACCESS_KEY_AD` / `ACCESS_KEY_PREMIUM` | `_build_app_android.yml`, `_build_app_ios.yml`, `_build_app_windows.yml`, `_build_app_linux.yml` | **Required (Connect only)** | The `vh://…` default server access key embedded in each Connect distribution, written to `.user/VpnHoodConnect/access_key_ad.txt` / `access_key_premium.txt` before the build. Keys are per-entitlement, not per-store: `ACCESS_KEY_AD` = the ad-supported Android Google (Play) build only; `ACCESS_KEY_PREMIUM` = every ad-free distribution (iOS **+ Android web APK + Windows MSI + Linux**). Absent on a strict publish → the build **FAILS** (`Assert-DefaultAccessKey`): Connect without a default server opens on an empty server list. Ignored by Client builds, and skipped entirely for a fork with no `PUBLISH` variable. |
-| `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents**, its Key ID, and the Issuer ID. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
+| `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `publish_client.yml` (in `Vpnhood.App.Client`), `connect_publish.yml` (in `Vpnhood.App.Connect`) | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents** (raw PEM text, NOT base64), its Key ID, and the Issuer ID. Team-wide like the cert — suits an **organization** secret. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
 
 ## Building your own app (fork-friendly)
 
@@ -96,7 +96,7 @@ Two things must both be true for that split, and each fails loudly if it is not:
 **2. Per-app identity (optional, never committed).** All **non-secret** build settings live in one
 `publish.json` at the app root — easy to manage and mirrored by a single GitHub **variable**. The app's
 runtime `appsettings.json` is a single **shared** file at the app root, embedded (as `AppSettings.json`)
-by every distribution (google, web, windows, linux, and future iOS) — a superset where each distribution
+by every distribution (google, web, windows, linux, ios) — a superset where each distribution
 reads the keys it needs and ignores the rest. Signing keys/passwords live in a per-store subfolder
 (`google/`, `web/`), one file per GitHub **secret**, with the store in the filename so it matches the
 secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_GOOGLE_BASE64`):
@@ -112,6 +112,11 @@ secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_GOOGLE_BASE64`)
 .user/VpnHoodConnect/access_key_premium.txt                 same, for EVERY ad-free distribution (iOS, Android web APK, Windows MSI, Linux)
 .user/VpnHoodConnect/access_key_premium.Debug.txt           Debug-config override (optional)
 .user/VpnHoodClient/web/… , .user/VpnHoodConnect/web/…       (per-store signing keys only)
+.user/<app>/ios/ios_provision_app.mobileprovision           App Store profile, app        — secret IOS_PROVISION_APP_BASE64
+.user/<app>/ios/ios_provision_ext.mobileprovision           App Store profile, extension  — secret IOS_PROVISION_EXT_BASE64
+.user/<app>/ios/ios_signing.json                            local marker ({ "Signed": false } = build unsigned); CI regenerates it from the secrets
+.user/apple_distribution_cert.p12 (+ _password.txt)         ROOT, not per-app: one Apple Distribution cert signs every app — org secret APPLE_DISTRIBUTION_CERT_BASE64/_PASSWORD
+.user/appstore_connect_api_key_<KEYID>.p8 (+ id/issuer txt) ROOT: App Store Connect API key — org secrets APPSTORE_CONNECT_API_KEY/_API_KEY_ID/_ISSUER_ID
 ```
 
 `publish.json` (every field optional; absent file/field = project default):
@@ -245,9 +250,11 @@ The `.aip` files themselves carry no signer. To enable it under **your own organ
 Do not reuse a third-party/previous signer — the published identity comes from the
 certificate profile, so verify it resolves to **your** organization before shipping.
 
-### iOS client
-`publish_client.yml` (in `Vpnhood.App.Client`) has a `build-ios` → `publish-appstore-ios` pair (mirroring Android → Play). Like
-every store leg it is **skip-with-warning** when its secrets are absent, but note two hard prerequisites:
+### iOS (Client and Connect)
+`publish_client.yml` (in `Vpnhood.App.Client`) and `connect_publish.yml` (in `Vpnhood.App.Connect`) each drive a
+`build-ios` → `publish-appstore-ios` pair (mirroring Android → Play); the secrets resolve from whichever app repo
+dispatches the run. Like every store leg it is **skip-with-warning** when its secrets are absent, but note two hard
+prerequisites:
 
 - **Runner.** The project targets `net11.0-ios` and needs the .NET 11 SDK + `ios` workload and **Xcode
   26.5+**. GitHub's hosted **`macos-26`** image ships Xcode 26.5 + 26.6, and the job installs .NET 11
@@ -261,13 +268,49 @@ every store leg it is **skip-with-warning** when its secrets are absent, but not
   per-build compliance questions. **Never flip it to `true`**: true requires an Apple-issued code
   the non-France flow never grants, and every upload is then rejected with error 90592. Semantics,
   the one-time wizard, the BIS annual report, and the description text Apple asks for are all in
-  [docs/legal/APP_STORE_EXPORT_COMPLIANCE.md](../docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md).
+  [docs/legal/APP_STORE_EXPORT_COMPLIANCE.md](../legal/developer/APP_STORE_EXPORT_COMPLIANCE.md).
 
 Secrets: `APPLE_DISTRIBUTION_CERT_BASE64` + `_PASSWORD`, `IOS_PROVISION_APP_BASE64`,
 `IOS_PROVISION_EXT_BASE64` (build/signing) and `APPSTORE_CONNECT_API_KEY` + `_API_KEY_ID` +
-`APPSTORE_CONNECT_ISSUER_ID` (upload). How to obtain and base64 each is documented step-by-step in
-`.user/VpnHoodClient/ios/README.md`. `pub/lib/Initialize-CiIosSigning.ps1` materializes the cert/profiles
-into a keychain at build time; `pub/lib/Publish-IosApp.ps1` produces the `.ipa` + `VpnHoodClient-ios.json`.
+`APPSTORE_CONNECT_ISSUER_ID` (upload). `pub/lib/Initialize-CiIosSigning.ps1` materializes the cert/profiles
+into a CI keychain at build time (writing `.user/<app>/ios/ios_signing.json`); `pub/lib/Publish-IosApp.ps1`
+produces the `.ipa` + `<PackageTitle>-ios.json`.
+
+#### Obtaining the Apple-issued iOS assets (fork checklist)
+
+Every asset below must be **issued by Apple** for your own developer account — none can be generated
+locally, and without them the build runs unsigned (compile check only, no `.ipa`). Substitute your own
+bundle ids throughout; each app needs its **own pair** of App Store profiles (app + Network Extension),
+while the certificate and the API key are one-per-team.
+
+| You need | GitHub secret | How to get it |
+|---|---|---|
+| Apple **Distribution** cert `.p12` (incl. private key) | `APPLE_DISTRIBUTION_CERT_BASE64` | Xcode → Settings → Accounts → Manage Certificates → **+ → Apple Distribution**, then export from Keychain Access as `.p12`. (Or the developer portal: Certificates → **Apple Distribution** from a CSR.) |
+| …its export password | `APPLE_DISTRIBUTION_CERT_PASSWORD` | The password you chose when exporting the `.p12`. |
+| **App Store** provisioning profile for the app | `IOS_PROVISION_APP_BASE64` | Developer portal → Profiles → **+ → App Store** → the app's App ID → the Distribution cert. Download the `.mobileprovision`. |
+| **App Store** provisioning profile for the extension | `IOS_PROVISION_EXT_BASE64` | Same, for the `…networkextension` App ID. The extension needs its **own** profile. |
+| App Store Connect API key `.p8` contents | `APPSTORE_CONNECT_API_KEY` | App Store Connect → Users and Access → **Integrations → App Store Connect API** → generate a key (App Manager role). Download the `AuthKey_XXXX.p8` — Apple offers it **once**. |
+| …the key's Key ID | `APPSTORE_CONNECT_API_KEY_ID` | Shown next to the key. |
+| …the Issuer ID | `APPSTORE_CONNECT_ISSUER_ID` | Shown at the top of the API keys page. |
+
+Turn the files into secrets and set them on the **app repo** that dispatches the publish (the cert and
+API key rows suit organization secrets when several app repos share them):
+
+```bash
+base64 -i AppleDistribution.p12 | gh secret set APPLE_DISTRIBUTION_CERT_BASE64 -R <owner>/<app-repo>
+base64 -i App.mobileprovision   | gh secret set IOS_PROVISION_APP_BASE64      -R <owner>/<app-repo>
+base64 -i Ext.mobileprovision   | gh secret set IOS_PROVISION_EXT_BASE64      -R <owner>/<app-repo>
+gh secret set APPSTORE_CONNECT_API_KEY -R <owner>/<app-repo> < AuthKey_XXXX.p8   # raw .p8 text, NOT base64
+```
+
+Two Apple gotchas that cost real time (details in
+[docs/ios/build-deploy-and-provisioning.md](../ios/build-deploy-and-provisioning.md), which also
+carries the full white-label checklist for in-app purchase, Sign in with Apple and App Store Server
+Notifications):
+
+- **Changing capabilities on an App ID invalidates every existing profile on it.** Regenerate + re-download
+  the profiles and refresh the `IOS_PROVISION_*` secrets afterwards — Apple never retrofits a profile.
+- **Renaming a profile in the portal regenerates it** (new UUID) — re-download and refresh the secret.
 
 ### Server (separate repo — `vpnhood/VpnHood.App.Server`)
 

@@ -18,7 +18,7 @@ name: Publish Listing · App Store (module)
 #
 # Missing credentials are NOT an error. A fork may ship on Google Play and not the App Store, so an
 # absent key warns, reports published=false and stays green — the convention documented in
-# .github/DEPLOYMENT.md ("Absent → skipped with a warning (the job stays green)"). A key that IS
+# docs/cicd/deployment.md ("Absent → skipped with a warning (the job stays green)"). A key that IS
 # present but fails to push fails the job loudly.
 
 on:
@@ -63,7 +63,7 @@ jobs:
     steps:
       - name: Skip if this fork has no App Store credentials
         if: env.APPSTORE_CONNECT_API_KEY == ''
-        run: echo "::warning title=App Store listing skipped::APPSTORE_CONNECT_API_KEY is not set; the App Store listing was NOT updated. Add APPSTORE_CONNECT_API_KEY/_API_KEY_ID/_ISSUER_ID (see .github/DEPLOYMENT.md) to enable it."
+        run: echo "::warning title=App Store listing skipped::APPSTORE_CONNECT_API_KEY is not set; the App Store listing was NOT updated. Add APPSTORE_CONNECT_API_KEY/_API_KEY_ID/_ISSUER_ID (see docs/cicd/deployment.md) to enable it."
 
       # Bare checkout on purpose: github.repository is the store-asset repo that started the run.
       - name: Checkout the store assets (caller repo)

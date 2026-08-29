@@ -6,7 +6,7 @@ name: Publish Listing · Google Play (module)
 # that repo's fastlane/ tree and android publish_contents lane.
 #
 # Missing credentials are NOT an error: a fork may ship on the App Store and not Play. Absent key ->
-# warning, published=false, job stays green (see .github/DEPLOYMENT.md). A key that IS present but
+# warning, published=false, job stays green (see docs/cicd/deployment.md). A key that IS present but
 # fails to push fails the job loudly.
 #
 # Play listing content is shared across tracks and attaches to the newest PRODUCTION version code,
@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Skip if this fork has no Google Play credentials
         if: env.GOOGLE_PLAY_API_KEY == ''
-        run: echo "::warning title=Google Play listing skipped::GOOGLE_PLAY_API_KEY is not set; the Play listing was NOT updated. Add GOOGLE_PLAY_API_KEY (see .github/DEPLOYMENT.md) to enable it."
+        run: echo "::warning title=Google Play listing skipped::GOOGLE_PLAY_API_KEY is not set; the Play listing was NOT updated. Add GOOGLE_PLAY_API_KEY (see docs/cicd/deployment.md) to enable it."
 
       # Bare checkout on purpose: github.repository is the store-asset repo that started the run.
       - name: Checkout the store assets (caller repo)

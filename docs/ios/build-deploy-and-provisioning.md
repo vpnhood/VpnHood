@@ -163,8 +163,11 @@ Learned the hard way on 2026-08-23 — the quirks called out below are all real.
 - Create the auto-renewable subscriptions (one subscription group). The **product id IS the plan+cycle**
   (`vpnhood_1_month_subscription`, `vpnhood_1_year_subscription`); it must match the portal's catalog
   mapping (store `appstore` + your bundle id) EXACTLY — the app carries no fallback ids.
-- Each subscription needs a price, at least one localization, and an **App Review screenshot**, or it sits
-  in `MISSING_METADATA` and cannot be sold. `.github/scripts/asc-iap.mjs report` audits all of this.
+- Each subscription needs a price, at least one localization, an **App Review screenshot**, and
+  **availability** (territories), or it sits in `MISSING_METADATA` and cannot be sold.
+  `.github/scripts/asc-iap.mjs report` audits all of this (dispatch via the `appstore_iap.yml`
+  workflow); it defaults to the canonical CONNECT product ids — a fork passes its own portal
+  catalog's ids with `--products myapp_monthly=ONE_MONTH,myapp_yearly=ONE_YEAR`.
 
 ### 2. App ID capabilities (developer portal)
 - `IN_APP_PURCHASE` is on by default; accounts also need **Sign in with Apple** on the App ID.

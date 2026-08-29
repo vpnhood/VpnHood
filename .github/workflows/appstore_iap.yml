@@ -34,6 +34,11 @@ on:
         type: string
         required: false
         default: com.vpnhood.connect.ios
+      products:
+        description: "Products to audit, as id=PERIOD pairs (comma-separated; PERIOD e.g. ONE_MONTH, ONE_YEAR). Empty = the canonical VpnHood! CONNECT products — a fork's portal catalog defines its own ids, so pass them here."
+        type: string
+        required: false
+        default: ""
   workflow_call:
     inputs:
       app_identifier:
@@ -41,6 +46,11 @@ on:
         type: string
         required: false
         default: com.vpnhood.connect.ios
+      products:
+        description: "Products to audit, as id=PERIOD pairs (comma-separated). Empty = the canonical VpnHood! CONNECT products."
+        type: string
+        required: false
+        default: ""
 
 jobs:
   iap:
@@ -69,7 +79,9 @@ jobs:
           node-version: "24"
 
       - name: Report the in-app-purchase inventory
-        run: node .github/scripts/asc-iap.mjs report --bundle-id "${{ inputs.app_identifier }}" | tee report.txt
+        env:
+          PRODUCTS: ${{ inputs.products }}
+        run: node .github/scripts/asc-iap.mjs report --bundle-id "${{ inputs.app_identifier }}" ${PRODUCTS:+--products "$PRODUCTS"} | tee report.txt
 
       # Put the answer on the run summary so it is readable without opening the job log.
       - name: Publish the report to the run summary

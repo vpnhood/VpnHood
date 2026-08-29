@@ -94,7 +94,7 @@ try {
 		# (a hosted CI runner isn't signed into an Apple account, so Xcode auto-signing can't run).
 		# NOTE (verify on first real CI run): the Network Extension (.appex) needs its OWN App Store
 		# profile. It is a ProjectReference, so if it doesn't pick up $extProvision here, set
-		# CodesignProvision in Extension's csproj (or add a per-project override) — see DEPLOYMENT.md.
+		# CodesignProvision in Extension's csproj (or add a per-project override) — see docs/cicd/deployment.md.
 		dotnet publish $projectFile -c Release -f $tfm -r $rid `
 			/verbosity:$msverbosity `
 			/p:SolutionDir=$solutionDir `
@@ -121,7 +121,7 @@ try {
 		# build here: an ios-arm64 build requires code signing, so attempting one without a cert would
 		# FAIL the job. Skipping it keeps the pipeline green (the whole point of skip-if-absent); the App
 		# Store upload job then finds no .ipa and skips too. Add the signing secrets to switch it on.
-		Write-Host "::warning title=iOS unsigned build::No iOS distribution signing configured (ios_signing.json Signed=false); NOT producing an .ipa. Add APPLE_DISTRIBUTION_CERT_* + IOS_PROVISION_* secrets (see .github/DEPLOYMENT.md) to build a store-uploadable .ipa.";
+		Write-Host "::warning title=iOS unsigned build::No iOS distribution signing configured (ios_signing.json Signed=false); NOT producing an .ipa. Add APPLE_DISTRIBUTION_CERT_* + IOS_PROVISION_* secrets (see docs/cicd/deployment.md) to build a store-uploadable .ipa.";
 	}
 
 	# publish info sidecar — MUST be "<title>-ios.json" (the app's update/deprecation check and the

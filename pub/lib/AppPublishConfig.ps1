@@ -73,7 +73,7 @@ function Get-AppPublishConfig {
 
 # Strict guard for the app's SHARED appsettings (.user/<app>/appsettings.json, embedded as AppSettings.json
 # by every distribution's csproj via Condition="Exists"). One file per app is shared across all stores /
-# platforms (google, web, windows, linux, and future iOS): it's a superset — each distribution reads the
+# platforms (google, web, windows, linux, ios): it's a superset — each distribution reads the
 # keys it needs and ignores the rest. Enforced ONLY when publish.json exists (strict mode): with NO
 # publish.json we build from built-in defaults and deliberately do NOT look for this — or any other —
 # .user / GitHub config. Throws when strict and the file is absent, so a real build can never silently

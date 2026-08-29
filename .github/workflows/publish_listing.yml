@@ -22,7 +22,7 @@ name: Publish Listing (all stores)
 #
 # Secrets: the caller passes `secrets: inherit`. Each module treats ITS OWN credential as optional —
 # absent means that store is skipped with a warning and the job stays green, so a fork that ships on
-# only one store still gets a green run (see .github/DEPLOYMENT.md).
+# only one store still gets a green run (see docs/cicd/deployment.md).
 
 on:
   workflow_call:

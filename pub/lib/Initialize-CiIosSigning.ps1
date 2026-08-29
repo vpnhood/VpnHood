@@ -39,7 +39,7 @@ $appProfB64 = Get-Env "IOS_PROVISION_APP_BASE64";
 $extProfB64 = Get-Env "IOS_PROVISION_EXT_BASE64";
 
 function Write-Unsigned([string]$reason) {
-	Write-Host "::warning title=iOS signing not configured::$reason The iOS build will be UNSIGNED (no .ipa) and the App Store upload will be skipped. Add the APPLE_DISTRIBUTION_CERT_* + IOS_PROVISION_* secrets (see .github/DEPLOYMENT.md) to enable it.";
+	Write-Host "::warning title=iOS signing not configured::$reason The iOS build will be UNSIGNED (no .ipa) and the App Store upload will be skipped. Add the APPLE_DISTRIBUTION_CERT_* + IOS_PROVISION_* secrets (see docs/cicd/deployment.md) to enable it.";
 	@{ Signed = $false } | ConvertTo-Json | Out-File $markerFile -Encoding ASCII;
 }
 

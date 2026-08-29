@@ -21,7 +21,7 @@ section records where the final implementation differs from it. See
   `push_docker`; skip-with-warning when absent. `publish_docker.ps1` gained `-generateOnly` to emit
   the compose files in CI without a local image build.
 - **Files:** `pub/Server/Publish.ps1` (build-only), new `pub/Server/PublishByGithub.ps1`,
-  `src/Apps/Server.Net/_publish.ps1` (env-resolved release URL). Secrets doc: `.github/DEPLOYMENT.md`.
+  `src/Apps/Server.Net/_publish.ps1` (env-resolved release URL). Secrets doc: `docs/cicd/deployment.md`.
 - **Not yet done:** push `server_publish.yml` to the server repo's `main`, set the Docker Hub secrets,
   and run the validation sequence at the bottom of this doc. Nothing has been pushed or dispatched.
 
@@ -156,7 +156,7 @@ Android/Linux/Windows **client** asset list. Two clean ways to include the serve
 
 Both end at one release-creation code path; A is less indirection.
 
-## New secrets (add to [.github/DEPLOYMENT.md](../../.github/DEPLOYMENT.md))
+## New secrets (add to [deployment.md](deployment.md))
 
 Set on the **`vpnhood/VpnHood.App.Server`** repo (where the workflow runs):
 
@@ -196,7 +196,7 @@ ever writes it. Release notes come from `CHANGELOG.Server.md` (hand-maintained; 
 - **Edit/retire** `pub/Server/Publish-GithubRelease.ps1` → shared `pub/lib/Publish-GithubRelease.ps1` (per the
   asset-set decision above).
 - **Edit** `pub/RELEASE-STRATEGY.md` — move "Server CI publish" from *Next steps* to *done*.
-- **Edit** `.github/DEPLOYMENT.md` — add the Docker Hub secrets + a Server section.
+- **Edit** `docs/cicd/deployment.md` — add the Docker Hub secrets + a Server section.
 - **Edit** `src/Apps/Server.Net/pub/publish_docker.ps1` — CI path uses `build-push-action`; the
   local path keeps the host-arch `--load` smoke build.
 
@@ -208,7 +208,7 @@ ever writes it. Release notes come from `CHANGELOG.Server.md` (hand-maintained; 
    Linux job and saving a runner. Confirm `_publish.ps1`'s Windows path cross-builds cleanly on Linux.
 2. **Does `VpnHood.App.Server` already have Actions enabled / the workflow indexed?** Like Connect,
    the dispatch 404s until the workflow file is pushed to its default branch and indexed (see
-   DEPLOYMENT.md "Activating the workflows"). `PublishByGithub.ps1` should pre-check this.
+   deployment.md "Activating the workflows"). `PublishByGithub.ps1` should pre-check this.
 3. **Asset-set decision A vs B** above.
 4. **`isLatest`/`:latest` semantics** for prereleases — keep current behavior (only stable tags
    `:latest`).

@@ -159,7 +159,7 @@ if ($doPackage) {
 	}
 	elseif (-not $signEnabled) {
 		Write-VhBuildWarning ("The Windows installer '$module_packageFileName' is UNSIGNED: Azure Trusted Signing is not " +
-			"configured. Set AZURE_SIGNING_CREDENTIAL and AZURE_SIGNING_TARGET (see .github/DEPLOYMENT.md) to sign the build.") `
+			"configured. Set AZURE_SIGNING_CREDENTIAL and AZURE_SIGNING_TARGET (see docs/cicd/deployment.md) to sign the build.") `
 			"Windows build is unsigned — Azure signing not configured";
 	}
 	else {

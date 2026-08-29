@@ -7,23 +7,29 @@
 // global fetch for HTTP) so CI needs no `npm install` — the same posture as the WebUI repo's
 // store-asc-screenshots.mjs.
 //
-// Auth: the three standard secrets this repo already uses for the App Store (see .github/DEPLOYMENT.md),
+// Auth: the three standard secrets this repo already uses for the App Store (see docs/cicd/deployment.md),
 // read from the environment:
 //   APPSTORE_CONNECT_API_KEY      the .p8 private-key CONTENTS (PEM)
 //   APPSTORE_CONNECT_API_KEY_ID   the key id (the 10-char id, e.g. from the .p8 filename)
 //   APPSTORE_CONNECT_ISSUER_ID    the issuer id (UUID)
 //
 // Usage:
-//   node asc-iap.mjs report [--bundle-id com.vpnhood.connect.ios]   # read-only; never mutates
+//   node asc-iap.mjs report [--bundle-id com.vpnhood.connect.ios]
+//                           [--products id=PERIOD,id=PERIOD]        # read-only; never mutates
 //   node asc-iap.mjs apply  ...                                     # create/price (see below)
 //
-// The two products the app requires. Since the "rename the app abstractions" refactor the app carries
-// NO embedded fallback ids at all — PortalAccountProvider.GetProductIds is the only catalog, so these
-// must match the WHMCS vpnhoodiap plan mapping for store "appstore" + package com.vpnhood.connect.ios
-// EXACTLY. A product that exists in App Store Connect but is unmapped in the portal can be charged for
-// and then has nowhere to be redeemed; one mapped but absent here simply cannot be sold.
+// The products to audit. The app carries NO embedded ids at all — PortalAccountProvider.GetProductIds
+// is the only catalog, so the authoritative list is whatever the PORTAL's plan mapping declares for
+// store "appstore" + your bundle id, and the ids in App Store Connect must match it EXACTLY. A product
+// that exists in App Store Connect but is unmapped in the portal can be charged for and then has
+// nowhere to be redeemed; one mapped but absent there simply cannot be sold.
+//
+// The default below is the canonical VpnHood! CONNECT mapping. A fork's portal defines its OWN ids —
+// pass them with --products (PERIOD is App Store Connect's enum: ONE_WEEK, ONE_MONTH, TWO_MONTHS,
+// THREE_MONTHS, SIX_MONTHS, ONE_YEAR), e.g.:
+//   --products myapp_monthly=ONE_MONTH,myapp_yearly=ONE_YEAR
 const DEFAULT_BUNDLE_ID = "com.vpnhood.connect.ios";
-const REQUIRED = [
+const DEFAULT_PRODUCTS = [
     { productId: "vpnhood_1_month_subscription", period: "ONE_MONTH", label: "Monthly" },
     { productId: "vpnhood_1_year_subscription", period: "ONE_YEAR", label: "Yearly" }
 ];
@@ -53,7 +59,7 @@ function makeToken() {
 function requireEnv(name) {
     const v = process.env[name];
     if (!v || !v.trim())
-        fail(`Missing required environment variable ${name}. See .github/DEPLOYMENT.md for the App Store secrets.`);
+        fail(`Missing required environment variable ${name}. See docs/cicd/deployment.md for the App Store secrets.`);
     return v.trim();
 }
 
@@ -149,7 +155,7 @@ async function report() {
     // 5) Bottom line.
     line();
     if (todo.length === 0) {
-        log("READY: both products exist and look complete. Verify a sandbox purchase end-to-end.");
+        log(`READY: all ${REQUIRED.length} product(s) exist and look complete. Verify a sandbox purchase end-to-end.`);
     } else {
         log("ACTION NEEDED:");
         for (const t of todo) log(`  - ${t}`);
@@ -222,16 +228,21 @@ async function reportOneSubscription(sub, todo) {
         todo.push(`Upload an App Review screenshot for ${pid} (required to submit)`);
     }
 
-    // Availability: which territories the product is sold in.
+    // Availability: which territories the product is sold in. Two calls on purpose: the to-one
+    // subscriptionAvailability endpoint rejects paging params (`limit` there = 400, which the old
+    // single-call version swallowed as "not set" even when availability WAS configured), so the
+    // territory count comes from the relationship endpoint's paging total instead.
     try {
-        const avail = await api(
-            `/v1/subscriptions/${id}/subscriptionAvailability?include=availableTerritories&limit=1`);
+        const avail = await api(`/v1/subscriptions/${id}/subscriptionAvailability`);
         const all = avail.data?.attributes?.availableInNewTerritories;
-        const count = (avail.included || []).filter(x => x.type === "territories").length;
+        const terr = await api(`/v1/subscriptionAvailabilities/${avail.data.id}/availableTerritories?limit=1`);
+        const count = terr.meta?.paging?.total ?? 0;
         log(`      availability: ${count} territor${count === 1 ? "y" : "ies"}${all ? " (+ auto new)" : ""}`);
+        if (count === 0) todo.push(`Set availability (territories) for ${pid}`);
     } catch {
         // availability endpoint 404s until set — not worth surfacing as an error
         log(`      availability: not set`);
+        todo.push(`Set availability (territories) for ${pid}`);
     }
 
     // Intro offer (free trial). Optional; the app already renders TrialPeriodIso when present.
@@ -351,6 +362,20 @@ const argv = process.argv.slice(2);
 const mode = argv.find(a => !a.startsWith("--")) || "report";
 const bundleFlag = argv.indexOf("--bundle-id");
 const BUNDLE_ID = bundleFlag !== -1 ? argv[bundleFlag + 1] : DEFAULT_BUNDLE_ID;
+
+// --products id=PERIOD,id=PERIOD — a fork's portal catalog defines its own ids (see the header).
+const PERIODS = ["ONE_WEEK", "ONE_MONTH", "TWO_MONTHS", "THREE_MONTHS", "SIX_MONTHS", "ONE_YEAR"];
+const PERIOD_LABELS = { ONE_WEEK: "Weekly", ONE_MONTH: "Monthly", TWO_MONTHS: "2-monthly",
+    THREE_MONTHS: "Quarterly", SIX_MONTHS: "Half-yearly", ONE_YEAR: "Yearly" };
+const productsFlag = argv.indexOf("--products");
+const REQUIRED = productsFlag === -1 ? DEFAULT_PRODUCTS :
+    (argv[productsFlag + 1] || "").split(",").map(pair => {
+        const [productId, period] = pair.split("=").map(s => s?.trim());
+        if (!productId || !PERIODS.includes(period))
+            fail(`Bad --products entry "${pair}". Use id=PERIOD with PERIOD one of: ${PERIODS.join(", ")}.`);
+        return { productId, period, label: PERIOD_LABELS[period] };
+    });
+if (REQUIRED.length === 0) fail("--products was given but named no products.");
 
 TOKEN = makeToken();
 try {

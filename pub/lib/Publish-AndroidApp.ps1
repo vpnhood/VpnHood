@@ -43,7 +43,7 @@ $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-Publish
 # Strict: in strict mode the app's shared appsettings must exist (no silent Exists() short-circuit).
 Assert-AppSettings $appFolder;
 # Strict: Connect must carry a default server access key for the store being built ($store already folds
-# web-arm64 into 'web', which is also the key it embeds).
+# web-arm64 into 'web'; inside Assert-DefaultAccessKey 'google' maps to the 'ad' key, 'web' to 'premium').
 Assert-DefaultAccessKey $appFolder $store -Connect:$connect;
 
 Write-Host "";

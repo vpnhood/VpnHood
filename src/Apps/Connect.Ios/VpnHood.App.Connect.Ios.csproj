@@ -36,18 +36,19 @@
         Condition="Exists('$(VhUserDir)/VpnHoodConnect/appsettings.$(Configuration).json')" />
   </ItemGroup>
 
-  <!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret. iOS has
-       its own key (ios/), separate from the android web/google ones. The configuration-specific file wins
-       (Debug embeds access_key_default_ios.Debug.txt), otherwise the base access_key_default_ios.txt is
-       used. Both optional: a fork without them falls back to the in-code default in AppConfigs
-       (null -> the UI prompts for a key). -->
+  <!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret.
+       Keys are per-entitlement, not per-store: only the ad-supported build (Android Google) embeds
+       access_key_ad; every ad-free build — iOS included (the App Store head has no ads) — embeds
+       access_key_premium. The configuration-specific file wins (Debug embeds access_key_premium.Debug.txt),
+       otherwise the base access_key_premium.txt is used. Both optional: a fork without them falls back
+       to the in-code default in AppConfigs (null -> the UI prompts for a key). -->
   <ItemGroup>
-    <EmbeddedResource Include="$(VhUserDir)/VpnHoodConnect/ios/access_key_default_ios.$(Configuration).txt"
+    <EmbeddedResource Include="$(VhUserDir)/VpnHoodConnect/access_key_premium.$(Configuration).txt"
         LogicalName="access_key_default.txt"
-        Condition="Exists('$(VhUserDir)/VpnHoodConnect/ios/access_key_default_ios.$(Configuration).txt')" />
-    <EmbeddedResource Include="$(VhUserDir)/VpnHoodConnect/ios/access_key_default_ios.txt"
+        Condition="Exists('$(VhUserDir)/VpnHoodConnect/access_key_premium.$(Configuration).txt')" />
+    <EmbeddedResource Include="$(VhUserDir)/VpnHoodConnect/access_key_premium.txt"
         LogicalName="access_key_default.txt"
-        Condition="!Exists('$(VhUserDir)/VpnHoodConnect/ios/access_key_default_ios.$(Configuration).txt') And Exists('$(VhUserDir)/VpnHoodConnect/ios/access_key_default_ios.txt')" />
+        Condition="!Exists('$(VhUserDir)/VpnHoodConnect/access_key_premium.$(Configuration).txt') And Exists('$(VhUserDir)/VpnHoodConnect/access_key_premium.txt')" />
   </ItemGroup>
 
   <ItemGroup>

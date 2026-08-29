@@ -35,18 +35,19 @@
 	</ItemGroup>
 
 	<!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret.
-	     Windows is a direct download, so it shares the 'web' distribution key with the Android web APK.
-	     The configuration-specific file wins (Debug embeds access_key_default_web.Debug.txt), otherwise
-	     the base access_key_default_web.txt is used. Both are optional here: a fork without them falls
+	     Keys are per-entitlement, not per-store: only the ad-supported build (Android Google) embeds
+	     access_key_ad; every ad-free build — Windows included — embeds access_key_premium.
+	     The configuration-specific file wins (Debug embeds access_key_premium.Debug.txt), otherwise
+	     the base access_key_premium.txt is used. Both are optional here: a fork without them falls
 	     back to the in-code default in AppConfigs, while a real (strict) publish is gated by
 	     Assert-DefaultAccessKey in pub/lib/AppPublishConfig.ps1. -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\web\access_key_default_web.$(Configuration).txt"
+		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\access_key_premium.$(Configuration).txt"
 			LogicalName="access_key_default.txt"
-			Condition="Exists('$(VhUserDir)\VpnHoodConnect\web\access_key_default_web.$(Configuration).txt')" />
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\web\access_key_default_web.txt"
+			Condition="Exists('$(VhUserDir)\VpnHoodConnect\access_key_premium.$(Configuration).txt')" />
+		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\access_key_premium.txt"
 			LogicalName="access_key_default.txt"
-			Condition="!Exists('$(VhUserDir)\VpnHoodConnect\web\access_key_default_web.$(Configuration).txt') And Exists('$(VhUserDir)\VpnHoodConnect\web\access_key_default_web.txt')" />
+			Condition="!Exists('$(VhUserDir)\VpnHoodConnect\access_key_premium.$(Configuration).txt') And Exists('$(VhUserDir)\VpnHoodConnect\access_key_premium.txt')" />
 	</ItemGroup>
 
 	<ItemGroup>

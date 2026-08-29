@@ -41,7 +41,8 @@ $repoUrl = if ($appConfig.repoUrl) { $appConfig.repoUrl } else { Resolve-Publish
 $installationPageUrl = if ($appConfig.installationPageUrl) { $appConfig.installationPageUrl } else { $repoUrl };
 # Strict: in strict mode (publish.json present) the app's shared appsettings must exist.
 Assert-AppSettings $appFolder;
-# Strict: Connect must carry a default server access key. iOS has its own ($distribution is "ios").
+# Strict: Connect must carry a default server access key. iOS is ad-free, so "ios" maps to the
+# 'premium' key (access_key_premium.txt) inside Assert-DefaultAccessKey.
 Assert-DefaultAccessKey $appFolder $distribution -Connect:$connect;
 
 Write-Host "";

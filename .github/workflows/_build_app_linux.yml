@@ -34,9 +34,9 @@ jobs:
       # releases and in-app update breaks with nothing going red.
       VH_PUBLISH_REPO: ${{ inputs.app != 'connect' && (vars.VH_PUBLISH_REPO || github.repository) || '' }}
       VH_CONNECT_PUBLISH_REPO: ${{ inputs.app == 'connect' && (vars.VH_CONNECT_PUBLISH_REPO || vars.VH_PUBLISH_REPO || github.repository) || '' }}
-      # Connect embeds a default server access key. Linux is a direct download, so it uses the same
-      # 'web' key as the Android web APK. Empty/unused for the client.
-      ACCESS_KEY_DEFAULT_WEB: ${{ secrets.ACCESS_KEY_DEFAULT_WEB }}
+      # Connect embeds a default server access key. Keys are per-entitlement: Linux has no ads, so it
+      # uses the 'premium' key shared by every ad-free distribution. Empty/unused for the client.
+      ACCESS_KEY_PREMIUM: ${{ secrets.ACCESS_KEY_PREMIUM }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v5
@@ -49,17 +49,17 @@ jobs:
           $v = Get-Content "$env:GITHUB_WORKSPACE/code/pub/PubVersion.json" | ConvertFrom-Json
           $tag = "v$($v.Version)" + ($(if ($v.Prerelease) { "-prerelease" } else { "" }))
           "MODULE_DIR=code/pub/bin/$tag/$env:PKG" | Out-File -FilePath $env:GITHUB_ENV -Append
-      # Linux is a direct download, so it embeds the same 'web' key as the Android web APK. When the
+      # Linux has no ads, so it embeds the 'premium' key shared by every ad-free distribution. When the
       # secret is absent nothing is written and the strict guard in the publish script (Assert-DefaultAccessKey)
       # FAILS the build — a Connect package with no default server opens on an empty server list.
       - name: Write default access key (connect)
         if: inputs.app == 'connect'
         shell: pwsh
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_WEB)) { return }
-          $d = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG/web"
+          if ([string]::IsNullOrWhiteSpace($env:ACCESS_KEY_PREMIUM)) { return }
+          $d = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
           New-Item -ItemType Directory -Path $d -Force | Out-Null
-          $env:ACCESS_KEY_DEFAULT_WEB | Out-File (Join-Path $d "access_key_default_web.txt") -Encoding ascii -Force -NoNewline
+          $env:ACCESS_KEY_PREMIUM | Out-File (Join-Path $d "access_key_premium.txt") -Encoding ascii -Force -NoNewline
       # publish.json is the strict-mode switch (see pub/lib/AppPublishConfig.ps1). Without it the Linux
       # build silently skipped every .user guard, so a missing appsettings/access key went unnoticed.
       - name: Write publish.json

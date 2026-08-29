@@ -64,9 +64,11 @@ jobs:
       ANDROID_KEYSTORE_CONNECT_GOOGLE_PASSWORD: ${{ inputs.app == 'connect' && secrets.ANDROID_KEYSTORE_GOOGLE_PASSWORD || '' }}
       ANDROID_KEYSTORE_CONNECT_WEB_BASE64: ${{ inputs.app == 'connect' && secrets.ANDROID_KEYSTORE_WEB_BASE64 || '' }}
       ANDROID_KEYSTORE_CONNECT_WEB_PASSWORD: ${{ inputs.app == 'connect' && secrets.ANDROID_KEYSTORE_WEB_PASSWORD || '' }}
-      # Connect embeds a default server access key per store; empty/unused for the client.
-      ACCESS_KEY_DEFAULT_GOOGLE: ${{ secrets.ACCESS_KEY_DEFAULT_GOOGLE }}
-      ACCESS_KEY_DEFAULT_WEB: ${{ secrets.ACCESS_KEY_DEFAULT_WEB }}
+      # Connect embeds a default server access key per entitlement: the Google build is the only
+      # ad-supported one ('ad' key); the web APKs are ad-free ('premium' key, shared with iOS,
+      # Windows and Linux). Empty/unused for the client.
+      ACCESS_KEY_AD: ${{ secrets.ACCESS_KEY_AD }}
+      ACCESS_KEY_PREMIUM: ${{ secrets.ACCESS_KEY_PREMIUM }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v5
@@ -101,13 +103,12 @@ jobs:
         shell: pwsh
         run: |
           $u = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
-          if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_GOOGLE)) {
-            $d = Join-Path $u "google"; New-Item -ItemType Directory -Path $d -Force | Out-Null
-            $env:ACCESS_KEY_DEFAULT_GOOGLE | Out-File (Join-Path $d "access_key_default_google.txt") -Encoding ascii -Force -NoNewline
+          New-Item -ItemType Directory -Path $u -Force | Out-Null
+          if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_AD)) {
+            $env:ACCESS_KEY_AD | Out-File (Join-Path $u "access_key_ad.txt") -Encoding ascii -Force -NoNewline
           }
-          if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_WEB)) {
-            $d = Join-Path $u "web"; New-Item -ItemType Directory -Path $d -Force | Out-Null
-            $env:ACCESS_KEY_DEFAULT_WEB | Out-File (Join-Path $d "access_key_default_web.txt") -Encoding ascii -Force -NoNewline
+          if (-not [string]::IsNullOrWhiteSpace($env:ACCESS_KEY_PREMIUM)) {
+            $env:ACCESS_KEY_PREMIUM | Out-File (Join-Path $u "access_key_premium.txt") -Encoding ascii -Force -NoNewline
           }
       - name: Write publish.json
         if: vars.PUBLISH != ''

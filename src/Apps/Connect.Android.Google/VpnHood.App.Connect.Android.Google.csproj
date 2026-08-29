@@ -52,16 +52,18 @@
 	</ItemGroup>
 
 	<!-- Default access key, embedded as its own resource so it can be sourced from a GitHub secret.
-	     The configuration-specific file wins (Debug embeds access_key_default_google.Debug.txt), otherwise
-	     the base access_key_default_google.txt is used. Both are optional: a fork without them falls back to the
+	     Keys are per-entitlement, not per-store: this Google build is the only ad-supported one, so it
+	     embeds access_key_ad; every other distribution embeds access_key_premium.
+	     The configuration-specific file wins (Debug embeds access_key_ad.Debug.txt), otherwise
+	     the base access_key_ad.txt is used. Both are optional: a fork without them falls back to the
 	     in-code default in AppConfigs. -->
 	<ItemGroup>
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\google\access_key_default_google.$(Configuration).txt"
+		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\access_key_ad.$(Configuration).txt"
 			LogicalName="access_key_default.txt"
-			Condition="Exists('$(VhUserDir)\VpnHoodConnect\google\access_key_default_google.$(Configuration).txt')" />
-		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\google\access_key_default_google.txt"
+			Condition="Exists('$(VhUserDir)\VpnHoodConnect\access_key_ad.$(Configuration).txt')" />
+		<EmbeddedResource Include="$(VhUserDir)\VpnHoodConnect\access_key_ad.txt"
 			LogicalName="access_key_default.txt"
-			Condition="!Exists('$(VhUserDir)\VpnHoodConnect\google\access_key_default_google.$(Configuration).txt') And Exists('$(VhUserDir)\VpnHoodConnect\google\access_key_default_google.txt')" />
+			Condition="!Exists('$(VhUserDir)\VpnHoodConnect\access_key_ad.$(Configuration).txt') And Exists('$(VhUserDir)\VpnHoodConnect\access_key_ad.txt')" />
 	</ItemGroup>
 
 	<ItemGroup>

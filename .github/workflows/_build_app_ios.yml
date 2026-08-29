@@ -39,8 +39,9 @@ jobs:
       APPLE_DISTRIBUTION_CERT_PASSWORD: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}
       IOS_PROVISION_APP_BASE64: ${{ secrets.IOS_PROVISION_APP_BASE64 }}
       IOS_PROVISION_EXT_BASE64: ${{ secrets.IOS_PROVISION_EXT_BASE64 }}
-      # Connect embeds its own iOS default server access key into the build; unused for client.
-      ACCESS_KEY_DEFAULT_IOS: ${{ secrets.ACCESS_KEY_DEFAULT_IOS }}
+      # Connect embeds a default server access key. Keys are per-entitlement: the App Store build has no
+      # ads, so it uses the 'premium' key shared by every ad-free distribution. Unused for the client.
+      ACCESS_KEY_PREMIUM: ${{ secrets.ACCESS_KEY_PREMIUM }}
     steps:
       - name: Checkout code (${{ env.CODE_REPO }})
         uses: actions/checkout@v5
@@ -78,10 +79,10 @@ jobs:
         if: inputs.app == 'connect'
         shell: pwsh
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:ACCESS_KEY_DEFAULT_IOS)) { return }
-          $d = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG/ios"
+          if ([string]::IsNullOrWhiteSpace($env:ACCESS_KEY_PREMIUM)) { return }
+          $d = Join-Path $env:GITHUB_WORKSPACE ".user/$env:PKG"
           New-Item -ItemType Directory -Path $d -Force | Out-Null
-          $env:ACCESS_KEY_DEFAULT_IOS | Out-File (Join-Path $d "access_key_default_ios.txt") -Encoding ascii -Force -NoNewline
+          $env:ACCESS_KEY_PREMIUM | Out-File (Join-Path $d "access_key_premium.txt") -Encoding ascii -Force -NoNewline
       - name: Write publish.json
         if: vars.PUBLISH != ''
         shell: pwsh

@@ -59,7 +59,7 @@ Or in the GitHub UI: **Settings → Secrets and variables → Actions → New re
 | `APPLE_DISTRIBUTION_CERT_BASE64` / `_PASSWORD` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (iOS signing) | Base64 of the Apple **Distribution** certificate `.p12` (with private key) that signs the iOS `.ipa`, plus its export password. Absent → the iOS build is UNSIGNED (no `.ipa`, a warning); there is no ephemeral fallback (App Store builds can't self-sign). |
 | `IOS_PROVISION_APP_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the app (`com.vpnhood.client.ios`). |
 | `IOS_PROVISION_EXT_BASE64` | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (iOS signing) | Base64 of the **App Store** provisioning profile for the Network Extension (`com.vpnhood.client.ios.networkextension`). The extension needs its own profile. |
-| `ACCESS_KEY_DEFAULT_GOOGLE` / `_WEB` / `_IOS` | `_build_app_android.yml`, `_build_app_ios.yml`, `_build_app_windows.yml`, `_build_app_linux.yml` | **Required (Connect only)** | The `vh://…` default server access key embedded in each Connect distribution, written to `.user/VpnHoodConnect/<dist>/access_key_default_<dist>.txt` before the build. One key per distribution channel: `_GOOGLE` = Play, `_IOS` = App Store, `_WEB` = every direct download (Android web APK **+ Windows MSI + Linux**). Absent on a strict publish → the build **FAILS** (`Assert-DefaultAccessKey`): Connect without a default server opens on an empty server list. Ignored by Client builds, and skipped entirely for a fork with no `PUBLISH` variable. |
+| `ACCESS_KEY_AD` / `ACCESS_KEY_PREMIUM` | `_build_app_android.yml`, `_build_app_ios.yml`, `_build_app_windows.yml`, `_build_app_linux.yml` | **Required (Connect only)** | The `vh://…` default server access key embedded in each Connect distribution, written to `.user/VpnHoodConnect/access_key_ad.txt` / `access_key_premium.txt` before the build. Keys are per-entitlement, not per-store: `ACCESS_KEY_AD` = the ad-supported Android Google (Play) build only; `ACCESS_KEY_PREMIUM` = every ad-free distribution (iOS **+ Android web APK + Windows MSI + Linux**). Absent on a strict publish → the build **FAILS** (`Assert-DefaultAccessKey`): Connect without a default server opens on an empty server list. Ignored by Client builds, and skipped entirely for a fork with no `PUBLISH` variable. |
 | `APPSTORE_CONNECT_API_KEY` (+ `_API_KEY_ID` + `APPSTORE_CONNECT_ISSUER_ID`) | `publish_client.yml` (in `Vpnhood.App.Client`) | Optional (App Store upload) | The App Store Connect API key: the `.p8` **contents**, its Key ID, and the Issuer ID. Present → the `.ipa` is uploaded to TestFlight (prerelease) / App Store (stable). Absent → the upload is skipped with a warning (job stays green). |
 
 ## Building your own app (fork-friendly)
@@ -107,10 +107,10 @@ secret name (`android_keystore_google.p12` ↔ `ANDROID_KEYSTORE_GOOGLE_BASE64`)
 .user/VpnHoodClient/appsettings.Debug.json                  Debug-config override (optional)
 .user/VpnHoodClient/google/android_keystore_google.p12      signing key   — secret
 .user/VpnHoodClient/google/android_keystore_google_password.txt  store password — secret
-.user/VpnHoodConnect/google/access_key_default_google.txt   Connect default access key
-.user/VpnHoodConnect/google/access_key_default_google.Debug.txt  Debug-config override (optional)
-.user/VpnHoodConnect/web/access_key_default_web.txt         same, for EVERY direct download (Android web APK, Windows MSI, Linux)
-.user/VpnHoodConnect/ios/access_key_default_ios.txt         same, for iOS (iOS has its own key)
+.user/VpnHoodConnect/access_key_ad.txt                      Connect default access key, ad-supported build (Android Google only)
+.user/VpnHoodConnect/access_key_ad.Debug.txt                Debug-config override (optional)
+.user/VpnHoodConnect/access_key_premium.txt                 same, for EVERY ad-free distribution (iOS, Android web APK, Windows MSI, Linux)
+.user/VpnHoodConnect/access_key_premium.Debug.txt           Debug-config override (optional)
 .user/VpnHoodClient/web/… , .user/VpnHoodConnect/web/…       (per-store signing keys only)
 ```
 
@@ -143,8 +143,8 @@ Any absent file/field keeps the project default, so an unmodified clone builds e
 
 ### Linux client — `publish_app.yml` (via `publish_client.yml` (in `Vpnhood.App.Client`))
 No secrets required. Builds self-contained `linux-x64` / `linux-arm64` packages.
-**Connect** additionally requires `ACCESS_KEY_DEFAULT_WEB` (Linux is a direct download, so it embeds the
-same key as the Android web APK); the build fails without it on a strict publish.
+**Connect** additionally requires `ACCESS_KEY_PREMIUM` (Linux has no ads, so it embeds the 'premium'
+key shared by every ad-free distribution); the build fails without it on a strict publish.
 
 ### Android client — build (`publish_app.yml`, via `publish_client.yml` (in `Vpnhood.App.Client`))
 Builds the Google AAB, the Web APK, and the Web arm64 APK on an `ubuntu-latest` runner,
@@ -203,9 +203,9 @@ The MSI is built with **Advanced Installer** on a `windows-latest` runner.
 
 - **`ADVANCED_INSTALLER_LICENSE`** — your Advanced Installer license ID. The Caphyon
   action installs and registers Advanced Installer with it.
-- **`ACCESS_KEY_DEFAULT_WEB`** (Connect only) — the default server key baked into the MSI. Windows is a
-  direct download, so it embeds the same key as the Android web APK. The build fails without it on a
-  strict publish, so an installer can never ship with an empty server list.
+- **`ACCESS_KEY_PREMIUM`** (Connect only) — the default server key baked into the MSI. Windows has no
+  ads, so it embeds the 'premium' key shared by every ad-free distribution. The build fails without it
+  on a strict publish, so an installer can never ship with an empty server list.
 
 **Code signing (optional, `publish_client.yml` (in `Vpnhood.App.Client`)):** signing is **off unless the Azure
 credential and the Trusted Signing target are both present**, in which case the build signs

@@ -1,4 +1,5 @@
-﻿using AuthenticationServices;
+﻿using System.Security.Authentication;
+using AuthenticationServices;
 using Foundation;
 using UIKit;
 using VpnHood.AppLib.Abstractions.Accounts;
@@ -39,7 +40,7 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
 
         var credential = await handler.Completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         var identityToken = credential.IdentityToken?.ToString(NSStringEncoding.UTF8)
-            ?? throw new InvalidOperationException("Apple returned no identity token.");
+            ?? throw new AuthenticationException("Apple returned no identity token.");
         return identityToken;
     }
 
@@ -65,7 +66,7 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
             if (authorization.GetCredential<ASAuthorizationAppleIdCredential>() is { } credential)
                 Completion.TrySetResult(credential);
             else
-                Completion.TrySetException(new InvalidOperationException("Apple returned no credential."));
+                Completion.TrySetException(new AuthenticationException("Apple returned no credential."));
         }
 
         public override void DidComplete(ASAuthorizationController controller, NSError error)
@@ -74,13 +75,13 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
             // the sheet and when its own server-side check fails ("Sign Up Not Completed") and the user
             // dismisses that alert, so the flattened detail must survive — as the inner exception, which
             // reaches the log/report, never the user-facing message. UserCanceledException is what the
-            // UI silences (same as the Google provider); the raw NSError chain would otherwise surface
-            // verbatim in the error dialog.
+            // UI silences and AuthenticationException is what it translates (both same as the Google
+            // provider); the raw NSError chain would otherwise surface verbatim in the error dialog.
             if (error.Code == (long)ASAuthorizationError.Canceled)
                 Completion.TrySetException(new UserCanceledException("Apple sign-in was cancelled.",
                     new InvalidOperationException(error.Describe())));
             else
-                Completion.TrySetException(new InvalidOperationException("Apple sign-in failed.",
+                Completion.TrySetException(new AuthenticationException("Apple sign-in failed.",
                     new InvalidOperationException(error.Describe())));
         }
 

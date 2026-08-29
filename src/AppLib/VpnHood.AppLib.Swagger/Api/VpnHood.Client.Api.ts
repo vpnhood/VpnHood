@@ -6148,7 +6148,6 @@ export class ClientPolicy implements IClientPolicy {
     pbp!: boolean;
     pbc!: boolean;
     pur_url?: string | null;
-    pur_url_f!: PurchaseUrlMode;
 
     constructor(data?: IClientPolicy) {
         if (data) {
@@ -6191,7 +6190,6 @@ export class ClientPolicy implements IClientPolicy {
             this.pbp = _data["pbp"] !== undefined ? _data["pbp"] : null as any;
             this.pbc = _data["pbc"] !== undefined ? _data["pbc"] : null as any;
             this.pur_url = _data["pur_url"] !== undefined ? _data["pur_url"] : null as any;
-            this.pur_url_f = _data["pur_url_f"] !== undefined ? _data["pur_url_f"] : null as any;
         }
     }
 
@@ -6225,7 +6223,6 @@ export class ClientPolicy implements IClientPolicy {
         data["pbp"] = this.pbp !== undefined ? this.pbp : null as any;
         data["pbc"] = this.pbc !== undefined ? this.pbc : null as any;
         data["pur_url"] = this.pur_url !== undefined ? this.pur_url : null as any;
-        data["pur_url_f"] = this.pur_url_f !== undefined ? this.pur_url_f : null as any;
         return data;
     }
 }
@@ -6244,13 +6241,6 @@ export interface IClientPolicy {
     pbp: boolean;
     pbc: boolean;
     pur_url?: string | null;
-    pur_url_f: PurchaseUrlMode;
-}
-
-export enum PurchaseUrlMode {
-    WhenNoStore = 0,
-    WithStore = 1,
-    HideStore = 2,
 }
 
 export class ConfigParams implements IConfigParams {

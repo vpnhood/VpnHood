@@ -44,9 +44,12 @@ public class ClientPolicy
     [JsonPropertyName("pbc")]
     public bool PremiumByCode { get; init; }
 
+    /// <summary>
+    /// The shop this operator sells through. Naming one REPLACES the app's own store: the client
+    /// shows this page and nothing else, so an in-app store and an outside shop are never offered
+    /// side by side. A build shipped through a store ignores it outright — where the link may be
+    /// shown is a property of the BUILD, never of a country or a server.
+    /// </summary>
     [JsonPropertyName("pur_url")]
     public Uri? PurchaseUrl { get; init; }
-
-    [JsonPropertyName("pur_url_f")]
-    public PurchaseUrlMode PurchaseUrlMode { get; init; }
 }

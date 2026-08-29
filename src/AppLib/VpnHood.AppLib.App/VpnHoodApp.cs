@@ -1321,37 +1321,28 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var clientPolicy = profileInfo.ClientPolicy;
         var premium = Features.Premium;
 
-        // A build the stores forbid an outside shop to never sees one: the URL and its mode are
-        // dropped here, at the single place both are read, so the SPA keeps asking only "is there a
-        // purchase url?" and never has to know which store it is running in. Dropping the mode with
-        // it matters — HideStore would otherwise leave the page empty, hiding the store on behalf of
-        // a link that will not be shown.
-        var isPurchaseUrlSupported = premium?.IsPurchaseUrlSupported == true;
-        var purchaseUrl = isPurchaseUrlSupported ? clientPolicy?.PurchaseUrl : null;
-        var purchaseUrlMode = isPurchaseUrlSupported
-            ? clientPolicy?.PurchaseUrlMode ?? PurchaseUrlMode.WhenNoStore
-            : PurchaseUrlMode.WhenNoStore;
+        // The operator's own shop, read only by a build that MAY open one. The URL arrives from the
+        // SERVER — every access token carries its operator's own — and that operator cannot know
+        // which store shipped this binary, so a store head drops it unread: Apple 3.1.1/3.1.3 and
+        // Play's Payments policy forbid steering a buyer out, and no token may talk a build into it.
+        var purchaseUrl = premium?.IsPurchaseUrlSupported == true ? clientPolicy?.PurchaseUrl : null;
 
-        // get subscription plans from the store — never asked in a build with no premium tier:
-        // there is nothing such a build could sell, so no store error may surface either
-        var storeInfo = premium != null && purchaseUrlMode != PurchaseUrlMode.HideStore &&
+        // ONE purchase surface, never two side by side. An operator that names its own shop sells
+        // its own way, so the in-app store is not merely hidden — it is never asked: its plans are
+        // OUR catalogue at OUR prices, which that operator does not sell, and a card the buyer
+        // cannot be billed for is worse than no card. Where no shop is named the store is the only
+        // way in, exactly as before; and a build with no premium tier sells nothing at all, so no
+        // store error may surface from one.
+        var storeInfo = premium != null && purchaseUrl == null &&
                         Services.AccountService?.BillingService != null
             ? await Services.AccountService.BillingService.GetStoreInfo(cancellationToken)
             : StoreInfo.Empty;
-
-        // calculate purchase url
-        var externalUrl = purchaseUrlMode switch {
-            PurchaseUrlMode.HideStore => purchaseUrl,
-            PurchaseUrlMode.WithStore => purchaseUrl,
-            PurchaseUrlMode.WhenNoStore when !storeInfo.IsAvailable => purchaseUrl,
-            _ => null
-        };
 
         var purchaseOptions = new AppPurchaseOptions {
             IsStoreAvailable = storeInfo.IsAvailable,
             SubscriptionPlans = storeInfo.SubscriptionPlans,
             StoreError = storeInfo.StoreError,
-            PurchaseUrl = externalUrl,
+            PurchaseUrl = purchaseUrl,
             // the remote policy offers it; the BUILD must also be allowed to take a typed code at
             // all (lifecycle §9 — a per-build capability, false on the App Store build)
             CanGoPremiumByCode = clientPolicy?.PremiumByCode == true && premium?.AllowImportAccessCode == true

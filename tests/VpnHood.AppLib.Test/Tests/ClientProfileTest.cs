@@ -544,14 +544,14 @@ public class ClientProfileTest : TestAppBase
 
         await using var app = TestAppHelper.CreateClientApp(appOptions);
 
-        // test two region in a same country
+        // The shop a policy names REPLACES the in-app store, and the policy that applies is chosen
+        // by country — so the same build sells through the store in one country and through the
+        // operator's own page in another, with the two never shown side by side.
         var token = CreateToken();
         token.IsPublic = true;
         var defaultPolicy = new ClientPolicy {
             ClientCountries = ["*"],
-            Normal = 10,
-            PurchaseUrl = new Uri("http://localhost/all"),
-            PurchaseUrlMode = PurchaseUrlMode.WhenNoStore
+            Normal = 10
         };
         var caPolicy = new ClientPolicy {
             ClientCountries = ["CA"],
@@ -559,7 +559,6 @@ public class ClientProfileTest : TestAppBase
             PremiumByPurchase = true,
             Normal = 200,
             PremiumByTrial = 300,
-            PurchaseUrlMode = PurchaseUrlMode.WithStore,
             PurchaseUrl = new Uri("http://localhost/ca")
         };
         var cnPolicy = new ClientPolicy {
@@ -568,7 +567,6 @@ public class ClientProfileTest : TestAppBase
             PremiumByPurchase = true,
             Normal = 200,
             PremiumByTrial = 300,
-            PurchaseUrlMode = PurchaseUrlMode.HideStore,
             PurchaseUrl = new Uri("http://localhost/cn")
         };
 
@@ -579,39 +577,39 @@ public class ClientProfileTest : TestAppBase
         app.UserSettings.ClientProfileId = clientProfile.ClientProfileId;
         var clientProfileInfo = clientProfile.ToInfo(app.Features);
 
-        // test default policy (no error)
+        // names no shop: the store is the only way in
         billingProvider.SubscriptionPlanException = null;
         var purchaseOptions = await app.GetPurchaseOptions(clientProfileInfo.ClientProfileId, TestCt);
-        Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
-        Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
+        Assert.IsNull(clientProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.IsNull(purchaseOptions.PurchaseUrl);
+        Assert.IsTrue(purchaseOptions.IsStoreAvailable);
         Assert.IsNull(purchaseOptions.StoreError);
 
-        // test default policy (billing error)
+        // names no shop and the store is broken: the failure is reported as itself, because there
+        // is no outside shop to fall back to
         billingProvider.SubscriptionPlanException = new Exception("Billing Error");
         purchaseOptions = await app.GetPurchaseOptions(clientProfileInfo.ClientProfileId, TestCt);
-        Assert.AreEqual(defaultPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
-        Assert.AreEqual(defaultPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
-        Assert.AreEqual(defaultPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
+        Assert.IsNull(purchaseOptions.PurchaseUrl);
         Assert.IsNotNull(purchaseOptions.StoreError);
-        billingProvider.SubscriptionPlanException = null;
 
-        // test ca policy
+        // test ca policy: a named shop replaces the store, which is not even asked — the billing
+        // provider is still broken here, and no store error may surface from a store nobody called
         app.UpdateClientCountry("CA");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo(app.Features);
         purchaseOptions = await app.GetPurchaseOptions(clientProfileInfo.ClientProfileId, TestCt);
-        Assert.AreEqual(caPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
         Assert.AreEqual(caPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.AreEqual(caPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
+        Assert.IsFalse(purchaseOptions.IsStoreAvailable, "a named shop must not be offered beside the store");
         Assert.IsNull(purchaseOptions.StoreError);
+        billingProvider.SubscriptionPlanException = null;
 
-        // test cn policy
+        // test cn policy: the country picks the shop
         app.UpdateClientCountry("CN");
         clientProfileInfo = app.ClientProfileService.Get(clientProfileInfo.ClientProfileId).ToInfo(app.Features);
         purchaseOptions = await app.GetPurchaseOptions(clientProfileInfo.ClientProfileId, TestCt);
-        Assert.AreEqual(cnPolicy.PurchaseUrlMode, clientProfileInfo.ClientPolicy?.PurchaseUrlMode);
+        Assert.AreEqual(cnPolicy.PurchaseUrl, clientProfileInfo.ClientPolicy?.PurchaseUrl);
         Assert.AreEqual(cnPolicy.PurchaseUrl, purchaseOptions.PurchaseUrl);
-        Assert.IsFalse(purchaseOptions.IsStoreAvailable, "HideStore must not offer the store at all");
+        Assert.IsFalse(purchaseOptions.IsStoreAvailable);
         Assert.IsNull(purchaseOptions.StoreError);
     }
 
@@ -631,15 +629,15 @@ public class ClientProfileTest : TestAppBase
         var token = CreateToken();
         token.IsPublic = true;
         token.ServerToken.ServerLocations = ["US/California"];
-        // HideStore is the demanding case: obeying it would hide the store on behalf of a link this
-        // build will not show, leaving the purchase page with nothing on it at all
+        // the demanding case: a named shop replaces the store everywhere it is allowed, so obeying
+        // it here would hide the store on behalf of a link this build will not show, leaving the
+        // purchase page with nothing on it at all
         token.ClientPolicies = [
             new ClientPolicy {
                 ClientCountries = ["*"],
                 Normal = 10,
                 PremiumByPurchase = true,
-                PurchaseUrl = new Uri("http://localhost/shop"),
-                PurchaseUrlMode = PurchaseUrlMode.HideStore
+                PurchaseUrl = new Uri("http://localhost/shop")
             }
         ];
 
@@ -723,8 +721,7 @@ public class ClientProfileTest : TestAppBase
                 PremiumByTrial = 30,
                 PremiumByPurchase = true,
                 PremiumByCode = true,
-                PurchaseUrl = new Uri("http://localhost/shop"),
-                PurchaseUrlMode = PurchaseUrlMode.WithStore
+                PurchaseUrl = new Uri("http://localhost/shop")
             }
         ];
 

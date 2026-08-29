@@ -2,6 +2,7 @@
 using Foundation;
 using UIKit;
 using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Ios.Extensions;
 using VpnHood.Core.Client.Devices.UiContexts;
 
@@ -71,13 +72,16 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
         {
             // 1001 = ASAuthorizationError.Canceled. Apple reports Canceled BOTH when the user dismisses
             // the sheet and when its own server-side check fails ("Sign Up Not Completed") and the user
-            // dismisses that alert, so the flattened detail is the only way to tell the two apart.
+            // dismisses that alert, so the flattened detail must survive — as the inner exception, which
+            // reaches the log/report, never the user-facing message. UserCanceledException is what the
+            // UI silences (same as the Google provider); the raw NSError chain would otherwise surface
+            // verbatim in the error dialog.
             if (error.Code == (long)ASAuthorizationError.Canceled)
-                Completion.TrySetException(
-                    new OperationCanceledException($"Apple sign-in was cancelled. {error.Describe()}"));
+                Completion.TrySetException(new UserCanceledException("Apple sign-in was cancelled.",
+                    new InvalidOperationException(error.Describe())));
             else
-                Completion.TrySetException(
-                    new InvalidOperationException($"Apple sign-in failed: {error.Describe()}"));
+                Completion.TrySetException(new InvalidOperationException("Apple sign-in failed.",
+                    new InvalidOperationException(error.Describe())));
         }
 
         public UIWindow GetPresentationAnchor(ASAuthorizationController controller)

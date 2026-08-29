@@ -1,4 +1,5 @@
 ﻿using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.Ios.AppStore.Exceptions;
 using VpnHood.AppLib.Ios.StoreKitNative;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
@@ -32,7 +33,7 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
         CancellationToken cancellationToken)
     {
-        var products = await _bridge.LoadProducts(productIds, cancellationToken).Vhc();
+        var products = await CallBridge(() => _bridge.LoadProducts(productIds, cancellationToken), cancellationToken).Vhc();
         // ReSharper disable once UseCollectionExpression
         return products
             .Select(product => new SubscriptionPlan {
@@ -59,17 +60,17 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
 
         PurchaseState = PurchaseState.Started;
         try {
-            var purchase = await _bridge
-                .Purchase(purchaseParams.PlanToken, appAccountToken, cancellationToken).Vhc();
+            var purchase = await CallBridge(
+                () => _bridge.Purchase(purchaseParams.PlanToken, appAccountToken, cancellationToken),
+                cancellationToken).Vhc();
 
             return purchase.State switch {
                 StoreKitPurchase.StatePurchased => new PurchaseProof {
                     Value = purchase.Jws
                             ?? throw new InvalidOperationException("StoreKit returned no signed transaction.")
                 },
-                StoreKitPurchase.StateCancelled => throw new OperationCanceledException("The purchase was cancelled."),
-                _ => throw new InvalidOperationException(
-                    "The purchase is awaiting approval (Ask to Buy). It will be delivered once approved.")
+                StoreKitPurchase.StateCancelled => throw AppStoreBillingErrors.Cancelled(),
+                _ => throw AppStoreBillingErrors.Pending()
             };
         }
         finally {
@@ -80,9 +81,26 @@ public class AppStoreBillingProvider(IStoreKitBridge? bridge = null)
     /// <summary>Apple review requirement: surface previously purchased items without a new charge.</summary>
     public async Task<PurchaseProof?> RestorePurchase(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        var entitlement = await _bridge.CurrentEntitlement(cancellationToken).Vhc();
+        var entitlement = await CallBridge(() => _bridge.CurrentEntitlement(cancellationToken), cancellationToken).Vhc();
         var jws = entitlement?.Jws;
         return jws == null ? null : new PurchaseProof { Value = jws };
+    }
+
+    // The billing contract: nothing store-specific crosses the client API. The bridge has no
+    // error-code channel (StoreKit failures arrive as plain exceptions with a message), so
+    // anything it throws — other than this call's own cancellation — leaves here as a
+    // BillingException with code Unknown and the store's message attached.
+    private static async Task<T> CallBridge<T>(Func<Task<T>> action, CancellationToken cancellationToken)
+    {
+        try {
+            return await action().Vhc();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) {
+            throw;
+        }
+        catch (Exception ex) when (ex is not BillingException) {
+            throw AppStoreBillingErrors.Wrap(ex);
+        }
     }
 
     public void Dispose()

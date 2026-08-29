@@ -7,6 +7,7 @@ using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using TaskExtensions = VpnHood.Core.Toolkit.Extensions.TaskExtensions;
 using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.ClientProfiles;

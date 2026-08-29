@@ -1,4 +1,5 @@
-﻿using Android.Runtime;
+﻿using Android.Content;
+using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
@@ -7,6 +8,7 @@ using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Updaters;
+using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Toolkit.Logging;
 
@@ -69,13 +71,22 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
             // No Google sign-in on this head, deliberately: an Android OAuth client is bound to a
             // package name AND signing certificate, and this sideloaded build shares neither with
-            // the Play build. The portal's own password sign-in serves, and nothing is sold here,
-            // so there is no billing provider either.
+            // the Play build. The portal's own password sign-in serves.
             var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
                 appConfigs.PortalBaseUri, appConfigs.AppId, [],
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
-            return new PortalAccountProvider(portalAuthenticationProvider, billingProvider: null,
+            // the web-distribution store: plans priced by the portal, checkout in the browser
+            var webBillingProvider = new PortalWebBillingProvider(appConfigs.PortalBaseUri, appConfigs.AppId,
+                openUrl: (uiContext, url, _) => {
+                    var intent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url.AbsoluteUri));
+                    intent.AddFlags(ActivityFlags.NewTask);
+                    ((AndroidUiContext) uiContext).Activity.StartActivity(intent);
+                    return Task.CompletedTask;
+                },
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
+
+            return new PortalAccountProvider(portalAuthenticationProvider, billingProvider: webBillingProvider,
                 portalBaseUrl: appConfigs.PortalBaseUri, packageName: appConfigs.AppId,
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
         }

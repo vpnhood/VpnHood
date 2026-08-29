@@ -57,13 +57,20 @@ public class App : Application
             if (appConfigs.PortalBaseUri == null)
                 return null;
 
-            // no external identity provider on this head: the portal's own password sign-in serves,
-            // and there is no store on Windows, so no billing provider either
+            // no external identity provider on this head: the portal's own password sign-in serves
             var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
                 appConfigs.PortalBaseUri, appConfigs.AppId, [],
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
-            return new PortalAccountProvider(portalAuthenticationProvider, billingProvider: null,
+            // the web-distribution store: plans priced by the portal, checkout in the browser
+            var webBillingProvider = new PortalWebBillingProvider(appConfigs.PortalBaseUri, appConfigs.AppId,
+                openUrl: (_, url, _) => {
+                    VpnHoodAppWin.OpenUrlInExternalBrowser(url);
+                    return Task.CompletedTask;
+                },
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
+
+            return new PortalAccountProvider(portalAuthenticationProvider, billingProvider: webBillingProvider,
                 portalBaseUrl: appConfigs.PortalBaseUri, packageName: appConfigs.AppId,
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
         }

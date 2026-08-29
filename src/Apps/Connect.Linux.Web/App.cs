@@ -63,13 +63,21 @@ internal static class App
                 return null;
             }
 
-            // no external identity provider on this head: the portal's own password sign-in serves,
-            // and this build ships through no store, so there is no billing provider either
+            // no external identity provider on this head: the portal's own password sign-in serves
             var portalAuthenticationProvider = new PortalAuthenticationProvider(storageFolderPath,
                 appConfigs.PortalBaseUri, appConfigs.AppId, [],
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
 
-            return new PortalAccountProvider(portalAuthenticationProvider, billingProvider: null,
+            // the web-distribution store: plans priced by the portal, checkout in the browser.
+            // xdg-open, not UseShellExecute: on Linux the latter does not resolve URLs.
+            var webBillingProvider = new PortalWebBillingProvider(appConfigs.PortalBaseUri, appConfigs.AppId,
+                openUrl: (_, url, _) => {
+                    Process.Start(new ProcessStartInfo { FileName = "xdg-open", ArgumentList = { url.AbsoluteUri } });
+                    return Task.CompletedTask;
+                },
+                ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
+
+            return new PortalAccountProvider(portalAuthenticationProvider, billingProvider: webBillingProvider,
                 portalBaseUrl: appConfigs.PortalBaseUri, packageName: appConfigs.AppId,
                 ignoreSslVerification: appConfigs.PortalIgnoreSslVerification);
         }

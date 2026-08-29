@@ -16,4 +16,11 @@ public static class StoreIds
     public const string GooglePlay = "googleplay";
     public const string AppStore = "appstore";
     public const string Microsoft = "microsoft";
+
+    /// <summary>
+    /// The direct-download distribution channel — not a store: no billing provider carries this id.
+    /// It names the backend's app registration for such builds, and the backend serves priced web
+    /// plans (checkout on the website) only to apps registered under it.
+    /// </summary>
+    public const string Web = "web";
 }

@@ -214,6 +214,20 @@ public class PortalApiClient : ApiClientBase
     }
 
     /// <summary>
+    /// GET /billing/plans — the priced plans a WEB-distributed app offers, each with a ready-made
+    /// checkout URL. The portal refuses store-distributed apps (their store prices their plans),
+    /// and prices everything in one currency that each purchase URL pins — called with the session
+    /// attached when one exists, so a signed-in account is priced in its own locked currency.
+    /// </summary>
+    public Task<IReadOnlyList<PortalPlan>> ListPlans(string storeId, string packageName,
+        CancellationToken cancellationToken)
+    {
+        return HttpGetAsync<IReadOnlyList<PortalPlan>>("billing/plans",
+            new Dictionary<string, object?> { ["store"] = storeId, ["packageName"] = packageName },
+            cancellationToken);
+    }
+
+    /// <summary>
     /// POST /billing/purchases — redeem a store purchase. The answer is the state alone: once
     /// provisioned, the caller refreshes GET /account, which is where the delivered code and the
     /// subscription live. Each store proves a purchase its own way — Play hands out a purchase

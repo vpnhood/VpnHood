@@ -14,7 +14,6 @@ public static class TransportDefaults
     public const int MtuSafety = 100;
     public const int MtuServer = MaxPacketSize;
     public const int MtuClient = MaxPacketSize - MtuSafety;
-    public const string HttpPassCheck = "VpnHoodPassCheck";
     public const int MaxUdpDatagramSize = 64 * 1024;
 
     // Covers any response a real-world resolver exchanges over UDP (post-DNS-Flag-Day defaults are

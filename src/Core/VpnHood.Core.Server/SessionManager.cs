@@ -37,7 +37,6 @@ public class SessionManager : IAsyncDisposable, IDisposable
     private readonly VirtualIpManager _virtualIpManager;
     private byte[] _serverSecret;
 
-    public string ApiKey { get; private set; }
     public NetFilter NetFilter { get; set; }
     public Version ServerVersion { get; }
     public ConcurrentDictionary<ulong, Session> Sessions { get; } = new();
@@ -50,10 +49,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     public byte[] ServerSecret {
         get => _serverSecret;
-        set {
-            ApiKey = HttpUtils.GetApiKey(value, TransportDefaults.HttpPassCheck);
-            _serverSecret = value;
-        }
+        set => _serverSecret = value;
     }
 
     internal SessionManager(
@@ -76,7 +72,6 @@ public class SessionManager : IAsyncDisposable, IDisposable
             Path.Combine(storagePath, "last-virtual-ips.json"));
 
         Tracker = tracker;
-        ApiKey = HttpUtils.GetApiKey(_serverSecret, TransportDefaults.HttpPassCheck);
         NetFilter = netFilter;
         ServerVersion = serverVersion;
         if (_vpnAdapter != null)

@@ -22,7 +22,7 @@ libraries. It contains **no proprietary or non-standard cryptography**.
 
 | Algorithm | Use | Source |
 |-----------|-----|--------|
-| AES (128 / 256-bit) — GCM, CBC, ECB | Tunnel data, token/config encryption. **ECB is never used to encrypt user traffic.** Its one live use is a single-block operation: computing the QUIC header-protection mask (RFC 9001 §5.4.3) while reading the SNI for domain filtering. Two further ECB call sites survive as unreferenced legacy (an unused CTR keystream helper, and a server API-key derivation whose result nothing reads) and are pending removal | Platform crypto library |
+| AES (128 / 256-bit) — GCM, CBC | Tunnel data, token/config encryption | Platform crypto library |
 | RSA (2048-bit) | X.509 certificates / key transport | Platform crypto library |
 | TLS 1.2 / 1.3 | Transport security (TCP and QUIC channels) | OS / platform TLS |
 | SHA-256 | Hashing, handshakes, integrity | Platform crypto library |
@@ -33,6 +33,11 @@ All algorithms are accepted standards published by international standards bodie
 (IETF, IEEE, ITU). They are implemented via standard operating-system and .NET
 cryptographic libraries (`System.Security.Cryptography`, `SslStream`, TLS). There
 are **no custom cipher primitives**.
+
+One further AES use is not data encryption and so is not listed above: a single AES block
+operation computes the QUIC **header-protection** mask exactly as RFC 9001 §5.4.3 prescribes, so
+the app can read the SNI of a QUIC packet for domain filtering. It protects no user data and
+carries no key of ours.
 
 ## Publicly available source code
 

@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Security.Cryptography;
 using System.Text;
 using VpnHood.Core.Toolkit.Extensions;
 
@@ -101,25 +100,4 @@ public static class HttpUtils
         return headers;
     }
 
-    public static string GetApiKey(byte[] key, string passCheck)
-    {
-        // convert password to bytearray
-        var passCheckBytes = Encoding.UTF8.GetBytes(passCheck);
-        if (passCheckBytes.Length != 16)
-            throw new InvalidOperationException("Password must be 16 bytes.");
-
-        // create encryptor
-        using var aes = Aes.Create();
-        aes.Mode = CipherMode.ECB;
-        aes.Padding = PaddingMode.PKCS7;
-        aes.Key = key;
-
-        using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
-
-        // encrypt password
-        var buffer = new byte[16];
-        encryptor.TransformBlock(passCheckBytes, 0, passCheckBytes.Length, buffer, 0);
-
-        return Convert.ToBase64String(buffer);
-    }
 }

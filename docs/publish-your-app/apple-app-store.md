@@ -115,7 +115,8 @@ product per plan (for example monthly and yearly). Each product needs **all** of
 - a **product id** that exactly matches what your billing portal expects — the app carries no
   fallback, so a mismatch means the plan cannot be sold;
 - a **price**;
-- at least one **localization** (display name and description);
+- at least one **localization** (display name and description) — but see below, one is rarely what
+  you want;
 - an **App Review screenshot** — a picture of your app's purchase screen;
 - **availability** — the territories it is sold in.
 
@@ -123,6 +124,26 @@ Miss any one and the product sits in *missing metadata* and cannot be sold, with
 which piece is absent. Our audit tool lists exactly what is missing for every product, and the
 screenshot can be generated for you rather than photographed by hand — see
 [the in-app purchase checklist](../ios/build-deploy-and-provisioning.md#enable-in-app-purchase-connect-style-apps-white-labelfork-checklist).
+
+**Translate the subscription texts, and do it before you submit.** Your in-app paywall is translated
+with the rest of the app, but the **native purchase sheet** — the system panel where the money is
+actually confirmed — shows *your* subscription display name and description, and Apple localizes
+only its own wording around them. With one English localization, that screen reads in English to
+every customer in the world.
+
+Do it before the first submission rather than after, because subscription texts go through App
+Review: bundled into the version's submission they cost nothing, added later they are a separate
+review round for the products. Write the English strings once in
+`store-i18n/en-US/subscriptions.json`, let the translator fill the other locales like every other
+store text, and push them with:
+
+```bash
+node e2e/store-subscriptions.mjs --bundle-id <your.bundle.id> --root <your store repo> --keys-dir <your keys>
+```
+
+It refuses over-length text rather than truncating it (Apple allows 30 characters for a display name
+and 45 for a description — short enough that some languages need a rewrite, not a translation), and
+`--check` shows what would change without writing.
 
 Also set, on the same page: **App Store Server Notifications** (both the sandbox and production
 URLs) pointing at your billing portal, so renewals, cancellations and refunds reach you.
@@ -145,8 +166,10 @@ one blocks the submission until answered:
    not enough; the price itself must exist.
 
    For an app of this shape the answer is always the same: **price Free, base territory USA,
-   available everywhere except the territories you deliberately switch off**
-   ([which ones, and why](../legal/developer/APP_STORE_TERRITORIES.md)). The app is the free
+   starting immediately with no end date, available everywhere except the territories you
+   deliberately switch off** ([which ones, and why](../legal/developer/APP_STORE_TERRITORIES.md)).
+   The price schedule offers start and end dates because it is built for temporary sales; a
+   permanently free app wants neither. The app is the free
    container; the **subscriptions** carry the money and are priced separately under *Subscriptions*,
    which is why a paid-feature app is still "Free" here. Charging for the app itself instead would
    make every existing user pay again at the next release, and is not how a subscription VPN is
@@ -155,16 +178,21 @@ one blocks the submission until answered:
    someone else's servers. **Saving is not enough:** the panel has a separate **Publish** button,
    and until you press it the version is blocked in the same silent way as pricing. Guidance and the
    reasoning behind each answer: [App Store privacy](../legal/developer/APP_STORE_PRIVACY.md).
-3. **Age rating** — the honest answers give a VPN a **17+** rating.
-4. **Export compliance** — routine, but there is one setting that must never be flipped, or every
+3. **Primary category** — App Information → *Primary Category*. Easy to miss because the field is
+   blank rather than flagged, and it blocks review as silently as the two above. A VPN belongs in
+   **Utilities**. A secondary category is optional and can stay empty.
+4. **Age rating** — the honest answers give a VPN a **17+** rating.
+5. **Export compliance** — routine, but there is one setting that must never be flipped, or every
    upload is rejected: [export compliance](../legal/developer/APP_STORE_EXPORT_COMPLIANCE.md).
-5. **Trader status** — required for the EU. If you sell, you are a trader, and your company address
+6. **Trader status** — required for the EU. If you sell, you are a trader, and your company address
    and contact details appear publicly on your listing.
-6. **Privacy policy URL** — a working page on your own domain, under your own name.
+7. **Privacy policy URL** — a working page on your own domain, under your own name.
 
-Pricing and App Privacy are the two that waste the most time, because neither announces itself: the
-version simply refuses to enter review and the API reports no reason. If a submission is blocked
-with nothing obviously missing, check those two first.
+**Pricing, App Privacy and the primary category** waste the most time, because none of them
+announces itself: the version simply refuses to enter review, and the only error — in the console
+and over the API alike — is *"this resource cannot be reviewed, please check associated errors"*,
+which names nothing. If a submission is blocked with nothing obviously missing, check those three
+first, in that order. All three bit this project's own first submission.
 
 ---
 

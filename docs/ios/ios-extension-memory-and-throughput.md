@@ -174,16 +174,20 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 GlobalReceiveBudget − totalPipeBuffered)`; `UpdateAdvertisedWindow()` tracks `_lastAdvertisedWindow`;
 `OnAppConsumed` sends a window-update when `(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`.
 
-**Host** — `src/Apps/Client.Ios/AppDelegate.cs` sets only `MaxPacketChannelCount = 1` directly. The buffer
-sizes live in the `LowMemory` preset in
+**Host** — `src/Apps/Client.Ios/AppDelegate.cs` sets only `MaxPacketChannelCount = 1` directly, and only on a
+real device — an Apple-silicon Mac keeps the default of 4 (see below). The buffer
+sizes live in the `LimitedMemory` preset in
 `src/Core/VpnHood.Core.Client.Abstractions/ClientTransportOptions.cs`: `PacketChannelBufferSize=16 KB`,
 `UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude
 socket buffers), and `TcpPacketChannelKernelBufferSize=256 KB` (the single outer TCP packet channel needs a larger
 BDP window; using the shared 64 KB cap limited TCP packet mode to roughly 10–15 Mbps at typical WAN RTTs).
 
-`ClientTransportOptions.ForCurrentPlatform()` picks `LowMemory` on iOS/tvOS and `HighMemory` elsewhere.
+`ClientTransportOptions.ForCurrentPlatform()` picks `LimitedMemory` on iOS/tvOS and `NormalMemory` elsewhere.
 `AppDelegate` overrides that for the one case the check cannot see: **"Designed for iPad" running on an
-Apple-silicon Mac**, which has no Network-Extension memory cap and therefore takes `HighMemory`.
+Apple-silicon Mac**, which has no Network-Extension memory cap and therefore takes `NormalMemory` *and* the
+default `MaxPacketChannelCount`. Both halves matter: `NormalMemory` leaves
+`TcpPacketChannelKernelBufferSize` null (OS default), so a Mac pinned to a single packet channel would sit in
+exactly the 10–15 Mbps regime that knob exists to escape, with none of the jetsam pressure that justifies it.
 
 TFM `net11.0-ios` on App + Extension + the iOS core libs (Devices.Ios, IosTun, AppLib.Ios.Common, Quic.Ios).
 

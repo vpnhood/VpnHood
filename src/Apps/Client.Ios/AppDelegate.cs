@@ -48,7 +48,15 @@ public class AppDelegate : UIApplicationDelegate
             // carries ~90 Mbps, so this halves the channel footprint with no real throughput loss and
             // buys headroom so the extension survives the system-memory-pressure spike when the app
             // foregrounds (WKWebView/SPA spin-up) during heavy traffic. Set before the first connect.
-            VpnHoodApp.Instance.UserSettings.MaxPacketChannelCount = 1;
+            // Apple Silicon Macs are the SAME exception the Transport preset makes below: no jetsam
+            // cap, so the trade buys nothing there and only costs throughput. It costs more than it
+            // looks: in packet mode every tunneled TCP flow is multiplexed over that one connection
+            // (ClientSession applies this only to TCP — UDP is single-channel by design), so a Mac
+            // capped at one channel is exactly the case ClientTransportOptions warns about.
+            VpnHoodApp.Instance.UserSettings.MaxPacketChannelCount =
+                NSProcessInfo.ProcessInfo.IsiOSApplicationOnMac
+                    ? ClientOptions.Default.MaxPacketChannelCount
+                    : 1;
             VpnHoodApp.Instance.SettingsService.Save();
         }
 
@@ -93,7 +101,7 @@ public class AppDelegate : UIApplicationDelegate
             // Mac Catalyst marker. Only Foundation can tell it from a real device; everything else
             // stays the platform's own choice.
             Transport = NSProcessInfo.ProcessInfo.IsiOSApplicationOnMac
-                ? ClientTransportOptions.HighMemory
+                ? ClientTransportOptions.NormalMemory
                 : ClientTransportOptions.ForCurrentPlatform(),
             // Log level: Information in production. To investigate, add the "/log:debug" debug command in
             // the UI (Debug Data 1) — the iOS diagnostics gates are computed from VhLogger.MinLogLevel, so

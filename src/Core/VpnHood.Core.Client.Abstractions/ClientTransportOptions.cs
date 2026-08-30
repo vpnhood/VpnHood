@@ -49,17 +49,21 @@ public class ClientTransportOptions
     public int UdpProxyQueueCapacity { get; set; } = TransportDefaults.ProxyPacketQueueCapacity;
 
     /// <summary>
-    /// Full-size transport: every knob left null so each core component applies its own default.
-    /// What every desktop-class host runs — Windows, Linux, macOS, Android.
+    /// The ordinary transport: every knob left null so each core component applies its own default.
+    /// What every host runs unless something constrains it — Windows, Linux, macOS, Android, and an
+    /// iOS app running on an Apple Silicon Mac. It is named for asking nothing unusual rather than
+    /// for wanting a lot of memory: <see cref="LimitedMemory"/> is the exception, this is the norm.
     /// </summary>
-    public static ClientTransportOptions HighMemory => new();
+    public static ClientTransportOptions NormalMemory => new();
 
     /// <summary>
     /// The constrained preset for a host that runs network code inside a memory-capped process —
     /// today the iOS/tvOS Network Extension under its ~52 MB jetsam limit. Every value here was
-    /// measured against that cap; see the per-knob notes.
+    /// measured against that cap; see the per-knob notes. Nothing else needs it: the limit is the
+    /// platform's, not a property of the device, which is why an Apple Silicon Mac running the same
+    /// iOS binary takes <see cref="NormalMemory"/> instead.
     /// </summary>
-    public static ClientTransportOptions LowMemory => new() {
+    public static ClientTransportOptions LimitedMemory => new() {
         // Shrink the transport coalescing buffers to keep memory usage low; these flow to the
         // extension via vpn.config. Desktop keeps the 256 KB default. 64 KB holds ~45 MTU packets
         // with negligible throughput impact below ~200 Mbps.
@@ -96,8 +100,8 @@ public class ClientTransportOptions
 
     /// <summary>
     /// Picks the preset that fits the current host. Apple mobile platforms (iOS / tvOS) run network
-    /// code inside memory-capped Network Extensions, so they get <see cref="LowMemory"/>; everything
-    /// else gets <see cref="HighMemory"/> so throughput is unaffected. Detection is by OS family,
+    /// code inside memory-capped Network Extensions, so they get <see cref="LimitedMemory"/>;
+    /// everything else gets <see cref="NormalMemory"/> so throughput is unaffected. Detection is by OS family,
     /// not a runtime memory probe: an extension's real limit is enforced by jetsam and is not
     /// visible through <see cref="GC.GetGCMemoryInfo()"/>, which reports total device RAM.
     /// <para>
@@ -112,6 +116,6 @@ public class ClientTransportOptions
     {
         // Apple mobile runs its network code inside a memory-capped Network Extension.
         var isAppleMobile = OperatingSystem.IsIOS() || OperatingSystem.IsTvOS();
-        return isAppleMobile ? LowMemory : HighMemory;
+        return isAppleMobile ? LimitedMemory : NormalMemory;
     }
 }

@@ -143,6 +143,14 @@ one blocks the submission until answered:
    Pricing and Availability and choose Free, the version cannot enter review, and Apple's error
    says only "this resource cannot be reviewed" without naming pricing. A base territory alone is
    not enough; the price itself must exist.
+
+   For an app of this shape the answer is always the same: **price Free, base territory USA,
+   available everywhere except the territories you deliberately switch off**
+   ([which ones, and why](../legal/developer/APP_STORE_TERRITORIES.md)). The app is the free
+   container; the **subscriptions** carry the money and are priced separately under *Subscriptions*,
+   which is why a paid-feature app is still "Free" here. Charging for the app itself instead would
+   make every existing user pay again at the next release, and is not how a subscription VPN is
+   sold.
 2. **App Privacy** — what your app collects. Do not copy anyone else's answers; they describe
    someone else's servers. **Saving is not enough:** the panel has a separate **Publish** button,
    and until you press it the version is blocked in the same silent way as pricing. Guidance and the
@@ -202,6 +210,13 @@ Two kinds of tester, and they behave very differently:
 | Setup | Invite them under **Users and Access** first, then add them to the internal group — it does not work in the other order | Added straight to an external group |
 | Beta App Review | Not required | **Required**, plus "What to Test" notes on the build |
 | Availability | As soon as the build finishes processing | After beta review passes |
+
+**An invited tester is not yet a tester.** Adding someone to a group only sends an invitation; their
+state stays `INVITED` until they open the email and accept, and an app they have not accepted simply
+never appears in their TestFlight — restarting the app or pulling to refresh does nothing, because
+there is nothing there yet. Acceptance is **per app**, so someone already testing your other app
+must accept again for this one. If the mail was lost, resend the invitation rather than re-adding
+them to the group.
 
 Two things worth knowing while testing:
 

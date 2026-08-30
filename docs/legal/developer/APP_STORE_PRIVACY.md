@@ -163,18 +163,37 @@ or starting to store the name from the Google token, flips Name to collected-and
 platform and requires updating the questionnaire and the shipped privacy manifest together, in a
 new build.
 
-Questionnaire answers for iOS Connect, relative to the Client table above:
+### Filling the App Privacy panel
 
-| Question | Answer |
+"Do you or your third-party partners collect data from this app?" → **Yes**. Then select exactly the
+six types below and nothing else.
+
+**One row per *Set Up* screen**, in the order App Store Connect presents them. Every value matches
+[`Connect.Ios/PrivacyInfo.xcprivacy`](../../../src/Apps/Connect.Ios/PrivacyInfo.xcprivacy), which
+Apple cross-checks against these answers — if the two ever disagree, the manifest wins and the panel
+alone cannot fix it (that takes a new build).
+
+| Panel category | Data type | "How is this data used?" | Linked to identity? | Used for tracking? |
+| --- | --- | --- | --- | --- |
+| Identifiers | **User ID** | App Functionality **+ Analytics** | **Yes** | No |
+| Contact Info | **Email Address** | App Functionality | **Yes** | No |
+| Purchases | **Purchase History** | App Functionality | **Yes** | No |
+| Usage Data | **Product Interaction** | Analytics | No | No |
+| Usage Data | **Other Usage Data** (traffic totals) | Analytics | No | No |
+| Diagnostics | **Other Diagnostic Data** | Analytics | No | No |
+
+**User ID carries BOTH purposes** — the one row that is easy to get wrong, because the rest of this
+page splits the two apart. The random clientId goes to GA4 as the user id (**Analytics**) *and*
+travels in the VPN session handshake, where the servers keep quota/session records against it and
+the portal can join it to the account (**App Functionality**).
+
+Types deliberately **not** selected:
+
+| Not selected | Why |
 | --- | --- |
-| Collect data? | Yes |
-| Data types | **Email Address**, **Purchase History**, User ID, Product Interaction, **Other Usage Data** (traffic totals), Other Diagnostic Data |
-| Purpose | Analytics for the usage/diagnostic types; **App Functionality** for Email Address, Purchase History and User ID (they identify the account and grant entitlement) |
-| Linked to identity? | **Yes** — for Email Address, Purchase History and User ID. There is now an account to link to; Client's random-GUID reasoning no longer applies |
-| Name? | **No** — policy (2026-08-09): iOS requests the email scope only, and the name inside Google's sign-in token is never stored. Applies to both platforms |
-| Used for tracking? | No — no ad SDK, no IDFA, nothing shared with data brokers |
-| Device ID? | No — same reasoning as Client (random per-install id; no IDFA, no ATT) |
-| Crash Data? | **No on iOS** — Crashlytics ships only in the Android/Google build |
+| **Name** | Policy (2026-08-09): iOS requests the email scope only, and the name inside Google's sign-in token is never stored. Applies to both platforms |
+| **Device ID** | Same reasoning as Client — random per-install id; no IDFA, no ATT |
+| **Crash Data** | **No on iOS** — Crashlytics ships only in the Android/Google build. This type covers actual crash *logs*; the diagnostics the app does send (error-dialog messages to GA4) are already declared above as **Other Diagnostic Data**. Apple's own Xcode Organizer crash reports are Apple collecting, not you, and never need declaring. Do not pre-declare this "for the future": the panel is editable at any time, so when iOS gains crash reporting, ship both halves in one release — add `NSPrivacyCollectedDataTypeCrashData` to the manifest, build, *then* tick Crash Data in the panel |
 
 Whether **Product Interaction / Other Usage Data / Other Diagnostic Data** are also "Linked"
 depends on one question: does anything join the analytics stream to the account? Today it does not

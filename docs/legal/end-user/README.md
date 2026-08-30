@@ -29,8 +29,9 @@ Currently here:
 - [vpnhood-client-privacy-policy.md](vpnhood-client-privacy-policy.md) — VpnHood! CLIENT (the app only; CLIENT is bring-your-own-key, so server behaviour is out of its scope)
 - [vpnhood-connect-privacy-policy.md](vpnhood-connect-privacy-policy.md) — VpnHood! CONNECT (app **and** our servers, since CONNECT only uses ours)
 
-MANAGER's privacy policy and terms of use still live in the GitHub wiki and migrate here later; the
-site's build workflow fetches those two from the wiki and everything in this folder from `main`.
+MANAGER's privacy policy and terms of use still live in the GitHub wiki; the site's build workflow
+fetches those two from the wiki and everything in **this folder from `develop`**, as stated above.
+(Migrating them here is not scheduled — treat the wiki as their home until someone owns that move.)
 
 The wiki pages for the migrated policies are now redirect stubs pointing at the published URL —
 leave them that way so old links keep working, and never edit policy text there again.

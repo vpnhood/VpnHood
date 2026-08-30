@@ -5,7 +5,7 @@ namespace VpnHood.Core.Common.Tokens;
 /// <summary>
 /// The plan a client requests when starting a session. It tells the server how the user
 /// is entitled to connect (free, ad-supported, trial, or premium).
-/// See docs/ConnectionOptions.md for the product-level overview.
+/// See docs/connection-options.md for the product-level overview.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter<ConnectPlanId>))]
 public enum ConnectPlanId

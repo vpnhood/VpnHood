@@ -16,15 +16,12 @@ injection only when broad v6 coverage is requested; `CanProtectSocket => false` 
 from the tunnel; `ReadPackets` is one-shot and must be re-armed) are documented **inline in
 `IosVpnAdapter.cs`** next to the code that enforces them — read those comments rather than duplicating here.
 
-## Auto-connect
-`SceneDelegate.WillConnect` waits 1.5 s then calls `VpnHoodApp.Instance.Connect()` on the main thread. **Do not
-add more timers or button-press automation** — the existing timer is sufficient.
-
 ## Extension gotchas (do / don't)
-- **`Console.SetOut(TextWriter.Null)` must be the FIRST line of the extension ctor**, before any other Console
-  access. iOS extension stdout has no reader; once the kernel pipe buffer fills, `Console.WriteLine` blocks
-  forever and hangs the constructor (extension never reaches `StartTunnel`, Documents folder stays empty). Use
-  `System.Diagnostics.Trace.WriteLine` for extension logging.
+- **`Console.SetOut(TextWriter.Null)` must run before any other Console access.** It lives at the top of
+  `IosVpnService` in `VpnHood.Core.Client.Devices.Ios` (the app-project `PacketTunnelProvider` ctor is
+  empty and must stay that way). iOS extension stdout has no reader; once the kernel pipe buffer fills,
+  `Console.WriteLine` blocks forever and hangs the constructor (extension never reaches `StartTunnel`,
+  Documents folder stays empty). Use `System.Diagnostics.Trace.WriteLine` for extension logging.
 - **`MtouchLink=SdkOnly`** in each extension csproj (`*.Ios.Extension`) is required. `None` → ~338 MB binary → type-load hangs; `Full`
   risks trimming needed types (`EXC_BAD_ACCESS` at startup). Do not change it. `TrimmerRoots.xml` isn't needed at
   `SdkOnly` (user/VpnHood assemblies aren't trimmed) — remove it if re-added.
@@ -36,10 +33,10 @@ add more timers or button-press automation** — the existing timer is sufficien
 ## Common runtime issues
 | Symptom | Root cause | Fix |
 |--|--|--|
-| `GetContainerUrl` returns `null` | App Group entitlement missing from profile | Re-provision both targets (see build-deploy-and-provisioning) |
+| `GetContainerUrl` returns `null` | App Group entitlement missing from profile | Re-provision both targets (see [build-deploy-and-provisioning.md](build-deploy-and-provisioning.md)) |
 | Extension `EXC_BAD_ACCESS` at startup | trimming removed a needed type | keep `MtouchLink=SdkOnly` (don't use `None`/`Full`) |
 | Extension crashes on launch: `Could not find the assembly …Devices.Ios` | CoreCLR registrar can't load the principal class's assembly | keep the local `PacketTunnelProvider` subclass (see architecture-and-ipc + memory doc) |
 | `SaveToPreferences` times out | NEVPNManager needs the first-run permission prompt | accept the VPN permission dialog on device |
 | Extension never reaches `StartTunnel` | bundle-ID / principal-class mismatch | verify `Info.plist NSExtensionPrincipalClass` matches the `[Register]` name |
-| Extension process never starts, Documents empty (`NEVPNErrorDomain Code=1`) | `Console.WriteLine` before `Console.SetOut(...Null)` hung the ctor | move `Console.SetOut` to the first ctor line (above) |
+| Extension process never starts, Documents empty (`NEVPNErrorDomain Code=1`) | `Console.WriteLine` before `Console.SetOut(...Null)` hung the ctor | keep `Console.SetOut` ahead of every other Console access in `IosVpnService` (above) |
 | Build: `MSB4004 "PropertyGroup" is reserved` | nested `<PropertyGroup>` | un-nest it (above) |

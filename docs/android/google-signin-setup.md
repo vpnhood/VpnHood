@@ -1,7 +1,10 @@
-# Login setup for test environment
+# Google sign-in — debug/development setup (Android)
 
-To sign in in the debug and development environment, read this general info:
-https://developers.google.com/android/guides/client-auth#windows
+Google sign-in only works in a **debug** build after that build's signing certificate is registered
+with Firebase. Without these steps, signing in fails on a developer machine while working fine in
+release builds. Applies to `src/Apps/Connect.Android.Google`.
+
+Background: [Authenticating your client](https://developers.google.com/android/guides/client-auth#windows).
 
 ## Steps for Visual Studio
 1. To get the debug certificate fingerprint for Visual Studio:

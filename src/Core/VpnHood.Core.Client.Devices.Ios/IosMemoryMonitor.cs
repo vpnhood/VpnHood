@@ -19,7 +19,7 @@ namespace VpnHood.Core.Client.Devices.Ios;
 /// full breakdown via <see cref="IosMemory.TryRead"/> on its own thread. For the aggregate line it also reads the <b>public</b> snapshots
 /// owned by the other subsystems' diagnostics (<c>IosTunDiagnostics</c>, <c>IosQuicDiagnostics</c>,
 /// <c>TcpStack.LocalTcpStack.ActiveDiagnostics</c>) — it does not own their counters. See
-/// <c>docs/ios-extension-memory-and-throughput.md</c>.
+/// <c>docs/ios/ios-extension-memory-and-throughput.md</c>.
 /// <para>
 /// The ext-mem.log breakdown: <c>footprint</c> = phys_footprint (the number jetsam enforces); <c>gcLive</c> =
 /// live managed objects; <c>native</c> = footprint − managed heap (NSObject peers, TLS/socket buffers, kernel

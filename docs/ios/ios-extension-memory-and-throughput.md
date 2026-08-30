@@ -10,8 +10,7 @@ so treat them as the preview.5 baseline).
 > This file merges the three working docs (`ios-memory-jetsam-investigation`, `ios-net11-coreclr-proxy-speed`,
 > and Gemini's `upload-speed-and-memory-stabilization`) into one accurate record. Code changes live in the
 > core projects under `src/Core`; the app glue is under `src/Apps/{Client,Connect}.Ios[.Extension]`. The
-> **batched native tun write** (Part 4) lives on
-> core branch `feat/ios-tun-batch-write`; the rest landed on `development`.
+> **batched native tun write** (Part 4) has since merged; everything described here is on `develop`.
 
 ---
 
@@ -121,7 +120,7 @@ up to `QueueCapacity` ≈ 255 packets per cycle) and hands the whole list to `Se
 - **Old path:** the adapter overrode only the per-packet `WritePacket`, so the base `SendPacketsAsync` looped
   and issued **one native `WritePackets([1 packet])` per packet** → one marshaling crossing + autorelease churn
   per packet. On a TCP-proxy download (many back-to-back MSS packets) that is the hot path.
-- **New path (`feat/ios-tun-batch-write`):** the adapter overrides `SendPacketsAsync` directly and flushes the
+- **New path (shipped):** the adapter overrides `SendPacketsAsync` directly and flushes the
   drained list to the native flow in **batches of up to 32** (`MaxWriteBatchSize`), using **reused,
   allocation-free arrays** wrapped in **one autorelease pool per drain**. Far fewer native crossings per burst.
   - Partial (final) chunks are handed an **exactly-sized** array (`_partialWrite*Batches[n]`, pre-allocated
@@ -175,11 +174,18 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 GlobalReceiveBudget − totalPipeBuffered)`; `UpdateAdvertisedWindow()` tracks `_lastAdvertisedWindow`;
 `OnAppConsumed` sends a window-update when `(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`.
 
-**Host** — `src/Apps/Client.Ios/AppDelegate.cs`: `MaxPacketChannelCount=1`, `PacketChannelBufferSize=16 KB`,
+**Host** — `src/Apps/Client.Ios/AppDelegate.cs` sets only `MaxPacketChannelCount = 1` directly. The buffer
+sizes live in the `LowMemory` preset in
+`src/Core/VpnHood.Core.Client.Abstractions/ClientTransportOptions.cs`: `PacketChannelBufferSize=16 KB`,
 `UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude
 socket buffers), and `TcpPacketChannelKernelBufferSize=256 KB` (the single outer TCP packet channel needs a larger
 BDP window; using the shared 64 KB cap limited TCP packet mode to roughly 10–15 Mbps at typical WAN RTTs).
-TFM `net11.0-ios` on App + Extension + the 3 iOS core libs (Devices.Ios, IosTun, AppLib.Ios.Common).
+
+`ClientTransportOptions.ForCurrentPlatform()` picks `LowMemory` on iOS/tvOS and `HighMemory` elsewhere.
+`AppDelegate` overrides that for the one case the check cannot see: **"Designed for iPad" running on an
+Apple-silicon Mac**, which has no Network-Extension memory cap and therefore takes `HighMemory`.
+
+TFM `net11.0-ios` on App + Extension + the iOS core libs (Devices.Ios, IosTun, AppLib.Ios.Common, Quic.Ios).
 
 ---
 

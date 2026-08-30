@@ -22,11 +22,12 @@ libraries. It contains **no proprietary or non-standard cryptography**.
 
 | Algorithm | Use | Source |
 |-----------|-----|--------|
-| AES (128 / 256-bit) — GCM, CBC, CTR | Tunnel data, token/config encryption | Platform crypto library |
+| AES (128 / 256-bit) — GCM, CBC, ECB | Tunnel data, token/config encryption. **ECB is never used to encrypt user traffic.** Its one live use is a single-block operation: computing the QUIC header-protection mask (RFC 9001 §5.4.3) while reading the SNI for domain filtering. Two further ECB call sites survive as unreferenced legacy (an unused CTR keystream helper, and a server API-key derivation whose result nothing reads) and are pending removal | Platform crypto library |
 | RSA (2048-bit) | X.509 certificates / key transport | Platform crypto library |
 | TLS 1.2 / 1.3 | Transport security (TCP and QUIC channels) | OS / platform TLS |
-| SHA-1, SHA-256 | Hashing, handshakes | Platform crypto library |
+| SHA-256 | Hashing, handshakes, integrity | Platform crypto library |
 | HMAC-SHA256 | Message authentication | Platform crypto library |
+| SHA-1 | **Non-security uses only:** the WebSocket handshake accept-key mandated by RFC 6455, and deriving a unique Windows network-adapter name. Not used for authentication, signatures or confidentiality | Platform crypto library |
 
 All algorithms are accepted standards published by international standards bodies
 (IETF, IEEE, ITU). They are implemented via standard operating-system and .NET
@@ -50,5 +51,11 @@ Export-compliance enquiries: **compliance@omegahood.com**
 
 ---
 
-_Last updated: 2026-07-06 · This document is informational and does not constitute
+_Last updated: 2026-08-29 · This document is informational and does not constitute
 legal advice._
+
+> **Single source.** This table is the authoritative algorithm inventory. The App Store
+> questionnaire guide ([APP_STORE_EXPORT_COMPLIANCE.md](APP_STORE_EXPORT_COMPLIANCE.md)) links here
+> rather than restating it — the two lists had drifted apart once, which is exactly the kind of
+> discrepancy between two public statements this document exists to avoid. When the cryptography
+> changes, change it **here**.

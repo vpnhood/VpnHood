@@ -186,27 +186,36 @@ they flip too.
 which triggers **Guideline 5.1.1(v)**: deletion must be initiated *inside* the app — sign-out is
 not enough and "email support" is a rejection. Invoices and payment records may be retained for
 legal/accounting obligations (Apple says so explicitly, and GDPR Art. 17(3)(b)/(e) agrees) provided
-the user is told; the backend anonymises the personal data and keeps the financial records. Also
-disclose that deleting the account does **not** cancel the App Store subscription.
+the user is told; the backend erases the *person* and keeps the financial records — **invoices keep
+the name they were issued with** (an earlier anonymise-the-invoice choice was reversed; see
+[account-lifecycle.md](../../accounts/account-lifecycle.md) "Why invoices keep the buyer's name").
+Also disclose that deleting the account does **not** cancel the App Store subscription.
 
 *Implemented (2026-08-10).* The flow lives at **Account page → "Delete my account"** with a
 confirmation dialog that carries the disclosures Apple asks for: deletion applies to all devices,
 cannot be undone, does not cancel the subscription (cancel it in the store where purchased), paid
-access keeps working until the period ends, and invoices are retained anonymized. For App Review
-notes: state that path explicitly so the reviewer finds it. Google Play additionally requires a
-**web deletion path declared in the Data safety form**; use
+access keeps working until the period ends, and invoices are retained under the name they were
+issued with. For App Review notes: state that path explicitly so the reviewer finds it. Google Play
+additionally requires a **web deletion path declared in the Data safety form**; use
 `https://www.vpnhood.com/user-account-deletion-request`, which explains the in-app route and links
-the sign-in–protected web deletion page. Deletion never touches a running service or a store
-subscription, and it is refused with an actionable message while the account still has active
-website-sold services (impossible for an account created in the app, so a reviewer cannot hit it).
+the sign-in–protected web deletion page.
+
+**Nothing blocks a deletion.** Deletion never touches a running service or a store subscription, and
+it is never refused — not even while the account still has active website-sold services. Those are
+cancelled at the end of their paid period instead. An earlier build *did* refuse in that case and
+sent the user to the website to finish; that is precisely the pattern Guideline 5.1.1(v) exists to
+prevent, so do not reintroduce it in a fork. The shipped behaviour is described to users in the
+[CONNECT privacy policy](../end-user/vpnhood-connect-privacy-policy.md) and specified in
+[account-lifecycle.md](../../accounts/account-lifecycle.md).
 
 **Manifest status.** `Connect.Ios/PrivacyInfo.xcprivacy` and
 `Connect.Ios.Extension/PrivacyInfo.xcprivacy` now exist (the extension's stays collection-free — the
-tunnel process runs no analytics). The host app's manifest currently declares the four pre-billing
-types: User ID (Analytics + App Functionality), Product Interaction, Other Usage Data, Other
-Diagnostic Data. **It must gain the Email Address and Purchase History types, with "linked" set
-`true` on those two plus User ID, in the same build that ships billing and sign-in.** Manifest and panel must ship together: Apple generates a privacy
-report from the binary and flags discrepancies, and the panel alone cannot fix a mismatch.
+tunnel process runs no analytics). The host app's manifest declares **six** collected types: User ID,
+Email Address and Purchase History (all three with `Linked = true`, because they hang off the
+account), plus Product Interaction, Other Usage Data and Other Diagnostic Data. The Email Address
+and Purchase History types were added with the build that shipped billing and sign-in, as they had
+to be. Manifest and panel must ship together: Apple generates a privacy report from the binary and
+flags discrepancies, and the panel alone cannot fix a mismatch.
 
 ## If your fork adds sign-in (Connect-like)
 

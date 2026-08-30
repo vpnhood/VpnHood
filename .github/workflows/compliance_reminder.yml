@@ -1,0 +1,75 @@
+name: Compliance reminder (BIS annual filing)
+
+# Opens a GitHub issue ahead of the annual US export-control (BIS/ENC) self-classification report,
+# which is due by 1 February every year for the preceding calendar year.
+#
+# WHY THIS EXISTS: the deadline used to live only as a sentence inside
+# docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md — a recurring legal obligation parked in a
+# document nobody is subscribed to. A missed filing is a compliance failure, not a chore, so the
+# reminder has to arrive on its own rather than wait to be re-read.
+#
+# It runs twice per cycle — 1 December (two months out) and 1 January (one month out) — and is
+# idempotent: if an open reminder issue for that filing year already exists, it does nothing.
+# Filing instructions and the entity/contact details are deliberately NOT here; they live in the
+# private .user/legals/FILING-INSTRUCTIONS.md (see the doc linked in the issue body).
+
+on:
+  schedule:
+    - cron: "0 9 1 12 *"   # 1 December, 09:00 UTC — two months before the deadline
+    - cron: "0 9 1 1 *"    # 1 January,  09:00 UTC — one month before the deadline
+  workflow_dispatch:        # manual check; safe to run any time (it only opens an issue, or skips)
+
+permissions:
+  issues: write
+
+jobs:
+  remind:
+    # Only the canonical repo files on behalf of the publishing entity; a fork has its own duty
+    # under its own name and should not inherit our reminder.
+    if: github.repository_owner == 'vpnhood'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            // The report covers the PREVIOUS calendar year and is due 1 Feb. In December the
+            // filing year is the current year; in January it is the year that just ended.
+            const now = new Date();
+            const filingYear = now.getUTCMonth() === 11 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+            const dueDate = `${filingYear + 1}-02-01`;
+            const title = `BIS annual self-classification report for ${filingYear} — due ${dueDate}`;
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+            if (existing.data.some(i => i.title === title)) {
+              core.info(`Reminder already open: "${title}" — nothing to do.`);
+              return;
+            }
+
+            const body = [
+              `The annual US export-control (BIS/ENC) **self-classification report** covering calendar`,
+              `year **${filingYear}** must be submitted by **${dueDate}**.`,
+              ``,
+              `This is a recurring obligation that follows from publishing encryption software under`,
+              `ECCN 5D992.c — it is not optional, and nothing else in the pipeline checks it.`,
+              ``,
+              `- Background and classification: [docs/legal/developer/EXPORT_COMPLIANCE.md](../blob/develop/docs/legal/developer/EXPORT_COMPLIANCE.md)`,
+              `- App Store side and maintainer status: [docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md](../blob/develop/docs/legal/developer/APP_STORE_EXPORT_COMPLIANCE.md)`,
+              `- **How to file** (entity details, CSV, send steps): \`.user/legals/FILING-INSTRUCTIONS.md\` —`,
+              `  deliberately kept out of this public repo.`,
+              ``,
+              `Close this issue once the report has been sent, and update the "Status (maintainers)"`,
+              `section of APP_STORE_EXPORT_COMPLIANCE.md with the filing date.`
+            ].join('\n');
+
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body
+            });
+            core.info(`Opened reminder issue #${issue.data.number}`);

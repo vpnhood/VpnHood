@@ -14,8 +14,8 @@ The device/extension/adapter implementations live in **`src/Core`** (referenced 
 | Type | Location | Role |
 |--|--|--|
 | `IosDevice` | `src/Core/VpnHood.Core.Client.Devices.Ios/IosDevice.cs` | `IDevice`; NEVPNManager save/load/start, creates the IPC transport |
-| `IosVpnService` (abstract) | same project | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, `StartMemoryGuard`/`StartMemoryProbe` |
-| `IosMessageListener` / transport | same project | App↔Extension IPC over `SendProviderMessage` / `HandleAppMessage` |
+| `IosVpnService` | same project | `NEPacketTunnelProvider` + `IVpnServiceHandler`; `StartTunnel`, `HandleAppMessage`, and the memory watchdogs (`IosMemoryGuard.Start()` / `IosMemoryMonitor.Start()`) |
+| `IosMessageClient` / `IosMessageListener` | same project | App↔Extension IPC over `SendProviderMessage` / `HandleAppMessage` |
 | `IosVpnAdapter` | `src/Core/VpnHood.Core.VpnAdapters.IosTun/` | `IVpnAdapter`; **batched** native write (`SendPacketsAsync` → `NEPacketTunnelFlow.WritePackets`), read via one-shot `ReadPackets` callback |
 | `LocalTcpStack` (proxy mode) | `src/Core/VpnHood.Core.TcpStack/` | user-space TCP stack used when `UseTcpProxy=true` |
 
@@ -50,19 +50,23 @@ both sides.
    **NETunnelProvider app-message channel** (below) — not status files.
 
 ## Transport (App↔Extension request/response API)
+The contract lives in `VpnHood.Core.Client.VpnServices.Abstractions.Messaging`:
+
 | Interface | Side | Purpose |
 |--|--|--|
-| `IVpnServiceApiTransport` | App | sends an `IApiRequest`, awaits `ApiResponse<T>` |
-| `IVpnServiceApiListener` | Extension | receives request bytes → `VpnServiceHost.ApiController` → response bytes |
+| `IMessageClient` | App | sends request bytes, awaits the response |
+| `IMessageListener` | Extension | receives request bytes → `VpnServiceHost.ApiController` → response bytes |
 
-- **App side:** `IDevice.CreateVpnServiceApiTransport()` defaults to `TcpVpnServiceApiTransport` (Android/desktop);
-  **iOS overrides** it to `ProviderMessageVpnServiceApiTransport`, shipping bytes via
-  `NETunnelProviderSession.SendProviderMessage`.
-- **Extension side:** iOS passes a `MessageVpnServiceApiListener` into the `VpnServiceHost` ctor;
-  `IosVpnService.HandleAppMessage` forwards bytes to it and returns the response via the completion handler.
-- **Serialization:** `ApiTransportJsonContext` (source-generated) is the single JSON context for all transport
-  types (`ApiTransportJsonContext.For<T>()`); `ConnectionInfo` is registered there too.
-- **Exceptions:** `VpnServiceException` + subtypes live in the **Device** project under
-  `VpnHood.Core.Client.Device.Exceptions` (import that namespace from iOS code).
+- **App side:** the cross-platform implementation is `TcpMessageClient` (Android/desktop — see
+  `LinuxDevice.cs`); **iOS supplies `IosMessageClient`** instead, shipping bytes via
+  `NETunnelProviderSession.SendProviderMessage`. It resolves the live provider session once and
+  reuses it, mirroring the TCP client's connection-reuse model.
+- **Extension side:** iOS passes an `IosMessageListener` into the `VpnServiceHost`;
+  `IosVpnService.HandleAppMessage` forwards bytes to it and returns the response via the completion
+  handler.
+- **Serialization is the caller's job.** Both iOS message types are *pure transports* — they move
+  bytes and nothing else; serialization happens in the caller / `ApiController`.
+- **Exceptions:** `VpnServiceException` + subtypes live under
+  `VpnHood.Core.Client.VpnServices.Abstractions.Exceptions` (import that namespace from iOS code).
 
 All IPC is App-Group + the provider message channel — there is **no socket/XPC IPC**.

@@ -16,7 +16,7 @@ The driving constraint is the iOS Network Extension **~52 MB jetsam limit**. QUI
 on iOS lands in **native** memory (Network.framework), which `phys_footprint` counts and jetsam
 enforces — so the whole design is about **bounding native receive buffering** while keeping
 throughput. See the shared record in the app repo's
-`docs/ios-extension-memory-and-throughput.md` for the broader memory story.
+`docs/ios/ios-extension-memory-and-throughput.md` for the broader memory story.
 
 ## Files
 

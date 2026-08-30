@@ -59,11 +59,15 @@ VpnHood underwent a comprehensive security audit by the Open Tech Fund. Read the
 [here](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/).
 
 ## FAQ & Documents
-Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) for the VpnHood documents.
+Technical and publishing documentation lives in [`docs/`](docs/README.md) — including
+**[how to publish your own branded VpnHood app](docs/publish-your-app/README.md)** to the App Store
+and Google Play. General questions are answered in our
+[Wiki](https://github.com/vpnhood/VpnHood/wiki).
 
+* [Publish your own app](docs/publish-your-app/README.md)
 * [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work)
 * [Can a network provider block VpnHood?](https://github.com/vpnhood/VpnHood/wiki/Can-a-network-provider-block-VpnHood)
-* [Changelog](https://github.com/vpnhood/VpnHood/blob/development/CHANGELOG.md)
+* [Changelog](https://github.com/vpnhood/VpnHood/blob/develop/CHANGELOG.md)
 * [More...](https://github.com/vpnhood/VpnHood/wiki)
 
 ## Support & Community

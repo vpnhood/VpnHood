@@ -9,6 +9,13 @@ to be able to predict, and the reference the in-app wording and the privacy poli
 
 Applies to **VpnHood! CONNECT**, the only app with sign-in today.
 
+> **About the "keyring plan §N" citations.** This document and many source comments cite a spec by
+> section number — *"(keyring plan §2)"*. That spec is `docs/access-code-keyring-plan.md` in the
+> **private** `.user` repository: the engineering statement of the same design this page tells in
+> business terms. Its §1–§9 are deliberately stable anchors, so a citation stays valid as the text
+> grows. If you do not have that repository, this page is the public account of the same rules; the
+> two are kept in agreement, and where they disagree the drift is a bug in one of them.
+
 ## Contents
 
 1. [The one rule](#1-the-one-rule)

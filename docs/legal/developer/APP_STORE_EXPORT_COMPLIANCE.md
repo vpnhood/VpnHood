@@ -23,9 +23,12 @@ about nor waives.
 
 `false` does **not** claim the app has no cryptography. It is Apple's machine-readable form of
 *"this app needs no Apple export-compliance documentation"* — which Apple's own questionnaire
-concludes for this app: it uses only **standards-body algorithms** (AES-GCM/CTR — NIST SP
-800-38D/38A, RSA — RFC 8017, SHA-2 — FIPS 180-4, HMAC — RFC 2104, TLS — IETF; nothing
-proprietary) and is **not distributed on the French store**. Apple's exact conclusion for those
+concludes for this app: it uses only **standards-body algorithms** (AES — NIST SP 800-38A/38D,
+RSA — RFC 8017, SHA-2 — FIPS 180-4, HMAC — RFC 2104, TLS — IETF; nothing proprietary) and is
+**not distributed on the French store**. The authoritative, per-algorithm inventory — including the
+AES modes and the two non-security uses of SHA-1 — lives in
+[EXPORT_COMPLIANCE.md](EXPORT_COMPLIANCE.md#cryptography-used); do not restate it here, or the two
+public statements drift apart. Apple's exact conclusion for those
 answers: *"Based on your answers, you don't need to upload any documents. You can specify that you
 don't use encryption in the Info.plist to avoid answering encryption questions with each app
 submission."*
@@ -66,8 +69,8 @@ the "no documents needed" conclusion quoted above. Description text that fits th
 chars):
 
 > Open-source VPN app. It encrypts user network traffic in a tunnel to a VPN server to protect
-> privacy. Encryption uses only standard algorithms (TLS, AES-GCM/CTR, RSA, SHA-2, HMAC) from
-> OS crypto libraries; no proprietary cryptography.
+> privacy. Encryption uses only standard algorithms (TLS, AES, RSA, SHA-2, HMAC) from OS crypto
+> libraries; no proprietary cryptography.
 
 ## The annual BIS self-classification report (recurring — every year)
 
@@ -112,7 +115,11 @@ response mislead you.
 - Plists set to `false` on 2026-07-31 (Client build 836 was the first prompt-free upload). The
   `true` misconfiguration existed 2026-07-06 → 2026-07-31 and blocked all Client uploads.
 - BIS annual self-classification: filed 2026 — contact in
-  [EXPORT_COMPLIANCE.md](EXPORT_COMPLIANCE.md). Next one due by 2027-02-01.
+  [EXPORT_COMPLIANCE.md](EXPORT_COMPLIANCE.md). Next one due by 2027-02-01. **You do not have to
+  remember this date:** [`compliance_reminder.yml`](../../../.github/workflows/compliance_reminder.yml)
+  opens an issue on 1 December and again on 1 January of each cycle. If that workflow is ever
+  removed, put the deadline somewhere else that notifies a human — a date buried in this file is
+  how it was missed before.
 - The **private** filing kit (CSV with entity/contact details, send steps, checklist) is
   deliberately outside this repo: `.user/legals/FILING-INSTRUCTIONS.md` — never published; this
   public doc stays PII-free.

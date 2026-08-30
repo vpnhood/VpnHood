@@ -139,15 +139,24 @@ test quickly and expect to buy again.
 Fill these in App Store Connect before submitting. All are one-time, all are mandatory, and each
 one blocks the submission until answered:
 
-1. **App Privacy** — what your app collects. Do not copy anyone else's answers; they describe
-   someone else's servers. Guidance and the reasoning behind each answer:
-   [App Store privacy](../legal/developer/APP_STORE_PRIVACY.md).
-2. **Age rating** — the honest answers give a VPN a **17+** rating.
-3. **Export compliance** — routine, but there is one setting that must never be flipped, or every
+1. **Pricing** — even a **free** app needs a price explicitly set. Until you press *Add Pricing* on
+   Pricing and Availability and choose Free, the version cannot enter review, and Apple's error
+   says only "this resource cannot be reviewed" without naming pricing. A base territory alone is
+   not enough; the price itself must exist.
+2. **App Privacy** — what your app collects. Do not copy anyone else's answers; they describe
+   someone else's servers. **Saving is not enough:** the panel has a separate **Publish** button,
+   and until you press it the version is blocked in the same silent way as pricing. Guidance and the
+   reasoning behind each answer: [App Store privacy](../legal/developer/APP_STORE_PRIVACY.md).
+3. **Age rating** — the honest answers give a VPN a **17+** rating.
+4. **Export compliance** — routine, but there is one setting that must never be flipped, or every
    upload is rejected: [export compliance](../legal/developer/APP_STORE_EXPORT_COMPLIANCE.md).
-4. **Trader status** — required for the EU. If you sell, you are a trader, and your company address
+5. **Trader status** — required for the EU. If you sell, you are a trader, and your company address
    and contact details appear publicly on your listing.
-5. **Privacy policy URL** — a working page on your own domain, under your own name.
+6. **Privacy policy URL** — a working page on your own domain, under your own name.
+
+Pricing and App Privacy are the two that waste the most time, because neither announces itself: the
+version simply refuses to enter review and the API reports no reason. If a submission is blocked
+with nothing obviously missing, check those two first.
 
 ---
 
@@ -164,10 +173,48 @@ Things that only bite on the very first version:
   skipped with a warning rather than failing; it goes through once review ends.
 - **Attach your subscriptions to the first version** when you submit it. A brand-new subscription
   is reviewed together with the app version, not on its own.
+- **Decide about Apple Silicon Macs.** Pricing and Availability carries a checkbox that offers your
+  iOS app on Macs. It is a real decision, not a formality: leaving it on means Apple reviews your
+  app **on macOS too**, where a VPN's packet-tunnel extension runs in a different environment
+  (notably without the iOS memory cap). Test it on a Mac through TestFlight before you submit, or
+  switch it off for the first release — you can enable it later without a new build, and a VPN that
+  fails on macOS is a rejection rather than merely a bad review.
 
 ---
 
-## 9. Submit
+## 9. Test on TestFlight first
+
+Every iOS build the pipeline produces goes to **TestFlight**, and that is also how a build reaches
+App Store Connect at all — you pick it for your App Store version from the builds TestFlight
+received. So test there before you submit.
+
+**Fill in Test Information, or your app is invisible to testers.** TestFlight → *Test Information*
+needs a **feedback email** and a **description**, set once per app. Until they exist, testers see
+nothing — not an error, just an app that never appears in their TestFlight list — even though the
+build finished processing and the tester is in the right group. Nothing anywhere tells you this is
+the reason.
+
+Two kinds of tester, and they behave very differently:
+
+| | Internal | External |
+| --- | --- | --- |
+| Who | Your App Store Connect users | Anyone with an email or public link |
+| Setup | Invite them under **Users and Access** first, then add them to the internal group — it does not work in the other order | Added straight to an external group |
+| Beta App Review | Not required | **Required**, plus "What to Test" notes on the build |
+| Availability | As soon as the build finishes processing | After beta review passes |
+
+Two things worth knowing while testing:
+
+- **Purchases run against the StoreKit sandbox.** TestFlight is therefore the right place to prove
+  your subscription end-to-end — and the only place you can, before review. Set the sandbox account
+  on the device first: **Settings → Developer → Sandbox Apple Account**, or the buy flow asks for a
+  real payment method.
+- **Testing on a Mac** needs the Apple Silicon Mac checkbox from step 8 enabled; TestFlight for Mac
+  only offers apps that are Mac-available.
+
+---
+
+## 10. Submit
 
 Add a **review note** with a working test account and anything a reviewer needs to see the app
 working — reviewers must be able to use every feature, including anything behind a purchase.

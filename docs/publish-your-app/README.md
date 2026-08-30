@@ -220,7 +220,7 @@ Selling is a separate project from shipping. You need:
    and then silently refuse to sell.
 3. **The subscription products themselves**, created in each store console, priced, described, and
    given a review screenshot. Our tooling audits this and tells you exactly what is missing; see
-   [the Apple page](apple-app-store.md#subscriptions).
+   [the Apple page](apple-app-store.md#6-subscriptions).
 
 What the user sees for each option — free, trial, ad-supported, paid — is explained in
 [connection options](../connection-options.md).
@@ -264,7 +264,7 @@ The failures we hit most often, and what they actually mean:
 | --- | --- | --- |
 | Apple: "invalid characters" on upload | An emoji slipped into your store text. Apple forbids them; Google allows them. | Remove it from the source text and rebuild the texts. |
 | Apple: missing screenshots for a device size | Your app says it supports iPad, so iPad screenshots are mandatory. | Regenerate screenshots; the tooling produces both sizes. |
-| Apple: a product stuck at "missing metadata" | A subscription lacks a price, a description, a review screenshot, or its territories. | Run the audit described on [the Apple page](apple-app-store.md#subscriptions). |
+| Apple: a product stuck at "missing metadata" | A subscription lacks a price, a description, a review screenshot, or its territories. | Run the audit described on [the Apple page](apple-app-store.md#6-subscriptions). |
 | Builds suddenly fail to sign after you changed a setting in Apple's portal | Changing a capability invalidates every existing signing profile. Apple never repairs them. | Regenerate the profiles and paste them in again. |
 | A store leg is skipped with a warning, build stays green | That credential is missing. This is deliberate, so a half-configured project still builds. | Add the missing credential, or ignore it if you do not want that store. |
 

@@ -168,6 +168,12 @@ new build.
 "Do you or your third-party partners collect data from this app?" → **Yes**. Then select exactly the
 six types below and nothing else.
 
+> **Saving is not publishing.** The panel has its own **Publish** button (top right), separate from
+> saving each type. Until you press it the answers do not count and the app version silently refuses
+> to enter review — Apple returns "this resource cannot be reviewed" and names no cause, over the
+> API as well as in the console. The other setting that blocks a version the same wordless way is
+> **pricing**: a free app still needs Free explicitly set on Pricing and Availability.
+
 **One row per *Set Up* screen**, in the order App Store Connect presents them. Every value matches
 [`Connect.Ios/PrivacyInfo.xcprivacy`](../../../src/Apps/Connect.Ios/PrivacyInfo.xcprivacy), which
 Apple cross-checks against these answers — if the two ever disagree, the manifest wins and the panel

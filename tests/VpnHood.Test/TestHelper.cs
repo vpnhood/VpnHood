@@ -322,10 +322,12 @@ public class TestHelper : IDisposable
             ClientId = clientId ?? Guid.NewGuid().ToString(),
             AllowAnonymousTracker = true,
             AllowEndPointTracker = true,
-            MaxPacketChannelCount = 1,
             IncludeIpRangesByDevice = [.. TestIps.AllRemoteTestIps.ToIpRanges()],
             SplitLocalNetwork = true,
-            Transport = new ClientTransportOptions { TcpConnectTimeout = TimeSpan.FromSeconds(3) },
+            Transport = new ClientTransportOptions {
+                TcpConnectTimeout = TimeSpan.FromSeconds(3),
+                MaxPacketChannelCount = 1
+            },
             ChannelProtocol = channelProtocol,
             UseTcpProxy = useTcpProxy,
             AccessKey = token?.ToAccessKey() ?? "" // set it later

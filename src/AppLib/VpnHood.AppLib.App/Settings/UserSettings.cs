@@ -16,7 +16,6 @@ public class UserSettings
     public string? CultureCode { get; set; }
     public string? CountryCode { get; set; }
     public Guid? ClientProfileId { get; set; }
-    public int MaxPacketChannelCount { get; set; } = ClientOptions.Default.MaxPacketChannelCount;
     public SplitTunnelingSettings SplitTunneling { get; set; } = new();
     public ChannelProtocol ChannelProtocol { get; set; } = ChannelProtocol.Tcp;
     public bool DropUdp { get; set; } = ClientOptions.Default.DropUdp;

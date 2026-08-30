@@ -9,7 +9,10 @@ namespace VpnHood.Core.Toolkit.Sockets;
 public sealed class TcpClientOptions
 {
     /// <summary>
-    /// Kernel send/receive buffer sizes, set as a pair: null leaves both at the OS default.
+    /// Kernel socket send/receive buffer sizes (SO_SNDBUF/SO_RCVBUF), set as a pair: null leaves both
+    /// at the OS default, which on Darwin also keeps its buffer autotune enabled. Named for the kernel
+    /// because the managed copy buffers elsewhere in the transport are sized separately and cost
+    /// different memory — these are charged once per socket, not per flow.
     /// </summary>
-    public TransferBufferSize? BufferSize { get; init; }
+    public TransferBufferSize? KernelBufferSize { get; init; }
 }

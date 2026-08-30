@@ -5624,7 +5624,6 @@ export class UserSettings implements IUserSettings {
     cultureCode?: string | null;
     countryCode?: string | null;
     clientProfileId?: string | null;
-    maxPacketChannelCount!: number;
     splitTunneling!: SplitTunnelingSettings;
     channelProtocol!: ChannelProtocol;
     dropUdp!: boolean;
@@ -5663,7 +5662,6 @@ export class UserSettings implements IUserSettings {
             this.cultureCode = _data["cultureCode"] !== undefined ? _data["cultureCode"] : null as any;
             this.countryCode = _data["countryCode"] !== undefined ? _data["countryCode"] : null as any;
             this.clientProfileId = _data["clientProfileId"] !== undefined ? _data["clientProfileId"] : null as any;
-            this.maxPacketChannelCount = _data["maxPacketChannelCount"] !== undefined ? _data["maxPacketChannelCount"] : null as any;
             this.splitTunneling = _data["splitTunneling"] ? SplitTunnelingSettings.fromJS(_data["splitTunneling"]) : new SplitTunnelingSettings();
             this.channelProtocol = _data["channelProtocol"] !== undefined ? _data["channelProtocol"] : null as any;
             this.dropUdp = _data["dropUdp"] !== undefined ? _data["dropUdp"] : null as any;
@@ -5704,7 +5702,6 @@ export class UserSettings implements IUserSettings {
         data["cultureCode"] = this.cultureCode !== undefined ? this.cultureCode : null as any;
         data["countryCode"] = this.countryCode !== undefined ? this.countryCode : null as any;
         data["clientProfileId"] = this.clientProfileId !== undefined ? this.clientProfileId : null as any;
-        data["maxPacketChannelCount"] = this.maxPacketChannelCount !== undefined ? this.maxPacketChannelCount : null as any;
         data["splitTunneling"] = this.splitTunneling ? this.splitTunneling.toJSON() : null as any;
         data["channelProtocol"] = this.channelProtocol !== undefined ? this.channelProtocol : null as any;
         data["dropUdp"] = this.dropUdp !== undefined ? this.dropUdp : null as any;
@@ -5735,7 +5732,6 @@ export interface IUserSettings {
     cultureCode?: string | null;
     countryCode?: string | null;
     clientProfileId?: string | null;
-    maxPacketChannelCount: number;
     splitTunneling: SplitTunnelingSettings;
     channelProtocol: ChannelProtocol;
     dropUdp: boolean;

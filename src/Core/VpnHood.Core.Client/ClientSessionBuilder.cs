@@ -354,8 +354,8 @@ internal class ClientSessionBuilder(
                     IsIpV6SupportedByServer = helloResponse.IsIpV6Supported,
                     AdRequirement = helloResponse.AdRequirement,
                     MaxPacketChannelCount = helloResponse.MaxPacketChannelCount != 0
-                        ? Math.Min(config.MaxPacketChannelCount, helloResponse.MaxPacketChannelCount)
-                        : config.MaxPacketChannelCount
+                        ? Math.Min(config.Transport.MaxPacketChannelCount, helloResponse.MaxPacketChannelCount)
+                        : config.Transport.MaxPacketChannelCount
                 });
 
             return session;

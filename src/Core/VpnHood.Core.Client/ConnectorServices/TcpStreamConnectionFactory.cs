@@ -37,11 +37,14 @@ internal class TcpStreamConnectionFactory(
                 tcpClient = await proxyConnector
                     .ConnectAsync(socketFactory, tcpEndPoint, onConnectAttempt, cancellationToken).Vhc();
             else {
-                // Packet mode multiplexes every inner TCP flow over this one outer connection, so it can
-                // need a larger BDP window than proxy/control and direct/split-flow sockets. Apply the
-                // override before ConnectAsync because TCP window scaling is negotiated in the handshake.
-                var socketOptions = isTcpPacketChannel && tcpPacketChannelKernelBufferSize != null
-                    ? new TcpClientOptions { BufferSize = tcpPacketChannelKernelBufferSize }
+                // Packet mode multiplexes every inner TCP flow over this one outer connection, so its
+                // sizing is decided here rather than inherited from the factory default, which exists to
+                // bound the many per-flow direct/split sockets. Pass the options whenever this is a packet
+                // channel, including when the size is null — null is the deliberate "leave it to the OS"
+                // choice, and only a non-null options object can express it. Applied before ConnectAsync
+                // because TCP window scaling is negotiated in the handshake.
+                var socketOptions = isTcpPacketChannel
+                    ? new TcpClientOptions { KernelBufferSize = tcpPacketChannelKernelBufferSize }
                     : null;
                 tcpClient = socketFactory.CreateTcpClient(tcpEndPoint, socketOptions);
                 await tcpClient.ConnectAsync(tcpEndPoint, cancellationToken).Vhc();

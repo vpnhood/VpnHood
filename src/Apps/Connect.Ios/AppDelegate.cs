@@ -8,9 +8,9 @@ using VpnHood.AppLib.Ios.AppStore;
 using VpnHood.AppLib.Ios.Common;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Updaters;
+using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Ios;
 using VpnHood.Core.Toolkit.Logging;
-using VpnHood.Core.Client.Abstractions;
 
 namespace VpnHood.App.Connect.Ios;
 
@@ -45,23 +45,6 @@ public class AppDelegate : UIApplicationDelegate
                 localizedDescription: AppConfigs.AppName);
 
             VpnHoodIosApp.Init(device, BuildAppOptions(appConfigs));
-
-            // Keep the iOS Network Extension under the ~52 MB jetsam limit: fewer packet channels
-            // (default is 4). Each packet channel is a full TLS connection — native socket + TLS state +
-            // a send/receive coalescing buffer pair. Use ONE channel: a single TLS connection comfortably
-            // carries ~90 Mbps, so this halves the channel footprint with no real throughput loss and
-            // buys headroom so the extension survives the system-memory-pressure spike when the app
-            // foregrounds (WKWebView/SPA spin-up) during heavy traffic. Set before the first connect.
-            // Apple Silicon Macs are the SAME exception the Transport preset makes below: no jetsam
-            // cap, so the trade buys nothing there and only costs throughput. It costs more than it
-            // looks: in packet mode every tunneled TCP flow is multiplexed over that one connection
-            // (ClientSession applies this only to TCP — UDP is single-channel by design), so a Mac
-            // capped at one channel is exactly the case ClientTransportOptions warns about.
-            VpnHoodApp.Instance.UserSettings.MaxPacketChannelCount =
-                NSProcessInfo.ProcessInfo.IsiOSApplicationOnMac
-                    ? ClientOptions.Default.MaxPacketChannelCount
-                    : 1;
-            VpnHoodApp.Instance.SettingsService.Save();
         }
 
         return true;

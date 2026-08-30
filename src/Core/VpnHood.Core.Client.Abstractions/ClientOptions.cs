@@ -47,7 +47,6 @@ public class ClientOptions
     // UnroutedIpMode is superior: its Block covers IPv6 too. The client's filter enforces the rule
     // itself, so even a raw (Block, Exclude) pair blocks — the app additionally passes it resolved.
     public SplitUnsupportedIpMode UnsupportedIpV6Mode { get; set; } = SplitUnsupportedIpMode.Block;
-    public int MaxPacketChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
     public TimeSpan MinPacketChannelTimespan { get; set; } = TimeSpan.FromMinutes(5);
     public TimeSpan MaxPacketChannelTimespan { get; set; } = TimeSpan.FromMinutes(10);

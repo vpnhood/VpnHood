@@ -15,16 +15,17 @@ public class ConfiguringSocketFactory(ISocketFactory inner) : ISocketFactory
     public bool KeepAlive { get; set; }
     public bool NoDelay { get; set; }
 
-    // Class-level default applied when CreateTcpClient is not given a per-call size.
+    // Class-level default applied when CreateTcpClient is not given per-call options.
     // Settable so the size can be adjusted at runtime (e.g. server reconfiguration).
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
 
     public TcpClient CreateTcpClient(IPEndPoint ipEndPoint, TcpClientOptions? options = null)
     {
-        // A per-call buffer size wins as a whole pair; otherwise the configured factory default applies.
-        var effectiveOptions = new TcpClientOptions {
-            BufferSize = options?.BufferSize ?? TcpKernelBufferSize
-        };
+        // Per-call options win as a whole: a caller that passes them has decided this socket's sizing,
+        // including a null KernelBufferSize meaning "leave it at the OS default". Falling back per-property
+        // would make that decision unexpressable — the caller could ask for any size except none, and
+        // would silently inherit a factory default chosen for entirely different sockets.
+        var effectiveOptions = options ?? new TcpClientOptions { KernelBufferSize = TcpKernelBufferSize };
         var tcpClient = inner.CreateTcpClient(ipEndPoint, effectiveOptions);
 
         // Buffer settings were applied by the inner factory before returning the socket. Apply the

@@ -97,7 +97,7 @@ public class ClientTunnelTest : TestBase
         var clientOption = TestHelper.CreateClientOptions();
         clientOption.MinPacketChannelTimespan = TimeSpan.FromMilliseconds(500);
         clientOption.MaxPacketChannelTimespan = TimeSpan.FromMilliseconds(500);
-        clientOption.MaxPacketChannelCount = 1;
+        clientOption.Transport.MaxPacketChannelCount = 1;
         await using var clientServerDom = await ClientServerDom.Create(TestHelper, clientOption);
         await VhTestUtil.AssertEqualsWait(true, async () => {
             await VhUtils.TryInvokeAsync(null,

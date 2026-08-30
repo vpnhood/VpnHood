@@ -92,7 +92,6 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             MaxPacketChannelLifespan = options.MaxPacketChannelTimespan,
             AutoDisposeVpnAdapter = options.AutoDisposeVpnAdapter,
             Transport = options.Transport,
-            MaxPacketChannelCount = options.MaxPacketChannelCount,
             PlanId = options.PlanId,
             AccessCode = options.AccessCode,
             ExcludeApps = options.ExcludeApps,

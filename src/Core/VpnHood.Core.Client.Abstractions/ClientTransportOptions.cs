@@ -32,13 +32,22 @@ public class ClientTransportOptions
 
     public TransferBufferSize PacketChannelBufferSize { get; set; } = TransportDefaults.ConnectionPacketBufferSize;
 
+    // How many packet channels the client asks the server for (the server caps it in turn, see
+    // ClientSessionBuilder). Each is a full transport connection — socket, TLS state and a coalescing
+    // buffer pair — so it is a throughput/memory trade, which is why it belongs to the preset rather
+    // than to the user: TCP packet mode multiplexes every tunneled flow over these, and upload spreads
+    // across them by source port. Applies to TCP only; UDP is single-channel by design (ClientSession).
+    public int MaxPacketChannelCount { get; set; } = TransportDefaults.MaxPacketChannelCount;
+
     // Null on these two means "leave the socket at the system default" — a real value, not "unset".
+    // Kernel buffer for every managed TCP socket except the packet channels below.
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? TcpKernelBufferSize { get; set; }
 
-    // Optional kernel buffer used only by TCP connections to the VPN server. This lets
-    // memory-constrained clients keep direct/split-flow sockets small without throttling the
-    // packet channel, where one outer TCP connection carries all tunneled flows.
+    // Kernel buffer for the TCP packet channels to the VPN server, which each carry every tunneled
+    // flow multiplexed together and so size independently of the per-flow sockets above. Null does
+    // NOT inherit TcpKernelBufferSize: it means the OS default, so a memory-constrained client can
+    // hold the per-flow sockets small while leaving the tunnel free to autotune.
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public TransferBufferSize? TcpPacketChannelKernelBufferSize { get; set; }
 
@@ -78,6 +87,13 @@ public class ClientTransportOptions
         // bounds a DNS storm without letting it starve the general pool above.
         MaxUdpDnsClientCount = 100,
         UdpProxyQueueCapacity = 16,
+        // Two, not the normal maximum: each channel is a TLS connection held for the session's life,
+        // and the extension pays for all of them inside the ~52 MB cap. Two is where the measured
+        // curve flattens — download rides a single channel regardless (the server picks by source
+        // port, which is 443 for nearly all download traffic), so extra channels only spread upload,
+        // and the 2026-08-30 device runs reached the link ceiling on upload with the tunnel sockets
+        // left to autotune. Judge any increase against ext-mem.log, not throughput alone.
+        MaxPacketChannelCount = 2,
         // UPLOAD/DOWNLOAD SPEED: the proxy copy pump is a serial read→write→flush loop, so per-flow
         // throughput ≈ StreamProxyBufferSize / RTT. 2 KB capped it at ~2 Mbps. 32 KB lifts that ~16×.
         // (Memory is per-ACTIVE-flow: 2 buffers × 32 KB; the many-idle-flows case is bounded separately.)
@@ -91,11 +107,15 @@ public class ClientTransportOptions
         // worst case to ~5 MB while still allowing ~25 Mbps per flow at 20 ms RTT (in-country hosts
         // are low-RTT).
         TcpKernelBufferSize = new TransferBufferSize(64 * 1024, 64 * 1024),
-        // Packet mode multiplexes every inner TCP flow over one outer TCP connection on iOS.
-        // A 64 KB outer socket window caps that entire tunnel near 10-15 Mbps at common WAN RTTs.
-        // Give only the server tunnel socket a 256 KB BDP window; direct/split-flow sockets retain
-        // the 64 KB cap above, preserving the per-flow jetsam memory bound.
-        TcpPacketChannelKernelBufferSize = new TransferBufferSize(256 * 1024, 256 * 1024)
+        // The one knob this preset deliberately does NOT shrink. Packet mode multiplexes every inner
+        // TCP flow over one outer TCP connection, so its throughput is window/RTT for the whole
+        // tunnel, and any explicit SO_SNDBUF/SO_RCVBUF disables Darwin's autotune (which grows to
+        // ~2 MB under load). Measured on-device at 75 ms RTT (2026-08-30): pinned at 256 KB gave
+        // 26 Mbps download and ~60 Mbps upload; left alone it reached 210 down / ~100 up, the latter
+        // being the link ceiling. Android pins nothing and was always fast. Kernel socket memory is
+        // charged once for the tunnel, not per flow, so autotune costs far less here than the
+        // 40-connection passthru case that forced TcpKernelBufferSize down to 64 KB.
+        TcpPacketChannelKernelBufferSize = null
     };
 
     /// <summary>

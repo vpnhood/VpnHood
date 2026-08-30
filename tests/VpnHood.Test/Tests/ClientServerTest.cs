@@ -136,7 +136,7 @@ public class ClientServerTest : TestBase
 
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.DropUdp = true;
-        clientOptions.MaxPacketChannelCount = 6;
+        clientOptions.Transport.MaxPacketChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions);
         await Assert.ThrowsAsync<OperationCanceledException>(() => TestHelper.Test_UdpEcho(timeout: TimeSpan.FromSeconds(3)),
             "UDP must be failed.");
@@ -158,7 +158,7 @@ public class ClientServerTest : TestBase
         // --------
         var clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.ChannelProtocol = ChannelProtocol.Tcp;
-        clientOptions.MaxPacketChannelCount = 6;
+        clientOptions.Transport.MaxPacketChannelCount = 6;
         await using var client = await TestHelper.CreateClient(clientOptions: clientOptions,
             vpnAdapter: TestHelper.CreateTestVpnAdapter());
 
@@ -177,7 +177,7 @@ public class ClientServerTest : TestBase
         // --------
         clientOptions = TestHelper.CreateClientOptions(token);
         clientOptions.ChannelProtocol = ChannelProtocol.Tcp;
-        clientOptions.MaxPacketChannelCount = 1;
+        clientOptions.Transport.MaxPacketChannelCount = 1;
         await using var client2 = await TestHelper.CreateClient(clientOptions: clientOptions);
 
         // let channel be removed gradually
@@ -200,7 +200,7 @@ public class ClientServerTest : TestBase
 
         // Create Client
         var clientOptions = TestHelper.CreateClientOptions(token);
-        clientOptions.MaxPacketChannelCount = 4;
+        clientOptions.Transport.MaxPacketChannelCount = 4;
         await using var client = await TestHelper.CreateClient(
             vpnAdapter: TestHelper.CreateTestVpnAdapter(), clientOptions: clientOptions);
 

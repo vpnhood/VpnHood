@@ -174,20 +174,42 @@ In July 2026, we encountered an issue where the panic recycler was triggering ag
 GlobalReceiveBudget − totalPipeBuffered)`; `UpdateAdvertisedWindow()` tracks `_lastAdvertisedWindow`;
 `OnAppConsumed` sends a window-update when `(_windowClosed && win≥4 KB) || (win−lastWin ≥ 16 KB)`.
 
-**Host** — `src/Apps/Client.Ios/AppDelegate.cs` sets only `MaxPacketChannelCount = 1` directly, and only on a
-real device — an Apple-silicon Mac keeps the default of 4 (see below). The buffer
-sizes live in the `LimitedMemory` preset in
+**Host** — nothing app-side tunes the transport any more: `MaxPacketChannelCount` is a preset knob
+(`LimitedMemory` = **2**, `NormalMemory` = `TransportDefaults.MaxPacketChannelCount`), not a user setting,
+so the iOS AppDelegates no longer rewrite it on launch. Installs that persisted the old force of 1 heal
+themselves — the stale `maxPacketChannelCount` in `settings.json` is simply ignored on load. The buffer
+sizes live in the same `LimitedMemory` preset in
 `src/Core/VpnHood.Core.Client.Abstractions/ClientTransportOptions.cs`: `PacketChannelBufferSize=16 KB`,
 `UdpProxyBufferSize=16 KB`, `StreamProxyBufferSize=32 KB`, `TcpKernelBufferSize=64 KB` (bounds split/exclude
-socket buffers), and `TcpPacketChannelKernelBufferSize=256 KB` (the single outer TCP packet channel needs a larger
-BDP window; using the shared 64 KB cap limited TCP packet mode to roughly 10–15 Mbps at typical WAN RTTs).
+socket buffers), and `TcpPacketChannelKernelBufferSize=null` — the OS default — for the outer TCP packet
+channels.
+
+**TCP packet-mode throughput (settled 2026-08-30, iPhone 11, 75 ms-RTT server).** Throughput over the
+tunnel is `window / RTT`, and an explicit `SO_SNDBUF`/`SO_RCVBUF` disables Darwin's autotune (which
+otherwise grows to ~2 MB under load). The old pinned 256 KB therefore capped download at ~26 Mbps at
+75 ms while Android — which pins nothing — did 120+ Mbps on the same link. Pinning only the send side
+was tried in between and held upload to ~60 Mbps, so the preset now leaves **both** sides to the OS.
+Measured on-device: download 26 → **210 Mbps**, upload → **~100 Mbps** (the link ceiling, matching UDP),
+extension footprint peak 29.3 → 30.3 MB. Kernel socket memory here is charged once for the tunnel rather
+than per flow, which is why autotune is affordable at the ~52 MB cap while `TcpKernelBufferSize` — paid
+per passthru flow, up to 40 of them — is not.
+
+Null on this knob means the OS default and does **not** inherit `TcpKernelBufferSize`: the packet channel
+is sized independently of the per-flow sockets, which is the whole reason it is a separate knob
+(`TcpStreamConnectionFactory` always passes per-call options for a packet channel, and
+`ConfiguringSocketFactory` lets per-call options win as a whole rather than merging property-by-property).
+
+**Known limit — channel selection collapses download onto one channel.**
+`Tunnel.FindChannelForPacketInternal` picks `SourcePort % channelCount`; download packets carry the
+remote service's port (443 for nearly everything), so all download flows share one packet channel no
+matter how many are open, while upload (ephemeral source ports) spreads across all of them. The download
+side of that choice runs on the **server**, so fixing the hash (use both ports) needs a server release
+and farm rollout. With receive autotune this matters much less — one autotuned channel carried 210 Mbps —
+but it is why channel count alone never moved the download number.
 
 `ClientTransportOptions.ForCurrentPlatform()` picks `LimitedMemory` on iOS/tvOS and `NormalMemory` elsewhere.
-`AppDelegate` overrides that for the one case the check cannot see: **"Designed for iPad" running on an
-Apple-silicon Mac**, which has no Network-Extension memory cap and therefore takes `NormalMemory` *and* the
-default `MaxPacketChannelCount`. Both halves matter: `NormalMemory` leaves
-`TcpPacketChannelKernelBufferSize` null (OS default), so a Mac pinned to a single packet channel would sit in
-exactly the 10–15 Mbps regime that knob exists to escape, with none of the jetsam pressure that justifies it.
+`AppDelegate` overrides the preset for the one case the check cannot see: **"Designed for iPad" running on an
+Apple-silicon Mac**, which has no Network-Extension memory cap and therefore takes `NormalMemory`.
 
 TFM `net11.0-ios` on App + Extension + the iOS core libs (Devices.Ios, IosTun, AppLib.Ios.Common, Quic.Ios).
 

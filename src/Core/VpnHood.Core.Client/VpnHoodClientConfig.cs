@@ -16,7 +16,6 @@ public class VpnHoodClientConfig
     public required Version Version { get; init; }
     public required bool AutoDisposeVpnAdapter { get; init; }
     public required ClientTransportOptions Transport { get; init; }
-    public required int MaxPacketChannelCount { get; init; }
     public required TimeSpan MinPacketChannelLifespan { get; init; }
     public required TimeSpan MaxPacketChannelLifespan { get; init; }
     public required bool AllowAnonymousTracker { get; init; }

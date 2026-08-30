@@ -38,6 +38,25 @@ blocked services such as unlicensed VoIP — and the telecom regulator blocks VP
 websites. The exposure here is mostly the *user's*, plus reputational and regulatory pressure on
 the provider. Deselecting costs a fork essentially nothing and removes the ambiguity.
 
+## Your subscriptions have their own list
+
+Deselecting a territory on the app does **not** deselect it on your subscriptions. Each product
+carries its own *Availability* list, it defaults to every territory, and App Store Connect never
+warns that the two disagree.
+
+Nothing breaks while they disagree — a subscription cannot be bought in a storefront that does not
+offer the app — which is exactly why it goes unnoticed. The cost arrives later: whoever re-enables a
+territory on the app re-enables selling there too, silently, without ever making that second
+decision. Set both lists the same at the first release, while the products have never been sold and
+changing them is free.
+
+Do the same for the **subscription group**? There is nothing to do — a group has no availability of
+its own; it follows its products.
+
+Both the app and each subscription also carry **"make available in new territories"**, on by
+default: any storefront Apple opens in future is enabled automatically. Leaving it on means this
+page's decision is revisited for you, by Apple, without notice.
+
 ## What deselecting does NOT do
 
 - It is an **availability choice, not a legal shield**. Users with a foreign Apple ID, a sideload,

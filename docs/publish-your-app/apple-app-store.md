@@ -118,7 +118,8 @@ product per plan (for example monthly and yearly). Each product needs **all** of
 - at least one **localization** (display name and description) — but see below, one is rarely what
   you want;
 - an **App Review screenshot** — a picture of your app's purchase screen;
-- **availability** — the territories it is sold in.
+- **availability** — the territories it is sold in. This is a *separate* list from the app's, and it
+  defaults to everywhere: [set it to match](../legal/developer/APP_STORE_TERRITORIES.md#your-subscriptions-have-their-own-list).
 
 Miss any one and the product sits in *missing metadata* and cannot be sold, with no explanation of
 which piece is absent. Our audit tool lists exactly what is missing for every product, and the
@@ -259,8 +260,22 @@ Two things worth knowing while testing:
 
 ## 10. Submit
 
-Add a **review note** with a working test account and anything a reviewer needs to see the app
-working — reviewers must be able to use every feature, including anything behind a purchase.
+A submission is a **basket**, not a button. App Store Connect collects the things to be reviewed
+together — your version, and anything else that needs review at the same time — and reviews them as
+one unit. Build the basket, then send it.
 
-Then submit, and wait. If you are rejected, read the message literally: first rejections are
-usually about the paperwork above, not about your app.
+1. **Pick the build.** On the version page, *Build → +*, and choose from what TestFlight received.
+   Check the number rather than taking the newest: a build made before a fix you are relying on will
+   ship that fix's absence to every user. Swapping the build later is free while the version is still
+   editable, and impossible once it is in review.
+2. **Tick your subscriptions into the basket.** They appear on the submit page as items you select
+   alongside the version. A first subscription is not reviewed on its own, so if you leave it out the
+   app ships approved with nothing to sell. (Doing this over the API is not possible on every
+   account — Apple's own console is the reliable route.)
+3. **Write the review note.** A working test account and whatever a reviewer needs to reach every
+   feature, including anything behind a purchase. Reviewers must be able to *use* the app, not just
+   open it. The panel also wants your own contact details, so Apple can reach a human during review.
+4. **Submit**, and wait.
+
+If you are rejected, read the message literally: first rejections are usually about the paperwork
+above, not about your app. Fixing metadata and resubmitting does not need a new build.

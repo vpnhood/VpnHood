@@ -1,6 +1,6 @@
 # Latest
 
-* Fix: Very slow download speed on iOS #ios #store
+* Improve: Much faster download speed #ios #store
 * Improve: Speed and stability #store
 
 # v8.1.846

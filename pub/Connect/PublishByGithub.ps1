@@ -66,6 +66,7 @@ if ($LASTEXITCODE -ne 0) { throw "GitHub has not indexed 'bump.yml' on $monoRepo
 gh api "repos/$connectRepo/actions/workflows/connect_publish.yml" --silent 2>$null | Out-Null;
 if ($LASTEXITCODE -ne 0) { throw "GitHub has not indexed 'connect_publish.yml' on $connectRepo yet (push a change to it first)."; }
 
+$releaseType = if ($prerelease) { "prerelease" } else { "release" };
 $releaseKind = if ($prerelease) { "prerelease (alpha)" } else { "release (stable/production)" };
 $rolloutText = if ($prerelease) { "n/a (alpha ships complete)" } else { "$rollout%" };
 
@@ -107,6 +108,7 @@ gh workflow run connect_publish.yml `
 	--repo $connectRepo `
 	--ref main `
 	-f "ref=develop" `
+	-f "release_type=$releaseType" `
 	-f "build_android=true" `
 	-f "publish_play=true" `
 	-f "build_ios=true" `

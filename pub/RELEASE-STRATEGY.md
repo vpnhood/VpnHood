@@ -154,6 +154,32 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
 `pub/Client/Publish.ps1` is now **build-only** for local smoke testing (no bump, no distribute, no
 push).
 
+### The channel is asserted, never chosen twice
+
+`pub/PubVersion.json` **decides** the channel: the Play track, the TestFlight-vs-App-Store lane and
+the GitHub release flag all read `Prerelease` from it. The `release_type` input on
+[publish_app.yml](../.github/workflows/publish_app.yml) does not set anything — it **asserts** what
+the dispatcher believed, and the run dies in a ten-second job if the two disagree, instead of
+quietly shipping an alpha to production.
+
+Both brand-repo callers forward it, and `PublishByGithub.ps1` fills it from the channel it already
+prompted for, so a normal release never asks twice and can never answer inconsistently. Only a
+**hand-dispatch from the Actions tab** has to pick it, and the input defaults to `prerelease`
+because that is the harmless direction to get wrong: a mistaken prerelease reaches testers, a
+mistaken release reaches production.
+
+The input stays *optional* on `publish_app.yml` itself because that workflow is the public entry
+point third parties pin (`@v1`); making it required would break every existing caller. Undeclared,
+the run warns —
+
+```
+Release type not declared
+No release_type was passed; shipping as 'release' per pub/PubVersion.json (v8.1.847).
+```
+
+— which is the gate telling you it is inert for that run, not an error. A fork sees this only if it
+dispatches by hand or its caller does not forward the input.
+
 ### NuGet smoke test (validate the pipeline without burning a version)
 
 To prove the pack + push path works against nuget.org **without** consuming a real version, dispatch

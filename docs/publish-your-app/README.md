@@ -169,6 +169,7 @@ and most of them **can never be changed after your first release**.
 | **Identifiers** for Android and for iOS (app + VPN part) | Permanent. They tie your build to the app records you created in step 7. |
 | **Logo and colours** | The app currently ships with two built-in looks; adding yours means adding your logo file and colour set. |
 | **Your links** — website, download page, support | They appear in the app and on the store listing. |
+| **Your privacy policy and terms of use** | Pages on your own domain. Both stores require the policy, and Apple wants both openable from the purchase screen. |
 | **Two settings blocks** pasted into your project's settings | One describes your app (name, identifiers, links), one holds its runtime settings. They travel with the project rather than living in files. |
 
 Two warnings from experience:

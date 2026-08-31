@@ -31,14 +31,10 @@ public class AppFeatures
     // The human account website behind the auth provider — the password form's escape hatch
     // ("forgot password?" opens it in the device browser). Null when no provider declares one.
     public required Uri? AccountWebsiteUrl { get; init; }
-    // Whether the UI must gate the app behind licence acceptance. Set by the head (AppOptions), never
-    // derived from which product is running - it is the distribution channel that decides, so a head
-    // that guessed from the product would get it wrong without saying so.
+    // See AppOptions.IsLicenseAgreementRequired. Never derive this from which product is running.
     public required bool IsLicenseAgreementRequired { get; init; }
 
-    // The build's legal documents, resolved from AppOptions so the UI never decides which product or
-    // store it is running under. Nullable because a fork may ship neither; the UI hides what it has
-    // no address for rather than linking somewhere wrong.
+    // See AppOptions.PrivacyPolicyUrl. Null reaches the UI as "hide the link", never as a guess.
     public required Uri? PrivacyPolicyUrl { get; init; }
     public required Uri? TermsOfUseUrl { get; init; }
 

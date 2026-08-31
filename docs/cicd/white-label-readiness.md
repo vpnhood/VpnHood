@@ -15,7 +15,8 @@ Verified against the tree on 2026-08-29; re-check before planning work.
 
 `publish.json` via the `PUBLISH` variable — release repo, artifact title, Windows install page,
 and the Android application id per distribution. `appsettings.json` via the `APPSETTINGS` variable —
-including `AppId`, `PortalBaseUri`, `UpdateInfoUrl`, `RemoteSettingsUrl`, `GoogleSignInClientId`
+including `AppId`, `PortalBaseUri`, `UpdateInfoUrl`, `RemoteSettingsUrl`, `GoogleSignInClientId`,
+the `PrivacyPolicyUrl` / `TermsOfUseUrl` the app links to,
 and the ad **unit** ids. The embedded default server key via `ACCESS_KEY_AD` / `ACCESS_KEY_PREMIUM`.
 
 ## Still hardcoded

@@ -89,14 +89,12 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public Uri? PrivacyPolicyUrl { get; set; }
     public Uri? TermsOfUseUrl { get; set; }
 
-    // Whether this build must have its licence agreement accepted before the app can be used. It is
-    // a DISTRIBUTION decision, not a product one, so it lives here rather than being inferred from
-    // which app is running: a build downloaded from our website passed through nothing that put our
-    // terms in front of the user, so it asks on first run, while a store build's user already
-    // accepted that store's agreement to install it. Either way both documents stay reachable from
-    // the paywall and from Settings > Privacy, which is what App Review 3.1.2 and Play's User Data
-    // policy actually ask for - the first-run screen is the website channel's substitute for a
-    // store, not an extra requirement on top of one.
+    // Whether this build must have its licence agreement accepted before the app can be used. A
+    // DISTRIBUTION decision, not a product one: a website download passed through nothing that put
+    // our terms in front of the user, while a store build's user already accepted that store's own
+    // agreement to install it. The screen is that channel's substitute for a store, not an extra
+    // requirement on top of one - it is the links above that App Review 3.1.2 and Play's User Data
+    // policy actually ask for.
     // On by default and opted OUT of by the four store heads, deliberately that way round: a head
     // added later that forgets the line shows one screen too many, which is noise, rather than
     // skipping a disclosure, which is a gap.

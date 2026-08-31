@@ -188,12 +188,29 @@ one blocks the submission until answered:
 6. **Trader status** — required for the EU. If you sell, you are a trader, and your company address
    and contact details appear publicly on your listing.
 7. **Privacy policy URL** — a working page on your own domain, under your own name.
+8. **Licence agreement** — App Information → *License Agreement*. Leave it alone and Apple's
+   [standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) governs every
+   sale, which is the right answer until you have terms of your own that a lawyer has read. Whichever
+   you use, the app has to link to the same one — see below.
 
 **Pricing, App Privacy and the primary category** waste the most time, because none of them
 announces itself: the version simply refuses to enter review, and the only error — in the console
 and over the API alike — is *"this resource cannot be reviewed, please check associated errors"*,
 which names nothing. If a submission is blocked with nothing obviously missing, check those three
 first, in that order. All three bit this project's own first submission.
+
+### Both documents have to be reachable from inside the app
+
+A reviewer will not go looking on your store listing. App Review **3.1.2** wants the **Terms of Use
+(EULA)** and the **Privacy Policy** openable from the purchase screen itself, at the moment money is
+asked for. This project's own CONNECT app was rejected on that point with a listing that already
+carried both links, so treat the two fields above as necessary and not sufficient.
+
+Both addresses are settings, not code — `PrivacyPolicyUrl` and `TermsOfUseUrl` in your app settings
+([deployment](../cicd/deployment.md)). Leave one empty and the app simply shows no link for it,
+which for the Privacy Policy is a rejection. The App Store build is the one exception: it always
+links Apple's standard EULA whatever `TermsOfUseUrl` says, because that is the agreement a buyer
+there actually accepts for as long as no custom EULA is registered in App Information above.
 
 ---
 

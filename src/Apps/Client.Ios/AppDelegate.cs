@@ -1,11 +1,14 @@
 using Foundation;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Ios.Common;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.Ios;
+using VpnHood.Core.Client.VpnServices.Abstractions.Tracking;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Client.Ios;
@@ -59,9 +62,12 @@ public class AppDelegate : UIApplicationDelegate
             isDebugMode: AppConfigs.IsDebugMode) {
             StorageFolderPath = storageFolderPath,
             // Product settings sourced from the embedded ".user" appsettings (parity with Client.Android.Web).
-            CustomData = appConfigs.CustomData,
-            Ga4MeasurementId = appConfigs.Ga4MeasurementId,
-            AllowEndPointTracker = appConfigs.AllowEndPointTracker,
+            // Apple applies an additional privacy rule to VPN apps: the iOS build does not send
+            // analytics or Firebase reports to third parties. Keep unrelated custom data intact.
+            CustomData = WithoutFirebaseOptions(appConfigs.CustomData),
+            Ga4MeasurementId = null,
+            TrackerFactory = new NullTrackerFactory(),
+            AllowEndPointTracker = false,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             // Empty until a DefaultAccessKey is supplied (see AppConfigs; Client is bring-your-own-key). An
             // invalid string here would throw inside VpnHoodApp.Init, so we pass an empty array otherwise.
@@ -111,5 +117,15 @@ public class AppDelegate : UIApplicationDelegate
                 UpdaterProvider = new AppStoreAppUpdaterProvider()
             }
         };
+    }
+
+    private static object? WithoutFirebaseOptions(JsonElement? customData)
+    {
+        if (customData is not { ValueKind: JsonValueKind.Object })
+            return customData?.Clone();
+
+        var result = JsonNode.Parse(customData.Value.GetRawText()) as JsonObject;
+        result?.Remove("firebaseOptions");
+        return result;
     }
 }

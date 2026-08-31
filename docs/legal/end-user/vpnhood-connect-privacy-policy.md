@@ -2,19 +2,19 @@
 
 *Effective: 2026-08-31.*
 
-**PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CONNECT** app and to the VPN servers **we operate**. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
+**OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy. This policy applies to the official **VpnHood! CONNECT** app and to the VPN servers we operate. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
-This policy describes what the app collects, what it never collects, and what our servers record. By using the app, you agree to the practices described here. We do not use or share your information except as described in this policy.
+This policy describes what the app collects, what it never collects, and what our servers record. We do not use or share your information except as described here.
 
 ## What VpnHood! CONNECT Collects
 
-The app collects **anonymous usage and diagnostic data** and sends it to Google Analytics (through Google's Firebase service). This data does not identify you; examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. Our open-source code shows what is sent and when.
+Except on iOS, the app can collect **pseudonymous usage and diagnostic data** and send it to Google Analytics through Firebase. It is linked to the Client ID described below, not to your name or contact details. Examples are how often the app is launched, which screens are used, the operating system version, connection results, and the technical text of error messages. The iOS build does not load Google Analytics or Firebase and does not offer Firebase-based report uploads.
 
 Some data depends on **where you installed the app from**, because those builds contain different components:
 
 | | App&nbsp;Store (iOS) | Windows, Linux | Google&nbsp;Play (Android) | Our&nbsp;website (Android) |
 | --- | --- | --- | --- | --- |
-| Anonymous analytics | yes | yes | yes | yes |
+| Pseudonymous analytics | no | yes | yes | yes |
 | Crash reports | no | no | yes | no |
 | Advertisements | no | no | yes | no |
 | Optional sign-in and purchases | yes | no | yes | no |
@@ -29,15 +29,15 @@ What that underlying value is depends on your platform:
 - **iOS and Linux** — a random value created inside the app on first launch, so deleting and reinstalling the app produces a brand-new Client ID.
 - **Android and Windows** — derived from an identifier the operating system already provides, so it **stays the same if you reinstall the app**. On Android it changes when the device is factory reset; on Windows it follows your Windows user account.
 
-The Client ID labels the anonymous analytics below and is sent to our VPN servers for session management, quotas, and abuse prevention.
+The Client ID labels analytics on builds that support analytics and is sent to our VPN servers for session management, quotas, and abuse prevention.
 
 ### You can turn analytics off
 
-Analytics is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, and turning it off while the app is running takes effect immediately and is remembered for later launches. Turning it off also disables in-app bug-report and feedback sending, since those use the same channel.
+On builds that support analytics, it is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; turning it off stops analytics events **and crash reports** from being sent, takes effect immediately, and is remembered for later launches. Turning it off also disables in-app bug-report and feedback sending, since those use the same channel. The iOS build has no analytics collection to turn on.
 
 ### Technical information
 
-When analytics is on, the following is collected:
+On builds with analytics, when analytics is on, the following is collected:
 
 - Client ID (the identifier described above)
 - VpnHood version
@@ -59,7 +59,7 @@ Crash reports follow the same switch as analytics, and your choice is remembered
 
 ### Advertisements (Google Play build)
 
-The Google Play build shows advertisements, including rewarded ads you may choose to watch to extend a session. Ads are delivered by **Google AdMob**, which collects its own data under Google's policies to select and measure ads. Advertising is not part of the anonymous analytics above and is not controlled by the analytics switch. Ads are not shown in every country.
+The Google Play build shows advertisements, including rewarded ads you may choose to watch to extend a session. Ads are delivered by **Google AdMob**, which collects its own data under Google's policies to select and measure ads. Advertising is not part of the pseudonymous analytics above and is not controlled by the analytics switch. Ads are not shown in every country.
 
 ### Optional sign-in and purchases (App Store and Google Play builds)
 
@@ -153,11 +153,33 @@ record with us.
 
 These companies process data on our behalf or in their own right, and only for the purposes described above:
 
-- **Google LLC** — Google Analytics / Firebase (anonymous analytics, all builds), Firebase Crashlytics (crash reports, Google Play build), Firebase storage (reports and ratings you send), AdMob (advertising, Google Play build), Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
+- **Google LLC** — Google Analytics/Firebase (pseudonymous analytics, non-iOS builds), Firebase Crashlytics (crash reports, Google Play build), Firebase storage (reports and ratings you send from non-iOS builds), AdMob (advertising, Google Play build), and Google Sign-In and Google Play billing (optional accounts and purchases, Google Play build)
 - **Apple Inc.** — Sign in with Apple and App Store billing (optional accounts and purchases, App Store build)
 - **AppsFlyer** — install attribution, website build for Android only
+- **Hosting and payment providers** — infrastructure needed to run the VPN and account services, and payment processing for website purchases
 
 They are obliged not to use the data for any purpose other than the one we assign them, except where they act as independent controllers under their own published policies (advertising and payments).
+
+## Why We Process Data
+
+Where data-protection law requires a legal basis, we rely on:
+
+- **performance of a contract** to provide VPN sessions, accounts, subscriptions, support, and purchases you request;
+- **consent** for optional analytics and reports you choose to send; you may withdraw consent at any time by turning analytics off;
+- **legitimate interests** in securing the Service, enforcing quotas, preventing fraud and abuse, diagnosing faults, and improving reliability; and
+- **legal obligations and legal claims** for tax and accounting records, lawful requests, preservation duties, and establishing, exercising, or defending claims.
+
+## How Long We Keep Data
+
+Connection logs are kept for 30 days and diagnostic server logs for 14 days, subject to the legal-preservation exception described above. Account information is kept while the account exists and is deleted as described under "Delete Your Account"; backups roll over within 30 days. Invoices are kept for the period required by tax law, and the refund-prevention hash described above is kept for up to 24 months. Analytics is kept under the retention setting configured for our Google Analytics property and is then deleted or aggregated. A report or message you send is kept until the issue is resolved and then only as long as reasonably needed for support, security, or a legal claim.
+
+## International Transfers
+
+We are based in the United States, and our providers may process data in the United States and other countries. Where required, transfers from the European Economic Area, United Kingdom, or Switzerland use a recognized safeguard, such as an adequacy decision or approved standard contractual clauses.
+
+## Your Privacy Rights
+
+Depending on where you live, you may ask to access, correct, delete, restrict, or receive a copy of your personal data, or object to certain processing. You may withdraw consent without affecting earlier lawful processing. You may also complain to your local data-protection authority. We do not sell personal information or share it for cross-context behavioural advertising. To exercise a right, contact us below; we may need to verify your request.
 
 ## Android Permissions
 
@@ -169,7 +191,7 @@ Our services are not directed to anyone under the age of 18. We do not knowingly
 
 ## Client Feedback & Bug Report
 
-The app lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us.
+On builds where in-app reporting is available, the app lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us. Firebase-based report sending is not available in the iOS build.
 
 The log file contains basic technical information and never the content of your traffic. Network addresses in it — yours, and those of the servers your device connected to — are replaced by tokens the same way as on our servers, using a key created inside the app that is never saved and never sent with the file, so the copy you send us cannot be turned back into addresses by us or by anybody else. Local network addresses stay readable, as they identify nobody. If you switch on verbose diagnostics yourself while reproducing a problem, the file can additionally contain host names in a shortened form.
 
@@ -179,4 +201,7 @@ We may update this policy from time to time; the current version is always avail
 
 ## Contact Us
 
-Questions about this policy: [legal@vpnhood.com](mailto:legal@vpnhood.com)
+Questions or privacy requests:
+
+- Mailing address: 8605 Santa Monica Blvd #281050, West Hollywood, CA 90069, USA
+- Email: **[legal@vpnhood.com](mailto:legal@vpnhood.com)**

@@ -2,74 +2,92 @@
 
 *Effective: 2026-08-31.*
 
-**PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CLIENT** app. VpnHood! CLIENT works with an access key you obtain yourself; your VPN traffic is handled by the server that key belongs to, under its operator's privacy policy, which is beyond our control.
+**OmegaHood LLC** ("we", "us", or "our") is the controller of the data described in this policy.
+This policy applies only to the official **VpnHood! CLIENT** app.
 
-This policy describes what the VpnHood! CLIENT app collects and what it never collects. By using the app, you agree to the practices described here. We do not use or share your information except as described in this policy.
+## Data We Collect
 
-## What VpnHood! CLIENT Collects
+Except on iOS, the app uses Google Analytics through Firebase to collect **pseudonymous usage and
+diagnostic data**. The data is linked to a Client ID, not to your name or contact details. It may
+include:
 
-The app collects **anonymous usage and diagnostic data** and sends it to Google Analytics (through the Firebase SDK). This data does not identify you or your device; examples are how often the app is launched, which screens are used, the operating system version, and the technical text of error messages. The app contains **no crash-reporting SDK, no advertising SDK, and no user accounts** — there is no login, no name, no email, and no payment information inside the app. Our open-source code shows that we don't send any user-identifiable information anywhere.
+- the Client ID;
+- app version, language, operating system, device model, and browser engine;
+- app launches, screens used, session duration, and connection results; and
+- technical error messages shown by the app.
 
-### Your Client ID
+Google may derive a general location, such as country, from the IP address used to send an analytics
+event. We do not send browsing history, websites visited, traffic content, or traffic volume to
+Google Analytics.
 
-The app identifies itself with a **Client ID**. It is never your device's serial number, phone number, or advertising ID, and it is never sent in its raw form — what leaves your device is a one-way hash that also mixes in the app's identity, so two VpnHood apps on the same device have unrelated Client IDs and neither can be traced back to the original value.
+The **Client ID** is a one-way hash that includes the app's identity. It is not a serial number,
+phone number, or advertising ID. On mobile and Linux, it is based on a random value created on first
+launch. On Windows, it is based on the Windows user account and may remain the same after reinstalling
+the app.
 
-On mobile and Linux the underlying value is a random one created inside the app on first launch, so deleting and reinstalling the app produces a brand-new Client ID. On Windows it is derived from your Windows user account instead, which means it stays the same if you reinstall.
+Analytics is controlled by **Settings → Privacy → "Share anonymous usage data"**. Turning it off
+stops analytics and is remembered for later launches. The iOS build does not load Google Analytics
+or Firebase and does not send analytics or reports to Google.
 
-The Client ID is used in two places: it labels the anonymous analytics described above, and it is sent to the VPN server you connect to for session management and abuse prevention.
+## Reports You Choose to Send
 
-### You can turn analytics off
+On supported non-iOS builds, you may choose to send a rating, feedback, or a diagnostic log through
+Google Firebase. Nothing is sent automatically. A report may contain the technical log, the text you
+enter, and an email address only if you choose to provide one. The local log otherwise stays on your
+device.
 
-Analytics is controlled by **Settings → Privacy → "Share anonymous usage data"** in the app. It is on by default; when you turn it off, the analytics component is not merely muted — it is never loaded at all, so nothing is sent to Google Analytics. If you turn it off while the app is running, collection stops immediately. Turning it off also disables in-app bug-report and feedback sending, since those use the same channel.
+## VPN Servers Are Separate
 
-### Technical information
+VpnHood! CLIENT includes no VPN server or access key. The independent operator of the server you
+choose handles the VPN connection under its own terms and privacy policy. We do not receive, control,
+or retain that operator's server data through CLIENT.
 
-When analytics is on, the following is collected:
+## Why We Process Data
 
-- Client ID (the random identifier described above)
-- VpnHood version
-- Country (derived by Google from the connection, not reported by the app)
-- Language
-- OS name and version
-- Device model (if applicable)
-- Browser engine
-- Session start time and duration, and the app screens you visit
-- Error messages shown by the app (their English technical text)
+Where data-protection law requires a legal basis, we rely on your consent for analytics and reports
+where consent is required, and otherwise on our legitimate interest in understanding app performance,
+fixing faults, and responding to messages you send. We may also process specific information when
+required by law or necessary to establish, exercise, or defend a legal claim.
 
-The app does **not** send your traffic volume to analytics; bytes are counted by the VPN server you connect to (see "VPN Servers").
+## Retention
 
-*Note:* If the server you connect to provides its own analytics ID, the app also reports a single anonymous connection event to that server operator's Google Analytics. The same switch above controls this.
+Analytics is kept under the retention setting configured for our Google Analytics property and is
+then deleted or aggregated. A report or message you send is kept until the issue is resolved and then
+only as long as reasonably needed for support, security, or a legal claim.
 
-## VPN Servers
+## Service Provider and International Transfers
 
-VpnHood! CLIENT ships with no server and no access key — you choose the server by the access key you add. Whoever operates that server necessarily sees what any VPN server sees: your IP address, connection times, and traffic totals. Your VPN traffic is governed by that operator's privacy policy, not this document.
+**Google LLC** processes analytics and voluntary reports for us through Google Analytics/Firebase on
+supported non-iOS builds. We are based in the United States, and Google may process data in the United
+States and other countries. Where required, international transfers use a recognized safeguard, such
+as an adequacy decision or approved standard contractual clauses.
 
-**Your destinations are never recorded.** The official VpnHood server implementation does not extract the domains, URLs, or IP addresses you visit from your traffic, so there is nothing about them to log, store, or hand over — that holds on any server running the official implementation, whoever operates it. When you use the **Split Domain** feature, the app reads domain names on your device to decide which traffic to send through the VPN; that happens inside the app, on your device, and is never sent anywhere.
+## Your Privacy Rights
 
-The app keeps its own technical log on your device to help diagnose faults, and that log does record the addresses your connections went to — but not as addresses. Each one is replaced by a short token produced with a random key that is created when the app starts, exists only in memory, and is never saved. The same address gives the same token while the app is running, so a fault can be traced through the file; once the app closes the key is gone, and nothing can turn a token back into an address afterwards. This log stays on your device unless you choose to send it to us (see "Client Feedback & Bug Report").
+CLIENT has no user account, identity document, or personal profile that we can provide to you. We
+normally cannot identify you from the pseudonymous analytics we receive. You can stop future
+analytics at any time in **Settings → Privacy**. If you contact us with a Client ID or report that
+you previously sent, we will handle any deletion or objection right that applies and that we can
+reasonably verify. You may also complain to your local data-protection authority. We do not sell
+personal information or share it for cross-context behavioural advertising.
 
-## Service Providers
+## Android Permission
 
-The only third party that processes app data on our behalf is **Google LLC**: Google Analytics/Firebase for the anonymous analytics described above, and Google Firebase storage for the reports and ratings you choose to send. Google processes this data to provide these services to us and is not permitted to use it for other purposes.
-
-## Android Permissions
-
-The `QUERY_ALL_PACKAGES` permission is used to allow the user to select which apps are allowed/disallowed to use the VPN.
+On Android, `QUERY_ALL_PACKAGES` lets you choose which installed apps use or bypass the VPN.
 
 ## Children's Privacy
 
-Our services are not directed to anyone under the age of 18. We do not knowingly collect personal information from anyone under 18. If we discover that a minor has provided us with personal information, we immediately delete it from our servers. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact us so that we can take the necessary actions.
+The app is not for anyone under 18. We do not knowingly collect personal information from anyone
+under 18. If we learn that we have done so, we will delete it. A parent or guardian may contact us
+below.
 
-## Client Feedback & Bug Report
+## Changes to This Policy
 
-The app lets you send us feedback, a rating, or a diagnostic log file to help solve technical issues. **Nothing is ever sent automatically** — a report leaves your device only when you press the send button. An email field is optionally available if you would like a response from us.
-
-The log file contains basic technical information and never the content of your traffic. Network addresses in it — yours, and those of the servers your device connected to — are replaced by tokens as described under "VPN Servers", using a key that is never saved and never sent with the file, so the copy you send us cannot be turned back into addresses by us or by anybody else. Local network addresses stay readable, as they identify nobody. If you switch on verbose diagnostics yourself while reproducing a problem, the file can additionally contain host names in a shortened form.
-
-## Changes to This Privacy Policy
-
-We may update this policy from time to time; the current version is always available on this page, and changes take effect when posted here. Every revision is recorded in our open-source repository — see the [change history of this policy](https://github.com/vpnhood/VpnHood/commits/develop/docs/legal/end-user/vpnhood-client-privacy-policy.md).
+We may update this policy when the app, law, or our practices change. We will post the updated policy
+and change the Effective date. The repository keeps the
+[change history](https://github.com/vpnhood/VpnHood/commits/develop/docs/legal/end-user/vpnhood-client-privacy-policy.md).
 
 ## Contact Us
 
-Questions about this policy: [legal@vpnhood.com](mailto:legal@vpnhood.com)
+- Mailing address: 8605 Santa Monica Blvd #281050, West Hollywood, CA 90069, USA
+- Email: **[legal@vpnhood.com](mailto:legal@vpnhood.com)**

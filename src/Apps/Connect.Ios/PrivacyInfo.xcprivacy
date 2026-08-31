@@ -3,18 +3,16 @@
 <!-- Apple's privacy manifest for the HOST APP. Required since May 2024: App Store Connect scans the
      upload for "required reason" API use and rejects with ITMS-91053 when a use is not declared here.
      The Network Extension is a separate bundle and needs its OWN manifest — see
-     Connect.Ios.Extension/PrivacyInfo.xcprivacy, which declares less because it runs no analytics.
+     Connect.Ios.Extension/PrivacyInfo.xcprivacy. Neither bundle sends analytics or Firebase reports.
 
      Reason codes come from Apple's published lists; they are NOT free text and an unrecognised code
      fails validation. On the first App Store upload, check the Xcode/altool privacy report against
      this file — the .NET BCL can reach a required-reason API from code we never call directly.
 
-     CONNECT vs CLIENT: this app ships Sign in with Apple + StoreKit billing on the Portal backend
-     AND runs the AppLib GA4 tracker (Ga4MeasurementId, absent from the Client's settings) in addition
-     to the SPA's Firebase Analytics, with AllowEndPointTracker=true. So it declares SIX collected
-     types to the Client's three — adding Email Address, Purchase History and Other Usage Data — and
-     marks the account-bound ones (Email, Purchase History, User ID) as Linked. The accessed-API list
-     is identical because both apps run the same AppLib/iOS code.
+     CONNECT vs CLIENT: this app ships Sign in with Apple + StoreKit billing on the Portal backend,
+     so it declares User ID, Email Address, and Purchase History for App Functionality. AppDelegate
+     disables the AppLib GA4 tracker and endpoint tracking and removes the SPA's firebaseOptions.
+     The accessed-API list is identical because both apps run the same AppLib/iOS code.
 
      The reasoning behind every answer here — and the matching App Store Connect "App Privacy" panel
      answers, which Apple cross-checks against this manifest — is recorded in
@@ -35,19 +33,13 @@
 	     hard-blocked by the system when the user denies tracking. -->
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
-	<!-- What the app can send. Analytics (the AppLib GA4 tracker plus Firebase Analytics in the SPA
-	     WebView) stays behind the user's "Share anonymous usage data" consent
-	     (UserSettings.AllowAnonymousTracker — when it is off neither tracker is constructed, and
-	     VpnHoodApp.cs gates AllowEndPointTracker on the same flag) and stays UNLINKED: the analytics
-	     stream keys on the random install id and never carries the account id or email. The
-	     account-bound types (Email Address, Purchase History, User ID) are LINKED — Sign in with Apple
-	     means an account exists — and exist regardless of the analytics consent, because they are what
-	     signs the user in and grants the entitlement (purpose App Functionality). -->
+	<!-- The account-bound types are used only for App Functionality. The iOS build sends no analytics
+	     or Firebase reports: AppDelegate forces a NullTracker, disables endpoint tracking, and removes
+	     firebaseOptions before the SPA starts. -->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- setUserId(clientId): a random per-install id, used to de-duplicate event streams. It also
-		     travels in the VPN session handshake (ClientInfo), and VpnHood's own servers keep per-client
-		     quota/session records against it — hence App Functionality in addition to Analytics.
+		<!-- The random per-install clientId travels in the VPN session handshake (ClientInfo), and
+		     VpnHood's own servers keep per-client quota/session records against it for App Functionality.
 		     Linked=true: with sign-in on board the portal can join the id to the account. See
 		     docs/legal/developer/APP_STORE_PRIVACY.md ("VpnHood! CONNECT on iOS"); the App Store Connect
 		     panel must declare the same purposes and linkage. -->
@@ -60,7 +52,6 @@
 			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
@@ -91,51 +82,6 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
-		<!-- CONNECT-ONLY. The native GA4 tracker is live here (Ga4MeasurementId is set; the Client's
-		     TrackerFactory falls back to a NullTracker), so ClientUsageTracker reports periodic usage
-		     counters — traffic totals plus request/connection counts, every 25 minutes. That is usage
-		     data beyond product interaction, so it gets its own type. Remove this entry if a build ever
-		     ships without Ga4MeasurementId. -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeOtherUsageData</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
-			</array>
-		</dict>
-		<!-- GA4's automatic app/page events, our own UI events, and the consented endpoint tracking
-		     (AllowEndPointTracker: which server location a session used — usage of the product, not a
-		     browsing history; the tunnel's traffic itself is never inspected or reported). -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
-			</array>
-		</dict>
-		<!-- Error-dialog messages and app version reported by ErrorHandler for triage. -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeOtherDiagnosticData</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
 	</array>

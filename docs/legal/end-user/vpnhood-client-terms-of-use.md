@@ -10,9 +10,11 @@ Our [Privacy Policy](https://www.vpnhood.com/vpnhood-client-privacy-policy) expl
 handles data. A store or platform through which you obtain the App may also impose terms that apply
 to your download and use.
 
-You must be at least 18 years old, or the age of legal majority where you live, to accept these
-Terms. A younger person may use the App only with the permission and supervision of a parent or
-legal guardian who accepts these Terms for them.
+If you obtained the App through Apple's App Store, Apple's
+[Standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) governs your
+licence and use of the App instead of these Terms. Our Privacy Policy still applies.
+
+You must be at least 18 years old, or the age of legal majority where you live, to use the App.
 
 ## What CLIENT is — and what it is not
 
@@ -145,8 +147,6 @@ except for any terms that cannot be superseded under applicable law or an open-s
 ## Contact
 
 Questions, notices, complaints, and legal claims concerning these Terms should be directed to:
-
-**OmegaHood LLC**
 
 - Mailing address: 8605 Santa Monica Blvd #281050, West Hollywood, CA 90069, USA
 - Email: **[legal@vpnhood.com](mailto:legal@vpnhood.com)**

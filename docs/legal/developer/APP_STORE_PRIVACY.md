@@ -22,21 +22,17 @@ own settings. So the id is **random** (derived from nothing about the device or 
 **per-install** (delete and reinstall → new id), and **per-app** (the bundle id is part of the
 hash, so two VpnHood apps on the same phone get unrelated ids).
 
-Everything the app sends off-device, and where the id goes:
+The official iOS build disables both analytics paths and Firebase report uploads at startup. It
+forces a null native tracker, disables endpoint tracking, and removes `firebaseOptions` before the
+SPA starts. The only off-device use of the Client ID is therefore:
 
 | Channel | What is sent | When |
 | --- | --- | --- |
-| Firebase Analytics (GA4, web SDK inside the SPA WebView) | `setUserId(clientId)`, GA4's automatic app/page events, custom UI events, error-dialog messages | Only while the user's **Settings → Privacy → "Share anonymous usage data"** consent is on |
-| Firebase Storage | User-initiated bug reports (app log) and ratings/review text; filename embeds a truncated (8-char) clientId | Only when the user explicitly taps Send — never automatic |
 | The VPN server | `clientId` in the session handshake (`ClientInfo`), for session management and abuse prevention | Every connection |
 
-The consent gate is real, not cosmetic: while the toggle is off the analytics SDK is **never even
-initialized** (merely initializing it would already contact Google and stamp an id), and
-withdrawing consent mid-session disables collection and discards the instance.
-
-The app also contains a native analytics tracker, but it is **inactive in Client**: without a GA4
-measurement id configured — and Client ships none — it degrades to a local-log-only stub and sends
-nothing. Client's only analytics path is the consented WebView analytics above.
+The shared code still supports analytics on other platforms, but the iOS app boundary deliberately
+overrides the shared configuration. Changing an embedded measurement id or Firebase setting alone
+does not re-enable collection on iOS.
 
 There are **no user accounts** in the app: no login, no names, no emails, no payment collection.
 If an access-key provider ties a key to a purchase on their website, that happens in a browser
@@ -44,11 +40,9 @@ outside the app and is not data the iOS binary collects.
 
 ## The privacy manifest is the contract
 
-[`Client.Ios/PrivacyInfo.xcprivacy`](../../../src/Apps/Client.Ios/PrivacyInfo.xcprivacy) declares
-exactly three collected data types — **User ID**, **Product Interaction**, **Other Diagnostic
-Data** — each with purpose **Analytics**, `Linked = false`, `Tracking = false`, plus
-`NSPrivacyTracking = false`. The Network Extension's manifest declares no collection at all
-(packet data never leaves the tunnel process).
+[`Client.Ios/PrivacyInfo.xcprivacy`](../../../src/Apps/Client.Ios/PrivacyInfo.xcprivacy) declares no
+collected data types and sets `NSPrivacyTracking = false`. The Network Extension's manifest also
+declares no collection (packet data never leaves the tunnel process).
 
 Two consequences:
 
@@ -61,20 +55,21 @@ Two consequences:
 
 App Store Connect → your app → **App Privacy**.
 
-### Fork with the default configuration (no Firebase of your own)
+### Official iOS build
 
-If your fork does not embed `firebaseOptions` in `CustomData`, the Firebase SDK is never created
-and nothing is sent to Google at all. The clientId still reaches **your own VPN servers** in the
-session handshake; whether that alone counts as "collection" is your call to make for your own
-server retention — if your servers do not retain it beyond serving the connection, the honest
-answer is:
+VpnHood! CLIENT has no accounts and no server of its own. It sends no analytics or Firebase reports
+on iOS. The Client ID still reaches the independent VPN server selected by the user. For the
+official App Store record, the answer is:
 
 > **"No, we do not collect data from this app."**
 
-Also strip the three `NSPrivacyCollectedDataTypes` entries from the manifest so binary and panel
-agree.
+The shipped privacy manifest already matches that answer.
 
-### Fork with analytics enabled (VpnHood's own configuration)
+### Fork that re-enables analytics
+
+Re-enabling iOS analytics requires changing the iOS app boundary, not merely adding configuration.
+If a fork does so, it must also restore the corresponding manifest entries and App Store Connect
+answers. For the current shared Firebase implementation, use the following inventory:
 
 1. **"Do you or your third-party partners collect data from this app?"** → **Yes**.
 
@@ -144,15 +139,15 @@ panel — and with no ad SDK on iOS, `NSPrivacyTracking` stays **false** and ATT
 
 What iOS Connect sends that Client does not:
 
-- **The native analytics tracker is active** (Connect ships a GA4 measurement id; Client does
-  not), so besides the WebView analytics the app reports session start, connection results, error
-  events, and periodic usage counters carrying **traffic totals** (roughly every 25 minutes) — all
-  behind the same "Share anonymous usage data" consent toggle.
 - **An email address**, from Sign in with Apple. It may be an Apple **private-relay** address
   (`@privaterelay.appleid.com`) — still an email address for questionnaire purposes.
 - **Purchase history.** The purchase receipt (Apple's signed transaction) and its transaction id
   are sent to the account backend, which stores them against the account to grant and restore the
   entitlement.
+
+Like Client, Connect disables the native GA4 tracker, endpoint tracking, SPA Firebase Analytics,
+and Firebase report uploads in its iOS app boundary. The shared configuration used by other
+platforms still contains those settings, but the iOS build does not use them.
 
 **Name is NOT collected — deliberate policy (2026-08-09), on BOTH platforms.** On iOS the sign-in
 requests only the **email** scope, so Apple never hands the app a name at all. On Android, Google's
@@ -166,7 +161,7 @@ new build.
 ### Filling the App Privacy panel
 
 "Do you or your third-party partners collect data from this app?" → **Yes**. Then select exactly the
-six types below and nothing else.
+three types below and nothing else.
 
 > **Saving is not publishing.** The panel has its own **Publish** button (top right), separate from
 > saving each type. Until you press it the answers do not count and the app version silently refuses
@@ -181,17 +176,12 @@ alone cannot fix it (that takes a new build).
 
 | Panel category | Data type | "How is this data used?" | Linked to identity? | Used for tracking? |
 | --- | --- | --- | --- | --- |
-| Identifiers | **User ID** | App Functionality **+ Analytics** | **Yes** | No |
+| Identifiers | **User ID** | App Functionality | **Yes** | No |
 | Contact Info | **Email Address** | App Functionality | **Yes** | No |
 | Purchases | **Purchase History** | App Functionality | **Yes** | No |
-| Usage Data | **Product Interaction** | Analytics | No | No |
-| Usage Data | **Other Usage Data** (traffic totals) | Analytics | No | No |
-| Diagnostics | **Other Diagnostic Data** | Analytics | No | No |
 
-**User ID carries BOTH purposes** — the one row that is easy to get wrong, because the rest of this
-page splits the two apart. The random clientId goes to GA4 as the user id (**Analytics**) *and*
-travels in the VPN session handshake, where the servers keep quota/session records against it and
-the portal can join it to the account (**App Functionality**).
+The random Client ID travels in the VPN session handshake, where the servers keep quota/session
+records against it and the portal can join it to the account. It is not sent to GA4 on iOS.
 
 Types deliberately **not** selected:
 
@@ -199,13 +189,8 @@ Types deliberately **not** selected:
 | --- | --- |
 | **Name** | Policy (2026-08-09): iOS requests the email scope only, and the name inside Google's sign-in token is never stored. Applies to both platforms |
 | **Device ID** | Same reasoning as Client — random per-install id; no IDFA, no ATT |
-| **Crash Data** | **No on iOS** — Crashlytics ships only in the Android/Google build. This type covers actual crash *logs*; the diagnostics the app does send (error-dialog messages to GA4) are already declared above as **Other Diagnostic Data**. Apple's own Xcode Organizer crash reports are Apple collecting, not you, and never need declaring. Do not pre-declare this "for the future": the panel is editable at any time, so when iOS gains crash reporting, ship both halves in one release — add `NSPrivacyCollectedDataTypeCrashData` to the manifest, build, *then* tick Crash Data in the panel |
-
-Whether **Product Interaction / Other Usage Data / Other Diagnostic Data** are also "Linked"
-depends on one question: does anything join the analytics stream to the account? Today it does not
-— GA4 keys on the random `clientId`, never the portal account id — so those three stay
-`Linked = false`. If a future change sends the account id (or the email) into an analytics event,
-they flip too.
+| **Crash Data** | **No on iOS** — Crashlytics ships only in the Android/Google build. Apple's own Xcode Organizer crash reports are Apple collecting, not you, and never need declaring. Do not pre-declare this "for the future": when iOS gains crash reporting, ship both halves in one release — add the type to the manifest, build, *then* update the panel |
+| **Product Interaction, Other Usage Data, Other Diagnostic Data** | The iOS build disables native GA4, endpoint tracking, SPA Firebase Analytics, and Firebase report uploads |
 
 **Account deletion becomes mandatory.** Sign in with Apple means the app supports account creation,
 which triggers **Guideline 5.1.1(v)**: deletion must be initiated *inside* the app — sign-out is
@@ -234,13 +219,11 @@ prevent, so do not reintroduce it in a fork. The shipped behaviour is described 
 [account-lifecycle.md](../../accounts/account-lifecycle.md).
 
 **Manifest status.** `Connect.Ios/PrivacyInfo.xcprivacy` and
-`Connect.Ios.Extension/PrivacyInfo.xcprivacy` now exist (the extension's stays collection-free — the
-tunnel process runs no analytics). The host app's manifest declares **six** collected types: User ID,
-Email Address and Purchase History (all three with `Linked = true`, because they hang off the
-account), plus Product Interaction, Other Usage Data and Other Diagnostic Data. The Email Address
-and Purchase History types were added with the build that shipped billing and sign-in, as they had
-to be. Manifest and panel must ship together: Apple generates a privacy report from the binary and
-flags discrepancies, and the panel alone cannot fix a mismatch.
+`Connect.Ios.Extension/PrivacyInfo.xcprivacy` now exist (the extension stays collection-free). The
+host app's manifest declares **three** collected types: User ID, Email Address, and Purchase History,
+all for App Functionality and all with `Linked = true`. Manifest and panel must ship together: Apple
+generates a privacy report from the binary and flags discrepancies, and the panel alone cannot fix
+a mismatch.
 
 ## If your fork adds sign-in (Connect-like)
 
@@ -248,7 +231,7 @@ Everything above assumes the app's only identity is a random access key. The mom
 **log in** — Google Sign-In, email accounts, anything that names a person — the answers flip:
 
 - **"Linked to the user's identity" becomes Yes** for User ID and for every data type joined with
-  the account (usage, diagnostics). This is the single biggest change: the anonymous-random-GUID
+  the account (usage, diagnostics). This is the single biggest change: the pseudonymous random-GUID
   reasoning above no longer applies, because there now *is* an identity to link to.
 - **New data types appear**: at minimum **Email Address** (and **Name**, if your backend keeps the
   name the sign-in token delivers — declare what you actually store), **Purchase History** if
@@ -291,17 +274,15 @@ compliance has its own document: [APP_STORE_EXPORT_COMPLIANCE.md](APP_STORE_EXPO
 - **Territories.** VPNs are restricted or banned in several countries; Apple removes VPN apps
   from the China and Russia storefronts on government demand. Deselect such territories yourself —
   which ones and why: [APP_STORE_TERRITORIES.md](APP_STORE_TERRITORIES.md).
-- **GDPR note.** Analytics consent here is opt-out (default on). EU regulators generally read
-  consent as opt-in, and even a random id is "personal data" under GDPR. The mitigations are that
-  the id is anonymous and unlinked and the toggle is prominent — but if you target EU users
-  primarily, consider flipping your fork's default to off.
+- **GDPR note.** The official iOS builds disable analytics. A fork that re-enables it should treat a
+  random Client ID as pseudonymous personal data and obtain valid consent before collection where
+  required; an opt-in default is the safer approach for EU users.
 
 ## Keep in sync
 
-Re-open this document when any of these change: an ad or crash-reporting SDK is added, the native
-tracker gets a `Ga4MeasurementId` in Client, login/accounts appear, the clientId derivation starts
-using device data, or Firebase web SDK behavior changes. Each of those invalidates at least one
-"No" above.
+Re-open this document when any of these change: an ad or crash-reporting SDK is added, either iOS
+analytics override is removed, login/accounts appear in Client, the Client ID derivation starts
+using device data, or Firebase web SDK behavior changes. Each can invalidate at least one answer.
 
 The clientId derivation is worth watching specifically, because it is already **not uniform**: the
 Windows website build derives it from the Windows user account (SID) and the Android website build

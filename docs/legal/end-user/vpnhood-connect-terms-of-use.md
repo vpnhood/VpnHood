@@ -12,9 +12,11 @@ Service handles data. A store or platform through which you obtain the App or a 
 also impose terms that apply to your download, purchase, and use. Its rules control if they conflict
 with these Terms on billing, cancellation, or refunds that it handles.
 
-You must be at least 18 years old, or the age of legal majority where you live, to accept these
-Terms. A younger person may use the Service only with the permission and supervision of a parent or
-legal guardian who accepts these Terms for them.
+If you obtained the App through Apple's App Store, Apple's
+[Standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) governs your
+licence and use of the App instead of these Terms. Our Privacy Policy still applies.
+
+You must be at least 18 years old, or the age of legal majority where you live, to use the Service.
 
 ## The Service
 
@@ -93,8 +95,7 @@ its payment processor to charge the payment method associated with your purchase
 - **App-store subscriptions.** Apple or Google charges your store account when you confirm the
   purchase. An auto-renewable subscription renews for the period and price shown by the store unless
   you cancel through that store. To avoid the next charge, cancel before the store's stated
-  deadline; Apple currently requires cancellation at least 24 hours before the end of the current
-  period. Cancelling stops future renewals and does not normally end the access already paid for.
+  deadline. Cancelling stops future renewals and does not normally end the access already paid for.
 - **Website purchases.** We or our payment processor handles website billing under the terms shown
   at checkout. If the checkout identifies a plan as recurring, it renews for the disclosed period
   until you cancel it through your account or support. Cancellation stops future billing and access
@@ -109,8 +110,9 @@ its payment processor to charge the payment method associated with your purchase
   consent required by its rules or applicable law. You may cancel before the new price takes effect.
 
 A premium code is a bearer credential with the duration, expiry, and device limit attached to it.
-Keep it secure: anyone who has a copy may be able to use its available device slots. Unless the
-offer says otherwise, a code does not renew automatically.
+Keep it secure: anyone who has a copy may be able to use its available device slots. A code does
+not itself create recurring billing; when it is linked to a renewing subscription, its validity may
+be extended as that subscription renews.
 
 Deleting the App or your VpnHood account **does not cancel an Apple or Google subscription**. Cancel
 it in the store where you purchased it. Deleting your VpnHood account cancels recurring website
@@ -192,8 +194,6 @@ licence.
 ## Contact
 
 Questions, notices, complaints, and legal claims concerning these Terms should be directed to:
-
-**OmegaHood LLC**
 
 - Mailing address: 8605 Santa Monica Blvd #281050, West Hollywood, CA 90069, USA
 - Email: **[legal@vpnhood.com](mailto:legal@vpnhood.com)**

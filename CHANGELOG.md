@@ -1,5 +1,9 @@
 # Latest
 
+* Fix: Very slow download speed on iOS #ios #store
+
+# v8.1.846
+
 * Feature: Support QUIC on all platforms #store
 * Feature: Split DNS — DNS queries now follow your split tunneling rules, so bypassed apps and sites resolve outside the tunnel #store
 * Feature: Unrouted IP protection — choose to block or bypass destinations the server cannot route, so traffic never leaks silently
@@ -13,7 +17,6 @@
 * Improve: Initialization speed when using split tunneling by country
 * Improve: SOCKS & HTTP proxies stability
 * Improve: Memory usage & stability #store
-* Fix: Very slow download speed on iOS #ios #store
 * Fix: Deleting your account on one device left it visible, and still signed in, on your other devices #connect
 * Fix: Signing out could take away an access code that was still paid for #connect
 * Fix: Premium features stayed unlocked locally after a subscription had expired

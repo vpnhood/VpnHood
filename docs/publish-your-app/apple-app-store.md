@@ -201,6 +201,15 @@ first, in that order. All three bit this project's own first submission.
 
 Things that only bite on the very first version:
 
+- **Check the version number on the record, not just in the build.** App Store Connect pre-fills
+  `1.0` when you create an app, and that string is what customers see on the product page. It is a
+  *separate field* from your binary's `CFBundleShortVersionString`, nothing keeps the two in step,
+  and Apple does not complain: a build declaring `8.1.847` attaches to a record saying `1.0`
+  silently. Leave them apart and the store advertises one number while the app reports another in
+  Settings, in its about screen, and in every crash log and support ticket. Set the record to the
+  version your build actually carries before you submit. Nothing in the pipeline does it for you —
+  the listing publish writes text and screenshots into whichever version is open, and never touches
+  the number.
 - **No "What's New" text.** Apple rejects a first version that carries release notes. Your later
   releases add them automatically.
 - **The listing must be published in two passes** — screenshots first, then text (a long-standing
@@ -210,8 +219,19 @@ Things that only bite on the very first version:
   skipped with a warning rather than failing; it goes through once review ends.
 - **Attach your subscriptions to the first version** when you submit it. A brand-new subscription
   is reviewed together with the app version, not on its own.
-- **Decide about Apple Silicon Macs.** Pricing and Availability carries a checkbox that offers your
-  iOS app on Macs. It is a real decision, not a formality: leaving it on means Apple reviews your
+- **Decide about Apple Silicon Macs — and use the right control.** Two things in App Store Connect
+  sound the same and are not. The one you want is the **"Make this app available on Mac"**
+  checkbox: it offers your existing iOS binary to Apple Silicon Macs, reusing your iPad
+  screenshots, with no separate version and no separate review. The one to avoid is **adding a
+  macOS platform** to the app record — that creates a second, independent `MAC_OS` version that
+  demands its own macOS *binary* (Catalyst or native) and its own screenshots at macOS sizes
+  (1280x800 / 1440x900 / 2560x1600 / 2880x1800, all 16:10). iPad screenshots cannot fill it: they
+  are 4:3, and Apple rejects them on dimensions. If your pipeline only produces an `.ipa` there is
+  no build that can ever complete that version, and it sits in *Prepare for Submission* forever. It
+  does not block your iOS submission — platforms submit independently — but delete the empty
+  version rather than leaving it.
+
+  The checkbox itself is a real decision, not a formality: leaving it on means Apple reviews your
   app **on macOS too**, where a VPN's packet-tunnel extension runs in a different environment
   (notably without the iOS memory cap). Test it on a Mac through TestFlight before you submit, or
   switch it off for the first release — you can enable it later without a new build, and a VPN that
@@ -268,10 +288,29 @@ one unit. Build the basket, then send it.
    Check the number rather than taking the newest: a build made before a fix you are relying on will
    ship that fix's absence to every user. Swapping the build later is free while the version is still
    editable, and impossible once it is in review.
-2. **Tick your subscriptions into the basket.** They appear on the submit page as items you select
-   alongside the version. A first subscription is not reviewed on its own, so if you leave it out the
-   app ships approved with nothing to sell. (Doing this over the API is not possible on every
-   account — Apple's own console is the reliable route.)
+2. **Add your subscriptions to the basket — from the products, not from the version.** This catches
+   people because the submit page does not offer them. Open each subscription under *Subscriptions*
+   and press **Add for Review** on the product itself; it joins the submission your version is
+   already in. A first subscription is not reviewed on its own, so leaving it out ships an approved
+   app with nothing to sell.
+
+   **A new group brings itself, but not its products.** Editing group-level text (a display name,
+   a translation) creates a pending *group version* that joins the submission on its own. The
+   products do not follow. Submit like that and Apple refuses with *"New subscription groups must be
+   submitted with an auto-renewable subscription from within that group"* — a new group with nothing
+   buyable in it.
+
+   Over the API, add the product's **version**, not the product. `reviewSubmissionItems` has no
+   `subscription` relationship (`ENTITY_ERROR.RELATIONSHIP.UNKNOWN`, which reads like a permissions
+   problem and is not); it has `subscriptionVersion`, pointing at an id from
+   `/v1/subscriptions/<id>/versions`:
+
+   ```jsonc
+   POST /v1/reviewSubmissionItems
+   { "data": { "type": "reviewSubmissionItems", "relationships": {
+       "reviewSubmission":    { "data": { "type": "reviewSubmissions",    "id": "<submission id>" } },
+       "subscriptionVersion": { "data": { "type": "subscriptionVersions", "id": "<version id>" } } } } }
+   ```
 3. **Write the review note.** A working test account and whatever a reviewer needs to reach every
    feature, including anything behind a purchase. Reviewers must be able to *use* the app, not just
    open it. The panel also wants your own contact details, so Apple can reach a human during review.

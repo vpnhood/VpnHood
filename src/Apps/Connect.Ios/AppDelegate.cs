@@ -70,6 +70,12 @@ public class AppDelegate : UIApplicationDelegate
             // string here would throw inside VpnHoodApp.Init, so we pass an empty array instead of a placeholder.
             AccessKeys = string.IsNullOrEmpty(appConfigs.DefaultAccessKey) ? [] : [appConfigs.DefaultAccessKey],
             Resources = resources,
+            PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
+            // Not appConfigs.TermsOfUseUrl: a purchase here is governed by Apple's standard EULA while
+            // no custom EULA is registered in App Store Connect. Delete this line once one is.
+            TermsOfUseUrl = new Uri("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"),
+            // The store already took this acceptance at install - see AppOptions.
+            IsLicenseAgreementRequired = false,
             UiName = "VpnHoodConnect",
             // Loopback port for the in-process SPA web server (the WKWebView loads from here).
             WebUiPort = appConfigs.WebUiPort,

@@ -26,6 +26,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppOptions(appId: appConfigs.AppId, "VpnHood", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             Resources = resources,
+            PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
+            TermsOfUseUrl = appConfigs.TermsOfUseUrl,
+            // The store already took this acceptance at install - see AppOptions.
+            IsLicenseAgreementRequired = false,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
             AdjustForSystemBars = false,

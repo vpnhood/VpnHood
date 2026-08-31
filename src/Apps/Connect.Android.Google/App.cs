@@ -44,6 +44,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             StorageFolderPath = storageFolderPath,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             Resources = resources,
+            PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
+            TermsOfUseUrl = appConfigs.TermsOfUseUrl,
+            // The store already took this acceptance at install - see AppOptions.
+            IsLicenseAgreementRequired = false,
             RemoteSettingsUrl = appConfigs.RemoteSettingsUrl,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,

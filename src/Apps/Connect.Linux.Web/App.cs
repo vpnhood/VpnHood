@@ -26,6 +26,8 @@ internal static class App
             CustomData = appConfigs.CustomData,
             UiName = "VpnHoodConnect",
             Resources = resources,
+            PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
+            TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = false,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,

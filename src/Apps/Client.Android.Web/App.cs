@@ -24,6 +24,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
         return new AppOptions(appId: appConfigs.AppId, storageFolderName: "VpnHood", AppConfigs.IsDebugMode) {
             CustomData = appConfigs.CustomData,
             Resources = resources,
+            PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
+            TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
             AdjustForSystemBars = false,

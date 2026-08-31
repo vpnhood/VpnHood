@@ -10,6 +10,7 @@ public class AppResources
     public Lazy<byte[]>? IpLocationZipData { get; set; }
     public byte[]? SpaZipData { get; set; }
     public VhSize WindowSize { get; set; } = new(400, 700);
+
     public AppStrings Strings { get; set; } = new();
     public AppColors Colors { get; set; } = new();
     public AppIcons Icons { get; set; } = new();

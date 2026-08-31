@@ -51,6 +51,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public Uri? RemoteSettingsUrl { get; set; }
     public bool AllowEndPointTracker { get; set; }
     public JsonElement? CustomData { get; set; }
+    public Uri? PrivacyPolicyUrl { get; set; }
+    public Uri? TermsOfUseUrl { get; set; }
 
     // Portal (account/billing) backend. Null disables account features entirely — the app builds and
     // runs sign-in-less (fail-soft, matching Connect.Android.Google's CreateAppAccountProvider) until

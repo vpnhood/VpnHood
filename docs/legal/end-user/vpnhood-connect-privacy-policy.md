@@ -1,6 +1,6 @@
 # VpnHood! CONNECT - Privacy Policy
 
-*Effective: 2026-08-23.*
+*Effective: 2026-08-31.*
 
 **PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CONNECT** app and to the VPN servers **we operate**. Unlike VpnHood! CLIENT, CONNECT comes with its own built-in access and does not let you add another provider's server, so the servers you use are ours and this policy covers them.
 
@@ -179,4 +179,4 @@ We may update this policy from time to time; the current version is always avail
 
 ## Contact Us
 
-Questions about this policy: [support@vpnhood.com](mailto:support@vpnhood.com)
+Questions about this policy: [legal@vpnhood.com](mailto:legal@vpnhood.com)

@@ -1,6 +1,6 @@
 # VpnHood! CLIENT - Privacy Policy
 
-*Effective: 2026-08-18.*
+*Effective: 2026-08-31.*
 
 **PLEASE NOTE:** This privacy policy applies to the official **VpnHood! CLIENT** app. VpnHood! CLIENT works with an access key you obtain yourself; your VPN traffic is handled by the server that key belongs to, under its operator's privacy policy, which is beyond our control.
 
@@ -72,4 +72,4 @@ We may update this policy from time to time; the current version is always avail
 
 ## Contact Us
 
-Questions about this policy: [support@vpnhood.com](mailto:support@vpnhood.com)
+Questions about this policy: [legal@vpnhood.com](mailto:legal@vpnhood.com)

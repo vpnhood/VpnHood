@@ -75,6 +75,33 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     public object? CustomData { get; set; }
     public bool AllowRecommendUserReviewByServer { get; set; }
     public Uri? RemoteSettingsUrl { get; set; }
+
+    // The two legal documents this build links to - from the paywall, from Settings > Privacy, and
+    // from the first-run screen where that is shown. Every head fills them in from its
+    // appsettings.json, exactly like Ga4MeasurementId and RemoteSettingsUrl above, so a fork points
+    // at its own documents without editing code. The App Store heads are the one exception: they
+    // hardcode TermsOfUseUrl to Apple's standard EULA, the agreement actually governing a purchase
+    // made there while no custom EULA is registered with Apple.
+    // Null means the build ships no such document, and the UI hides the link rather than guess an
+    // address. Keep this the only place either URL is set: a second source would have to be resolved
+    // against this one, and the symptom of getting that wrong is the wrong EULA on a paywall, found
+    // by a store rejection rather than by a test.
+    public Uri? PrivacyPolicyUrl { get; set; }
+    public Uri? TermsOfUseUrl { get; set; }
+
+    // Whether this build must have its licence agreement accepted before the app can be used. It is
+    // a DISTRIBUTION decision, not a product one, so it lives here rather than being inferred from
+    // which app is running: a build downloaded from our website passed through nothing that put our
+    // terms in front of the user, so it asks on first run, while a store build's user already
+    // accepted that store's agreement to install it. Either way both documents stay reachable from
+    // the paywall and from Settings > Privacy, which is what App Review 3.1.2 and Play's User Data
+    // policy actually ask for - the first-run screen is the website channel's substitute for a
+    // store, not an extra requirement on top of one.
+    // On by default and opted OUT of by the four store heads, deliberately that way round: a head
+    // added later that forgets the line shows one screen too many, which is noise, rather than
+    // skipping a disclosure, which is a gap.
+    // The user's answer is UserSettings.IsLicenseAccepted, asked once.
+    public bool IsLicenseAgreementRequired { get; set; } = true;
     public int? WebUiPort { get; set; }
     public string? WebUiHostName { get; set; }
 }

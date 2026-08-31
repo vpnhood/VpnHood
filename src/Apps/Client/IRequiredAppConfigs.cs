@@ -12,4 +12,8 @@ public interface IRequiredAppConfigs
     public Uri? RemoteSettingsUrl { get; set; }
     public bool AllowEndPointTracker { get; set; }
     public JsonElement? CustomData { get; set; }
+
+    // Copied onto AppOptions, which documents what these are and what null means.
+    public Uri? PrivacyPolicyUrl { get; set; }
+    public Uri? TermsOfUseUrl { get; set; }
 }

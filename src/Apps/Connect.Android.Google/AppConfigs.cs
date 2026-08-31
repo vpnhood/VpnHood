@@ -22,6 +22,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public Uri? RemoteSettingsUrl { get; set; }
     public bool AllowEndPointTracker { get; set; }
     public JsonElement? CustomData { get; set; }
+    public Uri? PrivacyPolicyUrl { get; set; }
+    public Uri? TermsOfUseUrl { get; set; }
 
     // This is a test access key, you should replace it with your own access key.
     // It is limited and can not be used in production.

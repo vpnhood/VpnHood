@@ -17,6 +17,8 @@ internal class AppConfigs : AppConfigsBase<AppConfigs>, IRequiredAppConfigs
     public Uri? RemoteSettingsUrl { get; set; }
     public bool AllowEndPointTracker { get; set; }
     public JsonElement? CustomData { get; set; }
+    public Uri? PrivacyPolicyUrl { get; set; }
+    public Uri? TermsOfUseUrl { get; set; }
 
     public string StorageFolderName { get; set; } = IsDebugMode ? "VpnHoodClient.debug" : "VpnHood";
 

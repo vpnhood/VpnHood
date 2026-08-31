@@ -23,6 +23,8 @@ internal static class App
         resources.Strings.AppName = AppConfigs.AppName;
         var appOptions = new AppOptions(appConfigs.AppId, "storage", AppConfigs.IsDebugMode) {
             Resources = resources,
+            PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
+            TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             IsAddAccessKeySupported = true,
             AllowEndPointStrategy = true,

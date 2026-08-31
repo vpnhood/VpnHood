@@ -36,6 +36,8 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
             DeviceId = AndroidUtils.GetDeviceId(this), //this will be hashed using AppId
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],
             Resources = resources,
+            PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
+            TermsOfUseUrl = appConfigs.TermsOfUseUrl,
             UiName = "VpnHoodConnect",
             IsAddAccessKeySupported = false,
             AllowEndPointTracker = appConfigs.AllowEndPointTracker,

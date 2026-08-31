@@ -3527,6 +3527,9 @@ export class AppFeatures implements IAppFeatures {
     isBillingSupported!: boolean;
     authProviderIds!: string[];
     accountWebsiteUrl!: string | null;
+    isLicenseAgreementRequired!: boolean;
+    privacyPolicyUrl!: string | null;
+    termsOfUseUrl!: string | null;
     isTcpProxySupported!: boolean;
     isQuicSupported!: boolean;
     isSplitDomainSupported!: boolean;
@@ -3582,6 +3585,9 @@ export class AppFeatures implements IAppFeatures {
                 this.authProviderIds = null as any;
             }
             this.accountWebsiteUrl = _data["accountWebsiteUrl"] !== undefined ? _data["accountWebsiteUrl"] : null as any;
+            this.isLicenseAgreementRequired = _data["isLicenseAgreementRequired"] !== undefined ? _data["isLicenseAgreementRequired"] : null as any;
+            this.privacyPolicyUrl = _data["privacyPolicyUrl"] !== undefined ? _data["privacyPolicyUrl"] : null as any;
+            this.termsOfUseUrl = _data["termsOfUseUrl"] !== undefined ? _data["termsOfUseUrl"] : null as any;
             this.isTcpProxySupported = _data["isTcpProxySupported"] !== undefined ? _data["isTcpProxySupported"] : null as any;
             this.isQuicSupported = _data["isQuicSupported"] !== undefined ? _data["isQuicSupported"] : null as any;
             this.isSplitDomainSupported = _data["isSplitDomainSupported"] !== undefined ? _data["isSplitDomainSupported"] : null as any;
@@ -3643,6 +3649,9 @@ export class AppFeatures implements IAppFeatures {
                 data["authProviderIds"].push(item);
         }
         data["accountWebsiteUrl"] = this.accountWebsiteUrl !== undefined ? this.accountWebsiteUrl : null as any;
+        data["isLicenseAgreementRequired"] = this.isLicenseAgreementRequired !== undefined ? this.isLicenseAgreementRequired : null as any;
+        data["privacyPolicyUrl"] = this.privacyPolicyUrl !== undefined ? this.privacyPolicyUrl : null as any;
+        data["termsOfUseUrl"] = this.termsOfUseUrl !== undefined ? this.termsOfUseUrl : null as any;
         data["isTcpProxySupported"] = this.isTcpProxySupported !== undefined ? this.isTcpProxySupported : null as any;
         data["isQuicSupported"] = this.isQuicSupported !== undefined ? this.isQuicSupported : null as any;
         data["isSplitDomainSupported"] = this.isSplitDomainSupported !== undefined ? this.isSplitDomainSupported : null as any;
@@ -3687,6 +3696,9 @@ export interface IAppFeatures {
     isBillingSupported: boolean;
     authProviderIds: string[];
     accountWebsiteUrl: string | null;
+    isLicenseAgreementRequired: boolean;
+    privacyPolicyUrl: string | null;
+    termsOfUseUrl: string | null;
     isTcpProxySupported: boolean;
     isQuicSupported: boolean;
     isSplitDomainSupported: boolean;

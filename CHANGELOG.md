@@ -13,6 +13,7 @@
 * Improve: Initialization speed when using split tunneling by country
 * Improve: SOCKS & HTTP proxies stability
 * Improve: Memory usage & stability #store
+* Fix: Very slow download speed on iOS #ios #store
 * Fix: Deleting your account on one device left it visible, and still signed in, on your other devices #connect
 * Fix: Signing out could take away an access code that was still paid for #connect
 * Fix: Premium features stayed unlocked locally after a subscription had expired

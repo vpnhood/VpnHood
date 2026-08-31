@@ -106,7 +106,31 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
 
 ## How to release (current flow)
 
-1. Maintain the CHANGELOG **by hand**: put the next release's notes under a leading `# Latest`
+1. **Refresh our own package pins.** A few of our libraries live in their own repos and reach the
+   apps as `PackageReference`, not `ProjectReference` — today `VpnHood.AppLib.Assets.ClassicSpa`
+   (the SPA, published from `VpnHood.Client.WebUI`), `VpnHood.Core.Quic.MsQuic.AndroidNative` (the
+   prebuilt `libmsquic.so`, published from the msquic fork on every push to its `main`), and the
+   `Assets.*` data packages. They are **pinned to an exact version**, so a newly published one does
+   not reach a build until someone edits the pin. Publishing without that edit ships the *previous*
+   library with new app code, silently and successfully.
+
+   Check each against nuget.org before every release:
+
+   ```bash
+   curl -s https://api.nuget.org/v3-flatcontainer/<package-id-lowercased>/index.json
+   ```
+
+   The SPA hides this better than the rest: a developer with `.user/use-local-spa.txt` builds
+   against the freshly built `spa.zip` and never restores the package at all, so a stale pin looks
+   correct locally and only reaches the real world through CI. Verify the way CI sees it, without
+   moving that file:
+
+   ```bash
+   dotnet restore src/Apps/Client/VpnHood.App.Client.csproj --force -p:VhUserDir=<an empty dir>
+   grep -o '"VpnHood.AppLib.Assets.ClassicSpa/[0-9.]*"' src/Apps/Client/obj/project.assets.json
+   ```
+
+2. Maintain the CHANGELOG **by hand**: put the next release's notes under a leading `# Latest`
    heading in `CHANGELOG.md` (server notes go in `CHANGELOG.Server.md`). Lines route themselves with
    **trailing tags**: `#client` / `#connect` pick the product; `#android #ios #windows #linux` limit
    platforms (inclusive — no platform tag = every platform, `#android #ios` ships to both); `#store`
@@ -117,11 +141,11 @@ These were considered and intentionally **not** done now. Revisit if the pain gr
    vhtranslator → fastlane; see the store pipeline README in VpnHood.Client.WebUI `e2e/store/`) —
    run it after editing the section, before publishing. Update the `# Latest` section yourself each
    cycle. Commit + push as normal work.
-2. Run `pub/Client/PublishByGithub.ps1` (or `pub/Connect/PublishByGithub.ps1`). It prompts for the
+3. Run `pub/Client/PublishByGithub.ps1` (or `pub/Connect/PublishByGithub.ps1`). It prompts for the
    channel and the Play audience ratio, dispatches **Bump Version** (`bump.yml`) here, waits for it,
    then dispatches that app's publish workflow — which lives in its brand repo — against the freshly
    bumped `develop`. A failed bump means nothing is published.
-3. To bump without publishing, run `bump.yml` directly. Choose `prerelease` on/off and optionally
+4. To bump without publishing, run `bump.yml` directly. Choose `prerelease` on/off and optionally
    tick `then_publish_nugets`. It bumps the version once (`PubVersion.json` + `Directory.Build.props`)
    and pushes `develop` (a stable bump also fast-forwards `main`; a prerelease bump does not). It does
    **not** touch the changelog, and it does **not** chain an app publish — every app now publishes

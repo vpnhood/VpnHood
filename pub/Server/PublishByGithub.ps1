@@ -5,9 +5,9 @@
 # develop -> main prerelease/stable model lives in THIS monorepo via bump.yml.
 #
 # Two steps, one command:
-#   1. Bump the MONOREPO in CI (bump.yml) with client-publish AND nuget OFF — so PubVersion.json +
-#      CHANGELOG advance and are pushed to develop (+ fast-forwarded to main on a STABLE bump).
-#      Waits for it to finish.
+#   1. Bump the MONOREPO in CI (bump.yml) with the nuget publish OFF — so PubVersion.json advances
+#      and is pushed to develop (+ fast-forwarded to main on a STABLE bump). The CHANGELOG is
+#      hand-maintained and never touched here. Waits for it to finish.
 #   2. Dispatch server_publish.yml in the SERVER repo (its own `main`) to build the server from the
 #      freshly bumped monorepo code (ref = develop) and release it there — plus push the multi-arch
 #      docker image. No bump and no NuGet happen in the server repo.
@@ -67,7 +67,7 @@ $dockerText = if ($pushDocker) { "yes (Docker Hub)" } else { "no (GitHub release
 
 Write-Host "";
 Write-Host "*** Release the Server via GitHub Actions" -BackgroundColor Blue;
-Write-Host "  1) bump monorepo : $monoRepo   (publish OFF, nuget OFF -> push develop$(if (-not $prerelease) { ' + fast-forward main' }))";
+Write-Host "  1) bump monorepo : $monoRepo   (nuget OFF -> push develop$(if (-not $prerelease) { ' + fast-forward main' }))";
 Write-Host "  2) publish server: $serverRepo   (build from monorepo develop, release there)";
 Write-Host "  type             : $releaseKind";
 Write-Host "  push docker      : $dockerText";
@@ -81,13 +81,14 @@ if (-not $yes) {
 	}
 }
 
-# --- Step 1: bump the monorepo (publish + nuget OFF), then wait for it to finish ----------------
+# --- Step 1: bump the monorepo (nuget OFF), then wait for it to finish --------------------------
+# Inputs must match bump.yml exactly: a dispatch carrying an unknown input is rejected whole
+# (HTTP 422), so a leftover flag fails the release before anything is built.
 Write-Host "Dispatching bump on $monoRepo ..." -ForegroundColor Cyan;
 gh workflow run bump.yml `
 	--repo $monoRepo `
 	--ref develop `
 	-f "prerelease=$($prerelease.ToString().ToLower())" `
-	-f "then_publish=false" `
 	-f "then_publish_nugets=false";
 if ($LASTEXITCODE -ne 0) { throw "Failed to dispatch bump.yml on $monoRepo."; }
 

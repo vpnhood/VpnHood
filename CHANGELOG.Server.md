@@ -1,4 +1,4 @@
-# Upcoming
+# Latest
 
 * Fix: UDP channel stops working for all sessions after a closing session's packet arrives late
 

@@ -14,7 +14,10 @@ with these Terms on billing, cancellation, or refunds that it handles.
 
 If you obtained the App through Apple's App Store, Apple's
 [Standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) governs your
-licence and use of the App instead of these Terms. Our Privacy Policy still applies.
+licence to the App itself instead of the "Licence and ownership" section below, and controls over
+these Terms wherever the two conflict. The rest of these Terms — including the Service, acceptable
+use, plans and payment, accounts, disclaimers, liability limits, and governing law — still governs
+your use of the Service, and our Privacy Policy still applies.
 
 You must be at least 18 years old, or the age of legal majority where you live, to use the Service.
 
@@ -76,6 +79,15 @@ believe this section has been materially breached, where a service provider iden
 session, or where action is necessary to protect users or systems or to comply with law. We use
 only the records described in the Privacy Policy for this purpose; we do not record the browsing
 destinations you visit. If you believe a restriction was a mistake, contact us.
+
+## Copyright complaints and repeat infringers
+
+We respond to notices of claimed copyright infringement that concern our infrastructure. Because the
+Service is a conduit that does not host user content and does not record browsing destinations, our
+response is normally limited to matching a notice against the connection records described in the
+Privacy Policy and notifying, restricting, or terminating the access behind it. We terminate, in
+appropriate circumstances, users who are repeat infringers. Notices under the U.S. Digital Millennium
+Copyright Act or equivalent laws should be sent to the contact address at the end of these Terms.
 
 ## VPN limitations
 

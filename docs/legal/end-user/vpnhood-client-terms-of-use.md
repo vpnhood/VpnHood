@@ -12,7 +12,10 @@ to your download and use.
 
 If you obtained the App through Apple's App Store, Apple's
 [Standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) governs your
-licence and use of the App instead of these Terms. Our Privacy Policy still applies.
+licence to the App instead of the "Licence and ownership" section below, and controls over these
+Terms wherever the two conflict. The rest of these Terms — including acceptable use, disclaimers,
+liability limits, and governing law — still applies to your use of the App and of anything we
+operate, and our Privacy Policy still applies.
 
 You must be at least 18 years old, or the age of legal majority where you live, to use the App.
 
@@ -98,14 +101,14 @@ Nothing in these Terms excludes a warranty or consumer right that cannot lawfull
 
 ## Limitation of liability
 
-To the maximum extent permitted by law, we and our affiliates, officers, employees, and
-agents will not be liable for indirect, incidental, special, consequential, exemplary, or punitive
-damages, or for loss of profits, revenue, business, data, or goodwill, arising from or related to
-the App. This includes loss caused by a third-party server or access key you chose.
+To the maximum extent permitted by law, we and our affiliates, officers, employees, agents,
+developers, contributors, and licensors will not be liable for indirect, incidental, special,
+consequential, exemplary, or punitive damages, or for loss of profits, revenue, business, data, or
+goodwill, arising from or related to the App. This includes loss caused by a third-party server or
+access key you chose.
 
-To the maximum extent permitted by law, our total liability for all claims relating to the App will
-not exceed the amount you paid for the App during the 12 months before the event giving rise to the
-claim.
+To the maximum extent permitted by applicable law, our total liability for any claims arising out
+of or relating to the App will be zero where the App was provided free of charge.
 
 These limits do not apply to fraud, wilful misconduct, death or personal injury caused by
 negligence, or any other liability that cannot lawfully be limited. Some jurisdictions do not allow

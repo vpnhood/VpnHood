@@ -59,7 +59,7 @@ Crash reports follow the same switch as analytics, and your choice is remembered
 
 ### Advertisements (Google Play build)
 
-The Google Play build shows advertisements, including rewarded ads you may choose to watch to extend a session. Ads are delivered by **Google AdMob**, which collects its own data under Google's policies to select and measure ads. Advertising is not part of the pseudonymous analytics above and is not controlled by the analytics switch. Ads are not shown in every country.
+The Google Play build shows advertisements, including rewarded ads you may choose to watch to extend a session. Ads are delivered by **Google AdMob**, which collects its own data under Google's policies to select and measure ads. Advertising is not part of the pseudonymous analytics above and is not controlled by the analytics switch. Ads are not shown in every country. You can limit ad personalisation in your Google account settings and in your device's ads settings.
 
 ### Optional sign-in and purchases (App Store and Google Play builds)
 
@@ -165,7 +165,7 @@ They are obliged not to use the data for any purpose other than the one we assig
 Where data-protection law requires a legal basis, we rely on:
 
 - **performance of a contract** to provide VPN sessions, accounts, subscriptions, support, and purchases you request;
-- **consent** for optional analytics and reports you choose to send; you may withdraw consent at any time by turning analytics off;
+- **consent**, where the law requires it, for analytics, crash reports, and the reports you choose to send; you may withdraw it at any time by turning analytics off. Where the law permits opt-out analytics instead, we rely on the legitimate interests below;
 - **legitimate interests** in securing the Service, enforcing quotas, preventing fraud and abuse, diagnosing faults, and improving reliability; and
 - **legal obligations and legal claims** for tax and accounting records, lawful requests, preservation duties, and establishing, exercising, or defending claims.
 
@@ -179,7 +179,7 @@ We are based in the United States, and our providers may process data in the Uni
 
 ## Your Privacy Rights
 
-Depending on where you live, you may ask to access, correct, delete, restrict, or receive a copy of your personal data, or object to certain processing. You may withdraw consent without affecting earlier lawful processing. You may also complain to your local data-protection authority. We do not sell personal information or share it for cross-context behavioural advertising. To exercise a right, contact us below; we may need to verify your request.
+Depending on where you live, you may ask to access, correct, delete, restrict, or receive a copy of your personal data, or object to certain processing. You may withdraw consent without affecting earlier lawful processing. You may also complain to your local data-protection authority. We do not sell personal information, and outside advertising we do not share it for cross-context behavioural advertising. In the Google Play build, ad delivery by Google AdMob may count as "sharing" under some laws, including California's; you can limit ad personalisation in your Google account settings and in your device's ads settings, and no other build contains advertising. To exercise a right, contact us below; we may need to verify your request.
 
 ## Android Permissions
 

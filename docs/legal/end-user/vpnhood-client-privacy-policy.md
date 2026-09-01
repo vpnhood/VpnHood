@@ -21,9 +21,11 @@ event. We do not send browsing history, websites visited, traffic content, or tr
 Google Analytics.
 
 The **Client ID** is a one-way hash that includes the app's identity. It is not a serial number,
-phone number, or advertising ID. On mobile and Linux, it is based on a random value created on first
-launch. On Windows, it is based on the Windows user account and may remain the same after reinstalling
-the app.
+phone number, or advertising ID. On iOS and Linux, it is based on a random value created on first
+launch, so reinstalling the app produces a new Client ID. On Android and Windows, it is derived from
+an identifier the operating system already provides, so it may remain the same after reinstalling the
+app; on Android it changes when the device is factory reset, and on Windows it follows your Windows
+user account.
 
 Analytics is controlled by **Settings → Privacy → "Share anonymous usage data"**. Turning it off
 stops analytics and is remembered for later launches. The iOS build does not load Google Analytics
@@ -35,6 +37,11 @@ On supported non-iOS builds, you may choose to send a rating, feedback, or a dia
 Google Firebase. Nothing is sent automatically. A report may contain the technical log, the text you
 enter, and an email address only if you choose to provide one. The local log otherwise stays on your
 device.
+
+Network addresses in a sent log — yours, and those of the servers your device connected to — are
+replaced by tokens using a key created inside the app that is never saved and never sent with the
+file, so the copy we receive cannot be turned back into addresses by us or by anybody else. Local
+network addresses stay readable, as they identify nobody.
 
 ## VPN Servers Are Separate
 

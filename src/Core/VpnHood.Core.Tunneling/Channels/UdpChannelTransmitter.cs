@@ -33,7 +33,9 @@ public abstract class UdpChannelTransmitter : IDisposable
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
     private static ulong _sendSequenceNumber;
-    private bool _disposed;
+    // volatile: the catch filters tell our own teardown from a dead socket by this flag, and Connected is
+    // read by the listener host; both run on threads other than the one calling Dispose
+    private volatile bool _disposed;
     private bool _isSendBufferSizeCustomized;
     private bool _isReceivedBufferSizeCustomized;
 
@@ -230,9 +232,9 @@ public abstract class UdpChannelTransmitter : IDisposable
         if (_disposed)
             return;
 
-        VhLogger.Instance.LogInformation(GeneralEventId.Essential, 
-            "UdpChannelTransmitter: Disposing the transmitter. LocalEndPoint: {LocalEndPoint}", 
-            VhLogger.Format(_udpClient.Client.LocalEndPoint));
+        VhLogger.Instance.LogInformation(GeneralEventId.Essential,
+            "UdpChannelTransmitter: Disposing the transmitter. LocalEndPoint: {LocalEndPoint}",
+            VhLogger.Format(LocalEndPoint));
 
         _disposed = true;
         _udpClient.Dispose();

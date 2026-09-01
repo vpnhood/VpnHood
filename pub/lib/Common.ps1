@@ -30,9 +30,11 @@ $packageConnectDirName = "VpnHoodConnect";
 #   Resolve-PublishRepoSlug / Resolve-PublishRepoUrl [-Connect] — resolve the target repo (defaults to
 #     the current repo so a fork publishes to itself; override with VH_PUBLISH_REPO / VH_CONNECT_PUBLISH_REPO).
 #   Get-AppPublishConfig — per-app .user/<packageFileTitle>/ config lookups.
+#   Get-LegacyAndroidInfoFileName — retired asset names still emitted during a rename's grace period.
 # Callers invoke these directly (e.g. Publish-GithubRelease gets its repo as a param resolved by the caller).
 . "$PSScriptRoot/Resolve-PublishRepo.ps1";
 . "$PSScriptRoot/AppPublishConfig.ps1";
+. "$PSScriptRoot/LegacyAssetAliases.ps1";
 
 # Prepare the latest folder
 $packagesRootDirLatest = "$pubDir/bin/latest";

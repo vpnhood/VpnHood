@@ -180,6 +180,42 @@ No release_type was passed; shipping as 'release' per pub/PubVersion.json (v8.1.
 — which is the gate telling you it is inert for that run, not an error. A fork sees this only if it
 dispatches by hand or its caller does not forward the input.
 
+### Renaming a release asset (keep the old name for a grace period)
+
+GitHub serves a release asset strictly by file name, so renaming one silently breaks every
+`…/releases/latest/download/<old-name>` link already out in the world — bookmarks, forks, and
+anything polling the file on a schedule. The release itself publishes green; only the far end
+notices.
+
+So when an asset is renamed, keep publishing the **old name alongside the new one** for about three
+months. [pub/lib/LegacyAssetAliases.ps1](lib/LegacyAssetAliases.ps1) holds the rename map and the
+expiry date; [Publish-AndroidApp.ps1](lib/Publish-AndroidApp.ps1) writes the aliased file and
+[Publish-GithubRelease.ps1](lib/Publish-GithubRelease.ps1) attaches it. Past the expiry both calls
+go inert on their own and the release goes back to the new names only — then delete the file and its
+two call sites. The alias carries the *current* release's payload, so a stale poller is handed the
+latest build under its real name.
+
+Alias the update-info **JSON** only, never the package. The alias is a *pointer*, not a second copy
+of the release: it carries the current release's payload, so its `PackageUrl` already names the real
+(new-name) package. Anything still on the old URL downloads the latest build from its canonical
+location, and duplicating tens of megabytes per release under a retired name buys nothing.
+
+The alias only reaches releases published *after* it is added. Patch the releases already out —
+whichever tag each repo currently serves as **Latest**, since that is what `latest/download`
+resolves to:
+
+```bash
+gh release download <tag> --repo <owner/repo> --pattern "<new-name>.json"
+cp <new-name>.json <old-name>.json
+gh release upload <tag> --repo <owner/repo> <old-name>.json --clobber
+```
+
+Currently aliased: the Android arm64 web build, renamed from `…-android-arm64-web` to
+`…-android-web-arm64` in v8.1.838 (client) / v8.1.847 (connect), aliased until 2026-12-01. Note this
+one never affected our own apps — both the universal and the arm64 APK are built from the same
+`*.Android.Web` project, whose `AppConfigs.UpdateInfoUrl` has always named
+`VpnHood<App>-Android-web.json`.
+
 ### NuGet smoke test (validate the pipeline without burning a version)
 
 To prove the pack + push path works against nuget.org **without** consuming a real version, dispatch

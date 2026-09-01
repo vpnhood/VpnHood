@@ -148,6 +148,61 @@ public class TunnelTest : TestBase
             cancellationToken: TestCt);
     }
 
+    // Regression: a packet arriving for a session whose cryptor was already disposed must not take the
+    // shared transmitter down with it. Live on 2026-08-29/30 this killed server-wide UDP for every
+    // session until the process restarted, because ObjectDisposedException counted as a dead socket.
+    [TestMethod]
+    public async Task UdpChannel_survives_a_disposed_session_cryptor()
+    {
+        var sessionKey = VhUtils.GenerateKey();
+        const ulong closingSessionId = 1UL;
+        const ulong livingSessionId = 2UL;
+
+        // one server transmitter shared by two sessions
+        using var serverTransmitter =
+            new ServerUdpChannelTransmitterTest(new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)));
+        var serverEndPoint = serverTransmitter.LocalEndPoint;
+        var closingTransport = serverTransmitter.AddSession(closingSessionId, sessionKey);
+
+        using var livingChannel = new UdpChannel(serverTransmitter.AddSession(livingSessionId, sessionKey),
+            new UdpChannelOptions {
+                AutoDisposePackets = true,
+                Blocking = false,
+                ChannelId = Guid.CreateVersion7().ToString(),
+                Lifespan = null,
+                TrafficMeter = new TrafficMeter()
+            });
+        var livingReceivedPackets = new List<IpPacket>();
+        livingChannel.PacketReceived += delegate(object? _, IpPacket ipPacket) {
+            livingReceivedPackets.Add(ipPacket);
+        };
+        livingChannel.Start();
+
+        // the closing session tears down its cryptors while its transport is still reachable by sessionId
+        closingTransport.Dispose();
+
+        // a late packet for that session hits the disposed cryptor inside the shared read loop
+        var (closingClientChannel, closingClientTransmitter) =
+            CreateClientUdpChannel(serverEndPoint, sessionId: closingSessionId, sessionKey: sessionKey);
+        using var closingClientTransmitterDisposable = closingClientTransmitter;
+        using var closingClientChannelDisposable = closingClientChannel;
+        closingClientChannel.Start();
+        closingClientChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+
+        // the untouched session must keep flowing over the very same transmitter
+        var (livingClientChannel, livingClientTransmitter) =
+            CreateClientUdpChannel(serverEndPoint, sessionId: livingSessionId, sessionKey: sessionKey);
+        using var livingClientTransmitterDisposable = livingClientTransmitter;
+        using var livingClientChannelDisposable = livingClientChannel;
+        livingClientChannel.Start();
+        livingClientChannel.SendPacketQueued(PacketBuilder.Parse(NetPacketBuilder.RandomPacket(true)));
+
+        await VhTestUtil.AssertEqualsWait(1, () => livingReceivedPackets.Count,
+            cancellationToken: TestCt);
+        Assert.IsTrue(serverTransmitter.Connected,
+            "One session's disposed cryptor must not dispose the shared transmitter.");
+    }
+
     [TestMethod]
     public async Task UdpChannel_via_Tunnel()
     {

@@ -133,6 +133,15 @@ else {
 		"$packageDir/windows-web/$packageFileTitle-win-x64.json",
 		"$packageDir/windows-web/$packageFileTitle-win-x64.txt"
 	);
+
+	# The arm64 update-info file under its retired name, written alongside the current one by
+	# Publish-AndroidApp.ps1 while the rename's grace period is open. Get-LegacyAndroidInfoFileName
+	# returns $null once it lapses, so the alias then drops out of both ends at once and the asset list
+	# goes back to exactly the names above. See pub/lib/LegacyAssetAliases.ps1.
+	$legacyArm64InfoFileName = Get-LegacyAndroidInfoFileName -packageFileTitle $packageFileTitle -distribution "web-arm64";
+	if ($legacyArm64InfoFileName) {
+		$assets += "$packageDir/android-web-arm64/$legacyArm64InfoFileName";
+	}
 }
 
 $missingAssets = $assets | Where-Object { -not (Test-Path $_) };

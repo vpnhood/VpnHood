@@ -162,6 +162,15 @@ try {
 		};
 
 		$json | ConvertTo-Json | Out-File $module_infoFile -Encoding ASCII;
+
+		# Same payload under the distribution's retired file name, while a rename's grace period is open
+		# (pub/lib/LegacyAssetAliases.ps1 — it returns $null once that lapses, or when this distribution
+		# was never renamed). It carries THIS release's PackageUrl, so a poller still on the old URL is
+		# handed the current build under its real name. Publish-GithubRelease.ps1 attaches it.
+		$legacyInfoFileName = Get-LegacyAndroidInfoFileName -packageFileTitle $packageFileTitle -distribution $distribution;
+		if ($legacyInfoFileName) {
+			$json | ConvertTo-Json | Out-File "$moduleDir/$legacyInfoFileName" -Encoding ASCII;
+		}
 	}
 
 	# ------------- aab

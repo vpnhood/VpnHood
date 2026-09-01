@@ -16,17 +16,19 @@ internal class UdpListenerHost(SessionManager sessionManager) : IDisposable
     private readonly List<UdpChannelTransmitter> _transmitters = [];
     private bool _disposed;
 
+    // only report transmitters that are still running; a transmitter that disposed itself
+    // (e.g. its socket died) must not be advertised in the Hello response
     public IReadOnlyList<IPEndPoint> EndPoints =>
-        [.. _transmitters.Select(x => x.LocalEndPoint)];
+        [.. _transmitters.Where(x => x.Connected).Select(x => x.LocalEndPoint)];
 
     public Task<IReadOnlyList<ServerHostEndPointStatus>> Configure(
         IReadOnlyList<IPEndPoint> ipEndPoints, TransferBufferSize? bufferSize)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        // stop transmitters that are not in the list
+        // stop transmitters that are not in the list; also drop dead ones so they get recreated below
         foreach (var transmitter in _transmitters
-                     .Where(x => !ipEndPoints.Contains(x.LocalEndPoint)).ToArray()) {
+                     .Where(x => !x.Connected || !ipEndPoints.Contains(x.LocalEndPoint)).ToArray()) {
             VhLogger.Instance.LogInformation("Stop listening on UdpEndPoint: {UdpEndPoint}",
                 VhLogger.Format(transmitter.LocalEndPoint));
             transmitter.Dispose();

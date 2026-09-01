@@ -13,7 +13,7 @@
 	<!-- Production: reference the zip-only package. It ships no DLL — its build/*.targets embeds
 	     spa.zip into THIS assembly as 'VpnHood.App.Client.spa.zip' (see SpaAsset). -->
 	<ItemGroup Condition="Exists('$(VhUserDir)\use-local-spa.txt')==false">
-		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="8.1.851" />
+		<PackageReference Include="VpnHood.AppLib.Assets.ClassicSpa" Version="8.1.852" />
 	</ItemGroup>
 	<!-- Local dev: embed the freshly built zip directly, under the same LogicalName the package uses,
 	     so SpaAsset reads it identically. No DLL to build — run _build-local.ps1 then create the

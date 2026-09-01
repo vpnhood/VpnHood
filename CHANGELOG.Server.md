@@ -1,5 +1,9 @@
 # Upcoming
 
+* Fix: UDP channel stops working for all sessions after a closing session's packet arrives late
+
+# v8.1.837
+
 * Fix: QUIC server stops after some errors
 
 # v8.0.815

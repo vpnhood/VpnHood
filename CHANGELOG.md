@@ -1,5 +1,9 @@
 # Latest
 
+* Update: Starlink Tools — an early preview of the screen
+
+# v8.1.849
+
 * Improve: Much faster download speed #ios #store
 * Improve: Terms of Use and Privacy Policy are now reachable from the subscription screen, not only from Settings #store
 * Improve: Legal links across the app now use the standard open-in-new-window icon, and the two links on the first-run screen are no longer crowded together

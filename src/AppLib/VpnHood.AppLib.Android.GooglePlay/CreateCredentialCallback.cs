@@ -11,7 +11,9 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 /// </summary>
 public class CreateCredentialCallback : Java.Lang.Object, ICredentialManagerCallback
 {
-    private readonly TaskCompletionSource<CreateCredentialResponse> _taskCompletionSource = new();
+    // completed from the Android main thread; the awaiting caller must not resume inside that callback frame
+    private readonly TaskCompletionSource<CreateCredentialResponse> _taskCompletionSource =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public void OnError(Java.Lang.Object e)
     {

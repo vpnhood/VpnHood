@@ -2,6 +2,10 @@
 
 namespace VpnHood.AppLib.Droid.GooglePlay;
 
+// The callback objects handed to Credential Manager are deliberately NOT disposed here. Android
+// keeps calling them on the main executor for as long as it holds them, and disposing the managed
+// peer first forces .NET to re-create it on the next call — which fails (no activation
+// constructor) and crashes the process. The GC bridge releases them once the Java side lets go.
 public class GoogleCredentialManager(ICredentialManager credentialManager) : IDisposable
 {
     public static GoogleCredentialManager Create(Activity activity)
@@ -14,7 +18,7 @@ public class GoogleCredentialManager(ICredentialManager credentialManager) : IDi
         GetCredentialRequest credentialRequest, CancellationToken cancellationToken)
     {
         var mainExecutor = activity.MainExecutor ?? throw new InvalidOperationException("Activity has no main executor.");
-        using var credentialManagerCallback = new CredentialManagerCallback();
+        var credentialManagerCallback = new CredentialManagerCallback();
         var cancellationSignal = cancellationToken.ToCancellationSignal(); // do not dispose this
         credentialManager.GetCredentialAsync(activity, credentialRequest, cancellationSignal,
             mainExecutor, credentialManagerCallback);
@@ -26,7 +30,7 @@ public class GoogleCredentialManager(ICredentialManager credentialManager) : IDi
         CreateCredentialRequest credentialRequest, CancellationToken cancellationToken)
     {
         var mainExecutor = activity.MainExecutor ?? throw new InvalidOperationException("Activity has no main executor.");
-        using var createCredentialCallback = new CreateCredentialCallback();
+        var createCredentialCallback = new CreateCredentialCallback();
         var cancellationSignal = cancellationToken.ToCancellationSignal(); // do not dispose this
         credentialManager.CreateCredentialAsync(activity, credentialRequest, cancellationSignal,
             mainExecutor, createCredentialCallback);
@@ -44,7 +48,7 @@ public class GoogleCredentialManager(ICredentialManager credentialManager) : IDi
         CancellationToken cancellationToken)
     {
         var mainExecutor = activity.MainExecutor ?? throw new InvalidOperationException("Activity has no main executor.");
-        using var clearCredentialCallback = new ClearCredentialStateCallback();
+        var clearCredentialCallback = new ClearCredentialStateCallback();
         var cancellationSignal = cancellationToken.ToCancellationSignal(); // do not dispose this
         credentialManager.ClearCredentialStateAsync(request, cancellationSignal,
             mainExecutor, clearCredentialCallback);

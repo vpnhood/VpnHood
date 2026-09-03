@@ -7,7 +7,9 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 // CredentialManagerCallback any OnResult means success.
 public class ClearCredentialStateCallback : Java.Lang.Object, ICredentialManagerCallback
 {
-    private readonly TaskCompletionSource _taskCompletionSource = new();
+    // completed from the Android main thread; the awaiting caller must not resume inside that callback frame
+    private readonly TaskCompletionSource _taskCompletionSource =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public void OnError(Java.Lang.Object e)
     {

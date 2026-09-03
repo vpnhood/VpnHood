@@ -176,8 +176,14 @@ public sealed class AndroidMessageClient : IMessageClient
 
         FailWaiter(binderTcs, DisposedMessage);
         FailPendingRequests(DisposedMessage);
-        _replyBinder.Dispose();
-        _serviceConnection.Dispose();
+
+        // Neither Java peer is disposed here, deliberately. A call into a disposed peer makes .NET
+        // re-create it, which fails (no activation constructor) and crashes the process. The service
+        // process still holds the reply binder and may deliver a late reply — OnTransact simply drops
+        // it. UnbindService forgets the connection inside Android's ServiceDispatcher, but doConnected
+        // invokes the connection outside its lock, so a callback already past that lock on the main
+        // thread can still arrive after a Dispose made from another thread. The GC bridge releases
+        // both peers once the Java side lets go.
     }
 
     // receives the service's oneway reply transactions and completes the matching pending request

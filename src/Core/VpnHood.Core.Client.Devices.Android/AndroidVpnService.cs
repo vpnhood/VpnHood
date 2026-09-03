@@ -53,9 +53,15 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
             "AndroidVpnService OnStartCommand. Action: {Action}, ProcessId: {ProcessId}",
             action, Process.GetCurrentProcess().Id);
 
-        // Create StartForeground and show notification as soon as possible. It is mandatory
-        if (_notification is null)
-            ShowNotification(VpnServiceHost.DefaultConnectionInfo);
+        // Promote to the foreground before anything else; it is mandatory after startForegroundService.
+        // A refused promotion (e.g. ForegroundServiceStartNotAllowedException) must end the start here:
+        // continuing would let the system kill the process ten seconds later with
+        // ForegroundServiceDidNotStartInTimeException, and returning Sticky would restart it into the
+        // same failure.
+        if (!TryShowNotification(VpnServiceHost.DefaultConnectionInfo)) {
+            StopSelf(startId);
+            return StartCommandResult.NotSticky;
+        }
 
         // get "manual" in
         return action switch {
@@ -141,22 +147,39 @@ public class AndroidVpnService : VpnService, IVpnServiceHandler
 
     public void ShowNotification(ConnectionInfo connectionInfo)
     {
-        if (_notification == null) {
-            VhLogger.Instance.LogDebug("Create and show the notification for the VPN service.");
-            _notification =
-                new AndroidVpnNotification(this, new VpnServiceLocalization(), connectionInfo.SessionName ?? "VPN");
+        TryShowNotification(connectionInfo);
+    }
 
-            // start foreground with notification
-            try {
-                StartForeground(AndroidVpnNotification.NotificationId, _notification.Build());
-            }
-            catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Failed to create VPN notification.");
-                return;
-            }
+    // Promotes the service to the foreground on first use, then keeps the notification in step with
+    // the connection state. Returns false when the system refused the promotion.
+    private bool TryShowNotification(ConnectionInfo connectionInfo)
+    {
+        var notification = _notification ?? TryStartForeground(connectionInfo.SessionName ?? "VPN");
+        if (notification == null)
+            return false;
+
+        notification.Update(connectionInfo.ClientState);
+        return true;
+    }
+
+    // Builds the notification and promotes the service with it. _notification is assigned only once
+    // the system has accepted the promotion, so a failed attempt (the builder, Build() and
+    // StartForeground can all throw) leaves nothing behind and the next start command retries.
+    // Reports the failure instead of throwing: a throw from OnStartCommand leaves no returned mode
+    // and Android would restart the service into a back-off crash loop.
+    private AndroidVpnNotification? TryStartForeground(string sessionName)
+    {
+        VhLogger.Instance.LogDebug("Create and show the notification for the VPN service.");
+        try {
+            var notification = new AndroidVpnNotification(this, new VpnServiceLocalization(), sessionName);
+            StartForeground(AndroidVpnNotification.NotificationId, notification.Build());
+            _notification = notification;
+            return notification;
         }
-
-        _notification.Update(connectionInfo.ClientState);
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not promote the VPN service to the foreground.");
+            return null;
+        }
     }
 
     public void StopNotification()

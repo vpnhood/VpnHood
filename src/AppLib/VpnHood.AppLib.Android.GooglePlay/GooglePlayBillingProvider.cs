@@ -79,33 +79,40 @@ public class GooglePlayBillingProvider : IBillingProvider
         });
     }
 
-    private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase> purchases)
+    // Play's listener contract: the list is null on every non-Ok result and may be null or empty
+    // even with Ok. GoogleBillingErrors.Create refuses an Ok result by design, so the order-less
+    // Ok outcomes below are named here explicitly rather than routed through it.
+    private void PurchasesUpdatedListener(BillingResult billingResult, IList<Purchase>? purchases)
     {
-        switch (billingResult.ResponseCode) {
-            case BillingResponseCode.Ok:
-                var purchasedItem = purchases.FirstOrDefault();
-                if (purchasedItem == null) {
-                    _taskCompletionSource?.TrySetException(GoogleBillingErrors.Create(billingResult));
-                    break;
-                }
-
-                // Play sets no order id while a purchase is still pending; the token alone cannot
-                // tell the two apart, so the order id stays the pending probe even though only the
-                // token travels onward
-                if (purchasedItem.OrderId != null)
-                    _taskCompletionSource?.TrySetResult(new PurchaseProof { Value = purchasedItem.PurchaseToken });
-                else
-                    // Based on Google document, orderId is null on pending state.
-                    // The pending state must be handled in the UI to let the user know their subscription will be
-                    // available when Google accepts payment and changes the purchase state to PURCHASES.
-                    _taskCompletionSource?.TrySetException(
-                        GoogleBillingErrors.Create(billingResult, purchasedItem.PurchaseState));
-                break;
-
-            default:
-                _taskCompletionSource?.TrySetException(GoogleBillingErrors.Create(billingResult));
-                break;
+        if (billingResult.ResponseCode != BillingResponseCode.Ok) {
+            _taskCompletionSource?.TrySetException(GoogleBillingErrors.Create(billingResult));
+            return;
         }
+
+        var purchasedItem = purchases?.FirstOrDefault();
+        if (purchasedItem == null) {
+            _taskCompletionSource?.TrySetException(new BillingException(BillingErrorCode.Unknown,
+                "Google Play returned OK without a purchase."));
+            return;
+        }
+
+        // Play sets no order id while a purchase is still pending; the token alone cannot
+        // tell the two apart, so the order id stays the pending probe even though only the
+        // token travels onward
+        if (purchasedItem.OrderId != null) {
+            _taskCompletionSource?.TrySetResult(new PurchaseProof { Value = purchasedItem.PurchaseToken });
+            return;
+        }
+
+        // Based on Google document, orderId is null on pending state.
+        // The pending state must be handled in the UI to let the user know their subscription will be
+        // available when Google accepts payment and changes the purchase state to PURCHASED.
+        // Any other order-less purchase is a state Play does not document; it must not throw on us.
+        _taskCompletionSource?.TrySetException(
+            purchasedItem.PurchaseState == Android.BillingClient.Api.PurchaseState.Pending
+                ? GoogleBillingErrors.Create(billingResult, purchasedItem.PurchaseState)
+                : new BillingException(BillingErrorCode.Unknown,
+                    $"Google Play returned a purchase without an order id. PurchaseState: {purchasedItem.PurchaseState}"));
     }
 
     public async Task<IReadOnlyList<SubscriptionPlan>> GetSubscriptionPlans(IReadOnlyList<string> productIds,
@@ -252,7 +259,10 @@ public class GooglePlayBillingProvider : IBillingProvider
             if (_taskCompletionSource is { Task.IsCompleted: false })
                 throw new InvalidOperationException("A purchase is already in progress.");
 
-            _taskCompletionSource = new TaskCompletionSource<PurchaseProof>();
+            // completed from the Android main thread by the purchases listener; whatever awaits the
+            // purchase must not resume inside that callback frame
+            _taskCompletionSource = new TaskCompletionSource<PurchaseProof>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
             var billingResult = billingClient.LaunchBillingFlow(appUiContext.Activity, billingFlowParams);
 
             if (billingResult.ResponseCode != BillingResponseCode.Ok)

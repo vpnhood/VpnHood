@@ -12,7 +12,9 @@ namespace VpnHood.AppLib.Droid.GooglePlay;
 
 public partial class CredentialManagerCallback : Java.Lang.Object, ICredentialManagerCallback
 {
-    private readonly TaskCompletionSource<GetCredentialResponse> _taskCompletionSource = new();
+    // completed from the Android main thread; the awaiting caller must not resume inside that callback frame
+    private readonly TaskCompletionSource<GetCredentialResponse> _taskCompletionSource =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     // Credential Manager reports real failures (stale account tokens, config problems)
     // as GetCredentialCancellationException — the same type as the user dismissing the

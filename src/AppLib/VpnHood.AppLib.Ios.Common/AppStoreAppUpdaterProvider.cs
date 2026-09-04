@@ -70,7 +70,8 @@ public class AppStoreAppUpdaterProvider : IAppUpdaterProvider
 
             // open the App Store page; the user updates (or declines) there
             VhLogger.Instance.LogDebug("Opening the App Store page for update...");
-            var taskCompletionSource = new TaskCompletionSource<bool>();
+            // completed on the main thread by the OpenUrl callback; do not resume inline on it
+            var taskCompletionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             await IosUtils.RunOnUiThread(() => {
                 var url = new NSUrl(storeApp.TrackViewUrl);
                 UIApplication.SharedApplication.OpenUrl(url, new NSDictionary(),

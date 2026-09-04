@@ -14,11 +14,17 @@ public static class IosCallbackTask
         if (cancellationToken.IsCancellationRequested)
             return Task.FromCanceled(cancellationToken);
 
-        var tcs = new TaskCompletionSource();
-        cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+        // completed on iOS's own completion queue; the awaiting caller must not resume inline on it
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // released once the native call has answered, or a long-lived token accumulates one
+        // registration per call
+        var registration = cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+
         // CRITICAL: nativeCall must receive a NON-NULL callback; passing null causes
         // EXC_BAD_ACCESS when iOS tries to invoke the block.
         nativeCall(err => {
+            registration.Dispose();
             if (err != null)
                 tcs.TrySetException(new NSErrorException(err));
             else

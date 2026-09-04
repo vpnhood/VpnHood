@@ -17,7 +17,8 @@ public static class IosUtils
             }
         }
 
-        var taskCompletionSource = new TaskCompletionSource();
+        // completed on the main thread; the awaiting caller must not resume inline on it
+        var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         UIApplication.SharedApplication.BeginInvokeOnMainThread(() => {
             try {
                 action();
@@ -43,7 +44,8 @@ public static class IosUtils
             }
         }
 
-        var taskCompletionSource = new TaskCompletionSource<T>();
+        // completed on the main thread; the awaiting caller must not resume inline on it
+        var taskCompletionSource = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         UIApplication.SharedApplication.BeginInvokeOnMainThread(() => {
             try {
                 var result = action();

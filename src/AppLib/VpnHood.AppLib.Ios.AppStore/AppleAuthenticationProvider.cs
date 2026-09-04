@@ -39,6 +39,14 @@ public class AppleAuthenticationProvider : IAuthenticationExternalProvider
         controller.PerformRequests();
 
         var credential = await handler.Completion.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        // The controller holds its delegate and presentation provider weakly, and nothing else
+        // references either object while the sheet is up, so in a Release build the GC may collect
+        // them mid-flow — the callbacks then land on a nil delegate and the sign-in never completes.
+        // Referencing them after the await keeps both alive until Apple has answered.
+        GC.KeepAlive(controller);
+        GC.KeepAlive(handler);
+
         var identityToken = credential.IdentityToken?.ToString(NSStringEncoding.UTF8)
             ?? throw new AuthenticationException("Apple returned no identity token.");
         return identityToken;

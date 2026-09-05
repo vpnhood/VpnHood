@@ -1,9 +1,9 @@
 # Latest
 
-* Update: Starlink Tools — an early preview of the screen
-* Fix: Rare crash after a cancelled Google sign-in or when the VPN service answered late #android #connect
-* Fix: The system could kill the app ten seconds after a refused VPN service start instead of the service stopping cleanly #android
-* Fix: Crash when Google Play reported a purchase result without a purchase #android #connect
+* Update: Starlink Tools — an early preview of the screen #store
+* Fix: Rare crash after a cancelled Google sign-in or when the VPN service answered late #android #connect #store
+* Fix: The system could kill the app ten seconds after a refused VPN service start instead of the service stopping cleanly #android #store
+* Fix: Crash when Google Play reported a purchase result without a purchase #android #connect #store
 * Fix: Sign in with Apple could occasionally never finish #ios #connect
 
 # v8.1.849

@@ -89,9 +89,13 @@ internal class RequestSender(ConnectorService connectorService) : IDisposable
             lock (ConnectorService.Stat) ConnectorService.Stat.RequestCount++;
             return ret;
         }
-        catch (Exception) when (timeoutCts.IsCancellationRequested) {
+        // Keep the exception that actually stopped us as the inner one. Its stack is the only record of
+        // WHICH stage timed out - TCP connect, TLS handshake, or waiting for the response - and that
+        // distinction is what separates an IP-level blackhole from SNI filtering when a whole region
+        // reports "no reachable server".
+        catch (Exception ex) when (timeoutCts.IsCancellationRequested) {
             throw new TimeoutException(
-                $"Could not send the {(RequestCode)request.RequestCode} request in the given time.");
+                $"Could not send the {(RequestCode)request.RequestCode} request in the given time.", ex);
         }
     }
 

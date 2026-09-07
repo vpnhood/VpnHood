@@ -6,6 +6,7 @@ you are trying to do.
 | I want to… | Go to |
 | --- | --- |
 | **Publish my own branded VPN app** to the stores | [publish-your-app/](publish-your-app/README.md) ← start here |
+| Know which component talks to which, and in which direction | [topology.md](topology.md) |
 | Know exactly which credential goes where in CI | [cicd/deployment.md](cicd/deployment.md) |
 | Understand what free / trial / ad / premium mean in the app | [connection-options.md](connection-options.md) |
 | Understand accounts, subscriptions, refunds | [accounts/account-lifecycle.md](accounts/account-lifecycle.md) |
@@ -46,6 +47,7 @@ Store policy and legal checkpoints a publisher must clear:
 
 | Area | Document |
 | --- | --- |
+| Component topology | [topology.md](topology.md) — who connects to whom, in which direction, and how many of each |
 | iOS app + Network Extension | [ios/](ios/README.md) — architecture, build & provisioning, memory limits, runtime rules |
 | Android | [android/google-signin-setup.md](android/google-signin-setup.md) — Google sign-in in debug builds |
 | Split tunnelling | [split-ip/](split-ip/README.md) — by country, by domain, by app |

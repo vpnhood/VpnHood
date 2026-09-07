@@ -81,8 +81,12 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
     public override void OnCreate()
     {
-        // lets init firebase analytics as single tone as soon as possible
-        if (!FirebaseAnalyticsTracker.IsInit && !AppConfigs.IsDebug)
+        // Init Firebase Analytics as a singleton as soon as possible, but not in the tile process: it
+        // never reports anything, and FirebaseInitProvider runs only in the default process, so this
+        // call would be the whole Firebase start-up cost inside the tile's executing-service window
+        // (Play ANR group "Executing service …QuickLaunchTileService"). The VPN service process keeps
+        // it on purpose: this same call is what gives Crashlytics crash reporting there.
+        if (!FirebaseAnalyticsTracker.IsInit && !AppConfigs.IsDebug && !QuickLaunchTileService.IsTileProcess)
             FirebaseAnalyticsTracker.Init();
 
         // init app

@@ -5,6 +5,7 @@
 * Fix: The system could kill the app ten seconds after a refused VPN service start instead of the service stopping cleanly #android #store
 * Fix: Crash when Google Play reported a purchase result without a purchase #android #connect #store
 * Fix: Sign in with Apple could occasionally never finish #ios #connect
+* Improve: The Quick Settings tile no longer starts Firebase in its own process, so it appears faster on low-end devices #android #connect
 
 # v8.1.849
 

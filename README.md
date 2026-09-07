@@ -25,10 +25,12 @@ Available for Windows, Linux, Android and iOS.
 
 
 ## Client Features
+
 * One-click connect
 * Fast & secure tunneling
 * Undetectable on private IPs
-* Protocols: UDP, TCP, Cloaked, Combination
+* Protocols: UDP, TCP, QUIC, Cloaked, Combination
+* Smart Proxies: SOCKS4, SOCKS5, HTTP & HTTPS relays, tested in parallel, rated, rotated and auto-updated from a list URL
 * Split tunneling (Apps & Countries)
 * Custom DNS
 * Platforms: Windows (10/11 x64), Android (Phone / TV), iOS (iPhone / iPad), Linux
@@ -36,6 +38,7 @@ Available for Windows, Linux, Android and iOS.
 * IPv4 / IPv6
 
 ## Server Features
+
 * Zero network configuration required
 * No admin privilege required
 * Hot restart (sessions persist)
@@ -45,6 +48,7 @@ Available for Windows, Linux, Android and iOS.
 * Platforms: Windows 10/11/Server, Linux
 
 ## Developer Features
+
 * Open source (LGPL) — fully in .NET
 * MAUI support
 * Ads interface (AdMob, InMobi, Chartboost integrated)
@@ -55,10 +59,12 @@ Available for Windows, Linux, Android and iOS.
 * Simple Visual Studio build experience
 
 ## Security Audit
+
 VpnHood underwent a comprehensive security audit by the Open Tech Fund. Read the full report
 [here](https://www.opentech.fund/security-safety-audits/vpnhood-security-audit-results/).
 
 ## FAQ & Documents
+
 Technical and publishing documentation lives in [`docs/`](docs/README.md) — including
 **[how to publish your own branded VpnHood app](docs/publish-your-app/README.md)** to the App Store
 and Google Play. General questions are answered in our
@@ -71,19 +77,24 @@ and Google Play. General questions are answered in our
 * [More...](https://github.com/vpnhood/VpnHood/wiki)
 
 ## Support & Community
+
 You are always welcome!
+
 * Issues & feature requests: [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
 * Discussions & Q&A: [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
 * Stay updated and follow us: [LinkedIn](https://www.linkedin.com/company/vpnhood).
 
 ## Supported Server
+
 <a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-win.png"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>
  -- | --
 Windows|Linux
 
 ## Special Thanks
+
 * [Advanced Installer](https://www.advancedinstaller.com): Installer tools for Windows.
 * [ReSharper](https://www.jetbrains.com/resharper/): Write, improve, and maintain C# code.
-* [BrowserStack](https://www.browserstack.com/): This project is tested with BrowserStack
+* [BrowserStack](https://www.browserstack.com/): This project is tested with BrowserStack.
+
 ---
 Enjoy VpnHood! Contributions, feedback and, stars are welcome.

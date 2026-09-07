@@ -100,7 +100,7 @@ public class ServerFinder(
         foreach (var itemException in itemExceptions) {
             VhLogger.Instance.LogWarning(itemException.exception,
                 "Failed to resolve endpoints for server token. HostName: {HostName}, HostPort: {HostPort}",
-                itemException.serverToken.HostName, itemException.serverToken.HostPort);
+                VhLogger.FormatHostName(itemException.serverToken.HostName), itemException.serverToken.HostPort);
         }
 
         return results;

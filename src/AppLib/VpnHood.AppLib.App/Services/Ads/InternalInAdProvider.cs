@@ -16,7 +16,7 @@ public class InternalInAdProvider : IAdProvider
 
     public Task LoadAd(IUiContext uiContext, CancellationToken cancellationToken)
     {
-        AdLoadedTime = FastDateTime.Now;
+        AdLoadedTime = FastDateTime.UtcNow;
         return Task.CompletedTask;
     }
 

@@ -522,9 +522,9 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         var remoteSettings = SettingsService.RemoteSettings;
         if (CurrentClientProfileInfo?.IsPremium == true ||
             remoteSettings?.PromotionImageUrl is null ||
-            remoteSettings.PromotionStartDate < DateTime.UtcNow ||
+            remoteSettings.PromotionStartDate < FastDateTime.UtcNow ||
             remoteSettings.PromotionEndDate is null ||
-            remoteSettings.PromotionEndDate < DateTime.UtcNow)
+            remoteSettings.PromotionEndDate < FastDateTime.UtcNow)
             return false;
 
         return SettingsService.PromotionImageFilePath != null;
@@ -720,7 +720,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // reset connection state
             _appPersistState.LastClearedError = null; // it is a new connection
             _appPersistState.HasDiagnoseRequested = connectOptions.Diagnose;
-            _appPersistState.ConnectRequestTime = DateTime.Now;
+            _appPersistState.ConnectRequestTime = DateTime.UtcNow;
             FireConnectionStateChanged();
 
             // initialize built-in tracker after acquire userAgent
@@ -1135,7 +1135,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         Settings.UserReview = new UserReview {
             AppVersion = Features.Version,
             Rating = rating,
-            Time = DateTime.UtcNow
+            Time = FastDateTime.UtcNow
         };
 
         _ = Services.Tracker.TryTrack(

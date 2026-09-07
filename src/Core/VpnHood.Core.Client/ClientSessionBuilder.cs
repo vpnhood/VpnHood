@@ -260,7 +260,7 @@ internal class ClientSessionBuilder(
                 ServerVersion = Version.Parse(helloResponse.ServerVersion),
                 SuppressedTo = helloResponse.SuppressedTo,
                 AdRequirement = helloResponse.AdRequirement,
-                CreatedTime = DateTime.UtcNow,
+                CreatedTime = FastDateTime.UtcNow,
                 IsTcpPacketSupported = helloResponse.IsTcpPacketSupported,
                 IsTcpProxySupported = helloResponse.IsTcpProxySupported,
                 IsQuicChannelSupported = hostQuicEndPoint != null && socketFactory.IsQuicSupported,

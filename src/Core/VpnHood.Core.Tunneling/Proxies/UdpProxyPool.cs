@@ -106,7 +106,7 @@ public class UdpProxyPool : PassthroughPacketTransport, IPacketProxyPool
         // other refresher, so an outbound-only flow would otherwise go deaf after UdpTimeout.
         // Re-add the mapping if the receive path has already removed it as expired
         if (!mapping.IsDisposed) {
-            mapping.LastUsedTime = FastDateTime.Now;
+            mapping.LastUsedTime = FastDateTime.UtcNow;
         }
         else {
             var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);

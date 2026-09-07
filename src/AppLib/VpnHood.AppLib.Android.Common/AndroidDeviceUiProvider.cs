@@ -57,13 +57,13 @@ public class AndroidDeviceUiProvider : IDeviceUiProvider
 
         // request for adding tile
         // result. 0: reject, 1: already granted, 2: granted 
-        var resuestTime = DateTime.Now;
+        var resuestTime = DateTime.UtcNow;
         var res = await QuickLaunchTileService
             .RequestAddTile(appUiContext.Activity)
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        if (res <= 0 && DateTime.Now - resuestTime < TimeSpan.FromMilliseconds(1000))
+        if (res <= 0 && DateTime.UtcNow - resuestTime < TimeSpan.FromMilliseconds(1000))
             throw new RequestQuickLaunchException(
                 "Unable to add the Quick Launch. Try again later or add it manually.");
 

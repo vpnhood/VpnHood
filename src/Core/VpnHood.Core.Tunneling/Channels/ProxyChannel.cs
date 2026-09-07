@@ -29,7 +29,7 @@ public class ProxyChannel : IProxyChannel
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private bool IsDisposed => _disposed;
 
-    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
+    public DateTime LastActivityTime { get; private set; } = FastDateTime.UtcNow;
     public string ChannelId { get; }
     private readonly TrafficMeter? _trafficMeter;
 
@@ -232,7 +232,7 @@ public class ProxyChannel : IProxyChannel
                     _traffic += new Traffic(0, bytesRead);
 
                 // set LastActivityTime as some data delegated
-                LastActivityTime = FastDateTime.Now;
+                LastActivityTime = FastDateTime.UtcNow;
             }
 
             // notify traffic meter and throttle if needed

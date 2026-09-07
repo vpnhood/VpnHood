@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.ClientProfiles;
@@ -129,12 +129,12 @@ public class AccountService
     private static bool IsCacheCurrent(Account account)
     {
         DateTime?[] expirations = [account.Subscription?.ExpirationTime, account.AccessCodeInfo?.ExpirationTime];
-        return expirations.All(x => x == null || x.Value.ToUniversalTime() > DateTime.UtcNow);
+        return expirations.All(x => x == null || x.Value.ToUniversalTime() > FastDateTime.UtcNow);
     }
 
     private bool IsRetryThrottled()
     {
-        return DateTime.UtcNow - _lastRefreshAttemptTime < RefreshRetryInterval;
+        return FastDateTime.UtcNow - _lastRefreshAttemptTime < RefreshRetryInterval;
     }
 
     /// <summary>
@@ -237,7 +237,7 @@ public class AccountService
         // silently throw away a decision the person made (keyring plan §6).
         await UploadPendingAccessCode(cancellationToken).Vhc();
 
-        _lastRefreshAttemptTime = DateTime.UtcNow;
+        _lastRefreshAttemptTime = FastDateTime.UtcNow;
         _account = await _accountProvider.GetAccount(cancellationToken).Vhc();
         Directory.CreateDirectory(_storageFolderPath);
         await File.WriteAllTextAsync(_accountFilePath, JsonSerializer.Serialize(_account), cancellationToken).Vhc();

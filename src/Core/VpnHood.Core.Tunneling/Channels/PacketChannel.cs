@@ -113,18 +113,18 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
 
         // dispose if its lifetime is over
         if (_started && _closeSentTime == null &&
-            _lifespan.HasValue && FastDateTime.Now - PacketStat.CreatedTime > _lifespan.Value) {
+            _lifespan.HasValue && FastDateTime.UtcNow - PacketStat.CreatedTime > _lifespan.Value) {
             VhLogger.Instance.LogDebug(GeneralEventId.PacketChannel,
                 "PacketChannel lifetime is over. ChannelId: {ChannelId}, CreatedTime: {CreatedTime}, Lifespan: {Lifespan}",
                 ChannelId, PacketStat.CreatedTime, _lifespan);
 
             // send close message if not already sent
             SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
-            _closeSentTime = FastDateTime.Now; // mark as closing
+            _closeSentTime = FastDateTime.UtcNow; // mark as closing
         }
 
         // dispose if _closeMessageTime is set and more than graceful timeout
-        if (FastDateTime.Now - _closeSentTime > TransportDefaults.TcpGracefulTimeout)
+        if (FastDateTime.UtcNow - _closeSentTime > TransportDefaults.TcpGracefulTimeout)
             Dispose();
 
         return default;
@@ -142,8 +142,8 @@ public abstract class PacketChannel : PacketTransport, IPacketChannel
 
             // send close message if closed messaged has not been received before
             if (_closeReceivedTime == null) {
-                _closeReceivedTime ??= FastDateTime.Now;
-                _closeSentTime ??= FastDateTime.Now;
+                _closeReceivedTime ??= FastDateTime.UtcNow;
+                _closeSentTime ??= FastDateTime.UtcNow;
                 SendPacketQueued(PacketMessageHandler.CreateMessage(new ClosePacketMessage()));
             }
 

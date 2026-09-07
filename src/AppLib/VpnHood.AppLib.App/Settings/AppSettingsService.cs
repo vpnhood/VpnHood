@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Toolkit.Logging;
@@ -71,7 +71,7 @@ public class AppSettingsService
         BeforeSave?.Invoke(this, EventArgs.Empty);
         OldUserSettings = JsonUtils.JsonClone(UserSettings);
         lock (_saveLock) {
-            Settings.ConfigTime = DateTime.Now;
+            Settings.ConfigTime = DateTime.UtcNow; // full precision: the SPA's change detection (see AppSettings)
             var json = JsonSerializer.Serialize(Settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(AppSettingsFilePath, json, Encoding.UTF8);
         }

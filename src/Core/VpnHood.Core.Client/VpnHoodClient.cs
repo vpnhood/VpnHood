@@ -46,7 +46,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     public ITracker? Tracker { get; }
     internal ServerIpFilter ServerIpFilter => _serverIpFilter;
 
-    public DateTime StateChangedTime { get; private set; } = DateTime.Now;
+    public DateTime StateChangedTime { get; private set; } = DateTime.UtcNow;
     public bool UseTcpProxy { get; set { field = value; _session?.UseTcpProxy = value; } }
     public bool DropUdp { get; set { field = value; _session?.DropUdp = value; } }
     public bool DropQuic { get; set { field = value; _session?.DropQuic = value; } }
@@ -192,7 +192,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             if (_lastState == State)
                 return;
             _lastState = State;
-            StateChangedTime = FastDateTime.Now;
+            StateChangedTime = FastDateTime.UtcNow;
         }
 
         VhLogger.Instance.LogInformation("Client state is changed. NewState: {NewState}", State);

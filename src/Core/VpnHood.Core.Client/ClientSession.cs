@@ -354,7 +354,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
 
         // stop traffic if the client is paused and unpause after AutoPauseTimeout
         if (_autoWaitTime != null) {
-            if (FastDateTime.Now - _autoWaitTime.Value < Config.Transport.AutoWaitTimeout)
+            if (FastDateTime.UtcNow - _autoWaitTime.Value < Config.Transport.AutoWaitTimeout)
                 throw new PacketDropException("Connection is paused. The packet has been dropped.");
 
             // resume connection if the client is paused and AutoWaitTimeout is not set
@@ -540,7 +540,7 @@ internal class ClientSession : IClientSession, IDisposable, IAsyncDisposable
             if (_disposed)
                 throw;
 
-            var now = FastDateTime.Now;
+            var now = FastDateTime.UtcNow;
             _lastConnectionErrorTime ??= now;
 
             // dispose by session timeout and must before pause because SessionTimeout is bigger than ReconnectTimeout

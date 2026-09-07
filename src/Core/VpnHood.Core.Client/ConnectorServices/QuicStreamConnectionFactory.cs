@@ -155,7 +155,7 @@ internal class QuicStreamConnectionFactory : IAsyncDisposable
         lock (_items) {
             foreach (var item in _items.ToArray()) {
                 var drained = item.ActiveStreamCount == 0 &&
-                              (item.IsDead || item.ZeroActiveSince + IdleConnectionTimeout <= FastDateTime.Now);
+                              (item.IsDead || item.ZeroActiveSince + IdleConnectionTimeout <= FastDateTime.UtcNow);
                 if (item.IsJammed || drained) {
                     _items.Remove(item);
                     disposeTasks.Add(item.TryDisposeAsync().AsTask());

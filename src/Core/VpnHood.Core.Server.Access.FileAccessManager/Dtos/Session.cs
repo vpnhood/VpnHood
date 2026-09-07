@@ -12,8 +12,8 @@ public class Session
     public required string TokenId { get; init; }
     public required ClientInfo ClientInfo { get; init; }
     public required byte[] SessionKey { get; init; }
-    public DateTime CreatedTime { get; init; } = FastDateTime.Now;
-    public DateTime LastUsedTime { get; init; } = FastDateTime.Now;
+    public DateTime CreatedTime { get; init; } = FastDateTime.UtcNow;
+    public DateTime LastUsedTime { get; init; } = FastDateTime.UtcNow;
     public DateTime? EndTime { get; set; }
     public DateTime? ExpirationTime { get; set; }
     public bool IsAlive => EndTime == null;
@@ -33,6 +33,6 @@ public class Session
     public void Kill()
     {
         if (IsAlive)
-            EndTime = FastDateTime.Now;
+            EndTime = FastDateTime.UtcNow;
     }
 }

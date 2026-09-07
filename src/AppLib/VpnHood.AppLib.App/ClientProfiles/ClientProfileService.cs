@@ -240,7 +240,7 @@ public class ClientProfileService
             if (item?.AccessCode == null || item.AccessCodeRefusal != null)
                 return;
 
-            item.AccessCodeRefusal = new AccessCodeRefusal { ErrorCode = errorCode, RefusedTime = DateTime.UtcNow };
+            item.AccessCodeRefusal = new AccessCodeRefusal { ErrorCode = errorCode, RefusedTime = FastDateTime.UtcNow };
             Save();
         }
     }

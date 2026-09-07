@@ -263,14 +263,14 @@ public class VpnServiceManager : IDisposable
         using var scopeLock = await _connectionInfoLock.LockAsync(updateCts.Token).Vhc();
 
         // read from cache if not expired
-        if (_isInitializing || (!force && FastDateTime.Now - _connectionInfoRefreshedTime < _connectionInfoTimeSpan))
+        if (_isInitializing || (!force && FastDateTime.UtcNow - _connectionInfoRefreshedTime < _connectionInfoTimeSpan))
             return _connectionInfo;
 
         // update from file to make sure there is no error
         // VpnClient always update the file when ConnectionState changes
         // Should send request if service is in initializing state, because SendRequest will set the state to disposed if failed
         _connectionInfo = JsonUtils.TryDeserializeFile<ConnectionInfo>(_vpnStatusFilePath) ?? _connectionInfo;
-        _connectionInfoRefreshedTime = FastDateTime.Now;
+        _connectionInfoRefreshedTime = FastDateTime.UtcNow;
         if (_isInitializing || _connectionInfo.Error != null || !_connectionInfo.IsStarted()) {
             CheckForEvents();
             return _connectionInfo;
@@ -318,7 +318,7 @@ public class VpnServiceManager : IDisposable
         }
 
         CheckForEvents();
-        _connectionInfoRefreshedTime = FastDateTime.Now;
+        _connectionInfoRefreshedTime = FastDateTime.UtcNow;
         return _connectionInfo;
     }
 
@@ -335,7 +335,7 @@ public class VpnServiceManager : IDisposable
         // update the last connection info
         if (response.ConnectionInfo.CreatedTime >= _connectionInfo.CreatedTime) {
             _connectionInfo = response.ConnectionInfo;
-            _connectionInfoRefreshedTime = FastDateTime.Now;
+            _connectionInfoRefreshedTime = FastDateTime.UtcNow;
         }
 
         // convert to error. 

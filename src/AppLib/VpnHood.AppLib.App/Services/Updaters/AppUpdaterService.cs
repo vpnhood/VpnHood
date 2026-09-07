@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
@@ -24,8 +24,16 @@ public class AppUpdaterService : IDisposable
         _appVersion = appVersion;
         _updateOptions = updateOptions;
         // defer reading version.json until update status is first queried
-        _lazyData = new Lazy<AppUpdaterData>(() =>
-            JsonUtils.TryDeserializeFile<AppUpdaterData>(VersionCheckFilePath) ?? new AppUpdaterData());
+        _lazyData = new Lazy<AppUpdaterData>(() => {
+            var data = JsonUtils.TryDeserializeFile<AppUpdaterData>(VersionCheckFilePath) ?? new AppUpdaterData();
+
+            // these stamps used to be written in local time and deserialize as local kind; the
+            // comparisons are in UTC now, so normalize once (a no-op for values already in UTC)
+            data.PostponeTime = data.PostponeTime?.ToUniversalTime();
+            data.CheckedTime = data.CheckedTime?.ToUniversalTime();
+            data.UpdaterAvailableSince = data.UpdaterAvailableSince?.ToUniversalTime();
+            return data;
+        });
     }
 
     public AppUpdaterStatus Status {
@@ -44,7 +52,7 @@ public class AppUpdaterService : IDisposable
 
     private bool IsInPostponeTime =>
         Data.PostponeTime != null &&
-        DateTime.Now - Data.PostponeTime < _updateOptions.PostponePeriod &&
+        FastDateTime.UtcNow - Data.PostponeTime < _updateOptions.PostponePeriod &&
         _appVersion.Equals(Data.PostponeVersion);
 
     private VersionStatus CalcVersionStatus()
@@ -56,7 +64,7 @@ public class AppUpdaterService : IDisposable
             return VersionStatus.Unknown;
 
         // wait for updater
-        if (DateTime.UtcNow - Data.PublishInfo.ReleaseDate < Data.PublishInfo.NotificationDelay)
+        if (FastDateTime.UtcNow - Data.PublishInfo.ReleaseDate < Data.PublishInfo.NotificationDelay)
             return VersionStatus.Latest; // assume the latest version is available to let store validate the app
 
         // set default notification delay
@@ -104,7 +112,7 @@ public class AppUpdaterService : IDisposable
         }
 
         // skip if already checked and not forced
-        if (!force && DateTime.Now - Data.CheckedTime < _updateOptions.CheckInterval) {
+        if (!force && FastDateTime.UtcNow - Data.CheckedTime < _updateOptions.CheckInterval) {
             VhLogger.Instance.LogDebug("VersionCheck is postponed. CheckedTime: {CheckedTime}, Interval: {Interval}",
                 Data.CheckedTime, _updateOptions.CheckInterval);
             return;
@@ -114,7 +122,7 @@ public class AppUpdaterService : IDisposable
             // check by provider
             if (await TryUpdateByProvider(force, cancellationToken).Vhc() ||
                 await TryUpdateByPublishInfoUrl(cancellationToken).Vhc()) {
-                Data.CheckedTime = DateTime.Now;
+                Data.CheckedTime = FastDateTime.UtcNow;
             }
         }
         finally {
@@ -135,11 +143,11 @@ public class AppUpdaterService : IDisposable
             }
 
             // update available time if not set
-            Data.UpdaterAvailableSince ??= DateTime.Now;
+            Data.UpdaterAvailableSince ??= FastDateTime.UtcNow;
 
             // wait while the user's postpone is active or the auto-updater has not had its chance yet
             if (!force && (IsInPostponeTime ||
-                           DateTime.Now - Data.UpdaterAvailableSince < _updateOptions.PromptDelay))
+                           FastDateTime.UtcNow - Data.UpdaterAvailableSince < _updateOptions.PromptDelay))
                 return true; // handled
 
             // update available, try to update
@@ -189,7 +197,7 @@ public class AppUpdaterService : IDisposable
     public void Postpone()
     {
         // version status is unknown when the app container can do it
-        Data.PostponeTime = DateTime.Now;
+        Data.PostponeTime = FastDateTime.UtcNow;
         Data.PostponeVersion = _appVersion;
         Save();
     }

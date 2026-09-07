@@ -14,7 +14,7 @@ public class EventReporter : IDisposable
 
     public int TotalEventCount { get; private set; }
     public int LastReportEventCount { get; private set; }
-    public DateTime LastReportEventTime { get; private set; } = FastDateTime.Now;
+    public DateTime LastReportEventTime { get; private set; } = FastDateTime.UtcNow;
     public LogScope LogScope { get; set; }
 
 
@@ -52,7 +52,7 @@ public class EventReporter : IDisposable
                 return;
 
             Report();
-            LastReportEventTime = FastDateTime.Now;
+            LastReportEventTime = FastDateTime.UtcNow;
             LastReportEventCount = TotalEventCount;
         }
     }
@@ -60,7 +60,7 @@ public class EventReporter : IDisposable
     protected virtual void Report()
     {
         var args = new[] {
-            Tuple.Create("EventDuration", (object?)(FastDateTime.Now - LastReportEventTime).ToString(@"hh\:mm\:ss")),
+            Tuple.Create("EventDuration", (object?)(FastDateTime.UtcNow - LastReportEventTime).ToString(@"hh\:mm\:ss")),
             Tuple.Create("EventCount", (object?)(TotalEventCount - LastReportEventCount)),
             Tuple.Create("EventTotal", (object?)TotalEventCount)
         };

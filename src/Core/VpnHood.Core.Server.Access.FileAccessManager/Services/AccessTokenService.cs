@@ -123,7 +123,7 @@ public class AccessTokenService
         // for backward compatibility
         if (File.Exists(usageFileName) && usage.Version < 2) {
             usage.CreatedTime = File.GetCreationTimeUtc(usageFileName);
-            usage.LastUsedTime = File.GetLastWriteTime(usageFileName);
+            usage.LastUsedTime = File.GetLastWriteTimeUtc(usageFileName);
         }
 
         // create access token data

@@ -49,7 +49,7 @@ public class AdMobAppOpenAdProvider(string adUnitId) : IAdProvider
             .WaitAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        AdLoadedTime = DateTime.Now;
+        AdLoadedTime = DateTime.UtcNow;
     }
 
     public async Task<ShowAdResult> ShowAd(IUiContext uiContext, string? customData,

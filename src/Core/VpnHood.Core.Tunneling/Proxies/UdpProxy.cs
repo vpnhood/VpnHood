@@ -42,7 +42,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
         _socket = socket;
         _receiveBuffer = new byte[receiveBufferSize];
         DestinationEndPointMap = new TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>>(udpTimeout);
-        LastUsedTime = FastDateTime.Now;
+        LastUsedTime = FastDateTime.UtcNow;
         LocalEndPoint = socket.GetLocalEndPoint();
         AddressFamily = LocalEndPoint.AddressFamily;
 
@@ -78,7 +78,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
 
             // send packet to destination
             var sentBytes = await _socket.SendToAsync(udpPacket.Payload, SocketFlags.None, _destinationEndPoint).Vhc();
-            LastUsedTime = FastDateTime.Now; // keep worker alive while receiving traffic
+            LastUsedTime = FastDateTime.UtcNow; // keep worker alive while receiving traffic
 
             if (sentBytes != udpPacket.Payload.Length)
                 throw new Exception(
@@ -126,7 +126,7 @@ internal class UdpProxy : SinglePacketTransport, ITimeoutItem
                     continue;
                 }
 
-                LastUsedTime = FastDateTime.Now; // keep worker alive while receiving traffic
+                LastUsedTime = FastDateTime.UtcNow; // keep worker alive while receiving traffic
                 var ipPacket = PacketBuilder.BuildUdp(remoteEndPoint, sourceEndPoint.Value,
                     _receiveBuffer.AsSpan(0, receivedBytes));
                 ipPacket.UpdateAllChecksums();

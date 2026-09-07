@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Core.Toolkit.Utils;
+namespace VpnHood.Core.Toolkit.Utils;
 
 public static class FileUtils
 {
@@ -6,13 +6,13 @@ public static class FileUtils
         CancellationToken cancellationToken = default)
     {
         // don't use fast date time, it's not accurate enough
-        var startTime = DateTime.Now;
+        var startTime = DateTime.UtcNow;
         while (true) {
             try {
                 await File.WriteAllTextAsync(filePath, content, cancellationToken);
                 return;
             }
-            catch (IOException) when (DateTime.Now - startTime < timeout) {
+            catch (IOException) when (DateTime.UtcNow - startTime < timeout) {
                 await Task.Delay(100, cancellationToken);
             }
         }
@@ -22,7 +22,7 @@ public static class FileUtils
         CancellationToken cancellationToken = default)
     {
         // don't use fast date time, it's not accurate enough
-        var startTime = DateTime.Now;
+        var startTime = DateTime.UtcNow;
         while (true) {
             try {
                 await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -30,7 +30,7 @@ public static class FileUtils
                 var content = await reader.ReadToEndAsync(cancellationToken);
                 return content;
             }
-            catch (IOException) when (DateTime.Now - startTime < timeout) {
+            catch (IOException) when (DateTime.UtcNow - startTime < timeout) {
                 await Task.Delay(100, cancellationToken);
             }
         }

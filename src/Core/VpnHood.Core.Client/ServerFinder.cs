@@ -252,7 +252,7 @@ public class ServerFinder(
         finally {
             VhLogger.Instance.LogInformation(GeneralEventId.Request,
                 "Endpoint reachability check completed. ElapsedTime: {ElapsedTime}, CompletedEndpoints: {CompletedEndpoints}/{TotalEndpoints}",
-                FastDateTime.Now - _progressMonitor.Progress.StartedTime,
+                FastDateTime.UtcNow - _progressMonitor.Progress.StartedTime,
                 hostStatuses.Count(x => x.Available is not null), hostStatuses.Length);
 
             // Ensure progress is complete at the end of the operation

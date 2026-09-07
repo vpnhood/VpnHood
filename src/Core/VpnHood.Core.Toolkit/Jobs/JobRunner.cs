@@ -13,7 +13,7 @@ public class JobRunner
     private static readonly Lazy<JobRunner> FastInstanceLazy = new(() => new JobRunner(TimeSpan.FromSeconds(2)));
     private int _maxDegreeOfParallelism = 2;
     private readonly TimeSpan _cleanupTimeSpan = TimeSpan.FromSeconds(60);
-    private DateTime _lastCleanupTime = FastDateTime.Now;
+    private DateTime _lastCleanupTime = FastDateTime.UtcNow;
 
     public static JobRunner SlowInstance => SlowInstanceLazy.Value;
     public static JobRunner FastInstance => FastInstanceLazy.Value;
@@ -44,7 +44,7 @@ public class JobRunner
             await Task.Delay(Interval).Vhc();
 
             // Periodic cleanup of dead jobs based on CleanupTimeSpan
-            var now = FastDateTime.Now;
+            var now = FastDateTime.UtcNow;
             if (now - _lastCleanupTime >= _cleanupTimeSpan) {
                 RemoveDeadCallbacks();
                 _lastCleanupTime = now;

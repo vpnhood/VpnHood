@@ -73,7 +73,7 @@ public class Job : IDisposable
         if (IsStarted)
             throw new InvalidOperationException("Job is already started.");
 
-        StartedTime = FastDateTime.Now;
+        StartedTime = FastDateTime.UtcNow;
     }
 
     public void Stop()
@@ -95,7 +95,7 @@ public class Job : IDisposable
             if (_jobSemaphore.CurrentCount == 0)
                 return false;
 
-            var now = FastDateTime.Now;
+            var now = FastDateTime.UtcNow;
 
             // first time execution after due time 
             if (LastExecutedTime is null)
@@ -153,7 +153,7 @@ public class Job : IDisposable
             throw;
         }
         finally {
-            LastExecutedTime = FastDateTime.Now;
+            LastExecutedTime = FastDateTime.UtcNow;
             VhUtils.TryInvoke(() => _jobSemaphore.Release()); // semaphore may be already disposed
         }
     }

@@ -7,8 +7,8 @@ public class ProgressMonitor(
     TimeSpan taskTimeout,
     int maxDegreeOfParallelism = 1)
 {
-    private readonly DateTime _startTime = FastDateTime.Now;
-    private DateTime _currentBatchStartTime = FastDateTime.Now;
+    private readonly DateTime _startTime = FastDateTime.UtcNow;
+    private DateTime _currentBatchStartTime = FastDateTime.UtcNow;
     private readonly Lock _incrementLock = new();
     private int _completedTaskCount;
     private int TotalBatches => (int)Math.Ceiling(totalTaskCount / (double)maxDegreeOfParallelism);
@@ -26,7 +26,7 @@ public class ProgressMonitor(
         lock (_incrementLock) {
             _completedTaskCount++;
             if (_completedTaskCount % maxDegreeOfParallelism == 0)
-                _currentBatchStartTime = FastDateTime.Now;
+                _currentBatchStartTime = FastDateTime.UtcNow;
         }
     }
 
@@ -45,7 +45,7 @@ public class ProgressMonitor(
 
                 // Method 2: Overall time-based progress
                 // completedTime not exceed of its own bound
-                var completedTime = CurrentBatchIndex * taskTimeout + (FastDateTime.Now - _currentBatchStartTime);
+                var completedTime = CurrentBatchIndex * taskTimeout + (FastDateTime.UtcNow - _currentBatchStartTime);
                 var maxCurrentBatchTime = (CurrentBatchIndex + 1) * taskTimeout;
                 if (completedTime > maxCurrentBatchTime)
                     completedTime = maxCurrentBatchTime;

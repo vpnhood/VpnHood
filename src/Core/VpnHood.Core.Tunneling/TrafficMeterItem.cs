@@ -9,8 +9,8 @@ internal sealed class TrafficMeterItem : IDisposable
     private long _total;
     private long _lastTotal;
     private long _windowTotal;
-    private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
-    private DateTime _windowStartTime = FastDateTime.Now;
+    private DateTime _lastSpeedUpdateTime = FastDateTime.UtcNow;
+    private DateTime _windowStartTime = FastDateTime.UtcNow;
     private long _speed;
     private readonly Lock _speedLock = new();
     private readonly SemaphoreSlim _throttleSemaphore = new(1, 1);
@@ -56,7 +56,7 @@ internal sealed class TrafficMeterItem : IDisposable
                 return;
 
             await Task.Delay(delay, cancellationToken).Vhc();
-            var now = FastDateTime.Now;
+            var now = FastDateTime.UtcNow;
             var totalElapsed = (now - _windowStartTime).TotalSeconds;
             var allowed = (long)(MaxSpeed * totalElapsed);
             var current = Interlocked.Read(ref _windowTotal);
@@ -74,7 +74,7 @@ internal sealed class TrafficMeterItem : IDisposable
         if (_disposed || MaxSpeed is 0)
             return TimeSpan.Zero;
 
-        var now = FastDateTime.Now;
+        var now = FastDateTime.UtcNow;
         var elapsed = (now - _windowStartTime).TotalSeconds;
         if (elapsed < 0.1)
             elapsed = 0.1;
@@ -89,7 +89,7 @@ internal sealed class TrafficMeterItem : IDisposable
     private void UpdateSpeed()
     {
         lock (_speedLock) {
-            var now = FastDateTime.Now;
+            var now = FastDateTime.UtcNow;
             var duration = (now - _lastSpeedUpdateTime).TotalSeconds;
             if (duration < 1)
                 return;

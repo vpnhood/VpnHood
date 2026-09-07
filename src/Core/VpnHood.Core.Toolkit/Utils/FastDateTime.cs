@@ -3,10 +3,10 @@ namespace VpnHood.Core.Toolkit.Utils;
 public static class FastDateTime
 {
     private static readonly Lock RefreshLocker = new();
-    private static long _nowTicks = DateTime.Now.Ticks;
-    private static long _utcNowTicks = DateTime.UtcNow.Ticks;
-    private static long _lastTickCount = Environment.TickCount64;
-    private static long _lastTickCountUtc = Environment.TickCount64;
+    private static long _nowTicks;
+    private static long _utcNowTicks;
+    private static long _lastTickCount;
+    private static long _lastTickCountUtc;
 
     public static TimeSpan Precision { get; set; } = TimeSpan.FromSeconds(1);
 
@@ -18,10 +18,10 @@ public static class FastDateTime
     public static DateTime Now {
         get {
             var tickCount = Environment.TickCount64;
-            if (tickCount - Volatile.Read(ref _lastTickCount) >= Precision.TotalMilliseconds) {
+            if (Volatile.Read(ref _nowTicks) == 0 || tickCount - Volatile.Read(ref _lastTickCount) >= Precision.TotalMilliseconds) {
                 lock (RefreshLocker) {
                     tickCount = Environment.TickCount64;
-                    if (tickCount - Volatile.Read(ref _lastTickCount) >= Precision.TotalMilliseconds) {
+                    if (Volatile.Read(ref _nowTicks) == 0 || tickCount - Volatile.Read(ref _lastTickCount) >= Precision.TotalMilliseconds) {
                         Volatile.Write(ref _nowTicks, DateTime.Now.Ticks);
                         Volatile.Write(ref _lastTickCount, tickCount);
                     }
@@ -35,10 +35,10 @@ public static class FastDateTime
     public static DateTime UtcNow {
         get {
             var tickCount = Environment.TickCount64;
-            if (tickCount - Volatile.Read(ref _lastTickCountUtc) >= Precision.TotalMilliseconds) {
+            if (Volatile.Read(ref _utcNowTicks) == 0 || tickCount - Volatile.Read(ref _lastTickCountUtc) >= Precision.TotalMilliseconds) {
                 lock (RefreshLocker) {
                     tickCount = Environment.TickCount64;
-                    if (tickCount - Volatile.Read(ref _lastTickCountUtc) >= Precision.TotalMilliseconds) {
+                    if (Volatile.Read(ref _utcNowTicks) == 0 || tickCount - Volatile.Read(ref _lastTickCountUtc) >= Precision.TotalMilliseconds) {
                         Volatile.Write(ref _utcNowTicks, DateTime.UtcNow.Ticks);
                         Volatile.Write(ref _lastTickCountUtc, tickCount);
                     }

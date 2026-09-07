@@ -16,7 +16,7 @@ public static class Ip2LocationDbParser
         CancellationToken cancellationToken = default)
     {
         interval ??= TimeSpan.FromDays(7);
-        if (File.GetLastWriteTime(filePath) > DateTime.Now - interval)
+        if (File.GetLastWriteTimeUtc(filePath) > DateTime.UtcNow - interval)
             return;
 
         // copy zip to memory

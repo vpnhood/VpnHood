@@ -495,7 +495,7 @@ public class ManagedProxyConnector : IProxyConnector
         if (!checkMode) {
             lock (_sessionStatus) {
                 _sessionStatus.SucceededCount++;
-                _sessionStatus.LastSucceeded = DateTime.UtcNow;
+                _sessionStatus.LastSucceeded = FastDateTime.UtcNow;
                 _sessionStatus.Latency = entry.Status.Latency;
                 _sessionStatus.ErrorMessage = null;
             }
@@ -508,7 +508,7 @@ public class ManagedProxyConnector : IProxyConnector
         if (!checkMode) {
             lock (_sessionStatus) {
                 _sessionStatus.FailedCount++;
-                _sessionStatus.LastFailed = DateTime.UtcNow;
+                _sessionStatus.LastFailed = FastDateTime.UtcNow;
                 _sessionStatus.Latency = null;
                 _sessionStatus.ErrorMessage = entry.Status.ErrorMessage;
             }

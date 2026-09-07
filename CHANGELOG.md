@@ -6,6 +6,7 @@
 * Fix: Crash when Google Play reported a purchase result without a purchase #android #connect #store
 * Fix: Sign in with Apple could occasionally never finish #ios #connect
 * Improve: The Quick Settings tile no longer starts Firebase in its own process, so it appears faster on low-end devices #android #connect
+* Fix: Timeouts and session cleanup no longer drift with the device's time zone or a daylight-saving change
 
 # v8.1.849
 

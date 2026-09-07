@@ -339,7 +339,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
 
     private Session[] GetIdleSessions()
     {
-        var minSessionActivityTime = FastDateTime.Now - SessionOptions.TimeoutValue;
+        var minSessionActivityTime = FastDateTime.UtcNow - SessionOptions.TimeoutValue;
         return [
             .. Sessions
                 .Values
@@ -463,7 +463,7 @@ public class SessionManager : IAsyncDisposable, IDisposable
     {
         // traffic should be collected if there is some traffic and last activity time is expired
         // it makes sure that we notify the manager that session was still active
-        var minActivityTime = FastDateTime.Now - SessionOptions.SyncIntervalValue;
+        var minActivityTime = FastDateTime.UtcNow - SessionOptions.SyncIntervalValue;
 
         // get all sessions and their traffic
         var usages = Sessions.Values

@@ -23,13 +23,13 @@ public class ExponentialBackoff(TimeSpan baseDelay, TimeSpan maxDelay)
     }
 
     /// <summary>True when there is no pending failure or the backoff window has elapsed since the last failure.</summary>
-    public bool IsReady => FailCount == 0 || FastDateTime.Now - _lastFailTime >= CurrentDelay;
+    public bool IsReady => FailCount == 0 || FastDateTime.UtcNow - _lastFailTime >= CurrentDelay;
 
     /// <summary>Records a failed attempt, growing the backoff window.</summary>
     public void OnFail()
     {
         FailCount++;
-        _lastFailTime = FastDateTime.Now;
+        _lastFailTime = FastDateTime.UtcNow;
     }
 
     /// <summary>Clears the failure history so the next attempt is allowed immediately.</summary>

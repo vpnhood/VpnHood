@@ -42,7 +42,7 @@ internal class AppCompositeAdService
     {
         return _loadedAdProviderItem?.AdProvider.AdLoadedTime == null ||
                _loadedAdProviderItem.AdProvider.AdLoadedTime + _loadedAdProviderItem.AdProvider.AdLifeSpan <
-               DateTime.Now;
+               DateTime.UtcNow;
     }
 
     private static bool IsCountrySupported(AppAdProviderItem adProviderItem, string countryCode)

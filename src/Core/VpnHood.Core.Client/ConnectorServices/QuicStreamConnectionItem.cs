@@ -107,7 +107,7 @@ internal class QuicStreamConnectionItem(
         lock (_usageLock) {
             ActiveStreamCount--;
             if (ActiveStreamCount == 0)
-                ZeroActiveSince = FastDateTime.Now;
+                ZeroActiveSince = FastDateTime.UtcNow;
         }
     }
 

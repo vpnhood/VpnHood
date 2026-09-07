@@ -260,7 +260,7 @@ public class VpnServiceHost : IDisposable
             await client.ProxyConnector.Flush().Vhc();
 
         var connectionInfo = new ConnectionInfo {
-            CreatedTime = FastDateTime.Now,
+            CreatedTime = FastDateTime.UtcNow,
             ProxyConnectorStatus = client.ProxyConnector?.Status,
             SessionName = client.Config.SessionName,
             SessionInfo = client.Session?.Info,
@@ -278,7 +278,7 @@ public class VpnServiceHost : IDisposable
         CancellationToken cancellationToken)
     {
         var connectionInfo = new ConnectionInfo {
-            CreatedTime = FastDateTime.Now,
+            CreatedTime = FastDateTime.UtcNow,
             ProxyConnectorStatus = null,
             SessionInfo = null,
             SessionStatus = null,

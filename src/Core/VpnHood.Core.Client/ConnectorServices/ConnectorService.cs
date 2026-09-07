@@ -394,9 +394,9 @@ internal class ConnectorService : IDisposable
     {
         public required TimeSpan IdleConnectionTimeout { get; init; }
         public required ReusableStreamConnection StreamConnection { get; init; }
-        private DateTime EnqueueTime { get; } = FastDateTime.Now;
+        private DateTime EnqueueTime { get; } = FastDateTime.UtcNow;
         public bool IsExpired =>
-            EnqueueTime + IdleConnectionTimeout <= FastDateTime.Now ||
+            EnqueueTime + IdleConnectionTimeout <= FastDateTime.UtcNow ||
             !StreamConnection.Connected;
     }
 

@@ -34,7 +34,7 @@ public class TrafficMeter : IDisposable
     /// <summary>
     /// Gets the last activity time.
     /// </summary>
-    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
+    public DateTime LastActivityTime { get; private set; } = FastDateTime.UtcNow;
 
     /// <summary>
     /// Gets or sets the maximum allowed speed (bytes per second) for throttling.
@@ -60,7 +60,7 @@ public class TrafficMeter : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         _sent.OnTraffic(bytes);
-        LastActivityTime = FastDateTime.Now;
+        LastActivityTime = FastDateTime.UtcNow;
     }
 
     /// <summary>
@@ -70,7 +70,7 @@ public class TrafficMeter : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         _received.OnTraffic(bytes);
-        LastActivityTime = FastDateTime.Now;
+        LastActivityTime = FastDateTime.UtcNow;
     }
 
     public bool ShouldThrottleSend()

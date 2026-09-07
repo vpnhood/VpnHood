@@ -33,7 +33,7 @@ public class DomainObserver(EventId sniEventId)
         lock (_lockObject) {
             if (_observations.TryGetValue(domainName, out var existing)) {
                 existing.Count++;
-                existing.LastObservedTime = FastDateTime.Now;
+                existing.LastObservedTime = FastDateTime.UtcNow;
                 existing.Action = action;
                 existing.Protocol = protocol;
             }
@@ -42,7 +42,7 @@ public class DomainObserver(EventId sniEventId)
                     DomainName = domainName,
                     Action = action,
                     Protocol = protocol,
-                    LastObservedTime = FastDateTime.Now,
+                    LastObservedTime = FastDateTime.UtcNow,
                 };
             }
         }

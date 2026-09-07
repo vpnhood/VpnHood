@@ -15,7 +15,7 @@ internal static class StateHelper
 {
     public static bool IsLongRunningState([NotNullWhen(true)] ConnectionInfo? connectionInfo)
     {
-        return FastDateTime.Now - connectionInfo?.ClientStateChangedTime > TimeSpan.FromMilliseconds(2000);
+        return FastDateTime.UtcNow - connectionInfo?.ClientStateChangedTime > TimeSpan.FromMilliseconds(2000);
     }
 
     public static int? GetProgress(ConnectionInfo? connectionInfo, AppAdService adService)

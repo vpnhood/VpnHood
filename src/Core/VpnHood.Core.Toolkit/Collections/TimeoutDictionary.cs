@@ -54,7 +54,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                 // replace the expired entry. The new value is stamped before publication so a
                 // concurrent reader can not see it as expired and evict it
                 var created = valueFactory(key);
-                created.LastUsedTime = FastDateTime.Now;
+                created.LastUsedTime = FastDateTime.UtcNow;
                 var newEntry = new Entry(created);
                 if (_items.TryUpdate(key, newEntry, entry)) {
                     // guard the same-instance case; the factory may have returned the mapped value
@@ -69,7 +69,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
             }
             else {
                 var created = valueFactory(key);
-                created.LastUsedTime = FastDateTime.Now;
+                created.LastUsedTime = FastDateTime.UtcNow;
                 var newEntry = new Entry(created);
                 if (_items.TryAdd(key, newEntry))
                     return FinishPublish(key, newEntry);
@@ -110,7 +110,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         AutoCleanupInternal();
 
-        value.LastUsedTime = FastDateTime.Now;
+        value.LastUsedTime = FastDateTime.UtcNow;
         var newEntry = new Entry(value);
         while (true) {
             if (_items.TryAdd(key, newEntry))
@@ -141,7 +141,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                     return false;
 
                 // an expired occupant must not block a fresh add; replace it like GetOrAdd does
-                value.LastUsedTime = FastDateTime.Now;
+                value.LastUsedTime = FastDateTime.UtcNow;
                 if (_items.TryUpdate(key, newEntry, entry)) {
                     if (!ReferenceEquals(entry.Value, value))
                         entry.Value.TryDispose();
@@ -150,7 +150,7 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
                 }
             }
             else {
-                value.LastUsedTime = FastDateTime.Now;
+                value.LastUsedTime = FastDateTime.UtcNow;
                 if (_items.TryAdd(key, newEntry)) {
                     FinishPublish(key, newEntry);
                     return true;
@@ -173,14 +173,14 @@ public sealed class TimeoutDictionary<TKey, TValue>(TimeSpan? timeout = null) : 
 
     private bool IsExpired(TValue item)
     {
-        return item.IsDisposed || (Timeout != null && FastDateTime.Now - item.LastUsedTime > Timeout);
+        return item.IsDisposed || (Timeout != null && FastDateTime.UtcNow - item.LastUsedTime > Timeout);
     }
 
     private static void Touch(TValue item)
     {
         // FastDateTime is low-resolution, so most touches see an unchanged time; skipping the write
         // keeps hot entries from dirtying a shared cache line on every packet
-        var now = FastDateTime.Now;
+        var now = FastDateTime.UtcNow;
         if (item.LastUsedTime != now)
             item.LastUsedTime = now;
     }

@@ -97,8 +97,8 @@ public class SessionService : IDisposable
             SessionId = (ulong)_lastSessionId,
             TokenId = accessTokenData.AccessToken.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
-            CreatedTime = FastDateTime.Now,
-            LastUsedTime = FastDateTime.Now,
+            CreatedTime = FastDateTime.UtcNow,
+            LastUsedTime = FastDateTime.UtcNow,
             SessionKey = VhUtils.GenerateKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
@@ -285,7 +285,7 @@ public class SessionService : IDisposable
                     var otherSession = otherSessions2[i];
                     otherSession.SuppressedBy = SessionSuppressType.Other;
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
-                    otherSession.EndTime = FastDateTime.Now;
+                    otherSession.EndTime = FastDateTime.UtcNow;
                     session.SuppressedTo = SessionSuppressType.Other;
                     lock (_updatedSessionIds) {
                         _updatedSessionIds.TryAdd(otherSession.SessionId, true);

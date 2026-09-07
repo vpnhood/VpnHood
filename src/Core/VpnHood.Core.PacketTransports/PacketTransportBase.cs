@@ -54,7 +54,7 @@ public abstract class PacketTransportBase : IPacketTransport
         try {
             ObjectDisposedException.ThrowIf(IsDisposed || IsDisposing, this);
 
-            _stat.LastReceivedTime = FastDateTime.Now;
+            _stat.LastReceivedTime = FastDateTime.UtcNow;
             _stat.ReceivedBytes += ipPacket.PacketLength;
             _stat.ReceivedPackets++;
             LogPacket(ipPacket, "Received a packet.");
@@ -168,7 +168,7 @@ public abstract class PacketTransportBase : IPacketTransport
 
             // Set sending state and last sent time
             _isSending = true;
-            _stat.LastSentTime = FastDateTime.Now;
+            _stat.LastSentTime = FastDateTime.UtcNow;
 
             // Send packets asynchronously
             var task = SendPacketsAsync(ipPackets);

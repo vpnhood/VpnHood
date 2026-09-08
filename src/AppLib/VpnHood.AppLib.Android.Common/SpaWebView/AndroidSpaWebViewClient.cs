@@ -1,4 +1,4 @@
-﻿using Android.Content;
+using Android.Content;
 using Android.Graphics;
 using Android.Webkit;
 using Microsoft.Extensions.Logging;
@@ -10,7 +10,7 @@ namespace VpnHood.AppLib.Droid.Common.SpaWebView;
 internal class AndroidSpaWebViewClient : WebViewClient
 {
     public event EventHandler? PageLoaded;
-    public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
+    public event EventHandler? LoadFailed;
     public event EventHandler? RenderProcessGone;
     private string? _mainHost;
     private bool _mainFrameConnectFailed;
@@ -72,8 +72,8 @@ internal class AndroidSpaWebViewClient : WebViewClient
 
         // Only connection-level failures mean the loopback server is unreachable. Anything else —
         // notably ERR_ABORTED (reported as ClientError.Unknown) from our own superseding LoadUrl —
-        // must not trigger recovery, or recovery would perpetually cancel itself into the retry cap
-        // (the Android twin of iOS ignoring NSUrlError.Cancelled).
+        // must not trigger a reload, or the reload would keep cancelling itself (the Android twin
+        // of iOS ignoring NSUrlError.Cancelled).
         if (error.ErrorCode is not (ClientError.Connect or ClientError.Timeout or ClientError.HostLookup
             or ClientError.Io))
             return;
@@ -81,7 +81,7 @@ internal class AndroidSpaWebViewClient : WebViewClient
         // Chromium renders its own error page for this navigation and OnPageFinished still fires for
         // it, so flag the navigation to keep that from being reported as a successful load.
         _mainFrameConnectFailed = true;
-        LoadFailed?.Invoke(this, new SpaLoadFailedEventArgs(duringInitialConnect: true));
+        LoadFailed?.Invoke(this, EventArgs.Empty);
     }
 
     // The WebView's render process died (commonly OOM-killed while the app was minimized). Returning
@@ -98,7 +98,7 @@ internal class AndroidSpaWebViewClient : WebViewClient
         base.OnPageFinished(view, url);
 
         // A failed main-frame navigation still "finishes" (Chromium's error page); reporting it as
-        // loaded would make the host hide the loader and reset its recovery state on a dead page.
+        // loaded would make the host hide the loader on a dead page.
         if (_mainFrameConnectFailed)
             return;
 

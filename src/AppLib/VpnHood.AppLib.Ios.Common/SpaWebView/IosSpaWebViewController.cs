@@ -40,9 +40,8 @@ public class IosSpaWebViewController : UIViewController
         _host = new SpaWebViewHost(webView);
         _host.Start();
 
-        // iOS suspends the host app in the background and can tear down the loopback socket and/or
-        // jettison the WKWebView's WebContent process, with no notification. Signal resume so the host
-        // re-checks the server and reloads the SPA if needed.
+        // iOS suspends the host app in the background and can close the loopback socket meanwhile;
+        // the web server re-checks itself on this signal.
         _foregroundObserver = UIApplication.Notifications.ObserveWillEnterForeground(
             (_, _) => _host?.OnResume());
     }

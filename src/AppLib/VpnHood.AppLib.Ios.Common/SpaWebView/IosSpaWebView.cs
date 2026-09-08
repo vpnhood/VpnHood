@@ -17,7 +17,7 @@ public sealed class IosSpaWebView : ISpaWebView
     private readonly UIActivityIndicatorView? _spinner;
 
     public event EventHandler? PageLoaded;
-    public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
+    public event EventHandler? LoadFailed;
     public event EventHandler? ContentProcessGone;
 
     public IosSpaWebView(UIViewController controller, UIColor backgroundColor)
@@ -102,11 +102,6 @@ public sealed class IosSpaWebView : ISpaWebView
         _webView?.LoadRequest(new NSUrlRequest(new NSUrl(url.ToString())));
     }
 
-    public void Reload()
-    {
-        _webView?.Reload();
-    }
-
     public void SetLoading(bool isLoading)
     {
         if (isLoading)
@@ -142,8 +137,7 @@ public sealed class IosSpaWebView : ISpaWebView
     }
 
     private void RaisePageLoaded() => PageLoaded?.Invoke(this, EventArgs.Empty);
-    private void RaiseLoadFailed(bool duringInitialConnect) =>
-        LoadFailed?.Invoke(this, new SpaLoadFailedEventArgs(duringInitialConnect));
+    private void RaiseLoadFailed() => LoadFailed?.Invoke(this, EventArgs.Empty);
     private void RaiseContentProcessGone() => ContentProcessGone?.Invoke(this, EventArgs.Empty);
 
     private sealed class NavDelegate(IosSpaWebView owner) : WKNavigationDelegate
@@ -202,21 +196,22 @@ public sealed class IosSpaWebView : ISpaWebView
             NSError error)
         {
             // NSUrlError.Cancelled (-999) is the expected result of superseding an in-flight load
-            // (e.g. our own reload) — it is not a server failure, so don't report it or recovery
-            // would perpetually cancel itself into the retry cap.
+            // (e.g. our own reload) — it is not a server failure, so don't report it or the reload
+            // would keep cancelling itself.
             const int nsUrlErrorCancelled = -999;
             if (error.Code == nsUrlErrorCancelled)
                 return;
 
             VhLogger.Instance.LogWarning("WebView provisional navigation failed: {Error}",
                 error.LocalizedDescription);
-            owner.RaiseLoadFailed(duringInitialConnect: true);
+            owner.RaiseLoadFailed();
         }
 
         // iOS jettisoned the WebView's content process under memory pressure — the page is now blank.
+        // Loading again spawns a new one.
         public override void ContentProcessDidTerminate(WKWebView webView)
         {
-            VhLogger.Instance.LogWarning("WKWebView content process terminated; recovering.");
+            VhLogger.Instance.LogWarning("WKWebView content process terminated.");
             owner.RaiseContentProcessGone();
         }
     }

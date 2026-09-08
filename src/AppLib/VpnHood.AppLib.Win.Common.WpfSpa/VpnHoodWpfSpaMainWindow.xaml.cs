@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Interop;
@@ -48,13 +48,13 @@ public partial class VpnHoodWpfSpaMainWindow : Window
 
         AppUiContext.Context = new WinUiContext(this);
 
-        // Host the SPA via the shared SpaWebViewHost (server lifecycle, launch URL, self-heal reload).
+        // Host the SPA via the shared SpaWebViewHost (server lifecycle, launch URL, reload on failure).
         // The Activated handler keeps the host alive for the window's lifetime.
         var spaWebView = new WpfSpaWebView(MainWebView, OnWebView2Unavailable);
         var host = new SpaWebViewHost(spaWebView);
         host.Start();
 
-        // Signal resume so the web server self-heals a torn-down listener and reloads if it restarted.
+        // Forward resume to the app (installed-apps cache and the like); no server check on desktop.
         Activated += (_, _) => host.OnResume();
     }
 

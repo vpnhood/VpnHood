@@ -5,9 +5,8 @@ namespace VpnHood.AppLib.Maui.Common;
 // Reusable MAUI page that hosts the VpnHood SPA via the shared SpaWebViewHost. A MAUI app can use it
 // as its MainPage; all hosting business logic is shared, and only MauiSpaWebView is MAUI-specific.
 //
-// NOTE: MAUI has no reliable per-page resume callback, so foreground recovery is driven primarily by
-// the web server's 1s health monitor. When this page's Window is available it also hooks
-// Window.Resumed for a prompt re-check; OnAppearing is used as a fallback resume signal.
+// NOTE: MAUI has no reliable per-page resume callback. When this page's Window is available it hooks
+// Window.Resumed to forward resume to the app; OnAppearing is used as a fallback resume signal.
 public class VpnHoodSpaPage : ContentPage
 {
     private readonly SpaWebViewHost _host;
@@ -49,7 +48,7 @@ public class VpnHoodSpaPage : ContentPage
             _host.Start();
         }
         else {
-            // Returned to this page — re-check the server (also covered by the health monitor).
+            // Returned to this page — forward resume to the app.
             _host.OnResume();
         }
 

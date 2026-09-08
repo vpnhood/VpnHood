@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -22,26 +22,20 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     private string? _spaPath;
     private readonly bool _isDebugMode;
     private readonly Lock _serverLock = new();
-    private Timer? _healthTimer;
-    private int _healthCheckBusy;
-    private int _inconclusiveProbes;
-    private static readonly TimeSpan HealthCheckInterval = TimeSpan.FromSeconds(1);
-    private static readonly TimeSpan ProbeTimeout = TimeSpan.FromMilliseconds(500);
-    private const int ProbeAttempts = 3;
-    private const int MaxInconclusiveProbes = 3;
-    private static readonly TimeSpan ProbeRetryDelay = TimeSpan.FromMilliseconds(50);
-    private static readonly TimeSpan RestartReadyTimeout = TimeSpan.FromSeconds(3);
+    private Timer? _watchdogTimer;
+    private bool _disposed;
+    private static readonly TimeSpan WatchdogInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(2);
     public Uri Url { get; }
 
     public string SpaHash => _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
     public bool UseHostName { get; set; }
 
-    // True only while the underlying loopback listener is actually accepting connections.
+    // The listener's own state. CavemanTcp clears it when its accept loop exits, so false means
+    // the listener is gone (or was never started).
     public bool IsListening => _server?.IsListening == true;
 
-    // Raised (off the caller's thread) after the server had to (re)start itself — e.g. the listener
-    // was found dead on resume. Platform UI subscribes to this to reload its WebView, whose old
-    // connections to the previous listener are now gone.
+    // Raised after a successful restart, outside the server lock so UI subscribers can dispatch.
     public event EventHandler? Restarted;
 
     private readonly VpnHoodApp _app;
@@ -55,9 +49,22 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
         var endPoint = VhUtils.GetFreeTcpEndPoint(host, defaultPort);
         Url = options.Url ?? new Uri($"http://{endPoint}");
         app.SettingsService.BeforeSave += SettingsServiceOnBeforeSave;
-        // Self-heal when the app returns to the foreground: iOS (and, less often, other platforms)
-        // can tear the loopback listener down while the app is in the background, with no notification.
         AppUiContext.OnResumed += AppUiContextOnResumed;
+    }
+
+    // iOS suspends the process and can close the loopback socket meanwhile while the accept loop
+    // still believes it is listening, so the flag alone is not enough there: one real connect on
+    // every resume, off the UI thread. The host reloads the SPA if the server restarts.
+    private void AppUiContextOnResumed(object? sender, EventArgs e)
+    {
+        Task.Run(() => {
+            try {
+                RestartIfUnreachable();
+            }
+            catch (Exception ex) {
+                VhLogger.Instance.LogError(ex, "SPA web server resume check failed.");
+            }
+        });
     }
 
     private void SettingsServiceOnBeforeSave(object? sender, EventArgs e)
@@ -67,20 +74,17 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             Restart();
     }
 
-    private void AppUiContextOnResumed(object? sender, EventArgs e)
-    {
-        // Immediate authoritative re-check on foreground (don't wait for the next timer tick). Off
-        // the UI thread — the probe/rebind must not block it.
-        Task.Run(RunHealthCheck);
-    }
-
     protected override void Dispose(bool disposing)
     {
         if (disposing) {
             AppUiContext.OnResumed -= AppUiContextOnResumed;
-            _healthTimer?.Dispose();
-            _healthTimer = null;
-            Stop();
+            // Under the lock so a watchdog tick that already fired can't restart the stopped server.
+            lock (_serverLock) {
+                _disposed = true;
+                _watchdogTimer?.Dispose();
+                _watchdogTimer = null;
+                Stop();
+            }
         }
 
         base.Dispose(disposing);
@@ -90,147 +94,62 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     {
         var ret = new VpnHoodAppWebServer(app, options ?? new WebServerOptions());
         ret.Start();
-        // Don't hand the URL to a web view until the accept loop is actually taking connections;
-        // Start() can return inside that window and the first page load would be refused.
-        ret.WaitUntilReachable();
-        ret.StartHealthMonitor();
+        ret._watchdogTimer = new Timer(_ => ret.RestartIfDown(), null, WatchdogInterval, WatchdogInterval);
         return ret;
     }
 
-    // A 1-second watchdog that keeps the loopback listener alive on every platform without relying
-    // on any lifecycle hook. On iOS the host app is suspended in the background, so this timer is
-    // frozen there (zero background cost) and fires again on resume; AppUiContext.OnResumed also
-    // kicks an immediate check so recovery isn't delayed by a tick.
-    private void StartHealthMonitor()
+    // Watchdog: put the listener back when it has died. It only reads the listener's own state, so
+    // a healthy server is never restarted. Notify the host so assets interrupted by the outage
+    // are loaded again, even when the main document had already finished loading.
+    private void RestartIfDown()
     {
-        _healthTimer ??= new Timer(_ => RunHealthCheck(), null,
-            HealthCheckInterval, HealthCheckInterval);
-    }
-
-    private void RunHealthCheck()
-    {
-        // Skip if the previous check (possibly a restart) is still running.
-        if (Interlocked.CompareExchange(ref _healthCheckBusy, 1, 0) != 0)
-            return;
-
         try {
-            HealIfUnreachable();
+            lock (_serverLock) {
+                if (_watchdogTimer == null || IsListening)
+                    return; // disposed, or alive
+
+                VhLogger.Instance.LogWarning("SPA web server listener is down; restarting it.");
+                Stop();
+                Start();
+            }
+            Restarted?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "SPA web server health check failed.");
-        }
-        finally {
-            Interlocked.Exchange(ref _healthCheckBusy, 0);
+            VhLogger.Instance.LogError(ex, "SPA web server watchdog failed.");
         }
     }
 
-    private enum ProbeResult
+    // Only on concrete signals (resume, a web view that failed to connect), never periodically: a
+    // probe that times out on a busy system would restart a healthy server.
+    public void RestartIfUnreachable()
     {
-        Connected,
-        Refused, // nothing is accepting on the port — authoritative death
-        Inconclusive // timed out or failed oddly — the listener may still be fine on a busy system
-    }
-
-    // Restart the server if it is not actually reachable. Returns true if it had to restart.
-    private bool HealIfUnreachable()
-    {
-        if (IsListening) {
-            switch (Probe()) {
-                case ProbeResult.Connected:
-                    _inconclusiveProbes = 0;
-                    return false;
-
-                case ProbeResult.Inconclusive when ++_inconclusiveProbes < MaxInconclusiveProbes:
-                    // A timeout is not proof the listener is dead: right after the OS thaws a frozen
-                    // process (Android's cached-apps freezer on resume) loopback connects can time out
-                    // for a moment even though the server is healthy. Restarting a healthy server here
-                    // is what strands the UI on a dead page, so act only on consecutive inconclusive
-                    // checks. A genuinely dead listener refuses (fast) and never reaches this branch.
-                    VhLogger.Instance.LogWarning(
-                        "SPA web server probe was inconclusive ({Count}/{Max}); deferring restart.",
-                        _inconclusiveProbes, MaxInconclusiveProbes);
-                    return false;
-            }
-        }
-
-        _inconclusiveProbes = 0;
         lock (_serverLock) {
+            if (_disposed || IsReachable())
+                return;
+
             VhLogger.Instance.LogWarning("SPA web server is not reachable; restarting it.");
             Stop();
             Start();
         }
-
-        // Announce the restart only once the new listener actually accepts. Start() can return
-        // before the accept loop is bound; a reload sent into that window gets connection-refused
-        // and lands the web view on an error page. Waiting also happens outside the lock, and the
-        // _healthCheckBusy guard keeps the next timer tick from probing the half-started listener.
-        WaitUntilReachable();
-
-        // Notify outside the lock so subscribers can't deadlock against a state transition.
         Restarted?.Invoke(this, EventArgs.Empty);
-        return true;
     }
 
-    // Authoritative liveness check. IsListening is only the server's own belief and can stay true
-    // after the OS tears the socket down, so when it claims to be up we confirm with a real loopback
-    // connect. The probe is done outside _serverLock so a slow connect never blocks Start/Stop.
-    // Retries a few times before giving a verdict: a listener that has just (re)started can briefly
-    // refuse connects in the window between Start() returning and its accept loop binding, and it
-    // must not be torn down for that transient (it caused a spurious restart right after launch).
-    private ProbeResult Probe()
+    private bool IsReachable()
     {
-        var sawInconclusive = false;
-        for (var attempt = 0; attempt < ProbeAttempts; attempt++) {
-            if (attempt > 0)
-                Thread.Sleep(ProbeRetryDelay);
-
-            var result = TryConnect();
-            if (result == ProbeResult.Connected)
-                return ProbeResult.Connected;
-            sawInconclusive |= result == ProbeResult.Inconclusive;
-        }
-
-        return sawInconclusive ? ProbeResult.Inconclusive : ProbeResult.Refused;
-    }
-
-    private ProbeResult TryConnect()
-    {
-        // Cancellation (not Wait(timeout)) so the connect task is always observed on timeout — a
-        // stray faulted task here would surface as an unhandled-task-exception SIGABRT.
         try {
             using var client = new TcpClient();
             using var cts = new CancellationTokenSource(ProbeTimeout);
             client.ConnectAsync(IPAddress.Loopback, Url.Port, cts.Token).AsTask().GetAwaiter().GetResult();
-            return client.Connected ? ProbeResult.Connected : ProbeResult.Refused;
-        }
-        catch (SocketException ex) when (ex.SocketErrorCode is SocketError.ConnectionRefused
-                                             or SocketError.ConnectionReset) {
-            return ProbeResult.Refused;
+            return client.Connected;
         }
         catch {
-            return ProbeResult.Inconclusive;
+            return false;
         }
     }
 
-    // Block (briefly) until the just-(re)started listener accepts a loopback connect, so callers can
-    // safely point a web view at it the moment this returns. Bounded: if the listener is genuinely
-    // broken the health monitor will keep healing it, and the platforms recover failed loads.
-    private void WaitUntilReachable()
-    {
-        var deadline = Environment.TickCount64 + (long)RestartReadyTimeout.TotalMilliseconds;
-        while (Environment.TickCount64 < deadline) {
-            if (TryConnect() == ProbeResult.Connected)
-                return;
-            Thread.Sleep(ProbeRetryDelay);
-        }
-
-        VhLogger.Instance.LogError("SPA web server is still not reachable after being started.");
-    }
-
-    // The lock serializes the state transitions now that several triggers can drive them
-    // concurrently (initial start on the UI thread, settings-save on the UI thread, and the
-    // resume self-heal on a background thread). Monitor is re-entrant, so Restart()'s nested
-    // Stop()/Start() calls are fine.
+    // The lock serializes the state transitions: initial start, settings-save restart, the watchdog
+    // and the web view's recovery can all drive them from different threads. Monitor is re-entrant,
+    // so Restart()'s nested Stop()/Start() calls are fine.
     public void Start()
     {
         lock (_serverLock) {
@@ -241,6 +160,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
                 return;
             }
 
+            // The listener socket is bound and listening before Start() returns, so callers can
+            // point a web view at Url immediately.
             _server = CreateWebServer();
             _server.Start();
             VhLogger.Instance.LogInformation("Web server has been started on {Url}", Url);
@@ -264,24 +185,12 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     public void Restart()
     {
         lock (_serverLock) {
+            if (_disposed)
+                return;
             Stop();
             Start();
         }
-
-        // Callers reload the web view right after a restart, so don't return before the new accept
-        // loop is actually taking connections (outside the lock; see WaitUntilReachable).
-        WaitUntilReachable();
-    }
-
-    // Make sure the loopback listener is actually reachable, restarting it if it is not. iOS can
-    // tear the listener socket down while the host app is in the background (or the process is
-    // memory-pressured), leaving a dead server the WKWebView SPA can no longer reach ("cannot
-    // connect to the internal web server"). This is normally driven automatically by the 1s health
-    // monitor and by AppUiContext.OnResumed, but platforms can also call it directly after a page
-    // load fails. Returns true if the server had to be (re)started; the Restarted event fires then.
-    public bool EnsureStarted()
-    {
-        return HealIfUnreachable();
+        Restarted?.Invoke(this, EventArgs.Empty);
     }
 
     private string GetSpaPath()

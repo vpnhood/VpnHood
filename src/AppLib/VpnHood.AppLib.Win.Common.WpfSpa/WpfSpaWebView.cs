@@ -6,22 +6,15 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.Win.Common.WpfSpa;
 
-// Windows (WPF/WebView2) ISpaWebView adapter: the only WebView2-specific SPA-hosting code. It maps
-// the WebView2 events onto the platform-neutral SpaWebViewHost events and, when the Edge WebView2
-// runtime is unavailable, invokes the window-provided fallback (open the SPA in the system browser).
+// Windows (WPF/WebView2) ISpaWebView adapter: the only WebView2-specific SPA-hosting code. When the
+// Edge WebView2 runtime is unavailable it invokes the window-provided fallback (open the SPA in the
+// system browser).
 public sealed class WpfSpaWebView(WebView2 webView, Action onWebView2Unavailable) : ISpaWebView
 {
     private Uri? _pendingUrl;
 
     public event EventHandler? PageLoaded;
-
-    // LoadFailed is required by ISpaWebView but never raised on desktop: a WebView2 navigation
-    // failure here is not a dead loopback listener (see OnNavigationCompleted), so recovery is left
-    // to the 1s health monitor. Suppress the "event is never used" warning — the omission is intended.
-#pragma warning disable CS0067
-    public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
-#pragma warning restore CS0067
-
+    public event EventHandler? LoadFailed;
     public event EventHandler? ContentProcessGone;
 
     public void Initialize()
@@ -57,11 +50,23 @@ public sealed class WpfSpaWebView(WebView2 webView, Action onWebView2Unavailable
 
     private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
     {
-        if (e.IsSuccess)
+        if (e.IsSuccess) {
             PageLoaded?.Invoke(this, EventArgs.Empty);
-        // A WebView2 navigation failure on desktop is typically not a dead loopback listener (unlike
-        // iOS backgrounding), so we don't force a server restart here — the 1s health monitor covers a
-        // genuinely dead server.
+            return;
+        }
+
+        // Only connection-level failures mean the loopback server is unreachable. OperationCanceled
+        // is our own superseding Navigate (the WebView2 twin of iOS NSUrlError.Cancelled) and must
+        // not trigger a reload, or the reload would keep cancelling itself.
+        VhLogger.Instance.LogWarning("WebView2 navigation failed: {Status}", e.WebErrorStatus);
+        if (e.WebErrorStatus is CoreWebView2WebErrorStatus.ServerUnreachable
+            or CoreWebView2WebErrorStatus.Timeout
+            or CoreWebView2WebErrorStatus.ConnectionAborted
+            or CoreWebView2WebErrorStatus.ConnectionReset
+            or CoreWebView2WebErrorStatus.Disconnected
+            or CoreWebView2WebErrorStatus.CannotConnect
+            or CoreWebView2WebErrorStatus.HostNameNotResolved)
+            LoadFailed?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
@@ -76,11 +81,6 @@ public sealed class WpfSpaWebView(WebView2 webView, Action onWebView2Unavailable
             webView.CoreWebView2.Navigate(url.ToString());
         else
             _pendingUrl = url; // navigate once CoreWebView2 finishes initializing
-    }
-
-    public void Reload()
-    {
-        webView.CoreWebView2?.Reload();
     }
 
     public void SetLoading(bool isLoading)

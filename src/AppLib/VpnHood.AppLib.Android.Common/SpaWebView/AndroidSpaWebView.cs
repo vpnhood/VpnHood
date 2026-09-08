@@ -10,9 +10,9 @@ using Uri = System.Uri;
 namespace VpnHood.AppLib.Droid.Common.SpaWebView;
 
 // Android ISpaWebView adapter: the only Android-specific SPA-hosting code. It owns the Android
-// WebView, swapping the activity's content between the loading screen and the WebView, and maps the
-// WebView client callbacks onto the platform-neutral SpaWebViewHost events. The WebView-version
-// "please update" redirect is Android-specific, so it lives here (it needs the live WebView).
+// WebView, swapping the activity's content between the loading screen and the WebView, and reports
+// the WebView client callbacks to SpaWebViewHost. The WebView-version "please update" redirect is
+// Android-specific, so it lives here (it needs the live WebView).
 public sealed class AndroidSpaWebView : ISpaWebView
 {
     private readonly IActivityEvent _activityEvent;
@@ -23,7 +23,7 @@ public sealed class AndroidSpaWebView : ISpaWebView
     private Activity Activity => _activityEvent.Activity;
 
     public event EventHandler? PageLoaded;
-    public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
+    public event EventHandler? LoadFailed;
     public event EventHandler? ContentProcessGone;
 
     public AndroidSpaWebView(IActivityEvent activityEvent, AndroidSpaWebViewMainActivityOptions options)
@@ -62,11 +62,6 @@ public sealed class AndroidSpaWebView : ISpaWebView
         _webView?.LoadUrl(ResolveUrl(url).ToString());
     }
 
-    public void Reload()
-    {
-        _webView?.Reload();
-    }
-
     public void SetLoading(bool isLoading)
     {
         // Android swaps the whole content view rather than overlaying a spinner: the loading screen is
@@ -98,16 +93,16 @@ public sealed class AndroidSpaWebView : ISpaWebView
     public void GoBack() => _webView?.GoBack();
 
     // The main document could not connect to the loopback server, so Chromium's own error page is on
-    // screen. Swap back to the loading screen while SpaWebViewHost recovers (server heal + reload) —
-    // the user must never be left staring at a "can't connect to server" page.
-    private void OnWebViewLoadFailed(object? sender, SpaLoadFailedEventArgs e)
+    // screen. Swap back to the loading screen while SpaWebViewHost reloads — the user must never be
+    // left staring at a "can't connect to server" page.
+    private void OnWebViewLoadFailed(object? sender, EventArgs e)
     {
         HideWebView();
-        LoadFailed?.Invoke(this, e);
+        LoadFailed?.Invoke(this, EventArgs.Empty);
     }
 
     // The render process died; the WebView instance is unusable from now on (reloading it does
-    // nothing), so it must be destroyed and rebuilt before the host reloads the SPA.
+    // nothing), so it must be destroyed and rebuilt before the host loads the SPA again.
     private void OnWebViewRenderProcessGone(object? sender, EventArgs e)
     {
         var oldWebView = _webView;

@@ -61,8 +61,6 @@ public class AndroidSpaWebViewMainActivityHandler(
 
     protected override void OnResume()
     {
-        // Let the web server self-heal a listener that was torn down while the app was in the
-        // background; if it had to restart, the host reloads the WebView.
         _host?.OnResume();
         _spaWebView?.OnActivityResume();
         base.OnResume();

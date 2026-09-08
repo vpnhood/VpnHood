@@ -27,25 +27,40 @@ the shared logic is a **controller** (`SpaWebViewHost`) that talks to a per-OS *
 
 ## Types
 
-- **`ISpaWebView`** — the per-OS surface: `Initialize`, `Load(Uri)`, `Reload`, `SetLoading(bool)`,
+- **`ISpaWebView`** — the per-OS surface: `Initialize`, `Load(Uri)`, `SetLoading(bool)`,
   `ShowError(string)`, `Post(Action)` (marshal to the UI thread), and events `PageLoaded`,
   `LoadFailed`, `ContentProcessGone`. Threading contract: the host calls these on the UI thread and
-  expects the events on the UI thread.
+  expects the events on the UI thread. Adapters only report; they never decide.
 - **`SpaWebViewHost`** — owns server `Init`, launch-URL computation (`?nocache={SpaHash}` plus an
-  optional `LaunchUrlBuilder` hook), `Restarted`→reload, resume→`AppUiContext.NotifyResumed()`, and
-  the bounded recovery state machine.
-- **`SpaWebViewHostOptions`** — `LaunchUrlBuilder`, `ServerNotRespondingMessage`,
-  `MaxRecoveryAttempts`.
-- **`SpaLoadFailedEventArgs`** — `DuringInitialConnect` (true ⇒ the listener is unusable even if it
-  still reports up, so force a server restart rather than just reloading).
+  optional `LaunchUrlBuilder` hook), resume→`AppUiContext.NotifyResumed()`, and reload after a
+  failure or server restart.
+- **`SpaWebViewHostOptions`** — `LaunchUrlBuilder`.
 
-## Server self-heal (in `VpnHoodAppWebServer`)
+## Keeping the server up (in `VpnHoodAppWebServer`)
 
-The listener can be torn down under the app (iOS backgrounding especially). The server heals
-itself via a **1-second health watchdog** plus an `AppUiContext.OnResumed` signal, both gated on a
-**real loopback connect probe** (`IsListening` can go stale). It raises `Restarted` when it rebinds
-so the UI reloads. The probe retries a few times so it tolerates the accept-loop warmup window
-instead of restarting spuriously right after launch.
+Three small mechanisms, each tied to a concrete signal. There is deliberately no periodic connect
+probe: one that times out on a busy or dozing device restarts a healthy server, and every restart
+kills whatever the web view is loading at that moment (blank page, or the old "user interface is
+not responding" screen).
+
+1. **Watchdog** — a 5 s timer restarts the listener when `IsListening` is false. CavemanTcp clears
+   the flag when its accept loop exits, so this only ever restarts a listener that is actually gone.
+   After a successful restart, `Restarted` makes the native host reload the SPA, including assets
+   whose loading was interrupted after the main document finished.
+2. **Resume probe** — the server subscribes to `AppUiContext.OnResumed` itself. iOS suspends the
+   process and can close the loopback socket meanwhile while the accept loop still believes it is
+   listening, so one real connect per resume, restart if it fails. The host then reloads as in 1.
+3. **Load again after a failure** (in `SpaWebViewHost`) — `LoadFailed` (main-document connection
+   failure) or `ContentProcessGone` makes the host give the server one real connect check (a failed
+   load is a concrete "unreachable" signal, and the flag can lie after an iOS suspension), then load
+   the SPA again after 1 s (Android rebuilds its WebView before reporting). The delay is the only bound: a listener that keeps failing is retried
+   every second instead of dead-ending on an error screen, and the watchdog has brought it back by
+   then. The fatal error screen is reserved for `Start()` throwing (the server cannot bind at all).
+
+Recovery lives in the native host; `index.html` has no bundle-error reload handler. A successful
+server restart reloads the whole document after 1 s, coalescing with any pending failure reload.
+This covers assets interrupted by a server outage; it does not detect arbitrary bundle failures
+while the server remains healthy. A full reload resets the current route and unsaved UI state.
 
 ## Adding / owning a platform
 
@@ -75,20 +90,18 @@ instead of restarting spuriously right after launch.
 - **MAUI** — build-verified (adapter, both android + windows target frameworks). Greenfield host —
   smoke-test resume delivery and the loading/error visuals on a device.
 
-The three above were compile-checked against the toolchains but not yet runtime-smoke-tested; the
-1s server health monitor is the safety net regardless.
+The three above were compile-checked against the toolchains but not yet runtime-smoke-tested.
 
 ### Per-platform things to verify
 
 - **Android** — content-view swap (loader → WebView on first `PageLoaded`); WebView-version
   "update WebView" redirect (`ResolveUrl`); hardware back (API<33 `OnKeyDown` + API33+ back
-  callback). The old `KillSpaServer` debug OnPause/OnResume hook was dropped (the health monitor
-  supersedes it). `LoadFailed`/`ContentProcessGone` are not raised — recovery is via the health
-  monitor + resume + `Restarted`.
+  callback). The old `KillSpaServer` debug OnPause/OnResume hook was dropped (the watchdog
+  supersedes it). `LoadFailed` is raised for main-frame connection errors; a dead render process
+  rebuilds the WebView, then raises `ContentProcessGone`.
 - **Windows** — the SPA URL now carries `?nocache={SpaHash}` (it didn't before); the WebView2
   "runtime missing" fallback (hide window + open system browser) moved into `OnWebView2Unavailable`;
   the window hides rather than closes, so `_host` is not explicitly disposed (process exit handles
   it).
 - **MAUI** — greenfield (no SPA host existed before). Verify the `Dispatcher` is non-null when the
-  page is constructed, and that resume is delivered (`Window.Resumed` + `OnAppearing`); the 1s
-  health monitor is the real safety net regardless.
+  page is constructed, and that resume is delivered (`Window.Resumed` + `OnAppearing`).

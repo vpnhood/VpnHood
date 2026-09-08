@@ -14,7 +14,7 @@ dials into a client, and nothing dials into a server except clients.
 | Piece | What it is | Where it runs |
 | --- | --- | --- |
 | **VpnHood! MANAGER** | The control panel and its agent API. Holds servers, farms, access tokens, usage. | A web service (hosted for you, or your own Access Manager implementation) |
-| **VpnHood! SERVER** | The node that carries traffic. | Your Linux or Windows machine — [`src/Apps/Server.Net`](../src/Apps/Server.Net) |
+| **VpnHood! SERVER** | The node that carries traffic. | A VPS or dedicated box you rent — not the user's device — [`src/Apps/Server.Net`](../src/Apps/Server.Net) |
 | **VpnHood! CLIENT / CONNECT** | The end-user app. | The user's phone, desktop, or TV |
 | **Access key** | A base64 blob the user pastes. Not a component, but it is how a client learns anything at all. | Issued by the manager, delivered by you |
 
@@ -26,13 +26,13 @@ graph LR
         M["VpnHood! MANAGER<br/>agent API + panel"]
     end
 
-    subgraph many["many servers — your machines"]
+    subgraph many["many servers — VPSes you rent"]
         S1["SERVER"]
         S2["SERVER"]
         S3["SERVER"]
     end
 
-    subgraph clients["many clients per server"]
+    subgraph clients["many clients — your users' own devices"]
         C1["CLIENT"]
         C2["CLIENT"]
         C3["CLIENT"]

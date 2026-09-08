@@ -5,23 +5,21 @@ using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.SpaWebView;
 
-// Platform-neutral controller that hosts the VpnHood SPA in a web view. It owns all the hosting
-// business logic — starting the loopback web server, computing the launch URL, driving the
-// loading/error state, reloading when the server self-heals, and the bounded recovery state
-// machine — and delegates only the native web-view mechanics to a per-platform ISpaWebView.
+// Platform-neutral controller that hosts the VpnHood SPA in a web view: starts the loopback web
+// server, computes the launch URL, drives the loading/error state and loads the SPA again after
+// the web view reports a failure. Only the native web-view mechanics live in the per-platform
+// ISpaWebView; the server keeps itself alive (see VpnHoodAppWebServer).
 //
 // Lifecycle from the OS host: construct one per web view, call Start() when the host UI is created,
 // OnResume() from the platform's foreground/resume hook, and Dispose() when it is torn down.
 public sealed class SpaWebViewHost : IDisposable
 {
+    private static readonly TimeSpan ReloadDelay = TimeSpan.FromSeconds(1);
     private readonly ISpaWebView _view;
     private readonly SpaWebViewHostOptions _options;
-
-    // All the following are touched only on the UI thread (Start's background work hops back via
-    // _view.Post, and the ISpaWebView events are contracted to be raised on the UI thread).
-    private int _recoveryAttempts;
-    private bool _serverHooked;
+    private VpnHoodAppWebServer? _server;
     private bool _viewInitialized;
+    private bool _reloadPending;
     private bool _disposed;
 
     public SpaWebViewHost(ISpaWebView view, SpaWebViewHostOptions? options = null)
@@ -42,12 +40,6 @@ public sealed class SpaWebViewHost : IDisposable
             try {
                 if (!VpnHoodAppWebServer.IsInit)
                     VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
-
-                // Reload the view whenever the server self-heals a torn-down listener (subscribe once).
-                if (!_serverHooked) {
-                    VpnHoodAppWebServer.Instance.Restarted += OnServerRestarted;
-                    _serverHooked = true;
-                }
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to start the SPA web server.");
@@ -59,8 +51,7 @@ public sealed class SpaWebViewHost : IDisposable
         });
     }
 
-    // Call from the platform's resume/foreground hook. The web server self-heals its listener (see
-    // VpnHoodAppWebServer); if it had to restart, OnServerRestarted reloads the view.
+    // Call from the platform's resume/foreground hook. The app and the web server subscribe to it.
     public void OnResume()
     {
         AppUiContext.NotifyResumed();
@@ -68,7 +59,15 @@ public sealed class SpaWebViewHost : IDisposable
 
     private void InitializeAndLoad()
     {
+        if (_disposed)
+            return;
+
         try {
+            if (_server == null) {
+                _server = VpnHoodAppWebServer.Instance;
+                _server.Restarted += OnServerRestarted;
+            }
+
             if (!_viewInitialized) {
                 _view.Initialize();
                 _viewInitialized = true;
@@ -95,57 +94,58 @@ public sealed class SpaWebViewHost : IDisposable
         return _options.LaunchUrlBuilder?.Invoke(url) ?? url;
     }
 
-    private void OnServerRestarted(object? sender, EventArgs e)
-    {
-        // The server self-healed a torn-down listener; the view's old connections are gone, so reload.
-        _view.Post(LoadSpa);
-    }
-
     private void OnPageLoaded(object? sender, EventArgs e)
     {
         _view.SetLoading(false);
-        _recoveryAttempts = 0; // a successful load means the server is reachable again
     }
 
-    private void OnLoadFailed(object? sender, SpaLoadFailedEventArgs e)
+    private void OnLoadFailed(object? sender, EventArgs e)
     {
-        VhLogger.Instance.LogWarning("SPA web view load failed (initialConnect={Initial}).",
-            e.DuringInitialConnect);
-        // A failed initial connection proves the current listener is unusable even if it still
-        // reports it is up, so force a rebind; otherwise a reload is enough.
-        Recover(forceServerRestart: e.DuringInitialConnect);
+        VhLogger.Instance.LogWarning("SPA web view load failed; reloading.");
+        ReloadAfterDelay();
+    }
+
+    private void OnServerRestarted(object? sender, EventArgs e)
+    {
+        _view.Post(() => {
+            if (!_disposed && _viewInitialized)
+                ReloadAfterDelay();
+        });
     }
 
     private void OnContentProcessGone(object? sender, EventArgs e)
     {
-        VhLogger.Instance.LogWarning("SPA web view content process terminated; recovering.");
-        Recover(forceServerRestart: false);
+        VhLogger.Instance.LogWarning("SPA web view content process terminated; reloading.");
+        ReloadAfterDelay();
     }
 
-    private void Recover(bool forceServerRestart)
+    // Load the SPA again after a short delay. A failed load is a concrete "unreachable" signal, so
+    // the server gets one real connect check first (its own state flag can lie after an iOS
+    // suspension); a listener that really is gone is rebound before the reload. The delay is the
+    // only bound on retries: it keeps a still-failing load at one attempt per second instead of
+    // dead-ending the user on an error screen. Overlapping signals collapse into one reload.
+    private void ReloadAfterDelay()
     {
-        if (_recoveryAttempts >= _options.MaxRecoveryAttempts) {
-            VhLogger.Instance.LogError("SPA web view could not be recovered after {Attempts} attempts.",
-                _recoveryAttempts);
-            _view.ShowError(_options.ServerNotRespondingMessage);
+        if (_disposed || _reloadPending)
             return;
-        }
 
-        _recoveryAttempts++;
-        Task.Run(() => {
+        _reloadPending = true;
+        _view.SetLoading(true);
+        Task.Run(async () => {
             try {
-                if (VpnHoodAppWebServer.IsInit) {
-                    if (forceServerRestart)
-                        VpnHoodAppWebServer.Instance.Restart();
-                    else
-                        VpnHoodAppWebServer.Instance.EnsureStarted();
-                }
+                if (VpnHoodAppWebServer.IsInit)
+                    VpnHoodAppWebServer.Instance.RestartIfUnreachable();
             }
             catch (Exception ex) {
-                VhLogger.Instance.LogError(ex, "Failed to recover the SPA web server.");
+                VhLogger.Instance.LogError(ex, "Failed to check the SPA web server after a failed load.");
             }
 
-            _view.Post(LoadSpa);
+            await Task.Delay(ReloadDelay);
+            _view.Post(() => {
+                _reloadPending = false;
+                if (!_disposed)
+                    LoadSpa();
+            });
         });
     }
 
@@ -158,10 +158,9 @@ public sealed class SpaWebViewHost : IDisposable
         _view.PageLoaded -= OnPageLoaded;
         _view.LoadFailed -= OnLoadFailed;
         _view.ContentProcessGone -= OnContentProcessGone;
-
-        if (_serverHooked && VpnHoodAppWebServer.IsInit) {
-            VpnHoodAppWebServer.Instance.Restarted -= OnServerRestarted;
-            _serverHooked = false;
+        if (_server != null) {
+            _server.Restarted -= OnServerRestarted;
+            _server = null;
         }
     }
 }

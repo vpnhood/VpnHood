@@ -6,18 +6,15 @@ using Uri = System.Uri;
 namespace VpnHood.AppLib.Maui.Common;
 
 // MAUI ISpaWebView adapter: the only MAUI-specific SPA-hosting code. It wraps a
-// Microsoft.Maui.Controls.WebView and maps its Navigated event onto the platform-neutral
-// SpaWebViewHost events. MAUI has no content-process-terminated signal, so ContentProcessGone is
-// never raised; recovery still comes from the server health monitor + resume + Restarted reload.
+// Microsoft.Maui.Controls.WebView and reports its Navigated event to SpaWebViewHost. MAUI has no
+// content-process-terminated signal, so ContentProcessGone is never raised.
 public sealed class MauiSpaWebView(WebView webView, IDispatcher dispatcher,
     ActivityIndicator? spinner = null, Label? errorLabel = null) : ISpaWebView
 {
     public event EventHandler? PageLoaded;
-    public event EventHandler<SpaLoadFailedEventArgs>? LoadFailed;
+    public event EventHandler? LoadFailed;
 
-    // MAUI has no content-process-terminated signal, so ContentProcessGone is never raised (recovery
-    // comes from the health monitor + resume + Restarted). Suppress the "never used" warning.
-#pragma warning disable CS0067
+#pragma warning disable CS0067 // never raised on MAUI, see above
     public event EventHandler? ContentProcessGone;
 #pragma warning restore CS0067
 
@@ -39,7 +36,7 @@ public sealed class MauiSpaWebView(WebView webView, IDispatcher dispatcher,
 
             default:
                 VhLogger.Instance.LogWarning("MAUI WebView navigation failed: {Result}", e.Result);
-                LoadFailed?.Invoke(this, new SpaLoadFailedEventArgs(duringInitialConnect: true));
+                LoadFailed?.Invoke(this, EventArgs.Empty);
                 break;
         }
     }
@@ -47,11 +44,6 @@ public sealed class MauiSpaWebView(WebView webView, IDispatcher dispatcher,
     public void Load(Uri url)
     {
         webView.Source = new UrlWebViewSource { Url = url.ToString() };
-    }
-
-    public void Reload()
-    {
-        webView.Reload();
     }
 
     public void SetLoading(bool isLoading)

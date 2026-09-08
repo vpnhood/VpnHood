@@ -65,11 +65,6 @@ VpnHood underwent a comprehensive security audit by the Open Tech Fund. Read the
 
 ## FAQ & Documents
 
-Technical and publishing documentation lives in [`docs/`](docs/README.md) — including
-**[how to publish your own branded VpnHood app](docs/publish-your-app/README.md)** to the App Store
-and Google Play. General questions are answered in our
-[Wiki](https://github.com/vpnhood/VpnHood/wiki).
-
 * [Publish your own app](docs/publish-your-app/README.md)
 * [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work)
 * [Can a network provider block VpnHood?](https://github.com/vpnhood/VpnHood/wiki/Can-a-network-provider-block-VpnHood)
@@ -94,7 +89,6 @@ Windows|Linux
 
 * [Advanced Installer](https://www.advancedinstaller.com): Installer tools for Windows.
 * [ReSharper](https://www.jetbrains.com/resharper/): Write, improve, and maintain C# code.
-* [BrowserStack](https://www.browserstack.com/): This project is tested with BrowserStack.
 
 ---
 Enjoy VpnHood! Contributions, feedback and, stars are welcome.

@@ -23,10 +23,10 @@ public class AppSettingsService
     public SplitIpViaDeviceSettings SplitIpViaDeviceSettings { get; }
     public SplitDomainSettings SplitDomainSettings { get; }
 
-    public AppSettingsService(string storagePath, Uri? remoteSettingsUrl, bool debugMode)
+    public AppSettingsService(string storagePath, Uri? remoteSettingsUrl)
     {
         _storagePath = storagePath;
-        Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? GetDefaultSettings(debugMode);
+        Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? new AppSettings();
         Settings.AppSettingsService = this;
         SplitIpViaAppSettings = new SplitIpViaAppSettings(Path.Combine(storagePath, "splits", "ips_via_app"));
         SplitIpViaDeviceSettings = new SplitIpViaDeviceSettings(Path.Combine(storagePath, "splits", "ips_via_device"));
@@ -49,15 +49,6 @@ public class AppSettingsService
             var filePath = BuildPromoteImageFilePath(RemoteSettings.PromotionImageUrl);
             return File.Exists(filePath) ? filePath : null;
         }
-    }
-
-    private static AppSettings GetDefaultSettings(bool debugMode)
-    {
-        return new AppSettings {
-            UserSettings = {
-                AllowRemoteAccess = debugMode // the default value of AllowRemoteAccess is true in debug mode 
-            }
-        };
     }
 
     private string BuildPromoteImageFilePath(Uri imageUrl)

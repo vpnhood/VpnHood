@@ -182,4 +182,22 @@ public class AppController : ControllerBase, IAppController
         throw new SwaggerOnlyException();
     }
 
+    [HttpGet("remote-access")]
+    public Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("remote-access/start")]
+    public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("remote-access/stop")]
+    public Task StopRemoteAccess(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
 }

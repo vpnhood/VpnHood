@@ -9,12 +9,12 @@ using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Helpers;
 
-public class ApiRouteMapper(WebserverLite server, bool isDebugMode)
+public class ApiRouteMapper(WebserverLite server, bool allowAnyOrigin)
     : IRouteMapper
 {
     private Task Options(HttpContextBase ctx)
     {
-        CorsMiddleware.AddCors(ctx, isDebugMode);
+        CorsMiddleware.AddCors(ctx, allowAnyOrigin);
         ctx.Response.StatusCode = (int)HttpStatusCode.OK;
         return ctx.Response.Send();
     }
@@ -24,7 +24,7 @@ public class ApiRouteMapper(WebserverLite server, bool isDebugMode)
         server.Routes.PreAuthentication.Static.Add(method, path, async ctx => {
             try {
                 // Add CORS to all requests centrally
-                CorsMiddleware.AddCors(ctx, isDebugMode);
+                CorsMiddleware.AddCors(ctx, allowAnyOrigin);
                 await handler(ctx);
             }
             catch (Exception ex) {
@@ -41,7 +41,7 @@ public class ApiRouteMapper(WebserverLite server, bool isDebugMode)
         server.Routes.PreAuthentication.Parameter.Add(method, path, async ctx => {
             try {
                 // Add CORS to all requests centrally
-                CorsMiddleware.AddCors(ctx, isDebugMode);
+                CorsMiddleware.AddCors(ctx, allowAnyOrigin);
                 await handler(ctx);
             }
             catch (Exception ex) {

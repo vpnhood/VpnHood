@@ -8,9 +8,9 @@ public static class WebServerLiteExtension
 {
     extension(WebserverLite server)
     {
-        public ApiRouteMapper AddRouteMapper(bool isDebugMode)
+        public ApiRouteMapper AddRouteMapper(bool allowAnyOrigin)
         {
-            return new ApiRouteMapper(server, isDebugMode);
+            return new ApiRouteMapper(server, allowAnyOrigin);
         }
 
         public void TryStop()

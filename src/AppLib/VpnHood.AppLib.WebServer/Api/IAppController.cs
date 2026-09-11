@@ -38,4 +38,7 @@ public interface IAppController
     Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken);
     Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken);
     Task InternalAdError(string errorMessage, CancellationToken cancellationToken);
+    Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken);
+    Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken);
+    Task StopRemoteAccess(CancellationToken cancellationToken);
 }

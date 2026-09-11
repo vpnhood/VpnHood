@@ -1,0 +1,26 @@
+using System.Net;
+using System.Text.Json.Serialization;
+using VpnHood.Core.Toolkit.Converters;
+
+namespace VpnHood.AppLib.WebServer.Api;
+
+// Whether the app's SPA and API can be reached from the local network, and how. The web server's
+// own answer: the app has no listeners, so it carries nothing about them. The reply of a start,
+// and of GET remote-access while the pairing screen is open.
+public class RemoteAccessState
+{
+    // Reachable from the LAN right now: held by a pairing screen, or always-on.
+    public required bool IsActive { get; init; }
+
+    // A debug build or the /remote-access command: the app's own listener is on every interface
+    // for the whole process, so no screen holds it and closing one changes nothing.
+    public required bool IsAlwaysOn { get; init; }
+
+    // Where a phone can dial in, best guess first. Those of the last start; empty before one.
+    public required IReadOnlyList<Uri> Urls { get; init; }
+
+    // Devices seen on the LAN within the last few seconds. Presence, not sessions: the remote SPA
+    // polls every second, so a closed tab ages out, and two browsers on one phone count once.
+    [JsonConverter(typeof(ArrayConverter<IPAddress, IPAddressConverter>))]
+    public required IPAddress[] ConnectedDevices { get; init; }
+}

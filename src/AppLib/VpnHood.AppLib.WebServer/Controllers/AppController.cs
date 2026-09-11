@@ -9,11 +9,12 @@ using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Extensions;
+using WatsonWebserver.Core;
 using HttpMethod = WatsonWebserver.Core.HttpMethod;
 
 namespace VpnHood.AppLib.WebServer.Controllers;
 
-internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
+internal class AppController(VpnHoodApp app, VpnHoodAppWebServer webServer) : ControllerBase, IAppController
 {
     public override void AddRoutes(IRouteMapper mapper)
     {
@@ -22,11 +23,13 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
         mapper.AddStatic(HttpMethod.PATCH, baseUrl + "configure", async ctx => {
             var body = ctx.ReadJson<ConfigParams>();
             var res = await Configure(body, ctx.Token);
+            res.IsRemote = ctx.IsRemote();
             await ctx.SendJson(res);
         });
 
         mapper.AddStatic(HttpMethod.GET, baseUrl + "config", async ctx => {
             var res = await GetConfig(ctx.Token);
+            res.IsRemote = ctx.IsRemote();
             await ctx.SendJson(res);
         });
 
@@ -166,6 +169,33 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
             var res = await GetSupportedSplitCountries(ctx.Token);
             await ctx.SendJson(res);
         });
+
+        // Pairing is the device's own business: a phone that reached the app through it can
+        // neither read, end nor start it, whatever the SPA it runs shows.
+        mapper.AddStatic(HttpMethod.GET, baseUrl + "remote-access", async ctx => {
+            RequireLocal(ctx);
+            var res = await GetRemoteAccess(ctx.Token);
+            await ctx.SendJson(res);
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "remote-access/start", async ctx => {
+            RequireLocal(ctx);
+            var res = await StartRemoteAccess(ctx.Token);
+            await ctx.SendJson(res);
+        });
+
+        mapper.AddStatic(HttpMethod.POST, baseUrl + "remote-access/stop", async ctx => {
+            RequireLocal(ctx);
+            await StopRemoteAccess(ctx.Token);
+            await ctx.SendNoContent();
+        });
+    }
+
+    // Mapped to 403 by the route mapper.
+    private static void RequireLocal(HttpContextBase ctx)
+    {
+        if (ctx.IsRemote())
+            throw new UnauthorizedAccessException("Remote access is controlled from the device itself.");
     }
 
     public async Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken)
@@ -357,5 +387,23 @@ internal class AppController(VpnHoodApp app) : ControllerBase, IAppController
     public Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
     {
         return app.Services.SplitCountryService.GetSupportedSplitCountries(cancellationToken);
+    }
+
+    public Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        return Task.FromResult(webServer.RemoteAccessState);
+    }
+
+    public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        return webServer.StartRemoteAccess();
+    }
+
+    public Task StopRemoteAccess(CancellationToken cancellationToken)
+    {
+        webServer.StopRemoteAccess();
+        return Task.CompletedTask;
     }
 }

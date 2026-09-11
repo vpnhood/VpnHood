@@ -28,7 +28,6 @@ public class UserSettings
     public EndPointStrategy EndPointStrategy { get; set; }
     public DnsMode DnsMode { get; set; }
     public AppProxySettings ProxySettings { get; set; } = new();
-    public bool AllowRemoteAccess { get; set; }
     public JsonElement? CustomData { get; set; }
 
 

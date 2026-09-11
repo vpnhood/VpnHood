@@ -1579,6 +1579,146 @@ export class AppClient {
         }
         return Promise.resolve<void>(null as any);
     }
+
+    getRemoteAccess( cancelToken?: CancelToken): Promise<RemoteAccessState> {
+        let url_ = this.baseUrl + "/api/app/remote-access";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "GET",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processGetRemoteAccess(_response);
+        });
+    }
+
+    protected processGetRemoteAccess(response: AxiosResponse): Promise<RemoteAccessState> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = RemoteAccessState.fromJS(resultData200);
+            return Promise.resolve<RemoteAccessState>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<RemoteAccessState>(null as any);
+    }
+
+    startRemoteAccess( cancelToken?: CancelToken): Promise<RemoteAccessState> {
+        let url_ = this.baseUrl + "/api/app/remote-access/start";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+                "Accept": "application/json"
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processStartRemoteAccess(_response);
+        });
+    }
+
+    protected processStartRemoteAccess(response: AxiosResponse): Promise<RemoteAccessState> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            let result200: any = null;
+            let resultData200  = _responseText;
+            result200 = RemoteAccessState.fromJS(resultData200);
+            return Promise.resolve<RemoteAccessState>(result200);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<RemoteAccessState>(null as any);
+    }
+
+    stopRemoteAccess( cancelToken?: CancelToken): Promise<void> {
+        let url_ = this.baseUrl + "/api/app/remote-access/stop";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: AxiosRequestConfig = {
+            method: "POST",
+            url: url_,
+            headers: {
+            },
+            cancelToken
+        };
+
+        return this.instance.request(options_).catch((_error: any) => {
+            if (isAxiosError(_error) && _error.response) {
+                return _error.response;
+            } else {
+                throw _error;
+            }
+        }).then((_response: AxiosResponse) => {
+            return this.processStopRemoteAccess(_response);
+        });
+    }
+
+    protected processStopRemoteAccess(response: AxiosResponse): Promise<void> {
+        const status = response.status;
+        let _headers: any = {};
+        if (response.headers && typeof response.headers === "object") {
+            for (const k in response.headers) {
+                if (response.headers.hasOwnProperty(k)) {
+                    _headers[k] = response.headers[k];
+                }
+            }
+        }
+        if (status === 200) {
+            const _responseText = response.data;
+            return Promise.resolve<void>(null as any);
+
+        } else if (status !== 200 && status !== 204) {
+            const _responseText = response.data;
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+        }
+        return Promise.resolve<void>(null as any);
+    }
 }
 
 export class BillingClient {
@@ -3436,6 +3576,7 @@ export class AppData implements IAppData {
     userSettings!: UserSettings;
     clientProfileInfos!: ClientProfileInfo[];
     availableCultureInfos!: UiCultureInfo[];
+    isRemote!: boolean;
 
     constructor(data?: IAppData) {
         if (data) {
@@ -3476,6 +3617,7 @@ export class AppData implements IAppData {
             else {
                 this.availableCultureInfos = null as any;
             }
+            this.isRemote = _data["isRemote"] !== undefined ? _data["isRemote"] : null as any;
         }
     }
 
@@ -3502,6 +3644,7 @@ export class AppData implements IAppData {
             for (let item of this.availableCultureInfos)
                 data["availableCultureInfos"].push(item ? item.toJSON() : null as any);
         }
+        data["isRemote"] = this.isRemote !== undefined ? this.isRemote : null as any;
         return data;
     }
 }
@@ -3513,6 +3656,7 @@ export interface IAppData {
     userSettings: UserSettings;
     clientProfileInfos: ClientProfileInfo[];
     availableCultureInfos: UiCultureInfo[];
+    isRemote: boolean;
 }
 
 export class AppFeatures implements IAppFeatures {
@@ -5648,7 +5792,6 @@ export class UserSettings implements IUserSettings {
     endPointStrategy!: EndPointStrategy;
     dnsMode!: DnsMode;
     proxySettings!: AppProxySettings;
-    allowRemoteAccess!: boolean;
     customData?: any | null;
     dnsServers!: string[];
 
@@ -5686,7 +5829,6 @@ export class UserSettings implements IUserSettings {
             this.endPointStrategy = _data["endPointStrategy"] !== undefined ? _data["endPointStrategy"] : null as any;
             this.dnsMode = _data["dnsMode"] !== undefined ? _data["dnsMode"] : null as any;
             this.proxySettings = _data["proxySettings"] ? AppProxySettings.fromJS(_data["proxySettings"]) : new AppProxySettings();
-            this.allowRemoteAccess = _data["allowRemoteAccess"] !== undefined ? _data["allowRemoteAccess"] : null as any;
             this.customData = _data["customData"] !== undefined ? _data["customData"] : null as any;
             if (Array.isArray(_data["dnsServers"])) {
                 this.dnsServers = [] as any;
@@ -5726,7 +5868,6 @@ export class UserSettings implements IUserSettings {
         data["endPointStrategy"] = this.endPointStrategy !== undefined ? this.endPointStrategy : null as any;
         data["dnsMode"] = this.dnsMode !== undefined ? this.dnsMode : null as any;
         data["proxySettings"] = this.proxySettings ? this.proxySettings.toJSON() : null as any;
-        data["allowRemoteAccess"] = this.allowRemoteAccess !== undefined ? this.allowRemoteAccess : null as any;
         data["customData"] = this.customData !== undefined ? this.customData : null as any;
         if (Array.isArray(this.dnsServers)) {
             data["dnsServers"] = [];
@@ -5756,7 +5897,6 @@ export interface IUserSettings {
     endPointStrategy: EndPointStrategy;
     dnsMode: DnsMode;
     proxySettings: AppProxySettings;
-    allowRemoteAccess: boolean;
     customData?: any | null;
     dnsServers: string[];
 }
@@ -6635,6 +6775,80 @@ export interface IAppUserReview {
 export enum ShowAdResult {
     Closed = "Closed",
     Clicked = "Clicked",
+}
+
+export class RemoteAccessState implements IRemoteAccessState {
+    isActive!: boolean;
+    isAlwaysOn!: boolean;
+    urls!: string[];
+    connectedDevices!: string[];
+
+    constructor(data?: IRemoteAccessState) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (this as any)[property] = (data as any)[property];
+            }
+        }
+        if (!data) {
+            this.urls = [];
+            this.connectedDevices = [];
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.isActive = _data["isActive"] !== undefined ? _data["isActive"] : null as any;
+            this.isAlwaysOn = _data["isAlwaysOn"] !== undefined ? _data["isAlwaysOn"] : null as any;
+            if (Array.isArray(_data["urls"])) {
+                this.urls = [] as any;
+                for (let item of _data["urls"])
+                    this.urls!.push(item);
+            }
+            else {
+                this.urls = null as any;
+            }
+            if (Array.isArray(_data["connectedDevices"])) {
+                this.connectedDevices = [] as any;
+                for (let item of _data["connectedDevices"])
+                    this.connectedDevices!.push(item);
+            }
+            else {
+                this.connectedDevices = null as any;
+            }
+        }
+    }
+
+    static fromJS(data: any): RemoteAccessState {
+        data = typeof data === 'object' ? data : {};
+        let result = new RemoteAccessState();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["isActive"] = this.isActive !== undefined ? this.isActive : null as any;
+        data["isAlwaysOn"] = this.isAlwaysOn !== undefined ? this.isAlwaysOn : null as any;
+        if (Array.isArray(this.urls)) {
+            data["urls"] = [];
+            for (let item of this.urls)
+                data["urls"].push(item);
+        }
+        if (Array.isArray(this.connectedDevices)) {
+            data["connectedDevices"] = [];
+            for (let item of this.connectedDevices)
+                data["connectedDevices"].push(item);
+        }
+        return data;
+    }
+}
+
+export interface IRemoteAccessState {
+    isActive: boolean;
+    isAlwaysOn: boolean;
+    urls: string[];
+    connectedDevices: string[];
 }
 
 export class SubscriptionPlan implements ISubscriptionPlan {

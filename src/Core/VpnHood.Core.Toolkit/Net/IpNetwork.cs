@@ -44,11 +44,16 @@ public class IpNetwork
 
     public static IpNetwork AllV4 => field ??= new IpNetwork(IPAddress.Any, 0);
 
+    // What an interface assigns itself with no configuration: RFC 3927 when no DHCP server answers,
+    // and every IPv6 interface unconditionally. Never routed.
+    public static IpNetwork LinkLocalNetworkV4 => field ??= Parse("169.254.0.0/16");
+    public static IpNetwork LinkLocalNetworkV6 => field ??= Parse("fe80::/10");
+
     public static IReadOnlyList<IpNetwork> LocalNetworksV4 => field ??= [
         Parse("10.0.0.0/8"),
         Parse("172.16.0.0/12"),
         Parse("192.168.0.0/16"),
-        Parse("169.254.0.0/16")
+        LinkLocalNetworkV4
     ];
 
     public static IpNetwork MulticastNetworkV4 => field ??= new IpNetwork(IPAddress.Parse("224.0.0.0"), 4);

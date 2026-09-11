@@ -226,6 +226,57 @@ public static class IPAddressUtil
         }
     }
 
+    // Hypervisor and container adapters no other device can reach. Matched by name and description
+    // because the OS reports most of them as plain Ethernet. A caller that runs its own VPN adapter
+    // appends that adapter's name; see GetLanAddresses.
+    public static IReadOnlyList<string> VirtualAdapterMarkers { get; } =
+        ["Hyper-V", "vEthernet", "VirtualBox", "VMware", "Docker", "WSL"];
+
+    // Every address of the family that another device on the local network could dial, best guess
+    // first. Which network that device is on cannot be known from here, so this is ranking, not
+    // proof: the address on the default route (the network with the internet is the one others
+    // share), then Wi-Fi and Ethernet, then the rest. Adapters matching excludeAdapterMarkers
+    // (VirtualAdapterMarkers when null), tunnels and tun* interfaces are left out entirely: a PC
+    // holds Hyper-V, VirtualBox or Docker addresses nobody can dial, and while a VPN is connected
+    // its adapter holds the default route on Windows — which is why the probe's answer counts only
+    // when the enumeration also lists it. "Not Down" rather than "Up": an OS that hides operstate
+    // reports Unknown. A phone or TV ends up with one entry; a PC with a few.
+    public static async Task<IReadOnlyList<IPAddress>> GetLanAddresses(AddressFamily addressFamily,
+        IEnumerable<string>? excludeAdapterMarkers = null)
+    {
+        Verify(addressFamily);
+        IReadOnlyList<string> markers = excludeAdapterMarkers?.ToArray() ?? VirtualAdapterMarkers;
+        var linkLocalNetwork = addressFamily == AddressFamily.InterNetworkV6
+            ? IpNetwork.LinkLocalNetworkV6
+            : IpNetwork.LinkLocalNetworkV4;
+
+        var addresses = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(x => x.OperationalStatus is not OperationalStatus.Down && !IsVirtualAdapter(x, markers))
+            .OrderBy(x => x.NetworkInterfaceType is NetworkInterfaceType.Wireless80211 or NetworkInterfaceType.Ethernet ? 0 : 1)
+            .SelectMany(x => x.GetIPProperties().UnicastAddresses)
+            .Select(x => x.Address)
+            .Where(x => x.AddressFamily == addressFamily && !IPAddress.IsLoopback(x) &&
+                        !linkLocalNetwork.Contains(x)) // self-assigned with no configuration; reaches nobody
+            .Distinct()
+            .ToList();
+
+        var defaultRouteAddress = await GetPrivateIpAddress(addressFamily).Vhc();
+        if (defaultRouteAddress != null && addresses.Remove(defaultRouteAddress))
+            addresses.Insert(0, defaultRouteAddress);
+
+        return addresses;
+    }
+
+    // tun0 on Android and Linux, whatever the OS itself classifies as a tunnel, and the markers.
+    private static bool IsVirtualAdapter(NetworkInterface networkInterface, IReadOnlyList<string> markers)
+    {
+        return networkInterface.NetworkInterfaceType is NetworkInterfaceType.Tunnel or NetworkInterfaceType.Ppp ||
+               networkInterface.Name.StartsWith("tun", StringComparison.OrdinalIgnoreCase) ||
+               markers.Any(marker =>
+                   networkInterface.Name.Contains(marker, StringComparison.OrdinalIgnoreCase) ||
+                   networkInterface.Description.Contains(marker, StringComparison.OrdinalIgnoreCase));
+    }
+
     public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)
     {
         return addressFamily switch {

@@ -167,7 +167,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             IsAddAccessKeySupported = options.IsAddAccessKeySupported,
             Premium = options.Premium,
             AllowEndPointStrategy = options.AllowEndPointStrategy,
-            IsTv = device.IsTv,
+            IsTv = device.IsTv || HasDebugCommand(DebugCommands.TvMode),
             OsType = AppUtils.GetOsType(),
             AdjustForSystemBars = options.AdjustForSystemBars,
             UiName = options.UiName,
@@ -311,10 +311,6 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             if (UserSettings.DnsMode is DnsMode.AdapterDns && UserSettings.DnsServers.Length is 0) {
                 UserSettings.DnsMode = DnsMode.Default;
             }
-
-            // todo: temporary override remote access
-            UserSettings.AllowRemoteAccess =
-                HasDebugCommand(DebugCommands.RemoteAccess) || Features.IsDebugMode;
 
             // reconfigure if connected
             if (ConnectionInfo.IsStarted()) {
@@ -606,7 +602,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
     {
         Directory.CreateDirectory(options.StorageFolderPath); //make sure the directory exists
         var settingsService =
-            new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl, options.IsDebugMode);
+            new AppSettingsService(options.StorageFolderPath, options.RemoteSettingsUrl);
         var logService = new LogService(Path.Combine(options.StorageFolderPath, FileNameLog));
         logService.Start(
             GetLogOptions(settingsService.Settings.UserSettings, options.LogServiceOptions, options.IsDebugMode),

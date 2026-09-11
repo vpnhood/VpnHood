@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.SpaWebView;
@@ -134,7 +135,7 @@ public sealed class SpaWebViewHost : IDisposable
         Task.Run(async () => {
             try {
                 if (VpnHoodAppWebServer.IsInit)
-                    VpnHoodAppWebServer.Instance.RestartIfUnreachable();
+                    await VpnHoodAppWebServer.Instance.RestartIfUnreachable().Vhc();
             }
             catch (Exception ex) {
                 VhLogger.Instance.LogError(ex, "Failed to check the SPA web server after a failed load.");

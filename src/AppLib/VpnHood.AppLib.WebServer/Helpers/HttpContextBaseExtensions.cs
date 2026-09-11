@@ -13,6 +13,13 @@ public static class HttpContextBaseExtensions
 
     extension(HttpContextBase ctx)
     {
+        // Whether the requestor is another device. Loopback is the app's own web view; anything
+        // else came over the LAN, whichever listener it hit. Unparsable counts as remote.
+        public bool IsRemote()
+        {
+            return !IPAddress.TryParse(ctx.Request.Source.IpAddress, out var ipAddress) || !IPAddress.IsLoopback(ipAddress);
+        }
+
         public T? GetQueryParameter<T>(string key, T? defaultValue)
         {
             return ctx.Request.QuerystringExists(key)

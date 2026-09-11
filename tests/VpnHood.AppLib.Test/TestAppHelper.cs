@@ -19,9 +19,11 @@ namespace VpnHood.AppLib.Test;
 
 public class TestAppHelper : TestHelper
 {
-    public AppOptions CreateAppOptions()
+    // isDebugMode: false stands for a release build where the test needs the difference, e.g. the web
+    // server's remote access. The tracker and log options below are explicit, so the flag changes nothing else.
+    public AppOptions CreateAppOptions(bool isDebugMode = true)
     {
-        var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode: true) {
+        var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode) {
             IsSingleton = false, // tests run many concurrent apps in one process
             // the test app stands for a CONNECT-like head no store forbids anything to; store-build
             // restrictions and the premium-less CLIENT shape are exercised by the tests that

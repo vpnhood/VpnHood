@@ -260,7 +260,7 @@ public class ClientAppTest : TestAppBase
         var settings1 = new WebserverSettings(endPoint1.Address.ToString(), endPoint1.Port);
         using var webServer1 = new WebserverLite(settings1, x => x.SendPlainText("", 404));
         webServer1
-            .AddRouteMapper(isDebugMode: true)
+            .AddRouteMapper(allowAnyOrigin: true)
             .AddStatic(HttpMethod.GET, "/accesskey", async ctx => {
                 isTokenRetrieved = true;
                 await ctx.SendPlainText("something_wrong");
@@ -269,7 +269,7 @@ public class ClientAppTest : TestAppBase
         var settings2 = new WebserverSettings(endPoint2.Address.ToString(), endPoint2.Port);
         using var webServer2 = new WebserverLite(settings2, x => x.SendPlainText("", 404));
         webServer2
-            .AddRouteMapper(isDebugMode: true)
+            .AddRouteMapper(allowAnyOrigin: true)
             .AddStatic(HttpMethod.GET, "/accesskey", async ctx => {
                 isTokenRetrieved = true;
                 await ctx.SendPlainText(token2.ServerToken.Encrypt());

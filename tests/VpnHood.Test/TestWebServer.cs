@@ -55,7 +55,7 @@ public class TestWebServer : IDisposable
             var settings = new WebserverSettings(endpoint.Address.ToString(), endpoint.Port);
             var webServer = new WebserverLite(settings, DefaultRoute);
             webServer
-                .AddRouteMapper(isDebugMode: true)
+                .AddRouteMapper(allowAnyOrigin: true)
                 .AddController(new ApiController(this));
             _webServers.Add(webServer);
         }
@@ -69,7 +69,7 @@ public class TestWebServer : IDisposable
             };
             var webServer = new WebserverLite(settings, DefaultRoute);
             webServer
-                .AddRouteMapper(isDebugMode: true)
+                .AddRouteMapper(allowAnyOrigin: true)
                 .AddController(new ApiController(this));
             _webServers.Add(webServer);
         }

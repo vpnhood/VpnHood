@@ -376,7 +376,7 @@ public class SplitIpDbTest : TestBase
     {
         var storagePath = Path.Combine(TestHelper.WorkingPath, "split-ip-via-app-service");
         Directory.CreateDirectory(storagePath);
-        var settingsService = new AppSettingsService(storagePath, remoteSettingsUrl: null, debugMode: true);
+        var settingsService = new AppSettingsService(storagePath, remoteSettingsUrl: null);
         var service = new SplitIpViaAppService(settingsService, new AllowAllPremiumFeatures());
 
         // the service owns its whole activity decision: toggle off ⇒ inactive, nothing built

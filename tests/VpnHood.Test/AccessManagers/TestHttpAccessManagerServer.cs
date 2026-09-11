@@ -49,7 +49,7 @@ public class TestHttpAccessManagerServer : IDisposable
         };
 
         server
-            .AddRouteMapper(isDebugMode: true)
+            .AddRouteMapper(allowAnyOrigin: true)
             .AddController(new ApiController(this));
 
         return server;

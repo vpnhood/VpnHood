@@ -14,8 +14,26 @@ internal static class CorsMiddleware
         "http://localhost:30080"
     ];
 
+    // Where a request may claim to come from: one of the dev servers above, or the page this
+    // server itself served. A browser sets Origin and a page cannot change it, so this is what
+    // separates the app's own SPA from any other tab that knows the address. The web server gates
+    // every request on the same answer, which is why it lives here and not inside AddCors.
+    public static bool IsAllowedOrigin(string origin, string? hostHeader, bool allowAnyOrigin)
+    {
+        if (allowAnyOrigin)
+            return true;
+
+        if (AllowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+            return true;
+
+        // the app's own pages: same host and port as the request arrived on, http since that is all
+        // this server speaks
+        return !string.IsNullOrEmpty(hostHeader) &&
+               string.Equals(origin, $"http://{hostHeader}", StringComparison.OrdinalIgnoreCase);
+    }
+
     // One origin echoed back, never a list and never "*": a browser rejects a list outright and
-    // refuses "*" for a credentialed request, which the pairing cookie will be. An origin that is
+    // refuses "*" for a credentialed request, which the pairing cookie is. An origin that is
     // not allowed gets no CORS headers at all; that is the browser's cue to block the call. A
     // request without Origin is same-origin or not from a browser, and needs nothing.
     public static void AddCors(HttpContextBase ctx, bool allowAnyOrigin)
@@ -24,7 +42,7 @@ internal static class CorsMiddleware
         if (string.IsNullOrEmpty(origin))
             return;
 
-        if (!allowAnyOrigin && !AllowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+        if (!IsAllowedOrigin(origin, ctx.Request.RetrieveHeaderValue("Host"), allowAnyOrigin))
             return;
 
         ctx.Response.Headers.Add("Access-Control-Allow-Origin", origin);

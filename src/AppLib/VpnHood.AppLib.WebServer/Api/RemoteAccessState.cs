@@ -16,7 +16,9 @@ public class RemoteAccessState
     // for the whole process, so no screen holds it and closing one changes nothing.
     public required bool IsAlwaysOn { get; init; }
 
-    // Where a phone can dial in, best guess first. Those of the last start; empty before one.
+    // Where a phone can dial in, best guess first, each carrying the pairing token the listener
+    // asks for on the first hit (none for a developer's always-on). Those of the last start or
+    // refresh; empty before a start.
     public required IReadOnlyList<Uri> Urls { get; init; }
 
     // Devices seen on the LAN within the last few seconds. Presence, not sessions: the remote SPA

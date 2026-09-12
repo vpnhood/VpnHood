@@ -20,6 +20,23 @@ public static class HttpContextBaseExtensions
             return !IPAddress.TryParse(ctx.Request.Source.IpAddress, out var ipAddress) || !IPAddress.IsLoopback(ipAddress);
         }
 
+        // The named cookie's value, or null. A request carries one Cookie header of "a=1; b=2"
+        // pairs; the name is matched exactly, as browsers send it.
+        public string? GetCookie(string name)
+        {
+            var header = ctx.Request.RetrieveHeaderValue("Cookie");
+            if (string.IsNullOrEmpty(header))
+                return null;
+
+            foreach (var pair in header.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)) {
+                var separator = pair.IndexOf('=');
+                if (separator > 0 && pair.AsSpan(0, separator).Equals(name, StringComparison.Ordinal))
+                    return pair[(separator + 1)..];
+            }
+
+            return null;
+        }
+
         public T? GetQueryParameter<T>(string key, T? defaultValue)
         {
             return ctx.Request.QuerystringExists(key)

@@ -389,10 +389,12 @@ internal class AppController(VpnHoodApp app, VpnHoodAppWebServer webServer) : Co
         return app.Services.SplitCountryService.GetSupportedSplitCountries(cancellationToken);
     }
 
+    // The pairing screen's poll: the network can change under an open screen, so this re-reads the
+    // addresses and rebinds when they moved, besides answering with the presence list.
     public Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        return Task.FromResult(webServer.RemoteAccessState);
+        return webServer.RefreshRemoteAccess();
     }
 
     public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken)

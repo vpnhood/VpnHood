@@ -8,18 +8,20 @@ using WatsonWebserver.Lite;
 
 namespace VpnHood.AppLib.WebServer;
 
-// One listener and its whole state machine. The web view's own listener and the remote-access one
+// One listener and its whole state machine. The web view's own listener and the remote-access ones
 // are the same thing bound to different places, so bind, stop and recovery exist once, here. The
-// factory decides where a fresh instance binds (the host can depend on a setting); the port is
-// fixed per listener so the probe knows where to connect. What differs between the two listeners
-// lives in VpnHoodAppWebServer: who creates them, when they go, and who is told they came back.
-internal class WebServerListener(string name, int port, Func<WebserverLite> serverFactory) : IDisposable
+// factory makes a fresh instance for the address and port fixed per listener, and the probe
+// connects to that same address, so a listener bound to a LAN address is judged there and not on
+// loopback. What differs between the listeners lives in VpnHoodAppWebServer: who creates them,
+// when they go, and who is told they came back.
+internal class WebServerListener(string name, IPAddress address, int port, Func<WebserverLite> serverFactory) : IDisposable
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(2);
     private readonly Lock _lock = new();
     private WebserverLite? _server;
     private bool _disposed;
 
+    public IPAddress Address => address;
     public int Port => port;
 
     // The listener's own state. CavemanTcp clears it when its accept loop exits, so false means
@@ -34,7 +36,7 @@ internal class WebServerListener(string name, int port, Func<WebserverLite> serv
     {
         lock (_lock) {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            VhLogger.Instance.LogInformation("Starting the {Name} web server listener on port {Port}...", name, port);
+            VhLogger.Instance.LogInformation("Starting the {Name} web server listener on {EndPoint}...", name, new IPEndPoint(address, port));
             _server ??= serverFactory();
             _server.Start();
         }
@@ -47,7 +49,7 @@ internal class WebServerListener(string name, int port, Func<WebserverLite> serv
             if (server == null)
                 return;
 
-            VhLogger.Instance.LogInformation("Stopping the {Name} web server listener...", name);
+            VhLogger.Instance.LogInformation("Stopping the {Name} web server listener on {EndPoint}...", name, new IPEndPoint(address, port));
             server.TryStop();
             server.Dispose();
             _server = null;
@@ -102,7 +104,8 @@ internal class WebServerListener(string name, int port, Func<WebserverLite> serv
         try {
             using var client = new TcpClient();
             using var cts = new CancellationTokenSource(ProbeTimeout);
-            await client.ConnectAsync(IPAddress.Loopback, port, cts.Token).Vhc();
+            var probeAddress = address.Equals(IPAddress.Any) ? IPAddress.Loopback : address;
+            await client.ConnectAsync(probeAddress, port, cts.Token).Vhc();
             return client.Connected;
         }
         catch {

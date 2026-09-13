@@ -15,6 +15,11 @@ namespace VpnHood.AppLib.Win.Common.WpfSpa;
 // ReSharper disable once RedundantExtendsListEntry
 public partial class VpnHoodWpfSpaMainWindow : Window
 {
+    // Android TV lays out at 960x540 dp (a 1920x1080 panel at xhdpi, the size its design guidance
+    // targets), and a CSS px is a dp, so a web view of this size is the TV's own viewport.
+    private const int TvPanelWidth = 960;
+    private const int TvPanelHeight = 540;
+
     public VpnHoodWpfSpaMainWindow()
     {
         InitializeComponent();
@@ -26,8 +31,18 @@ public partial class VpnHoodWpfSpaMainWindow : Window
             Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R,
                 backgroundColor.Value.G, backgroundColor.Value.B));
         Visibility = VpnHoodAppWin.Instance.ShowWindowAfterStart ? Visibility.Visible : Visibility.Hidden;
-        Width = VpnHoodApp.Instance.Resources.WindowSize.Width;
-        Height = VpnHoodApp.Instance.Resources.WindowSize.Height;
+        // On the TV UI the window is the panel: the web view takes the TV's viewport and the
+        // window wraps it, so the layout is judged here at the TV's shape and measure. Everything
+        // else keeps the phone-shaped window from the resources.
+        if (VpnHoodApp.Instance.Features.IsTv) {
+            SizeToContent = SizeToContent.WidthAndHeight;
+            MainWebView.Width = TvPanelWidth;
+            MainWebView.Height = TvPanelHeight;
+        }
+        else {
+            Width = VpnHoodApp.Instance.Resources.WindowSize.Width;
+            Height = VpnHoodApp.Instance.Resources.WindowSize.Height;
+        }
         ResizeMode = ResizeMode.CanMinimize;
         StateChanged += (_, _) => {
             if (WindowState == WindowState.Minimized) Hide();
@@ -37,9 +52,14 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         var hWnd = new WindowInteropHelper(this).EnsureHandle();
         if (backgroundColor != null) VpnHoodAppWin.SetWindowTitleBarColor(hWnd, backgroundColor.Value);
 
-        // initialize MainWebView user-data folder (the WebView2 mechanics live in WpfSpaWebView)
-        MainWebView.CreationProperties = new CoreWebView2CreationProperties
-            { UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp") };
+        // initialize MainWebView user-data folder (the WebView2 mechanics live in WpfSpaWebView).
+        // On the TV UI the arrow keys move focus: Chromium's spatial navigation, which Android's
+        // WebView turns on by itself for a device without a touchscreen. With it on here too, the
+        // TV layout can be walked with a keyboard exactly as a D-pad walks it on the TV.
+        MainWebView.CreationProperties = new CoreWebView2CreationProperties {
+            UserDataFolder = Path.Combine(VpnHoodApp.Instance.StorageFolderPath, "Temp"),
+            AdditionalBrowserArguments = VpnHoodApp.Instance.Features.IsTv ? "--enable-spatial-navigation" : null
+        };
 
         // initialize tray icon
         UpdateIcon();

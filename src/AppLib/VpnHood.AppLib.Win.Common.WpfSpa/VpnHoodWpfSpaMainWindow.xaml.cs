@@ -75,7 +75,17 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         host.Start();
 
         // Forward resume to the app (installed-apps cache and the like); no server check on desktop.
-        Activated += (_, _) => host.OnResume();
+        // The keyboard belongs to the web view, which is this window's whole content: WPF keeps
+        // keyboard focus on the Window itself and moves it into a child only on a click or a Tab,
+        // so until then the document is not focused - the page's own initial focus (Connect on the
+        // TV UI) draws no ring and the arrows do nothing, which on a TV reads as an app that
+        // ignores the remote until Tab is pressed (owner, 2026-09-13). Measured in a WPF copy of
+        // this window: document.hasFocus() is false while the window is active and true right
+        // after this call. On every activation, so the keyboard comes back after an alt-tab too.
+        Activated += (_, _) => {
+            host.OnResume();
+            MainWebView.Focus();
+        };
     }
 
     private void OnWebView2Unavailable()

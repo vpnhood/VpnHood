@@ -26,7 +26,12 @@ namespace VpnHood.AppLib.WebServer;
 public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 {
     // The pairing: a short token in the QR's address that becomes a cookie on the first hit. Eight
-    // characters from an alphabet without 0/O/1/l, since someone may type it from the screen.
+    // characters from an alphabet without 0/O/1/l, since someone may type it from the screen. One
+    // per run of the app, like the port: made at the first start and kept across stop and start,
+    // so a phone that paired earlier in this run gets back in without a scan when the screen is
+    // opened again (an accidental Back on the TV would otherwise cost a rescan). The screen still
+    // decides when anything is reachable at all; only a restart makes a new token, and nothing
+    // is persisted, so it never becomes a standing credential for the install.
     private const string PairQueryName = "pair";
     private const string PairCookieName = "vh-pair";
     private const string BearerPrefix = "Bearer ";
@@ -259,8 +264,8 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     }
 
     // Keeps a listener whose address is still advertised, drops the ones that are not, adds the
-    // rest. A phone paired before its address moved stays paired: the token is per session, and
-    // the port is the one the session had. Under the lock.
+    // rest. A phone paired before its address moved stays paired: the token and the port are the
+    // process's, not the listener's. Under the lock.
     private void BindRemoteListeners(IReadOnlyList<IPAddress> addresses)
     {
         // The developer's is the primary's own port. Otherwise beside the web view's port when
@@ -320,7 +325,6 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
                 listener.Dispose();
             _remoteListeners = [];
             _remoteAccessUrls = [];
-            _pairToken = null;
         }
     }
 

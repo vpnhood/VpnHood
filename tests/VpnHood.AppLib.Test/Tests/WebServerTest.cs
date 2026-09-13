@@ -178,12 +178,13 @@ public class WebServerTest : TestAppBase
         Assert.IsFalse(webServer.IsRemoteAccessActive);
         await Assert.ThrowsExactlyAsync<HttpRequestException>(() => http.GetStringAsync(root));
 
-        // a new start is a new pairing: the old cookie opens nothing
+        // a new start in the same run is the same pairing, address and token alike: the phone's
+        // cookie from before the stop still opens it, so an accidental close costs no rescan
         var second = await webServer.StartRemoteAccess();
         Assert.IsTrue(webServer.IsRemoteAccessActive);
-        Assert.AreNotEqual(pairUrl.Query, second.Urls[0].Query);
-        using var staleCookie = await http.GetAsync(root);
-        Assert.AreEqual(HttpStatusCode.Unauthorized, staleCookie.StatusCode);
+        Assert.AreEqual(pairUrl, second.Urls[0]);
+        using var keptCookie = await http.GetAsync(new Uri(root, "api/app/state"));
+        Assert.AreEqual(HttpStatusCode.OK, keptCookie.StatusCode);
 
         // the UI context going away is a stop too
         AppUiContext.Context = null;

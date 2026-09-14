@@ -1,0 +1,55 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- VpnHood! Client, the default product: the web UI's client theme (vhClientThemeColors in
+       theme/themes.ts), key for key, so a page ported here paints what it painted there. This file
+       and ConnectTheme.axaml carry the same keys and nothing else - a key added to one belongs in
+       the other the same day, or the other product's views fail to find it. -->
+
+  <ResourceDictionary.MergedDictionaries>
+    <ResourceInclude Source="avares://VpnHood.AppLib.AvaloniaUI/Styles/Colors.axaml" />
+  </ResourceDictionary.MergedDictionaries>
+
+  <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource Blue330}" />
+  <SolidColorBrush x:Key="AppTextBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="AppText50Brush" Color="#80FFFFFF" />
+  <SolidColorBrush x:Key="AppText40Brush" Color="#66FFFFFF" />
+  <SolidColorBrush x:Key="AppDisabledBrush" Color="#61FFFFFF" />
+  <SolidColorBrush x:Key="AppBorderBrush" Color="#1FFFFFFF" />
+
+  <!-- the connect button: this product's is a gradient where Connect's is flat, as on the web UI
+       (#connectBtn.client-app, left to right, the second tone landing at 90%) -->
+  <LinearGradientBrush x:Key="ConnectBtnBrush" StartPoint="0%,50%" EndPoint="100%,50%">
+    <GradientStop Offset="0" Color="{StaticResource Blue100}" />
+    <GradientStop Offset="0.9" Color="{StaticResource Green100}" />
+  </LinearGradientBrush>
+  <SolidColorBrush x:Key="OnConnectBtnBrush" Color="{StaticResource Blue400}" />
+  <SolidColorBrush x:Key="ConnectBtnConnectedBrush" Color="{StaticResource Blue100}" />
+  <SolidColorBrush x:Key="OnConnectBtnConnectedBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="CircleBorderBrush" Color="{StaticResource Blue100}" />
+  <SolidColorBrush x:Key="CircleShineBrush" Color="{StaticResource Green50}" />
+
+  <SolidColorBrush x:Key="ConfigBtnBgBrush" Color="#B3122272" />
+  <SolidColorBrush x:Key="OnConfigBtnBrush" Color="{StaticResource Blue100}" />
+  <SolidColorBrush x:Key="ConfigBtnBorderBrush" Color="#4D16A3FE" />
+  <SolidColorBrush x:Key="ConfigCardBrush" Color="{StaticResource Blue290}" />
+
+  <SolidColorBrush x:Key="ActiveServerBrush" Color="{StaticResource Green200}" />
+  <SolidColorBrush x:Key="FastestServerBrush" Color="{StaticResource Blue100}" />
+  <SolidColorBrush x:Key="ActiveChipBrush" Color="{StaticResource Green200}" />
+  <SolidColorBrush x:Key="OnActiveChipBrush" Color="{StaticResource Blue500}" />
+  <SolidColorBrush x:Key="PremiumIconBrush" Color="{StaticResource Blue100}" />
+
+  <!-- down and up, which the web UI paints in one colour (connection-speed); ours are the same two
+       in both products, as they say which way the traffic goes rather than which product this is -->
+  <SolidColorBrush x:Key="SpeedDownBrush" Color="{StaticResource Green200}" />
+  <SolidColorBrush x:Key="SpeedUpBrush" Color="{StaticResource Red100}" />
+
+  <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource Red100}" />
+  <SolidColorBrush x:Key="NoteBrush" Color="{StaticResource Purple20}" />
+  <SolidColorBrush x:Key="OnNoteBrush" Color="{StaticResource Purple300}" />
+  <SolidColorBrush x:Key="AppFocusBrush" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="VersionDebugBrush" Color="{StaticResource Yellow200}" />
+  <SolidColorBrush x:Key="OnVersionDebugBrush" Color="{StaticResource Blue400}" />
+
+</ResourceDictionary>

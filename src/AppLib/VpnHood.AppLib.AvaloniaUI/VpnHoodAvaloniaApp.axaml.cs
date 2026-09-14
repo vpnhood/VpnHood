@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -23,6 +23,10 @@ public partial class VpnHoodAvaloniaApp : Application
 
     public override void Initialize()
     {
+        // the product's palette before the styles that read it: VpnHoodApp is initialized by the
+        // host first, except in the processes that get no view (below), which take the default.
+        Resources.MergedDictionaries.Add(
+            AppTheme.FromUiName(VpnHoodApp.IsInit ? VpnHoodApp.Instance.Features.UiName : null));
         AvaloniaXamlLoader.Load(this);
     }
 
@@ -46,7 +50,7 @@ public partial class VpnHoodAvaloniaApp : Application
                     Height = PanelHeight,
                     MinWidth = MinPanelWidth,
                     MinHeight = MinPanelHeight,
-                    Background = new SolidColorBrush(AppTheme.Background),
+                    Background = ThemeBrush("AppBackgroundBrush"),
                     Content = mainView
                 };
                 break;
@@ -55,5 +59,13 @@ public partial class VpnHoodAvaloniaApp : Application
                 singleView.MainView = mainView;
                 break;
         }
+    }
+
+    // the theme's brush for the one surface XAML does not reach: the desktop window itself
+    private IBrush ThemeBrush(string key)
+    {
+        return this.TryFindResource(key, out var value) && value is IBrush brush
+            ? brush
+            : throw new InvalidOperationException($"The theme has no brush named '{key}'.");
     }
 }

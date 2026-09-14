@@ -1,55 +1,16 @@
-<Styles xmlns="https://github.com/avaloniaui"
+﻿<Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls">
 
-  <!-- The web UI's CONNECT theme (theme/themes.ts + theme/colors.ts), key for key, so a page ported
-       here paints what it painted there. Type and focus fit a TV first (TV plan §3.4): every
-       control wears a ring while a remote or a keyboard has it (:focus-visible - a finger's focus
-       shows nothing, as on the web UI), and the layouts query the page host's width (the "Page"
+  <!-- The shapes, in the theme's keys: what a key is worth is the product's, and lives in
+       ClientTheme.axaml or ConnectTheme.axaml (the web UI's two themes, theme/themes.ts), so a
+       page ported here paints what it painted there in either product. Nothing below names a
+       colour of its own. Type and focus fit a TV first (TV plan §3.4): every control wears a ring
+       while a remote or a keyboard has it (:focus-visible - a finger's focus shows nothing, as on
+       the web UI), and the layouts query the page host's width (the "Page"
        container, MainView): under 600 logical px a two-column page stacks. -->
 
   <Styles.Resources>
-    <!-- the palette (myColors) -->
-    <Color x:Key="Purple100">#8d9fe4</Color>
-    <Color x:Key="Purple200">#7b7afe</Color>
-    <Color x:Key="Purple300">#2f296e</Color>
-    <Color x:Key="Purple400">#211951</Color>
-    <Color x:Key="Purple500">#150e3d</Color>
-    <Color x:Key="Purple600">#0b0b24</Color>
-    <Color x:Key="Cream100">#e7b481</Color>
-    <Color x:Key="Green200">#15f5ba</Color>
-    <Color x:Key="Green300">#23c99d</Color>
-    <Color x:Key="Red100">#ff5252</Color>
-
-    <!-- the theme keys (vhConnectThemeColors) -->
-    <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource Purple500}" />
-    <SolidColorBrush x:Key="AppTextBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="AppText50Brush" Color="#80FFFFFF" />
-    <SolidColorBrush x:Key="AppText40Brush" Color="#66FFFFFF" />
-    <SolidColorBrush x:Key="AppDisabledBrush" Color="#61FFFFFF" />
-    <SolidColorBrush x:Key="AppBorderBrush" Color="#1FFFFFFF" />
-    <SolidColorBrush x:Key="ConnectBtnBrush" Color="{StaticResource Cream100}" />
-    <SolidColorBrush x:Key="OnConnectBtnBrush" Color="{StaticResource Purple300}" />
-    <SolidColorBrush x:Key="ConnectBtnConnectedBrush" Color="{StaticResource Purple200}" />
-    <SolidColorBrush x:Key="OnConnectBtnConnectedBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="CircleBorderBrush" Color="{StaticResource Cream100}" />
-    <SolidColorBrush x:Key="CircleShineBrush" Color="{StaticResource Green200}" />
-    <SolidColorBrush x:Key="ConfigBtnBgBrush" Color="#B3150E3D" />
-    <SolidColorBrush x:Key="OnConfigBtnBrush" Color="{StaticResource Cream100}" />
-    <SolidColorBrush x:Key="ConfigBtnBorderBrush" Color="#4DE7B481" />
-    <SolidColorBrush x:Key="ConfigCardBrush" Color="{StaticResource Purple400}" />
-    <SolidColorBrush x:Key="ActiveServerBrush" Color="{StaticResource Green200}" />
-    <SolidColorBrush x:Key="FastestServerBrush" Color="{StaticResource Purple200}" />
-    <SolidColorBrush x:Key="ActiveChipBrush" Color="{StaticResource Green200}" />
-    <SolidColorBrush x:Key="OnActiveChipBrush" Color="{StaticResource Purple500}" />
-    <SolidColorBrush x:Key="PremiumIconBrush" Color="{StaticResource Cream100}" />
-    <SolidColorBrush x:Key="SpeedDownBrush" Color="{StaticResource Green200}" />
-    <SolidColorBrush x:Key="SpeedUpBrush" Color="{StaticResource Red100}" />
-    <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource Red100}" />
-    <SolidColorBrush x:Key="NoteBrush" Color="{StaticResource Purple400}" />
-    <SolidColorBrush x:Key="AppFocusBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="VersionDebugBrush" Color="{StaticResource Cream100}" />
-    <SolidColorBrush x:Key="OnVersionDebugBrush" Color="{StaticResource Purple600}" />
     <FontFamily x:Key="IconFont">avares://VpnHood.AppLib.AvaloniaUI/Assets/Fonts#Material Design Icons</FontFamily>
 
     <!-- The Fluent button template (one content presenter) with v-ripple around the presenter:
@@ -157,6 +118,12 @@
     <Setter Property="Background" Value="{StaticResource NoteBrush}" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="14,10" />
+  </Style>
+  <!-- the note's own text colour: the client's note is a light card, the connect one dark, and
+       the text has to follow. It is written here rather than inherited from the border because
+       the TextBlock style above gives every block the page's colour. -->
+  <Style Selector="Border.note TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource OnNoteBrush}" />
   </Style>
 
   <!-- Buttons: the web UI's v-btn, which neither uppercases nor fills, with its ripple; each class

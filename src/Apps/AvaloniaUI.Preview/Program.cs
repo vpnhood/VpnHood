@@ -1,7 +1,8 @@
-using Avalonia;
+﻿using Avalonia;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.AvaloniaUI;
+using VpnHood.AppLib.AvaloniaUI.Styles;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
@@ -12,8 +13,10 @@ namespace VpnHood.App.AvaloniaUI.Preview;
 // never touches the installed client, the web server up so a phone can pair with it exactly as
 // with a TV, and the UI in a window that opens at a TV's size and resizes down to a phone's.
 // "--tv" runs it as a TV (AppFeatures.IsTv: the pairing row, the ring on arrival); without it, as
-// a phone or a desktop. Connecting needs the WinDivert driver, so a plain run shows the walk and
-// the pairing; run elevated to connect as well.
+// a phone or a desktop. "--connect" runs it as the Connect product, which is what picks the theme
+// (AppOptions.UiName); without it, as the client, as any head that names no product. Connecting
+// needs the WinDivert driver, so a plain run shows the walk and the pairing; run elevated to
+// connect as well.
 internal static class Program
 {
     [STAThread]
@@ -21,6 +24,7 @@ internal static class Program
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
         var isTv = args.Contains("--tv");
+        var isConnect = args.Contains("--connect");
 
         var storageFolderPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.AvaloniaPreview");
@@ -31,7 +35,8 @@ internal static class Program
             StorageFolderPath = storageFolderPath,
             Resources = resources,
             IsLicenseAgreementRequired = false,
-            IsAddAccessKeySupported = true
+            IsAddAccessKeySupported = true,
+            UiName = isConnect ? AppTheme.ConnectUiName : null
         };
 
         var device = new PreviewDevice(new WinDevice(storageFolderPath, appOptions.IsDebugMode), isTv);

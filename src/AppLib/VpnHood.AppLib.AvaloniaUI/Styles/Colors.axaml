@@ -1,0 +1,28 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- The web UI's tones (theme/colors.ts), trimmed to the ones the two themes beside this file
+       name. Only those two files read them: a view names a theme key, never a tone, which is what
+       lets the same view paint in either product. -->
+
+  <Color x:Key="Blue100">#16a3fe</Color>
+  <Color x:Key="Blue290">#14257b</Color>
+  <Color x:Key="Blue300">#122272</Color>
+  <Color x:Key="Blue330">#0e1c5f</Color>
+  <Color x:Key="Blue400">#06124b</Color>
+  <Color x:Key="Blue500">#030b30</Color>
+  <Color x:Key="Purple20">#e1e1ff</Color>
+  <Color x:Key="Purple100">#8d9fe4</Color>
+  <Color x:Key="Purple200">#7b7afe</Color>
+  <Color x:Key="Purple300">#2f296e</Color>
+  <Color x:Key="Purple400">#211951</Color>
+  <Color x:Key="Purple500">#150e3d</Color>
+  <Color x:Key="Purple600">#0b0b24</Color>
+  <Color x:Key="Green50">#00ff56</Color>
+  <Color x:Key="Green100">#3ff6a9</Color>
+  <Color x:Key="Green200">#15f5ba</Color>
+  <Color x:Key="Yellow200">#ffe648</Color>
+  <Color x:Key="Cream100">#e7b481</Color>
+  <Color x:Key="Red100">#ff5252</Color>
+
+</ResourceDictionary>

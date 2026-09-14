@@ -19,6 +19,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private const double Megabyte = 1_000_000;
     private const double Gigabyte = 1000 * Megabyte;
+    private static readonly TimeSpan NoticeLife = TimeSpan.FromSeconds(6);
 
     private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private readonly DispatcherTimer _timer;
@@ -28,9 +29,23 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public string AppName => _app.Resources.Strings.AppName;
     public string VersionText => $"{Strings.Current.AbbreviationVersion} {_app.Features.Version.Build}";
-    public string LocationTitle => Strings.Current.Location.ToUpperInvariant();
     public string SettingsTitle => Strings.Current.Settings.ToUpperInvariant();
     public string AutoChipText => Strings.Current.Auto.ToUpperInvariant();
+
+    // Connect ships one server and lets the person pick a location in it; the client keeps a list of
+    // servers, each with locations of its own. That one difference names the home row, fills it,
+    // and decides whether the page behind it is a list of servers or of locations - the web UI's
+    // isSingleProfileMode, everywhere it reads it.
+    public bool IsSingleProfileMode => AppProduct.IsSingleProfileMode(_app.Features.UiName);
+    public string ServersRowTitle => (IsSingleProfileMode ? Strings.Current.Location : Strings.Current.Server).ToUpperInvariant();
+    public string ServersPageTitle => IsSingleProfileMode ? Strings.Current.Location : Strings.Current.Servers;
+
+    // A server is added by its access key, which only a client head takes (IsAddAccessKeySupported).
+    // A remote cannot type a vh:// key, so on a TV the button says so and leads to the phone -
+    // exactly what the web UI's servers page does with it.
+    public bool CanAddServer => _app.Features.IsAddAccessKeySupported;
+    public string AddServerText => IsTv ? Strings.Current.AddOrRemoveServers : Strings.Current.AddServer;
+    public string AddServerGlyph => IsTv ? Mdi.Cellphone : Mdi.PlusCircleOutline;
 
     // A TV hands everything but connecting to a phone (TV plan §3.1); the row that does so shows
     // only there. The app's word, not the UI's: the same views serve a phone.
@@ -62,13 +77,24 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string ErrorText { get; private set => Set(ref field, value); } = "";
     public bool HasError { get; private set => Set(ref field, value); }
 
-    // the location, as the home row and the servers page show it
-    public bool HasProfile { get; private set => Set(ref field, value); }
-    public string LocationName { get; private set => Set(ref field, value); } = Strings.Current.NoLocationSelected;
+    // the home row and the page behind it: the location in connect, the server in the client
+    public string ServersRowValue { get; private set => Set(ref field, value); } = Strings.Current.NoLocationSelected;
     public Bitmap? LocationFlag { get; private set => Set(ref field, value); }
     public bool HasLocationFlag { get; private set => Set(ref field, value); }
     public bool IsLocationAuto { get; private set => Set(ref field, value); } = true;
     public IReadOnlyList<LocationGroup> LocationGroups { get; private set => Set(ref field, value); } = [];
+    public IReadOnlyList<ProfileItem> Profiles { get; private set => Set(ref field, value); } = [];
+
+    // Nothing to show on the servers page but the way to add one: the web UI's NO_SERVER_AVAILABLE
+    // warning, which it shows only where a key can be added at all.
+    public bool HasNoServer { get; private set => Set(ref field, value); }
+    public string NoServerText => Strings.Current.NoServerAvailable;
+
+    // What the web UI says in a snackbar: a sentence about the tap just made, gone a few seconds
+    // later. The two the servers row can produce are the reasons it does not open at all.
+    public string NoticeText { get; private set => Set(ref field, value); } = "";
+    public bool HasNotice { get; private set => Set(ref field, value); }
+    private DateTime _noticeUntil;
 
     public MainViewModel()
     {
@@ -157,28 +183,85 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         HasDebugData = _app.UserSettings.DebugData1 != null || _app.UserSettings.DebugData2 != null;
 
-        // ServersButton
-        HasProfile = profile != null;
+        // ServersButton: the location in connect, the name of the chosen server in the client
         var location = state.ServerLocationInfo;
-        LocationName = location == null ? Strings.Current.NoLocationSelected
+        ServersRowValue = IsSingleProfileMode
+            ? location == null ? Strings.Current.NoLocationSelected
             : location.IsAuto ? Strings.Current.AutoSelect
-            : LocationDisplay(location.TranslatedCountryName, location.HasRegion && location.HasMultipleRegions ? location.RegionName : null);
+            : LocationDisplay(location.TranslatedCountryName, location.HasRegion && location.HasMultipleRegions ? location.RegionName : null)
+            : profile?.ClientProfileName ?? Strings.Current.NoServerSelected;
         IsLocationAuto = location == null || location.IsAuto;
         HasLocationFlag = !IsLocationAuto;
         LocationFlag = HasLocationFlag ? Flags.Get(location?.CountryCode) : null;
 
-        // the servers page, rebuilt only when a row differs: a new list every second would rebuild
-        // the rows under the remote, and the focus with them
-        var groups = BuildGroups(profile);
-        if (cultureChanged || groups.Count != LocationGroups.Count ||
-            groups.Where((g, i) => !g.SameAs(LocationGroups[i])).Any()) {
-            foreach (var group in groups) {
-                var previous = LocationGroups.FirstOrDefault(x => x.Title == group.Title);
-                if (previous != null)
-                    group.IsExpanded = previous.IsExpanded;
-            }
-            LocationGroups = groups;
+        // the page behind that row, rebuilt only when a row differs: a new list every second would
+        // rebuild the rows under the remote, and the focus with them
+        RefreshLocations(profile, cultureChanged);
+        RefreshProfiles(cultureChanged);
+
+        if (HasNotice && DateTime.UtcNow > _noticeUntil) {
+            HasNotice = false;
+            NoticeText = "";
         }
+    }
+
+    private void RefreshLocations(ClientProfileInfo? profile, bool cultureChanged)
+    {
+        // the client's locations live in its servers' cards, one list per server
+        var groups = IsSingleProfileMode ? BuildGroups(profile, isNested: false, isActiveProfile: true) : [];
+        if (!cultureChanged && groups.Count == LocationGroups.Count &&
+            !groups.Where((x, i) => !x.SameAs(LocationGroups[i])).Any())
+            return;
+
+        foreach (var group in groups) {
+            var previous = LocationGroups.FirstOrDefault(x => x.Title == group.Title);
+            if (previous != null)
+                group.IsExpanded = previous.IsExpanded;
+        }
+        LocationGroups = groups;
+    }
+
+    private void RefreshProfiles(bool cultureChanged)
+    {
+        IReadOnlyList<ClientProfileInfo> infos = IsSingleProfileMode ? [] : ProfileInfos();
+        HasNoServer = !IsSingleProfileMode && CanAddServer && infos.Count == 0;
+        var profiles = BuildProfiles(infos);
+        if (!cultureChanged && profiles.Count == Profiles.Count &&
+            !profiles.Where((x, i) => !x.SameAs(Profiles[i])).Any())
+            return;
+
+        foreach (var item in profiles) {
+            var previous = Profiles.FirstOrDefault(x => x.ClientProfileId == item.ClientProfileId);
+            if (previous != null)
+                item.IsExpanded = previous.IsExpanded;
+        }
+        Profiles = profiles;
+    }
+
+    private IReadOnlyList<ClientProfileInfo> ProfileInfos()
+    {
+        return _app.ClientProfileService.List().Select(x => x.ToInfo(_app.Features)).ToArray();
+    }
+
+    // The web UI's ExpansionPanel: every server the app holds, the one it is set to marked, each
+    // opened when it is that one or has a single location - nothing to open.
+    private IReadOnlyList<ProfileItem> BuildProfiles(IReadOnlyList<ClientProfileInfo> infos)
+    {
+        var currentId = _app.CurrentClientProfileInfo?.ClientProfileId;
+        return infos.Select(x => {
+            var isSingleLocation = x.LocationInfos.Length < 2;
+            var isActive = x.ClientProfileId == currentId;
+            return new ProfileItem {
+                ClientProfileId = x.ClientProfileId,
+                Name = x.ClientProfileName,
+                IsActive = isActive,
+                IsSingleLocation = isSingleLocation,
+                SupportIdText = $"SID:{x.SupportId}",
+                HostName = x.HostNames.FirstOrDefault() ?? "",
+                Groups = BuildGroups(x, isNested: true, isActiveProfile: isActive),
+                IsExpanded = isActive || isSingleLocation
+            };
+        }).ToArray();
     }
 
     // "United States (California)", "USA (California)" as the web UI abbreviates it
@@ -213,7 +296,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The web UI's LocationList: Free and Premium cards when the profile has both and the person is
     // not premium; only the premium rows when the person is; one card of everything otherwise.
-    private IReadOnlyList<LocationGroup> BuildGroups(ClientProfileInfo? profile)
+    private IReadOnlyList<LocationGroup> BuildGroups(ClientProfileInfo? profile, bool isNested, bool isActiveProfile)
     {
         if (profile == null)
             return [];
@@ -232,6 +315,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             return new LocationGroup {
                 Title = title,
                 IsPremium = isPremiumGroup,
+                IsNested = isNested,
                 Items = locations.Select(x => new LocationItem(
                     ClientProfileId: profile.ClientProfileId,
                     ServerLocation: x.ServerLocation,
@@ -239,7 +323,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                     Name: x.IsAuto ? Strings.Current.Fastest : x.IsNestedCountry ? x.RegionName : x.TranslatedCountryName,
                     IsNested: x.IsNestedCountry,
                     IsAuto: x.CountryCode == ServerLocationInfo.AutoCountryCode,
-                    IsActive: x.ServerLocation == selected && profile.IsPremiumLocationSelected == isPremiumGroup,
+                    // only under the server the app is set to: another server's own choice is not
+                    // where this app is going (the web UI's isActiveItem, which returns false for
+                    // any profile but the active one)
+                    IsActive: isActiveProfile && x.ServerLocation == selected &&
+                              profile.IsPremiumLocationSelected == isPremiumGroup,
                     IsPremiumGroup: isPremiumGroup,
                     HasUnblockable: x.Options.HasUnblockable && isPremiumGroup,
                     ShowCrown: isPremiumGroup && !isPremiumUser)).ToArray()
@@ -270,6 +358,58 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         finally {
             Dispatcher.UIThread.Post(Refresh);
         }
+    }
+
+    // A server chosen in the list, or one just added by its key: the app connects where that server
+    // is already set to go, as the web UI's connectWithProfile does.
+    public async Task ConnectToProfile(Guid clientProfileId)
+    {
+        try {
+            var location = _app.ClientProfileService.FindInfo(clientProfileId)?.SelectedLocationInfo;
+            await _app.Connect(new ConnectOptions {
+                ClientProfileId = clientProfileId,
+                ServerLocation = location?.ServerLocation,
+                PlanId = PlanFor(location)
+            });
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not connect to the chosen server.");
+        }
+        finally {
+            Dispatcher.UIThread.Post(Refresh);
+        }
+    }
+
+    // A server the person typed the key of. The key is the app's to judge: an unreadable one throws,
+    // and the page that called this says so (INVALID_ACCESS_KEY_FORMAT), as the web UI's dialog does.
+    public Guid AddAccessKey(string accessKey)
+    {
+        var profile = _app.ClientProfileService.ImportAccessKey(accessKey);
+        Refresh();
+        return profile.ClientProfileId;
+    }
+
+    // Why the servers row leads nowhere, when it does: a head that takes no keys can hold nothing
+    // to choose between. The web UI's buttonClickHandler, which says this and stays home.
+    public string? ServersUnreachableReason()
+    {
+        if (CanAddServer)
+            return null;
+
+        var profiles = _app.ClientProfileService.List();
+        if (profiles.Length == 0)
+            return Strings.Current.NoClientProfileAvailable;
+
+        return profiles.Length == 1 && profiles[0].ToInfo(_app.Features).LocationInfos.Length < 2
+            ? Strings.Current.NoAdditionalLocationAvailable
+            : null;
+    }
+
+    public void ShowNotice(string text)
+    {
+        NoticeText = text;
+        HasNotice = true;
+        _noticeUntil = DateTime.UtcNow + NoticeLife;
     }
 
     public async Task ConnectTo(LocationItem location)

@@ -8,12 +8,9 @@ namespace VpnHood.AppLib.AvaloniaUI.Styles;
 // styles that read it, because a key is looked up once, where it is written.
 public static class AppTheme
 {
-    // what a Connect head sets as its AppOptions.UiName; a Client head sets nothing
-    public const string ConnectUiName = "VpnHoodConnect";
-
     public static ResourceInclude FromUiName(string? uiName)
     {
-        var fileName = uiName == ConnectUiName ? "ConnectTheme" : "ClientTheme";
+        var fileName = AppProduct.IsConnect(uiName) ? "ConnectTheme" : "ClientTheme";
         return new ResourceInclude(baseUri: null) {
             Source = new Uri($"avares://VpnHood.AppLib.AvaloniaUI/Styles/{fileName}.axaml")
         };

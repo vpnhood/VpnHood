@@ -5,7 +5,9 @@
        name. Only those two files read them: a view names a theme key, never a tone, which is what
        lets the same view paint in either product. -->
 
+  <Color x:Key="Gray300">#eaeaea</Color>
   <Color x:Key="Blue100">#16a3fe</Color>
+  <Color x:Key="Blue280">#1a2d8b</Color>
   <Color x:Key="Blue290">#14257b</Color>
   <Color x:Key="Blue300">#122272</Color>
   <Color x:Key="Blue330">#0e1c5f</Color>
@@ -21,7 +23,10 @@
   <Color x:Key="Green50">#00ff56</Color>
   <Color x:Key="Green100">#3ff6a9</Color>
   <Color x:Key="Green200">#15f5ba</Color>
+  <Color x:Key="Green300">#23c99d</Color>
   <Color x:Key="Yellow200">#ffe648</Color>
+  <Color x:Key="Orange100">#fb8c00</Color>
+  <Color x:Key="Orange300">#4a2800</Color>
   <Color x:Key="Cream100">#e7b481</Color>
   <Color x:Key="Red100">#ff5252</Color>
 

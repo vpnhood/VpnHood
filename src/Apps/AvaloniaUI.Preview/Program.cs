@@ -2,7 +2,6 @@
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.AvaloniaUI;
-using VpnHood.AppLib.AvaloniaUI.Styles;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
@@ -29,14 +28,16 @@ internal static class Program
         var storageFolderPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.AvaloniaPreview");
         var resources = ClientAppResources.Resources;
-        resources.Strings.AppName = "VpnHood!";
+        // the name the UI shows, as a head of that product would set it (AppFeatures.AppName is
+        // this very string), so the preview says which product it is running as
+        resources.Strings.AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT";
 
         var appOptions = new AppOptions(appId: "com.vpnhood.avalonia.preview", "VpnHood! Avalonia Preview", isDebugMode: true) {
             StorageFolderPath = storageFolderPath,
             Resources = resources,
             IsLicenseAgreementRequired = false,
-            IsAddAccessKeySupported = true,
-            UiName = isConnect ? AppTheme.ConnectUiName : null
+            IsAddAccessKeySupported = !isConnect, // a connect head ships one built-in profile and takes no keys
+            UiName = isConnect ? AppProduct.ConnectUiName : null
         };
 
         var device = new PreviewDevice(new WinDevice(storageFolderPath, appOptions.IsDebugMode), isTv);

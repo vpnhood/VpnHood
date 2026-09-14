@@ -29,6 +29,13 @@
   <SolidColorBrush x:Key="OnConfigBtnBrush" Color="{StaticResource Cream100}" />
   <SolidColorBrush x:Key="ConfigBtnBorderBrush" Color="#4DE7B481" />
   <SolidColorBrush x:Key="ConfigCardBrush" Color="{StaticResource Purple400}" />
+  <!-- a card inside a card: the location groups of a server, in the servers list -->
+  <SolidColorBrush x:Key="ExpansionCardBrush" Color="{StaticResource Purple400}" />
+  <SolidColorBrush x:Key="ActiveProfileBrush" Color="{StaticResource Green300}" />
+  <SolidColorBrush x:Key="InactiveProfileBrush" Color="#99EAEAEA" />
+  <!-- btn-style-2, tonal: the add-server button on the servers page -->
+  <SolidColorBrush x:Key="TonalBtnBrush" Color="{StaticResource Purple200}" />
+  <SolidColorBrush x:Key="TonalBtnBgBrush" Color="#297B7AFE" />
 
   <SolidColorBrush x:Key="ActiveServerBrush" Color="{StaticResource Green200}" />
   <SolidColorBrush x:Key="FastestServerBrush" Color="{StaticResource Purple200}" />
@@ -42,6 +49,8 @@
   <SolidColorBrush x:Key="SpeedUpBrush" Color="{StaticResource Red100}" />
 
   <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource Red100}" />
+  <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Orange100}" />
+  <SolidColorBrush x:Key="OnWarningBrush" Color="{StaticResource Orange300}" />
   <SolidColorBrush x:Key="NoteBrush" Color="{StaticResource Purple400}" />
   <SolidColorBrush x:Key="OnNoteBrush" Color="{StaticResource Purple100}" />
   <SolidColorBrush x:Key="AppFocusBrush" Color="#FFFFFF" />

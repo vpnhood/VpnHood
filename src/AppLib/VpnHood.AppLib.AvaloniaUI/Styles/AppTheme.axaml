@@ -126,6 +126,21 @@
     <Setter Property="Foreground" Value="{StaticResource OnNoteBrush}" />
   </Style>
 
+  <!-- alert-warning: the same shape in the warning colour, its title a touch heavier (the web UI's
+       VAlert with type="warning", whose text colour is the theme's on-warning) -->
+  <Style Selector="Border.alert-warning">
+    <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,10" />
+  </Style>
+  <Style Selector="Border.alert-warning TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource OnWarningBrush}" />
+  </Style>
+  <Style Selector="Border.alert-warning TextBlock.alert-title">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
   <!-- Buttons: the web UI's v-btn, which neither uppercases nor fills, with its ripple; each class
        below is one of its shapes. The transparent 3px border keeps the size from jumping when the
        ring lights. The ring is the border's, so Fluent's focus adorner (a rectangle in the top
@@ -323,12 +338,23 @@
   <Style Selector="ToggleButton.debug-item:checked TextBlock.check">
     <Setter Property="Opacity" Value="1" />
   </Style>
+  <!-- A text field keeps the page's own dark fill in every state: Fluent's focused field is black,
+       which belongs to neither product. The ring says which field has the keys. -->
   <Style Selector="TextBox">
     <Setter Property="Background" Value="{StaticResource ConfigBtnBgBrush}" />
     <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
     <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
     <Setter Property="CornerRadius" Value="6" />
     <Setter Property="FontSize" Value="14" />
+  </Style>
+  <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{StaticResource ConfigBtnBgBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
+  </Style>
+  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{StaticResource ConfigBtnBgBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
   </Style>
 
   <!-- Chips: v-chip x-small flat (Active) and small tonal (Auto). -->
@@ -371,11 +397,54 @@
     <Setter Property="Stretch" Value="UniformToFill" />
   </Style>
 
-  <!-- config-card, the servers page's card -->
+  <!-- config-card, the servers page's card; nested is a card inside a server's card -->
   <Style Selector="Border.config-card">
     <Setter Property="Background" Value="{StaticResource ConfigCardBrush}" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="Padding" Value="0,4" />
+  </Style>
+  <Style Selector="Border.config-card.nested">
+    <Setter Property="Background" Value="{StaticResource ExpansionCardBrush}" />
+  </Style>
+
+  <!-- A server's row in the client's list (ExpansionPanel.vue's title row): the mark, the name and
+       the +/- that opens it. The whole row is the button, as the panel's title is there. -->
+  <Style Selector="Button.profile-header">
+    <Setter Property="Template" Value="{StaticResource RippleButtonTemplate}" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.profile-header:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
+  </Style>
+  <Style Selector="TextBlock.profile-name">
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="TextBlock.profile-name.inactive">
+    <Setter Property="Opacity" Value="0.6" />
+  </Style>
+
+  <!-- Add server (btn-style-2, tonal): the product's second colour on a wash of itself -->
+  <Style Selector="Button.tonal">
+    <Setter Property="Background" Value="{StaticResource TonalBtnBgBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TonalBtnBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="16,6" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.tonal:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
   </Style>
 
   <!-- a location group's header: v-list-group's activator, the title with a rule and a chevron -->

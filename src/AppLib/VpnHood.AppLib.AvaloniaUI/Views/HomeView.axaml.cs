@@ -36,8 +36,15 @@ public partial class HomeView : UserControl, IPage
         await _viewModel.ToggleConnect();
     }
 
-    private void OnLocationClick(object? sender, RoutedEventArgs e)
+    // The web UI's ServersButton: the page opens unless there is nothing behind it to choose, and
+    // then the row says why rather than opening an empty page.
+    private void OnServersClick(object? sender, RoutedEventArgs e)
     {
+        if (_viewModel.ServersUnreachableReason() is { } reason) {
+            _viewModel.ShowNotice(reason);
+            return;
+        }
+
         _host.Navigate(new LocationsView(_viewModel, _host));
     }
 

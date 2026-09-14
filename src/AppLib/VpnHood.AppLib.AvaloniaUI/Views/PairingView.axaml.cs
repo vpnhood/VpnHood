@@ -21,12 +21,16 @@ public partial class PairingView : UserControl, IPage, IDisposable
     private bool _isAlwaysOn;
     private bool _disposed;
 
-    public PairingView(MainView host)
+    // The hint is what the web UI's dialog shows when it was opened for a job a remote cannot do -
+    // adding a server, say: it names the page to open on the phone (RemoteAccessHint).
+    public PairingView(MainView host, string? hint = null)
     {
         _host = host;
         InitializeComponent();
         _timer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => _ = Refresh());
         AddressText.Text = Strings.Current.RemoteAccessStarting;
+        HintText.Text = hint;
+        HintText.IsVisible = hint != null;
     }
 
     public void FocusDefault()

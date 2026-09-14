@@ -91,17 +91,22 @@
         <!-- the last error, while idle; the web UI shows it in a dialog -->
         <TextBlock Classes="body-small error" Text="{Binding ErrorText}" IsVisible="{Binding HasError}"
                    TextWrapping="Wrap" TextAlignment="Center" MaxWidth="320" />
+
+        <!-- what the web UI would say in a snackbar: why the row just tapped led nowhere -->
+        <TextBlock Classes="body-small" Text="{Binding NoticeText}" IsVisible="{Binding HasNotice}"
+                   TextWrapping="Wrap" TextAlignment="Center" MaxWidth="320" Margin="0,8,0,0" />
       </StackPanel>
 
       <StackPanel Classes="rows" Spacing="4">
 
-        <!-- ServersButton -->
-        <Button x:Name="LocationButton" Classes="config-item" Click="OnLocationClick" IsEnabled="{Binding HasProfile}">
+        <!-- ServersButton: LOCATION in connect, SERVER in the client, and the value follows -
+             the chosen location there, the chosen server's name here -->
+        <Button x:Name="ServersButton" Classes="config-item" Click="OnServersClick">
           <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
             <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.Earth}" />
-            <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding LocationTitle}" />
+            <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding ServersRowTitle}" />
             <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{x:Static res:Mdi.ChevronRight}" />
-            <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding LocationName}" />
+            <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding ServersRowValue}" />
             <Border Grid.Column="4" Classes="flag" Width="23" Height="15" CornerRadius="3" Margin="8,0,0,0"
                     IsVisible="{Binding HasLocationFlag}">
               <Image Source="{Binding LocationFlag}" />

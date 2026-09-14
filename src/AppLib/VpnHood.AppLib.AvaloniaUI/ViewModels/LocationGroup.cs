@@ -15,6 +15,10 @@ public sealed class LocationGroup : INotifyPropertyChanged
     public required IReadOnlyList<LocationItem> Items { get; init; }
     public bool HasTitle => Title.Length > 0;
 
+    // A card of a server's card, in the client's list of servers, rather than a card of the page:
+    // the web UI gives it the darker of the two (LocationGroup.vue's expansion-panels-collapsed).
+    public bool IsNested { get; init; }
+
     public bool IsExpanded {
         get => _isExpanded;
         set {
@@ -26,6 +30,7 @@ public sealed class LocationGroup : INotifyPropertyChanged
 
     public bool SameAs(LocationGroup other)
     {
-        return Title == other.Title && IsPremium == other.IsPremium && Items.SequenceEqual(other.Items);
+        return Title == other.Title && IsPremium == other.IsPremium && IsNested == other.IsNested &&
+               Items.SequenceEqual(other.Items);
     }
 }

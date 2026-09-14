@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
+using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.ViewModels;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
@@ -58,7 +59,9 @@ public partial class LocationsView : UserControl, IPage
 
     // The active location is where the input starts, so a press without a change is a no-op and
     // the nearest alternatives are one step away. Its row exists only once the lists have been laid
-    // out, which may be after this call: then the landing waits for that layout.
+    // out, which may be after this call: then the landing waits for that layout. A client's list
+    // may show no row at all - every server closed, or none added yet - and the input lands on the
+    // first thing on the page instead, which is the way to add one.
     public void FocusDefault()
     {
         if (!FocusActiveRow())
@@ -68,7 +71,18 @@ public partial class LocationsView : UserControl, IPage
     private void OnFirstLayout(object? sender, EventArgs e)
     {
         LayoutUpdated -= OnFirstLayout;
-        FocusActiveRow();
+        if (!FocusActiveRow())
+            FocusFirstControl();
+    }
+
+    private void FocusFirstControl()
+    {
+        var first = Scroller.GetVisualDescendants().OfType<Button>()
+            .FirstOrDefault(x => x is { IsVisible: true, IsEffectivelyEnabled: true, Focusable: true });
+        if (first != null)
+            first.LandFocus();
+        else
+            Header.FocusBack();
     }
 
     private bool FocusActiveRow()
@@ -95,6 +109,33 @@ public partial class LocationsView : UserControl, IPage
     {
         if (RowOf(e.Source) is { } location)
             _ = Choose(location);
+    }
+
+    // A server's row: it opens on its locations, unless it has a single one - then there is nothing
+    // to open and choosing it connects, as the web UI's panel click does.
+    private void OnProfileClick(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not ProfileItem profile)
+            return;
+
+        if (!profile.IsSingleLocation) {
+            profile.IsExpanded = !profile.IsExpanded;
+            return;
+        }
+
+        _host.GoBack();
+        _ = _viewModel.ConnectToProfile(profile.ClientProfileId);
+    }
+
+    // A vh:// key is a long base64 blob no remote can type, so a TV sends the person to their phone
+    // - the page that hands the address out - and says so there; anything with a keyboard gets the
+    // field. The web UI's onAddServer, with its dialog as our page.
+    private void OnAddServerClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel.IsTv)
+            _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintServers));
+        else
+            _host.Navigate(new AddServerView(_viewModel, _host));
     }
 
     private static LocationItem? RowOf(object? source)

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.AppLib.AvaloniaUI</RootNamespace>
+		<IsPackable>false</IsPackable>
+		<Description>The app's UI in Avalonia, for wherever the web UI cannot run: an Android whose web view is too old or broken, Apple TV. Capped today - connect, the location list, and on a TV the pairing code that hands everything else to a phone - and responsive: two columns on a TV or a desktop, one on a phone. Grows page by page as the web UI's features are ported.</Description>
+		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+	</PropertyGroup>
+
+	<!-- The web UI's own assets, so both UIs look the same: its country flags, its home background,
+	     its fonts (Poppins Light for text, Bold for titles) and its icon font (Material Design Icons,
+	     the full face for now - a subset of the glyphs Mdi.cs names would cut it to a few KB). -->
+	<ItemGroup>
+		<AvaloniaResource Include="Assets\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+		<!-- The QR of the pairing address: Android has no encoder of its own and Core Image is tvOS-only,
+		     so one dependency-free .NET encoder serves both (TV plan, Phase 4). -->
+		<PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+		<!-- The pairing page starts and stops the LAN listener the phone dials into. -->
+		<ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+	</ItemGroup>
+</Project>

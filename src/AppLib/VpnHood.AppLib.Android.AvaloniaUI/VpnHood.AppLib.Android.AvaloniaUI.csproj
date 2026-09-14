@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0-android36.1</TargetFramework>
+		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+		<RootNamespace>VpnHood.AppLib.Droid.AvaloniaUI</RootNamespace>
+		<IsPackable>false</IsPackable>
+		<Description>The Avalonia UI's activity on Android, for a device whose web view cannot run the web UI: the app's activity-event contract on Avalonia's main activity, so the app can ask for VPN permission and take access-key intents as it does behind the web UI. A head opts in with two declarations - see README.md.</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia.Android" Version="12.1.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLib.AvaloniaUI\VpnHood.AppLib.AvaloniaUI.csproj" />
+		<ProjectReference Include="..\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+	</ItemGroup>
+</Project>

@@ -1,0 +1,66 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VpnHood.AppLib.AvaloniaUI.ViewModels"
+             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls"
+             x:Class="VpnHood.AppLib.AvaloniaUI.Views.LocationsView"
+             x:DataType="vm:MainViewModel">
+  <!-- The web UI's servers page for one profile (pages/servers + components/Servers): a card per
+       group - Free and Premium when both exist and the person is not premium - each a collapsible
+       list of rows: the flag or the bolt of the fastest choice, the name, and at the end the
+       Active chip, the unblockable mark and the crown. Up and Down walk the rows, Enter or a tap
+       connects there and returns home, Back returns without. -->
+  <DockPanel Classes="page">
+    <controls:PageHeader DockPanel.Dock="Top" Title="{x:Static res:Strings.Servers}" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl ItemsSource="{Binding LocationGroups}" MaxWidth="720">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:LocationGroup">
+            <Border Classes="config-card" Margin="0,0,0,16">
+              <StackPanel>
+
+                <!-- LocationGroup: the activator -->
+                <ToggleButton Classes="group-header" IsChecked="{Binding IsExpanded}" IsVisible="{Binding HasTitle}">
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock Classes="body-small disabled" Text="{Binding Title}" VerticalAlignment="Center" />
+                    <Border Grid.Column="1" Height="1" Margin="12,0" Background="{StaticResource AppBorderBrush}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Classes="mdi disabled chevron" FontSize="20" Text="{x:Static res:Mdi.ChevronDown}" RenderTransformOrigin="50%,50%" />
+                  </Grid>
+                </ToggleButton>
+
+                <!-- LocationListItem, one per row -->
+                <ListBox Classes="locations" ItemsSource="{Binding Items}" IsVisible="{Binding IsExpanded}" SelectionMode="Single">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LocationItem">
+                      <Grid ColumnDefinitions="Auto,*,Auto" Margin="{Binding Indent}">
+                        <TextBlock Classes="mdi bolt" Classes.active="{Binding IsActive}" FontSize="31" Margin="0,0,8,0"
+                                   Text="{x:Static res:Mdi.LightningBoltOutline}" IsVisible="{Binding IsAuto}" />
+                        <Border Classes="flag" Classes.small="{Binding IsNested}" Margin="0,0,8,0" IsVisible="{Binding !IsAuto}">
+                          <Image Source="{Binding Flag}" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                          <TextBlock Classes="location-name" Classes.nested="{Binding IsNested}" Classes.active="{Binding IsActive}" Text="{Binding Name}" />
+                          <TextBlock Classes="body-small disabled flasher" Text="{Binding RecommendedText}" IsVisible="{Binding IsAuto}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                          <Border Classes="chip chip-active" IsVisible="{Binding IsActive}">
+                            <TextBlock Text="{Binding ActiveChipText}" />
+                          </Border>
+                          <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource PremiumIconBrush}"
+                                     Text="{x:Static res:Mdi.SwordCross}" IsVisible="{Binding HasUnblockable}" />
+                          <TextBlock Classes="mdi" FontSize="18" Foreground="{StaticResource PremiumIconBrush}"
+                                     Text="{x:Static res:Mdi.Crown}" IsVisible="{Binding ShowCrown}" />
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

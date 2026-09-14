@@ -1,0 +1,124 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:VpnHood.AppLib.AvaloniaUI.ViewModels"
+             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls"
+             x:Class="VpnHood.AppLib.AvaloniaUI.Views.HomeView"
+             x:DataType="vm:MainViewModel">
+  <!-- The web UI's home (pages/index.vue): the header, the hero - the speeds, the circle, the
+       Connect pill - and the rows. Portrait stacks them, header to rows, as the web UI's single
+       column does; over 600 logical px the hero and the rows sit side by side, as its
+       landscape-home grid does. The placement lives in styles, not on the elements: a local value
+       would beat the query. The Settings row is a TV's alone: it hands the rest to a phone. -->
+  <UserControl.Styles>
+    <Style Selector="StackPanel.hero">
+      <Setter Property="Grid.Row" Value="1" />
+      <Setter Property="Grid.Column" Value="0" />
+    </Style>
+    <Style Selector="StackPanel.rows">
+      <Setter Property="Grid.Row" Value="1" />
+      <Setter Property="Grid.Column" Value="2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <ContainerQuery Name="Page" Query="max-width:600">
+      <Style Selector="StackPanel.hero">
+        <Setter Property="Grid.ColumnSpan" Value="3" />
+      </Style>
+      <Style Selector="StackPanel.rows">
+        <Setter Property="Grid.Row" Value="2" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.ColumnSpan" Value="3" />
+        <Setter Property="VerticalAlignment" Value="Bottom" />
+      </Style>
+    </ContainerQuery>
+  </UserControl.Styles>
+
+  <Panel>
+    <!-- #homeContainer: the web UI's body-bg over the theme's background -->
+    <Panel.Background>
+      <ImageBrush Source="avares://VpnHood.AppLib.AvaloniaUI/Assets/Images/body-bg.png" Stretch="UniformToFill" AlignmentY="Top" />
+    </Panel.Background>
+
+    <Grid Classes="page" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto">
+
+      <!-- HomePageHeader: the app name in the middle, the build at the end -->
+      <Grid Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,2*,*" MinHeight="48">
+        <TextBlock Grid.Column="1" Classes="h4" Text="{Binding AppName}" TextAlignment="Center" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="2" Classes="body-small muted40" Text="{Binding VersionText}"
+                   HorizontalAlignment="Right" VerticalAlignment="Center" />
+      </Grid>
+
+      <StackPanel Classes="hero" HorizontalAlignment="Center" VerticalAlignment="Center">
+
+        <!-- ConnectionInfo: the speeds, in place but invisible until connected -->
+        <StackPanel Opacity="{Binding SpeedsOpacity}" Margin="0,0,0,8">
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="2">
+            <TextBlock Classes="body-small muted40" Text="{x:Static res:Strings.Statistics}" VerticalAlignment="Center" />
+            <TextBlock Classes="mdi muted40" FontSize="16" Text="{x:Static res:Mdi.ChevronRight}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16">
+            <StackPanel Orientation="Horizontal" Spacing="3">
+              <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource SpeedDownBrush}" Text="{x:Static res:Mdi.ArrowDownThin}" />
+              <TextBlock Classes="body-medium" Text="{Binding SpeedDown}" VerticalAlignment="Center" />
+              <TextBlock Classes="muted40" FontSize="10" Text="{x:Static res:Strings.Mbps}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="3">
+              <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource SpeedUpBrush}" Text="{x:Static res:Mdi.ArrowUpThin}" />
+              <TextBlock Classes="body-medium" Text="{Binding SpeedUp}" VerticalAlignment="Center" />
+              <TextBlock Classes="muted40" FontSize="10" Text="{x:Static res:Strings.Mbps}" VerticalAlignment="Center" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- HomeConnectionInfo: the circle -->
+        <controls:ConnectionCircle Margin="0,12"
+                                   Phase="{Binding Phase}"
+                                   StateText="{Binding StateText}"
+                                   Glyph="{Binding StateGlyph}"
+                                   UsageText="{Binding UsageText}"
+                                   Progress="{Binding Progress}"
+                                   IsProgressVisible="{Binding IsProgressVisible}" />
+
+        <!-- #connectBtn -->
+        <Button x:Name="ConnectButton" Classes="connect-btn" Classes.connected="{Binding IsConnected}"
+                Content="{Binding ConnectButtonText}" IsEnabled="{Binding IsConnectEnabled}"
+                Margin="0,20,0,16" HorizontalAlignment="Center" Click="OnConnectClick" />
+
+        <!-- the last error, while idle; the web UI shows it in a dialog -->
+        <TextBlock Classes="body-small error" Text="{Binding ErrorText}" IsVisible="{Binding HasError}"
+                   TextWrapping="Wrap" TextAlignment="Center" MaxWidth="320" />
+      </StackPanel>
+
+      <StackPanel Classes="rows" Spacing="4">
+
+        <!-- ServersButton -->
+        <Button x:Name="LocationButton" Classes="config-item" Click="OnLocationClick" IsEnabled="{Binding HasProfile}">
+          <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+            <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.Earth}" />
+            <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding LocationTitle}" />
+            <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{x:Static res:Mdi.ChevronRight}" />
+            <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding LocationName}" />
+            <Border Grid.Column="4" Classes="flag" Width="23" Height="15" CornerRadius="3" Margin="8,0,0,0"
+                    IsVisible="{Binding HasLocationFlag}">
+              <Image Source="{Binding LocationFlag}" />
+            </Border>
+            <Border Grid.Column="4" Classes="chip chip-auto" Margin="8,0,0,0" IsVisible="{Binding IsLocationAuto}">
+              <TextBlock Text="{Binding AutoChipText}" />
+            </Border>
+          </Grid>
+        </Button>
+
+        <!-- Settings, on a TV: everything else is done from a phone -->
+        <Button x:Name="PhoneButton" Classes="config-item" Click="OnPhoneClick" IsVisible="{Binding IsTv}">
+          <Grid ColumnDefinitions="Auto,Auto,Auto,*">
+            <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.Cog}" />
+            <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding SettingsTitle}" />
+            <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{x:Static res:Mdi.ChevronRight}" />
+            <TextBlock Grid.Column="3" Classes="config-value" Text="{x:Static res:Strings.OnYourPhone}" />
+          </Grid>
+        </Button>
+
+      </StackPanel>
+    </Grid>
+  </Panel>
+</UserControl>

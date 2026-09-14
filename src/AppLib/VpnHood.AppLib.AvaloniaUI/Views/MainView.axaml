@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VpnHood.AppLib.AvaloniaUI.Views.MainView"
+             xmlns:animation="using:VpnHood.AppLib.AvaloniaUI.Animation"
+             XYFocus.NavigationModes="Enabled"
+             FontFamily="avares://VpnHood.AppLib.AvaloniaUI/Assets/Fonts#Poppins"
+             FontWeight="Light"
+             Background="{StaticResource AppBackgroundBrush}">
+  <!-- One host, one page at a time; the pages push and pop through the code-behind, and Back
+       pops. The host is the "Page" container the layouts query (AppTheme, the views): its own
+       width, never its content's, decides which layout a page takes. The pages change hands with
+       the web UI's route transition (OutInTransition), reversed on the way back. The font is the
+       web UI's: Poppins Light for text, Bold where a style says so. -->
+  <TransitioningContentControl x:Name="Host" Container.Name="Page" Container.Sizing="Width">
+    <TransitioningContentControl.PageTransition>
+      <animation:OutInTransition />
+    </TransitioningContentControl.PageTransition>
+  </TransitioningContentControl>
+</UserControl>

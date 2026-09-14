@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Views;
 
 namespace VpnHood.AppLib.AvaloniaUI.Controls;
@@ -26,6 +27,12 @@ public partial class PageHeader : UserControl
         base.OnPropertyChanged(change);
         if (change.Property == TitleProperty && TitleBlock != null)
             TitleBlock.Text = Title;
+    }
+
+    // for a page that has nothing else to land on
+    public void FocusBack()
+    {
+        BackButton.LandFocus();
     }
 
     // the same pop the Back key does

@@ -9,6 +9,7 @@ public static class Mdi
     public const string AccountCircle = "\U000F0009";
     public const string ArrowDownThin = "\U000F19B3";
     public const string ArrowUpThin = "\U000F19B2";
+    public const string BugOutline = "\U000F0A30";
     public const string Cellphone = "\U000F011C";
     public const string Check = "\U000F012C";
     public const string ChevronDown = "\U000F0140";

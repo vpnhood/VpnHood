@@ -39,13 +39,13 @@
       </StackPanel>
 
       <StackPanel Classes="text-pane" Spacing="14" VerticalAlignment="Center">
-        <TextBlock Classes="title" Text="{x:Static res:Strings.RemoteAccess}" />
-        <TextBlock Classes="body" Text="{x:Static res:Strings.RemoteAccessDesc}" />
+        <TextBlock Classes="title" Text="{Binding RemoteAccess, Source={x:Static res:Strings.Current}}" />
+        <TextBlock Classes="body" Text="{Binding RemoteAccessDesc, Source={x:Static res:Strings.Current}}" />
         <Border Classes="note">
-          <TextBlock Classes="body" Text="{x:Static res:Strings.RemoteAccessKeepOpen}" />
+          <TextBlock Classes="body" Text="{Binding RemoteAccessKeepOpen, Source={x:Static res:Strings.Current}}" />
         </Border>
-        <TextBlock x:Name="ConnectedText" Classes="muted" Text="{x:Static res:Strings.RemoteAccessNoDevice}" />
-        <Button x:Name="DoneButton" Classes="action" Content="{x:Static res:Strings.Done}"
+        <TextBlock x:Name="ConnectedText" Classes="muted" Text="{Binding RemoteAccessNoDevice, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="DoneButton" Classes="action" Content="{Binding Done, Source={x:Static res:Strings.Current}}"
                 HorizontalAlignment="Right" Click="OnDoneClick" />
       </StackPanel>
 

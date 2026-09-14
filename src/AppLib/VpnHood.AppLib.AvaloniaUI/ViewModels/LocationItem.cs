@@ -21,6 +21,6 @@ public sealed record LocationItem(
 {
     public Bitmap? Flag => IsAuto ? null : Flags.Get(CountryCode);
     public Thickness Indent => IsNested ? new Thickness(16, 0, 0, 0) : default;
-    public string RecommendedText => $"({Strings.Recommended})";
-    public string ActiveChipText => Strings.Active.ToUpperInvariant();
+    public string RecommendedText => $"({Strings.Current.Recommended})";
+    public string ActiveChipText => Strings.Current.Active.ToUpperInvariant();
 }

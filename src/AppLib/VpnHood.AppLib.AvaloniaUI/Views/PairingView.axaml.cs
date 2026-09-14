@@ -26,7 +26,7 @@ public partial class PairingView : UserControl, IPage, IDisposable
         _host = host;
         InitializeComponent();
         _timer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => _ = Refresh());
-        AddressText.Text = Strings.RemoteAccessStarting;
+        AddressText.Text = Strings.Current.RemoteAccessStarting;
     }
 
     public void FocusDefault()
@@ -77,11 +77,11 @@ public partial class PairingView : UserControl, IPage, IDisposable
         var url = state.Urls.FirstOrDefault();
         Qr.Text = url?.AbsoluteUri;
         AddressText.Text = url == null
-            ? Strings.RemoteAccessStarting
+            ? Strings.Current.RemoteAccessStarting
             : string.Join("\n", state.Urls.Select(x => x.AbsoluteUri));
         ConnectedText.Text = state.ConnectedDevices.Length == 0
-            ? Strings.RemoteAccessNoDevice
-            : string.Format(Strings.RemoteAccessConnectedFrom, string.Join(", ", state.ConnectedDevices.Select(x => x.ToString())));
+            ? Strings.Current.RemoteAccessNoDevice
+            : Strings.Current.RemoteAccessConnectedFrom(string.Join(", ", state.ConnectedDevices.Select(x => x.ToString())));
     }
 
     private void OnDoneClick(object? sender, RoutedEventArgs e)

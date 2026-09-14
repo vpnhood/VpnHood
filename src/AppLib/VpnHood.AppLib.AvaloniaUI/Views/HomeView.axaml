@@ -44,8 +44,12 @@
       <!-- HomePageHeader: the app name in the middle, the build at the end -->
       <Grid Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,2*,*" MinHeight="48">
         <TextBlock Grid.Column="1" Classes="h4" Text="{Binding AppName}" TextAlignment="Center" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="2" Classes="body-small muted40" Text="{Binding VersionText}"
-                   HorizontalAlignment="Right" VerticalAlignment="Center" />
+        <!-- The version, and the way to the developer page: five taps, as the web UI counts them,
+             or one once a debug field is set - which the chip shows by filling. It never takes the
+             focus, as the web UI's chip does not (tabindex="-1"): a remote has no use for it. -->
+        <Button Grid.Column="2" Classes="version-chip" Classes.debug="{Binding HasDebugData}"
+                Focusable="False" Content="{Binding VersionText}" Click="OnVersionClick"
+                HorizontalAlignment="Right" VerticalAlignment="Center" />
       </Grid>
 
       <StackPanel Classes="hero" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -53,19 +57,19 @@
         <!-- ConnectionInfo: the speeds, in place but invisible until connected -->
         <StackPanel Opacity="{Binding SpeedsOpacity}" Margin="0,0,0,8">
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="2">
-            <TextBlock Classes="body-small muted40" Text="{x:Static res:Strings.Statistics}" VerticalAlignment="Center" />
+            <TextBlock Classes="body-small muted40" Text="{Binding Statistics, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
             <TextBlock Classes="mdi muted40" FontSize="16" Text="{x:Static res:Mdi.ChevronRight}" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16">
             <StackPanel Orientation="Horizontal" Spacing="3">
               <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource SpeedDownBrush}" Text="{x:Static res:Mdi.ArrowDownThin}" />
               <TextBlock Classes="body-medium" Text="{Binding SpeedDown}" VerticalAlignment="Center" />
-              <TextBlock Classes="muted40" FontSize="10" Text="{x:Static res:Strings.Mbps}" VerticalAlignment="Center" />
+              <TextBlock Classes="muted40" FontSize="10" Text="{Binding Mbps, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="3">
               <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource SpeedUpBrush}" Text="{x:Static res:Mdi.ArrowUpThin}" />
               <TextBlock Classes="body-medium" Text="{Binding SpeedUp}" VerticalAlignment="Center" />
-              <TextBlock Classes="muted40" FontSize="10" Text="{x:Static res:Strings.Mbps}" VerticalAlignment="Center" />
+              <TextBlock Classes="muted40" FontSize="10" Text="{Binding Mbps, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
             </StackPanel>
           </StackPanel>
         </StackPanel>
@@ -114,7 +118,7 @@
             <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.Cog}" />
             <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding SettingsTitle}" />
             <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{x:Static res:Mdi.ChevronRight}" />
-            <TextBlock Grid.Column="3" Classes="config-value" Text="{x:Static res:Strings.OnYourPhone}" />
+            <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding ManageFromYourPhone, Source={x:Static res:Strings.Current}}" />
           </Grid>
         </Button>
 

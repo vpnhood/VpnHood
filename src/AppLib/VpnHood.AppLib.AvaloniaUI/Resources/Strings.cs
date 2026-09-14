@@ -1,59 +1,94 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Avalonia.Platform;
+
 namespace VpnHood.AppLib.AvaloniaUI.Resources;
 
-// The UI's words, English only for now, each the web UI's English for the same key (en.json). A
-// catalogue of its own rather than the web UI's locale files: those are compiled into the SPA's
-// chunks and never travel as JSON, so a native UI cannot read them at runtime. Before this UI grows
-// past a few pages, the two need one source (TV plan, Phase 4); until then this is the file the
-// translator has to learn.
-public static class Strings
+// The UI's words: the web UI's own locale files (Assets/Locales, copied from VpnHood.Client.WebUI
+// by _sync-locales.ps1 - en.json the source a person edits, the rest vhtranslator's), read as JSON
+// because those files are the one place the wording lives. Strings.g.cs names every key of en.json
+// as a member, so a page asks for a string in C# and a key that disappears is a compile error.
+//
+// One instance, Current, and the pages bind to its members rather than reading them once:
+//
+//     Text="{Binding Connect, Source={x:Static res:Strings.Current}}"
+//
+// so a language chosen on the paired phone reaches a TV that is already showing the page - a
+// property change with an empty name, which every binding on this object takes as its own.
+public sealed partial class Strings : INotifyPropertyChanged
 {
-    // connection states, as the web UI names them (VpnHoodAppData.connectionStateText)
-    public const string Connect = "Connect";
-    public const string Disconnect = "Disconnect";
-    public const string Disconnected = "Disconnected";
-    public const string Connecting = "Connecting";
-    public const string Connected = "Connected";
-    public const string Disconnecting = "Disconnecting";
-    public const string Initializing = "Initializing";
-    public const string Waiting = "Waiting";
-    public const string Diagnosing = "Diagnosing";
-    public const string ValidatingProxies = "Validating proxies";
-    public const string LoadingAd = "Loading Ad";
-    public const string FindingNetwork = "Finding network";
-    public const string FindingBestServer = "Finding best server";
-    public const string Unstable = "Unstable";
-    public const string Cancel = "Cancel";
-    public const string StopDiagnosing = "Stop Diagnosing";
+    private static readonly IReadOnlyDictionary<string, string> English =
+        Load("en") ?? throw new InvalidOperationException("Assets/Locales/en.json is not in this assembly.");
 
-    // home
-    public const string Statistics = "Statistics";
-    public const string Mbps = "Mbps";
-    public const string Of = "of";
-    public const string VersionAbbreviation = "v";
+    private IReadOnlyDictionary<string, string> _texts = English;
+    private string _cultureName = "en";
 
-    // locations
-    public const string Location = "Location";
-    public const string NoLocation = "No Location";
-    public const string AutoSelect = "Auto Select";
-    public const string Auto = "Auto";
-    public const string Servers = "Servers";
-    public const string FreeLocations = "Free Locations";
-    public const string PremiumLocations = "Premium Locations";
-    public const string Fastest = "Fastest";
-    public const string Recommended = "Recommended";
-    public const string Active = "Active";
-    public const string AlreadyConnectedToLocation = "You are already connected to the selected location.";
+    public static Strings Current { get; } = new();
 
-    // a TV's settings row and pairing page
-    public const string Settings = "Settings";
-    public const string OnYourPhone = "On your phone";
-    public const string RemoteAccess = "Remote Access";
-    public const string RemoteAccessDesc =
-        "Manage VpnHood from your phone or computer: scan this code, or type the address into a browser on the same network.";
-    public const string RemoteAccessKeepOpen =
-        "Keep this open while you make changes. Remote access ends when you press Done or go back.";
-    public const string RemoteAccessNoDevice = "No device connected yet.";
-    public const string RemoteAccessConnectedFrom = "Connected from {0}.";
-    public const string RemoteAccessStarting = "Starting…";
-    public const string Done = "Done";
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private Strings()
+    {
+    }
+
+    // The language to show - the app's answer, the person's choice or the device's. A culture we
+    // ship no file for falls back to the language alone (pt-PT to pt), then to English.
+    // Returns whether the words changed, so a caller can rebuild text it has already composed.
+    public bool SetCulture(CultureInfo culture)
+    {
+        if (_cultureName == culture.Name)
+            return false;
+
+        _cultureName = culture.Name;
+        _texts = Load(culture.Name) ?? Load(culture.TwoLetterISOLanguageName) ?? English;
+
+        // no name: every binding on this object reads its property again
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+        return true;
+    }
+
+    // The web UI hardcodes this unit in ConnectionInfo.vue, so it has no key to follow.
+    public string Mbps => "Mbps";
+
+    // The address the phone dials, before the listener has one. The web UI's dialog has no such
+    // moment - it asks the app that is already running - so there is no key for it either.
+    public string RemoteAccessStarting => "Starting…";
+
+    private string Get(string key)
+    {
+        if (_texts.TryGetValue(key, out var text))
+            return text;
+
+        // Strings.g.cs is generated from en.json, so a key missing from English means the two have
+        // drifted: show the key rather than nothing, and trip a developer's build.
+        Debug.Assert(English.ContainsKey(key), $"No locale key '{key}'. Run _sync-locales.ps1.");
+        return English.GetValueOrDefault(key, key);
+    }
+
+    // vue-i18n's named placeholders: "Connected from {address}."
+    private string Get(string key, params (string Name, object Value)[] arguments)
+    {
+        var text = Get(key);
+        foreach (var (name, value) in arguments)
+            text = text.Replace($"{{{name}}}", Convert.ToString(value, CultureInfo.CurrentCulture));
+        return text;
+    }
+
+    private static IReadOnlyDictionary<string, string>? Load(string cultureName)
+    {
+        var uri = new Uri($"avares://VpnHood.AppLib.AvaloniaUI/Assets/Locales/{cultureName}.json");
+        if (!AssetLoader.Exists(uri))
+            return null;
+
+        using var stream = AssetLoader.Open(uri);
+        return JsonSerializer.Deserialize(stream, LocaleJsonContext.Default.DictionaryStringString);
+    }
 }
+
+// The heads publish trimmed, so the shape these files deserialize into is declared rather than
+// discovered.
+[JsonSerializable(typeof(Dictionary<string, string>))]
+internal sealed partial class LocaleJsonContext : JsonSerializerContext;

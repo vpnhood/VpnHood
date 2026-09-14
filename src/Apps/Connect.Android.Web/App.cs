@@ -1,9 +1,11 @@
 ﻿using Android.Content;
 using Android.Runtime;
+using Avalonia.Android;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Portal;
@@ -22,8 +24,11 @@ namespace VpnHood.App.Connect.Droid.Web;
     SupportsRtl = AndroidAppConstants.SupportsRtl,
     AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("CHANNEL", Value = "GitHub")]
+// Avalonia's application base, so the Avalonia UI can be hosted beside the web view (the size
+// measurement of the one-bundle option, TV plan Phase 4); it initializes Avalonia in OnCreate,
+// after VpnHoodAndroidApp.Init below.
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : Application(javaReference, transfer)
+    : AvaloniaAndroidApplication<VpnHoodAvaloniaApp>(javaReference, transfer)
 {
     private AppOptions CreateAppOptions(AppConfigs appConfigs)
     {

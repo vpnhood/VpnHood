@@ -27,18 +27,28 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string AppName => _app.Resources.Strings.AppName;
-    public string VersionText => $"{Strings.VersionAbbreviation} {_app.Features.Version.Build}";
-    public string LocationTitle => Strings.Location.ToUpperInvariant();
-    public string SettingsTitle => Strings.Settings.ToUpperInvariant();
-    public string AutoChipText => Strings.Auto.ToUpperInvariant();
+    public string VersionText => $"{Strings.Current.AbbreviationVersion} {_app.Features.Version.Build}";
+    public string LocationTitle => Strings.Current.Location.ToUpperInvariant();
+    public string SettingsTitle => Strings.Current.Settings.ToUpperInvariant();
+    public string AutoChipText => Strings.Current.Auto.ToUpperInvariant();
 
     // A TV hands everything but connecting to a phone (TV plan §3.1); the row that does so shows
     // only there. The app's word, not the UI's: the same views serve a phone.
     public bool IsTv => _app.Features.IsTv;
 
+    // A debug field that is set shows on the version chip, and opens the developer page on the
+    // first tap rather than the fifth - the web UI's isDebugDataHasValue.
+    public bool HasDebugData { get; private set => Set(ref field, value); }
+
+    // The person's choice when there is one, the device's language otherwise - the pair
+    // VpnHoodApp itself resolves at every settings change.
+    private CultureInfo AppCulture => _app.UserSettings.CultureCode is { } code
+        ? CultureInfo.GetCultureInfo(code)
+        : _app.SystemUiCulture;
+
     // the connection, as the circle and the button show it
     public string Phase { get; private set => Set(ref field, value); } = "none";
-    public string StateText { get; private set => Set(ref field, value); } = Strings.Disconnected;
+    public string StateText { get; private set => Set(ref field, value); } = Strings.Current.Disconnected;
     public string StateGlyph { get; private set => Set(ref field, value); } = Mdi.PowerPlugOff;
     public string UsageText { get; private set => Set(ref field, value); } = "";
     public double Progress { get; private set => Set(ref field, value); }
@@ -47,14 +57,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public double SpeedsOpacity { get; private set => Set(ref field, value); }
     public string SpeedDown { get; private set => Set(ref field, value); } = "0.00";
     public string SpeedUp { get; private set => Set(ref field, value); } = "0.00";
-    public string ConnectButtonText { get; private set => Set(ref field, value); } = Strings.Connect;
+    public string ConnectButtonText { get; private set => Set(ref field, value); } = Strings.Current.Connect;
     public bool IsConnectEnabled { get; private set => Set(ref field, value); } = true;
     public string ErrorText { get; private set => Set(ref field, value); } = "";
     public bool HasError { get; private set => Set(ref field, value); }
 
     // the location, as the home row and the servers page show it
     public bool HasProfile { get; private set => Set(ref field, value); }
-    public string LocationName { get; private set => Set(ref field, value); } = Strings.NoLocation;
+    public string LocationName { get; private set => Set(ref field, value); } = Strings.Current.NoLocationSelected;
     public Bitmap? LocationFlag { get; private set => Set(ref field, value); }
     public bool HasLocationFlag { get; private set => Set(ref field, value); }
     public bool IsLocationAuto { get; private set => Set(ref field, value); } = true;
@@ -79,6 +89,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (_disposed)
             return;
 
+        // The language, asked of the app rather than of this thread: VpnHoodApp writes
+        // CurrentUICulture on the thread that initializes it - here, the UI thread - so a language
+        // chosen later, from the paired phone, would never reach a thread that already has its own.
+        // The words change with everything else this reads, at the same beat.
+        var cultureChanged = Strings.Current.SetCulture(AppCulture);
+        if (cultureChanged)
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty)); // the titles
+
         var state = _app.State;
         var profile = _app.CurrentClientProfileInfo;
         var connectionState = state.ConnectionState;
@@ -94,18 +112,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             _ => "connecting"
         };
         StateText = connectionState switch {
-            AppConnectionState.None => Strings.Disconnected,
-            AppConnectionState.Initializing => Strings.Initializing,
-            AppConnectionState.Waiting => Strings.Waiting,
-            AppConnectionState.Diagnosing => Strings.Diagnosing,
-            AppConnectionState.ValidatingProxies => Strings.ValidatingProxies,
-            AppConnectionState.Connecting => Strings.Connecting,
-            AppConnectionState.Connected => Strings.Connected,
-            AppConnectionState.Disconnecting => Strings.Disconnecting,
-            AppConnectionState.WaitingForAd => Strings.LoadingAd,
-            AppConnectionState.FindingReachableServer => Strings.FindingNetwork,
-            AppConnectionState.FindingBestServer => Strings.FindingBestServer,
-            AppConnectionState.Unstable => Strings.Unstable,
+            AppConnectionState.None => Strings.Current.Disconnected,
+            AppConnectionState.Initializing => Strings.Current.Initializing,
+            AppConnectionState.Waiting => Strings.Current.Waiting,
+            AppConnectionState.Diagnosing => Strings.Current.Diagnosing,
+            AppConnectionState.ValidatingProxies => Strings.Current.ValidatingProxies,
+            AppConnectionState.Connecting => Strings.Current.Connecting,
+            AppConnectionState.Connected => Strings.Current.Connected,
+            AppConnectionState.Disconnecting => Strings.Current.Disconnecting,
+            AppConnectionState.WaitingForAd => Strings.Current.LoadingAd,
+            AppConnectionState.FindingReachableServer => Strings.Current.FindingNetwork,
+            AppConnectionState.FindingBestServer => Strings.Current.FindingBestServer,
+            AppConnectionState.Unstable => Strings.Current.Unstable,
             _ => connectionState.ToString()
         };
         UsageText = IsConnected ? BandwidthUsage(state) : "";
@@ -125,23 +143,25 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         // #connectBtn
         ConnectButtonText = state.IsDiagnosing
-            ? Strings.StopDiagnosing
+            ? Strings.Current.StopDiagnosing
             : connectionState switch {
-                AppConnectionState.Initializing => Strings.Cancel,
-                AppConnectionState.Disconnecting => Strings.Disconnecting,
-                AppConnectionState.Diagnosing => Strings.StopDiagnosing,
-                AppConnectionState.None => Strings.Connect,
-                _ => Strings.Disconnect
+                AppConnectionState.Initializing => Strings.Current.Cancel,
+                AppConnectionState.Disconnecting => Strings.Current.Disconnecting,
+                AppConnectionState.Diagnosing => Strings.Current.StopDiagnosing,
+                AppConnectionState.None => Strings.Current.Connect,
+                _ => Strings.Current.Disconnect
             };
         IsConnectEnabled = connectionState == AppConnectionState.None || state.CanDisconnect;
         ErrorText = state.LastError?.Message ?? "";
         HasError = ErrorText.Length > 0;
 
+        HasDebugData = _app.UserSettings.DebugData1 != null || _app.UserSettings.DebugData2 != null;
+
         // ServersButton
         HasProfile = profile != null;
         var location = state.ServerLocationInfo;
-        LocationName = location == null ? Strings.NoLocation
-            : location.IsAuto ? Strings.AutoSelect
+        LocationName = location == null ? Strings.Current.NoLocationSelected
+            : location.IsAuto ? Strings.Current.AutoSelect
             : LocationDisplay(location.TranslatedCountryName, location.HasRegion && location.HasMultipleRegions ? location.RegionName : null);
         IsLocationAuto = location == null || location.IsAuto;
         HasLocationFlag = !IsLocationAuto;
@@ -150,7 +170,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // the servers page, rebuilt only when a row differs: a new list every second would rebuild
         // the rows under the remote, and the focus with them
         var groups = BuildGroups(profile);
-        if (groups.Count != LocationGroups.Count || groups.Where((g, i) => !g.SameAs(LocationGroups[i])).Any()) {
+        if (cultureChanged || groups.Count != LocationGroups.Count ||
+            groups.Where((g, i) => !g.SameAs(LocationGroups[i])).Any()) {
             foreach (var group in groups) {
                 var previous = LocationGroups.FirstOrDefault(x => x.Title == group.Title);
                 if (previous != null)
@@ -180,7 +201,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (max <= 0 || state.SessionStatus == null)
             return "";
         var traffic = state.SessionStatus.SessionTraffic;
-        return $"{FormatTraffic(traffic.Sent + traffic.Received)} {Strings.Of} {FormatTraffic(max)}";
+        return $"{FormatTraffic(traffic.Sent + traffic.Received)} {Strings.Current.Of} {FormatTraffic(max)}";
     }
 
     private static string FormatTraffic(long bytes)
@@ -215,7 +236,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                     ClientProfileId: profile.ClientProfileId,
                     ServerLocation: x.ServerLocation,
                     CountryCode: x.CountryCode,
-                    Name: x.IsAuto ? Strings.Fastest : x.IsNestedCountry ? x.RegionName : x.TranslatedCountryName,
+                    Name: x.IsAuto ? Strings.Current.Fastest : x.IsNestedCountry ? x.RegionName : x.TranslatedCountryName,
                     IsNested: x.IsNestedCountry,
                     IsAuto: x.CountryCode == ServerLocationInfo.AutoCountryCode,
                     IsActive: x.ServerLocation == selected && profile.IsPremiumLocationSelected == isPremiumGroup,
@@ -226,7 +247,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
 
         if (showGroups)
-            return [Group(Strings.FreeLocations, false, free), Group(Strings.PremiumLocations, true, premium)];
+            return [Group(Strings.Current.FreeLocations, false, free), Group(Strings.Current.PremiumLocations, true, premium)];
         if (hasGroups)
             return [Group("", true, premium)];
         return [Group("", premium.Length > 0, all)];

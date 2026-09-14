@@ -56,6 +56,9 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.Common\VpnHood.AppLib.Android.Common.csproj" />
+		<!-- The Avalonia UI beside the web view, for the size measurement of the one-bundle option
+		     (TV plan, Phase 4 packaging); nothing reaches it yet. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.AvaloniaUI\VpnHood.AppLib.Android.AvaloniaUI.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 		<PackageReference Include="AppsFlyerXamarinBindingAndroid" Version="6.18.1" />

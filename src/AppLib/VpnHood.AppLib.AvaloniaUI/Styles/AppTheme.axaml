@@ -48,6 +48,8 @@
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource Red100}" />
     <SolidColorBrush x:Key="NoteBrush" Color="{StaticResource Purple400}" />
     <SolidColorBrush x:Key="AppFocusBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="VersionDebugBrush" Color="{StaticResource Cream100}" />
+    <SolidColorBrush x:Key="OnVersionDebugBrush" Color="{StaticResource Purple600}" />
     <FontFamily x:Key="IconFont">avares://VpnHood.AppLib.AvaloniaUI/Assets/Fonts#Material Design Icons</FontFamily>
 
     <!-- The Fluent button template (one content presenter) with v-ripple around the presenter:
@@ -278,6 +280,88 @@
     <Setter Property="FontWeight" Value="Bold" />
     <Setter Property="Padding" Value="28,8" />
     <Setter Property="CornerRadius" Value="20" />
+  </Style>
+
+  <!-- The version at the end of the home header (HomePageHeader.vue): 40% white text while there
+       is nothing to debug, a filled cream chip once a debug field is set. -->
+  <Style Selector="Button.version-chip">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource AppText40Brush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+  <Style Selector="Button.version-chip.debug">
+    <Setter Property="Background" Value="{StaticResource VersionDebugBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnVersionDebugBrush}" />
+    <Setter Property="Padding" Value="8,1" />
+  </Style>
+
+  <!-- The developer page: a row per debug command, checked when DebugData1 names it, and the one
+       free field. Both are that page's alone, but they are shapes like any other here. -->
+  <Style Selector="Button.combo-field">
+    <Setter Property="Background" Value="{StaticResource ConfigBtnBgBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.combo-field:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <!-- A flyout is a top level of its own, so it takes neither the page's font nor its
+       background: both are set here. -->
+  <Style Selector="FlyoutPresenter.commands">
+    <Setter Property="FontFamily" Value="avares://VpnHood.AppLib.AvaloniaUI/Assets/Fonts#Poppins" />
+    <Setter Property="FontWeight" Value="Light" />
+    <Setter Property="Background" Value="{StaticResource ConfigCardBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="4" />
+    <Setter Property="MinWidth" Value="320" />
+  </Style>
+  <Style Selector="ToggleButton.debug-item">
+    <Setter Property="Template" Value="{StaticResource RippleButtonTemplate}" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.debug-item:checked /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.debug-item:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#14FFFFFF" />
+    <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+  </Style>
+  <Style Selector="ToggleButton.debug-item:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource AppFocusBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="ToggleButton.debug-item TextBlock.check">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector="ToggleButton.debug-item:checked TextBlock.check">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="TextBox">
+    <Setter Property="Background" Value="{StaticResource ConfigBtnBgBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource AppTextBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontSize" Value="14" />
   </Style>
 
   <!-- Chips: v-chip x-small flat (Active) and small tonal (Auto). -->

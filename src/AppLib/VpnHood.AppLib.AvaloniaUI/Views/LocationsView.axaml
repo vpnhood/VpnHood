@@ -11,7 +11,7 @@
        Active chip, the unblockable mark and the crown. Up and Down walk the rows, Enter or a tap
        connects there and returns home, Back returns without. -->
   <DockPanel Classes="page">
-    <controls:PageHeader DockPanel.Dock="Top" Title="{x:Static res:Strings.Servers}" />
+    <controls:PageHeader DockPanel.Dock="Top" Title="{Binding Servers, Source={x:Static res:Strings.Current}}" />
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <ItemsControl ItemsSource="{Binding LocationGroups}" MaxWidth="720">
         <ItemsControl.ItemTemplate>

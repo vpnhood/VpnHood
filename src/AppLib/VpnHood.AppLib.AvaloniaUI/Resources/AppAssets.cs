@@ -27,12 +27,22 @@ public static class AppAssets
         }
     }
 
+    public static bool IsFolderPathSet => _folderPath != null;
+
     // The fonts, which every page's text needs and which Avalonia reaches through a collection
-    // rather than a path (see AppFontCollection). Called once the UI is up, before its styles are
-    // read: a font manager exists only then.
-    internal static void RegisterFonts()
+    // rather than a path (see AppFontCollection). Once, after the folder is named and before the
+    // first text is drawn - which is as the app starts where a head names the folder first (a
+    // desktop, iOS), and in the activity on Android, where the Application starts Avalonia before
+    // any activity has named it.
+    private static bool _fontsRegistered;
+
+    public static void RegisterFonts()
     {
+        if (_fontsRegistered)
+            return;
+
         AppFontCollection.Register(PathOf("fonts"));
+        _fontsRegistered = true;
     }
 
     public static string PathOf(string relativePath)

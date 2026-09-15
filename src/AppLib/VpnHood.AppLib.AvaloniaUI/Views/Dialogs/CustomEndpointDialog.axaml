@@ -14,7 +14,7 @@
           <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" />
         </Grid>
       </Button>
-      <TextBox x:Name="EndpointBox" Classes="outlined" TextChanged="OnEndpointChanged" KeyDown="OnEndpointKeyDown" />
+      <TextBox x:Name="EndpointBox" Classes="outlined" TextChanged="OnEndpointChanged" KeyDown="OnEndpointKeyDown" FlowDirection="LeftToRight" />
       <TextBlock x:Name="ErrorText" Classes="body-small error-text" TextWrapping="Wrap" IsVisible="False" />
       <TextBlock Classes="body-small dialog-text" TextWrapping="Wrap" Text="{Binding CustomEndpointDesc, Source={x:Static res:Strings.Current}}" />
       <WrapPanel Orientation="Horizontal">

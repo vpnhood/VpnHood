@@ -1,4 +1,3 @@
-using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
@@ -27,7 +26,7 @@ public partial class UserReviewDialog : DialogBase
         LaterButton.Content = Strings.Current.Later;
         CloseButton.IsVisible = recommendation != 2;
         ReviewBox.TextChanged += (_, _) => SendButton.IsEnabled = !string.IsNullOrWhiteSpace(ReviewBox.Text);
-        ReviewBox.Watermark = Strings.Current.UserReviewTextPlaceholder;
+        ReviewBox.PlaceholderText = Strings.Current.UserReviewTextPlaceholder;
     }
 
     public override bool CanDismiss => _recommendation != 2;
@@ -53,33 +52,48 @@ public partial class UserReviewDialog : DialogBase
     // closed before a submit: the rate is dropped, and the ask is answered as declined
     private async void OnCloseClick(object? sender, RoutedEventArgs e)
     {
-        if (!TextStep.IsVisible)
-            _rate = 0;
-        await Submit(null);
+        try {
+            if (!TextStep.IsVisible)
+                _rate = 0;
+            await Submit(null);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnSubmitClick(object? sender, RoutedEventArgs e)
     {
-        if (_rate == 3) {
-            RateStep.IsVisible = false;
-            Actions.IsVisible = false;
-            ThanksStep.IsVisible = true;
-            await Task.Delay(1500);
-            await Submit(null);
-            return;
-        }
+        try {
+            if (_rate == 3) {
+                RateStep.IsVisible = false;
+                Actions.IsVisible = false;
+                ThanksStep.IsVisible = true;
+                await Task.Delay(1500);
+                await Submit(null);
+                return;
+            }
 
-        RateStep.IsVisible = false;
-        TextStep.IsVisible = true;
-        SubmitButton.IsVisible = false;
-        SendButton.IsVisible = true;
-        LaterButton.Content = Strings.Current.Cancel;
-        ReviewBox.LandFocus();
+            RateStep.IsVisible = false;
+            TextStep.IsVisible = true;
+            SubmitButton.IsVisible = false;
+            SendButton.IsVisible = true;
+            LaterButton.Content = Strings.Current.Cancel;
+            ReviewBox.LandFocus();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnSendClick(object? sender, RoutedEventArgs e)
     {
-        await Submit(ReviewBox.Text);
+        try {
+            await Submit(ReviewBox.Text);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async Task Submit(string? text)

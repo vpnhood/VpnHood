@@ -19,7 +19,7 @@ public partial class FilterList : UserControl
         // a remote types nothing until asked: the field is behind its button on a TV, in view elsewhere
         SearchBox.IsVisible = !AppData.IsTvUi;
         SearchButton.IsVisible = AppData.IsTvUi;
-        SearchBox.Watermark = Strings.Current.Search;
+        SearchBox.PlaceholderText = Strings.Current.Search;
     }
 
     public IReadOnlyList<FilterItem> Items {
@@ -63,7 +63,7 @@ public partial class FilterList : UserControl
         var search = SearchBox.Text?.Trim();
         List.ItemsSource = string.IsNullOrEmpty(search)
             ? _items
-            : _items.Where(x => x.Name.Contains(search, StringComparison.OrdinalIgnoreCase)).ToArray();
+            : [.. _items.Where(x => x.Name.Contains(search, StringComparison.OrdinalIgnoreCase))];
     }
 
     private void OnSearchChanged(object? sender, TextChangedEventArgs e)
@@ -89,12 +89,22 @@ public partial class FilterList : UserControl
 
     private async void OnSelectAllClick(object? sender, RoutedEventArgs e)
     {
-        await SetAll(true, Strings.Current.SelectAllItems);
+        try {
+            await SetAll(true, Strings.Current.SelectAllItems);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnClearAllClick(object? sender, RoutedEventArgs e)
     {
-        await SetAll(false, Strings.Current.ClearAllItems);
+        try {
+            await SetAll(false, Strings.Current.ClearAllItems);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async Task SetAll(bool isSelected, string title)

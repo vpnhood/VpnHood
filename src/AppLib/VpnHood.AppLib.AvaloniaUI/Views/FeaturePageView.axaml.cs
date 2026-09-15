@@ -1,7 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 
@@ -77,13 +75,18 @@ public partial class FeaturePageView : UserControl, IPage
 
     private async void OnActionClick(object? sender, RoutedEventArgs e)
     {
-        if (_action == null)
-            return;
         try {
-            await _action();
+            if (_action == null)
+                return;
+            try {
+                await _action();
+            }
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
+            await this.ReportError(ex);
         }
     }
 

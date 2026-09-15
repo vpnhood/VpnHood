@@ -33,20 +33,30 @@ public partial class PremiumCodeDialog : DialogBase
 
     private async void OnCodeKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || !ActivateButton.IsEnabled)
-            return;
-        e.Handled = true;
-        await Activate();
+        try {
+            if (e.Key != Key.Enter || !ActivateButton.IsEnabled)
+                return;
+            e.Handled = true;
+            await Activate();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnActivateClick(object? sender, RoutedEventArgs e)
     {
-        await Activate();
+        try {
+            await Activate();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        Close();
     }
 
     // The profile write is the ONE door (keyring plan §7): it makes the code work here at once, and
@@ -76,7 +86,7 @@ public partial class PremiumCodeDialog : DialogBase
             Close(true);
             await AppData.LoadAccount(true, CancellationToken.None);
             _host.ViewModel.Refresh();
-            _host.ShowSnackbar(Strings.Current.PremiumCodeSavedForLaterMsg, SnackbarKind.Highlight, hasTimer: true);
+            _host.ShowSnackbar(Strings.Current.PremiumCodeSavedForLaterMsg);
             return;
         }
 

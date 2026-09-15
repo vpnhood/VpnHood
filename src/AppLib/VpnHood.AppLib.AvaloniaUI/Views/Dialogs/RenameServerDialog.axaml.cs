@@ -29,7 +29,7 @@ public partial class RenameServerDialog : DialogBase
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        Close();
     }
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)

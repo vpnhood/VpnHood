@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 
@@ -26,6 +27,13 @@ public partial class OptionRow : UserControl
             DescriptionText.Text = value;
             DescriptionText.IsVisible = !string.IsNullOrEmpty(value);
         }
+    }
+
+    // the description's own direction: a note the web UI pins dir="ltr" keeps its order under a
+    // right-to-left row
+    public FlowDirection DescriptionFlowDirection {
+        get => DescriptionText.FlowDirection;
+        set => DescriptionText.FlowDirection = value;
     }
 
     // a chip beside the title: "Recommended", "Default"

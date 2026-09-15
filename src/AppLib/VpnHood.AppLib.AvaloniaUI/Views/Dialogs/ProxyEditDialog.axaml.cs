@@ -16,7 +16,7 @@ public partial class ProxyEditDialog : DialogBase
     private readonly ProxySheetKind _kind;
     private readonly string? _oldId;
     private readonly AppProxyEndPointService _service = VpnHoodApp.Instance.Services.ProxyEndPointService;
-    private ProxyProtocol _protocol = ProxyProtocol.Http;
+    private ProxyProtocol _protocol;
     private bool _isProcessing;
 
     // Add: empty fields; AddList: the import box; Edit: the saved proxy's fields and record
@@ -38,11 +38,11 @@ public partial class ProxyEditDialog : DialogBase
         StatusPanel.IsVisible = kind == ProxySheetKind.Edit;
         RemoveButton.IsVisible = kind == ProxySheetKind.Edit;
         SaveButton.Content = kind == ProxySheetKind.Edit ? s.Save : s.Add;
-        ListBox.Watermark = s.ProxyImportLabel;
-        HostBox.Watermark = s.ProxyHost;
-        PortBox.Watermark = s.ProxyPort;
-        UsernameBox.Watermark = s.ProxyUsername;
-        PasswordBox.Watermark = s.ProxyPassword;
+        ListBox.PlaceholderText = s.ProxyImportLabel;
+        HostBox.PlaceholderText = s.ProxyHost;
+        PortBox.PlaceholderText = s.ProxyPort;
+        UsernameBox.PlaceholderText = s.ProxyUsername;
+        PasswordBox.PlaceholderText = s.ProxyPassword;
 
         foreach (var protocol in new[] { ProxyProtocol.Http, ProxyProtocol.Https, ProxyProtocol.Socks4, ProxyProtocol.Socks5 }) {
             var item = new Button { Content = protocol.ToString().ToLowerInvariant() };
@@ -208,52 +208,62 @@ public partial class ProxyEditDialog : DialogBase
 
     private async void OnSaveClick(object? sender, RoutedEventArgs e)
     {
-        _isProcessing = true;
-        UpdateSaveButton();
         try {
-            switch (_kind) {
-                case ProxySheetKind.Add:
-                    await _service.Add(BuildEndPoint());
-                    break;
-                case ProxySheetKind.AddList:
-                    await _service.Import(ListBox.Text ?? "");
-                    break;
-                default:
-                    await _service.Update(_oldId ?? throw new InvalidOperationException("The proxy to update has no id."), BuildEndPoint());
-                    break;
+            _isProcessing = true;
+            UpdateSaveButton();
+            try {
+                switch (_kind) {
+                    case ProxySheetKind.Add:
+                        await _service.Add(BuildEndPoint());
+                        break;
+                    case ProxySheetKind.AddList:
+                        await _service.Import(ListBox.Text ?? "");
+                        break;
+                    default:
+                        await _service.Update(_oldId ?? throw new InvalidOperationException("The proxy to update has no id."), BuildEndPoint());
+                        break;
+                }
+                Close(true);
             }
-            Close(true);
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
+            finally {
+                _isProcessing = false;
+                UpdateSaveButton();
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
-        }
-        finally {
-            _isProcessing = false;
-            UpdateSaveButton();
+            await this.ReportError(ex);
         }
     }
 
     private async void OnRemoveClick(object? sender, RoutedEventArgs e)
     {
-        if (_oldId == null || !await _host.Confirm(Strings.Current.RemoveProxy, Strings.Current.RemoveProxyMsg))
-            return;
-        _isProcessing = true;
-        UpdateSaveButton();
         try {
-            await _service.Delete(_oldId);
-            Close(true);
+            if (_oldId == null || !await _host.Confirm(Strings.Current.RemoveProxy, Strings.Current.RemoveProxyMsg))
+                return;
+            _isProcessing = true;
+            UpdateSaveButton();
+            try {
+                await _service.Delete(_oldId);
+                Close(true);
+            }
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
+            finally {
+                _isProcessing = false;
+                UpdateSaveButton();
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
-        }
-        finally {
-            _isProcessing = false;
-            UpdateSaveButton();
+            await this.ReportError(ex);
         }
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        Close();
     }
 }

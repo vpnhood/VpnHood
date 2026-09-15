@@ -18,7 +18,7 @@ public partial class CustomEndpointDialog : DialogBase
         _host = host;
         _clientProfileId = profile.ClientProfileId;
         InitializeComponent();
-        EndpointBox.Watermark = Strings.Current.CustomEndpointPlaceHolder;
+        EndpointBox.PlaceholderText = Strings.Current.CustomEndpointPlaceHolder;
         EndpointBox.Text = profile.CustomServerEndpoints?.FirstOrDefault()?.ToString();
         EnabledSwitch.IsChecked = profile.IsCustomServerEndpointsEnabled;
     }
@@ -40,19 +40,29 @@ public partial class CustomEndpointDialog : DialogBase
 
     private async void OnEndpointKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter) return;
-        e.Handled = true;
-        await Save();
+        try {
+            if (e.Key != Key.Enter) return;
+            e.Handled = true;
+            await Save();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        Close();
     }
 
     private async void OnSaveClick(object? sender, RoutedEventArgs e)
     {
-        await Save();
+        try {
+            await Save();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     // the app judges the address; one it refuses is said so under the field, and the dialog stays

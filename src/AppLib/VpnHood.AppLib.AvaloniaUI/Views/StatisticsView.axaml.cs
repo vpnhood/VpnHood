@@ -68,23 +68,23 @@ public partial class StatisticsView : UserControl, IPage
 
         if (!isChina) {
             var card = AddCard(s.SessionTraffic, Mdi.ChartTimelineVariant, s.StatisticsSessionTrafficCardDesc);
-            AddRow(card, s.Used, Format.Traffic(status?.SessionTraffic.Total ?? 0), "highlight");
+            AddRow(card, s.Used, Format.Traffic(status?.SessionTraffic.Total ?? 0), "highlight", isLtr: true);
             var max = status?.SessionMaxTraffic ?? 0;
-            AddRow(card, s.MaxTraffic, max > 0 ? Format.Traffic(max) : s.Unlimited, max > 0 ? "error" : "active", isLast: true);
+            AddRow(card, s.MaxTraffic, max > 0 ? Format.Traffic(max) : s.Unlimited, max > 0 ? "error" : "active", isLast: true, isLtr: true);
         }
 
         if (!isChina) {
             var card = AddCard(s.MonthlyTraffic, Mdi.ChartTimelineVariant, s.StatisticsMonthlyTrafficCardDesc);
-            AddRow(card, s.Used, Format.Traffic(status?.CycleTraffic.Total ?? 0), "highlight");
+            AddRow(card, s.Used, Format.Traffic(status?.CycleTraffic.Total ?? 0), "highlight", isLtr: true);
             var max = access?.MaxCycleTraffic ?? 0;
-            AddRow(card, s.MaxTraffic, max > 0 ? Format.Traffic(max) : s.Unlimited, max > 0 ? "error" : "active", isLast: true);
+            AddRow(card, s.MaxTraffic, max > 0 ? Format.Traffic(max) : s.Unlimited, max > 0 ? "error" : "active", isLast: true, isLtr: true);
         }
 
         if (isPremiumUser && !isChina) {
             var card = AddCard(s.TotalTraffic, Mdi.ChartTimelineVariant, s.StatisticsTotalTrafficCardDesc);
-            AddRow(card, s.Used, Format.Traffic(status?.TotalTraffic.Total ?? 0), "highlight");
+            AddRow(card, s.Used, Format.Traffic(status?.TotalTraffic.Total ?? 0), "highlight", isLtr: true);
             var max = access?.MaxTotalTraffic ?? 0;
-            AddRow(card, s.MaxTraffic, max > 0 ? Format.Traffic(max) : s.Unlimited, max > 0 ? "error" : "active", isLast: true);
+            AddRow(card, s.MaxTraffic, max > 0 ? Format.Traffic(max) : s.Unlimited, max > 0 ? "error" : "active", isLast: true, isLtr: true);
         }
     }
 
@@ -111,14 +111,17 @@ public partial class StatisticsView : UserControl, IPage
         return body;
     }
 
-    // a label at the start, the value at the end in its colour, a hairline under all but the last
-    private static void AddRow(StackPanel card, string label, string value, string valueClass, bool isLast = false)
+    // a label at the start, the value at the end in its colour, a hairline under all but the last;
+    // a traffic figure is pinned left to right, as statistics.vue pins it (dir="ltr")
+    private static void AddRow(StackPanel card, string label, string value, string valueClass, bool isLast = false, bool isLtr = false)
     {
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(0, 5) };
         var labelText = new TextBlock { Text = label, Margin = new Thickness(0, 0, 20, 0), VerticalAlignment = VerticalAlignment.Center };
         labelText.Classes.Add("body-small");
         labelText.Classes.Add("disabled");
         var valueText = new TextBlock { Text = value, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        if (isLtr)
+            valueText.FlowDirection = FlowDirection.LeftToRight;
         valueText.Classes.Add("body-small");
         valueText.Classes.Add(valueClass);
         Grid.SetColumn(valueText, 1);

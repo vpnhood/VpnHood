@@ -22,10 +22,13 @@ public class PortalWebBillingProvider : IBillingProvider
     private readonly Func<IUiContext, Uri, CancellationToken, Task> _openUrl;
     private IReadOnlyDictionary<string, Uri> _checkoutUrls = new Dictionary<string, Uri>();
 
+    /// <param name="portalBaseUrl">The portal the plans are listed from and the checkout opens on.</param>
+    /// <param name="packageName">The app the plans are listed for, as the portal names it.</param>
     /// <param name="openUrl">
     /// Opens a URL in the SYSTEM browser. Platform business, so the app that knows its platform
     /// passes it in — an Intent on Android, the shell on desktop.
     /// </param>
+    /// <param name="ignoreSslVerification">Accepts any server certificate: a development portal's.</param>
     public PortalWebBillingProvider(Uri portalBaseUrl, string packageName,
         Func<IUiContext, Uri, CancellationToken, Task> openUrl, bool ignoreSslVerification = false)
     {
@@ -59,10 +62,10 @@ public class PortalWebBillingProvider : IBillingProvider
         var plans = await apiClient.ListPlans(StoreIds.Web, _packageName, cancellationToken).Vhc();
 
         // like every store: price exactly what the backend says is sellable, nothing more
-        plans = plans.Where(plan => productIds.Contains(plan.PlanId)).ToArray();
+        plans = [.. plans.Where(plan => productIds.Contains(plan.PlanId))];
         _checkoutUrls = plans.ToDictionary(plan => plan.PlanId, plan => plan.PurchaseUrl);
 
-        return plans.Select(plan => new SubscriptionPlan {
+        return [.. plans.Select(plan => new SubscriptionPlan {
             PlanToken = plan.PlanId,
             Period = plan.BillingPeriod,
             BasePrice = double.Parse(plan.PriceAmount, CultureInfo.InvariantCulture),
@@ -70,7 +73,7 @@ public class PortalWebBillingProvider : IBillingProvider
             CurrencyCode = plan.PriceCurrency,
             // the portal's own symbol: the checkout renders "{symbol}{amount}", so the card matches it
             CurrencySymbol = plan.PriceCurrencySymbol
-        }).ToArray();
+        })];
     }
 
     public async Task<PurchaseProof> Purchase(IUiContext uiContext, PurchaseParams purchaseParams,

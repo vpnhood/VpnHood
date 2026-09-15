@@ -6,13 +6,16 @@
              XYFocus.NavigationModes="Enabled"
              FontFamily="fonts:VpnHood#Poppins"
              FontWeight="Light"
+             FlowDirection="{Binding FlowDirection, Source={x:Static res:Strings.Current}}"
              Background="{StaticResource BackgroundBrush}">
   <!-- One host, one page at a time; the pages push and pop through the code-behind, and Back
        pops. The host is the "Page" container the layouts query (AppTheme, the views): its own
        width, never its content's, decides which layout a page takes. The pages change hands with
        the web UI's route transition (OutInTransition), reversed on the way back. Over the page,
        in the order the web UI's App.vue stacks them: the reconnect bar, the drawer, the dialogs
-       and the snackbar. The font is the web UI's: Poppins Light for text, Bold where a style says. -->
+       and the snackbar. The font is the web UI's: Poppins Light for text, Bold where a style says.
+       The language's direction is set here, on the root (Strings.FlowDirection), and everything
+       beneath mirrors with it: the drawer's "Left" is the start edge, the right in Persian. -->
   <Panel>
     <TransitioningContentControl x:Name="Host" Container.Name="Page" Container.Sizing="Width">
       <TransitioningContentControl.PageTransition>
@@ -33,9 +36,10 @@
       </Grid>
     </Border>
 
-    <!-- the drawer, off the TV UI: a scrim, and the panel from the start edge -->
+    <!-- the drawer, off the TV UI: a scrim, and the panel from the start edge. Both are animated
+         from the code-behind, as Vuetify's temporary navigation drawer animates them. -->
     <Panel x:Name="DrawerLayer" IsVisible="False">
-      <Border Background="{StaticResource ScrimBrush}" PointerPressed="OnScrimPressed" />
+      <Border x:Name="DrawerScrim" Background="{StaticResource ScrimBrush}" PointerPressed="OnScrimPressed" />
       <ContentControl x:Name="DrawerContent" HorizontalAlignment="Left" />
     </Panel>
 

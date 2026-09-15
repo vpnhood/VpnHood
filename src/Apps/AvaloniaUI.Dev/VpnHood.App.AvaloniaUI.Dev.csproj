@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- a developer's tool, never shipped -->
-		<Description>Runs the Avalonia UI (VpnHood.AppLib.AvaloniaUI) on the Windows device in a window that opens at a TV's size and resizes down to a phone's, so a screen can be walked with the arrow keys and seen in both layouts before a device is involved - the Avalonia counterpart of the web UI's /tv-mode. "--tv" runs it as a TV.</Description>
+		<Description>A developer's tool: runs the VpnHood Avalonia UI on a PC, from a TV's size down to a phone's</Description>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net10.0</TargetFramework>
-		<RootNamespace>VpnHood.App.AvaloniaUI.Preview</RootNamespace>
-		<AssemblyName>VpnHoodAvaloniaPreview</AssemblyName>
+		<RootNamespace>VpnHood.App.AvaloniaUI.Dev</RootNamespace>
+		<AssemblyName>VpnHoodAvaloniaDev</AssemblyName>
 	</PropertyGroup>
 
 	<ItemGroup>

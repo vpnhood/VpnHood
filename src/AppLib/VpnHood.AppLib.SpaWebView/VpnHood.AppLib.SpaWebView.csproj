@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Platform-neutral controller that hosts the VpnHood single-page application (SPA) in a native web view. Each platform implements a thin ISpaWebView adapter; all the hosting business logic (web-server lifecycle, launch URL, loading/error state, self-heal reload and recovery) lives here.</Description>
+		<Description>Platform-neutral controller that hosts the VpnHood single-page application (SPA) in a native web view; each platform supplies a thin ISpaWebView adapter.</Description>
 		<TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>VpnHood.AppLib.SpaWebView</RootNamespace>
 	</PropertyGroup>

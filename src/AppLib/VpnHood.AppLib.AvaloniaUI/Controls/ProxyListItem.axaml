@@ -31,7 +31,7 @@
           <Border x:Name="QualityDivider" Classes="divider vertical" />
           <TextBlock x:Name="QualityText" Classes="body-small" FontSize="11" VerticalAlignment="Center" />
         </StackPanel>
-        <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="20" Text="{x:Static res:Mdi.ChevronRight}" />
+        <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="20" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
       </Grid>
       <TextBlock x:Name="ErrorText" Classes="body-small disabled" Opacity="0.6" TextWrapping="Wrap" IsVisible="False" />
     </StackPanel>

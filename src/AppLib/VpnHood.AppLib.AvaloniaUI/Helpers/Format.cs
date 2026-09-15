@@ -32,7 +32,7 @@ internal static class Format
         if (seconds < 5)
             return strings.TimeJustNow;
         if (seconds < 60)
-            return strings.TimeSecondsAgo(seconds, seconds == 1 ? strings.Second : strings.Seconds);
+            return strings.TimeSecondsAgo(seconds, strings.Seconds);
 
         var minutes = seconds / 60;
         if (minutes < 60)

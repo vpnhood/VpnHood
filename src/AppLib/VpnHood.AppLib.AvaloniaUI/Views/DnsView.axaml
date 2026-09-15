@@ -24,10 +24,11 @@
               </StackPanel>
               <TextBlock x:Name="PrivateDnsCrown" Grid.Column="1" Classes="crown" Text="{x:Static res:Mdi.Crown}" IsVisible="False" />
             </Grid>
-            <TextBlock x:Name="ProviderText" Classes="body-small highlight" TextTrimming="CharacterEllipsis" IsVisible="False" />
+            <!-- a host name, left to right in every language (dns/index.vue's dir="ltr") -->
+            <TextBlock x:Name="ProviderText" Classes="body-small highlight" TextTrimming="CharacterEllipsis" IsVisible="False" FlowDirection="LeftToRight" />
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="card-subtitle" Text="{Binding PrivateDnsDesc, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="20" Margin="12,0,0,0" Text="{x:Static res:Mdi.ChevronRight}" />
+              <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="20" Margin="12,0,0,0" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
             </Grid>
           </StackPanel>
         </Button>
@@ -50,12 +51,14 @@
               <controls:OptionRow x:Name="DefaultRow" Clicked="OnDefaultClick" />
               <controls:OptionRow x:Name="CustomRow" Clicked="OnCustomClick" />
             </StackPanel>
-            <StackPanel x:Name="CustomPanel" Spacing="6" IsVisible="False" Margin="0,8,0,0">
+            <!-- the addresses read left to right in every language, as the web UI's locale provider
+                 keeps the whole form -->
+            <StackPanel x:Name="CustomPanel" Spacing="6" IsVisible="False" Margin="0,8,0,0" FlowDirection="LeftToRight">
               <TextBlock Classes="body-medium" Text="DNS 1" />
-              <TextBox x:Name="Dns1Box" Classes="outlined" Watermark="8.8.8.8" TextChanged="OnDnsChanged" />
+              <TextBox x:Name="Dns1Box" Classes="outlined" PlaceholderText="8.8.8.8" TextChanged="OnDnsChanged" />
               <TextBlock x:Name="Dns1Error" Classes="body-small error-text" IsVisible="False" />
               <TextBlock Classes="body-medium" Text="DNS 2" Margin="0,8,0,0" />
-              <TextBox x:Name="Dns2Box" Classes="outlined" Watermark="8.8.4.4" TextChanged="OnDnsChanged" />
+              <TextBox x:Name="Dns2Box" Classes="outlined" PlaceholderText="8.8.4.4" TextChanged="OnDnsChanged" />
               <TextBlock x:Name="Dns2Error" Classes="body-small error-text" IsVisible="False" />
             </StackPanel>
           </StackPanel>

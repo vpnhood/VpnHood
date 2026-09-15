@@ -24,9 +24,9 @@ namespace VpnHood.App.Connect.Droid.Web;
     SupportsRtl = AndroidAppConstants.SupportsRtl,
     AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("CHANNEL", Value = "GitHub")]
-// Avalonia's application base, so the Avalonia UI can be hosted beside the web view (the size
-// measurement of the one-bundle option, TV plan Phase 4); it initializes Avalonia in OnCreate,
-// after VpnHoodAndroidApp.Init below.
+// Avalonia's application base: the Avalonia UI ships beside the web view, and Avalonia 12 starts
+// from the process's Application (its OnCreate, after the app below). AvaloniaActivity shows it,
+// when MainActivity hands the launch over (DebugCommands.AvaloniaUi).
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
     : AvaloniaAndroidApplication<VpnHoodAvaloniaApp>(javaReference, transfer)
 {

@@ -73,6 +73,7 @@
     <Project Path="src/AppLib/VpnHood.AppLib.Abstractions/VpnHood.AppLib.Abstractions.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.AvaloniaUI/VpnHood.AppLib.AvaloniaUI.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.AvaloniaUI.Desktop/VpnHood.AppLib.AvaloniaUI.Desktop.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Portal/VpnHood.AppLib.Portal.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.SpaWebView/VpnHood.AppLib.SpaWebView.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Swagger/VpnHood.AppLib.Swagger.csproj" />
@@ -136,7 +137,7 @@
       <Build Solution="Debug|*" Project="false" />
     </Project>
     <Project Path="src/Apps/Server.Net/VpnHood.App.Server.Net.csproj" />
-    <Project Path="src/Apps/AvaloniaUI.Preview/VpnHood.App.AvaloniaUI.Preview.csproj" />
+    <Project Path="src/Apps/AvaloniaUI.Dev/VpnHood.App.AvaloniaUI.Dev.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/VpnHood.Core.Client.Abstractions/VpnHood.Core.Client.Abstractions.csproj" />

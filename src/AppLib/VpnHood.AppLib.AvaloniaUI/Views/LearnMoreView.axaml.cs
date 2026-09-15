@@ -55,11 +55,11 @@ public partial class LearnMoreView : UserControl, IPage
         var block = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(16, 0, 0, 10) };
         block.Classes.Add("body-medium");
         block.Classes.Add("disabled");
-        block.Inlines = new InlineCollection {
+        block.Inlines = [
             new Run("• "),
             new Run(lead + " ") { Foreground = Brushes.White },
             new Run(text)
-        };
+        ];
         Sections.Children.Add(block);
     }
 }

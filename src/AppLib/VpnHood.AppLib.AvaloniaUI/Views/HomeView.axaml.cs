@@ -48,7 +48,12 @@ public partial class HomeView : UserControl, IPage
 
     private async void OnConnectClick(object? sender, RoutedEventArgs e)
     {
-        await _viewModel.ToggleConnect();
+        try {
+            await _viewModel.ToggleConnect();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     // The web UI's ServersButton: the page opens unless there is nothing behind it to choose, and
@@ -109,32 +114,42 @@ public partial class HomeView : UserControl, IPage
     // onAccountClick).
     private async void OnAccountClick(object? sender, RoutedEventArgs e)
     {
-        if (AppData.Account != null) {
-            _host.Navigate(new AccountView(_host));
-            return;
-        }
-
-        if (AppData.PrimaryProviderId == null) {
-            _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintSignIn));
-            return;
-        }
-
-        if (AppData.HasSignInChoice) {
-            await _host.ShowDialog(new SignInDialog(_host));
-            return;
-        }
-
         try {
-            await _viewModel.SignIn();
+            if (AppData.Account != null) {
+                _host.Navigate(new AccountView(_host));
+                return;
+            }
+
+            if (AppData.PrimaryProviderId == null) {
+                _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintSignIn));
+                return;
+            }
+
+            if (AppData.HasSignInChoice) {
+                await _host.ShowDialog(new SignInDialog(_host));
+                return;
+            }
+
+            try {
+                await _viewModel.SignIn();
+            }
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
+            await this.ReportError(ex);
         }
     }
 
     private async void OnBadgeClick(object? sender, RoutedEventArgs e)
     {
-        await _host.ShowDialog(new BadgeDialog(_host, _viewModel.Badges));
+        try {
+            await _host.ShowDialog(new BadgeDialog(_host, _viewModel.Badges));
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     // The developer page, opened as the web UI opens its dialog (HomePageHeader.vue): the fifth

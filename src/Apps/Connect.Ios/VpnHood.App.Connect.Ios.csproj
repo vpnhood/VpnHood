@@ -59,6 +59,10 @@
     <ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
     <!-- iOS shared app code: VpnHoodIosApp bootstrap + the WKWebView SPA host. -->
     <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Ios.Common\VpnHood.AppLib.Ios.Common.csproj" />
+    <!-- The Avalonia UI beside the web view: AvaloniaUiAppDelegate shows it when the app asks for that
+         UI (DebugCommands.AvaloniaUi), which Main.cs decides before UIKit starts. -->
+    <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI\VpnHood.AppLib.AvaloniaUI.csproj" />
+    <PackageReference Include="Avalonia.iOS" Version="12.1.2" />
     <!-- StoreKit 2 billing + Sign in with Apple (AppStoreBillingProvider / AppleAuthenticationProvider).
          The Swift facade + binding come from the VpnHood.AppLib.Ios.StoreKitNative NuGet it
          references; being a binding package, its xcframework links into the app automatically. -->

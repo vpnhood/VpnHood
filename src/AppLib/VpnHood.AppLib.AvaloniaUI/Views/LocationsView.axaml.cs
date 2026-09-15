@@ -55,7 +55,7 @@ public partial class LocationsView : UserControl, IPage
             return;
 
         var index = list.IndexFromContainer(row) + (e.Key == Key.Down ? 1 : -1);
-        if (index < 0 || index >= list.ItemCount || list.ContainerFromIndex(index) is not Control next)
+        if (index < 0 || index >= list.ItemCount || list.ContainerFromIndex(index) is not { } next)
             return;
 
         list.SelectedIndex = index;
@@ -96,7 +96,7 @@ public partial class LocationsView : UserControl, IPage
         var lists = this.GetVisualDescendants().OfType<ListBox>().Where(x => x.IsVisible).ToArray();
         foreach (var list in lists) {
             var active = (list.ItemsSource as IEnumerable<LocationItem>)?.FirstOrDefault(x => x.IsActive);
-            if (active == null || list.ContainerFromItem(active) is not Control row)
+            if (active == null || list.ContainerFromItem(active) is not { } row)
                 continue;
             list.SelectedItem = active;
             row.LandFocus();
@@ -104,7 +104,7 @@ public partial class LocationsView : UserControl, IPage
         }
 
         // no active row: the first row of the first list
-        if (lists.FirstOrDefault()?.ContainerFromIndex(0) is not Control first)
+        if (lists.FirstOrDefault()?.ContainerFromIndex(0) is not { } first)
             return false;
         first.LandFocus();
         return true;
@@ -184,41 +184,56 @@ public partial class LocationsView : UserControl, IPage
 
     private async void OnRenameClick(object? sender, RoutedEventArgs e)
     {
-        CloseMenu(sender);
-        if (ProfileOf(sender) is not { } profile)
-            return;
-        var dialog = new RenameServerDialog(profile.Name);
-        if (!await _host.ShowDialog(dialog))
-            return;
         try {
-            // an empty name gives the server its default name back (SAVE_EMPTY_TO_DISPLAY_DEFAULT_NAME)
-            var name = string.IsNullOrWhiteSpace(dialog.NewName) ? null : dialog.NewName.Trim();
-            await _app.UpdateClientProfile(profile.ClientProfileId, new ClientProfileUpdateParams {
-                ClientProfileName = new Patch<string?>(name)
-            }, CancellationToken.None);
-            _viewModel.Refresh();
+            CloseMenu(sender);
+            if (ProfileOf(sender) is not { } profile)
+                return;
+            var dialog = new RenameServerDialog(profile.Name);
+            if (!await _host.ShowDialog(dialog))
+                return;
+            try {
+                // an empty name gives the server its default name back (SAVE_EMPTY_TO_DISPLAY_DEFAULT_NAME)
+                var name = string.IsNullOrWhiteSpace(dialog.NewName) ? null : dialog.NewName.Trim();
+                await _app.UpdateClientProfile(profile.ClientProfileId, new ClientProfileUpdateParams {
+                    ClientProfileName = new Patch<string?>(name)
+                }, CancellationToken.None);
+                _viewModel.Refresh();
+            }
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
+            await this.ReportError(ex);
         }
     }
 
     private async void OnDiagnoseClick(object? sender, RoutedEventArgs e)
     {
-        CloseMenu(sender);
-        if (ProfileOf(sender) is not { } profile)
-            return;
-        _host.GoBack();
-        await _viewModel.ConnectWithProfile(profile.ClientProfileId, isDiagnose: true);
+        try {
+            CloseMenu(sender);
+            if (ProfileOf(sender) is not { } profile)
+                return;
+            _host.GoBack();
+            await _viewModel.ConnectWithProfile(profile.ClientProfileId, isDiagnose: true);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnCustomEndpointClick(object? sender, RoutedEventArgs e)
     {
-        CloseMenu(sender);
-        if (ProfileOf(sender) is not { } profile || _app.ClientProfileService.FindInfo(profile.ClientProfileId) is not { } info)
-            return;
-        if (await _host.ShowDialog(new CustomEndpointDialog(_host, info)))
-            _viewModel.Refresh();
+        try {
+            CloseMenu(sender);
+            if (ProfileOf(sender) is not { } profile || _app.ClientProfileService.FindInfo(profile.ClientProfileId) is not { } info)
+                return;
+            if (await _host.ShowDialog(new CustomEndpointDialog(_host, info)))
+                _viewModel.Refresh();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnStarlinkClick(object? sender, RoutedEventArgs e)
@@ -231,20 +246,25 @@ public partial class LocationsView : UserControl, IPage
     // removing the server the app is connected through disconnects first (ClientProfileController.Delete)
     private async void OnRemoveClick(object? sender, RoutedEventArgs e)
     {
-        CloseMenu(sender);
-        if (ProfileOf(sender) is not { } profile)
-            return;
-        var s = Strings.Current;
-        if (!await _host.Confirm(s.Warning, $"{s.ConfirmRemoveServer}\n\n{profile.Name}"))
-            return;
         try {
-            if (!_app.IsIdle && profile.ClientProfileId == _app.CurrentClientProfileInfo?.ClientProfileId)
-                await _app.Disconnect();
-            _app.ClientProfileService.Delete(profile.ClientProfileId);
-            _viewModel.Refresh();
+            CloseMenu(sender);
+            if (ProfileOf(sender) is not { } profile)
+                return;
+            var s = Strings.Current;
+            if (!await _host.Confirm(s.Warning, $"{s.ConfirmRemoveServer}\n\n{profile.Name}"))
+                return;
+            try {
+                if (!_app.IsIdle && profile.ClientProfileId == _app.CurrentClientProfileInfo?.ClientProfileId)
+                    await _app.Disconnect();
+                _app.ClientProfileService.Delete(profile.ClientProfileId);
+                _viewModel.Refresh();
+            }
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
+            await this.ReportError(ex);
         }
     }
 

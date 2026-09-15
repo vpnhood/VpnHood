@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Avalonia.Platform;
+using Avalonia.Media;
 
 namespace VpnHood.AppLib.AvaloniaUI.Resources;
 
@@ -50,12 +50,29 @@ public sealed partial class Strings : INotifyPropertyChanged
             return false;
 
         _cultureName = culture.Name;
-        _texts = Load(culture.Name) ?? Load(culture.TwoLetterISOLanguageName) ?? English;
+        var texts = Load(culture.Name) ?? Load(culture.TwoLetterISOLanguageName);
+        _texts = texts ?? English;
+        // the direction of the words shown, not of the culture asked for: a language we have no
+        // file for is shown in English, which runs left to right
+        IsRightToLeft = texts != null && culture.TextInfo.IsRightToLeft;
 
         // no name: every binding on this object reads its property again
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
         return true;
     }
+
+    // The way the words run, which the web UI takes from Vuetify's rtl map (ar and fa). The root
+    // view binds its FlowDirection to it, and Avalonia mirrors the layout beneath: the panels,
+    // the grids, the margins, the drawer's side. Text and images are never mirrored, and the
+    // spots the web UI pins with dir="ltr" or a locale provider - addresses, keys, figures - are
+    // pinned LeftToRight the same way.
+    public bool IsRightToLeft { get; private set; }
+    public FlowDirection FlowDirection => IsRightToLeft ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+
+    // The chevrons that point the way through the pages - Util.getLocalizedRightChevron and its
+    // left twin. A glyph is text, which the mirroring leaves as it is, so the glyph itself turns.
+    public string ChevronForward => IsRightToLeft ? Mdi.ChevronLeft : Mdi.ChevronRight;
+    public string ChevronBack => IsRightToLeft ? Mdi.ChevronRight : Mdi.ChevronLeft;
 
     // The web UI hardcodes this unit in ConnectionInfo.vue, so it has no key to follow.
     public string Mbps => "Mbps";

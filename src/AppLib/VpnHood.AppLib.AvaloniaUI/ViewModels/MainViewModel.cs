@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Avalonia.Media.Imaging;
@@ -10,7 +10,6 @@ using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.Views;
 using VpnHood.AppLib.AvaloniaUI.Views.Dialogs;
 using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Dtos;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Common.Messaging;
@@ -29,7 +28,6 @@ namespace VpnHood.AppLib.AvaloniaUI.ViewModels;
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private const double Megabyte = 1_000_000;
-    private const double Gigabyte = 1000 * Megabyte;
     private static readonly TimeSpan NoticeLife = TimeSpan.FromSeconds(6);
     private static readonly TimeSpan FiveMinutes = TimeSpan.FromSeconds(299);
     private static readonly TimeSpan FifteenMinutes = TimeSpan.FromSeconds(899);
@@ -51,7 +49,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public MainView? Host { get; set; }
 
     public string AppName => _app.Resources.Strings.AppName;
-    public string VersionText => $"{Strings.Current.AbbreviationVersion} {_app.Features.Version.Build}";
+    public string VersionText => $"v{_app.Features.Version.Build}";
     public string SettingsTitle => Strings.Current.Settings.ToUpperInvariant();
     public string AutoChipText => Strings.Current.Auto.ToUpperInvariant();
     public string SplitCountriesTitle => Strings.Current.SplitCountries.ToUpperInvariant();
@@ -249,7 +247,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ServersRowValue = IsSingleProfileMode
             ? location == null ? Strings.Current.NoLocationSelected
             : location.IsAuto ? Strings.Current.AutoSelect
-            : LocationDisplay(location.TranslatedCountryName, location.HasRegion && location.HasMultipleRegions ? location.RegionName : null)
+            : LocationDisplay(location.TranslatedCountryName, location is { HasRegion: true, HasMultipleRegions: true } ? location.RegionName : null)
             : profile?.ClientProfileName ?? Strings.Current.NoServerSelected;
         IsLocationAuto = location == null || location.IsAuto;
         HasLocationFlag = !IsLocationAuto;
@@ -331,7 +329,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             : showMyFlag && state.ClientCountryInfo != null ? [state.ClientCountryInfo.CountryCode]
             : [];
         if (flagCodes.Length != SplitCountryFlags.Count || flagCodes.Length > 0 && !ReferenceEquals(_flagCodes, null) && !flagCodes.SequenceEqual(_flagCodes))
-            SplitCountryFlags = flagCodes.Select(AppAssets.Flag).OfType<Bitmap>().ToArray();
+            SplitCountryFlags = [.. flagCodes.Select(AppAssets.Flag).OfType<Bitmap>()];
         _flagCodes = flagCodes;
         HasSplitCountryFlags = SplitCountryFlags.Count > 0;
 
@@ -438,7 +436,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public IReadOnlyList<ClientProfileInfo> ProfileInfos()
     {
-        return _app.ClientProfileService.List().Select(x => x.ToInfo(_app.Features)).ToArray();
+        return [.. _app.ClientProfileService.List().Select(x => x.ToInfo(_app.Features))];
     }
 
     // The web UI's ExpansionPanel: every server the app holds, the one it is set to marked, each
@@ -446,34 +444,35 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private IReadOnlyList<ProfileItem> BuildProfiles(IReadOnlyList<ClientProfileInfo> infos)
     {
         var currentId = _app.CurrentClientProfileInfo?.ClientProfileId;
-        return infos.Select(x => {
-            var isSingleLocation = x.LocationInfos.Length < 2;
-            var isActive = x.ClientProfileId == currentId;
-            return new ProfileItem {
-                ClientProfileId = x.ClientProfileId,
-                Name = x.ClientProfileName,
-                IsActive = isActive,
-                IsSingleLocation = isSingleLocation,
-                IsBuiltIn = x.IsBuiltIn,
-                SupportIdText = $"SID:{x.SupportId}",
-                HostName = x.HostNames.FirstOrDefault() ?? "",
-                HasCustomEndpoint = x is { IsCustomServerEndpointsEnabled: true, CustomServerEndpoints.Length: > 0 },
-                CollapsedFlags = CollapsedFlags(x),
-                MoreLocationCount = Math.Max(0, LocationCount(x) - ProfileItem.CollapsedFlagCount),
-                Groups = BuildGroups(x, isNested: true, isActiveProfile: isActive),
-                IsExpanded = isActive || isSingleLocation
-            };
-        }).ToArray();
+        // ReSharper disable once UseCollectionExpression
+        return infos
+            .Select(x => {
+                var isSingleLocation = x.LocationInfos.Length < 2;
+                var isActive = x.ClientProfileId == currentId;
+                return new ProfileItem {
+                    ClientProfileId = x.ClientProfileId,
+                    Name = x.ClientProfileName,
+                    IsActive = isActive,
+                    IsSingleLocation = isSingleLocation,
+                    IsBuiltIn = x.IsBuiltIn,
+                    SupportIdText = $"SID:{x.SupportId}",
+                    HostName = x.HostNames.FirstOrDefault() ?? "",
+                    HasCustomEndpoint = x is { IsCustomServerEndpointsEnabled: true, CustomServerEndpoints.Length: > 0 },
+                    CollapsedFlags = CollapsedFlags(x),
+                    MoreLocationCount = Math.Max(0, LocationCount(x) - ProfileItem.CollapsedFlagCount),
+                    Groups = BuildGroups(x, isNested: true, isActiveProfile: isActive),
+                    IsExpanded = isActive || isSingleLocation
+                };
+            }).ToArray();
     }
 
     // ExpansionPanelCollapsed.vue: the first flags of a closed server, the fastest choice as the earth
     private static IReadOnlyList<CollapsedFlag> CollapsedFlags(ClientProfileInfo profile)
     {
-        return profile.LocationInfos
+        return [.. profile.LocationInfos
             .Take(ProfileItem.CollapsedFlagCount + 1)
             .Where(x => !x.IsNestedCountry)
-            .Select(x => new CollapsedFlag(AppData.IsLocationAutoSelected(x.CountryCode) ? null : x.CountryCode))
-            .ToArray();
+            .Select(x => new CollapsedFlag(AppData.IsLocationAutoSelected(x.CountryCode) ? null : x.CountryCode))];
     }
 
     // Util.calcLocationCount: the countries, without the automatic choice and the regions
@@ -527,7 +526,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 Title = title,
                 IsPremium = isPremiumGroup,
                 IsNested = isNested,
-                Items = locations.Select(x => new LocationItem(
+                Items = [.. locations.Select(x => new LocationItem(
                     ClientProfileId: profile.ClientProfileId,
                     ServerLocation: x.ServerLocation,
                     CountryCode: x.CountryCode,
@@ -541,7 +540,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                               profile.IsPremiumLocationSelected == isPremiumGroup,
                     IsPremiumGroup: isPremiumGroup,
                     HasUnblockable: x.Options.HasUnblockable && isPremiumGroup,
-                    ShowCrown: isPremiumGroup && !isPremiumUser)).ToArray()
+                    ShowCrown: isPremiumGroup && !isPremiumUser))]
             };
         }
 
@@ -603,9 +602,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var info = _app.ClientProfileService.FindInfo(clientProfileId);
         var selected = info?.SelectedLocationInfo;
         var serverLocation = selected?.ServerLocation;
-        var isPremium = info?.IsPremiumLocationSelected ?? false;
-        if (selected?.Options.HasPremium == true && !selected.Options.HasFree) isPremium = true;
-        if (selected?.Options.HasPremium == false && selected.Options.HasFree) isPremium = false;
+        var isPremium = (info?.IsPremiumLocationSelected ?? false) || selected?.Options is { HasPremium: true, HasFree: false };
+        if (selected?.Options is { HasPremium: false, HasFree: true }) isPremium = false;
         if (AppData.IsPremiumUser && !isPremium) {
             isPremium = true;
             serverLocation = null;
@@ -618,7 +616,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // location asks to be asked, then the connect, the profile's choice written and saved.
     public async Task ConnectWith(ConnectRequest request)
     {
-        if (request.ServerLocation != null && !request.IsDiagnose && ShowPromoteIfNeeded(request))
+        if (request is { ServerLocation: not null, IsDiagnose: false } && ShowPromoteIfNeeded(request))
             return;
 
         if (request.GoToHome)

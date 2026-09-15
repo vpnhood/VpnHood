@@ -2,8 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 
 namespace VpnHood.AppLib.AvaloniaUI.Controls;
@@ -32,7 +30,7 @@ public partial class PremiumFeaturesCarousel : UserControl
             ("always-on.webp", s.AlwaysOn, s.AlwaysOnPremiumDesc, intents.IsAlwaysOnSettingsSupported),
             ("support.webp", s._247Support, s._247SupportDesc, true)
         };
-        _slides = slides.Where(x => x.IsSupported).Select(x => (x.Image, x.Title, x.Description)).ToArray();
+        _slides = [.. slides.Where(x => x.IsSupported).Select(x => (x.Image, x.Title, x.Description))];
 
         var hasMany = _slides.Count > 1;
         PrevButton.IsVisible = hasMany;

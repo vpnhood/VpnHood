@@ -37,9 +37,6 @@ public sealed partial class Strings
     /// <summary>Version</summary>
     public string Version => Get("VERSION");
 
-    /// <summary>v</summary>
-    public string AbbreviationVersion => Get("ABBREVIATION_VERSION");
-
     /// <summary>Connect</summary>
     public string Connect => Get("CONNECT");
 

@@ -24,7 +24,7 @@
       </Grid>
       <Grid ColumnDefinitions="*,Auto">
         <TextBlock x:Name="SubtitleText" Classes="card-subtitle" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="20" Margin="12,0,0,0" Text="{x:Static res:Mdi.ChevronRight}" />
+        <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="20" Margin="12,0,0,0" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
       </Grid>
       <!-- the language row's invitation to contribute a translation, with its link -->
       <StackPanel x:Name="LanguageMore" Spacing="8" IsVisible="False" Margin="0,8,0,0">

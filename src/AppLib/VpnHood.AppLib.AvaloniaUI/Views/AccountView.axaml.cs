@@ -273,8 +273,13 @@ public partial class AccountView : UserControl, IPage
 
     private async void OnChangeCodeClick(object? sender, RoutedEventArgs e)
     {
-        await _host.ShowDialog(new PremiumCodeDialog(_host));
-        Fill();
+        try {
+            await _host.ShowDialog(new PremiumCodeDialog(_host));
+            Fill();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     // signed out only: the device's copy is the only one there is
@@ -294,18 +299,23 @@ public partial class AccountView : UserControl, IPage
     // the store shows its own screen; this only asks, and a device that cannot fails loudly
     private async void OnManageClick(object? sender, RoutedEventArgs e)
     {
-        var billing = _app.Services.AccountService?.BillingService;
-        if (billing == null)
-            return;
-        ManageButton.IsEnabled = false;
         try {
-            await billing.OpenSubscriptionManagement(AppUiContext.RequiredContext, CancellationToken.None);
+            var billing = _app.Services.AccountService?.BillingService;
+            if (billing == null)
+                return;
+            ManageButton.IsEnabled = false;
+            try {
+                await billing.OpenSubscriptionManagement(AppUiContext.RequiredContext, CancellationToken.None);
+            }
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
+            finally {
+                ManageButton.IsEnabled = true;
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
-        }
-        finally {
-            ManageButton.IsEnabled = true;
+            await this.ReportError(ex);
         }
     }
 

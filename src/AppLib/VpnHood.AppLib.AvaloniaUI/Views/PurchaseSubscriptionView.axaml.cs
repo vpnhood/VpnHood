@@ -1,4 +1,3 @@
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -74,7 +73,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
     {
         OptionsPanel.IsVisible = true;
         StorePanel.IsVisible = options.IsStoreAvailable;
-        StoreErrorCard.IsVisible = !options.IsStoreAvailable && options.StoreError != null;
+        StoreErrorCard.IsVisible = options is { IsStoreAvailable: false, StoreError: not null };
         WebButton.IsVisible = options.PurchaseUrl != null && MainView.IsExternalLinkUsable;
         CodeButton.IsVisible = options.CanGoPremiumByCode;
         RestoreButton.IsVisible = _app.Features.IsAccountSupported;
@@ -162,7 +161,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         PurchaseButton.IsEnabled = _selectedPlan != null;
     }
 
-    private string PlanTitle(string period)
+    private static string PlanTitle(string period)
     {
         return period switch {
             OneMonth => Strings.Current._1Month,
@@ -172,7 +171,7 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
         };
     }
 
-    private string PricePeriod(string period)
+    private static string PricePeriod(string period)
     {
         return period switch {
             OneMonth => Strings.Current.PerMonth,
@@ -212,22 +211,27 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
     private async void OnPurchaseClick(object? sender, RoutedEventArgs e)
     {
-        if (_selectedPlan is not { } plan)
-            return;
-
         try {
-            if (AppData.Account == null) {
-                await _host.ViewModel.SignIn(onPurchase: true);
-                if (IsAccountServed()) {
-                    _host.Replace(new AccountView(_host));
-                    await _host.ShowError(Strings.Current.HaveActiveSubscription);
-                    return;
+            if (_selectedPlan is not { } plan)
+                return;
+
+            try {
+                if (AppData.Account == null) {
+                    await _host.ViewModel.SignIn(onPurchase: true);
+                    if (IsAccountServed()) {
+                        _host.Replace(new AccountView(_host));
+                        await _host.ShowError(Strings.Current.HaveActiveSubscription);
+                        return;
+                    }
                 }
+                await Purchase(new PurchaseParams { PlanToken = plan.PlanToken });
             }
-            await Purchase(new PurchaseParams { PlanToken = plan.PlanToken });
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
+            await this.ReportError(ex);
         }
     }
 
@@ -279,8 +283,6 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
 
     private async Task Restore()
     {
-        var hasNothingToRestore = false;
-        var isRestoredButExpired = false;
         var pending = new PendingDialog();
         _ = _host.ShowDialog(pending);
         try {
@@ -301,56 +303,86 @@ public partial class PurchaseSubscriptionView : UserControl, IPage
             await AppData.LoadAccount(false, CancellationToken.None);
             _host.ViewModel.Refresh();
 
-            // "am I premium again?" is the question, and the refreshed account the only witness
+            // "am I premium again?" is the question, and the refreshed account the only witness;
+            // the wait is over before the answer is shown
             var isServed = IsAccountServed();
-            hasNothingToRestore = !restored && !isServed;
-            isRestoredButExpired = restored && !isServed;
             pending.Close();
             if (isServed)
                 await _host.ShowDialog(new PurchaseCompleteDialog(_host));
+            else if (restored)
+                await _host.ShowError(Strings.Current.RestoredPurchaseExpiredMsg);
+            else
+                await _host.ShowError(Strings.Current.NoPurchaseToRestore);
         }
         finally {
             pending.Close();
         }
-
-        if (hasNothingToRestore) await _host.ShowError(Strings.Current.NoPurchaseToRestore);
-        if (isRestoredButExpired) await _host.ShowError(Strings.Current.RestoredPurchaseExpiredMsg);
     }
 
     // ---- the rest ----
 
     private async void OnRetryClick(object? sender, RoutedEventArgs e)
     {
-        await LoadOptions();
+        try {
+            await LoadOptions();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnMoreInfoClick(object? sender, RoutedEventArgs e)
     {
-        if (_options?.StoreError is { } error)
-            await _host.ShowError(error.Message);
+        try {
+            if (_options?.StoreError is { } error)
+                await _host.ShowError(error.Message);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnWebClick(object? sender, RoutedEventArgs e)
     {
-        if (_options?.PurchaseUrl is { } url)
-            await _host.OpenLink(url, Strings.Current.PurchaseViaWeb);
+        try {
+            if (_options?.PurchaseUrl is { } url)
+                await _host.OpenLink(url, Strings.Current.PurchaseViaWeb);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnCodeClick(object? sender, RoutedEventArgs e)
     {
-        await _host.ShowDialog(new PremiumCodeDialog(_host));
+        try {
+            await _host.ShowDialog(new PremiumCodeDialog(_host));
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnTermsClick(object? sender, RoutedEventArgs e)
     {
-        if (_app.Features.TermsOfUseUrl is { } url)
-            await _host.OpenLink(url, Strings.Current.TermsOfUse);
+        try {
+            if (_app.Features.TermsOfUseUrl is { } url)
+                await _host.OpenLink(url, Strings.Current.TermsOfUse);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
-        if (_app.Features.PrivacyPolicyUrl is { } url)
-            await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
+        try {
+            if (_app.Features.PrivacyPolicyUrl is { } url)
+                await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnBackClick(object? sender, RoutedEventArgs e)

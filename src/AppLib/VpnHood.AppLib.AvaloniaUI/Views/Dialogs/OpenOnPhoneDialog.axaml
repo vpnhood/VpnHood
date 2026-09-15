@@ -6,7 +6,8 @@
                     x:Class="VpnHood.AppLib.AvaloniaUI.Views.Dialogs.OpenOnPhoneDialog">
   <!-- The web UI's OpenOnPhoneDialog: what a TV shows in place of following an outbound link - a
        code to scan, the address beneath it for anyone who would rather type it, and Close under
-       the remote. -->
+       the remote. The address is pinned left to right, as QrPlate.vue pins it: an RTL locale
+       would reorder it into something that cannot be typed. -->
   <Border Classes="dialog" MaxWidth="480">
     <StackPanel Spacing="12" HorizontalAlignment="Center">
       <TextBlock x:Name="TitleText" Classes="dialog-title" TextAlignment="Center" TextWrapping="Wrap" />
@@ -14,7 +15,7 @@
       <Border Background="White" CornerRadius="4" Padding="8" HorizontalAlignment="Center">
         <controls:QrCodeControl x:Name="Qr" Width="220" Height="220" />
       </Border>
-      <TextBlock x:Name="AddressText" Classes="dialog-text" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="400" />
+      <TextBlock x:Name="AddressText" Classes="dialog-text" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="400" FlowDirection="LeftToRight" />
       <Button x:Name="CloseButton" Classes="dialog-btn" HorizontalAlignment="Right" Margin="0,8,0,0"
               Content="{Binding Close, Source={x:Static res:Strings.Current}}" Click="OnCloseClick" />
     </StackPanel>

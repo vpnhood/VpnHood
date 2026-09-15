@@ -19,7 +19,7 @@ public partial class ConfirmDialog : DialogBase
 
     private void OnNoClick(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        Close();
     }
 
     private void OnYesClick(object? sender, RoutedEventArgs e)

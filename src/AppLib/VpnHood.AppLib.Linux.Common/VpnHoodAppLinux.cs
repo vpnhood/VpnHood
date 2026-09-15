@@ -12,12 +12,12 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
 {
     private readonly CommandListener _commandListener;
     private const string FileNameAppCommand = "appcommand";
-    private readonly bool _showWindowAfterStart;
+    public bool ShowWindowAfterStart { get; }
     public event EventHandler? Exiting;
 
     public VpnHoodAppLinux(AppOptions appOptions, bool showWindowAfterStart)
     {
-        _showWindowAfterStart = showWindowAfterStart;
+        ShowWindowAfterStart = showWindowAfterStart;
 
         // init app
         VpnHoodApp.Init(new LinuxDevice(appOptions.StorageFolderPath), appOptions);
@@ -52,14 +52,19 @@ public class VpnHoodAppLinux : Singleton<VpnHoodAppLinux>
     }
 
 
+    // What a run does before its UI: the old adapter, as a previous run's route may still be active.
+    public Task PrepareAsync()
+    {
+        return VhUtils.TryInvokeAsync(null, () =>
+            ExecuteCommandAsync($"ip link delete {VpnHoodApp.Instance.Features.AppName}", CancellationToken.None));
+    }
+
     public async Task Run()
     {
-        // try to remove the old adapter, as previous route maybe till be active
-        await VhUtils.TryInvokeAsync(null, () =>
-            ExecuteCommandAsync($"ip link delete {VpnHoodApp.Instance.Features.AppName}", CancellationToken.None));
+        await PrepareAsync();
 
         // show main window if requested
-        if (_showWindowAfterStart)
+        if (ShowWindowAfterStart)
             OpenMainWindowRequested?.Invoke(this, EventArgs.Empty);
 
         // wait until app is closed

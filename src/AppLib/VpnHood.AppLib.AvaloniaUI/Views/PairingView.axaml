@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
              xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls"
@@ -35,9 +35,15 @@
         <Border Background="White" CornerRadius="6" Padding="10" HorizontalAlignment="Center">
           <controls:QrCodeControl x:Name="Qr" Width="256" Height="256" />
         </Border>
-        <TextBlock x:Name="AddressText" Classes="address" HorizontalAlignment="Center" TextAlignment="Center" />
+        <!-- pinned left to right, as QrPlate.vue and the other-addresses line are: an RTL locale
+             would reorder an address into something that cannot be typed -->
+        <TextBlock x:Name="AddressText" Classes="address" HorizontalAlignment="Center" TextAlignment="Center" FlowDirection="LeftToRight" />
       </StackPanel>
 
+      <!-- Grid.Row and Grid.Column come from the styles above, which the container query
+           rewrites for a narrow page; a local value here would beat the query and leave this pane
+           beside the code instead of under it. -->
+      <!-- ReSharper disable Xaml.MissingGridIndex -->
       <StackPanel Classes="text-pane" Spacing="14" VerticalAlignment="Center">
         <TextBlock Classes="title" Text="{Binding RemoteAccess, Source={x:Static res:Strings.Current}}" />
         <TextBlock Classes="body" Text="{Binding RemoteAccessDesc, Source={x:Static res:Strings.Current}}" />
@@ -50,6 +56,7 @@
         <Button x:Name="DoneButton" Classes="action" Content="{Binding Done, Source={x:Static res:Strings.Current}}"
                 HorizontalAlignment="Right" Click="OnDoneClick" />
       </StackPanel>
+      <!-- ReSharper restore Xaml.MissingGridIndex -->
 
     </Grid>
   </ScrollViewer>

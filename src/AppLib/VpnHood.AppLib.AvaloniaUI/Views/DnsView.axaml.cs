@@ -127,11 +127,10 @@ public partial class DnsView : UserControl, IPage, ILeaveGuard
         try {
             var settings = _app.UserSettings;
             settings.DnsMode = _mode;
-            settings.DnsServers = new[] { Dns1Box.Text, Dns2Box.Text }
+            settings.DnsServers = [.. new[] { Dns1Box.Text, Dns2Box.Text }
                 .Select(x => x?.Trim())
                 .Where(x => !string.IsNullOrEmpty(x))
-                .Select(x => IPAddress.Parse(x ?? ""))
-                .ToArray();
+                .Select(x => IPAddress.Parse(x ?? ""))];
             _app.SettingsService.Save();
             _host.ViewModel.Refresh();
             return true;

@@ -1,5 +1,7 @@
 ﻿using Android.Runtime;
+using Avalonia.Android;
 using VpnHood.AppLib;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.GooglePlay;
@@ -14,8 +16,11 @@ namespace VpnHood.App.Client.Droid.Google;
     NetworkSecurityConfig = AndroidAppConstants.NetworkSecurityConfig,
     SupportsRtl = AndroidAppConstants.SupportsRtl,
     AllowBackup = AndroidAppConstants.AllowBackup)]
+// Avalonia's application base: the Avalonia UI ships beside the web view, and Avalonia 12 starts
+// from the process's Application (its OnCreate, after the app below). AvaloniaActivity shows it,
+// when MainActivity hands the launch over (DebugCommands.AvaloniaUi).
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : Application(javaReference, transfer)
+    : AvaloniaAndroidApplication<VpnHoodAvaloniaApp>(javaReference, transfer)
 {
     private static AppOptions CreateAppOptions()
     {

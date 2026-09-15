@@ -6,8 +6,6 @@ namespace VpnHood.AppLib.AvaloniaUI.ViewModels;
 // or the one untitled card when it is not. Open by default, as the web UI opens both.
 public sealed class LocationGroup : INotifyPropertyChanged
 {
-    private bool _isExpanded = true;
-
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public required string Title { get; init; }
@@ -20,13 +18,13 @@ public sealed class LocationGroup : INotifyPropertyChanged
     public bool IsNested { get; init; }
 
     public bool IsExpanded {
-        get => _isExpanded;
+        get;
         set {
-            if (_isExpanded == value) return;
-            _isExpanded = value;
+            if (field == value) return;
+            field = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
         }
-    }
+    } = true;
 
     public bool SameAs(LocationGroup other)
     {

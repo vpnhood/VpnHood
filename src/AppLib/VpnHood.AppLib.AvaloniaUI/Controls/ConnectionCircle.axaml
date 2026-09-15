@@ -30,15 +30,9 @@
       <Setter Property="BorderBrush" Value="White" />
     </Style>
 
-    <!-- the rotor: a 3s turn while connecting (#rotateCircle), a 2s pulse while unstable (.flasher) -->
-    <Style Selector="Grid.spinning Canvas#Rotor">
-      <Style.Animations>
-        <Animation Duration="0:0:3" IterationCount="INFINITE">
-          <KeyFrame Cue="0%"><Setter Property="RotateTransform.Angle" Value="0" /></KeyFrame>
-          <KeyFrame Cue="100%"><Setter Property="RotateTransform.Angle" Value="360" /></KeyFrame>
-        </Animation>
-      </Style.Animations>
-    </Style>
+    <!-- the rotor: the 3s turn while connecting (#rotateCircle) is the code-behind's, because the
+         web UI's turn only pauses and never ends (animation-play-state) and a style animation here
+         cannot; a 2s pulse while unstable (.flasher) -->
     <Style Selector="Grid.unstable Canvas#Rotor">
       <Style.Animations>
         <Animation Duration="0:0:2" IterationCount="INFINITE">
@@ -86,9 +80,16 @@
     </Style>
     <!-- The end of every connect animation is a setter of the connected style, never a held last
          keyframe (FillMode Forward): a held value outlives the class, so a disconnect kept the
-         glow and lost the dots. Backward holds the first keyframe through a delay instead. -->
+         glow and lost the dots. Backward holds the first keyframe through a delay instead.
+         The setters are the connected picture and the animations are the arrival at it, split as
+         the web UI splits .connected from .animation-true: a style's animations run every time the
+         style is applied, and leaving the home page takes the circle out of the tree, so a
+         connected circle coming back would play the arrival again. Only the code-behind's .animate
+         class, set for a connect the page watched happen, brings the animations. -->
     <Style Selector="Grid.connected Ellipse.dot">
       <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="Grid.connected.animate Ellipse.dot">
       <Style.Animations>
         <Animation Duration="0:0:0.2" Delay="0:0:0.4" FillMode="Backward">
           <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1" /></KeyFrame>
@@ -111,6 +112,8 @@
       <Setter Property="Height" Value="157" />
       <Setter Property="Opacity" Value="1" />
       <Setter Property="BoxShadow" Value="0 0 30 11 #15F5BA" />
+    </Style>
+    <Style Selector="Grid.connected.animate Border#Shine">
       <Style.Animations>
         <Animation Duration="0:0:0.8" Delay="0:0:0.4" FillMode="Backward" Easing="CubicEaseInOut">
           <KeyFrame Cue="0%">
@@ -136,7 +139,7 @@
       <Setter Property="Fill" Value="{StaticResource ConnectionCircleShineBrush}" />
       <Setter Property="Opacity" Value="0" />
     </Style>
-    <Style Selector="Grid.connected Ellipse#Flash">
+    <Style Selector="Grid.connected.animate Ellipse#Flash">
       <Style.Animations>
         <Animation Duration="0:0:0.8" Delay="0:0:0.4" Easing="CubicEaseInOut">
           <KeyFrame Cue="0%">
@@ -158,10 +161,10 @@
     <Border x:Name="Shine" HorizontalAlignment="Center" VerticalAlignment="Center" />
     <Ellipse x:Name="Flash" HorizontalAlignment="Center" VerticalAlignment="Center" />
     <Border x:Name="Ring" CornerRadius="75" BorderThickness="1" />
-    <Canvas x:Name="Rotor" Width="150" Height="150" RenderTransformOrigin="50%,50%">
-      <Canvas.RenderTransform>
-        <RotateTransform />
-      </Canvas.RenderTransform>
+    <!-- turns clockwise in every language, as the web UI's CSS animation does: a right-to-left
+         root would mirror it the other way round -->
+    <Canvas x:Name="Rotor" Width="150" Height="150" RenderTransformOrigin="50%,50%" FlowDirection="LeftToRight">
+      <!-- the turn's transform belongs to the code-behind, which owns the angle -->
       <Ellipse x:Name="DotA" Classes="dot" />
       <Ellipse x:Name="DotB" Classes="dot" />
     </Canvas>

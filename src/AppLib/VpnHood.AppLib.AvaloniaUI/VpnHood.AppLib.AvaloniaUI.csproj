@@ -3,7 +3,7 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>VpnHood.AppLib.AvaloniaUI</RootNamespace>
 		<IsPackable>false</IsPackable>
-		<Description>The app's UI in Avalonia, for wherever the web UI cannot run: an Android whose web view is too old or broken, Apple TV. Capped today - connect, the location list, and on a TV the pairing code that hands everything else to a phone - and responsive: two columns on a TV or a desktop, one on a phone. Grows page by page as the web UI's features are ported.</Description>
+		<Description>The VpnHood app's UI in Avalonia: the web UI's pages, page for page, in one responsive layout</Description>
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>
 

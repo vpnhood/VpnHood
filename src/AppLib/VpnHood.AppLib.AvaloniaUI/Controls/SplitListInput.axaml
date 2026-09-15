@@ -11,19 +11,20 @@
     <Border Classes="config-card" Padding="16,12,16,12">
       <StackPanel Spacing="8">
         <TextBlock x:Name="ExcludeTitle" Classes="body-medium" />
-        <TextBox x:Name="ExcludeBox" Classes="outlined multiline" TextChanged="OnTextChanged" />
+        <!-- the lists read left to right in every language, as the web UI's locale provider keeps them -->
+        <TextBox x:Name="ExcludeBox" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" />
       </StackPanel>
     </Border>
     <Border Classes="config-card" Padding="16,12,16,12">
       <StackPanel Spacing="8">
         <TextBlock x:Name="IncludeTitle" Classes="body-medium" />
-        <TextBox x:Name="IncludeBox" Classes="outlined multiline" TextChanged="OnTextChanged" />
+        <TextBox x:Name="IncludeBox" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" />
       </StackPanel>
     </Border>
     <Border x:Name="BlockCard" Classes="config-card" Padding="16,12,16,12">
       <StackPanel Spacing="8">
         <TextBlock x:Name="BlockTitle" Classes="body-medium" />
-        <TextBox x:Name="BlockBox" Classes="outlined multiline" TextChanged="OnTextChanged" />
+        <TextBox x:Name="BlockBox" Classes="outlined multiline" TextChanged="OnTextChanged" FlowDirection="LeftToRight" />
       </StackPanel>
     </Border>
   </StackPanel>

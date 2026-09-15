@@ -8,7 +8,7 @@
   <Grid RowDefinitions="*,Auto" MaxWidth="560">
     <Grid ColumnDefinitions="Auto,*,Auto">
       <Button x:Name="PrevButton" Classes="icon" VerticalAlignment="Center" Click="OnPrevClick">
-        <TextBlock Classes="mdi highlight" FontSize="28" Text="{x:Static res:Mdi.ChevronLeft}" />
+        <TextBlock Classes="mdi highlight" FontSize="28" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
       </Button>
       <Grid Grid.Column="1" RowDefinitions="*,Auto,Auto" Margin="8,0">
         <Grid x:Name="RocketBox" IsVisible="False" MaxHeight="220" Margin="0,0,0,16">
@@ -16,12 +16,12 @@
           <Image x:Name="Rocket" Source="{res:AppImage rocket.webp}" Stretch="Uniform" VerticalAlignment="Center" Height="120" />
           <Image Source="{res:AppImage rocket-smoke.webp}" Stretch="Uniform" VerticalAlignment="Bottom" Width="120" />
         </Grid>
-        <Image x:Name="SlideImage" MaxHeight="200" Stretch="Uniform" Margin="0,0,0,20" />
+        <Image x:Name="SlideImage" Grid.Row="0" MaxHeight="200" Stretch="Uniform" Margin="0,0,0,20" />
         <TextBlock x:Name="TitleText" Grid.Row="1" Classes="h3" TextAlignment="Center" Margin="0,0,0,8" />
         <TextBlock x:Name="DescriptionText" Grid.Row="2" Classes="label-large" Opacity="0.7" TextWrapping="Wrap" TextAlignment="Center" Margin="12,0" />
       </Grid>
       <Button x:Name="NextButton" Grid.Column="2" Classes="icon" VerticalAlignment="Center" Click="OnNextClick">
-        <TextBlock Classes="mdi highlight" FontSize="28" Text="{x:Static res:Mdi.ChevronRight}" />
+        <TextBlock Classes="mdi highlight" FontSize="28" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
       </Button>
     </Grid>
     <StackPanel x:Name="Dots" Grid.Row="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" Margin="0,16,0,0" />

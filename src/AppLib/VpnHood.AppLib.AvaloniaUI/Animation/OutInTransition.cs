@@ -14,7 +14,7 @@ namespace VpnHood.AppLib.AvaloniaUI.Animation;
 // clean; the leaving one stays dark until the host hides it.
 public sealed class OutInTransition : IPageTransition
 {
-    private static readonly Easing Ease = new SplineEasing(0.25, 0.1, 0.25, 1);
+    private static readonly Easing Ease = new SplineEasing(0.25, 0.1, 0.25);
     private static readonly TimeSpan LeaveTime = TimeSpan.FromMilliseconds(90);
     private static readonly TimeSpan EnterTime = TimeSpan.FromMilliseconds(130);
 

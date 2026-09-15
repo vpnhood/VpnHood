@@ -1,9 +1,13 @@
 ﻿using System.Security.Principal;
 using System.Windows;
+using Microsoft.Extensions.Logging;
 using VpnHood.AppLib;
+using VpnHood.AppLib.AvaloniaUI.Desktop;
 using VpnHood.AppLib.Services.Updaters;
+using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.Win.Common;
 using VpnHood.AppLib.Win.Common.WpfSpa;
+using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.App.Client.Win.Web;
 
@@ -44,15 +48,41 @@ public class App : Application
         // call base first to init app resources
         base.OnStartup(e);
 
-        // load app configs
-        VpnHoodAppWpfSpa.Init(CreateAppOptions, args: Environment.GetCommandLineArgs());
+        // the web UI, in this application's window
+        VpnHoodAppWpfSpa.Init();
     }
 
     [STAThread]
     public static void Main(string[] args)
     {
-        _ = args;
-        var app = new App();
-        app.Run();
+        // The app first, on its own; then the UI framework by the app's own setting: WPF hosts the
+        // web UI, Avalonia the native one when the debug command forces it.
+        try {
+            VpnHoodAppWin.Init(CreateAppOptions, args);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "Could not run the app.");
+            return;
+        }
+
+        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
+            RunAvaloniaUi(args);
+        else
+            new App().Run();
+    }
+
+    // The Avalonia UI in its own window, opened from the tray as the web UI's is; Exit there ends
+    // it, with the app.
+    private static void RunAvaloniaUi(string[] args)
+    {
+        var appWin = VpnHoodAppWin.Instance;
+        appWin.OpenMainWindowRequested += (_, _) => AvaloniaDesktopHost.ShowMainWindow();
+        appWin.ExitRequested += (_, _) => AvaloniaDesktopHost.Shutdown();
+        try {
+            AvaloniaDesktopHost.Run(args, appWin.ShowWindowAfterStart);
+        }
+        finally {
+            appWin.Dispose();
+        }
     }
 }

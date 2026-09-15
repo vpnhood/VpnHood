@@ -1,8 +1,10 @@
 ﻿using Android.Content;
 using Android.Service.QuickSettings;
+using VpnHood.AppLib;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib.Droid.Common.Constants;
 using VpnHood.AppLib.Droid.Common.SpaWebView;
+using VpnHood.AppLib.Utils;
 
 namespace VpnHood.App.Client.Droid.Google;
 
@@ -24,11 +26,21 @@ namespace VpnHood.App.Client.Droid.Google;
 public class MainActivity : AndroidAppMainActivity
 {
     // https://android.googlesource.com/platform/libcore/+/android-5.0.2_r1/luni/src/main/java/libcore/net/MimeUtils.java
-    private const string AccessKeyScheme1 = "vh";
-    private const string AccessKeyScheme2 = "vhkey";
-    private const string AccessKeyMime1 = "application/vhkey";
-    private const string AccessKeyMime2 = "application/pgp-keys"; //.key
-    private const string AccessKeyMime3 = "application/vnd.cinderella"; //.cdy
+    public const string AccessKeyScheme1 = "vh";
+    public const string AccessKeyScheme2 = "vhkey";
+    public const string AccessKeyMime1 = "application/vhkey";
+    public const string AccessKeyMime2 = "application/pgp-keys"; //.key
+    public const string AccessKeyMime3 = "application/vnd.cinderella"; //.cdy
+
+    // the Avalonia UI in place of the web view, when the debug command forces it: the launch goes
+    // to that activity instead, because Avalonia's activity has a base class of its own
+    protected override void OnCreate(Bundle? savedInstanceState)
+    {
+        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
+            OnCreateRedirectingTo<AvaloniaActivity>(savedInstanceState);
+        else
+            base.OnCreate(savedInstanceState);
+    }
 
     protected override AndroidAppMainActivityHandler CreateMainActivityHandler()
     {

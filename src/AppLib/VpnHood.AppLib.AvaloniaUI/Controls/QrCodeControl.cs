@@ -25,6 +25,10 @@ public class QrCodeControl : Control
         set => SetValue(TextProperty, value);
     }
 
+    // Never mirrored: under a right-to-left root Avalonia flips what a control draws, and a
+    // flipped code is one a phone cannot read. The same exemption the Image control has.
+    protected override bool BypassFlowDirectionPolicies => true;
+
     public override void Render(DrawingContext context)
     {
         var size = Bounds.Size;

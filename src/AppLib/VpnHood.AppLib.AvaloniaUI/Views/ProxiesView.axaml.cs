@@ -65,7 +65,7 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
         FilterMenu.Children.Add(MenuItem(s.Failed, () => ChooseFilter("failed")));
         FilterMenu.Children.Add(MenuItem(s.Disabled, () => ChooseFilter("disabled")));
 
-        UrlBox.Watermark = s.ProxyAutoUpdateUrlPlaceholder;
+        UrlBox.PlaceholderText = s.ProxyAutoUpdateUrlPlaceholder;
         ShowMode();
     }
 
@@ -228,14 +228,24 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
 
     private async void OnUrlLostFocus(object? sender, RoutedEventArgs e)
     {
-        if (!HasUrl || UrlBox.Text == _oldUrl || _isReloadingUrl)
-            return;
-        await ReloadFromUrl();
+        try {
+            if (!HasUrl || UrlBox.Text == _oldUrl || _isReloadingUrl)
+                return;
+            await ReloadFromUrl();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnReloadClick(object? sender, RoutedEventArgs e)
     {
-        await ReloadFromUrl();
+        try {
+            await ReloadFromUrl();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void SaveAutoUpdateSettings()
@@ -367,11 +377,11 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
     // a menu action, with its question first when it destroys something
     private async void RunListAction(Func<Task> action, string? confirmTitle = null, string? confirmMessage = null)
     {
-        if (confirmTitle != null && confirmMessage != null && !await _host.Confirm(confirmTitle, confirmMessage))
-            return;
-        _isBusy = true;
-        UpdateButtons();
         try {
+            if (confirmTitle != null && confirmMessage != null && !await _host.Confirm(confirmTitle, confirmMessage))
+                return;
+            _isBusy = true;
+            UpdateButtons();
             await action();
             await RefreshList();
         }
@@ -407,34 +417,86 @@ public partial class ProxiesView : UserControl, IPage, IDisposable
 
     private async void ChooseFilter(string? filter)
     {
-        _filter = filter;
-        await RefreshList();
+        try {
+            _filter = filter;
+            await RefreshList();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnAddClick(object? sender, RoutedEventArgs e)
     {
-        if (await _host.ShowDialog(new ProxyEditDialog(_host, ProxySheetKind.Add, null)))
-            await RefreshList();
+        try {
+            if (await _host.ShowDialog(new ProxyEditDialog(_host, ProxySheetKind.Add, null)))
+                await RefreshList();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnAddListClick(object? sender, RoutedEventArgs e)
     {
-        if (await _host.ShowDialog(new ProxyEditDialog(_host, ProxySheetKind.AddList, null)))
-            await RefreshList();
+        try {
+            if (await _host.ShowDialog(new ProxyEditDialog(_host, ProxySheetKind.AddList, null)))
+                await RefreshList();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnProxyClick(object? sender, EventArgs e)
     {
-        if (sender is not ProxyListItem item)
-            return;
-        if (await _host.ShowDialog(new ProxyEditDialog(_host, ProxySheetKind.Edit, item.Proxy)))
-            await RefreshList();
+        try {
+            if (sender is not ProxyListItem item)
+                return;
+            if (await _host.ShowDialog(new ProxyEditDialog(_host, ProxySheetKind.Edit, item.Proxy)))
+                await RefreshList();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
-    private async void OnFirstPageClick(object? sender, RoutedEventArgs e) => await GoToPage(1);
-    private async void OnPrevPageClick(object? sender, RoutedEventArgs e) => await GoToPage(_page - 1);
-    private async void OnNextPageClick(object? sender, RoutedEventArgs e) => await GoToPage(_page + 1);
-    private async void OnLastPageClick(object? sender, RoutedEventArgs e) => await GoToPage((_totalCount + ItemsPerPage - 1) / ItemsPerPage);
+    private async void OnFirstPageClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await GoToPage(1);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+    private async void OnPrevPageClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await GoToPage(_page - 1);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+    private async void OnNextPageClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await GoToPage(_page + 1);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
+    private async void OnLastPageClick(object? sender, RoutedEventArgs e)
+    {
+        try {
+            await GoToPage((_totalCount + ItemsPerPage - 1) / ItemsPerPage);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
+    }
 
     private async Task GoToPage(int page)
     {

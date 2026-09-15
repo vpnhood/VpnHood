@@ -1,10 +1,12 @@
 ﻿using Android.Runtime;
+using Avalonia.Android;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.App.Connect.Droid.Google.FirebaseUtils;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
@@ -26,8 +28,11 @@ namespace VpnHood.App.Connect.Droid.Google;
     Debuggable = AppConfigs.IsDebugMode,
     AllowBackup = AndroidAppConstants.AllowBackup)]
 [MetaData("com.google.android.gms.ads.APPLICATION_ID", Value = AppConfigs.AdMobApplicationId)]
+// Avalonia's application base: the Avalonia UI ships beside the web view, and Avalonia 12 starts
+// from the process's Application (its OnCreate, after the app below). AvaloniaActivity shows it,
+// when MainActivity hands the launch over (DebugCommands.AvaloniaUi).
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : Application(javaReference, transfer)
+    : AvaloniaAndroidApplication<VpnHoodAvaloniaApp>(javaReference, transfer)
 {
     private static AppOptions CreateAppOptions()
     {

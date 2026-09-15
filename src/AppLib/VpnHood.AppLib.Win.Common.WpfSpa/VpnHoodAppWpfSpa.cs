@@ -1,44 +1,24 @@
-﻿using System.Net;
-using System.Security.Principal;
 using System.Windows;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.Win.Common.WpfSpa;
 
+// The web UI in WPF's window, on the app VpnHoodAppWin.Init has started: the window, and what
+// WPF answers of the tray's requests - opening the window, exiting. Called from the WPF
+// application's startup, where a window can be made.
 // ReSharper disable once RedundantExtendsListEntry
 public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
 {
-    public static VpnHoodAppWpfSpa Init(Func<AppOptions> optionsFactory, string[] args)
+    public static VpnHoodAppWpfSpa Init()
     {
         try {
             // create instance
             var app = new VpnHoodAppWpfSpa();
             Application.Current.Exit += (_, _) => Exit();
-
-            // initialize Win App
-            var appOptions = optionsFactory();
-            appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
-            appOptions.DeviceUiProvider = new WinDeviceUiProvider();
-            appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
-
-            // register local domain if needed
-            var alternativeUrl = string.IsNullOrEmpty(appOptions.WebUiHostName)
-                ? null
-                : VpnHoodAppWin.RegisterLocalDomain(IPEndPoint.Parse("127.10.10.10:80"), appOptions.WebUiHostName);
-
-            // initialize VpnHoodWinApp
-            VpnHoodAppWin.Init(appOptions, args: args);
-            VpnHoodAppWebServer.Init(VpnHoodApp.Instance, new WebServerOptions { Url = alternativeUrl });
-
-            // initialize Win
             VpnHoodAppWin.Instance.ExitRequested += (_, _) => Exit();
-            VpnHoodAppWin.Instance.OpenMainWindowInBrowserRequested += (_, _) =>
-                VpnHoodAppWin.OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
             VpnHoodAppWin.Instance.OpenMainWindowRequested += OpenMainWindowRequested;
-            VpnHoodAppWin.Instance.Start();
 
             // run the app
             var mainWindow = new VpnHoodWpfSpaMainWindow();
@@ -75,13 +55,8 @@ public class VpnHoodAppWpfSpa : Singleton<VpnHoodAppWpfSpa>
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing) {
-            if (VpnHoodAppWebServer.IsInit)
-                VpnHoodAppWebServer.Instance.Dispose();
-
-            if (VpnHoodAppWin.IsInit)
-                VpnHoodAppWin.Instance.Dispose();
-        }
+        if (disposing && VpnHoodAppWin.IsInit)
+            VpnHoodAppWin.Instance.Dispose();
 
         base.Dispose(disposing);
     }

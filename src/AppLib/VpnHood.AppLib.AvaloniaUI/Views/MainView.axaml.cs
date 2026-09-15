@@ -1,9 +1,12 @@
 using Avalonia;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.AvaloniaUI.Animation;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.ViewModels;
@@ -24,10 +27,15 @@ namespace VpnHood.AppLib.AvaloniaUI.Views;
 public partial class MainView : UserControl
 {
     private static readonly TimeSpan SnackbarLife = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan DrawerTime = TimeSpan.FromMilliseconds(200);
+    private static readonly Easing DrawerEase = new SplineEasing(0.4, 0, 0.2);
 
     private readonly Stack<IPage> _pages = new();
     private readonly Stack<DialogBase> _dialogs = new();
     private readonly DispatcherTimer _snackbarTimer;
+    private readonly TranslateTransform _drawerOffset = new();
+    private CancellationTokenSource _drawerSlideCancel = new();
+    private bool _isDrawerOpen;
     private DateTime _snackbarUntil;
     private TopLevel? _topLevel;
     private IInputElement? _focusBeforeOverlay;
@@ -37,6 +45,10 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
+        // what a television gets and nothing else does - today the overscan inset of every page's
+        // root (AppTheme). The device's answer never changes while the app runs, so it is a class,
+        // not a binding.
+        Classes.Set("tv", ViewModel.IsTv);
         _snackbarTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(50), DispatcherPriority.Background, (_, _) => TickSnackbar());
         ViewModel.PropertyChanged += (_, e) => {
             if (e.PropertyName is nameof(MainViewModel.IsReconnectRequired) or "")
@@ -44,6 +56,8 @@ public partial class MainView : UserControl
         };
         Navigate(new HomeView(ViewModel, this));
         ViewModel.Host = this;
+
+        DrawerContent.RenderTransform = _drawerOffset;
 
         // the consent a first run asks for, over everything until it is given (App.vue's
         // isShowPrivacyPolicyDialog)
@@ -104,11 +118,11 @@ public partial class MainView : UserControl
         if (_dialogs.Count > 0) {
             var top = _dialogs.Peek();
             if (top.CanDismiss)
-                top.Close(false);
+                top.Close();
             return true;
         }
 
-        if (DrawerLayer.IsVisible) {
+        if (_isDrawerOpen) {
             CloseDrawer();
             return true;
         }
@@ -191,7 +205,7 @@ public partial class MainView : UserControl
     // view, and Back must work then too.
     private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
     {
-        var isTyping = _topLevel?.FocusManager?.GetFocusedElement() is TextBox;
+        var isTyping = _topLevel?.FocusManager.GetFocusedElement() is TextBox;
         if ((e.Key == Key.Escape || (e.Key == Key.Back && !isTyping)) && GoBack())
             e.Handled = true;
     }
@@ -204,7 +218,7 @@ public partial class MainView : UserControl
     public Task<bool> ShowDialog(DialogBase dialog)
     {
         if (_dialogs.Count == 0)
-            _focusBeforeOverlay = _topLevel?.FocusManager?.GetFocusedElement();
+            _focusBeforeOverlay = _topLevel?.FocusManager.GetFocusedElement();
 
         _dialogs.Push(dialog);
         dialog.Closed += OnDialogClosed;
@@ -357,14 +371,24 @@ public partial class MainView : UserControl
 
     private async void OnUpdateStoreClick(object? sender, RoutedEventArgs e)
     {
-        if (AppData.State.UpdaterStatus?.PublishInfo?.GooglePlayUrl is { } url)
-            await OpenLink(url, Strings.Current.UpdateFromGooglePlay);
+        try {
+            if (AppData.State.UpdaterStatus?.PublishInfo?.GooglePlayUrl is { } url)
+                await OpenLink(url, Strings.Current.UpdateFromGooglePlay);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnUpdateDirectClick(object? sender, RoutedEventArgs e)
     {
-        if (AppData.State.UpdaterStatus?.PublishInfo?.InstallationPageUrl is { } url)
-            await OpenLink(url, Strings.Current.UpdateFromDirectLink);
+        try {
+            if (AppData.State.UpdaterStatus?.PublishInfo?.InstallationPageUrl is { } url)
+                await OpenLink(url, Strings.Current.UpdateFromDirectLink);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnUpdateNoStoreClick(object? sender, RoutedEventArgs e)
@@ -400,7 +424,12 @@ public partial class MainView : UserControl
 
     private async void OnReconnectClick(object? sender, RoutedEventArgs e)
     {
-        await ViewModel.Reconnect();
+        try {
+            await ViewModel.Reconnect();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnReconnectDismissClick(object? sender, RoutedEventArgs e)
@@ -412,25 +441,59 @@ public partial class MainView : UserControl
 
     public void OpenDrawer()
     {
-        if (DrawerLayer.IsVisible)
+        if (_isDrawerOpen)
             return;
-        _focusBeforeOverlay = _topLevel?.FocusManager?.GetFocusedElement();
+
+        _isDrawerOpen = true;
+        _focusBeforeOverlay = _topLevel?.FocusManager.GetFocusedElement();
         var drawer = new DrawerView(this);
         DrawerContent.Content = drawer;
         DrawerLayer.IsVisible = true;
         Host.IsEnabled = false;
         Dispatcher.UIThread.Post(drawer.FocusDefault, DispatcherPriority.Loaded);
+        _ = SlideDrawer(open: true);
     }
 
+    // The page behind, the focus and the input are handed back at once; only the picture waits for
+    // the slide, so a Back key never feels held by an animation.
     public void CloseDrawer()
     {
-        if (!DrawerLayer.IsVisible)
+        if (!_isDrawerOpen)
             return;
-        DrawerLayer.IsVisible = false;
-        DrawerContent.Content = null;
+
+        _isDrawerOpen = false;
         if (_dialogs.Count == 0) {
             Host.IsEnabled = true;
             RestoreFocus();
+        }
+
+        _ = SlideDrawer(open: false);
+    }
+
+    // Vuetify's temporary navigation drawer, value for value: the panel slides in from the start
+    // edge and the scrim comes up with it, over 200ms on the standard curve. The offset is the
+    // drawer's own measured width rather than the 300 of its style, and it is taken before the
+    // first frame is drawn, so the panel is never seen in place. A slide that is still running when
+    // the other one starts is cancelled where it is, and the one taking over carries on from there.
+    private async Task SlideDrawer(bool open)
+    {
+        await _drawerSlideCancel.CancelAsync();
+        _drawerSlideCancel.Dispose();
+        _drawerSlideCancel = new CancellationTokenSource();
+        var cancellationToken = _drawerSlideCancel.Token;
+
+        DrawerContent.Measure(Size.Infinity);
+        var hidden = -DrawerContent.DesiredSize.Width;
+        await FrameClock.Tween(DrawerTime, DrawerEase, progress => {
+            var shown = open ? progress : 1 - progress;
+            _drawerOffset.X = hidden * (1 - shown);
+            DrawerScrim.Opacity = shown;
+        }, cancellationToken);
+
+        // the layer holds the drawer while it leaves, and goes once it has
+        if (!open && !cancellationToken.IsCancellationRequested) {
+            DrawerLayer.IsVisible = false;
+            DrawerContent.Content = null;
         }
     }
 

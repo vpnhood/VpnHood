@@ -25,6 +25,13 @@ public static class DebugCommands
     // acts on it.
     public const string Starlink = "/starlink";
 
+    // Shows the Avalonia UI in place of the web UI. Every head ships both, so the native UI can
+    // be walked on any device; applies at the next launch, and the Avalonia UI's own developer
+    // page can clear it again. Read where each head chooses its UI - its Main, its launcher
+    // activity, its app delegate - which is also where a device's web view would be judged too
+    // old for the web UI, when that check is written.
+    public const string AvaloniaUi = "/avalonia-ui";
+
     public static string[] All => [
         CaptureContext,
         DropUdp,
@@ -39,6 +46,7 @@ public static class DebugCommands
         DisableWebSocket,
         OsTcpStack,
         TvMode,
-        Starlink
+        Starlink,
+        AvaloniaUi
     ];
 }

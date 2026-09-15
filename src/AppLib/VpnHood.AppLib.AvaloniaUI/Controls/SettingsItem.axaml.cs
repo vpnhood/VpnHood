@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Views;
 
 namespace VpnHood.AppLib.AvaloniaUI.Controls;
 
@@ -83,9 +82,14 @@ public partial class SettingsItem : UserControl
 
     private async void OnLanguageLinkClick(object? sender, RoutedEventArgs e)
     {
-        e.Handled = true;
-        var host = this.FindHost();
-        if (host != null)
-            await host.OpenLink(new Uri(LanguagesUrl), Title);
+        try {
+            e.Handled = true;
+            var host = this.FindHost();
+            if (host != null)
+                await host.OpenLink(new Uri(LanguagesUrl), Title);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 }

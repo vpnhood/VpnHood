@@ -34,7 +34,7 @@
                 <Grid ColumnDefinitions="Auto,*,Auto" Margin="{Binding Indent}">
                   <TextBlock Classes="mdi bolt" Classes.active="{Binding IsActive}" FontSize="31" Margin="0,0,8,0"
                              Text="{x:Static res:Mdi.LightningBoltOutline}" IsVisible="{Binding IsAuto}" />
-                  <Border Classes="flag" Classes.small="{Binding IsNested}" Margin="0,0,8,0" IsVisible="{Binding !IsAuto}">
+                  <Border Grid.Column="0" Classes="flag" Classes.small="{Binding IsNested}" Margin="0,0,8,0" IsVisible="{Binding !IsAuto}">
                     <Image Source="{Binding Flag}" />
                   </Border>
                   <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
@@ -94,7 +94,7 @@
                       <TextBlock Classes="mdi" FontSize="28" VerticalAlignment="Center" Margin="0,0,10,0"
                                  Foreground="{StaticResource ActiveProfileRadioBrush}"
                                  Text="{x:Static res:Mdi.CheckCircleOutline}" IsVisible="{Binding IsActive}" />
-                      <TextBlock Classes="mdi" FontSize="28" VerticalAlignment="Center" Margin="0,0,10,0"
+                      <TextBlock Grid.Column="0" Classes="mdi" FontSize="28" VerticalAlignment="Center" Margin="0,0,10,0"
                                  Foreground="{StaticResource InactiveProfileRadioBrush}"
                                  Text="{x:Static res:Mdi.CircleOutline}" IsVisible="{Binding !IsActive}" />
                       <TextBlock Grid.Column="1" Classes="profile-name" Classes.inactive="{Binding !IsActive}"

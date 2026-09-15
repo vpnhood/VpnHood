@@ -63,9 +63,9 @@ public partial class SplitListInput : UserControl
         ExcludeTitle.Text = exclude;
         IncludeTitle.Text = include;
         BlockTitle.Text = block;
-        ExcludeBox.Watermark = placeholder;
-        IncludeBox.Watermark = placeholder;
-        BlockBox.Watermark = placeholder;
+        ExcludeBox.PlaceholderText = placeholder;
+        IncludeBox.PlaceholderText = placeholder;
+        BlockBox.PlaceholderText = placeholder;
         BlockCard.IsVisible = hasBlocks;
     }
 

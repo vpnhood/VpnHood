@@ -28,7 +28,7 @@
       <Button x:Name="CommandsField" Classes="combo-field">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock x:Name="NoCommandText" Classes="body-small disabled" Text="None" VerticalAlignment="Center" />
-          <ItemsControl x:Name="ChosenList">
+          <ItemsControl x:Name="ChosenList" Grid.Column="0">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
                 <WrapPanel />

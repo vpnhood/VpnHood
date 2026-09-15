@@ -24,10 +24,8 @@ public partial class DeveloperView : UserControl, IPage, IDisposable
 
         var current = (_app.UserSettings.DebugData1 ?? "")
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        _commands = _app.Features.DebugCommands
-            .Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })
-            .ToArray();
-        _unknown = current.Except(_app.Features.DebugCommands).ToArray();
+        _commands = [.. _app.Features.DebugCommands.Select(x => new DebugCommandItem(x) { IsOn = current.Contains(x) })];
+        _unknown = [.. current.Except(_app.Features.DebugCommands)];
 
         SupportIdText.Text = $"Support ID: {_app.CurrentClientProfileInfo?.SupportId}";
         CommandList.ItemsSource = _commands;

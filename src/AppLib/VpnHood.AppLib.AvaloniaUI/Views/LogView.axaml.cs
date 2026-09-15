@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.Core.Toolkit.Logging;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;

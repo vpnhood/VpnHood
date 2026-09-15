@@ -2,9 +2,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="VpnHood.AppLib.AvaloniaUI.VpnHoodAvaloniaApp"
              RequestedThemeVariant="Dark">
-  <!-- The palette is not here: it is one of the two theme files beside the styles, merged into the
-       resources in code before this file is loaded, since the styles below resolve their keys as
-       they are read. Dark is what the Fluent controls take for the keys no theme of ours names. -->
+  <!-- The client's palette, merged here as the default: every key a style or a view names can
+       then be followed to its definition by the tooling. The other product's palette is merged
+       over it in code once this file is loaded (Initialize) - a dictionary merged later wins -
+       and the styles below read their keys when they are first applied, after both are in
+       place. Dark is what the Fluent controls take for the keys no theme of ours names. -->
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://VpnHood.AppLib.AvaloniaUI/Styles/ClientTheme.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
   <Application.Styles>
     <FluentTheme />
     <StyleInclude Source="avares://VpnHood.AppLib.AvaloniaUI/Styles/AppTheme.axaml" />

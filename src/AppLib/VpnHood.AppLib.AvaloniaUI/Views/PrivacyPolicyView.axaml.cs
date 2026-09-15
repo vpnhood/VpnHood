@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Platform;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 
@@ -57,13 +56,23 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
 
     private async void OnTermsClick(object? sender, RoutedEventArgs e)
     {
-        if (_app.Features.TermsOfUseUrl is { } url)
-            await _host.OpenLink(url, Strings.Current.TermsOfUse);
+        try {
+            if (_app.Features.TermsOfUseUrl is { } url)
+                await _host.OpenLink(url, Strings.Current.TermsOfUse);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
-        if (_app.Features.PrivacyPolicyUrl is { } url)
-            await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
+        try {
+            if (_app.Features.PrivacyPolicyUrl is { } url)
+                await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 }

@@ -47,9 +47,9 @@ public partial class SignInDialog : DialogBase
         EmailButton.IsVisible = hasPassword && !isPhoneForEmail;
         EmailScopeHint.IsVisible = EmailButton.IsVisible;
 
-        EmailBox.Watermark = s.Email;
-        PasswordBox.Watermark = s.Password;
-        CodeBox.Watermark = s.TwoFactorCode;
+        EmailBox.PlaceholderText = s.Email;
+        PasswordBox.PlaceholderText = s.Password;
+        CodeBox.PlaceholderText = s.TwoFactorCode;
         ProviderHint.IsVisible = _primaryProviderId != null;
         ProviderHint.Text = s.SignInProviderHint(PrimaryProviderName());
         // the one place the account website appears - where a browser can open it
@@ -124,19 +124,24 @@ public partial class SignInDialog : DialogBase
 
     private async void OnPrimaryClick(object? sender, RoutedEventArgs e)
     {
-        Close(false);
         try {
-            await _host.ViewModel.SignIn();
+            Close();
+            try {
+                await _host.ViewModel.SignIn();
+            }
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
+            await this.ReportError(ex);
         }
     }
 
     // the phone is the TV's keyboard: the pairing page takes this dialog's place
     private void OnPhoneClick(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        Close();
         _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintSignIn));
     }
 
@@ -152,7 +157,7 @@ public partial class SignInDialog : DialogBase
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        Close();
     }
 
     private void OnSavedClick(object? sender, RoutedEventArgs e)
@@ -168,32 +173,57 @@ public partial class SignInDialog : DialogBase
 
     private async void OnPasswordKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || !SubmitPasswordButton.IsEnabled) return;
-        e.Handled = true;
-        await SubmitPassword();
+        try {
+            if (e.Key != Key.Enter || !SubmitPasswordButton.IsEnabled) return;
+            e.Handled = true;
+            await SubmitPassword();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnCodeKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || !SubmitCodeButton.IsEnabled) return;
-        e.Handled = true;
-        await SubmitChallenge();
+        try {
+            if (e.Key != Key.Enter || !SubmitCodeButton.IsEnabled) return;
+            e.Handled = true;
+            await SubmitChallenge();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnSubmitPasswordClick(object? sender, RoutedEventArgs e)
     {
-        await SubmitPassword();
+        try {
+            await SubmitPassword();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnSubmitCodeClick(object? sender, RoutedEventArgs e)
     {
-        await SubmitChallenge();
+        try {
+            await SubmitChallenge();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnForgotClick(object? sender, RoutedEventArgs e)
     {
-        if (AppData.Features.AccountWebsiteUrl is { } url)
-            await _host.OpenLink(url, Strings.Current.ForgotPassword);
+        try {
+            if (AppData.Features.AccountWebsiteUrl is { } url)
+                await _host.OpenLink(url, Strings.Current.ForgotPassword);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async Task SubmitPassword()

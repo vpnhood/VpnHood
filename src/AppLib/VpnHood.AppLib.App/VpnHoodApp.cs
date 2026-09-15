@@ -1059,6 +1059,15 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         return HasDebugCommand(UserSettings, command);
     }
 
+    // The command in the settings kept in the storage folder, read without starting the app: for
+    // a head that must choose its UI framework before it can start the app (iOS names its
+    // delegate to UIKit first). Everything else asks the instance.
+    public static bool HasDebugCommand(string storageFolderPath, string command)
+    {
+        var settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsService.GetAppSettingsFilePath(storageFolderPath));
+        return settings != null && HasDebugCommand(settings.UserSettings, command);
+    }
+
     private static bool HasDebugCommand(UserSettings userSettings, string command)
     {
         if (string.IsNullOrEmpty(userSettings.DebugData1))

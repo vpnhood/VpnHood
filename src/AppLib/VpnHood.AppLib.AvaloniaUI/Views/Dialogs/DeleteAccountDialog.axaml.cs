@@ -25,7 +25,7 @@ public partial class DeleteAccountDialog : DialogBase
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)
     {
-        Close(false);
+        Close();
     }
 
     private void OnDeleteClick(object? sender, RoutedEventArgs e)

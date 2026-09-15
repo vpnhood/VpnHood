@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<Description>Manage client accounts and in-app purchases through the VpnHood Portal API (backend-agnostic; implemented today by the vpnhoodiap WHMCS module)</Description>
+		<Description>Manage client accounts and in-app purchases through the VpnHood Portal API (backend-agnostic)</Description>
 		<TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>VpnHood.AppLib.Portal</RootNamespace>
 	</PropertyGroup>

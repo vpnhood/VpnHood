@@ -47,24 +47,39 @@ public partial class ErrorDialog : DialogBase
     // the automatic location, then a connect on it (ErrorDialog.changeLocationToAuto)
     private async void OnAutoClick(object? sender, RoutedEventArgs e)
     {
-        if (AppData.ClientProfileId is not { } profileId)
-            return;
-        CloseAndClear();
-        await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: false, ConnectPlanId.Normal));
+        try {
+            if (AppData.ClientProfileId is not { } profileId)
+                return;
+            CloseAndClear();
+            await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: false, ConnectPlanId.Normal));
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnTryPremiumClick(object? sender, RoutedEventArgs e)
     {
-        if (AppData.ClientProfileId is not { } profileId)
-            return;
-        CloseAndClear();
-        await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: true, ConnectPlanId.PremiumByTrial));
+        try {
+            if (AppData.ClientProfileId is not { } profileId)
+                return;
+            CloseAndClear();
+            await _host.ViewModel.ConnectWith(new ConnectRequest(profileId, null, IsPremium: true, ConnectPlanId.PremiumByTrial));
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnDiagnoseClick(object? sender, RoutedEventArgs e)
     {
-        CloseAndClear();
-        await _host.ViewModel.Diagnose();
+        try {
+            CloseAndClear();
+            await _host.ViewModel.Diagnose();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnReportClick(object? sender, RoutedEventArgs e)
@@ -81,8 +96,13 @@ public partial class ErrorDialog : DialogBase
 
     private async void OnChangeCodeClick(object? sender, RoutedEventArgs e)
     {
-        CloseAndClear();
-        await _host.ShowDialog(new PremiumCodeDialog(_host));
+        try {
+            CloseAndClear();
+            await _host.ShowDialog(new PremiumCodeDialog(_host));
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnLearnMoreClick(object? sender, RoutedEventArgs e)

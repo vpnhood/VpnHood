@@ -1,7 +1,6 @@
 using Android.Content;
 using Android.Content.PM;
 using Android.Content.Res;
-using Android.OS;
 using Android.Runtime;
 using Android.Views;
 using Avalonia.Android;
@@ -20,7 +19,7 @@ namespace VpnHood.AppLib.Droid.AvaloniaUI;
 // MainView answers.
 public class AndroidAppAvaloniaMainActivity : AvaloniaMainActivity, IActivityEvent
 {
-    private AndroidAppMainActivityHandler? _handler;
+    protected AndroidAppMainActivityHandler? MainActivityHandler { get; private set; }
 
     public event EventHandler<ActivityResultEventArgs>? ActivityResultEvent;
     public event EventHandler<CreateEventArgs>? CreateEvent;
@@ -42,16 +41,20 @@ public class AndroidAppAvaloniaMainActivity : AvaloniaMainActivity, IActivityEve
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         // before base.OnCreate, so the handler is subscribed when the create event fires
-        _handler = new AndroidAppMainActivityHandler(this, CreateActivityOptions());
+        MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions());
 
-        // Also before base.OnCreate, which starts Avalonia: the UI reads its images, flags, fonts
-        // and words from the bundle's assets folder, and cannot draw a glyph before it is there.
-        // The web server is what extracts the bundle - and what a phone pairs with - so it comes up
-        // here rather than on the pairing screen. On this thread, deliberately: the first run of a
-        // version unpacks the bundle, and every frame after this line depends on it.
+        // Also before base.OnCreate, which makes the view (VpnHoodAvaloniaApp hands this activity
+        // its factory): the UI reads its images, flags, fonts and words from the bundle's assets
+        // folder, and cannot draw a glyph before it is there. The web server is what extracts the
+        // bundle - and what a phone pairs with - so it comes up here rather than on the pairing
+        // screen. On this thread, deliberately: the first run of a version unpacks the bundle, and
+        // every frame after this line depends on it. The fonts are registered here as well:
+        // Avalonia itself started with the process's Application, before any activity could name
+        // the folder they are in.
         if (!VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
         AppAssets.FolderPath = VpnHoodAppWebServer.Instance.AssetsFolderPath;
+        AppAssets.RegisterFonts();
 
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });
@@ -106,7 +109,7 @@ public class AndroidAppAvaloniaMainActivity : AvaloniaMainActivity, IActivityEve
     protected override void OnDestroy()
     {
         DestroyEvent?.Invoke(this, EventArgs.Empty);
-        _handler = null;
+        MainActivityHandler = null;
         base.OnDestroy();
     }
 

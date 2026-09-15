@@ -10,7 +10,14 @@ public class AppSettingsService
 {
     private readonly string _storagePath;
     private readonly Lock _saveLock = new();
-    private string AppSettingsFilePath => Path.Combine(_storagePath, "settings.json");
+    private string AppSettingsFilePath => GetAppSettingsFilePath(_storagePath);
+
+    // Where the settings of a storage folder are, for a reader that has no service yet
+    // (VpnHoodApp.HasDebugCommand's static form, before the app starts).
+    public static string GetAppSettingsFilePath(string storagePath)
+    {
+        return Path.Combine(storagePath, "settings.json");
+    }
     private string RemoteSettingsFilePath => Path.Combine(_storagePath, "remote_settings.json");
     private string PromotionFolderPath => Path.Combine(_storagePath, "promotions");
 
@@ -26,7 +33,11 @@ public class AppSettingsService
     public AppSettingsService(string storagePath, Uri? remoteSettingsUrl)
     {
         _storagePath = storagePath;
-        Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath) ?? new AppSettings();
+        // A file that cannot be read is replaced by defaults - a new client id among them - so the
+        // failure must at least be in the log, or a device that keeps forgetting its settings has
+        // nothing to show for it.
+        Settings = JsonUtils.TryDeserializeFile<AppSettings>(AppSettingsFilePath, logger: VhLogger.Instance) ??
+                   new AppSettings();
         Settings.AppSettingsService = this;
         SplitIpViaAppSettings = new SplitIpViaAppSettings(Path.Combine(storagePath, "splits", "ips_via_app"));
         SplitIpViaDeviceSettings = new SplitIpViaDeviceSettings(Path.Combine(storagePath, "splits", "ips_via_device"));

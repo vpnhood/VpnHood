@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Media;
 using VpnHood.AppLib.AvaloniaUI.Controls;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 
@@ -49,7 +50,8 @@ public partial class LanguageView : UserControl, IPage
 
     private void AddRow(string code, string title, string? description)
     {
-        var row = new OptionRow { Title = title, Description = description };
+        // the note under the system row reads left to right in every language, as language.vue pins it
+        var row = new OptionRow { Title = title, Description = description, DescriptionFlowDirection = FlowDirection.LeftToRight };
         row.Clicked += (_, _) => Choose(code);
         _rows.Add((code, row));
         Rows.Children.Add(row);

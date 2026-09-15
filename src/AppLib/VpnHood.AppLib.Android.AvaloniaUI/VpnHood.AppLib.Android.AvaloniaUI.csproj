@@ -4,7 +4,7 @@
 		<SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
 		<RootNamespace>VpnHood.AppLib.Droid.AvaloniaUI</RootNamespace>
 		<IsPackable>false</IsPackable>
-		<Description>The Avalonia UI's activity on Android, for a device whose web view cannot run the web UI: the app's activity-event contract on Avalonia's main activity, so the app can ask for VPN permission and take access-key intents as it does behind the web UI. A head opts in with two declarations - see README.md.</Description>
+		<Description>Hosts the VpnHood Avalonia UI in an Android activity</Description>
 	</PropertyGroup>
 
 	<ItemGroup>

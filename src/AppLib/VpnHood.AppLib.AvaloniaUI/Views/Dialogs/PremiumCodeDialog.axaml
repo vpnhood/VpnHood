@@ -16,7 +16,7 @@
           <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding ActivePremiumKeyExpirationNotice, Source={x:Static res:Strings.Current}}" />
         </StackPanel>
       </Border>
-      <TextBox x:Name="CodeBox" Classes="outlined" Watermark="XXXX-XXXX-XXXX-XXXX-XXXX" TextChanged="OnCodeChanged" KeyDown="OnCodeKeyDown" />
+      <TextBox x:Name="CodeBox" Classes="outlined" PlaceholderText="XXXX-XXXX-XXXX-XXXX-XXXX" TextChanged="OnCodeChanged" KeyDown="OnCodeKeyDown" FlowDirection="LeftToRight" />
       <TextBlock x:Name="ErrorText" Classes="body-small error-text" TextWrapping="Wrap" IsVisible="False" />
       <Button x:Name="ActivateButton" Classes="pill block" Background="{StaticResource ActivateCodeBtnBrush}" IsEnabled="False" Click="OnActivateClick"
               Content="{Binding Activate, Source={x:Static res:Strings.Current}}" />

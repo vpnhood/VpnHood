@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.UiContexts;
+// ReSharper disable ShortLivedHttpClient
 
 namespace VpnHood.AppLib.Test.Tests;
 

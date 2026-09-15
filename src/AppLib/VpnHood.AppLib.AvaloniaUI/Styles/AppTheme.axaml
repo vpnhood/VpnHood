@@ -47,16 +47,18 @@
     </ControlTemplate>
   </Styles.Resources>
 
-  <!-- Every page's root, inset from the edge: 48x27 is the 5% overscan inset of a TV at 960x540;
-       a phone keeps the web UI's 16px sides. -->
+  <!-- Every page's root, inset from the edge: the web UI's 16px sides, whatever the window's size -
+       a desktop window and a tablet are given no more than a phone there. 48x27 is the 5% overscan
+       inset of a TV at 960x540, and it belongs to a television alone, as the web UI gives it only
+       to a tv-device (general.css, "TV page inset and measure"): a window on a desk crops nothing,
+       and the inset there only pushes the page's header down the screen. MainView carries the
+       class, from the device's own word (AppFeatures.IsTv). -->
   <Style Selector=":is(Panel).page">
+    <Setter Property="Margin" Value="16,8,16,16" />
+  </Style>
+  <Style Selector=":is(UserControl).tv :is(Panel).page">
     <Setter Property="Margin" Value="48,27" />
   </Style>
-  <ContainerQuery Name="Page" Query="max-width:600">
-    <Style Selector=":is(Panel).page">
-      <Setter Property="Margin" Value="16,8,16,16" />
-    </Style>
-  </ContainerQuery>
 
   <!-- The web UI's type scale (Vuetify's MD2 metrics kept by override.css): Poppins Light for
        text, Poppins Bold for titles, both inherited from MainView. -->

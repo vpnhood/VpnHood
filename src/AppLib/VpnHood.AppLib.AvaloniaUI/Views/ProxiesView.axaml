@@ -170,11 +170,11 @@
               <StackPanel x:Name="Pagination" Spacing="8" IsVisible="False">
                 <Border Classes="divider" />
                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center">
-                  <Button x:Name="FirstPageButton" Classes="icon small" Click="OnFirstPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.ChevronLeft}" /></Button>
-                  <Button x:Name="PrevPageButton" Classes="icon small" Click="OnPrevPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.ChevronLeft}" /></Button>
+                  <Button x:Name="FirstPageButton" Classes="icon small" Click="OnFirstPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" /></Button>
+                  <Button x:Name="PrevPageButton" Classes="icon small" Click="OnPrevPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" /></Button>
                   <TextBlock x:Name="PageText" Classes="body-small highlight" VerticalAlignment="Center" Margin="8,0" />
-                  <Button x:Name="NextPageButton" Classes="icon small" Click="OnNextPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.ChevronRight}" /></Button>
-                  <Button x:Name="LastPageButton" Classes="icon small" Click="OnLastPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.ChevronRight}" /></Button>
+                  <Button x:Name="NextPageButton" Classes="icon small" Click="OnNextPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" /></Button>
+                  <Button x:Name="LastPageButton" Classes="icon small" Click="OnLastPageClick"><TextBlock Classes="mdi" FontSize="18" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" /></Button>
                 </StackPanel>
                 <TextBlock x:Name="PaginationText" Classes="body-small disabled" TextAlignment="Center" />
               </StackPanel>

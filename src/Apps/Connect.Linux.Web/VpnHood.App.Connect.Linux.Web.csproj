@@ -40,6 +40,8 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />
+		<!-- The Avalonia UI beside the web UI, run in place of it when the app asks (DebugCommands.AvaloniaUi). -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI.Desktop\VpnHood.AppLib.AvaloniaUI.Desktop.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Portal\VpnHood.AppLib.Portal.csproj" />
 	</ItemGroup>
 

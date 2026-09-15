@@ -11,7 +11,7 @@
         <StackPanel Orientation="Horizontal" Spacing="12">
           <Image x:Name="Logo" Width="50" Height="50" />
           <StackPanel VerticalAlignment="Center">
-            <TextBlock x:Name="AppNameText" Classes="h4" FontSize="16" />
+            <TextBlock x:Name="AppNameText" Classes="h4" FontSize="16" FlowDirection="LeftToRight" />
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Classes="drawer-version" Text="{Binding Version, Source={x:Static res:Strings.Current}}" />
               <TextBlock x:Name="VersionText" Classes="drawer-version" />

@@ -57,12 +57,22 @@ public partial class InternalAdView : UserControl, IPage, ILeaveGuard, IDisposab
 
     private async void OnCloseClick(object? sender, RoutedEventArgs e)
     {
-        await Dismiss(learnMore: false);
+        try {
+            await Dismiss(learnMore: false);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnLearnMoreClick(object? sender, RoutedEventArgs e)
     {
-        await Dismiss(learnMore: true);
+        try {
+            await Dismiss(learnMore: true);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async Task Dismiss(bool learnMore)

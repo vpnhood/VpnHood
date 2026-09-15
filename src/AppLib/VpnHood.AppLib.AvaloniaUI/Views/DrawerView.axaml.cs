@@ -1,10 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
-using VpnHood.Core.Toolkit.ApiClients;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 
@@ -75,12 +72,17 @@ public partial class DrawerView : UserControl
 
     private async void OnAccountClick(object? sender, RoutedEventArgs e)
     {
-        _host.CloseDrawer();
-        if (AppData.Account != null) {
-            _host.Replace(new AccountView(_host));
-            return;
+        try {
+            _host.CloseDrawer();
+            if (AppData.Account != null) {
+                _host.Replace(new AccountView(_host));
+                return;
+            }
+            await _host.ViewModel.SignIn();
         }
-        await _host.ViewModel.SignIn();
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnSettingsClick(object? sender, RoutedEventArgs e)
@@ -91,71 +93,126 @@ public partial class DrawerView : UserControl
 
     private async void OnDiagnoseClick(object? sender, RoutedEventArgs e)
     {
-        _host.CloseDrawer();
-        await _host.ViewModel.Diagnose();
+        try {
+            _host.CloseDrawer();
+            await _host.ViewModel.Diagnose();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnUpdateClick(object? sender, RoutedEventArgs e)
     {
-        UpdateIcon.Text = Mdi.Loading;
-        UpdateIcon.Classes.Add("spinner");
-        UpdateItem.IsEnabled = false;
         try {
-            var updater = _app.Services.UpdaterService ?? throw new NotSupportedException("App Updater is not supported.");
-            await updater.CheckForUpdate(true, CancellationToken.None);
+            UpdateIcon.Text = Mdi.Loading;
+            UpdateIcon.Classes.Add("spinner");
+            UpdateItem.IsEnabled = false;
+            try {
+                var updater = _app.Services.UpdaterService ?? throw new NotSupportedException("App Updater is not supported.");
+                await updater.CheckForUpdate(true, CancellationToken.None);
+            }
+            catch (Exception ex) {
+                await _host.ProcessError(ex);
+            }
+            finally {
+                _host.CloseDrawer();
+            }
         }
         catch (Exception ex) {
-            await _host.ProcessError(ex);
-        }
-        finally {
-            _host.CloseDrawer();
+            await this.ReportError(ex);
         }
     }
 
     private async void OnWhatsNewClick(object? sender, RoutedEventArgs e)
     {
-        await Open(ChangelogUrl, Strings.Current.WhatsNew);
+        try {
+            await Open(ChangelogUrl, Strings.Current.WhatsNew);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnFeedbackClick(object? sender, RoutedEventArgs e)
     {
-        await Open(Strings.Current.SendFeedbackUrl, Strings.Current.SendFeedback);
+        try {
+            await Open(Strings.Current.SendFeedbackUrl, Strings.Current.SendFeedback);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnPersonalServerClick(object? sender, RoutedEventArgs e)
     {
-        await Open(PersonalServerUrl, Strings.Current.CreatePersonalServer);
+        try {
+            await Open(PersonalServerUrl, Strings.Current.CreatePersonalServer);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnWebsiteClick(object? sender, RoutedEventArgs e)
     {
-        await Open(WebsiteUrl, "vpnhood.com");
+        try {
+            await Open(WebsiteUrl, "vpnhood.com");
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnPrivacyClick(object? sender, RoutedEventArgs e)
     {
-        if (_app.Features.PrivacyPolicyUrl is { } url)
-            await Open(url.AbsoluteUri, Strings.Current.PrivacyPolicy);
+        try {
+            if (_app.Features.PrivacyPolicyUrl is { } url)
+                await Open(url.AbsoluteUri, Strings.Current.PrivacyPolicy);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnLinkedInClick(object? sender, RoutedEventArgs e)
     {
-        await Open(LinkedInUrl, "LinkedIn");
+        try {
+            await Open(LinkedInUrl, "LinkedIn");
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnInstagramClick(object? sender, RoutedEventArgs e)
     {
-        await Open(InstagramUrl, "Instagram");
+        try {
+            await Open(InstagramUrl, "Instagram");
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnXClick(object? sender, RoutedEventArgs e)
     {
-        await Open(XUrl, "X");
+        try {
+            await Open(XUrl, "X");
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async void OnPoweredByClick(object? sender, RoutedEventArgs e)
     {
-        await Open(EngineUrl, Strings.Current.VpnhoodEngine);
+        try {
+            await Open(EngineUrl, Strings.Current.VpnhoodEngine);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private async Task Open(string url, string title)

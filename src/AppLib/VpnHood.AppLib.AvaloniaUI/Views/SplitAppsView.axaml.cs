@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.ViewModels;
@@ -59,11 +58,10 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
     // they are not; "All future apps" ahead of its group; then by name
     private static IReadOnlyList<FilterItem> Sort(IReadOnlyList<FilterItem> items)
     {
-        var isFutureSelected = items.Any(x => x.Id == FutureAppsId && x.IsSelected);
-        return items.OrderBy(x => isFutureSelected ? x.IsSelected ? 1 : 0 : x.IsSelected ? 0 : 1)
+        var isFutureSelected = items.Any(x => x is { Id: FutureAppsId, IsSelected: true });
+        return [.. items.OrderBy(x => isFutureSelected ? x.IsSelected ? 1 : 0 : x.IsSelected ? 0 : 1)
             .ThenBy(x => x.Id == FutureAppsId ? 0 : 1)
-            .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
-            .ToArray();
+            .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)];
     }
 
     private static Bitmap? DecodePng(string base64)
@@ -85,7 +83,7 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
 
     // Include with nothing in it is the one state that cannot be saved: the app would tunnel
     // nothing. It is held until the person leaves, and refused then (ALL_APPS_EXCLUDED_ERROR_MSG).
-    private bool IsSaveRejected => Split.AppMode == SplitAppMode.Include && Split.Apps.Length == 0;
+    private bool IsSaveRejected => Split is { AppMode: SplitAppMode.Include, Apps.Length: 0 };
 
     private void OnSelectionChanged(object? sender, EventArgs e)
     {
@@ -97,15 +95,15 @@ public partial class SplitAppsView : UserControl, IPage, ILeaveGuard
             return;
         }
 
-        if (items.Any(x => x.Id == FutureAppsId && x.IsSelected)) {
+        if (items.Any(x => x is { Id: FutureAppsId, IsSelected: true })) {
             Split.AppMode = SplitAppMode.Exclude;
-            Split.Apps = items.Where(x => !x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id).ToArray();
+            Split.Apps = [.. items.Where(x => !x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id)];
             _app.SettingsService.Save();
             return;
         }
 
         Split.AppMode = SplitAppMode.Include;
-        Split.Apps = items.Where(x => x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id).ToArray();
+        Split.Apps = [.. items.Where(x => x.IsSelected && x.Id != FutureAppsId).Select(x => x.Id)];
         if (!IsSaveRejected)
             _app.SettingsService.Save();
     }

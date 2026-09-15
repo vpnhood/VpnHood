@@ -62,7 +62,7 @@
               <Button x:Name="ManageButton" Classes="btn1 small" HorizontalAlignment="Right" Click="OnManageClick" IsVisible="False">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <TextBlock Text="{Binding ManageSubscription, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-                  <TextBlock Classes="mdi" FontSize="16" Text="{x:Static res:Mdi.ChevronRight}" VerticalAlignment="Center" />
+                  <TextBlock Classes="mdi" FontSize="16" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
               <TextBlock x:Name="ManageNote" Classes="card-subtitle" IsVisible="False" />
@@ -82,7 +82,7 @@
               <Button x:Name="MoreDetailsButton" Classes="btn1 small" HorizontalAlignment="Right" Click="OnMoreDetailsClick" IsVisible="False">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <TextBlock Text="{Binding MoreDetails, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-                  <TextBlock Classes="mdi" FontSize="16" Text="{x:Static res:Mdi.ChevronRight}" VerticalAlignment="Center" />
+                  <TextBlock Classes="mdi" FontSize="16" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
             </StackPanel>
@@ -99,7 +99,7 @@
               <Button x:Name="GoPremiumButton" Classes="btn1 small" HorizontalAlignment="Right" Click="OnGoPremiumClick">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <TextBlock Text="{Binding GoPremium, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-                  <TextBlock Classes="mdi" FontSize="16" Text="{x:Static res:Mdi.ChevronRight}" VerticalAlignment="Center" />
+                  <TextBlock Classes="mdi" FontSize="16" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
                 </StackPanel>
               </Button>
             </StackPanel>

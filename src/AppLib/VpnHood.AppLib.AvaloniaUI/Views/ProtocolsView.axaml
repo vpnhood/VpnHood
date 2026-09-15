@@ -24,7 +24,7 @@
               <Button x:Name="LearnMoreButton" Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnLearnMoreClick">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <TextBlock Classes="body-small highlight" Text="{Binding LearnMore, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-                  <TextBlock Classes="mdi highlight" FontSize="18" Text="{x:Static res:Mdi.ChevronRight}" />
+                  <TextBlock Classes="mdi highlight" FontSize="18" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
                 </StackPanel>
               </Button>
             </StackPanel>

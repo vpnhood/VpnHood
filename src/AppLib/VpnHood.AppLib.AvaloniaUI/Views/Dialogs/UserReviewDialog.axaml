@@ -18,13 +18,13 @@
         <TextBlock Classes="h3" TextAlignment="Center" Text="{Binding Feedback, Source={x:Static res:Strings.Current}}" />
         <TextBlock Classes="body-large dialog-text" TextAlignment="Center" Text="{Binding FeedbackDesc, Source={x:Static res:Strings.Current}}" />
         <StackPanel Orientation="Horizontal" Spacing="28" HorizontalAlignment="Center">
-          <Button x:Name="Rate1" Classes="icon rate" Width="60" Height="60" CornerRadius="30" Click="OnRate1Click">
+          <Button x:Name="Rate1" Classes="icon" Width="60" Height="60" CornerRadius="30" Click="OnRate1Click">
             <TextBlock Classes="mdi" FontSize="48" Text="{x:Static res:Mdi.EmoticonSadOutline}" />
           </Button>
-          <Button x:Name="Rate2" Classes="icon rate" Width="60" Height="60" CornerRadius="30" Click="OnRate2Click">
+          <Button x:Name="Rate2" Classes="icon" Width="60" Height="60" CornerRadius="30" Click="OnRate2Click">
             <TextBlock FontSize="44" FontWeight="Bold" Text="😐" />
           </Button>
-          <Button x:Name="Rate3" Classes="icon rate" Width="60" Height="60" CornerRadius="30" Click="OnRate3Click">
+          <Button x:Name="Rate3" Classes="icon" Width="60" Height="60" CornerRadius="30" Click="OnRate3Click">
             <TextBlock FontSize="44" Text="😊" />
           </Button>
         </StackPanel>

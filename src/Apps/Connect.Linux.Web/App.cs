@@ -3,9 +3,11 @@ using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.AvaloniaUI.Desktop;
 using VpnHood.AppLib.Linux.Common;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Updaters;
+using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
@@ -119,13 +121,29 @@ internal static class App
 
         // init webserver
         VpnHoodAppWebServer.Init(VpnHoodApp.Instance, new WebServerOptions());
-        VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow(VpnHoodAppWebServer.Instance.Url);
 
         // write service url
         File.WriteAllText(serviceUrlPath, VpnHoodAppWebServer.Instance.Url.ToString());
 
-        // run app
+        // run app: the Avalonia UI in a window on this thread when the debug command forces it,
+        // otherwise the web UI, in the browser
+        if (VpnHoodApp.Instance.HasDebugCommand(DebugCommands.AvaloniaUi))
+            return RunAvaloniaUi(args);
+
+        VpnHoodAppLinux.Instance.OpenMainWindowRequested += (_, _) => OpenMainWindow(VpnHoodAppWebServer.Instance.Url);
         return VpnHoodAppLinux.Instance.Run();
+    }
+
+    // The Avalonia UI in a window: opened again by a second launch, as the browser is, and ended
+    // by the stop command, with the app.
+    private static Task RunAvaloniaUi(string[] args)
+    {
+        var appLinux = VpnHoodAppLinux.Instance;
+        appLinux.OpenMainWindowRequested += (_, _) => AvaloniaDesktopHost.ShowMainWindow();
+        appLinux.Exiting += (_, _) => AvaloniaDesktopHost.Shutdown();
+        appLinux.PrepareAsync().GetAwaiter().GetResult();
+        AvaloniaDesktopHost.Run(args, appLinux.ShowWindowAfterStart);
+        return Task.CompletedTask;
     }
 
     private static void OpenMainWindow(Uri url)

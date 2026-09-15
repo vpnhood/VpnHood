@@ -29,4 +29,15 @@
     <ApplicationVersion>$([System.Version]::Parse('$(VersionNumeric)').Build)</ApplicationVersion>
   </PropertyGroup>
 
+  <!-- Native symbol files never ship: the SkiaSharp and HarfBuzzSharp packages the Avalonia UI brings
+       put libSkiaSharp.pdb (80 MB) and libHarfBuzzSharp.pdb (20 MB) beside their DLLs, and a publish
+       would carry them into every desktop installer. Nothing reads them - a native crash is not
+       symbolized on a user's machine. Managed .pdb files are untouched. -->
+  <Target Name="VhRemoveNativeSymbolsFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+        Condition="'%(Extension)' == '.pdb' And '%(ResolvedFileToPublish.AssetType)' == 'native'" />
+    </ItemGroup>
+  </Target>
+
 </Project>

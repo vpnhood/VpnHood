@@ -22,35 +22,42 @@ public class AppDelegate : UIApplicationDelegate
 {
     public override bool FinishedLaunching(UIApplication application, NSDictionary? launchOptions)
     {
-        if (!VpnHoodApp.IsInit) {
-            // The App process has a readable stdout, so a console logger is fine here.
-            VhLogger.Instance = VhLogger.CreateConsoleLogger();
-
-            // Load per-product settings the same way the Android Connect app does: merge the embedded
-            // ".user" appsettings over the in-code defaults and pick up the secret default access key.
-            var appConfigs = AppConfigs.Load();
-
-            // Evaluate GetContainerUrl here — on the main thread, after iOS has fully initialized the
-            // sandbox — so the App-Group container path (the App<->Extension IPC folder) is stable for
-            // the whole session. If this is null the App Group entitlement is missing from the profile.
-            var sharedContainerPath = NSFileManager.DefaultManager.GetContainerUrl(AppConfigs.AppGroupId).Path;
-            VhLogger.Instance.LogInformation(
-                "FinishedLaunching: GetContainerUrl({AppGroupId}) = {Path}",
-                AppConfigs.AppGroupId, sharedContainerPath ?? "<null>");
-
-            // IosDevice lives in the core VpnHood.Core.Client.Devices.Ios project; it needs the
-            // extension's bundle id and the resolved shared-container path to wire up NEVPNManager +
-            // the IPC config folder. The App Group id stays here only to compute sharedContainerPath
-            // (above) — the Extension receives the resolved path, not the App Group id.
-            var device = new IosDevice(
-                providerBundleId: AppConfigs.ProviderBundleId,
-                sharedContainerPath: sharedContainerPath,
-                localizedDescription: AppConfigs.AppName);
-
-            VpnHoodIosApp.Init(device, BuildAppOptions(appConfigs));
-        }
-
+        StartApp();
         return true;
+    }
+
+    // The app as this head configures it, started as launching finishes. AvaloniaUiAppDelegate
+    // starts the same app under the other UI.
+    internal static void StartApp()
+    {
+        if (VpnHoodApp.IsInit)
+            return;
+
+        // The App process has a readable stdout, so a console logger is fine here.
+        VhLogger.Instance = VhLogger.CreateConsoleLogger();
+
+        // Load per-product settings the same way the Android Connect app does: merge the embedded
+        // ".user" appsettings over the in-code defaults and pick up the secret default access key.
+        var appConfigs = AppConfigs.Load();
+
+        // Evaluate GetContainerUrl here — on the main thread, after iOS has fully initialized the
+        // sandbox — so the App-Group container path (the App<->Extension IPC folder) is stable for
+        // the whole session. If this is null the App Group entitlement is missing from the profile.
+        var sharedContainerPath = NSFileManager.DefaultManager.GetContainerUrl(AppConfigs.AppGroupId).Path;
+        VhLogger.Instance.LogInformation(
+            "FinishedLaunching: GetContainerUrl({AppGroupId}) = {Path}",
+            AppConfigs.AppGroupId, sharedContainerPath ?? "<null>");
+
+        // IosDevice lives in the core VpnHood.Core.Client.Devices.Ios project; it needs the
+        // extension's bundle id and the resolved shared-container path to wire up NEVPNManager +
+        // the IPC config folder. The App Group id stays here only to compute sharedContainerPath
+        // (above) — the Extension receives the resolved path, not the App Group id.
+        var device = new IosDevice(
+            providerBundleId: AppConfigs.ProviderBundleId,
+            sharedContainerPath: sharedContainerPath,
+            localizedDescription: AppConfigs.AppName);
+
+        VpnHoodIosApp.Init(device, BuildAppOptions(appConfigs));
     }
 
     private static AppOptions BuildAppOptions(AppConfigs appConfigs)

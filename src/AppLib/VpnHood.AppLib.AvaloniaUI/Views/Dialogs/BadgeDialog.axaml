@@ -21,7 +21,7 @@
                              HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-2" />
                 </Panel>
                 <TextBlock Grid.Column="1" Classes="body-medium" Text="{Binding Title}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Classes="mdi disabled" FontSize="20" Text="{x:Static res:Mdi.ChevronRight}" />
+                <TextBlock Grid.Column="2" Classes="mdi disabled" FontSize="20" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
               </Grid>
             </Button>
           </DataTemplate>

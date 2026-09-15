@@ -42,7 +42,12 @@ public partial class PrivacyView : UserControl, IPage
 
     private async void OnPolicyClick(object? sender, RoutedEventArgs e)
     {
-        if (_app.Features.PrivacyPolicyUrl is { } url)
-            await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
+        try {
+            if (_app.Features.PrivacyPolicyUrl is { } url)
+                await _host.OpenLink(url, Strings.Current.PrivacyPolicy);
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 }

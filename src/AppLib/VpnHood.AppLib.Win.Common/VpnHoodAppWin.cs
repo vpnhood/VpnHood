@@ -2,7 +2,9 @@
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.WebServer;
 using VpnHood.AppLib.Win.Common.WinNative;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Common;
@@ -57,6 +59,29 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(storageFolder, FileNameAppCommand));
         _commandListener.CommandReceived += CommandListener_CommandReceived;
+    }
+
+    // The app on Windows, before any UI: the single instance, the firewall, the device, the web
+    // server both UIs load from, the tray. Which UI shows it is the head's next step - the web UI
+    // in WPF, or the Avalonia UI when DebugCommands.AvaloniaUi asks - so nothing here belongs to a
+    // UI framework. Throws when another instance is running, after asking it for its window.
+    public static VpnHoodAppWin Init(Func<AppOptions> optionsFactory, string[] args)
+    {
+        var appOptions = optionsFactory();
+        appOptions.DeviceId ??= WindowsIdentity.GetCurrent().User?.Value;
+        appOptions.DeviceUiProvider = new WinDeviceUiProvider();
+        appOptions.EventWatcherInterval ??= TimeSpan.FromSeconds(1);
+
+        // register local domain if needed
+        var alternativeUrl = string.IsNullOrEmpty(appOptions.WebUiHostName)
+            ? null
+            : RegisterLocalDomain(IPEndPoint.Parse("127.10.10.10:80"), appOptions.WebUiHostName);
+
+        var appWin = Init(appOptions, args);
+        VpnHoodAppWebServer.Init(VpnHoodApp.Instance, new WebServerOptions { Url = alternativeUrl });
+        appWin.OpenMainWindowInBrowserRequested += (_, _) => OpenUrlInExternalBrowser(VpnHoodAppWebServer.Instance.Url);
+        appWin.Start();
+        return appWin;
     }
 
     public static VpnHoodAppWin Init(AppOptions appOptions, string[] args)
@@ -337,6 +362,10 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
             _commandListener.Dispose();
             _instanceMutex?.Dispose();
             _sysTray?.Dispose();
+
+            // the web server started with the app, then the app it serves
+            if (VpnHoodAppWebServer.IsInit)
+                VpnHoodAppWebServer.Instance.Dispose();
 
             // disconnect and dispose app
             if (VpnHoodApp.IsInit)

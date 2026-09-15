@@ -86,7 +86,7 @@ public class RippleEffect : Panel
         _host = TemplatedParent as Control ?? this;
         _host.AddHandler(PointerPressedEvent, OnHostPointerPressed, RoutingStrategies.Bubble, handledEventsToo: true);
         _host.AddHandler(PointerReleasedEvent, OnHostPointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
-        _host.AddHandler(PointerCaptureLostEvent, OnHostPointerCaptureLost, RoutingStrategies.Direct | RoutingStrategies.Bubble, handledEventsToo: true);
+        _host.AddHandler(PointerCaptureLostEvent, OnHostPointerCaptureLost, handledEventsToo: true);
         _host.AddHandler(KeyDownEvent, OnHostKeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
         _host.AddHandler(KeyUpEvent, OnHostKeyUp, RoutingStrategies.Bubble, handledEventsToo: true);
     }
@@ -134,7 +134,7 @@ public class RippleEffect : Panel
     {
         // the press moved the capture from the control under the pointer to the host: that loss
         // is not the host's
-        if (e.Source == _host)
+        if (ReferenceEquals(e.Source, _host))
             _layer.Cancel();
     }
 
@@ -161,7 +161,7 @@ public class RippleEffect : Panel
     // any is alive.
     private sealed class RippleLayer(RippleEffect owner) : Control
     {
-        private static readonly Easing Decelerate = new SplineEasing(0, 0, 0.2, 1);
+        private static readonly Easing Decelerate = new SplineEasing(0, 0, 0.2);
         private static readonly TimeSpan GrowTime = TimeSpan.FromMilliseconds(250);
         private static readonly TimeSpan FadeInTime = TimeSpan.FromMilliseconds(100);
         private static readonly TimeSpan HoldTime = TimeSpan.FromMilliseconds(250);

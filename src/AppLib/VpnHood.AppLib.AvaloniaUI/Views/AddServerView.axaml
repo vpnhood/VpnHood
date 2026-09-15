@@ -12,7 +12,7 @@
 
     <StackPanel MaxWidth="720" Spacing="14" VerticalAlignment="Top">
       <TextBlock Classes="body-small disabled" Text="{Binding AddAccessKeySubtitle, Source={x:Static res:Strings.Current}}" />
-      <TextBox x:Name="KeyBox" Watermark="vh://" AcceptsReturn="False" />
+      <TextBox x:Name="KeyBox" PlaceholderText="vh://" AcceptsReturn="False" FlowDirection="LeftToRight" />
       <TextBlock x:Name="ErrorText" Classes="body-small error" IsVisible="False" TextWrapping="Wrap" />
       <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" Margin="0,6,0,0">
         <Button x:Name="AddButton" Classes="action" Content="{Binding Add, Source={x:Static res:Strings.Current}}" Click="OnAddClick" />

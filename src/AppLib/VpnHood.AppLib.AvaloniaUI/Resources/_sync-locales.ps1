@@ -1,7 +1,8 @@
-# Brings the web UI's words here: copies every locale file from VpnHood.Client.WebUI (en.json the
-# source a person edits, the rest vhtranslator's) into Assets/Locales, and writes Strings.g.cs -
-# one member per key of en.json, so a page names a string in C# and a key that disappears is a
-# compile error. Run it after the translator has run, or after a key is added to en.json.
+# Writes Strings.g.cs from the web UI's en.json: one member per key, so a page names a string in C#
+# and a key that disappears is a compile error. Run it after a key is added to en.json.
+#
+# The locale files themselves are not copied here - both UIs read the same ones from the assets
+# folder of the SPA bundle at run time (AppAssets). This script only names their keys in C#.
 #
 # Every file is read and written with an explicit UTF-8 encoding: Windows PowerShell would
 # otherwise read these files as ANSI and double-encode every non-ASCII word in them.
@@ -12,21 +13,13 @@ $ErrorActionPreference = "Stop";
 $projectDir = Split-Path -Parent $PSScriptRoot;
 $vhFolder = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $projectDir)));
 $localesDir = Join-Path $vhFolder "VpnHood.Client.WebUI\src\locales";
-$assetsDir = Join-Path $projectDir "Assets\Locales";
 $outputFile = Join-Path $PSScriptRoot "Strings.g.cs";
 
 if (!(Test-Path $localesDir)) { throw "The web UI's locales are not beside this repo. $localesDir"; }
 
-# the locale files, verbatim: a copy, never a conversion, so both UIs read the same words
-New-Item -ItemType Directory -Force -Path $assetsDir | Out-Null;
-Get-ChildItem (Join-Path $assetsDir "*.json") | Remove-Item;
-$files = Get-ChildItem (Join-Path $localesDir "*.json");
-foreach ($file in $files) { Copy-Item $file.FullName (Join-Path $assetsDir $file.Name) -Force; }
-Write-Host "Copied $($files.Count) locale files to Assets\Locales.";
-
 # one member per key of en.json
 $utf8 = New-Object System.Text.UTF8Encoding($false);
-$english = [System.IO.File]::ReadAllText((Join-Path $assetsDir "en.json"), $utf8) | ConvertFrom-Json;
+$english = [System.IO.File]::ReadAllText((Join-Path $localesDir "en.json"), $utf8) | ConvertFrom-Json;
 
 function Get-MemberName([string] $key) {
     $name = ($key -split "_" | ForEach-Object {

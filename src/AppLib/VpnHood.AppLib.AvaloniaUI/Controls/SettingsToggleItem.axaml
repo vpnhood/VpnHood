@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VpnHood.AppLib.AvaloniaUI.Controls.SettingsToggleItem">
+  <!-- The web UI's SettingsToggleItem: a card that changes a setting where it stands - the title,
+       a warning chip while the caller provides one, the switch, and a paragraph under them. The
+       card is the button and the switch only shows: on a TV the row is the thing the remote is on
+       (data-tv-row), and the press flips it. -->
+  <Button x:Name="Card" Classes="card-row" Click="OnCardClick" Margin="0,0,0,12">
+    <StackPanel Spacing="6">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock x:Name="TitleText" Classes="body-medium" VerticalAlignment="Center" />
+          <Border x:Name="WarningChip" Classes="chip warning comfortable" IsVisible="False">
+            <TextBlock x:Name="WarningText" />
+          </Border>
+        </StackPanel>
+        <ToggleSwitch x:Name="Switch" Grid.Column="1" IsHitTestVisible="False" />
+      </Grid>
+      <TextBlock x:Name="DescriptionText" Classes="card-subtitle" IsVisible="False" />
+      <ContentControl x:Name="ExtraContent" IsVisible="False" />
+    </StackPanel>
+  </Button>
+</UserControl>

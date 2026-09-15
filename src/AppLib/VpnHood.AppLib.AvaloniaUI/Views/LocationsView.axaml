@@ -45,9 +45,9 @@
                     <Border Classes="chip chip-active" IsVisible="{Binding IsActive}">
                       <TextBlock Text="{Binding ActiveChipText}" />
                     </Border>
-                    <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource PremiumIconBrush}"
+                    <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource PremiumFeaturesIconBrush}"
                                Text="{x:Static res:Mdi.SwordCross}" IsVisible="{Binding HasUnblockable}" />
-                    <TextBlock Classes="mdi" FontSize="18" Foreground="{StaticResource PremiumIconBrush}"
+                    <TextBlock Classes="mdi" FontSize="18" Foreground="{StaticResource PremiumFeaturesIconBrush}"
                                Text="{x:Static res:Mdi.Crown}" IsVisible="{Binding ShowCrown}" />
                   </StackPanel>
                 </Grid>
@@ -90,27 +90,100 @@
                 <StackPanel>
 
                   <Button Classes="profile-header" Click="OnProfileClick">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                       <TextBlock Classes="mdi" FontSize="28" VerticalAlignment="Center" Margin="0,0,10,0"
-                                 Foreground="{StaticResource ActiveProfileBrush}"
+                                 Foreground="{StaticResource ActiveProfileRadioBrush}"
                                  Text="{x:Static res:Mdi.CheckCircleOutline}" IsVisible="{Binding IsActive}" />
                       <TextBlock Classes="mdi" FontSize="28" VerticalAlignment="Center" Margin="0,0,10,0"
-                                 Foreground="{StaticResource InactiveProfileBrush}"
+                                 Foreground="{StaticResource InactiveProfileRadioBrush}"
                                  Text="{x:Static res:Mdi.CircleOutline}" IsVisible="{Binding !IsActive}" />
                       <TextBlock Grid.Column="1" Classes="profile-name" Classes.inactive="{Binding !IsActive}"
                                  Text="{Binding Name}" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="2" Classes="mdi disabled" FontSize="27" VerticalAlignment="Center"
+
+                      <!-- the server's menu (ExpansionPanel.vue), off the TV -->
+                      <Button Grid.Column="2" Classes="icon small" VerticalAlignment="Center" Margin="0,0,4,0"
+                              IsVisible="{Binding ShowMenu}" Click="OnMenuClick">
+                        <TextBlock Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.DotsVertical}" />
+                        <Button.Flyout>
+                          <Flyout Placement="BottomEdgeAlignedRight" FlyoutPresenterClasses="menu">
+                            <StackPanel>
+                              <Button Classes="menu-item" IsVisible="{Binding CanRename}" Click="OnRenameClick">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                  <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Pencil}" VerticalAlignment="Center" />
+                                  <TextBlock Text="{Binding Rename, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+                                </StackPanel>
+                              </Button>
+                              <Button Classes="menu-item" IsEnabled="{Binding CanDiagnose}" Click="OnDiagnoseClick">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                  <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Speedometer}" VerticalAlignment="Center" />
+                                  <TextBlock Text="{Binding Diagnose, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+                                </StackPanel>
+                              </Button>
+                              <Button Classes="menu-item" Click="OnCustomEndpointClick">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                  <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.IpOutline}" VerticalAlignment="Center" />
+                                  <TextBlock Text="{Binding CustomEndpoint, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+                                </StackPanel>
+                              </Button>
+                              <Button Classes="menu-item" IsVisible="{Binding ShowStarlinkTools}" Click="OnStarlinkClick">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                  <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.SatelliteUplink}" VerticalAlignment="Center" />
+                                  <TextBlock Text="{Binding StarlinkTools, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+                                </StackPanel>
+                              </Button>
+                              <Button Classes="menu-item" IsVisible="{Binding CanRemove}" Click="OnRemoveClick">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                  <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Delete}" VerticalAlignment="Center" />
+                                  <TextBlock Text="{Binding Remove, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+                                </StackPanel>
+                              </Button>
+                            </StackPanel>
+                          </Flyout>
+                        </Button.Flyout>
+                      </Button>
+
+                      <TextBlock Grid.Column="3" Classes="mdi disabled" FontSize="27" VerticalAlignment="Center"
                                  Text="{Binding ExpandGlyph}" IsVisible="{Binding HasLocations}" />
                     </Grid>
+                  </Button>
+
+                  <!-- closed: the first flags of its locations, and how many more (ExpansionPanelCollapsed.vue) -->
+                  <Button Classes="collapsed-row" Margin="16,0,16,8" IsVisible="{Binding ShowCollapsedFlags}" Click="OnCollapsedClick">
+                    <StackPanel Orientation="Horizontal">
+                      <ItemsControl ItemsSource="{Binding CollapsedFlags}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:CollapsedFlag">
+                            <Border Classes="flag-round">
+                              <Panel>
+                                <TextBlock Classes="mdi" FontSize="24" Foreground="{StaticResource FastestServerBrush}"
+                                           Text="{x:Static res:Mdi.Earth}" IsVisible="{Binding IsAuto}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Image Source="{Binding Flag}" IsVisible="{Binding !IsAuto}" />
+                              </Panel>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <TextBlock Classes="body-small" Text="{Binding MoreLocationsText}" IsVisible="{Binding HasMoreLocations}"
+                                 VerticalAlignment="Center" Margin="12,0,0,0" />
+                    </StackPanel>
                   </Button>
 
                   <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource GroupTemplate}"
                                 IsVisible="{Binding IsExpanded}" Margin="12,0" />
 
-                  <!-- the support id and the host this server was built from -->
-                  <Grid ColumnDefinitions="Auto,*" Margin="16,0,16,14">
+                  <!-- the support id and the host this server was built from, with the mark of a
+                       custom address in force -->
+                  <Grid ColumnDefinitions="Auto,*,Auto" Margin="16,0,16,14">
                     <TextBlock Classes="body-small disabled" Text="{Binding SupportIdText}" />
-                    <TextBlock Grid.Column="1" Classes="body-small disabled" Text="{Binding HostName}"
+                    <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="16" Margin="0,0,4,0" HorizontalAlignment="Right"
+                               VerticalAlignment="Center" Text="{x:Static res:Mdi.IpNetwork}" IsVisible="{Binding HasCustomEndpoint}" />
+                    <TextBlock Grid.Column="2" Classes="body-small disabled" Text="{Binding HostName}"
                                TextAlignment="Right" TextTrimming="CharacterEllipsis" />
                   </Grid>
 

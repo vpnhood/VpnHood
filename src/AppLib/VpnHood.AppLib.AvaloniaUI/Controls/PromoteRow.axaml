@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VpnHood.AppLib.AvaloniaUI.Controls.PromoteRow">
+  <!-- The web UI's PromoteConnectButton: an icon in the premium colour, a title over a
+       description, and a filled chip naming the act at the end. The row is the button. -->
+  <Button x:Name="Row" Classes="card-on-grad" Click="OnClick">
+    <Grid ColumnDefinitions="Auto,*,Auto">
+      <TextBlock x:Name="Icon" Classes="mdi" FontSize="25" Margin="0,0,8,0" VerticalAlignment="Top"
+                 Foreground="{StaticResource PromotePremiumColorPremiumBrush}" />
+      <StackPanel Grid.Column="1">
+        <TextBlock x:Name="TitleText" Classes="body-medium" FontWeight="Bold" />
+        <TextBlock x:Name="DescriptionText" Classes="body-small" Opacity="0.4" TextWrapping="Wrap" />
+      </StackPanel>
+      <Border Grid.Column="2" Classes="chip flat-premium comfortable" Margin="8,0,0,0">
+        <TextBlock x:Name="ButtonText" />
+      </Border>
+    </Grid>
+  </Button>
+</UserControl>

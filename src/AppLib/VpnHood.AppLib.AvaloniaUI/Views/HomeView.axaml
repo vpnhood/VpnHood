@@ -5,11 +5,14 @@
              xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls"
              x:Class="VpnHood.AppLib.AvaloniaUI.Views.HomeView"
              x:DataType="vm:MainViewModel">
-  <!-- The web UI's home (pages/index.vue): the header, the hero - the speeds, the circle, the
-       Connect pill - and the rows. Portrait stacks them, header to rows, as the web UI's single
+  <!-- The web UI's home (pages/index.vue): the header - the drawer's door off the TV, the app name,
+       the build - the badges and the premium mark or the countdown, the hero - the speeds, the
+       circle, the Connect pill - and the rows: the server or location, the countries split, the
+       apps split where the device has apps, the protocol, and on a TV the account and Settings,
+       which hand the rest to a phone. Portrait stacks them, header to rows, as the web UI's single
        column does; over 600 logical px the hero and the rows sit side by side, as its
        landscape-home grid does. The placement lives in styles, not on the elements: a local value
-       would beat the query. The Settings row is a TV's alone: it hands the rest to a phone. -->
+       would beat the query. -->
   <UserControl.Styles>
     <Style Selector="StackPanel.hero">
       <Setter Property="Grid.Row" Value="1" />
@@ -33,16 +36,27 @@
     </ContainerQuery>
   </UserControl.Styles>
 
-  <Panel>
-    <!-- #homeContainer: the web UI's body-bg over the theme's background -->
-    <Panel.Background>
-      <ImageBrush Source="avares://VpnHood.AppLib.AvaloniaUI/Assets/Images/body-bg.png" Stretch="UniformToFill" AlignmentY="Top" />
-    </Panel.Background>
+  <Panel Background="{StaticResource HomeBgBrush}">
+    <!-- #homeContainer: the web UI's body-bg over the home's gradient; the premium art on the sides
+         once the session is premium -->
+    <Panel>
+      <Panel.Background>
+        <ImageBrush Source="{res:AppImage body-bg.png}" Stretch="UniformToFill" AlignmentY="Top" />
+      </Panel.Background>
+    </Panel>
+    <Image Source="{res:AppImage premium-bg-left.webp}" HorizontalAlignment="Left" VerticalAlignment="Top"
+           Stretch="Uniform" MaxWidth="260" IsVisible="{Binding IsPremiumSession}" />
+    <Image Source="{res:AppImage premium-bg-right.webp}" HorizontalAlignment="Right" VerticalAlignment="Top"
+           Stretch="Uniform" MaxWidth="260" IsVisible="{Binding IsPremiumSession}" />
 
     <Grid Classes="page" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*,Auto">
 
-      <!-- HomePageHeader: the app name in the middle, the build at the end -->
+      <!-- HomePageHeader: the drawer's door, the app name in the middle, the build at the end -->
       <Grid Grid.Row="0" Grid.ColumnSpan="3" ColumnDefinitions="*,2*,*" MinHeight="48">
+        <Button x:Name="MenuButton" Classes="icon" HorizontalAlignment="Left" VerticalAlignment="Center"
+                IsVisible="{Binding IsNotTv}" Click="OnMenuClick">
+          <TextBlock Classes="mdi" Text="{x:Static res:Mdi.Menu}" />
+        </Button>
         <TextBlock Grid.Column="1" Classes="h4" Text="{Binding AppName}" TextAlignment="Center" VerticalAlignment="Center" />
         <!-- The version, and the way to the developer page: five taps, as the web UI counts them,
              or one once a debug field is set - which the chip shows by filling. It never takes the
@@ -52,22 +66,74 @@
                 HorizontalAlignment="Right" VerticalAlignment="Center" />
       </Grid>
 
+      <!-- HomeBadge and GoPremiumButton: the badges of the features in use, and the premium
+           chip, the countdown or the pitch, under the header -->
+      <Grid Grid.Row="0" Grid.ColumnSpan="3" Margin="0,52,0,0" VerticalAlignment="Top">
+        <StackPanel HorizontalAlignment="Center">
+          <!-- CountDown: the time left in a trial or a rewarded session, and the way to extend it -->
+          <Border x:Name="CountdownChip" Classes="chip countdown comfortable" IsVisible="{Binding ShowCountdown}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Classes="mdi" FontSize="18" Text="{x:Static res:Mdi.Crown}" />
+              <TextBlock Text="{Binding CountdownText}" Width="63" />
+              <Button Classes="pill small bold countdown-extend" IsVisible="{Binding CanExtendByRewardedAd}" Click="OnExtendClick">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                  <TextBlock FontSize="12" FontWeight="Bold" Text="{Binding ExtendIt, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+                  <TextBlock Classes="mdi" FontSize="16" Text="{x:Static res:Mdi.ChevronRight}" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </Border>
+          <!-- You are premium -->
+          <Button Classes="pill status-on-btn" IsVisible="{Binding ShowYouArePremium}" Click="OnAccountClick">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Classes="mdi" FontSize="18" Foreground="{StaticResource EnablePremiumBrush}" Text="{x:Static res:Mdi.Crown}" />
+              <TextBlock Classes="body-small" Foreground="{StaticResource EnablePremiumBrush}" Text="{Binding YouArePremium, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <!-- Go premium -->
+          <Button Classes="pill go-premium" IsVisible="{Binding ShowGoPremium}" Click="OnGoPremiumClick">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Border Background="{StaticResource GoPremiumBtnBrush}" CornerRadius="13" Width="25" Height="25">
+                <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource OnGoPremiumBtnBrush}" Text="{x:Static res:Mdi.Crown}" />
+              </Border>
+              <TextBlock Classes="body-small" Text="{Binding GoPremium, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+        <ItemsControl ItemsSource="{Binding Badges}" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding HasBadges}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:FeatureBadge">
+              <Button Classes="badge" Click="OnBadgeClick">
+                <Panel Width="28" Height="28">
+                  <TextBlock Classes="mdi" Text="{Binding Icon}" />
+                  <TextBlock Classes="mdi" FontSize="14" Text="{Binding SecondIcon}" IsVisible="{Binding HasSecondIcon}"
+                             HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-2" />
+                </Panel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Grid>
+
       <StackPanel Classes="hero" HorizontalAlignment="Center" VerticalAlignment="Center">
 
-        <!-- ConnectionInfo: the speeds, in place but invisible until connected -->
+        <!-- ConnectionInfo: the speeds, in place but invisible until connected, and Statistics -->
         <StackPanel Opacity="{Binding SpeedsOpacity}" Margin="0,0,0,8">
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="2">
-            <TextBlock Classes="body-small muted40" Text="{Binding Statistics, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
-            <TextBlock Classes="mdi muted40" FontSize="16" Text="{x:Static res:Mdi.ChevronRight}" />
-          </StackPanel>
+          <Button x:Name="StatisticsButton" Classes="pill" HorizontalAlignment="Center" Padding="8,2" MinHeight="0"
+                  IsEnabled="{Binding IsConnected}" Click="OnStatisticsClick">
+            <StackPanel Orientation="Horizontal" Spacing="2">
+              <TextBlock Classes="body-small muted40" Text="{Binding Statistics, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+              <TextBlock Classes="mdi muted40" FontSize="16" Text="{x:Static res:Mdi.ChevronRight}" />
+            </StackPanel>
+          </Button>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16">
             <StackPanel Orientation="Horizontal" Spacing="3">
-              <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource SpeedDownBrush}" Text="{x:Static res:Mdi.ArrowDownThin}" />
+              <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource ActiveBrush}" Text="{x:Static res:Mdi.ArrowDownThin}" />
               <TextBlock Classes="body-medium" Text="{Binding SpeedDown}" VerticalAlignment="Center" />
               <TextBlock Classes="muted40" FontSize="10" Text="{Binding Mbps, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="3">
-              <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource SpeedUpBrush}" Text="{x:Static res:Mdi.ArrowUpThin}" />
+              <TextBlock Classes="mdi" FontSize="16" Foreground="{StaticResource ErrorBrush}" Text="{x:Static res:Mdi.ArrowUpThin}" />
               <TextBlock Classes="body-medium" Text="{Binding SpeedUp}" VerticalAlignment="Center" />
               <TextBlock Classes="muted40" FontSize="10" Text="{Binding Mbps, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
             </StackPanel>
@@ -80,6 +146,8 @@
                                    StateText="{Binding StateText}"
                                    Glyph="{Binding StateGlyph}"
                                    UsageText="{Binding UsageText}"
+                                   ExpireText="{Binding ExpireText}"
+                                   IsExpireWarning="{Binding IsExpireWarning}"
                                    Progress="{Binding Progress}"
                                    IsProgressVisible="{Binding IsProgressVisible}" />
 
@@ -87,10 +155,6 @@
         <Button x:Name="ConnectButton" Classes="connect-btn" Classes.connected="{Binding IsConnected}"
                 Content="{Binding ConnectButtonText}" IsEnabled="{Binding IsConnectEnabled}"
                 Margin="0,20,0,16" HorizontalAlignment="Center" Click="OnConnectClick" />
-
-        <!-- the last error, while idle; the web UI shows it in a dialog -->
-        <TextBlock Classes="body-small error" Text="{Binding ErrorText}" IsVisible="{Binding HasError}"
-                   TextWrapping="Wrap" TextAlignment="Center" MaxWidth="320" />
 
         <!-- what the web UI would say in a snackbar: why the row just tapped led nowhere -->
         <TextBlock Classes="body-small" Text="{Binding NoticeText}" IsVisible="{Binding HasNotice}"
@@ -114,6 +178,63 @@
             <Border Grid.Column="4" Classes="chip chip-auto" Margin="8,0,0,0" IsVisible="{Binding IsLocationAuto}">
               <TextBlock Text="{Binding AutoChipText}" />
             </Border>
+          </Grid>
+        </Button>
+
+        <!-- SplitCountryButton: the countries split, with its flags -->
+        <Button x:Name="SplitCountriesButton" Classes="config-item" Click="OnSplitCountriesClick">
+          <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+            <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.CallSplit}" />
+            <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding SplitCountriesTitle}" />
+            <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{x:Static res:Mdi.ChevronRight}" />
+            <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding SplitCountryText}" IsVisible="{Binding ShowSplitCountryText}" />
+            <ItemsControl Grid.Column="4" ItemsSource="{Binding SplitCountryFlags}" IsVisible="{Binding HasSplitCountryFlags}" Margin="8,0,0,0">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="4" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Classes="flag" Width="23" Height="15" CornerRadius="3">
+                    <Image Source="{Binding}" />
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Grid>
+        </Button>
+
+        <!-- the apps split, where the device has apps to split -->
+        <Button x:Name="SplitAppsButton" Classes="config-item" Click="OnSplitAppsClick" IsVisible="{Binding HasSplitAppsRow}">
+          <Grid ColumnDefinitions="Auto,Auto,Auto,*">
+            <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.CallSplit}" />
+            <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding SplitAppsTitle}" />
+            <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{x:Static res:Mdi.ChevronRight}" />
+            <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding SplitAppsText}" />
+          </Grid>
+        </Button>
+
+        <!-- the protocol, with the cloak chip while cloak mode is on -->
+        <Button x:Name="ProtocolButton" Classes="config-item" Click="OnProtocolClick">
+          <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+            <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.TransitConnectionVariant}" />
+            <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding ProtocolTitle}" />
+            <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{x:Static res:Mdi.ChevronRight}" />
+            <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding ProtocolText}" />
+            <Border Grid.Column="4" Classes="chip chip-auto" Margin="8,0,0,0" IsVisible="{Binding IsCloakOn}">
+              <TextBlock Text="{Binding CloakChipText}" />
+            </Border>
+          </Grid>
+        </Button>
+
+        <!-- Account, TV UI only, for a build with an account -->
+        <Button x:Name="AccountButton" Classes="config-item" Click="OnAccountClick" IsVisible="{Binding HasAccountRow}">
+          <Grid ColumnDefinitions="Auto,Auto,Auto,*">
+            <TextBlock Classes="mdi config-icon" Text="{x:Static res:Mdi.AccountCircle}" />
+            <TextBlock Grid.Column="1" Classes="config-title" Text="{Binding AccountTitle}" />
+            <TextBlock Grid.Column="2" Classes="mdi config-chevron" Text="{x:Static res:Mdi.ChevronRight}" />
+            <TextBlock Grid.Column="3" Classes="config-value" Text="{Binding AccountRowValue}" />
           </Grid>
         </Button>
 

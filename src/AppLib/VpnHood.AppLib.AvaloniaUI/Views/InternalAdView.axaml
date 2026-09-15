@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             x:Class="VpnHood.AppLib.AvaloniaUI.Views.InternalAdView">
+  <!-- The web UI's internal-ad page: the app's own promotion, held for a moment before it can be
+       closed, with Learn more leading to the purchase page. The web UI plays a short film here;
+       this head has no video player, so the countdown runs over the promotion's still. -->
+  <Border Background="#0b0923">
+    <DockPanel Classes="page">
+      <Grid DockPanel.Dock="Top" HorizontalAlignment="Right">
+        <Button x:Name="CountButton" Classes="pill small tonal-white" Click="OnCloseClick" />
+      </Grid>
+      <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,12,*" Margin="0,16,0,0">
+        <Button x:Name="CloseButton" Classes="pill btn2 block" IsEnabled="False" Click="OnCloseClick"
+                Content="{Binding Close, Source={x:Static res:Strings.Current}}" />
+        <Button x:Name="LearnMoreButton" Grid.Column="2" Classes="pill btn1 block" IsEnabled="False" Click="OnLearnMoreClick"
+                Content="{Binding LearnMore, Source={x:Static res:Strings.Current}}" />
+      </Grid>
+      <Image Source="{res:AppImage premium-servers.webp}" Stretch="Uniform" MaxWidth="600" />
+    </DockPanel>
+  </Border>
+</UserControl>

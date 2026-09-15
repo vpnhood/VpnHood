@@ -4,39 +4,67 @@ using System.Runtime.CompilerServices;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
+using VpnHood.AppLib.AvaloniaUI.Views;
+using VpnHood.AppLib.AvaloniaUI.Views.Dialogs;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Dtos;
+using VpnHood.AppLib.Settings;
+using VpnHood.Core.Client.Devices.UiContexts;
+using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Logging;
+using VpnHood.Core.Toolkit.Utils;
 
 namespace VpnHood.AppLib.AvaloniaUI.ViewModels;
 
-// What the UI shows, read off VpnHoodApp in process - no API layer, no JSON: the same objects the
+// What the home shows, read off VpnHoodApp in process - no API layer, no JSON: the same objects the
 // web UI reads over HTTP, shaped the way its home and servers pages shape them. Refreshed on the
 // app's own events and once a second, because the state's progress values and speeds move without
-// an event, and always on the UI thread.
+// an event, and always on the UI thread. The connect flows of the web UI's VpnHoodApp.ts and
+// ConnectManager live here too, and the prompts its reloadState raises - the error dialog, the
+// update notice, the review, the ad - go through the host.
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private const double Megabyte = 1_000_000;
     private const double Gigabyte = 1000 * Megabyte;
     private static readonly TimeSpan NoticeLife = TimeSpan.FromSeconds(6);
+    private static readonly TimeSpan FiveMinutes = TimeSpan.FromSeconds(299);
+    private static readonly TimeSpan FifteenMinutes = TimeSpan.FromSeconds(899);
 
     private readonly VpnHoodApp _app = VpnHoodApp.Instance;
     private readonly DispatcherTimer _timer;
     private bool _disposed;
+    private DateTime _noticeUntil;
+    private string? _shownErrorMessage;
+    private DateTime? _ignoredSuppressTime;
+    private bool _isUpdatePostponed;
+    private bool _isReviewShown;
+    private bool _isQuickLaunchPrompted;
+    private bool _isInternalAdShown;
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    // the page host: where a prompt raised by a state change is shown
+    public MainView? Host { get; set; }
 
     public string AppName => _app.Resources.Strings.AppName;
     public string VersionText => $"{Strings.Current.AbbreviationVersion} {_app.Features.Version.Build}";
     public string SettingsTitle => Strings.Current.Settings.ToUpperInvariant();
     public string AutoChipText => Strings.Current.Auto.ToUpperInvariant();
+    public string SplitCountriesTitle => Strings.Current.SplitCountries.ToUpperInvariant();
+    public string SplitAppsTitle => Strings.Current.SplitApps.ToUpperInvariant();
+    public string ProtocolTitle => Strings.Current.ProtocolTitle.ToUpperInvariant();
+    public string AccountTitle => Strings.Current.Account.ToUpperInvariant();
+    public string CloakChipText => Strings.Current.Cloak.ToUpperInvariant();
 
     // Connect ships one server and lets the person pick a location in it; the client keeps a list of
     // servers, each with locations of its own. That one difference names the home row, fills it,
     // and decides whether the page behind it is a list of servers or of locations - the web UI's
     // isSingleProfileMode, everywhere it reads it.
-    public bool IsSingleProfileMode => AppProduct.IsSingleProfileMode(_app.Features.UiName);
+    public bool IsSingleProfileMode => AppData.IsSingleProfileMode;
     public string ServersRowTitle => (IsSingleProfileMode ? Strings.Current.Location : Strings.Current.Server).ToUpperInvariant();
     public string ServersPageTitle => IsSingleProfileMode ? Strings.Current.Location : Strings.Current.Servers;
 
@@ -45,11 +73,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // exactly what the web UI's servers page does with it.
     public bool CanAddServer => _app.Features.IsAddAccessKeySupported;
     public string AddServerText => IsTv ? Strings.Current.AddOrRemoveServers : Strings.Current.AddServer;
-    public string AddServerGlyph => IsTv ? Mdi.Cellphone : Mdi.PlusCircleOutline;
+    public string AddServerGlyph => IsTv ? Mdi.Cellphone : Mdi.PlusCircle;
 
     // A TV hands everything but connecting to a phone (TV plan §3.1); the row that does so shows
     // only there. The app's word, not the UI's: the same views serve a phone.
     public bool IsTv => _app.Features.IsTv;
+    public bool IsNotTv => !IsTv;
+
+    // the drawer's door, off the TV; the account row, on it
+    public bool HasAccountRow => IsTv && _app.Features.IsAccountSupported;
+    public bool HasSplitAppsRow => _app.Features.IsExcludeAppsSupported || _app.Features.IsIncludeAppsSupported;
 
     // A debug field that is set shows on the version chip, and opens the developer page on the
     // first tap rather than the fifth - the web UI's isDebugDataHasValue.
@@ -66,16 +99,30 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string StateText { get; private set => Set(ref field, value); } = Strings.Current.Disconnected;
     public string StateGlyph { get; private set => Set(ref field, value); } = Mdi.PowerPlugOff;
     public string UsageText { get; private set => Set(ref field, value); } = "";
+    public string ExpireText { get; private set => Set(ref field, value); } = "";
+    public bool IsExpireWarning { get; private set => Set(ref field, value); }
     public double Progress { get; private set => Set(ref field, value); }
     public bool IsProgressVisible { get; private set => Set(ref field, value); }
     public bool IsConnected { get; private set => Set(ref field, value); }
+    public bool IsPremiumSession { get; private set => Set(ref field, value); }
     public double SpeedsOpacity { get; private set => Set(ref field, value); }
     public string SpeedDown { get; private set => Set(ref field, value); } = "0.00";
     public string SpeedUp { get; private set => Set(ref field, value); } = "0.00";
     public string ConnectButtonText { get; private set => Set(ref field, value); } = Strings.Current.Connect;
     public bool IsConnectEnabled { get; private set => Set(ref field, value); } = true;
-    public string ErrorText { get; private set => Set(ref field, value); } = "";
-    public bool HasError { get; private set => Set(ref field, value); }
+    public bool IsReconnectRequired { get; private set => Set(ref field, value); }
+
+    // GoPremiumButton: the countdown of a timed session, "You are premium", or the pitch
+    public bool ShowCountdown { get; private set => Set(ref field, value); }
+    public string CountdownText { get; private set => Set(ref field, value); } = "";
+    public string CountdownKind { get; private set => Set(ref field, value); } = "normal";
+    public bool CanExtendByRewardedAd { get; private set => Set(ref field, value); }
+    public bool ShowYouArePremium { get; private set => Set(ref field, value); }
+    public bool ShowGoPremium { get; private set => Set(ref field, value); }
+
+    // HomeBadge: the features in use right now
+    public IReadOnlyList<FeatureBadge> Badges { get; private set => Set(ref field, value); } = [];
+    public bool HasBadges { get; private set => Set(ref field, value); }
 
     // the home row and the page behind it: the location in connect, the server in the client
     public string ServersRowValue { get; private set => Set(ref field, value); } = Strings.Current.NoLocationSelected;
@@ -84,6 +131,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool IsLocationAuto { get; private set => Set(ref field, value); } = true;
     public IReadOnlyList<LocationGroup> LocationGroups { get; private set => Set(ref field, value); } = [];
     public IReadOnlyList<ProfileItem> Profiles { get; private set => Set(ref field, value); } = [];
+
+    // the other rows: the countries split, the apps split, the protocol, the account
+    public string SplitCountryText { get; private set => Set(ref field, value); } = "";
+    public bool ShowSplitCountryText { get; private set => Set(ref field, value); } = true;
+    public IReadOnlyList<Bitmap> SplitCountryFlags { get; private set => Set(ref field, value); } = [];
+    public bool HasSplitCountryFlags { get; private set => Set(ref field, value); }
+    public string SplitAppsText { get; private set => Set(ref field, value); } = "";
+    public string ProtocolText { get; private set => Set(ref field, value); } = "";
+    public bool IsCloakOn { get; private set => Set(ref field, value); }
+    public string AccountRowValue { get; private set => Set(ref field, value); } = "";
 
     // Nothing to show on the servers page but the way to add one: the web UI's NO_SERVER_AVAILABLE
     // warning, which it shows only where a key can be added at all.
@@ -94,7 +151,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // later. The two the servers row can produce are the reasons it does not open at all.
     public string NoticeText { get; private set => Set(ref field, value); } = "";
     public bool HasNotice { get; private set => Set(ref field, value); }
-    private DateTime _noticeUntil;
 
     public MainViewModel()
     {
@@ -128,7 +184,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var connectionState = state.ConnectionState;
 
         // HomeConnectionInfo
-        IsConnected = connectionState == AppConnectionState.Connected;
+        IsConnected = AppData.IsConnected(state);
+        IsPremiumSession = (AppData.IsPremiumSupported && AppData.IsPremiumUser) ||
+                           (state.SessionInfo?.IsPremiumSession == true && IsConnected);
         Phase = connectionState switch {
             AppConnectionState.None => "none",
             AppConnectionState.Connected => "connected",
@@ -154,13 +212,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         };
         UsageText = IsConnected ? BandwidthUsage(state) : "";
         StateGlyph = connectionState switch {
-            AppConnectionState.Connected => UsageText.Length > 0 ? "" : Mdi.Check,
+            AppConnectionState.Connected => !state.CanDiagnose ? Mdi.Stethoscope : UsageText.Length > 0 ? "" : Mdi.Check,
             AppConnectionState.None => Mdi.PowerPlugOff,
             AppConnectionState.Waiting => Mdi.TimerSand,
             _ => ""
         };
         IsProgressVisible = state.StateProgress.HasValue;
         Progress = state.StateProgress ?? 0;
+        RefreshExpiry(state);
 
         // ConnectionInfo
         SpeedsOpacity = IsConnected ? 1 : 0;
@@ -178,10 +237,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 _ => Strings.Current.Disconnect
             };
         IsConnectEnabled = connectionState == AppConnectionState.None || state.CanDisconnect;
-        ErrorText = state.LastError?.Message ?? "";
-        HasError = ErrorText.Length > 0;
+        IsReconnectRequired = state.IsReconnectRequired && IsConnected;
 
         HasDebugData = _app.UserSettings.DebugData1 != null || _app.UserSettings.DebugData2 != null;
+
+        RefreshPremiumButton(state);
+        RefreshBadges(state);
 
         // ServersButton: the location in connect, the name of the chosen server in the client
         var location = state.ServerLocationInfo;
@@ -192,7 +253,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             : profile?.ClientProfileName ?? Strings.Current.NoServerSelected;
         IsLocationAuto = location == null || location.IsAuto;
         HasLocationFlag = !IsLocationAuto;
-        LocationFlag = HasLocationFlag ? Flags.Get(location?.CountryCode) : null;
+        LocationFlag = HasLocationFlag ? AppAssets.Flag(location?.CountryCode) : null;
+
+        RefreshOtherRows(state);
 
         // the page behind that row, rebuilt only when a row differs: a new list every second would
         // rebuild the rows under the remote, and the focus with them
@@ -203,6 +266,141 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             HasNotice = false;
             NoticeText = "";
         }
+
+        RefreshPrompts(state);
+    }
+
+    // the access key's expiry, under the state (HomeConnectionInfo.getExpireDate): not for a
+    // connect build without premium, and only while connected
+    private void RefreshExpiry(AppState state)
+    {
+        var expiration = state.SessionInfo?.AccessInfo?.ExpirationTime;
+        if ((!AppData.IsPremiumUser && !AppData.IsPremiumSupported) || !IsConnected || expiration == null) {
+            ExpireText = "";
+            return;
+        }
+        ExpireText = $"{Strings.Current.Expire}: {Format.ExpireDate(expiration.Value)}";
+        IsExpireWarning = (expiration.Value - DateTime.UtcNow).TotalDays <= 3;
+    }
+
+    // GoPremiumButton.vue: the countdown of a trial or a rewarded session, else the premium mark,
+    // else the pitch when the profile can be upgraded
+    private void RefreshPremiumButton(AppState state)
+    {
+        var expiration = state.SessionStatus?.SessionExpirationTime;
+        ShowCountdown = !AppData.IsPremiumUser && expiration != null && IsConnected;
+        if (ShowCountdown && expiration != null) {
+            var remaining = expiration.Value - DateTime.UtcNow;
+            CountdownText = Format.Countdown(remaining);
+            CountdownKind = remaining < FiveMinutes ? "warning" : remaining < FifteenMinutes ? "alert" : "normal";
+            CanExtendByRewardedAd = state.SessionStatus?.CanExtendByRewardedAd == true;
+        }
+        ShowYouArePremium = !ShowCountdown && AppData.IsPremiumSupported && AppData.IsPremiumUser;
+        ShowGoPremium = !ShowCountdown && !ShowYouArePremium && AppData.IsPremiumSupported && state.ClientProfile?.CanGoPremium == true;
+    }
+
+    // HomeBadge: one badge per feature in use (FeatureIcons.ts)
+    private void RefreshBadges(AppState state)
+    {
+        var badges = new List<FeatureBadge>();
+        if (state.SplitTunnelingState.IsSplittingTraffic)
+            badges.Add(new FeatureBadge(Mdi.CallSplit, Mdi.Web, Strings.Current.SplitTunneling, FeaturePage.SplitTunneling));
+        if (AppData.IsCustomEndpointActive(state))
+            badges.Add(new FeatureBadge(Mdi.IpNetwork, null, Strings.Current.CustomEndpoint, FeaturePage.Servers));
+        if (AppData.IsDnsCustomized(state))
+            badges.Add(new FeatureBadge(Mdi.Dns, null, Strings.Current.Dns, FeaturePage.Dns));
+        if (state.IsProxyEndPointActive)
+            badges.Add(new FeatureBadge(Mdi.Diversify, null, Strings.Current.Proxies, FeaturePage.Proxies));
+
+        if (badges.Count != Badges.Count || badges.Where((x, i) => x != Badges[i]).Any())
+            Badges = badges;
+        HasBadges = badges.Count > 0;
+    }
+
+    // SplitCountryButton, the apps row, the protocol row and the account row
+    private void RefreshOtherRows(AppState state)
+    {
+        var split = state.SplitTunnelingState;
+        var excluded = split.Countries;
+        var isExcludeList = split.CountryMode == SplitCountryMode.ExcludeList;
+        var allowMultipleFlags = isExcludeList && excluded.Count is > 0 and < 3;
+        var showMyFlag = split.CountryMode == SplitCountryMode.ExcludeMyCountry;
+        SplitCountryText = AppData.SplitCountryStatusText(state);
+        ShowSplitCountryText = !allowMultipleFlags || excluded.Count < 3;
+        var flagCodes = allowMultipleFlags ? excluded.ToArray()
+            : showMyFlag && state.ClientCountryInfo != null ? [state.ClientCountryInfo.CountryCode]
+            : [];
+        if (flagCodes.Length != SplitCountryFlags.Count || flagCodes.Length > 0 && !ReferenceEquals(_flagCodes, null) && !flagCodes.SequenceEqual(_flagCodes))
+            SplitCountryFlags = flagCodes.Select(AppAssets.Flag).OfType<Bitmap>().ToArray();
+        _flagCodes = flagCodes;
+        HasSplitCountryFlags = SplitCountryFlags.Count > 0;
+
+        SplitAppsText = AppData.SplitAppsStatusText();
+        ProtocolText = AppData.ProtocolTitle(AppData.ActiveProtocol(state));
+        IsCloakOn = _app.UserSettings.UseTcpProxy;
+        AccountRowValue = AppData.Account?.Email ?? Strings.Current.SignIn;
+    }
+
+    private string[]? _flagCodes;
+
+    // The prompts the web UI's reloadState raises off the state: the last error as a dialog, the
+    // internal ad and the quick launch page, the update notice, the 'suppressed to' notice and the
+    // review. Each once per occasion, so a poll never nags.
+    private void RefreshPrompts(AppState state)
+    {
+        var host = Host;
+        if (host == null)
+            return;
+
+        if (state.LastError != null && state.LastError.Message != _shownErrorMessage) {
+            _shownErrorMessage = state.LastError.Message;
+            _ = host.ShowErrorMessage(ErrorMessages.For(state.LastError));
+        }
+        else if (state.LastError == null) {
+            _shownErrorMessage = null;
+        }
+
+        if (state.IsWaitingForInternalAd == true) {
+            if (!_isInternalAdShown) {
+                _isInternalAdShown = true;
+                host.Replace(new InternalAdView(host));
+            }
+        }
+        else {
+            _isInternalAdShown = false;
+            if (state.IsQuickLaunchRecommended && !_isQuickLaunchPrompted) {
+                _isQuickLaunchPrompted = true;
+                host.Navigate(FeaturePages.QuickLaunch(host));
+            }
+        }
+
+        if (state.UpdaterStatus?.Prompt == true && !_isUpdatePostponed && !host.IsUpdateNoticeShown)
+            host.ShowUpdateNotice(state.UpdaterStatus);
+
+        if (IsConnected && state.SessionInfo?.SuppressedTo == SessionSuppressType.Other &&
+            _ignoredSuppressTime != state.ConnectRequestTime && !host.IsSnackbarShown)
+            host.ShowSnackbar(Strings.Current.SessionSuppressedToOther, SnackbarKind.Suppress, hasTimer: false, hasClose: true);
+
+        if (state.UserReviewRecommended != 0 && !_isReviewShown) {
+            _isReviewShown = true;
+            _ = host.ShowDialog(new UserReviewDialog(host, state.UserReviewRecommended));
+        }
+    }
+
+    public void IgnoreSuppressNotice()
+    {
+        _ignoredSuppressTime = _app.State.ConnectRequestTime;
+    }
+
+    public void PostponeUpdate()
+    {
+        _isUpdatePostponed = true;
+        _app.Services.UpdaterService?.Postpone();
+    }
+
+    public void ReviewShown()
+    {
+        _isReviewShown = false;
     }
 
     private void RefreshLocations(ClientProfileInfo? profile, bool cultureChanged)
@@ -238,7 +436,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         Profiles = profiles;
     }
 
-    private IReadOnlyList<ClientProfileInfo> ProfileInfos()
+    public IReadOnlyList<ClientProfileInfo> ProfileInfos()
     {
         return _app.ClientProfileService.List().Select(x => x.ToInfo(_app.Features)).ToArray();
     }
@@ -256,12 +454,32 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 Name = x.ClientProfileName,
                 IsActive = isActive,
                 IsSingleLocation = isSingleLocation,
+                IsBuiltIn = x.IsBuiltIn,
                 SupportIdText = $"SID:{x.SupportId}",
                 HostName = x.HostNames.FirstOrDefault() ?? "",
+                HasCustomEndpoint = x is { IsCustomServerEndpointsEnabled: true, CustomServerEndpoints.Length: > 0 },
+                CollapsedFlags = CollapsedFlags(x),
+                MoreLocationCount = Math.Max(0, LocationCount(x) - ProfileItem.CollapsedFlagCount),
                 Groups = BuildGroups(x, isNested: true, isActiveProfile: isActive),
                 IsExpanded = isActive || isSingleLocation
             };
         }).ToArray();
+    }
+
+    // ExpansionPanelCollapsed.vue: the first flags of a closed server, the fastest choice as the earth
+    private static IReadOnlyList<CollapsedFlag> CollapsedFlags(ClientProfileInfo profile)
+    {
+        return profile.LocationInfos
+            .Take(ProfileItem.CollapsedFlagCount + 1)
+            .Where(x => !x.IsNestedCountry)
+            .Select(x => new CollapsedFlag(AppData.IsLocationAutoSelected(x.CountryCode) ? null : x.CountryCode))
+            .ToArray();
+    }
+
+    // Util.calcLocationCount: the countries, without the automatic choice and the regions
+    private static int LocationCount(ClientProfileInfo profile)
+    {
+        return profile.LocationInfos.Count(x => x.CountryCode != "*" && !x.IsNestedCountry);
     }
 
     // "United States (California)", "USA (California)" as the web UI abbreviates it
@@ -284,14 +502,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (max <= 0 || state.SessionStatus == null)
             return "";
         var traffic = state.SessionStatus.SessionTraffic;
-        return $"{FormatTraffic(traffic.Sent + traffic.Received)} {Strings.Current.Of} {FormatTraffic(max)}";
-    }
-
-    private static string FormatTraffic(long bytes)
-    {
-        return bytes >= Gigabyte
-            ? (bytes / Gigabyte).ToString("0.#", CultureInfo.InvariantCulture) + "GB"
-            : (bytes / Megabyte).ToString("0", CultureInfo.InvariantCulture) + "MB";
+        return $"{Format.TrafficTight(traffic.Sent + traffic.Received)} {Strings.Current.Of} {Format.TrafficTight(max)}";
     }
 
     // The web UI's LocationList: Free and Premium cards when the profile has both and the person is
@@ -341,43 +552,156 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         return [Group("", premium.Length > 0, all)];
     }
 
+    // ---- connecting, as the web UI's VpnHoodApp.connect and ConnectManager do it ----
+
+    private long _lastConnectPress = Environment.TickCount64 - 1000;
+
     // Connect, or disconnect: the one button's two meanings, decided by the app's own flags, as the
-    // web UI's onConnectButtonClick decides them.
+    // web UI's onConnectButtonClick decides them - with its guard against a double press.
     public async Task ToggleConnect()
     {
+        if (_lastConnectPress >= Environment.TickCount64 - 1000)
+            return;
+        _lastConnectPress = Environment.TickCount64;
+
+        var state = _app.State;
+        if (state.CanDisconnect) {
+            await Disconnect();
+            return;
+        }
+        if (state.CanConnect)
+            await ConnectWithCurrentProfile();
+    }
+
+    public async Task Disconnect()
+    {
         try {
-            var state = _app.State;
-            if (state.CanDisconnect)
-                await _app.Disconnect();
-            else if (state.CanConnect)
-                await _app.Connect(new ConnectOptions { PlanId = PlanFor(_app.CurrentClientProfileInfo?.SelectedLocationInfo) });
+            await _app.Disconnect();
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not connect or disconnect.");
+            VhLogger.Instance.LogError(ex, "Could not disconnect.");
         }
         finally {
             Dispatcher.UIThread.Post(Refresh);
         }
     }
 
-    // A server chosen in the list, or one just added by its key: the app connects where that server
-    // is already set to go, as the web UI's connectWithProfile does.
-    public async Task ConnectToProfile(Guid clientProfileId)
+    // ConnectManager.connectWithCurrentProfile: no server chosen yet opens the servers page
+    public async Task ConnectWithCurrentProfile(bool isDiagnose = false)
     {
+        if (AppData.ClientProfileId is not { } profileId) {
+            Host?.Navigate(new LocationsView(this, Host));
+            return;
+        }
+        await ConnectWithProfile(profileId, isDiagnose);
+    }
+
+    // ConnectManager.connectWithProfile: the server's own choice of location and side, a premium
+    // person always on the premium side of the automatic choice
+    public async Task ConnectWithProfile(Guid clientProfileId, bool isDiagnose = false)
+    {
+        var info = _app.ClientProfileService.FindInfo(clientProfileId);
+        var selected = info?.SelectedLocationInfo;
+        var serverLocation = selected?.ServerLocation;
+        var isPremium = info?.IsPremiumLocationSelected ?? false;
+        if (selected?.Options.HasPremium == true && !selected.Options.HasFree) isPremium = true;
+        if (selected?.Options.HasPremium == false && selected.Options.HasFree) isPremium = false;
+        if (AppData.IsPremiumUser && !isPremium) {
+            isPremium = true;
+            serverLocation = null;
+        }
+
+        await ConnectWith(new ConnectRequest(clientProfileId, serverLocation, isPremium, ConnectPlanId.Normal, isDiagnose));
+    }
+
+    // ConnectManager.connectWithLocation, then VpnHoodApp.connect: the promote page first when the
+    // location asks to be asked, then the connect, the profile's choice written and saved.
+    public async Task ConnectWith(ConnectRequest request)
+    {
+        if (request.ServerLocation != null && !request.IsDiagnose && ShowPromoteIfNeeded(request))
+            return;
+
+        if (request.GoToHome)
+            Host?.GoHome();
+
         try {
-            var location = _app.ClientProfileService.FindInfo(clientProfileId)?.SelectedLocationInfo;
-            await _app.Connect(new ConnectOptions {
-                ClientProfileId = clientProfileId,
-                ServerLocation = location?.ServerLocation,
-                PlanId = PlanFor(location)
-            });
+            var options = new ConnectOptions {
+                ClientProfileId = request.ClientProfileId,
+                ServerLocation = request.ServerLocation,
+                PlanId = request.PlanId,
+                Diagnose = request.IsDiagnose
+            };
+            var connect = _app.Connect(options, CancellationToken.None);
+
+            // the profile's choice, as the web UI writes it right after asking for the connect
+            await _app.UpdateClientProfile(request.ClientProfileId, new ClientProfileUpdateParams {
+                IsPremiumLocationSelected = new Patch<bool>(request.IsPremium),
+                SelectedLocation = new Patch<string?>(request.ServerLocation)
+            }, CancellationToken.None);
+            _app.UserSettings.ClientProfileId = request.ClientProfileId;
+            _app.SettingsService.Save();
+
+            await connect;
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not connect to the chosen server.");
+            VhLogger.Instance.LogError(ex, "Could not connect.");
         }
         finally {
             Dispatcher.UIThread.Post(Refresh);
         }
+    }
+
+    // ConnectManager.showPromoteDialog: a location whose policy wants the person asked - an ad, a
+    // trial, a purchase - gets the promote page instead of a connect
+    private bool ShowPromoteIfNeeded(ConnectRequest request)
+    {
+        var host = Host;
+        if (host == null)
+            return false;
+        var info = _app.ClientProfileService.FindInfo(request.ClientProfileId);
+        var options = info?.LocationInfos.FirstOrDefault(x => x.ServerLocation == request.ServerLocation)?.Options;
+        if (options?.Prompt != true)
+            return false;
+        host.Navigate(new PromoteView(host, request.ClientProfileId, request.ServerLocation ?? "", request.IsPremium));
+        return true;
+    }
+
+    // a location chosen in the list (LocationListItem.internalConnect)
+    public async Task ConnectTo(LocationItem location)
+    {
+        await ConnectWith(new ConnectRequest(location.ClientProfileId, location.ServerLocation, location.IsPremiumGroup, ConnectPlanId.Normal));
+    }
+
+    // a server chosen in the list, or one just added by its key
+    public async Task ConnectToProfile(Guid clientProfileId)
+    {
+        await ConnectWithProfile(clientProfileId);
+    }
+
+    public async Task Diagnose()
+    {
+        try {
+            await _app.Connect(new ConnectOptions { ClientProfileId = _app.UserSettings.ClientProfileId, Diagnose = true }, CancellationToken.None);
+        }
+        catch (Exception ex) {
+            VhLogger.Instance.LogError(ex, "The diagnosis failed.");
+        }
+        finally {
+            Dispatcher.UIThread.Post(Refresh);
+        }
+    }
+
+    // ReconnectRequiredAlert: a fresh session on the same server
+    public async Task Reconnect()
+    {
+        await Disconnect();
+        await ConnectWithCurrentProfile();
+    }
+
+    public void ClearReconnectRequired()
+    {
+        _app.ClearReconnectRequired();
+        IsReconnectRequired = false;
     }
 
     // A server the person typed the key of. The key is the app's to judge: an unreadable one throws,
@@ -412,34 +736,110 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _noticeUntil = DateTime.UtcNow + NoticeLife;
     }
 
-    public async Task ConnectTo(LocationItem location)
+    // ---- the account, as the web UI's VpnHoodApp.signIn and friends ----
+
+    // The store's sign-in. Its sheet is the device's own; the loading dialog covers the wait.
+    // Cancelled silently, unless a purchase was waiting on it.
+    public async Task SignIn(bool onPurchase = false)
     {
+        var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
+        var service = _app.Services.AccountService ?? throw new InvalidOperationException("Account service is not available.");
+        var providerId = AppData.PrimaryProviderId ?? throw new InvalidOperationException("This build reports no sign-in method.");
+
+        using var loading = host.Loading();
         try {
-            var info = _app.CurrentClientProfileInfo?.LocationInfos
-                .FirstOrDefault(x => x.ServerLocation == location.ServerLocation);
-            await _app.Connect(new ConnectOptions {
-                ClientProfileId = location.ClientProfileId,
-                ServerLocation = location.ServerLocation,
-                PlanId = PlanFor(info)
-            });
+            await service.AuthenticationService.SignIn(AppUiContext.RequiredContext,
+                new SignInOptions { ProviderId = providerId }, CancellationToken.None);
+            await AfterSignedIn(onPurchase);
         }
         catch (Exception ex) {
-            VhLogger.Instance.LogError(ex, "Could not connect to the chosen location.");
-        }
-        finally {
-            Dispatcher.UIThread.Post(Refresh);
+            var name = ex.GetType().Name;
+            if (name == nameof(TaskCanceledException) || name == nameof(OperationCanceledException)) {
+                if (onPurchase)
+                    throw new Exception(Strings.Current.SignInCanceledByUser);
+                return;
+            }
+            if (name == "AuthenticationException")
+                throw new Exception(Strings.Current.SignInFailedMsg);
+            if (name == nameof(HttpRequestException) && ex.Message.Contains("400"))
+                throw new Exception(Strings.Current.LoginConnectionErrorMsg);
+            throw;
         }
     }
 
-    // The plan the location's policy allows this person. The web UI asks first, in its promote
-    // dialog (an ad, a trial, a purchase); that dialog is not ported, so here a location with no
-    // free plan takes its trial when it offers one, and the server's own refusal shows otherwise.
-    private static ConnectPlanId PlanFor(ClientServerLocationInfo? location)
+    // the portal's own email and password; a second factor comes back as a challenge
+    public async Task<SignInResult> SignInWithPassword(string email, string password)
     {
-        var options = location?.Options;
-        if (options == null || options.Normal != null)
-            return ConnectPlanId.Normal;
-        return options.PremiumByTrial != null ? ConnectPlanId.PremiumByTrial : ConnectPlanId.Normal;
+        var service = _app.Services.AccountService ?? throw new InvalidOperationException("Account service is not available.");
+        var result = await service.AuthenticationService.SignIn(AppUiContext.RequiredContext,
+            new SignInOptions { ProviderId = "password", UserName = email, Password = password }, CancellationToken.None);
+        if (result.State == SignInState.SignedIn)
+            await AfterSignedIn(false);
+        return result;
+    }
+
+    public async Task<SignInResult> CompleteSignInChallenge(string code)
+    {
+        var service = _app.Services.AccountService ?? throw new InvalidOperationException("Account service is not available.");
+        var result = await service.AuthenticationService.SignIn(AppUiContext.RequiredContext,
+            new SignInOptions { ProviderId = "password", TwoFactorCode = code }, CancellationToken.None);
+        if (result.State == SignInState.SignedIn)
+            await AfterSignedIn(false);
+        return result;
+    }
+
+    private async Task AfterSignedIn(bool onPurchase)
+    {
+        await AppData.LoadAccount(false, CancellationToken.None);
+        Refresh();
+        // sign-in is otherwise silent; a purchase confirms itself
+        if (!onPurchase && AppData.Account?.Email is { } email)
+            Host?.ShowSnackbar(Strings.Current.SignedInAsX(email));
+    }
+
+    public async Task SignOut()
+    {
+        var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
+        if (!await host.Confirm(Strings.Current.ConfirmSignOutTitle, Strings.Current.ConfirmSignOutDesc))
+            return;
+
+        var service = _app.Services.AccountService ?? throw new InvalidOperationException("Account service is not available.");
+        using var loading = host.Loading();
+        await service.AuthenticationService.SignOut(AppUiContext.RequiredContext, CancellationToken.None);
+        await AppData.LoadAccount(false, CancellationToken.None);
+        Refresh();
+        host.GoHome();
+    }
+
+    // Permanent, and confirmed by the caller; the tunnel goes with a premium the account paid for.
+    public async Task DeleteAccount()
+    {
+        var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
+        var service = _app.Services.AccountService ?? throw new InvalidOperationException("Account service is not available.");
+        using var loading = host.Loading();
+        await service.DeleteAccount(AppUiContext.RequiredContext, CancellationToken.None);
+        if (IsConnected)
+            await _app.Disconnect();
+        await AppData.LoadAccount(false, CancellationToken.None);
+        Refresh();
+        host.GoHome();
+    }
+
+    // signed out only (keyring plan §7): the device's copy is the only one there is
+    public async Task RemovePremiumCode()
+    {
+        var host = Host ?? throw new InvalidOperationException("The main view is not attached.");
+        var profile = _app.State.ClientProfile ?? throw new InvalidOperationException("Could not find the profile in the state for remove premium code.");
+        if (!profile.HasAccessCode)
+            throw new InvalidOperationException("The profile does not have a premium code.");
+
+        using var loading = host.Loading();
+        if (IsConnected)
+            await _app.Disconnect();
+        await _app.UpdateClientProfile(profile.ClientProfileId, new ClientProfileUpdateParams {
+            AccessCode = new Patch<string?>(null)
+        }, CancellationToken.None);
+        Refresh();
     }
 
     private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)

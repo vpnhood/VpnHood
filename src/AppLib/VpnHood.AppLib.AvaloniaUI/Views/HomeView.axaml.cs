@@ -2,7 +2,9 @@ using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
+using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.ViewModels;
+using VpnHood.AppLib.AvaloniaUI.Views.Dialogs;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 
@@ -23,6 +25,19 @@ public partial class HomeView : UserControl, IPage
         _host = host;
         DataContext = viewModel;
         InitializeComponent();
+        viewModel.PropertyChanged += (_, e) => {
+            if (e.PropertyName is nameof(MainViewModel.CountdownKind) or "")
+                UpdateCountdownColor();
+        };
+        UpdateCountdownColor();
+    }
+
+    // the countdown's colour steps down as the time does (CountDown.getCountdownColor)
+    private void UpdateCountdownColor()
+    {
+        CountdownChip.Classes.Set("normal", _viewModel.CountdownKind == "normal");
+        CountdownChip.Classes.Set("alert", _viewModel.CountdownKind == "alert");
+        CountdownChip.Classes.Set("warning-time", _viewModel.CountdownKind == "warning");
     }
 
     // Connect is where the input starts, as on the web UI's home.
@@ -48,9 +63,78 @@ public partial class HomeView : UserControl, IPage
         _host.Navigate(new LocationsView(_viewModel, _host));
     }
 
+    private void OnSplitCountriesClick(object? sender, RoutedEventArgs e)
+    {
+        _host.Navigate(new SplitCountriesView(_host));
+    }
+
+    private void OnSplitAppsClick(object? sender, RoutedEventArgs e)
+    {
+        _host.Navigate(new SplitAppsView(_host));
+    }
+
+    private void OnProtocolClick(object? sender, RoutedEventArgs e)
+    {
+        _host.Navigate(new ProtocolsView(_host));
+    }
+
     private void OnPhoneClick(object? sender, RoutedEventArgs e)
     {
         _host.Navigate(new PairingView(_host));
+    }
+
+    private void OnMenuClick(object? sender, RoutedEventArgs e)
+    {
+        _host.OpenDrawer();
+    }
+
+    private void OnStatisticsClick(object? sender, RoutedEventArgs e)
+    {
+        if (_viewModel.IsConnected)
+            _host.Navigate(new StatisticsView(_host));
+    }
+
+    private void OnGoPremiumClick(object? sender, RoutedEventArgs e)
+    {
+        _host.Navigate(new PurchaseSubscriptionView(_host, null));
+    }
+
+    private void OnExtendClick(object? sender, RoutedEventArgs e)
+    {
+        _host.Navigate(new ExtendSessionView(_host));
+    }
+
+    // The account: signed in, its page; signed out, the sign-in - the chooser where there is one,
+    // the phone where the only way is the email form a remote cannot fill (index.vue's
+    // onAccountClick).
+    private async void OnAccountClick(object? sender, RoutedEventArgs e)
+    {
+        if (AppData.Account != null) {
+            _host.Navigate(new AccountView(_host));
+            return;
+        }
+
+        if (AppData.PrimaryProviderId == null) {
+            _host.Navigate(new PairingView(_host, Strings.Current.RemoteAccessHintSignIn));
+            return;
+        }
+
+        if (AppData.HasSignInChoice) {
+            await _host.ShowDialog(new SignInDialog(_host));
+            return;
+        }
+
+        try {
+            await _viewModel.SignIn();
+        }
+        catch (Exception ex) {
+            await _host.ProcessError(ex);
+        }
+    }
+
+    private async void OnBadgeClick(object? sender, RoutedEventArgs e)
+    {
+        await _host.ShowDialog(new BadgeDialog(_host, _viewModel.Badges));
     }
 
     // The developer page, opened as the web UI opens its dialog (HomePageHeader.vue): the fifth

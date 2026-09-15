@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 
 namespace VpnHood.AppLib.AvaloniaUI.Controls;
 
@@ -18,6 +19,12 @@ public partial class ConnectionCircle : UserControl
 
     public static readonly StyledProperty<string> UsageTextProperty =
         AvaloniaProperty.Register<ConnectionCircle, string>(nameof(UsageText), "");
+
+    public static readonly StyledProperty<string> ExpireTextProperty =
+        AvaloniaProperty.Register<ConnectionCircle, string>(nameof(ExpireText), "");
+
+    public static readonly StyledProperty<bool> IsExpireWarningProperty =
+        AvaloniaProperty.Register<ConnectionCircle, bool>(nameof(IsExpireWarning));
 
     public static readonly StyledProperty<double> ProgressProperty =
         AvaloniaProperty.Register<ConnectionCircle, double>(nameof(Progress));
@@ -48,6 +55,16 @@ public partial class ConnectionCircle : UserControl
     public string UsageText {
         get => GetValue(UsageTextProperty);
         set => SetValue(UsageTextProperty, value);
+    }
+
+    public string ExpireText {
+        get => GetValue(ExpireTextProperty);
+        set => SetValue(ExpireTextProperty, value);
+    }
+
+    public bool IsExpireWarning {
+        get => GetValue(IsExpireWarningProperty);
+        set => SetValue(IsExpireWarningProperty, value);
     }
 
     public double Progress {
@@ -83,6 +100,13 @@ public partial class ConnectionCircle : UserControl
         else if (change.Property == UsageTextProperty) {
             UsageBlock.Text = UsageText;
             UsageBlock.IsVisible = UsageText.Length > 0;
+        }
+        else if (change.Property == ExpireTextProperty) {
+            ExpireBlock.Text = ExpireText;
+            ExpireBlock.IsVisible = ExpireText.Length > 0;
+        }
+        else if (change.Property == IsExpireWarningProperty) {
+            ExpireBlock.Foreground = this.FindResource(IsExpireWarning ? "ExpireDateWarningBrush" : "ExpireDateAlertBrush") as IBrush;
         }
         else if (change.Property == ProgressProperty) {
             Bar.Value = Progress;

@@ -19,7 +19,7 @@ public sealed record LocationItem(
     bool HasUnblockable,
     bool ShowCrown)
 {
-    public Bitmap? Flag => IsAuto ? null : Flags.Get(CountryCode);
+    public Bitmap? Flag => IsAuto ? null : AppAssets.Flag(CountryCode);
     public Thickness Indent => IsNested ? new Thickness(16, 0, 0, 0) : default;
     public string RecommendedText => $"({Strings.Current.Recommended})";
     public string ActiveChipText => Strings.Current.Active.ToUpperInvariant();

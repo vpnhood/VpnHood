@@ -2,6 +2,7 @@
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.AvaloniaUI;
+using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
@@ -25,8 +26,12 @@ internal static class Program
         var isTv = args.Contains("--tv");
         var isConnect = args.Contains("--connect");
 
+        // "--storage <name>" gives the run its own settings, log and profiles, so a second preview
+        // can be driven while someone is using one - and a name never used before is a first run,
+        // which is the only way to see what a new install sees.
         var storageFolderPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.AvaloniaPreview");
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            ValueOf(args, "--storage") ?? "VpnHood.AvaloniaPreview");
         var resources = ClientAppResources.Resources;
         // the name the UI shows, as a head of that product would set it (AppFeatures.AppName is
         // this very string), so the preview says which product it is running as
@@ -35,7 +40,17 @@ internal static class Program
         var appOptions = new AppOptions(appId: "com.vpnhood.avalonia.preview", "VpnHood! Avalonia Preview", isDebugMode: true) {
             StorageFolderPath = storageFolderPath,
             Resources = resources,
-            IsLicenseAgreementRequired = false,
+            // the documents the product links to, which every head takes from its appsettings.json:
+            // without them the pages that link to them - Settings > Privacy, the paywall, the
+            // drawer - have nothing to show, which is a preview of a build no one ships
+            PrivacyPolicyUrl = new Uri(isConnect
+                ? "https://www.vpnhood.com/vpnhood-connect-privacy-policy"
+                : "https://www.vpnhood.com/vpnhood-client-privacy-policy"),
+            TermsOfUseUrl = new Uri(isConnect
+                ? "https://www.vpnhood.com/legal/vpnhood-connect-terms-of-use"
+                : "https://www.vpnhood.com/legal/vpnhood-client-terms-of-use"),
+            // left at the product default (on): the consent screen is part of what a client head
+            // shows on a first run, and a preview that skips it previews a build no one ships
             IsAddAccessKeySupported = !isConnect, // a connect head ships one built-in profile and takes no keys
             UiName = isConnect ? AppProduct.ConnectUiName : null
         };
@@ -45,11 +60,21 @@ internal static class Program
         try {
             // the phone's half of the pairing: the server the pairing page hands out the address of
             using var webServer = VpnHoodAppWebServer.Init(app);
+            // the images, flags, fonts and words this UI draws from - the same files the web UI
+            // loads from this server, so the package carries one copy of each
+            AppAssets.FolderPath = webServer.AssetsFolderPath;
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         finally {
             app.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
+    }
+
+    // the word after a flag, "--storage other"; null when the flag is absent or ends the line
+    private static string? ValueOf(string[] args, string name)
+    {
+        var index = Array.IndexOf(args, name);
+        return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
     }
 
     // Avalonia's designer and previewer look for this by name.

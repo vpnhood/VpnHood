@@ -1,0 +1,9 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="VpnHood.AppLib.AvaloniaUI.Controls.SettingsSectionTitle">
+  <!-- The web UI's SettingsSectionTitle: a dim word and a rule after it, over a section's rows -->
+  <Grid ColumnDefinitions="Auto,*" Margin="0,18,0,12">
+    <TextBlock x:Name="TitleText" Classes="section-title" VerticalAlignment="Center" Margin="0,0,8,0" />
+    <Border Grid.Column="1" Classes="divider" VerticalAlignment="Center" Opacity="0.6" />
+  </Grid>
+</UserControl>

@@ -5,7 +5,9 @@ using Android.OS;
 using Android.Runtime;
 using Android.Views;
 using Avalonia.Android;
+using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.Droid.Common.Activities;
+using VpnHood.AppLib.WebServer;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 
 namespace VpnHood.AppLib.Droid.AvaloniaUI;
@@ -41,6 +43,16 @@ public class AndroidAppAvaloniaMainActivity : AvaloniaMainActivity, IActivityEve
     {
         // before base.OnCreate, so the handler is subscribed when the create event fires
         _handler = new AndroidAppMainActivityHandler(this, CreateActivityOptions());
+
+        // Also before base.OnCreate, which starts Avalonia: the UI reads its images, flags, fonts
+        // and words from the bundle's assets folder, and cannot draw a glyph before it is there.
+        // The web server is what extracts the bundle - and what a phone pairs with - so it comes up
+        // here rather than on the pairing screen. On this thread, deliberately: the first run of a
+        // version unpacks the bundle, and every frame after this line depends on it.
+        if (!VpnHoodAppWebServer.IsInit)
+            VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
+        AppAssets.FolderPath = VpnHoodAppWebServer.Instance.AssetsFolderPath;
+
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });
     }

@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             x:Class="VpnHood.AppLib.AvaloniaUI.Controls.SettingsItem">
+  <!-- The web UI's SettingsItem: a card that opens a page - the title, a chip saying its state or
+       its choice, a warning chip when its posture can leak, the crown when it is sold, the subtitle
+       and the chevron. The whole card is the button, and the ring is its. -->
+  <Button x:Name="Card" Classes="card-row" Click="OnCardClick" Margin="0,0,0,12">
+    <StackPanel Spacing="4">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock x:Name="TitleText" Classes="body-medium" VerticalAlignment="Center" />
+          <Border x:Name="StatusChip" Classes="chip comfortable" IsVisible="False">
+            <TextBlock x:Name="StatusText" />
+          </Border>
+          <Button x:Name="WarningChip" Classes="icon" Width="NaN" Height="NaN" Padding="0" MinHeight="0" CornerRadius="12"
+                  IsVisible="False" Click="OnWarningClick">
+            <Border Classes="chip warning comfortable">
+              <TextBlock x:Name="WarningText" />
+            </Border>
+          </Button>
+        </StackPanel>
+        <TextBlock x:Name="Crown" Grid.Column="1" Classes="crown" Text="{x:Static res:Mdi.Crown}" IsVisible="False" />
+      </Grid>
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock x:Name="SubtitleText" Classes="card-subtitle" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="20" Margin="12,0,0,0" Text="{x:Static res:Mdi.ChevronRight}" />
+      </Grid>
+      <!-- the language row's invitation to contribute a translation, with its link -->
+      <StackPanel x:Name="LanguageMore" Spacing="8" IsVisible="False" Margin="0,8,0,0">
+        <Border Classes="divider" />
+        <TextBlock Classes="card-subtitle" Text="{Binding ContributeEditLanguagesDesc, Source={x:Static res:Strings.Current}}" />
+        <Button Classes="text-highlight" HorizontalAlignment="Left" Padding="0" Click="OnLanguageLinkClick">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock Classes="body-small highlight" Text="{Binding ContributeEditLanguagesTitle, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+            <TextBlock Classes="mdi highlight" FontSize="16" Text="{x:Static res:Mdi.OpenInNew}" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </StackPanel>
+  </Button>
+</UserControl>

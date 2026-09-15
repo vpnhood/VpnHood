@@ -7,10 +7,11 @@ using Avalonia.Platform;
 
 namespace VpnHood.AppLib.AvaloniaUI.Resources;
 
-// The UI's words: the web UI's own locale files (Assets/Locales, copied from VpnHood.Client.WebUI
-// by _sync-locales.ps1 - en.json the source a person edits, the rest vhtranslator's), read as JSON
-// because those files are the one place the wording lives. Strings.g.cs names every key of en.json
-// as a member, so a page asks for a string in C# and a key that disappears is a compile error.
+// The UI's words: the web UI's own locale files, read from the assets folder (locales/*.json -
+// en.json the source a person edits, the rest vhtranslator's) because those files are the one
+// place the wording lives, and the web UI reads the very same ones. Strings.g.cs names every key
+// of en.json as a member (_sync-locales.ps1), so a page asks for a string in C# and a key that
+// disappears is a compile error.
 //
 // One instance, Current, and the pages bind to its members rather than reading them once:
 //
@@ -27,6 +28,12 @@ public sealed partial class Strings : INotifyPropertyChanged
     private string _cultureName = "en";
 
     public static Strings Current { get; } = new();
+
+    // The languages this UI has, by the locale files in the assets folder: what the web UI declares
+    // to the app at start (ConfigParams.AvailableCultures), so the app's language list and its
+    // best-culture choice are made from the words that actually exist there.
+    public static IReadOnlyList<string> AvailableCultures { get; } =
+        [.. AppAssets.FileNames("locales", "*.json").OrderBy(x => x, StringComparer.OrdinalIgnoreCase)];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -79,12 +86,10 @@ public sealed partial class Strings : INotifyPropertyChanged
 
     private static IReadOnlyDictionary<string, string>? Load(string cultureName)
     {
-        var uri = new Uri($"avares://VpnHood.AppLib.AvaloniaUI/Assets/Locales/{cultureName}.json");
-        if (!AssetLoader.Exists(uri))
-            return null;
-
-        using var stream = AssetLoader.Open(uri);
-        return JsonSerializer.Deserialize(stream, LocaleJsonContext.Default.DictionaryStringString);
+        var json = AppAssets.ReadText($"locales/{cultureName}.json");
+        return json == null
+            ? null
+            : JsonSerializer.Deserialize(json, LocaleJsonContext.Default.DictionaryStringString);
     }
 }
 

@@ -1,60 +1,35 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- VpnHood! Connect, the product a head names by setting AppOptions.UiName: the web UI's connect
-       theme (vhConnectThemeColors in theme/themes.ts), key for key. This file and ClientTheme.axaml
-       carry the same keys and nothing else - a key added to one belongs in the other the same day,
-       or the other product's views fail to find it. -->
+  <!-- VpnHood! Connect, the product a head names by setting AppOptions.UiName. The keys are the
+       web UI's connect theme, key for key (ConnectTheme.g.axaml, generated from theme/themes.ts by
+       _sync-theme.ps1); below them, what the web UI writes as CSS rather than as a key. This file
+       and ClientTheme.axaml carry the same keys and nothing else: a key added to one belongs in
+       the other the same day. -->
 
   <ResourceDictionary.MergedDictionaries>
     <ResourceInclude Source="avares://VpnHood.AppLib.AvaloniaUI/Styles/Colors.axaml" />
+    <ResourceInclude Source="avares://VpnHood.AppLib.AvaloniaUI/Styles/ConnectTheme.g.axaml" />
   </ResourceDictionary.MergedDictionaries>
 
-  <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource Purple500}" />
-  <SolidColorBrush x:Key="AppTextBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="AppText50Brush" Color="#80FFFFFF" />
-  <SolidColorBrush x:Key="AppText40Brush" Color="#66FFFFFF" />
-  <SolidColorBrush x:Key="AppDisabledBrush" Color="#61FFFFFF" />
-  <SolidColorBrush x:Key="AppBorderBrush" Color="#1FFFFFFF" />
-
-  <!-- flat here, where the client's is a gradient (#connectBtn.connect-app takes grad-1 alone) -->
+  <!-- #connectBtn.connect-app: flat, where the client's is a gradient -->
   <SolidColorBrush x:Key="ConnectBtnBrush" Color="{StaticResource Cream100}" />
-  <SolidColorBrush x:Key="OnConnectBtnBrush" Color="{StaticResource Purple300}" />
-  <SolidColorBrush x:Key="ConnectBtnConnectedBrush" Color="{StaticResource Purple200}" />
-  <SolidColorBrush x:Key="OnConnectBtnConnectedBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="CircleBorderBrush" Color="{StaticResource Cream100}" />
-  <SolidColorBrush x:Key="CircleShineBrush" Color="{StaticResource Green200}" />
 
-  <SolidColorBrush x:Key="ConfigBtnBgBrush" Color="#B3150E3D" />
-  <SolidColorBrush x:Key="OnConfigBtnBrush" Color="{StaticResource Cream100}" />
-  <SolidColorBrush x:Key="ConfigBtnBorderBrush" Color="#4DE7B481" />
-  <SolidColorBrush x:Key="ConfigCardBrush" Color="{StaticResource Purple400}" />
-  <!-- a card inside a card: the location groups of a server, in the servers list -->
-  <SolidColorBrush x:Key="ExpansionCardBrush" Color="{StaticResource Purple400}" />
-  <SolidColorBrush x:Key="ActiveProfileBrush" Color="{StaticResource Green300}" />
-  <SolidColorBrush x:Key="InactiveProfileBrush" Color="#99EAEAEA" />
-  <!-- btn-style-2, tonal: the add-server button on the servers page -->
-  <SolidColorBrush x:Key="TonalBtnBrush" Color="{StaticResource Purple200}" />
-  <SolidColorBrush x:Key="TonalBtnBgBrush" Color="#297B7AFE" />
+  <!-- #homeContainer: both stops purple 500, so a flat ground -->
+  <SolidColorBrush x:Key="HomeBgBrush" Color="{StaticResource Purple500}" />
 
-  <SolidColorBrush x:Key="ActiveServerBrush" Color="{StaticResource Green200}" />
-  <SolidColorBrush x:Key="FastestServerBrush" Color="{StaticResource Purple200}" />
-  <SolidColorBrush x:Key="ActiveChipBrush" Color="{StaticResource Green200}" />
-  <SolidColorBrush x:Key="OnActiveChipBrush" Color="{StaticResource Purple500}" />
-  <SolidColorBrush x:Key="PremiumIconBrush" Color="{StaticResource Cream100}" />
+  <!-- .primary-bg-grad: colored-bg-dark up to 60%, then to colored-bg-light at the top -->
+  <LinearGradientBrush x:Key="PrimaryBgGradBrush" StartPoint="50%,100%" EndPoint="50%,0%">
+    <GradientStop Offset="0" Color="{StaticResource Purple600}" />
+    <GradientStop Offset="0.6" Color="{StaticResource Purple600}" />
+    <GradientStop Offset="1" Color="{StaticResource Purple500}" />
+  </LinearGradientBrush>
 
-  <!-- down and up, which the web UI paints in one colour (connection-speed); ours are the same two
-       in both products, as they say which way the traffic goes rather than which product this is -->
-  <SolidColorBrush x:Key="SpeedDownBrush" Color="{StaticResource Green200}" />
-  <SolidColorBrush x:Key="SpeedUpBrush" Color="{StaticResource Red100}" />
+  <!-- .config-item: config-btn-bg at 70%, its border on-config-btn-bg at 30% -->
+  <SolidColorBrush x:Key="HomeConfigBtnBgBrush" Color="#B3150E3D" />
+  <SolidColorBrush x:Key="HomeConfigBtnBorderBrush" Color="#4DE7B481" />
 
-  <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource Red100}" />
-  <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource Orange100}" />
-  <SolidColorBrush x:Key="OnWarningBrush" Color="{StaticResource Orange300}" />
-  <SolidColorBrush x:Key="NoteBrush" Color="{StaticResource Purple400}" />
-  <SolidColorBrush x:Key="OnNoteBrush" Color="{StaticResource Purple100}" />
-  <SolidColorBrush x:Key="AppFocusBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="VersionDebugBrush" Color="{StaticResource Cream100}" />
-  <SolidColorBrush x:Key="OnVersionDebugBrush" Color="{StaticResource Purple600}" />
+  <!-- .card-on-grad-bg: card-on-grad-bg at 30% -->
+  <SolidColorBrush x:Key="CardOnGradBgAlphaBrush" Color="#4D2F296E" />
 
 </ResourceDictionary>

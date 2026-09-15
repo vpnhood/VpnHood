@@ -63,6 +63,12 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     public Uri Url { get; }
 
     public string SpaHash => _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
+
+    // The bundle's assets folder: its images, country flags, fonts, locale files and content
+    // documents, each under its own name (the bundle's own code and styles are hashed and live
+    // beside it). The SPA loads them from here over this server; a head that shows the native UI
+    // instead hands this path to it, so one copy on the device serves both.
+    public string AssetsFolderPath => Path.Combine(GetSpaPath(), "assets");
     public bool UseHostName { get; set; }
     public bool IsListening => _primary.IsListening;
 
@@ -496,6 +502,13 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     {
         var contentType = MimeTypeUtils.GetContentType(fullPath);
         context.Response.ContentType = contentType;
+        // The bundle's own files carry a hash of their content in the name, so a name is a version
+        // and can be kept for good; the assets folder's names are stable across versions - the
+        // native UI reads the same files by name - so its files must be asked for again each time.
+        context.Response.Headers["Cache-Control"] = fullPath.Contains($"{Path.DirectorySeparatorChar}assets{Path.DirectorySeparatorChar}",
+            StringComparison.OrdinalIgnoreCase)
+            ? "no-cache"
+            : "public, max-age=31536000, immutable";
         return context.Response.Send(File.ReadAllBytes(fullPath));
     }
 

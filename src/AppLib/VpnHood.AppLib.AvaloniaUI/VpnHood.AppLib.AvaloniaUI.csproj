@@ -7,12 +7,9 @@
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>
 
-	<!-- The web UI's own assets, so both UIs look the same: its country flags, its home background,
-	     its fonts (Poppins Light for text, Bold for titles) and its icon font (Material Design Icons,
-	     the full face for now - a subset of the glyphs Mdi.cs names would cut it to a few KB). -->
-	<ItemGroup>
-		<AvaloniaResource Include="Assets\**" />
-	</ItemGroup>
+	<!-- This UI embeds no assets: its images, country flags, fonts, locale files and content
+	     documents are the web UI's own, read at run time from the assets folder of the SPA bundle
+	     (AppAssets, named by the head). A build that ships both UIs ships one copy of each. -->
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="12.1.2" />

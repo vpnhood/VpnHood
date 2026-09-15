@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.Styles;
 using VpnHood.AppLib.AvaloniaUI.Views;
 
@@ -23,6 +24,12 @@ public partial class VpnHoodAvaloniaApp : Application
 
     public override void Initialize()
     {
+        // The fonts of the assets folder (AppAssets.FolderPath, which the head named), before the
+        // styles that name them: the styles are read as the XAML below is loaded. Only where there
+        // is a view - see OnFrameworkInitializationCompleted.
+        if (VpnHoodApp.IsInit)
+            AppAssets.RegisterFonts();
+
         // the product's palette before the styles that read it: VpnHoodApp is initialized by the
         // host first, except in the processes that get no view (below), which take the default.
         Resources.MergedDictionaries.Add(
@@ -41,6 +48,11 @@ public partial class VpnHoodAvaloniaApp : Application
 
     private void ShowMainView()
     {
+        // the languages this UI has, declared to the app as the web UI's configure call does
+        var app = VpnHoodApp.Instance;
+        app.Services.CultureProvider.AvailableCultures = [.. Strings.AvailableCultures];
+        app.UpdateUi();
+
         var mainView = new MainView();
         switch (ApplicationLifetime) {
             case IClassicDesktopStyleApplicationLifetime desktop:
@@ -50,7 +62,7 @@ public partial class VpnHoodAvaloniaApp : Application
                     Height = PanelHeight,
                     MinWidth = MinPanelWidth,
                     MinHeight = MinPanelHeight,
-                    Background = ThemeBrush("AppBackgroundBrush"),
+                    Background = ThemeBrush("BackgroundBrush"),
                     Content = mainView
                 };
                 break;

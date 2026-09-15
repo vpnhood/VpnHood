@@ -24,7 +24,7 @@
     </Style>
     <Style Selector="Grid.live Border#Ring">
       <Setter Property="Opacity" Value="1" />
-      <Setter Property="BorderBrush" Value="{StaticResource CircleBorderBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ConnectionCircleBorderBrush}" />
     </Style>
     <Style Selector="Grid.connected Border#Ring">
       <Setter Property="BorderBrush" Value="White" />
@@ -66,7 +66,7 @@
       </Setter>
     </Style>
     <Style Selector="Grid.live Ellipse.dot">
-      <Setter Property="Fill" Value="{StaticResource CircleBorderBrush}" />
+      <Setter Property="Fill" Value="{StaticResource ConnectionCircleBorderBrush}" />
     </Style>
     <Style Selector="Ellipse#DotA">
       <Setter Property="Canvas.Left" Value="6" />
@@ -103,7 +103,7 @@
       <Setter Property="Height" Value="15" />
       <Setter Property="CornerRadius" Value="79" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="BorderBrush" Value="{StaticResource CircleShineBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource ConnectionCircleShineBrush}" />
       <Setter Property="Opacity" Value="0" />
     </Style>
     <Style Selector="Grid.connected Border#Shine">
@@ -133,7 +133,7 @@
     <Style Selector="Ellipse#Flash">
       <Setter Property="Width" Value="15" />
       <Setter Property="Height" Value="15" />
-      <Setter Property="Fill" Value="{StaticResource CircleShineBrush}" />
+      <Setter Property="Fill" Value="{StaticResource ConnectionCircleShineBrush}" />
       <Setter Property="Opacity" Value="0" />
     </Style>
     <Style Selector="Grid.connected Ellipse#Flash">
@@ -171,13 +171,16 @@
       <TextBlock x:Name="StateTextBlock" Classes="body-small" TextAlignment="Center" />
       <TextBlock x:Name="GlyphBlock" Classes="mdi" FontSize="40" HorizontalAlignment="Center" IsVisible="False" />
       <TextBlock x:Name="UsageBlock" Classes="body-large" TextAlignment="Center" IsVisible="False" />
+      <!-- the access key's expiry, in the alert colour, the warning colour in its last days -->
+      <TextBlock x:Name="ExpireBlock" Classes="body-small" TextAlignment="Center" IsVisible="False" Margin="0,6,0,0"
+                 Foreground="{StaticResource ExpireDateAlertBrush}" />
     </StackPanel>
 
     <!-- the progress of a connection, at the bottom of the circle -->
     <StackPanel x:Name="ProgressPanel" VerticalAlignment="Bottom" HorizontalAlignment="Center"
                 Margin="0,0,0,10" Width="75" IsVisible="False">
       <ProgressBar x:Name="Bar" Height="5" MinHeight="5" Minimum="0" Maximum="100" CornerRadius="3"
-                   Foreground="{StaticResource CircleShineBrush}" Background="#1AFFFFFF" />
+                   Foreground="{StaticResource ConnectionCircleShineBrush}" Background="#1AFFFFFF" />
       <TextBlock x:Name="ProgressText" FontSize="10" TextAlignment="Center" />
     </StackPanel>
   </Grid>

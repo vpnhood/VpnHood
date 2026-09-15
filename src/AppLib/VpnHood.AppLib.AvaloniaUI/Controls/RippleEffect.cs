@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
+using Avalonia.VisualTree;
 using VpnHood.AppLib.AvaloniaUI.Animation;
 
 namespace VpnHood.AppLib.AvaloniaUI.Controls;
@@ -110,6 +111,13 @@ public class RippleEffect : Panel
     {
         if (_host is not { IsEffectivelyEnabled: true } host || _layer.IsHolding ||
             !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        // A press on a button of the host's own - the menu in a server's header, the warning chip
+        // in a settings card - is that button's: taking the capture here would keep the release
+        // from it and it would never click. No ripple for the host either; the button has its own.
+        if (e.Source is Visual source && source.FindAncestorOfType<Button>(includeSelf: true) is { } pressed &&
+            pressed != host && host.IsVisualAncestorOf(pressed))
             return;
 
         e.Pointer.Capture(host);

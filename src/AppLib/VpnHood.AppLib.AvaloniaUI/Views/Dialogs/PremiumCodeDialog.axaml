@@ -1,0 +1,27 @@
+<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+                    xmlns:dialogs="using:VpnHood.AppLib.AvaloniaUI.Views.Dialogs"
+                    x:Class="VpnHood.AppLib.AvaloniaUI.Views.Dialogs.PremiumCodeDialog">
+  <!-- The web UI's PremiumByCode sheet: the code, in the shape it comes in, and Activate. -->
+  <Border Classes="dialog" MaxWidth="480">
+    <StackPanel Spacing="12">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <TextBlock Classes="mdi" FontSize="22" Text="{x:Static res:Mdi.Key}" VerticalAlignment="Center" />
+        <TextBlock Classes="dialog-title" VerticalAlignment="Center" Text="{Binding EnterPremiumCode, Source={x:Static res:Strings.Current}}" />
+      </StackPanel>
+      <Border Classes="note">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="alert-title" Text="{Binding Note, Source={x:Static res:Strings.Current}}" />
+          <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding ActivePremiumKeyExpirationNotice, Source={x:Static res:Strings.Current}}" />
+        </StackPanel>
+      </Border>
+      <TextBox x:Name="CodeBox" Classes="outlined" Watermark="XXXX-XXXX-XXXX-XXXX-XXXX" TextChanged="OnCodeChanged" KeyDown="OnCodeKeyDown" />
+      <TextBlock x:Name="ErrorText" Classes="body-small error-text" TextWrapping="Wrap" IsVisible="False" />
+      <Button x:Name="ActivateButton" Classes="pill block" Background="{StaticResource ActivateCodeBtnBrush}" IsEnabled="False" Click="OnActivateClick"
+              Content="{Binding Activate, Source={x:Static res:Strings.Current}}" />
+      <Button x:Name="CancelButton" Classes="dialog-btn" HorizontalAlignment="Right" Click="OnCancelClick"
+              Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+    </StackPanel>
+  </Border>
+</dialogs:DialogBase>

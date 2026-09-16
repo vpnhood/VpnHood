@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AppLib;
+﻿using VpnHood.AppLib.Contracts.App;
+
+namespace VpnHood.AppLib;
 
 public static class AppConnectionStateExtensions
 {

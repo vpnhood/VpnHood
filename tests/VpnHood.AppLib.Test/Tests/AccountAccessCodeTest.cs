@@ -1,6 +1,9 @@
-using System.Net;
+﻿using System.Net;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices.UiContexts;

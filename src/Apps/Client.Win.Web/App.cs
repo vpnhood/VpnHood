@@ -1,6 +1,7 @@
 ﻿using System.Security.Principal;
 using System.Windows;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.ClassicAvaloniaUi;
 using VpnHood.AppLib;
 using VpnHood.AppLib.AvaloniaUI.Desktop;
 using VpnHood.AppLib.Services.Updaters;
@@ -17,9 +18,10 @@ public class App : Application
     {
         var appConfigs = AppConfigs.Load();
         var resources = ClientAppResources.Resources;
-        resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(appConfigs.AppId, appConfigs.StorageFolderName, AppConfigs.IsDebugMode) {
+            AppName = AppConfigs.AppName,
+            IpLocationZipData = ClientAppResources.IpLocationZipData,
             DeviceId = WindowsIdentity.GetCurrent().User?.Value,
             Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,
@@ -79,7 +81,7 @@ public class App : Application
         appWin.OpenMainWindowRequested += (_, _) => AvaloniaDesktopHost.ShowMainWindow();
         appWin.ExitRequested += (_, _) => AvaloniaDesktopHost.Shutdown();
         try {
-            AvaloniaDesktopHost.Run(args, appWin.ShowWindowAfterStart);
+            AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, appWin.ShowWindowAfterStart);
         }
         finally {
             appWin.Dispose();

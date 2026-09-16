@@ -1,4 +1,4 @@
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
 using VpnHood.AppLib.SpaWebView;
 
@@ -10,11 +10,14 @@ public static class ClientAppResources
     // SpaResourcesFactory) — the SPA package owns the whole visual identity.
     public static AppResources Resources => field ??= Create();
 
+    // Not a UI resource: the ~14 MB IP-location database the engine reads for country splits and
+    // location lookups. Lazy, so a run that never asks for a country never materializes it.
+    public static Lazy<byte[]> IpLocationZipData { get; } = new(() => Ip2LocationLiteDb.ZipData);
+
     private static AppResources Create()
     {
         var assembly = typeof(ClientAppResources).Assembly;
         var resources = SpaResourcesFactory.FromSpaZip(assembly, "VpnHood.App.Client.spa.zip");
-        resources.IpLocationZipData = new Lazy<byte[]>(() => Ip2LocationLiteDb.ZipData);
         // the Avalonia UI's browser build, when this build embeds one (see the project file)
         resources.AvaloniaBrowserZipData = EmbeddedResource.TryRead(assembly, "VpnHood.App.Client.avalonia-browser.zip");
         return resources;

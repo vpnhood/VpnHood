@@ -1,29 +1,22 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>VpnHood.AppLib.AvaloniaUI</RootNamespace>
 		<IsPackable>false</IsPackable>
-		<Description>The VpnHood app's UI in Avalonia: the web UI's pages, page for page, in one responsive layout</Description>
-		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+		<Description>What any Avalonia UI for the VpnHood app needs: the app's state as pages read it, and the Application every host mounts. No theme, no layout, no control, no words</Description>
 	</PropertyGroup>
 
-	<!-- This UI embeds no assets: its images, country flags, fonts and content documents are the
-	     files of VpnHood.AppLib.Assets, read at run time from the folder that package places
-	     (AppContent); its words are that package's resources. -->
+	<!-- Deliberately without VpnHood.AppLib.Assets: a UI built on this package brings its own
+	     images and words, or takes ours by referencing that package itself. Nothing here shows a
+	     word or draws a picture, so nothing here needs them. -->
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="12.1.2" />
-		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
-		<!-- The QR of the pairing address: Android has no encoder of its own and Core Image is tvOS-only,
-		     so one dependency-free .NET encoder serves both (TV plan, Phase 4). -->
-		<PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- The content this UI draws from - the files, the words, the messages - and the folder it finds them in. -->
-		<ProjectReference Include="..\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
-		<ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
-		<!-- The pairing page starts and stops the LAN listener the phone dials into. -->
-		<ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+		<!-- The app's API, and the whole of what this package knows about the app: the six
+		     interfaces and the shapes they carry, in process or over HTTP. No engine, no listener. -->
+		<ProjectReference Include="..\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
 	</ItemGroup>
 </Project>

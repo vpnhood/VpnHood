@@ -1,5 +1,6 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
+using VpnHood.AppLib.Contracts.App;
 
 namespace VpnHood.AppLib.Utils;
 

@@ -1,8 +1,8 @@
-using System.Web;
+﻿using System.Web;
 using Android.Webkit;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib.SpaWebView;
-using VpnHood.AppLib.WebServer;
+using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using Uri = System.Uri;

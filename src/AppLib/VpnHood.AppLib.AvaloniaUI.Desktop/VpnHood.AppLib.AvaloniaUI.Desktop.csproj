@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>VpnHood.AppLib.AvaloniaUI.Desktop</RootNamespace>
@@ -13,6 +13,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppLib.AvaloniaUI\VpnHood.AppLib.AvaloniaUI.csproj" />
 		<!-- The web server extracts the bundle whose assets folder the UI draws from. -->
-		<ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+		<ProjectReference Include="..\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
 	</ItemGroup>
 </Project>

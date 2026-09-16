@@ -1,8 +1,9 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Abstractions.Device;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.ClientProfiles;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;

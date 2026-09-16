@@ -1,10 +1,10 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Net;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Dtos;
-using VpnHood.AppLib.WebServer;
-using VpnHood.AppLib.WebServer.Api;
-using VpnHood.AppLib.WebServer.Client;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.WebHost;
+using VpnHood.AppLib.Api.Clients;
+using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.SplitTunneling;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Exceptions;
 using VpnHood.Core.Toolkit.Utils;
@@ -61,7 +61,7 @@ public class AppApiClientTest : TestAppBase
         await using var app = TestAppHelper.CreateClientApp(appOptions);
         using var webServer = VpnHoodAppWebServer.Init(app);
         using var http = new HttpClient { BaseAddress = webServer.Url };
-        var api = HttpAppApi.Create(http);
+        var api = HttpVpnHoodApi.Create(http);
 
         // the configuration, whole: the features, the state, the settings, the profiles, the languages
         var config = await api.App.Configure(new ConfigParams { AvailableCultures = ["en", "fa"] }, CancellationToken.None);
@@ -96,6 +96,12 @@ public class AppApiClientTest : TestAppBase
         // nothing to say is an empty reply, not a failure
         Assert.IsNull(await api.Account.Get(CancellationToken.None));
         Assert.IsNull(await api.ProxyEndPoints.GetDevice(CancellationToken.None));
+
+        // the two replies that are not JSON: the log as text, the promotion image as bytes - while
+        // the access code IS json, so a quoted empty string must come back as an empty one
+        Assert.IsNotNull(await api.App.Log(CancellationToken.None));
+        Assert.AreEqual(string.Empty, await api.ClientProfiles.GetAccessCode(profileId, CancellationToken.None));
+        await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.App.PromotionImage(CancellationToken.None));
 
         // a failure the server reported comes back as the exception it names
         await Assert.ThrowsExactlyAsync<NotExistsException>(() => api.ClientProfiles.Get(Guid.NewGuid(), CancellationToken.None));

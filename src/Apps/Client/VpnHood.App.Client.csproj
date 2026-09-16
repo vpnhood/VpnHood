@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
@@ -38,7 +38,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.SpaWebView\VpnHood.AppLib.SpaWebView.csproj" />
-		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
 	</ItemGroup>
 
 

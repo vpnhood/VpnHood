@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Description>Tiny internal webserver to server your single-page application (SPA). You need this only if you want to create a UI for your VpnHood client by single-page application (SPA)</Description>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.AppLib.Api.WebHost</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Watson.Lite" Version="6.6.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <!-- The contract this server puts on HTTP, and the in-process host that answers it. The
+	       dependency goes this way only: a UI on the device takes the host without this server. -->
+	  <ProjectReference Include="..\VpnHood.AppLib.Api\VpnHood.AppLib.Api.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppLib.Api.InProcessHost\VpnHood.AppLib.Api.InProcessHost.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+	  <!-- The assets folder this server serves at /assets/ to every UI. -->
+	  <ProjectReference Include="..\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
+	</ItemGroup>
+
+</Project>

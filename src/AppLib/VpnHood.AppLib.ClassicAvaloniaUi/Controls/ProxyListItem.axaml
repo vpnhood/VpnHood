@@ -1,0 +1,39 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             x:Class="VpnHood.AppLib.ClassicAvaloniaUi.Controls.ProxyListItem">
+  <!-- The web UI's ProxyListItem: the protocol as a chip, the address and the user, on or off at
+       the end; under them the counts of what succeeded and failed, the quality, and the last error. -->
+  <Button x:Name="Row" Classes="list-item" Click="OnRowClick">
+    <StackPanel Spacing="8">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Border Classes="chip white comfortable">
+            <TextBlock x:Name="ProtocolText" />
+          </Border>
+          <TextBlock x:Name="TitleText" Classes="body-medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <Border x:Name="StateChip" Grid.Column="1" Classes="chip comfortable">
+          <TextBlock x:Name="StateText" />
+        </Border>
+      </Grid>
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock x:Name="SucceededIcon" Classes="mdi disabled" FontSize="14" Text="{x:Static res:Mdi.CheckCircle}" VerticalAlignment="Center" />
+            <TextBlock x:Name="SucceededText" Classes="body-small disabled" FontSize="11" VerticalAlignment="Center" />
+          </StackPanel>
+          <Border Classes="divider vertical" />
+          <StackPanel Orientation="Horizontal" Spacing="4">
+            <TextBlock x:Name="FailedIcon" Classes="mdi disabled" FontSize="14" Text="{x:Static res:Mdi.CloseCircle}" VerticalAlignment="Center" />
+            <TextBlock x:Name="FailedText" Classes="body-small disabled" FontSize="11" VerticalAlignment="Center" />
+          </StackPanel>
+          <Border x:Name="QualityDivider" Classes="divider vertical" />
+          <TextBlock x:Name="QualityText" Classes="body-small" FontSize="11" VerticalAlignment="Center" />
+        </StackPanel>
+        <TextBlock Grid.Column="1" Classes="mdi disabled" FontSize="20" Text="{Binding ChevronForward, Source={x:Static res:Strings.Current}}" />
+      </Grid>
+      <TextBlock x:Name="ErrorText" Classes="body-small disabled" Opacity="0.6" TextWrapping="Wrap" IsVisible="False" />
+    </StackPanel>
+  </Button>
+</UserControl>

@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.App;
 using Windows.UI.Notifications;
 using Microsoft.Maui.Handlers;
 using Microsoft.Maui.Platform;

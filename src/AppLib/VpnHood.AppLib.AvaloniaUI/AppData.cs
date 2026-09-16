@@ -1,16 +1,15 @@
-using Avalonia;
-using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.Assets;
-using VpnHood.AppLib.AvaloniaUI.Resources;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Settings;
-using VpnHood.AppLib.WebServer.Api;
+﻿using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Api;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.Settings;
 using VpnHood.Core.Common.Messaging;
-using AppConfig = VpnHood.AppLib.WebServer.Api.AppData;
+using AppConfig = VpnHood.AppLib.Api.App.AppData;
 
 namespace VpnHood.AppLib.AvaloniaUI;
 
-// What the pages read off the app, and the one way they reach it: the app's API (AppApi), the same
+// What the pages read off the app, and the one way they reach it: the app's API (VpnHoodApi), the same
 // six interfaces in process - the web server's controllers, no listener - and over HTTP, from a
 // paired browser. The pages read plain values held here - the features, the state, the settings,
 // the profiles - and never the app itself, so the same pages run on the device and in a browser.
@@ -19,11 +18,11 @@ namespace VpnHood.AppLib.AvaloniaUI;
 // web UI's own signal) or a page saved. The web UI's VpnHoodAppData, question for question.
 public static class AppData
 {
-    private static AppApi? _api;
+    private static VpnHoodApi? _api;
     private static AppConfig? _config;
     private static AppState? _state;
 
-    public static AppApi Api => _api ?? throw new InvalidOperationException(
+    public static VpnHoodApi Api => _api ?? throw new InvalidOperationException(
         $"The UI has not been given the app's API. A head must call {nameof(AppData)}.{nameof(Init)} before the UI starts.");
 
     public static bool IsInit => _api != null;
@@ -32,26 +31,19 @@ public static class AppData
     // The head's first step, before Avalonia starts: the API, and the configuration read through
     // it - the features decide the theme, which is applied as the application initializes. In
     // process the read completes at once.
-    public static async Task Init(AppApi api, CancellationToken cancellationToken)
+    public static async Task Init(VpnHoodApi api, CancellationToken cancellationToken)
     {
         _api = api;
         await ReloadConfig(cancellationToken);
     }
 
-    // The head's second step, once the assets folder can be read (on Android, in the activity - the
-    // application has started by then): the languages this UI has, declared to the app as the web
-    // UI's configure call declares its own, so the app's language list and its best-culture choice
-    // are made from the words that exist. The fonts are registered here when Avalonia is already up
-    // (Android), else by the application as it initializes.
-    public static async Task Configure(CancellationToken cancellationToken)
+    // The head's second step, once the UI can say which languages it has: they are declared to
+    // the app as the web UI's configure call declares its own, so the app's language list and its
+    // best-culture choice are made from the words that exist. A UI whose words live in files it
+    // must first place has placed them by now - that moment is the head's, not a page's.
+    public static async Task Configure(IReadOnlyList<string> availableCultures, CancellationToken cancellationToken)
     {
-        // the folder, which on Android is a copy this call makes (AndroidAppContent): here, where a
-        // head chooses the moment, rather than under the first page that asks for a picture
-        _ = AppContent.FolderPath;
-        if (Application.Current != null)
-            AppAssets.RegisterFonts();
-
-        _config = await Api.App.Configure(new ConfigParams { AvailableCultures = [.. Strings.AvailableCultures] }, cancellationToken);
+        _config = await Api.App.Configure(new ConfigParams { AvailableCultures = [.. availableCultures] }, cancellationToken);
         _state = _config.State;
         IsConfigured = true;
     }
@@ -153,18 +145,6 @@ public static class AppData
     public static bool CanGoPremium => State.ClientProfile?.CanGoPremium == true;
     public static Guid? ClientProfileId => State.ClientProfile?.ClientProfileId ?? UserSettings.ClientProfileId;
 
-    // What a failure's message depends on besides the failure (ErrorMessages.For): the standing of
-    // the session and the profile, off the state as it is when the failure is shown.
-    public static ErrorContext ErrorContext => new() {
-        HasDiagnoseRequested = State.HasDiagnoseRequested,
-        IsPremiumSupported = IsPremiumSupported,
-        IsPremiumUser = IsPremiumUser,
-        IsPremiumByAccount = IsPremiumByAccount,
-        CanTryPremium = CanTryPremium,
-        HasAccessCode = State.ClientProfile?.HasAccessCode == true,
-        CanImportAccessCode = CanImportAccessCode
-    };
-
     public static bool IsPremiumFeature(AppFeature feature)
     {
         return Features.Premium?.Features.Contains(feature) ?? false;
@@ -230,15 +210,6 @@ public static class AppData
         return Features.ChannelProtocols.Contains(protocol);
     }
 
-    public static string ProtocolTitle(ChannelProtocol protocol)
-    {
-        return protocol switch {
-            ChannelProtocol.Udp => Strings.Current.ProtocolUdp,
-            ChannelProtocol.Quic => Strings.Current.ProtocolQuic,
-            _ => Strings.Current.ProtocolTcp
-        };
-    }
-
     // this head has no web analytics of its own, so the tracker the app reports is the whole answer
     public static bool IsAnonymousTrackerSupported => Features.IsAnonymousTrackerSupported;
 
@@ -250,39 +221,6 @@ public static class AppData
     public static bool IsLocationAutoSelected(string? serverLocation)
     {
         return serverLocation is "*" or "*/*";
-    }
-
-    // The home row's word for the countries split, from the EFFECTIVE mode in the state: a split
-    // the toggle or the plan silenced reads Off (VpnHoodAppData.splitCountryStatusText).
-    public const int AllCountriesCount = 238;
-    private const int MaxFlags = 3;
-
-    public static string SplitCountryStatusText(AppState state)
-    {
-        var split = state.SplitTunnelingState;
-        switch (split.CountryMode) {
-            case SplitCountryMode.ExcludeMyCountry:
-                return Strings.Current.ExcludeMyCountry;
-            case SplitCountryMode.ExcludeList: {
-                var count = split.Countries.Count;
-                if (count == 0) return Strings.Current.Off;
-                if (count < MaxFlags) return Strings.Current.Exclude;
-                if (count < AllCountriesCount / 2) return Strings.Current.AllExceptX(count);
-                return Strings.Current.OnlyX(AllCountriesCount - count);
-            }
-            default:
-                return Strings.Current.Off;
-        }
-    }
-
-    public static string SplitAppsStatusText()
-    {
-        var split = UserSettings.SplitTunneling;
-        return split.AppMode switch {
-            SplitAppMode.Exclude => split.Apps.Length > 0 ? Strings.Current.AllExceptX(split.Apps.Length) : Strings.Current.Off,
-            SplitAppMode.Include => Strings.Current.OnlyX(split.Apps.Length),
-            _ => Strings.Current.Off
-        };
     }
 
     // VpnHoodApp.HasDebugCommand, from the settings: the commands are the words of DebugData1.

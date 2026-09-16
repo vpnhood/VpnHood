@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -7,14 +7,19 @@ using Ga4.Trackers;
 using Microsoft.Extensions.Logging;
 using TaskExtensions = VpnHood.Core.Toolkit.Extensions.TaskExtensions;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Abstractions.Billing;
 using VpnHood.AppLib.Abstractions.Ads;
 using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.ClientProfiles;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.Premium;
+using VpnHood.AppLib.Contracts.Settings;
 using VpnHood.AppLib.Diagnosing;
 using VpnHood.AppLib.DtoConverters;
 using VpnHood.AppLib.Exceptions;
+using VpnHood.AppLib.Premium;
 using VpnHood.AppLib.Providers;
+using VpnHood.AppLib.Services.Countries;
 using VpnHood.AppLib.Services;
 using VpnHood.AppLib.Services.Accounts;
 using VpnHood.AppLib.Services.Ads;
@@ -115,7 +120,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             Transport = options.Transport
         };
 
-        _ipRangeLocationProvider = options.Resources.IpLocationZipData is { } ipLocationZipData
+        _ipRangeLocationProvider = options.IpLocationZipData is { } ipLocationZipData
             ? new LocalIpRangeLocationProvider(
                 () => new ZipArchive(new MemoryStream(ipLocationZipData.Value)),
                 () => AppRegionInfo.CurrentRegion.Name)
@@ -124,7 +129,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
         // each split service owns its whole activity decision: its settings gate + the premium plan
         // (this app implements IPremiumFeatureChecker)
         var splitCountryService = new SplitCountryService(settingsService, this, _ipRangeLocationProvider,
-            ipLocationZipData: options.Resources.IpLocationZipData);
+            ipLocationZipData: options.IpLocationZipData);
         splitCountryService.StateChanged += LocationService_StateChanged;
 
         var splitIpViaAppService = new SplitIpViaAppService(settingsService, this);
@@ -184,7 +189,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             WebUiPort = options.WebUiPort,
             ClientId = clientId,
             AppId = options.AppId,
-            AppName = options.Resources.Strings.AppName,
+            AppName = options.AppName,
             IsLicenseAgreementRequired = options.IsLicenseAgreementRequired,
             PrivacyPolicyUrl = options.PrivacyPolicyUrl,
             TermsOfUseUrl = options.TermsOfUseUrl,
@@ -827,7 +832,7 @@ public class VpnHoodApp : Singleton<VpnHoodApp>,
             // create clientOptions
             var proxyOptions = await Services.ProxyEndPointService.GetProxyOptions().Vhc();
             var clientOptions = new ClientOptions {
-                AppName = Resources.Strings.AppName,
+                AppName = Features.AppName,
                 ClientId = Features.ClientId,
                 AccessKey = token.ToAccessKey(),
                 Transport = Config.Transport,

@@ -1,0 +1,29 @@
+﻿using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.Core.Proxies.Management.Abstractions;
+using VpnHood.Core.Toolkit.Generics;
+
+namespace VpnHood.AppLib.Api;
+
+public interface IProxyEndPointsApi
+{
+    Task<AppProxyEndPointInfo> Get(string proxyEndPointId, CancellationToken cancellationToken);
+    Task<AppProxyEndPointInfo> Add(ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken);
+    Task<AppProxyEndPointInfo> Update(string proxyEndPointId, ProxyEndPoint proxyEndPoint, CancellationToken cancellationToken);
+    Task Delete(string proxyEndPointId, CancellationToken cancellationToken);
+    Task DeleteAll(bool deleteSucceeded, bool deleteFailed, bool deleteUnknown, bool deleteDisabled, CancellationToken cancellationToken);
+    Task DisableAllFailed(CancellationToken cancellationToken);
+    Task ResetStates(CancellationToken cancellationToken);
+    Task<AppProxyEndPointInfo?> GetDevice(CancellationToken cancellationToken);
+    Task<ListResult<AppProxyEndPointInfo>> List(
+        string? search,
+        bool includeSucceeded,
+        bool includeFailed,
+        bool includeUnknown,
+        bool includeDisabled,
+        int? recordIndex,
+        int? recordCount,
+        CancellationToken cancellationToken);
+    Task Import(string content, CancellationToken cancellationToken);
+    Task ReloadUrl(CancellationToken cancellationToken);
+    Task<AppProxyEndPointInfo> Parse(string text, ProxyEndPointDefaults defaults, CancellationToken cancellationToken);
+}

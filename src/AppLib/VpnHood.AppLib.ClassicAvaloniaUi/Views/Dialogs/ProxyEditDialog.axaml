@@ -1,0 +1,74 @@
+﻿<dialogs:DialogBase xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:res="using:VpnHood.AppLib.Assets"
+                    xmlns:dialogs="using:VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs"
+                    x:Class="VpnHood.AppLib.ClassicAvaloniaUi.Views.Dialogs.ProxyEditDialog">
+  <!-- The web UI's AddOrEditProxy sheet: one proxy's fields - or a list to import - and, for one
+       already saved, its record and the way to remove it. -->
+  <Border Classes="dialog" MaxWidth="520">
+    <ScrollViewer MaxHeight="520" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="12">
+        <TextBlock x:Name="TitleText" Classes="dialog-title" />
+
+        <!-- a list to import -->
+        <StackPanel x:Name="ListPanel" Spacing="8" IsVisible="False">
+          <TextBlock Classes="body-small disabled" TextWrapping="Wrap" Text="{Binding ProxyImportDesc, Source={x:Static res:Strings.Current}}" />
+          <TextBox x:Name="ListBox" Classes="outlined multiline" MinHeight="150" TextChanged="OnFieldChanged" />
+        </StackPanel>
+
+        <!-- ProxyFields: one proxy -->
+        <StackPanel x:Name="FieldsPanel" Spacing="10">
+          <Button x:Name="EnabledRow" Classes="list-item last" Padding="0,4" Click="OnEnabledClick">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="body-medium" Text="{Binding Enabled, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+              <ToggleSwitch x:Name="EnabledSwitch" Grid.Column="1" />
+            </Grid>
+          </Button>
+          <TextBox x:Name="HostBox" Classes="outlined" TextChanged="OnFieldChanged" LostFocus="OnHostLostFocus" />
+          <TextBlock x:Name="HostError" Classes="body-small error-text" IsVisible="False" />
+          <TextBox x:Name="PortBox" Classes="outlined" TextChanged="OnFieldChanged" />
+          <TextBlock x:Name="PortError" Classes="body-small error-text" IsVisible="False" />
+          <Button x:Name="ProtocolButton" Classes="combo-field" HorizontalAlignment="Stretch" Click="OnMenuButtonClick">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel>
+                <TextBlock Classes="body-small disabled" Text="{Binding ProxyProtocol, Source={x:Static res:Strings.Current}}" />
+                <TextBlock x:Name="ProtocolText" Classes="body-medium" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Classes="mdi" FontSize="20" Text="{x:Static res:Mdi.ChevronDown}" VerticalAlignment="Center" />
+            </Grid>
+            <Button.Flyout>
+              <Flyout Placement="Bottom" FlyoutPresenterClasses="menu">
+                <StackPanel x:Name="ProtocolMenu" />
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+          <Button x:Name="AuthRow" Classes="list-item last" Padding="0,4" Click="OnAuthClick">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="body-medium" Text="{Binding Authentication, Source={x:Static res:Strings.Current}}" VerticalAlignment="Center" />
+              <ToggleSwitch x:Name="AuthSwitch" Grid.Column="1" />
+            </Grid>
+          </Button>
+          <StackPanel x:Name="AuthPanel" Spacing="10" IsVisible="False">
+            <TextBox x:Name="UsernameBox" Classes="outlined" />
+            <TextBox x:Name="PasswordBox" Classes="outlined" />
+          </StackPanel>
+        </StackPanel>
+
+        <!-- ProxyStatus: the record of one already saved -->
+        <StackPanel x:Name="StatusPanel" Spacing="0" IsVisible="False">
+          <Border Classes="divider" Margin="0,4,0,8" />
+          <StackPanel x:Name="StatusRows" />
+        </StackPanel>
+
+        <Border Classes="divider" />
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+          <Button x:Name="RemoveButton" Classes="dialog-btn text-error" Click="OnRemoveClick" IsVisible="False"
+                  Content="{Binding Remove, Source={x:Static res:Strings.Current}}" />
+          <Button x:Name="CancelButton" Grid.Column="2" Classes="dialog-btn" Click="OnCancelClick"
+                  Content="{Binding Cancel, Source={x:Static res:Strings.Current}}" />
+          <Button x:Name="SaveButton" Grid.Column="3" Classes="dialog-btn plain bold" Click="OnSaveClick" />
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+</dialogs:DialogBase>

@@ -1,4 +1,7 @@
-﻿namespace VpnHood.AppLib.Exceptions;
+﻿
+using VpnHood.AppLib.Contracts.App;
+
+namespace VpnHood.AppLib.Exceptions;
 
 public class PremiumOnlyException : UnauthorizedAccessException
 {

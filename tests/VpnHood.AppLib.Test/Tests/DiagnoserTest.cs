@@ -1,4 +1,5 @@
-﻿using VpnHood.AppLib.Exceptions;
+﻿using VpnHood.AppLib.Api.Exceptions;
+using VpnHood.AppLib.Exceptions;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.Core.Client.Abstractions.Exceptions;
 

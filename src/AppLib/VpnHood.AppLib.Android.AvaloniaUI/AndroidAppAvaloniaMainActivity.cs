@@ -1,4 +1,4 @@
-using Android.Content;
+﻿using Android.Content;
 using Android.Content.PM;
 using Android.Content.Res;
 using Android.Runtime;
@@ -6,7 +6,7 @@ using Android.Views;
 using Avalonia.Android;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common.Activities;
-using VpnHood.AppLib.WebServer;
+using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Droid.ActivityEvents;
 
 namespace VpnHood.AppLib.Droid.AvaloniaUI;
@@ -17,7 +17,8 @@ namespace VpnHood.AppLib.Droid.AvaloniaUI;
 // the app needs to ask for VPN permission, the access-key intents, the activity results. The Back
 // key, a remote's or a phone's, reaches Avalonia through AvaloniaActivity.OnBackPressed, which
 // MainView answers.
-public class AndroidAppAvaloniaMainActivity : AvaloniaMainActivity, IActivityEvent
+public class AndroidAppAvaloniaMainActivity<TUi> : AvaloniaMainActivity, IActivityEvent
+    where TUi : Avalonia.Application, IAvaloniaUi
 {
     protected AndroidAppMainActivityHandler? MainActivityHandler { get; private set; }
 
@@ -43,17 +44,18 @@ public class AndroidAppAvaloniaMainActivity : AvaloniaMainActivity, IActivityEve
         // before base.OnCreate, so the handler is subscribed when the create event fires
         MainActivityHandler = new AndroidAppMainActivityHandler(this, CreateActivityOptions());
 
-        // Also before base.OnCreate, which makes the view (VpnHoodAvaloniaApp hands this activity
-        // its factory): the UI reads its images, flags and fonts from the assets folder, which on
-        // Android is a copy out of the package (AndroidAppContent), made on the first run of a
-        // version - on this thread, deliberately, as every frame after this line depends on it.
-        // AppData.Configure registers the fonts (Avalonia itself started with the process's
-        // Application, before the folder could be read) and tells the app which languages the UI
-        // has; in process it completes at once. The web server is what a phone pairs with, so it
-        // comes up here rather than on the pairing screen.
+        // Also before base.OnCreate, which makes the view (the UI hands this activity its
+        // factory): a UI whose pictures are files reads them from a folder, which on Android is a
+        // copy out of the package (AndroidAppContent), made on the first run of a version - on
+        // this thread, deliberately, as every frame after this line depends on it. PrepareContent
+        // also registers the UI's fonts, Avalonia having started with the process's Application,
+        // before the folder could be read. Then the app is told which languages the UI has; in
+        // process that completes at once. The web server is what a phone pairs with, so it comes
+        // up here rather than on the pairing screen.
         if (!VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
-        AppData.Configure(CancellationToken.None).GetAwaiter().GetResult();
+        TUi.PrepareContent();
+        AppData.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 
         base.OnCreate(savedInstanceState);
         CreateEvent?.Invoke(this, new CreateEventArgs { SavedInstanceState = savedInstanceState });

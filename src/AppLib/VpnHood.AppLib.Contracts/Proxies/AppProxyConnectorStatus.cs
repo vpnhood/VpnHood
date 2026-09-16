@@ -1,0 +1,12 @@
+﻿using VpnHood.Core.Proxies.Management.Abstractions;
+
+namespace VpnHood.AppLib.Contracts.Proxies;
+
+public class AppProxyConnectorStatus
+{
+    public required ProxySessionStatus SessionStatus { get; init; }
+    public required int SucceededServerCount { get; init; }
+    public required int FailedServerCount { get; init; }
+    public required int UnknownServerCount { get; init; }
+    public required int DisabledServerCount { get; init; }
+}

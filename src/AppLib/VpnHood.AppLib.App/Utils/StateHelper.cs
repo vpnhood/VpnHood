@@ -1,7 +1,12 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.ClientProfiles;
-using VpnHood.AppLib.Dtos;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Contracts.SplitTunneling;
+using VpnHood.AppLib.DtoConverters;
+using VpnHood.AppLib.Premium;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Client.Abstractions;
@@ -37,15 +42,14 @@ internal static class StateHelper
 
 
 
-    public static AppServerLocationInfo? GetServerLocationInfo(
+    public static CurrentServerLocationInfo? GetServerLocationInfo(
         SessionInfo? sessionInfo,
         ClientProfileInfo? clientProfileInfo)
     {
         // get session server location info
         var sessionServerLocationInfo = sessionInfo?.ServerLocationInfo;
         if (sessionServerLocationInfo != null) {
-            return AppServerLocationInfo.FromInfo(
-                sessionServerLocationInfo,
+            return sessionServerLocationInfo.ToAppDto(
                 clientProfileInfo?.HasMultipleRegion(sessionServerLocationInfo.CountryCode) == true);
         }
 
@@ -53,10 +57,8 @@ internal static class StateHelper
         if (clientProfileInfo?.SelectedLocationInfo is null)
             return null;
 
-        return
-             AppServerLocationInfo.FromInfo(
-                 clientProfileInfo.SelectedLocationInfo,
-                 clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode));
+        return clientProfileInfo.SelectedLocationInfo.ToAppDto(
+            clientProfileInfo.HasMultipleRegion(clientProfileInfo.SelectedLocationInfo.CountryCode));
     }
 
     // The one place that says why a configured feature is not in effect. The gate itself is silent —

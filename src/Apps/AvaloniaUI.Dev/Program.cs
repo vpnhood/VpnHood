@@ -1,8 +1,10 @@
-using Avalonia;
+﻿using Avalonia;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.AvaloniaUI;
-using VpnHood.AppLib.WebServer;
+using VpnHood.AppLib.ClassicAvaloniaUi;
+using VpnHood.AppLib.Api.InProcessHost;
+using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Toolkit.Logging;
 
@@ -35,9 +37,10 @@ internal static class Program
         var resources = ClientAppResources.Resources;
         // the name the UI shows, as a head of that product would set it (AppFeatures.AppName is
         // this very string), so the window says which product it is running as
-        resources.Strings.AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT";
 
         var appOptions = new AppOptions(appId: "com.vpnhood.avalonia.dev", "VpnHood! Avalonia Dev", isDebugMode: true) {
+            AppName = isConnect ? "VpnHood! CONNECT" : "VpnHood! CLIENT",
+            IpLocationZipData = ClientAppResources.IpLocationZipData,
             StorageFolderPath = storageFolderPath,
             Resources = resources,
             // the documents the product links to, which every head takes from its appsettings.json:
@@ -67,8 +70,9 @@ internal static class Program
             // dials over HTTP, here the app's own controllers in process - and draws from the
             // assets folder beside this executable, which the build placed there (the same files
             // the web server serves at /assets/). In process both complete at once.
-            AppData.Init(InProcessAppApi.Create(app), CancellationToken.None).GetAwaiter().GetResult();
-            AppData.Configure(CancellationToken.None).GetAwaiter().GetResult();
+            AppData.Init(InProcessVpnHoodApi.Create(app, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
+            ClassicAvaloniaApp.PrepareContent();
+            AppData.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         finally {
@@ -86,6 +90,6 @@ internal static class Program
     // Avalonia's designer and previewer look for this by name.
     public static AppBuilder BuildAvaloniaApp()
     {
-        return AppBuilder.Configure<VpnHoodAvaloniaApp>().UsePlatformDetect();
+        return AppBuilder.Configure<ClassicAvaloniaApp>().UsePlatformDetect();
     }
 }

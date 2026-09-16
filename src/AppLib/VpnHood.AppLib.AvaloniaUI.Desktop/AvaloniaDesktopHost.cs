@@ -1,14 +1,16 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
-using VpnHood.AppLib.WebServer;
+using VpnHood.AppLib.Api.InProcessHost;
+using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.AppLib.AvaloniaUI.Desktop;
 
-// The Avalonia UI in a window on a desktop: a Windows or Linux head runs it here in place of the
-// web UI when the app asks (DebugCommands.AvaloniaUi). The window hides rather than closes - the
+// An Avalonia UI in a window on a desktop: a Windows or Linux head runs it here in place of the
+// web UI when the app asks (DebugCommands.AvaloniaUi). Which UI is the head's to name, once, as
+// the type argument of Run. The window hides rather than closes - the
 // app lives on, in the tray on Windows and as a service on Linux, and asks for the window again
 // through ShowMainWindow - so the run ends only with Shutdown, which the head calls as the app
 // exits. Run takes the calling thread as the UI thread until then.
@@ -17,21 +19,24 @@ public static class AvaloniaDesktopHost
     private static ClassicDesktopStyleApplicationLifetime? _lifetime;
     private static Window? _window;
 
-    // VpnHoodApp and its web server must be up: the web server is what a phone pairs with. The
-    // UI's files are beside the executable, where the build placed them. A run that starts in the
-    // background (the head's /nowindow) keeps the window back until ShowMainWindow.
-    public static void Run(string[] args, bool showWindow)
+    // VpnHoodApp and its web server must be up: the web server is what a phone pairs with. A run
+    // that starts in the background (the head's /nowindow) keeps the window back until ShowMainWindow.
+    public static void Run<TUi>(string[] args, bool showWindow)
+        where TUi : Application, IAvaloniaUi, new()
     {
         // The UI reaches the app through its API - the same six interfaces a paired browser dials
         // over HTTP, here the app's own controllers in process; in process both complete at once.
-        AppData.Init(InProcessAppApi.Create(VpnHoodApp.Instance), CancellationToken.None).GetAwaiter().GetResult();
-        AppData.Configure(CancellationToken.None).GetAwaiter().GetResult();
+        AppData.Init(InProcessVpnHoodApi.Create(VpnHoodApp.Instance, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
+
+        // what this UI needs before its first view, and the languages it has words for
+        TUi.PrepareContent();
+        AppData.Configure(TUi.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
 
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
             Args = args,
             ShutdownMode = ShutdownMode.OnExplicitShutdown
         };
-        BuildAvaloniaApp().SetupWithLifetime(lifetime);
+        BuildAvaloniaApp<TUi>().SetupWithLifetime(lifetime);
 
         var window = lifetime.MainWindow ??
                      throw new InvalidOperationException("The UI has made no main window.");
@@ -68,8 +73,9 @@ public static class AvaloniaDesktopHost
         Dispatcher.UIThread.Post(() => _lifetime?.Shutdown());
     }
 
-    private static AppBuilder BuildAvaloniaApp()
+    private static AppBuilder BuildAvaloniaApp<TUi>()
+        where TUi : Application, new()
     {
-        return AppBuilder.Configure<VpnHoodAvaloniaApp>().UsePlatformDetect();
+        return AppBuilder.Configure<TUi>().UsePlatformDetect();
     }
 }

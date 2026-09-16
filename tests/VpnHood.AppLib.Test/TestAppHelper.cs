@@ -1,8 +1,8 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.AppLib.Assets.Ip2LocationLite;
+using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.Core.Client.Devices;
@@ -24,6 +24,8 @@ public class TestAppHelper : TestHelper
     public AppOptions CreateAppOptions(bool isDebugMode = true)
     {
         var appOptions = new AppOptions("com.vpnhood.client.test", "VpnHoodClient.Test", isDebugMode) {
+            AppName = "VpnHood! Test",
+            IpLocationZipData = new Lazy<byte[]>(() => Ip2LocationLiteDb.ZipData),
             IsSingleton = false, // tests run many concurrent apps in one process
             // the test app stands for a CONNECT-like head no store forbids anything to; store-build
             // restrictions and the premium-less CLIENT shape are exercised by the tests that
@@ -60,7 +62,6 @@ public class TestAppHelper : TestHelper
             }
         };
 
-        appOptions.Resources.IpLocationZipData = new Lazy<byte[]>(() => Ip2LocationLiteDb.ZipData);
         return appOptions;
     }
 

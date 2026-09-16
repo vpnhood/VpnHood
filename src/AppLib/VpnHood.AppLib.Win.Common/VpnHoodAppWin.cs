@@ -4,7 +4,9 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.WebServer;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.WebHost;
+using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Win.Common.WinNative;
 using VpnHood.Core.Client.Devices.Win;
 using VpnHood.Core.Common;
@@ -169,7 +171,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
 
     private void InitNotifyIcon()
     {
-        _sysTray = new SystemTray(VpnHoodApp.Instance.Resources.Strings.AppName, _appIcon);
+        _sysTray = new SystemTray(VpnHoodApp.Instance.Features.AppName, _appIcon);
         _sysTray.Clicked += (_, _) => OpenMainWindow();
         _sysTray.ContextMenu = new ContextMenu();
         _openMainWindowMenuItemId =
@@ -215,7 +217,7 @@ public class VpnHoodAppWin : Singleton<VpnHoodAppWin>, IDisposable
         else if (VpnHoodApp.Instance.IsIdle) icon = _disconnectedIcon;
         if (icon == IntPtr.Zero) icon = _appIcon;
 
-        _sysTray.Update($@"{VpnHoodApp.Instance.Resources.Strings.AppName} - {stateName}", icon);
+        _sysTray.Update($@"{VpnHoodApp.Instance.Features.AppName} - {stateName}", icon);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_connectMenuItemId, VpnHoodApp.Instance.IsIdle);
         _sysTray.ContextMenu?.EnableMenuItem(_disconnectMenuItemId,

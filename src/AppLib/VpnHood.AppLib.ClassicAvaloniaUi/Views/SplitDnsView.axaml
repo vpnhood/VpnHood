@@ -1,0 +1,26 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:controls="using:VpnHood.AppLib.ClassicAvaloniaUi.Controls"
+             x:Class="VpnHood.AppLib.ClassicAvaloniaUi.Views.SplitDnsView">
+  <!-- The web UI's split-dns: two ways to resolve names while splitting, the permissive one with
+       its warning -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding SplitDns, Source={x:Static res:Strings.Current}}" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel MaxWidth="720">
+        <controls:SplitDisabledAlert x:Name="DisabledAlert" TurnedOn="OnTurnedOn" />
+        <TextBlock Classes="card-subtitle" Margin="0,0,0,16" Text="{Binding SplitDnsDesc, Source={x:Static res:Strings.Current}}" />
+        <Border x:Name="LeakAlert" Classes="alert-warning" Margin="0,0,0,16" IsVisible="False">
+          <TextBlock Classes="body-small" TextWrapping="Wrap" Text="{Binding SplitDnsLeakWarning, Source={x:Static res:Strings.Current}}" />
+        </Border>
+        <Border x:Name="Card" Classes="config-card" Padding="4,8">
+          <StackPanel>
+            <controls:OptionRow x:Name="IncludeAllRow" Clicked="OnIncludeAllClick" />
+            <controls:OptionRow x:Name="DefaultRouteRow" Clicked="OnDefaultRouteClick" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

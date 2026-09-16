@@ -1,8 +1,7 @@
-using System.Security.Authentication;
+﻿using System.Security.Authentication;
 using AndroidX.Credentials;
 using AndroidX.Credentials.Exceptions;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.Core.Client.Abstractions.Exceptions;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.UiContexts;
 using Xamarin.GoogleAndroid.Libraries.Identity.GoogleId;

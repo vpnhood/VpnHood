@@ -5,7 +5,8 @@ using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
-using VpnHood.AppLib.AvaloniaUI;
+using VpnHood.AppLib.ClassicAvaloniaUi;
+using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.AppLib.Droid.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
@@ -29,15 +30,16 @@ namespace VpnHood.App.Connect.Droid.Web;
 // from the process's Application (its OnCreate, after the app below). AvaloniaActivity shows it,
 // when MainActivity hands the launch over (DebugCommands.AvaloniaUi).
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : AvaloniaAndroidApplication<VpnHoodAvaloniaApp>(javaReference, transfer)
+    : AvaloniaAndroidApplication<ClassicAvaloniaApp>(javaReference, transfer)
 {
     private AppOptions CreateAppOptions(AppConfigs appConfigs)
     {
         // load app settings and resources
         var resources = ConnectAppResources.Resources;
-        resources.Strings.AppName = AppConfigs.AppName;
 
         var appOptions = new AppOptions(appId: PackageName!, "VpnHoodConnect", AppConfigs.IsDebugMode) {
+            AppName = AppConfigs.AppName,
+            IpLocationZipData = ConnectAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             DeviceId = AndroidUtils.GetDeviceId(this), //this will be hashed using AppId
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],

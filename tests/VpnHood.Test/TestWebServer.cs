@@ -3,7 +3,7 @@ using System.Net.Quic;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.WebServer.Helpers;
+using VpnHood.AppLib.Api.WebHost.Helpers;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;
 using VpnHood.Core.Tunneling;

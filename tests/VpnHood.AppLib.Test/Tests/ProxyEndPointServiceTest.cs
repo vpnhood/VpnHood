@@ -1,6 +1,8 @@
-using System.Net;
+﻿using System.Net;
 using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Settings;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.Settings;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.AppLib.Test.Providers;
 using VpnHood.AppLib.Utils;

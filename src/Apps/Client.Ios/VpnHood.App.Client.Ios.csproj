@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net11.0-ios</TargetFramework>
@@ -48,6 +48,8 @@
     <!-- The Avalonia UI beside the web view: AvaloniaUiAppDelegate shows it when the app asks for that
          UI (DebugCommands.AvaloniaUi), which Main.cs decides before UIKit starts. -->
     <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI\VpnHood.AppLib.AvaloniaUI.csproj" />
+    <!-- The UI itself: the pages, the controls, the themes. -->
+    <ProjectReference Include="..\..\AppLib\VpnHood.AppLib.ClassicAvaloniaUi\VpnHood.AppLib.ClassicAvaloniaUi.csproj" />
     <PackageReference Include="Avalonia.iOS" Version="12.1.2" />
     <!-- Shared client resources: embedded SPA (SpaZipData) + IP-location db + ClientAppResources. -->
     <ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />

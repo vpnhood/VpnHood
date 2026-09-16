@@ -1,12 +1,14 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Wpf;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.SpaWebView;
-using VpnHood.AppLib.WebServer;
+using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Utils;
 
@@ -26,7 +28,7 @@ public partial class VpnHoodWpfSpaMainWindow : Window
         var backgroundColor = VpnHoodApp.Instance.Resources.Colors.WindowBackgroundColor;
 
         // initialize main window
-        Title = VpnHoodApp.Instance.Resources.Strings.AppName;
+        Title = VpnHoodApp.Instance.Features.AppName;
         if (backgroundColor != null)
             Background = new SolidColorBrush(Color.FromArgb(backgroundColor.Value.A, backgroundColor.Value.R,
                 backgroundColor.Value.G, backgroundColor.Value.B));

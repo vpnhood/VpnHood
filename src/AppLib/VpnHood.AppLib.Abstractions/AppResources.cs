@@ -1,13 +1,10 @@
-﻿using VpnHood.Core.Toolkit.Graphics;
+﻿using VpnHood.AppLib.Assets;
+using VpnHood.Core.Toolkit.Graphics;
 
 namespace VpnHood.AppLib.Abstractions;
 
 public class AppResources
 {
-    // Lazy: the ~14 MB IP-location db is materialized only on first .Value — i.e. when a country
-    // split or location lookup actually runs (see VpnHoodApp / SplitCountryService), not at startup.
-    // The null-vs-non-null check still tells "provided" from "not provided" without loading it.
-    public Lazy<byte[]>? IpLocationZipData { get; set; }
     public byte[]? SpaZipData { get; set; }
 
     // The Avalonia UI's browser build (VpnHood.App.AvaloniaUI.Browser), which the web server hands a
@@ -22,7 +19,6 @@ public class AppResources
 
     public class AppStrings
     {
-        public string AppName { get; set; } = Resources.AppName;
         public string Disconnect { get; set; } = Resources.Disconnect;
         public string Connect { get; set; } = Resources.Connect;
         public string Disconnected { get; set; } = Resources.Disconnected;
@@ -45,13 +41,30 @@ public class AppResources
 
     public class AppIcons
     {
-        // Lazy: the default bytes are pulled from the embedded resource only on first access, so an app
-        // that never shows a given icon (or that the SPA overrides via SpaResourcesFactory) pays nothing
-        // for it at startup. A caller-assigned value wins; setting null re-arms the default on next read.
-        public byte[]? BadgeConnectedIconData { get => field ??= Resources.BadgeConnectedIcon; set; }
-        public byte[]? BadgeConnectingIconData { get => field ??= Resources.BadgeConnectingIcon; set; }
-        public byte[]? SystemTrayConnectedIconData { get => field ??= Resources.VpnConnectedIcon; set; }
-        public byte[]? SystemTrayConnectingIconData { get => field ??= Resources.VpnConnectingIcon; set; }
-        public byte[]? SystemTrayDisconnectedIconData { get => field ??= Resources.VpnDisconnectedIcon; set; }
+        // Files, not bytes in an assembly. These are OS-chrome icons - a tray, a taskbar badge - so
+        // they belong with the app's other content (VpnHood.AppLib.Assets), which every head's build
+        // places the way its platform reads files. Keeping them embedded cost 612 KB in a library
+        // every UI links, and Android packs each assembly once per CPU architecture, so the same
+        // bytes shipped three times. Read lazily: a head that never draws a tray pays nothing, and a
+        // build with no content folder - a test, or the browser head, which has no chrome to draw -
+        // reads null, which is what every caller already checks for. A caller-assigned value wins
+        // (SpaResourcesFactory hands over the branded icons from spa.zip); setting null re-arms the
+        // default on the next read.
+        public byte[]? BadgeConnectedIconData { get => field ??= ReadIcon("BadgeConnected.ico"); set; }
+        public byte[]? BadgeConnectingIconData { get => field ??= ReadIcon("BadgeConnecting.ico"); set; }
+        public byte[]? SystemTrayConnectedIconData { get => field ??= ReadIcon("VpnConnected.ico"); set; }
+        public byte[]? SystemTrayConnectingIconData { get => field ??= ReadIcon("VpnConnecting.ico"); set; }
+        public byte[]? SystemTrayDisconnectedIconData { get => field ??= ReadIcon("VpnDisconnected.ico"); set; }
+
+        private static byte[]? ReadIcon(string fileName)
+        {
+            if (!AppContent.TryGetFolderPath(out var folderPath))
+                return null;
+
+            var filePath = Path.Combine(folderPath, IconsFolderName, fileName);
+            return File.Exists(filePath) ? File.ReadAllBytes(filePath) : null;
+        }
+
+        private const string IconsFolderName = "icons";
     }
 }

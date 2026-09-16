@@ -1,6 +1,7 @@
-using VpnHood.AppLib.Abstractions;
+﻿using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Device;
+using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.AppLib.Services.Ads;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Client.Abstractions;
@@ -38,6 +39,15 @@ public class AppOptions(string appId, string storageFolderName, bool isDebugMode
     // Starts at the preset for this platform, so a memory-capped head is safe without opting in.
     public ClientTransportOptions Transport { get; set; } = ClientTransportOptions.ForCurrentPlatform();
     public AppUpdaterOptions? UpdaterOptions { get; set; }
+    // The two the ENGINE reads. Everything else a head supplies - the tray icons, the colours, the
+    // OS strings, the browser bundles - is the head's and the web host's; it travels in Resources,
+    // which this class carries for them and never reads itself.
+    public required string AppName { get; init; }
+
+    // Lazy: the ~14 MB IP-location db is materialized only on first .Value - when a country split or
+    // a location lookup actually runs - not at startup. Null means the head shipped none.
+    public Lazy<byte[]>? IpLocationZipData { get; set; }
+
     public AppResources Resources { get; set; } = new();
 
     // ReSharper disable once StringLiteralTypo

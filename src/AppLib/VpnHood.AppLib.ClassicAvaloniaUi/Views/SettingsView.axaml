@@ -1,0 +1,30 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:controls="using:VpnHood.AppLib.ClassicAvaloniaUi.Controls"
+             x:Class="VpnHood.AppLib.ClassicAvaloniaUi.Views.SettingsView">
+  <!-- The web UI's settings/index: three sections of rows, each a page - how the app presents
+       itself, how traffic is carried, and what it guarantees about exposure. A row a platform
+       cannot serve is left out, and a section left with no rows loses its title too. -->
+  <DockPanel Classes="page">
+    <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Settings, Source={x:Static res:Strings.Current}}" />
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <StackPanel MaxWidth="720">
+        <controls:SettingsSectionTitle x:Name="AppSection" Margin="0,0,0,12" />
+        <controls:SettingsItem x:Name="LanguageItem" Clicked="OnLanguageClick" />
+        <controls:SettingsItem x:Name="NotificationsItem" Clicked="OnNotificationsClick" />
+        <controls:SettingsItem x:Name="QuickLaunchItem" Clicked="OnQuickLaunchClick" />
+
+        <controls:SettingsSectionTitle x:Name="ConnectivitySection" />
+        <controls:SettingsItem x:Name="ProxiesItem" Clicked="OnProxiesClick" />
+        <controls:SettingsItem x:Name="SplitTunnelingItem" Clicked="OnSplitTunnelingClick" WarningClicked="OnSplitTunnelingClick" />
+        <controls:SettingsItem x:Name="DnsItem" Clicked="OnDnsClick" />
+
+        <controls:SettingsSectionTitle x:Name="PrivacySection" />
+        <controls:SettingsItem x:Name="PrivacyItem" Clicked="OnPrivacyClick" />
+        <controls:SettingsItem x:Name="KillSwitchItem" Clicked="OnKillSwitchClick" />
+        <controls:SettingsItem x:Name="AlwaysOnItem" Clicked="OnAlwaysOnClick" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

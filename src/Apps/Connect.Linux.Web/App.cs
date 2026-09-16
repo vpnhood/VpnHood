@@ -1,14 +1,16 @@
 ﻿using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
+using VpnHood.AppLib.ClassicAvaloniaUi;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.AvaloniaUI.Desktop;
+using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.AppLib.Linux.Common;
 using VpnHood.AppLib.Portal;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.AppLib.Utils;
-using VpnHood.AppLib.WebServer;
+using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Common.Exceptions;
 using VpnHood.Core.Toolkit.Logging;
 
@@ -23,8 +25,9 @@ internal static class App
     {
         var appConfigs = AppConfigs.Load();
         var resources = ConnectAppResources.Resources;
-        resources.Strings.AppName = AppConfigs.AppName;
         var appOptions = new AppOptions(appId: appConfigs.AppId, Path.GetDirectoryName(StoragePath)!, AppConfigs.IsDebugMode) {
+            AppName = AppConfigs.AppName,
+            IpLocationZipData = ConnectAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             UiName = "VpnHoodConnect",
             Resources = resources,
@@ -142,7 +145,7 @@ internal static class App
         appLinux.OpenMainWindowRequested += (_, _) => AvaloniaDesktopHost.ShowMainWindow();
         appLinux.Exiting += (_, _) => AvaloniaDesktopHost.Shutdown();
         appLinux.PrepareAsync().GetAwaiter().GetResult();
-        AvaloniaDesktopHost.Run(args, appLinux.ShowWindowAfterStart);
+        AvaloniaDesktopHost.Run<ClassicAvaloniaApp>(args, appLinux.ShowWindowAfterStart);
         return Task.CompletedTask;
     }
 

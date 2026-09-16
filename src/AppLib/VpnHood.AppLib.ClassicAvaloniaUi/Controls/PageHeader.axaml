@@ -1,0 +1,14 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             x:Class="VpnHood.AppLib.ClassicAvaloniaUi.Controls.PageHeader">
+  <!-- The web UI's AppBar: a round back button at the start and the page's title over the
+       middle. -->
+  <Grid Margin="0,8,0,20" Height="43">
+    <Button x:Name="BackButton" Classes="back-btn" HorizontalAlignment="Left" Click="OnBackClick">
+      <TextBlock Classes="mdi" Text="{Binding ChevronBack, Source={x:Static res:Strings.Current}}" />
+    </Button>
+    <TextBlock x:Name="TitleBlock" Classes="body-large" HorizontalAlignment="Center" VerticalAlignment="Center"
+               MaxWidth="200" TextTrimming="CharacterEllipsis" />
+  </Grid>
+</UserControl>

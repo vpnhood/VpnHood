@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+﻿<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- published and zipped by _publish.ps1, embedded by the heads -->
 		<Description>The VpnHood Avalonia UI as a browser page: what the app's web server hands a paired device in place of the SPA</Description>
@@ -27,5 +27,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI\VpnHood.AppLib.AvaloniaUI.csproj" />
+		<!-- The UI itself: the pages, the controls, the themes. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.ClassicAvaloniaUi\VpnHood.AppLib.ClassicAvaloniaUi.csproj" />
 	</ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>VpnHood App Abstractions</Description>
 		<TargetFramework>net10.0</TargetFramework>
@@ -6,6 +6,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<!-- The OS-chrome icons are files in the content package, not bytes in this assembly. -->
+		<ProjectReference Include="..\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Abstractions\VpnHood.Core.Client.Devices.Abstractions.csproj" />
 	</ItemGroup>
 

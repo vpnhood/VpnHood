@@ -1,4 +1,4 @@
-using Foundation;
+﻿using Foundation;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -67,9 +67,10 @@ public class AppDelegate : UIApplicationDelegate
         // Shared client resources bundle the SPA (SpaZipData) served by VpnHoodAppWebServer and
         // shown in the WKWebView. Without SpaZipData the web server cannot start.
         var resources = AppConfigs.Resources;
-        resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(appId: appConfigs.AppId, AppConfigs.AppName, isDebugMode: AppConfigs.IsDebugMode) {
+            AppName = AppConfigs.AppName,
+            IpLocationZipData = ConnectAppResources.IpLocationZipData,
             StorageFolderPath = storageFolderPath,
             // Product settings sourced from the embedded ".user" appsettings (parity with Connect.Android.Web).
             // Apple applies an additional privacy rule to VPN apps: the iOS build does not send

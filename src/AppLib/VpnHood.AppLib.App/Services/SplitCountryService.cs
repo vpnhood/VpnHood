@@ -1,9 +1,11 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Dtos;
+using VpnHood.AppLib.Contracts.Countries;
+using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Premium;
+using VpnHood.AppLib.Services.Countries;
 using VpnHood.AppLib.Settings;
 using VpnHood.Core.Filtering.Abstractions;
 using VpnHood.Core.Filtering.Sqlite;

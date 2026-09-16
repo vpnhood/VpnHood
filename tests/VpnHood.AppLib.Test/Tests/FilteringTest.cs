@@ -1,5 +1,7 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Quic;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.App;
 using VpnHood.AppLib.Test.Dom;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Toolkit.Net;

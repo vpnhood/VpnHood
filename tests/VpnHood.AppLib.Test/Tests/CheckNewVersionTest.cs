@@ -1,4 +1,7 @@
 ﻿using System.Text.Json;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.Updaters;
 using VpnHood.AppLib.Services.Updaters;
 using VpnHood.Core.Toolkit.Utils;
 

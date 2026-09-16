@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
+﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
 		<Product>VpnHood! CLIENT</Product>
@@ -33,6 +33,8 @@
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Linux.Common\VpnHood.AppLib.Linux.Common.csproj" />
 		<!-- The Avalonia UI beside the web UI, run in place of it when the app asks (DebugCommands.AvaloniaUi). -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI.Desktop\VpnHood.AppLib.AvaloniaUI.Desktop.csproj" />
+		<!-- The UI itself: the pages, the controls, the themes. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.ClassicAvaloniaUi\VpnHood.AppLib.ClassicAvaloniaUi.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
 

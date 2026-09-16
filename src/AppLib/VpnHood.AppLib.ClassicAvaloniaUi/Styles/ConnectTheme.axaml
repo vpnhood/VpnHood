@@ -1,0 +1,35 @@
+﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- VpnHood! Connect, the product a head names by setting AppOptions.UiName. The keys are the
+       web UI's connect theme, key for key (ConnectTheme.g.axaml, generated from theme/themes.ts by
+       _sync-theme.ps1); below them, what the web UI writes as CSS rather than as a key. This file
+       and ClientTheme.axaml carry the same keys and nothing else: a key added to one belongs in
+       the other the same day. -->
+
+  <ResourceDictionary.MergedDictionaries>
+    <ResourceInclude Source="avares://VpnHood.AppLib.ClassicAvaloniaUi/Styles/Colors.axaml" />
+    <ResourceInclude Source="avares://VpnHood.AppLib.ClassicAvaloniaUi/Styles/ConnectTheme.g.axaml" />
+  </ResourceDictionary.MergedDictionaries>
+
+  <!-- #connectBtn.connect-app: flat, where the client's is a gradient -->
+  <SolidColorBrush x:Key="ConnectBtnBrush" Color="{StaticResource Cream100}" />
+
+  <!-- #homeContainer: both stops purple 500, so a flat ground -->
+  <SolidColorBrush x:Key="HomeBgBrush" Color="{StaticResource Purple500}" />
+
+  <!-- .primary-bg-grad: colored-bg-dark up to 60%, then to colored-bg-light at the top -->
+  <LinearGradientBrush x:Key="PrimaryBgGradBrush" StartPoint="50%,100%" EndPoint="50%,0%">
+    <GradientStop Offset="0" Color="{StaticResource Purple600}" />
+    <GradientStop Offset="0.6" Color="{StaticResource Purple600}" />
+    <GradientStop Offset="1" Color="{StaticResource Purple500}" />
+  </LinearGradientBrush>
+
+  <!-- .config-item: config-btn-bg at 70%, its border on-config-btn-bg at 30% -->
+  <SolidColorBrush x:Key="HomeConfigBtnBgBrush" Color="#B3150E3D" />
+  <SolidColorBrush x:Key="HomeConfigBtnBorderBrush" Color="#4DE7B481" />
+
+  <!-- .card-on-grad-bg: card-on-grad-bg at 30% -->
+  <SolidColorBrush x:Key="CardOnGradBgAlphaBrush" Color="#4D2F296E" />
+
+</ResourceDictionary>

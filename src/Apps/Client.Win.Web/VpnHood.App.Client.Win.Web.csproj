@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
 		<Product>VpnHood! CLIENT</Product>
@@ -39,6 +39,8 @@
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Win.Common.WpfSpa\VpnHood.AppLib.Win.Common.WpfSpa.csproj" />
 		<!-- The Avalonia UI beside the web UI, run in place of it when the app asks (DebugCommands.AvaloniaUi). -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.AvaloniaUI.Desktop\VpnHood.AppLib.AvaloniaUI.Desktop.csproj" />
+		<!-- The UI itself: the pages, the controls, the themes. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.ClassicAvaloniaUi\VpnHood.AppLib.ClassicAvaloniaUi.csproj" />
 	</ItemGroup>
 
 	<!-- The assets folder - the images, flags, fonts and documents every UI draws from - placed the way

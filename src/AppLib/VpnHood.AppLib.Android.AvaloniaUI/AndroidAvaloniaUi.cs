@@ -1,5 +1,6 @@
-using VpnHood.AppLib.AvaloniaUI;
-using VpnHood.AppLib.WebServer;
+﻿using VpnHood.AppLib.AvaloniaUI;
+using VpnHood.AppLib.Api.InProcessHost;
+using VpnHood.AppLib.Api.WebHost;
 
 namespace VpnHood.AppLib.Droid.AvaloniaUI;
 
@@ -14,6 +15,6 @@ public static class AndroidAvaloniaUi
         if (!VpnHoodApp.IsInit)
             return;
 
-        AppData.Init(InProcessAppApi.Create(VpnHoodApp.Instance), CancellationToken.None).GetAwaiter().GetResult();
+        AppData.Init(InProcessVpnHoodApi.Create(VpnHoodApp.Instance, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
     }
 }

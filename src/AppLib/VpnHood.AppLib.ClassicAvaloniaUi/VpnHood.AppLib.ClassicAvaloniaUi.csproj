@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.AppLib.ClassicAvaloniaUi</RootNamespace>
+		<IsPackable>false</IsPackable>
+		<Description>VpnHood's own Avalonia UI: the web UI's pages, page for page, in one responsive layout - the views, the controls and the two products' themes</Description>
+		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+	</PropertyGroup>
+
+	<!-- This UI embeds no assets: its images, country flags, fonts and content documents are the
+	     files of VpnHood.AppLib.Assets, read at run time from the folder that package places
+	     (AppContent); its words are that package's resources. -->
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia" Version="12.1.2" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+		<!-- The QR of the pairing address: Android has no encoder of its own and Core Image is tvOS-only,
+		     so one dependency-free .NET encoder serves both (TV plan, Phase 4). -->
+		<PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="3.2.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Mounting Avalonia and the app's state as the pages read it, which any Avalonia UI needs. -->
+		<ProjectReference Include="..\VpnHood.AppLib.AvaloniaUI\VpnHood.AppLib.AvaloniaUI.csproj" />
+		<!-- The content this UI draws from - the files, the words, the messages - and the folder it finds them in. -->
+		<ProjectReference Include="..\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
+		<!-- The pairing page starts and stops the LAN listener the phone dials into. -->
+	</ItemGroup>
+</Project>

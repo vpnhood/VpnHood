@@ -1,5 +1,5 @@
-using Microsoft.Extensions.Logging;
-using VpnHood.AppLib.WebServer;
+﻿using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;
 using VpnHood.Core.Toolkit.Logging;

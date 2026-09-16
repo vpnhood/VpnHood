@@ -1,7 +1,8 @@
 ﻿using System.Globalization;
 using VpnHood.AppLib.Abstractions;
-using VpnHood.AppLib.Abstractions.Device;
-using VpnHood.AppLib.Dtos;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Toolkit.Utils;
 

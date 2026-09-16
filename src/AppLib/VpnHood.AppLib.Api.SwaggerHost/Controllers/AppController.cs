@@ -1,0 +1,207 @@
+﻿using System.Net.Mime;
+using Microsoft.AspNetCore.Mvc;
+using VpnHood.AppLib.Abstractions.Ads;
+using VpnHood.AppLib.Api.App;
+using VpnHood.AppLib.Api.Exceptions;
+using VpnHood.AppLib.Api.SwaggerHost.Exceptions;
+using VpnHood.AppLib.Api;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.Countries;
+using VpnHood.AppLib.Contracts.Settings;
+using VpnHood.AppLib.Contracts.SplitTunneling;
+using VpnHood.Core.Client.Devices;
+using VpnHood.Core.Common.Messaging;
+using VpnHood.Core.Common.Tokens;
+
+namespace VpnHood.AppLib.Api.SwaggerHost.Controllers;
+
+[ApiController]
+[Route("api/app")]
+public class AppController : ControllerBase, IAppApi
+{
+    [HttpPatch("configure")]
+    public Task<AppData> Configure(ConfigParams configParams, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("config")]
+    public Task<AppData> GetConfig(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("split-by-ips-via-app")]
+    public Task<SplitIpsViaApp> GetSplitIpsViaApp(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPut("split-by-ips-via-app")]
+    public Task SetSplitIpsViaApp(SplitIpsViaApp value, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("split-by-ips-via-device")]
+    public Task<SplitIpsViaDevice> GetSplitIpsViaDevice(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPut("split-by-ips-via-device")]
+    public Task SetSplitIpsViaDevice(SplitIpsViaDevice value, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("split-by-domains")]
+    public Task<SplitDomains> GetSplitDomains(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPut("split-by-domains")]
+    public Task SetSplitDomains(SplitDomains value, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("state")]
+    public Task<AppState> GetState(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("connect")]
+    public Task Connect(Guid? clientProfileId = null, string? serverLocation = null, 
+        ConnectPlanId planId = ConnectPlanId.Normal, CancellationToken cancellationToken = default)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("diagnose")]
+    public Task Diagnose(Guid? clientProfileId = null, string? serverLocation = null, 
+        ConnectPlanId planId = ConnectPlanId.Normal, CancellationToken cancellationToken = default)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("disconnect")]
+    public Task Disconnect(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("clear-last-error")]
+    public Task ClearLastError(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("clear-reconnect-required")]
+    public Task ClearReconnectRequired(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("extend-by-rewarded-ad")]
+    public Task ExtendByRewardedAd(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPut("user-settings")]
+    public Task SetUserSettings(UserSettings userSettings, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("log.txt")]
+    [Produces(MediaTypeNames.Text.Plain)]
+    public Task<string> Log(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("promotion.jpg")]
+    [Produces(MediaTypeNames.Image.Jpeg)]
+    public Task<byte[]> PromotionImage(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("installed-apps")]
+    public Task<IReadOnlyList<DeviceAppInfo>> GetInstalledApps(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("version-check")]
+    public Task VersionCheck(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("version-check-postpone")]
+    public Task VersionCheckPostpone(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("process-types")]
+    public Task ProcessTypes(ExceptionType exceptionType, SessionErrorCode errorCode,
+        CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("user-review")]
+    public Task SetUserReview(AppUserReview userReview, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("countries")]
+    public Task<CountryInfo[]> GetCountries(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("supported-split-by-countries")]
+    public Task<CountryInfo[]> GetSupportedSplitCountries(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("internal-ad/dismiss")]
+    public Task InternalAdDismiss(ShowAdResult result, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("internal-ad/error")]
+    public Task InternalAdError(string errorMessage, CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpGet("remote-access")]
+    public Task<RemoteAccessState> GetRemoteAccess(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("remote-access/start")]
+    public Task<RemoteAccessState> StartRemoteAccess(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+    [HttpPost("remote-access/stop")]
+    public Task StopRemoteAccess(CancellationToken cancellationToken)
+    {
+        throw new SwaggerOnlyException();
+    }
+
+}

@@ -1,4 +1,4 @@
-<Solution>
+﻿<Solution>
   <Configurations>
     <Platform Name="Any CPU" />
     <Platform Name="ARM" />
@@ -72,13 +72,17 @@
   <Folder Name="/src/AppLib/">
     <Project Path="src/AppLib/VpnHood.AppLib.Abstractions/VpnHood.AppLib.Abstractions.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Api/VpnHood.AppLib.Api.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Contracts/VpnHood.AppLib.Contracts.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Assets/VpnHood.AppLib.Assets.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.AvaloniaUI/VpnHood.AppLib.AvaloniaUI.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.AvaloniaUI.Desktop/VpnHood.AppLib.AvaloniaUI.Desktop.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.ClassicAvaloniaUi/VpnHood.AppLib.ClassicAvaloniaUi.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Portal/VpnHood.AppLib.Portal.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.SpaWebView/VpnHood.AppLib.SpaWebView.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.Swagger/VpnHood.AppLib.Swagger.csproj" />
-    <Project Path="src/AppLib/VpnHood.AppLib.WebServer/VpnHood.AppLib.WebServer.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Api.SwaggerHost/VpnHood.AppLib.Api.SwaggerHost.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Api.InProcessHost/VpnHood.AppLib.Api.InProcessHost.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Api.WebHost/VpnHood.AppLib.Api.WebHost.csproj" />
   </Folder>
   <Folder Name="/src/AppLib/Android/">
     <Project Path="src/AppLib/VpnHood.AppLib.Android.Ads.AdMob/VpnHood.AppLib.Android.Ads.AdMob.csproj" />

@@ -2,7 +2,6 @@
 using VpnHood.AppLib.Abstractions;
 using VpnHood.AppLib.Abstractions.AdExceptions;
 using VpnHood.AppLib.Abstractions.Ads;
-using VpnHood.AppLib.Abstractions.Device;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.Devices.UiContexts;
 using VpnHood.Core.Toolkit.Extensions;

@@ -1,10 +1,14 @@
+﻿
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.ClientProfiles;
+
 namespace VpnHood.AppLib.ClientProfiles;
 
 public static class ClientProfileExtensions
 {
     public static ClientProfileInfo ToInfo(this ClientProfile clientProfile, AppFeatures appFeatures)
     {
-        return ClientProfileInfo.Create(clientProfile, appFeatures);
+        return ClientProfileInfoBuilder.Build(clientProfile, appFeatures);
     }
 
     public static ClientProfileBaseInfo ToBaseInfo(this ClientProfileInfo clientProfileInfo)

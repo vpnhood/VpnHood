@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.AppLib.Api</RootNamespace>
+		<IsPackable>false</IsPackable>
+		<Description>The VpnHood app's API: the six interfaces a UI reads the app through, the shapes they carry, and the client that dials them over HTTP. A UI needs this and nothing else of the app</Description>
+	</PropertyGroup>
+
+	<!-- Deliberately without VpnHood.AppLib.App: what is here is the contract, not the app. A UI
+	     built on this package compiles without the engine, and runs against an app in its own
+	     process or one on another device (HttpVpnHoodApi) - which is what the WASM head does. The app
+	     references this package to implement the contract, never the other way round. -->
+
+	<ItemGroup>
+		<ProjectReference Include="..\VpnHood.AppLib.Contracts\VpnHood.AppLib.Contracts.csproj" />
+		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Abstractions\VpnHood.Core.Client.Abstractions.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.VpnServices.Abstractions\VpnHood.Core.Client.VpnServices.Abstractions.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Proxies.Management.Abstractions\VpnHood.Core.Proxies.Management.Abstractions.csproj" />
+	</ItemGroup>
+</Project>

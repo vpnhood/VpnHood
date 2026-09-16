@@ -3,10 +3,11 @@ using Avalonia.Android;
 using Microsoft.Extensions.Logging;
 using VpnHood.App.Client;
 using VpnHood.App.Connect.Droid.Google.FirebaseUtils;
+using VpnHood.AppLib.ClassicAvaloniaUi;
 using VpnHood.AppLib;
 using VpnHood.AppLib.Abstractions.Accounts;
 using VpnHood.AppLib.Abstractions.Billing;
-using VpnHood.AppLib.AvaloniaUI;
+using VpnHood.AppLib.Contracts.Premium;
 using VpnHood.AppLib.Droid.AvaloniaUI;
 using VpnHood.AppLib.Droid.Ads.VhAdMob;
 using VpnHood.AppLib.Droid.Common;
@@ -33,7 +34,7 @@ namespace VpnHood.App.Connect.Droid.Google;
 // from the process's Application (its OnCreate, after the app below). AvaloniaActivity shows it,
 // when MainActivity hands the launch over (DebugCommands.AvaloniaUi).
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : AvaloniaAndroidApplication<VpnHoodAvaloniaApp>(javaReference, transfer)
+    : AvaloniaAndroidApplication<ClassicAvaloniaApp>(javaReference, transfer)
 {
     private static AppOptions CreateAppOptions()
     {
@@ -43,9 +44,10 @@ public class App(IntPtr javaReference, JniHandleOwnership transfer)
 
         // load app settings and resources
         var resources = ConnectAppResources.Resources;
-        resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(appId: appConfigs.AppId, "VpnHoodConnect", AppConfigs.IsDebugMode) {
+            AppName = AppConfigs.AppName,
+            IpLocationZipData = ConnectAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             StorageFolderPath = storageFolderPath,
             AccessKeys = appConfigs.DefaultAccessKey != null ? [appConfigs.DefaultAccessKey] : [],

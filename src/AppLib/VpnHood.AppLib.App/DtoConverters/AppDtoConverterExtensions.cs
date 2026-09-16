@@ -1,10 +1,17 @@
-﻿using VpnHood.AppLib.Dtos;
+﻿using VpnHood.AppLib.Abstractions.Device;
+using VpnHood.AppLib.Abstractions;
+using VpnHood.AppLib.Contracts.App;
+using VpnHood.AppLib.Contracts.ClientProfiles;
+using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.AppLib.Contracts.Sessions;
 using VpnHood.Core.Client.Abstractions;
 using VpnHood.Core.Client.VpnServices.Abstractions;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Common.Tokens;
 using VpnHood.Core.Proxies.Management.Abstractions;
 using VpnHood.Core.Toolkit.ApiClients;
+
+using VpnHood.AppLib.Services.Countries;
 
 namespace VpnHood.AppLib.DtoConverters;
 
@@ -87,8 +94,62 @@ public static class AppDtoConverterExtensions
         };
     }
 
-    public static AppServerLocationInfo ToAppDto(this ServerLocationInfo value)
+    // The shape a UI reads a location as, with the country name already in the language the app
+    // speaks - the contract carries names, it never looks one up.
+    public static CurrentServerLocationInfo ToAppDto(this ServerLocationInfo value, bool hasMultipleRegions = false)
     {
-        return AppServerLocationInfo.FromInfo(value);
+        return new CurrentServerLocationInfo {
+            CountryCode = value.CountryCode,
+            RegionName = value.RegionName,
+            ServerLocation = value.ServerLocation,
+            CountryName = value.CountryName,
+            IsAuto = value.IsAuto,
+            HasRegion = value.HasRegion,
+            HasMultipleRegions = hasMultipleRegions,
+            TranslatedCountryName = TranslatedNameOf(value.CountryCode, value.CountryName)
+        };
+    }
+
+    // The same location, already in the contract's shape: the profile's list is built once and the
+    // state points at one of its entries, so nothing is re-derived and no engine type is needed.
+    public static CurrentServerLocationInfo ToAppDto(this ServerLocationItem value, bool hasMultipleRegions = false)
+    {
+        return new CurrentServerLocationInfo {
+            CountryCode = value.CountryCode,
+            RegionName = value.RegionName,
+            ServerLocation = value.ServerLocation,
+            CountryName = value.CountryName,
+            IsAuto = value.IsAuto,
+            HasRegion = value.HasRegion,
+            HasMultipleRegions = hasMultipleRegions,
+            TranslatedCountryName = TranslatedNameOf(value.CountryCode, value.CountryName)
+        };
+    }
+
+    private static string TranslatedNameOf(string countryCode, string countryName)
+    {
+        return countryCode == ServerLocationInfo.AutoCountryCode
+            ? countryName
+            : AppCountryInfo.TryGet(countryCode)?.TranslatedName ?? countryName;
+    }
+
+    // What the device can open or ask for, read off the providers the head supplied. The shape is
+    // the contract's; asking a provider is the app's.
+    public static DeviceIntentFeatures ToIntentFeatures(this IDeviceUiProvider? uiProvider,
+        IAppUserReviewProvider? userReviewProvider)
+    {
+        return new DeviceIntentFeatures {
+            IsUserReviewSupported = userReviewProvider != null,
+            IsWebBrowserSupported = uiProvider?.IsWebBrowserSupported ?? false,
+            IsQuickLaunchSupported = uiProvider?.IsQuickLaunchSupported ?? false,
+            IsRequestQuickLaunchSupported = uiProvider?.IsRequestQuickLaunchSupported ?? false,
+            IsRequestNotificationSupported = uiProvider?.IsRequestNotificationSupported ?? false,
+            IsPrivateDnsSettingsSupported = uiProvider?.IsPrivateDnsSettingsSupported ?? false,
+            IsKillSwitchSettingsSupported = uiProvider?.IsKillSwitchSettingsSupported ?? false,
+            IsAlwaysOnSettingsSupported = uiProvider?.IsAlwaysOnSettingsSupported ?? false,
+            IsSettingsSupported = uiProvider?.IsSettingsSupported ?? false,
+            IsAppSettingsSupported = uiProvider?.IsAppSettingsSupported ?? false,
+            IsAppNotificationSettingsSupported = uiProvider?.IsAppNotificationSettingsSupported ?? false
+        };
     }
 }

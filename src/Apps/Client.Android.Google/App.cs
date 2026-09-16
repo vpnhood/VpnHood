@@ -1,7 +1,7 @@
 ﻿using Android.Runtime;
 using Avalonia.Android;
 using VpnHood.AppLib;
-using VpnHood.AppLib.AvaloniaUI;
+using VpnHood.AppLib.ClassicAvaloniaUi;
 using VpnHood.AppLib.Droid.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common;
 using VpnHood.AppLib.Droid.Common.Constants;
@@ -21,15 +21,16 @@ namespace VpnHood.App.Client.Droid.Google;
 // from the process's Application (its OnCreate, after the app below). AvaloniaActivity shows it,
 // when MainActivity hands the launch over (DebugCommands.AvaloniaUi).
 public class App(IntPtr javaReference, JniHandleOwnership transfer)
-    : AvaloniaAndroidApplication<VpnHoodAvaloniaApp>(javaReference, transfer)
+    : AvaloniaAndroidApplication<ClassicAvaloniaApp>(javaReference, transfer)
 {
     private static AppOptions CreateAppOptions()
     {
         var appConfigs = AppConfigs.Load();
         var resources = ClientAppResources.Resources;
-        resources.Strings.AppName = AppConfigs.AppName;
 
         return new AppOptions(appId: appConfigs.AppId, "VpnHood", AppConfigs.IsDebugMode) {
+            AppName = AppConfigs.AppName,
+            IpLocationZipData = ClientAppResources.IpLocationZipData,
             CustomData = appConfigs.CustomData,
             Resources = resources,
             PrivacyPolicyUrl = appConfigs.PrivacyPolicyUrl,

@@ -1,8 +1,9 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Browser;
+using VpnHood.AppLib.Api.Clients;
 using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
-using VpnHood.AppLib.WebServer.Client;
+using VpnHood.AppLib.ClassicAvaloniaUi;
 
 namespace VpnHood.App.AvaloniaUI.Browser;
 
@@ -20,15 +21,16 @@ internal static class Program
         var pageUrl = new Uri(args.Length > 0 ? args[0] : "http://localhost:9090/");
         var http = new HttpClient { BaseAddress = new Uri(pageUrl.GetLeftPart(UriPartial.Authority) + "/") };
 
-        await AppData.Init(HttpAppApi.Create(http), CancellationToken.None);
+        await AppData.Init(HttpVpnHoodApi.Create(http), CancellationToken.None);
         var assetsFolderPath = await BrowserAssets.Download(http, CancellationToken.None);
         AppContent.FolderResolver = () => assetsFolderPath;
-        await AppData.Configure(CancellationToken.None);
+        ClassicAvaloniaApp.PrepareContent();
+        await AppData.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None);
         await BuildAvaloniaApp().StartBrowserAppAsync("out");
     }
 
     public static AppBuilder BuildAvaloniaApp()
     {
-        return AppBuilder.Configure<VpnHoodAvaloniaApp>();
+        return AppBuilder.Configure<ClassicAvaloniaApp>();
     }
 }

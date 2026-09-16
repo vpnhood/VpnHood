@@ -1,3 +1,4 @@
+﻿using VpnHood.AppLib.Contracts.Settings;
 using VpnHood.Core.Common.Messaging;
 
 namespace VpnHood.AppLib.Settings;

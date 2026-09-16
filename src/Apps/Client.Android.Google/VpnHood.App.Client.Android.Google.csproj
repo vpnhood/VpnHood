@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>	<!-- application, not a NuGet package -->
 		<Description>VpnHood Android Client App</Description>
@@ -57,6 +57,8 @@
 		<!-- The Avalonia UI beside the web view: AvaloniaActivity, which MainActivity hands the launch
 		     to when the app asks for that UI (DebugCommands.AvaloniaUi). -->
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.AvaloniaUI\VpnHood.AppLib.Android.AvaloniaUI.csproj" />
+		<!-- The UI itself: the pages, the controls, the themes. -->
+		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.ClassicAvaloniaUi\VpnHood.AppLib.ClassicAvaloniaUi.csproj" />
 		<ProjectReference Include="..\..\AppLib\VpnHood.AppLib.Android.GooglePlay.Core\VpnHood.AppLib.Android.GooglePlay.Core.csproj" />
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>

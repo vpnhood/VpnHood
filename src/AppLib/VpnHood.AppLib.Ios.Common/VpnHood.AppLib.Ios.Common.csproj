@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>VpnHood shared code for iOS client apps (WebView host + app bootstrap)</Description>
 		<TargetFramework>net11.0-ios</TargetFramework>
@@ -8,7 +8,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
-		<ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+		<ProjectReference Include="..\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.SpaWebView\VpnHood.AppLib.SpaWebView.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Client.Devices.Ios\VpnHood.Core.Client.Devices.Ios.csproj" />
 	</ItemGroup>

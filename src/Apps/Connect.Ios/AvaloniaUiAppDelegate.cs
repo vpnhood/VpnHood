@@ -1,10 +1,12 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.iOS;
 using Foundation;
 using VpnHood.AppLib;
 using VpnHood.AppLib.AvaloniaUI;
+using VpnHood.AppLib.ClassicAvaloniaUi;
 using VpnHood.AppLib.Ios.Common;
-using VpnHood.AppLib.WebServer;
+using VpnHood.AppLib.Api.InProcessHost;
+using VpnHood.AppLib.Api.WebHost;
 using VpnHood.Core.Client.Devices.UiContexts;
 
 namespace VpnHood.App.Connect.Ios;
@@ -17,7 +19,7 @@ namespace VpnHood.App.Connect.Ios;
 // given the app's API (its own controllers in process, the same six interfaces a paired browser
 // dials over HTTP). Its files are in the app bundle, where the build placed them.
 [Register("AvaloniaUiAppDelegate")]
-public class AvaloniaUiAppDelegate : AvaloniaAppDelegate<VpnHoodAvaloniaApp>
+public class AvaloniaUiAppDelegate : AvaloniaAppDelegate<ClassicAvaloniaApp>
 {
     protected override AppBuilder CreateAppBuilder()
     {
@@ -25,8 +27,9 @@ public class AvaloniaUiAppDelegate : AvaloniaAppDelegate<VpnHoodAvaloniaApp>
         if (!VpnHoodAppWebServer.IsInit)
             VpnHoodAppWebServer.Init(VpnHoodApp.Instance);
         // in process both complete at once
-        AppData.Init(InProcessAppApi.Create(VpnHoodApp.Instance), CancellationToken.None).GetAwaiter().GetResult();
-        AppData.Configure(CancellationToken.None).GetAwaiter().GetResult();
+        AppData.Init(InProcessVpnHoodApi.Create(VpnHoodApp.Instance, () => VpnHoodAppWebServer.Instance), CancellationToken.None).GetAwaiter().GetResult();
+        ClassicAvaloniaApp.PrepareContent();
+        AppData.Configure(ClassicAvaloniaApp.AvailableCultures, CancellationToken.None).GetAwaiter().GetResult();
         AppUiContext.Context = new IosUiContext();
         return base.CreateAppBuilder();
     }

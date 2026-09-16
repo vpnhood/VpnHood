@@ -1,3 +1,4 @@
+﻿using VpnHood.AppLib.ClassicAvaloniaUi;
 using VpnHood.AppLib.Droid.AvaloniaUI;
 using VpnHood.AppLib.Droid.Common.Activities;
 using VpnHood.AppLib.Droid.Common.Constants;
@@ -15,7 +16,7 @@ namespace VpnHood.App.Client.Droid.Google;
     LaunchMode = AndroidMainActivityConstants.LaunchMode,
     ScreenOrientation = AndroidMainActivityConstants.ScreenOrientation,
     ConfigurationChanges = AndroidMainActivityConstants.ConfigChanges)]
-public class AvaloniaActivity : AndroidAppAvaloniaMainActivity
+public class AvaloniaActivity : AndroidAppAvaloniaMainActivity<ClassicAvaloniaApp>
 {
     protected override AndroidMainActivityOptions CreateActivityOptions()
     {

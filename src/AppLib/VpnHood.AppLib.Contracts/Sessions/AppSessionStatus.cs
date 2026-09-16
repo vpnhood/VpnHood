@@ -1,0 +1,27 @@
+﻿using VpnHood.AppLib.Contracts.Proxies;
+using VpnHood.Core.Common.Messaging;
+
+namespace VpnHood.AppLib.Contracts.Sessions;
+
+public class AppSessionStatus
+{
+    public required AppConnectorStat ConnectorStat { get; init; }
+    public required Traffic Speed { get; init; }
+    public required Traffic SessionTraffic { get; init; }
+    public required Traffic SessionSplitTraffic { get; init; }
+    public required Traffic CycleTraffic { get; init; }
+    public required Traffic TotalTraffic { get; init; }
+    public required int StreamTunnelledCount { get; init; }
+    public required int StreamPassthruCount { get; init; }
+    public required int PacketChannelCount { get; init; }
+    public required int UnstableCount { get; set; }
+    public required int WaitingCount { get; set; }
+    public required bool CanExtendByRewardedAd { get; init; }
+    public required long SessionMaxTraffic { get; init; }
+    public required DateTime? SessionExpirationTime { get; init; }
+    public required int? ActiveClientCount { get; init; }
+    public required bool IsTcpProxy { get; init; }
+    public required bool CanChangeTcpProxy { get; init; }
+    public required bool IsDropQuic { get; init; }
+    public required ChannelProtocol ChannelProtocol { get; init; }
+}

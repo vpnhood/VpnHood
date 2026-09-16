@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.Settings;
+﻿namespace VpnHood.AppLib.Settings;
 
 // File-backed list settings core: one text file per list inside the folder. A missing file is
 // created empty on FIRST access (read or signature) — so a stat-only change signature taken before a

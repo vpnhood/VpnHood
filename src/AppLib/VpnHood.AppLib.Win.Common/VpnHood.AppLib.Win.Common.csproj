@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>Shared library for VpnHood Windows Clients</Description>
 		<TargetFramework>net10.0</TargetFramework>
@@ -9,7 +9,7 @@
 	  <ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
 	  <ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 	  <!-- The web server both UIs load from, started with the app (VpnHoodAppWin.Init). -->
-	  <ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />
+	  <ProjectReference Include="..\VpnHood.AppLib.Api.WebHost\VpnHood.AppLib.Api.WebHost.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create an UI on it</Description>
 		<TargetFramework>net10.0</TargetFramework>
@@ -21,6 +21,8 @@
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Filtering.Sqlite\VpnHood.Core.Filtering.Sqlite.csproj" />
 		<ProjectReference Include="..\..\Core\VpnHood.Core.Proxies.Management.Sqlite\VpnHood.Core.Proxies.Management.Sqlite.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.Abstractions\VpnHood.AppLib.Abstractions.csproj" />
+		<!-- The shapes and the six interfaces this app fills: the contract, which knows nothing of it. -->
+		<ProjectReference Include="..\VpnHood.AppLib.Contracts\VpnHood.AppLib.Contracts.csproj" />
 	</ItemGroup>
 
 </Project>

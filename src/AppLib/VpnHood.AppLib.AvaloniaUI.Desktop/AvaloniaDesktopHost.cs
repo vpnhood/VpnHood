@@ -17,15 +17,15 @@ public static class AvaloniaDesktopHost
     private static ClassicDesktopStyleApplicationLifetime? _lifetime;
     private static Window? _window;
 
-    // VpnHoodApp and its web server must be up: the UI draws from the bundle's assets folder, which
-    // the web server extracts. A run that starts in the background (the head's /nowindow) keeps
-    // the window back until ShowMainWindow.
+    // VpnHoodApp and its web server must be up: the web server is what a phone pairs with. The
+    // UI's files are beside the executable, where the build placed them. A run that starts in the
+    // background (the head's /nowindow) keeps the window back until ShowMainWindow.
     public static void Run(string[] args, bool showWindow)
     {
         // The UI reaches the app through its API - the same six interfaces a paired browser dials
         // over HTTP, here the app's own controllers in process; in process both complete at once.
         AppData.Init(InProcessAppApi.Create(VpnHoodApp.Instance), CancellationToken.None).GetAwaiter().GetResult();
-        AppData.Configure(VpnHoodAppWebServer.Instance.AssetsFolderPath, CancellationToken.None).GetAwaiter().GetResult();
+        AppData.Configure(CancellationToken.None).GetAwaiter().GetResult();
 
         var lifetime = new ClassicDesktopStyleApplicationLifetime {
             Args = args,

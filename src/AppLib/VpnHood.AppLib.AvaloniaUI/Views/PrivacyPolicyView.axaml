@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:res="using:VpnHood.AppLib.Assets"
              x:Class="VpnHood.AppLib.AvaloniaUI.Views.PrivacyPolicyView">
   <!-- The web UI's privacy-policy page, the consent a first run asks for: the product's own
        summary, the links to the full documents, and Accept - which stays on screen at every text

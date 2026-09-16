@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using VpnHood.AppLib.AvaloniaUI.Resources;
+using VpnHood.AppLib.Assets;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 

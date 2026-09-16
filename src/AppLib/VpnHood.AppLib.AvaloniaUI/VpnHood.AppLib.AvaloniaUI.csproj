@@ -7,9 +7,9 @@
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>
 
-	<!-- This UI embeds no assets: its images, country flags, fonts, locale files and content
-	     documents are the web UI's own, read at run time from the assets folder of the SPA bundle
-	     (AppAssets, named by the head). A build that ships both UIs ships one copy of each. -->
+	<!-- This UI embeds no assets: its images, country flags, fonts and content documents are the
+	     files of VpnHood.AppLib.Assets, read at run time from the folder that package places
+	     (AppContent); its words are that package's resources. -->
 
 	<ItemGroup>
 		<PackageReference Include="Avalonia" Version="12.1.2" />
@@ -20,6 +20,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- The content this UI draws from - the files, the words, the messages - and the folder it finds them in. -->
+		<ProjectReference Include="..\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
 		<ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
 		<!-- The pairing page starts and stops the LAN listener the phone dials into. -->
 		<ProjectReference Include="..\VpnHood.AppLib.WebServer\VpnHood.AppLib.WebServer.csproj" />

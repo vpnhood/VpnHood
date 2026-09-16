@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.AvaloniaUI.Helpers;
+namespace VpnHood.AppLib.Assets;
 
 // The buttons an error dialog offers beside Close, decided by what went wrong (the web UI's
 // ShowErrorActions): a diagnosis, a retry on the automatic location, a premium trial, and for a

@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.AvaloniaUI.Resources;
+namespace VpnHood.AppLib.Assets;
 
 // Material Design Icons, the web UI's icon set, drawn by code point from the icon font in the
 // assets folder: the same glyph the web UI shows for the same name, and nothing to convert when a
@@ -7,11 +7,12 @@ namespace VpnHood.AppLib.AvaloniaUI.Resources;
 // glyph without a word of warning.
 //
 // That font is a subset: the SPA build cuts it to the icons its own pages name plus the ones
-// listed in its build/native-ui-icons.txt, which _sync-icons.ps1 writes from THIS file. Add an
-// icon here, run that script, and rebuild the SPA - or the glyph is a blank box.
+// listed in its build/native-ui-icons.txt, which _sync-native-assets.ps1 (in the Avalonia UI
+// project) writes from THIS file. Add an icon here, run that script, and rebuild the SPA - or the
+// glyph is a blank box.
 public static class Mdi
 {
-    public const string FontFamily = AppAssets.IconFontFamily;
+    public const string FontFamily = AppFonts.IconFamily;
 
     public const string Account = "\U000F0004";
     public const string AccountCircle = "\U000F0009";

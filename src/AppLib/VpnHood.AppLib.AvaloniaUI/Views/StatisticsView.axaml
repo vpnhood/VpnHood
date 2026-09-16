@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:res="using:VpnHood.AppLib.Assets"
              xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls"
              x:Class="VpnHood.AppLib.AvaloniaUI.Views.StatisticsView">
   <!-- The web UI's statistics page: a card per subject - the premium access, the server, the

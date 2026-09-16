@@ -1,4 +1,4 @@
-using VpnHood.AppLib.AvaloniaUI.Resources;
+using VpnHood.AppLib.Assets;
 using VpnHood.Core.Proxies.Management.Abstractions;
 
 namespace VpnHood.AppLib.AvaloniaUI.Helpers;

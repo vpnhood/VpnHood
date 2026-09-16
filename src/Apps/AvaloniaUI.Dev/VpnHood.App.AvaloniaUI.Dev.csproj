@@ -18,4 +18,7 @@
 		<!-- Shared client resources: the SPA the pairing hands to the phone, the IP-location db. -->
 		<ProjectReference Include="..\Client\VpnHood.App.Client.csproj" />
 	</ItemGroup>
+	<!-- The assets folder - the images, flags, fonts and documents every UI draws from - placed the way
+	     this platform reads files: the same targets a package reference of VpnHood.AppLib.Assets imports. -->
+	<Import Project="..\..\AppLib\VpnHood.AppLib.Assets\build\VpnHood.AppLib.Assets.targets" />
 </Project>

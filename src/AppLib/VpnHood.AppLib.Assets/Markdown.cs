@@ -1,12 +1,12 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace VpnHood.AppLib.AvaloniaUI.Helpers;
+namespace VpnHood.AppLib.Assets;
 
 // The web UI's content documents (src/content/<lang>/*.md) are markdown its build renders to HTML.
 // This renders the same subset - the front matter's title, paragraphs, headings, bullet and
 // numbered lists, bold, links - to the markup RichText draws, so a document reads the same here.
-internal static partial class Markdown
+public static partial class Markdown
 {
     [GeneratedRegex(@"\*\*(.+?)\*\*", RegexOptions.Compiled)]
     private static partial Regex BoldRegex();

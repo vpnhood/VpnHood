@@ -1,5 +1,6 @@
 using Avalonia.Media;
 using Avalonia.Media.Fonts;
+using VpnHood.AppLib.Assets;
 
 namespace VpnHood.AppLib.AvaloniaUI.Resources;
 
@@ -15,7 +16,7 @@ namespace VpnHood.AppLib.AvaloniaUI.Resources;
 // on a Persian face when Poppins has no glyph for it.
 internal sealed class AppFontCollection : FontCollectionBase
 {
-    public const string Scheme = "fonts:VpnHood";
+    public const string Scheme = AppFonts.CollectionScheme;
 
     private AppFontCollection(string folderPath)
     {

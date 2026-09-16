@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.ViewModels;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
@@ -39,7 +39,12 @@ public partial class AddServerView : UserControl, IPage
 
     private async void OnAddClick(object? sender, RoutedEventArgs e)
     {
-        await Add();
+        try {
+            await Add();
+        }
+        catch (Exception ex) {
+            await this.ReportError(ex);
+        }
     }
 
     private void OnCancelClick(object? sender, RoutedEventArgs e)

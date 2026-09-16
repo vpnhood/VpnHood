@@ -65,10 +65,10 @@ internal static class Program
 
             // The UI reaches the app through its API - the same six interfaces a paired browser
             // dials over HTTP, here the app's own controllers in process - and draws from the
-            // bundle's assets folder the web server extracts, the same files the web UI loads from
-            // that server, so the package carries one copy of each. In process both complete at once.
+            // assets folder beside this executable, which the build placed there (the same files
+            // the web server serves at /assets/). In process both complete at once.
             AppData.Init(InProcessAppApi.Create(app), CancellationToken.None).GetAwaiter().GetResult();
-            AppData.Configure(webServer.AssetsFolderPath, CancellationToken.None).GetAwaiter().GetResult();
+            AppData.Configure(CancellationToken.None).GetAwaiter().GetResult();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         finally {

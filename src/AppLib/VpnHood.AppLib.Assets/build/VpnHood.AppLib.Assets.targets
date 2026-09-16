@@ -1,0 +1,36 @@
+<Project>
+	<!-- The assets folder - images, flags, fonts, content documents - placed the way each platform reads
+	     files, so the app that references this package writes nothing to get them and AppContent finds
+	     them where its platform put them. Imported by NuGet for a package reference (build/<PackageId>
+	     .targets), and by every head of this repo for the project reference, so both paths run one file.
+
+	     The files are placed by the APP's build, never a library's: TargetFramework here is the app's,
+	     and it is the one property already set at this point of the build (TargetPlatformIdentifier is
+	     computed later, in the SDK's own targets). A browser build gets nothing: it fetches these from
+	     the web server that served it. -->
+	<PropertyGroup>
+		<VhAssetsDir>$(MSBuildThisFileDirectory)..\assets\</VhAssetsDir>
+		<VhIsAndroidApp>$(TargetFramework.Contains('-android'))</VhIsAndroidApp>
+		<VhIsAppleApp Condition="$(TargetFramework.Contains('-ios')) Or $(TargetFramework.Contains('-tvos')) Or $(TargetFramework.Contains('-maccatalyst'))">true</VhIsAppleApp>
+		<VhIsBrowserApp>$(TargetFramework.Contains('-browser'))</VhIsBrowserApp>
+	</PropertyGroup>
+
+	<!-- Android: one copy in base/assets of the bundle, which is not split by CPU architecture.
+	     AndroidAppContent copies them out of the package to storage on the first run of a version.
+	     The folder's name twice on purpose: .NET for Android takes a leading assets\ in the link as
+	     the package's asset root and drops it, and the folder must keep its name under that root
+	     (assets/version.txt), where AndroidAppContent looks for it. -->
+	<ItemGroup Condition="'$(VhIsAndroidApp)' == 'true'">
+		<AndroidAsset Include="$(VhAssetsDir)**\*" Link="assets\assets\%(RecursiveDir)%(Filename)%(Extension)" Visible="false" />
+	</ItemGroup>
+
+	<!-- iOS and tvOS: a folder of the app bundle, read in place. -->
+	<ItemGroup Condition="'$(VhIsAppleApp)' == 'true'">
+		<BundleResource Include="$(VhAssetsDir)**\*" Link="assets\%(RecursiveDir)%(Filename)%(Extension)" Visible="false" />
+	</ItemGroup>
+
+	<!-- Windows and Linux: a folder beside the executable, read in place. -->
+	<ItemGroup Condition="'$(TargetFramework)' != '' And '$(VhIsAndroidApp)' != 'true' And '$(VhIsAppleApp)' != 'true' And '$(VhIsBrowserApp)' != 'true'">
+		<None Include="$(VhAssetsDir)**\*" Link="assets\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+	</ItemGroup>
+</Project>

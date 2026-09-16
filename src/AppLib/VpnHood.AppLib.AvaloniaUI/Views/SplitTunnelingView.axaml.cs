@@ -1,8 +1,8 @@
 using Avalonia;
 using Avalonia.Controls;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Controls;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.Core.Client.Abstractions;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;

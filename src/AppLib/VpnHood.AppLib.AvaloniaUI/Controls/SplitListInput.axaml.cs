@@ -1,5 +1,5 @@
 using Avalonia.Controls;
-using VpnHood.AppLib.AvaloniaUI.Resources;
+using VpnHood.AppLib.Assets;
 
 namespace VpnHood.AppLib.AvaloniaUI.Controls;
 

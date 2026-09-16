@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:res="using:VpnHood.AppLib.Assets"
              xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls"
              x:Class="VpnHood.AppLib.AvaloniaUI.Views.AddServerView">
   <!-- The web UI's AddServerDialog as a page: the key field and what it is for. Shown only where a

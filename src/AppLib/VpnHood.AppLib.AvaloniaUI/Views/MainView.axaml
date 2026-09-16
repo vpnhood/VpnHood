@@ -1,12 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:res="using:VpnHood.AppLib.Assets"
              x:Class="VpnHood.AppLib.AvaloniaUI.Views.MainView"
              xmlns:animation="using:VpnHood.AppLib.AvaloniaUI.Animation"
+             xmlns:helpers="using:VpnHood.AppLib.AvaloniaUI.Helpers"
              XYFocus.NavigationModes="Enabled"
              FontFamily="fonts:VpnHood#Poppins"
              FontWeight="Light"
-             FlowDirection="{Binding FlowDirection, Source={x:Static res:Strings.Current}}"
+             FlowDirection="{Binding IsRightToLeft, Source={x:Static res:Strings.Current}, Converter={x:Static helpers:FlowDirectionConverter.Instance}}"
              Background="{StaticResource BackgroundBrush}">
   <!-- One host, one page at a time; the pages push and pop through the code-behind, and Back
        pops. The host is the "Page" container the layouts query (AppTheme, the views): its own
@@ -14,7 +15,7 @@
        the web UI's route transition (OutInTransition), reversed on the way back. Over the page,
        in the order the web UI's App.vue stacks them: the reconnect bar, the drawer, the dialogs
        and the snackbar. The font is the web UI's: Poppins Light for text, Bold where a style says.
-       The language's direction is set here, on the root (Strings.FlowDirection), and everything
+       The language's direction is set here, on the root (Strings.IsRightToLeft), and everything
        beneath mirrors with it: the drawer's "Left" is the start edge, the right in Persian. -->
   <Panel>
     <TransitioningContentControl x:Name="Host" Container.Name="Page" Container.Sizing="Width">

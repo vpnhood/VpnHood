@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<RootNamespace>VpnHood.AppLib.Assets</RootNamespace>
+		<Description>The VpnHood app's content, for any UI built on it: the images, flags, fonts and documents as files, the words of every language as resources, and the code that turns the app's state into them</Description>
+	</PropertyGroup>
+
+	<!-- The words: one JSON file per language, embedded, so text works with no folder named and no
+	     file read - a CLI, a service, a page in a browser all get them from this assembly. en.json is
+	     the one a person edits; the rest are vhtranslator's. The name keeps the culture as written
+	     (pt-BR), which the default manifest naming would not. -->
+	<ItemGroup>
+		<EmbeddedResource Include="Locales\*.json" LogicalName="VpnHood.AppLib.Assets.Locales.%(Filename)%(Extension)" />
+	</ItemGroup>
+
+	<!-- The files: never inside an assembly - Android packs every assembly once per CPU architecture,
+	     and these are the same bytes on all of them. They ship in the package beside the DLL, and
+	     build/VpnHood.AppLib.Assets.targets places them the way each platform reads files; a head in
+	     this repo imports that same file, so what our heads test is what a consumer gets. -->
+	<ItemGroup>
+		<None Include="assets\**\*" Pack="true" PackagePath="assets\%(RecursiveDir)%(Filename)%(Extension)" />
+		<None Include="build\VpnHood.AppLib.Assets.targets" Pack="true" PackagePath="build\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Common\VpnHood.Core.Common.csproj" />
+		<ProjectReference Include="..\..\Core\VpnHood.Core.Toolkit\VpnHood.Core.Toolkit.csproj" />
+	</ItemGroup>
+</Project>

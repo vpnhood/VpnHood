@@ -1,4 +1,5 @@
 using Avalonia.Interactivity;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.Core.Common.Tokens;
 

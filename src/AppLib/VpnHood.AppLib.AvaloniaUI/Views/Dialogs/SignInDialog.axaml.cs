@@ -3,6 +3,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.Core.Toolkit.ApiClients;

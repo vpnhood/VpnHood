@@ -1,8 +1,8 @@
 using System.Net;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.Settings;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;

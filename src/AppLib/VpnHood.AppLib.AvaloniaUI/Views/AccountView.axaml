@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:ui="using:VpnHood.AppLib.AvaloniaUI.Resources"
              xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls"
              x:Class="VpnHood.AppLib.AvaloniaUI.Views.AccountView">
   <!-- The web UI's account page: who is signed in; what makes the session premium - the account's
@@ -11,7 +12,7 @@
       <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Account, Source={x:Static res:Strings.Current}}" />
       <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel MaxWidth="720" Spacing="16">
-          <Image x:Name="PremiumImage" Source="{res:AppImage you-are-premium.webp}" MaxWidth="371" Stretch="Uniform" IsVisible="False" />
+          <Image x:Name="PremiumImage" Source="{ui:AppImage you-are-premium.webp}" MaxWidth="371" Stretch="Uniform" IsVisible="False" />
 
           <!-- UserDetails -->
           <Border x:Name="UserCard" Classes="config-card" Padding="16,12" IsVisible="False">
@@ -93,7 +94,7 @@
             <StackPanel Spacing="8">
               <TextBlock Classes="card-title" Text="{Binding Upgrade, Source={x:Static res:Strings.Current}}" />
               <Grid ColumnDefinitions="Auto,*">
-                <Image Source="{res:AppImage free-to-premium-account-icon.webp}" Width="92" Margin="0,0,16,0" VerticalAlignment="Center" />
+                <Image Source="{ui:AppImage free-to-premium-account-icon.webp}" Width="92" Margin="0,0,16,0" VerticalAlignment="Center" />
                 <TextBlock x:Name="UpgradeText" Grid.Column="1" Classes="body-medium" TextWrapping="Wrap" VerticalAlignment="Center" />
               </Grid>
               <Button x:Name="GoPremiumButton" Classes="btn1 small" HorizontalAlignment="Right" Click="OnGoPremiumClick">

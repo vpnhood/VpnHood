@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.ViewModels;
 using VpnHood.AppLib.AvaloniaUI.Views.Dialogs;
 

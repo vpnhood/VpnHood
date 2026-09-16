@@ -3,8 +3,8 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using VpnHood.AppLib.Abstractions.Billing;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.Views.Dialogs;
 using VpnHood.Core.Toolkit.ApiClients;
 

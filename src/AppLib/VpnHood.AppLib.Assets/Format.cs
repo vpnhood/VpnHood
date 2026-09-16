@@ -1,10 +1,9 @@
 using System.Globalization;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 
-namespace VpnHood.AppLib.AvaloniaUI.Helpers;
+namespace VpnHood.AppLib.Assets;
 
 // The web UI's Util, for the words a page composes from numbers: dates, ages, latencies, traffic.
-internal static class Format
+public static class Format
 {
     private const double Megabyte = 1_000_000;
     private const double Gigabyte = 1000 * Megabyte;

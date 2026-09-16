@@ -364,3 +364,8 @@ MigrationBackup/
 
 # Swift Package Manager derived data (VpnHoodStoreKit facade builds)
 .build/
+
+# The app content package's files: images, flags, fonts and documents, built in the web UI
+# repo and brought in by src/AppLib/VpnHood.AppLib.Assets/_sync-assets.ps1. Binary, ~5 MB, and
+# already versioned where they are authored - this repo keeps code.
+src/AppLib/VpnHood.AppLib.Assets/assets/

@@ -11,6 +11,8 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\VpnHood.AppLib.App\VpnHood.AppLib.App.csproj" />
+	  <!-- The assets folder this server serves at /assets/ to every UI. -->
+	  <ProjectReference Include="..\VpnHood.AppLib.Assets\VpnHood.AppLib.Assets.csproj" />
 	</ItemGroup>
 
 </Project>

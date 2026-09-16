@@ -1,8 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Controls;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.Dtos;
 using VpnHood.Core.Common.Messaging;
 

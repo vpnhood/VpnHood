@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Media.Imaging;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 
 namespace VpnHood.AppLib.AvaloniaUI.ViewModels;

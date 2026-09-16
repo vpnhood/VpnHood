@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Browser;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI;
 using VpnHood.AppLib.WebServer.Client;
 
@@ -7,9 +8,10 @@ namespace VpnHood.App.AvaloniaUI.Browser;
 
 // The Avalonia UI in a browser: the page the app's web server hands a paired device, served by the
 // app itself. Nothing of the app runs here. The API is dialed over HTTP at the address the page
-// came from, the browser's own cookie carrying the pairing, and the assets the UI draws from -
-// images, flags, fonts, words - are fetched from the same server into the runtime's file system
-// before the UI starts, so the UI reads them as it does on a device: from a folder.
+// came from, the browser's own cookie carrying the pairing, and the files the UI draws from -
+// images, flags, fonts, documents - are fetched from the same server into the runtime's file
+// system before the UI starts, so the UI reads them as it does on a device: from a folder. The
+// words need no fetch: they are resources of the content assembly, which came with the page.
 internal static class Program
 {
     private static async Task Main(string[] args)
@@ -20,7 +22,8 @@ internal static class Program
 
         await AppData.Init(HttpAppApi.Create(http), CancellationToken.None);
         var assetsFolderPath = await BrowserAssets.Download(http, CancellationToken.None);
-        await AppData.Configure(assetsFolderPath, CancellationToken.None);
+        AppContent.FolderResolver = () => assetsFolderPath;
+        await AppData.Configure(CancellationToken.None);
         await BuildAvaloniaApp().StartBrowserAppAsync("out");
     }
 

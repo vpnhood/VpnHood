@@ -1,6 +1,6 @@
 <dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+                    xmlns:res="using:VpnHood.AppLib.Assets"
                     xmlns:dialogs="using:VpnHood.AppLib.AvaloniaUI.Views.Dialogs"
                     x:Class="VpnHood.AppLib.AvaloniaUI.Views.Dialogs.ProxyEditDialog">
   <!-- The web UI's AddOrEditProxy sheet: one proxy's fields - or a list to import - and, for one

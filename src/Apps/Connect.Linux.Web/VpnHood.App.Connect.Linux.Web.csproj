@@ -49,4 +49,7 @@
 		<PackageReference Include="VpnHood.AppLib.Assets.Ip2LocationLite" Version="7.0.745" />
 	</ItemGroup>
 
+	<!-- The assets folder - the images, flags, fonts and documents every UI draws from - placed the way
+	     this platform reads files: the same targets a package reference of VpnHood.AppLib.Assets imports. -->
+	<Import Project="..\..\AppLib\VpnHood.AppLib.Assets\build\VpnHood.AppLib.Assets.targets" />
 </Project>

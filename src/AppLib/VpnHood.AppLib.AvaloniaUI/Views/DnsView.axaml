@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:ui="using:VpnHood.AppLib.AvaloniaUI.Resources"
              xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls"
              x:Class="VpnHood.AppLib.AvaloniaUI.Views.DnsView">
   <!-- The web UI's dns/index: the device's private DNS as the first card, opening its page, and the
@@ -9,7 +10,7 @@
     <controls:PageHeader x:Name="Header" DockPanel.Dock="Top" Title="{Binding Dns, Source={x:Static res:Strings.Current}}" />
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel MaxWidth="720">
-        <Image Source="{res:AppImage private-dns.webp}" MaxHeight="130" Stretch="Uniform" />
+        <Image Source="{ui:AppImage private-dns.webp}" MaxHeight="130" Stretch="Uniform" />
         <TextBlock Classes="card-subtitle" Margin="12,8,12,20" Text="{Binding DnsDesc, Source={x:Static res:Strings.Current}}" />
 
         <!-- Private DNS: the device's setting, read here and set in its own page -->

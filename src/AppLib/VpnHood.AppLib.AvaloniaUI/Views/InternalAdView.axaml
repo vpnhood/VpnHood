@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:ui="using:VpnHood.AppLib.AvaloniaUI.Resources"
              x:Class="VpnHood.AppLib.AvaloniaUI.Views.InternalAdView">
   <!-- The web UI's internal-ad page: the app's own promotion, held for a moment before it can be
        closed, with Learn more leading to the purchase page. The web UI plays a short film here;
@@ -16,7 +17,7 @@
         <Button x:Name="LearnMoreButton" Grid.Column="2" Classes="pill btn1 block" IsEnabled="False" Click="OnLearnMoreClick"
                 Content="{Binding LearnMore, Source={x:Static res:Strings.Current}}" />
       </Grid>
-      <Image Source="{res:AppImage premium-servers.webp}" Stretch="Uniform" MaxWidth="600" />
+      <Image Source="{ui:AppImage premium-servers.webp}" Stretch="Uniform" MaxWidth="600" />
     </DockPanel>
   </Border>
 </UserControl>

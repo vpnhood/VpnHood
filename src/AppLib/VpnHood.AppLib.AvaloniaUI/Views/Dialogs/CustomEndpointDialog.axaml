@@ -1,6 +1,6 @@
 <dialogs:DialogBase xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+                    xmlns:res="using:VpnHood.AppLib.Assets"
                     xmlns:dialogs="using:VpnHood.AppLib.AvaloniaUI.Views.Dialogs"
                     x:Class="VpnHood.AppLib.AvaloniaUI.Views.Dialogs.CustomEndpointDialog">
   <!-- The web UI's custom endpoint dialog: an address of the person's own for the server, and the

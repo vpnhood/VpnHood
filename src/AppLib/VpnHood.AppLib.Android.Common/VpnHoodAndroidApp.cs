@@ -1,5 +1,6 @@
 ﻿using Android.Runtime;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Assets;
 using VpnHood.Core.Client.Devices.Droid;
 using VpnHood.Core.Client.Devices.Droid.Utils;
 using VpnHood.Core.Toolkit.Logging;
@@ -26,6 +27,9 @@ public class VpnHoodAndroidApp : Singleton<VpnHoodAndroidApp>
 
         var vpnHoodDevice = AndroidDevice.Create();
         VpnHoodApp.Init(vpnHoodDevice, options);
+
+        // the assets folder: a copy out of the package, made the first time it is asked for
+        AppContent.FolderResolver = () => AndroidAppContent.Extract(Application.Context, VpnHoodApp.Instance.StorageFolderPath);
         return new VpnHoodAndroidApp();
     }
 

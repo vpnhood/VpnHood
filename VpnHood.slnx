@@ -72,6 +72,7 @@
   <Folder Name="/src/AppLib/">
     <Project Path="src/AppLib/VpnHood.AppLib.Abstractions/VpnHood.AppLib.Abstractions.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.App/VpnHood.AppLib.App.csproj" />
+    <Project Path="src/AppLib/VpnHood.AppLib.Assets/VpnHood.AppLib.Assets.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.AvaloniaUI/VpnHood.AppLib.AvaloniaUI.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.AvaloniaUI.Desktop/VpnHood.AppLib.AvaloniaUI.Desktop.csproj" />
     <Project Path="src/AppLib/VpnHood.AppLib.Portal/VpnHood.AppLib.Portal.csproj" />

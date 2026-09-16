@@ -1,4 +1,4 @@
-namespace VpnHood.AppLib.AvaloniaUI.Helpers;
+namespace VpnHood.AppLib.Assets;
 
 // What an error dialog shows for one failure: the sentence, the buttons, or nothing at all.
 public sealed record ErrorMessage(string Text, ErrorActions? Actions = null, bool IsIgnored = false)

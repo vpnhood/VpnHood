@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using VpnHood.AppLib.AvaloniaUI.Resources;
+using VpnHood.AppLib.Assets;
 
 namespace VpnHood.AppLib.AvaloniaUI.ViewModels;
 

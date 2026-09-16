@@ -1,20 +1,20 @@
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.Core.Common.Messaging;
 using VpnHood.Core.Toolkit.ApiClients;
 
-namespace VpnHood.AppLib.AvaloniaUI.Helpers;
+namespace VpnHood.AppLib.Assets;
 
 // The web UI's ErrorHandler: the sentence for a failure, and the buttons that go with it. The app
 // reports a failure as an ApiError - a type name and a bag of data - whether it happened behind an
-// HTTP call there or a method call here, so the two read the same fields.
-internal static class ErrorMessages
+// HTTP call there or a method call here, so the two read the same fields. What the sentence depends
+// on besides the failure comes in as the ErrorContext, read by the UI that holds the app's state.
+public static class ErrorMessages
 {
-    public static ErrorMessage For(Exception exception)
+    public static ErrorMessage For(Exception exception, ErrorContext context)
     {
-        return For(exception.ToApiError());
+        return For(exception.ToApiError(), context);
     }
 
-    public static ErrorMessage For(ApiError error)
+    public static ErrorMessage For(ApiError error, ErrorContext context)
     {
         var strings = Strings.Current;
         var data = error.Data;
@@ -30,7 +30,7 @@ internal static class ErrorMessages
                 return new ErrorMessage(strings.UnreachableServerMessage, new ErrorActions { ShowDiagnose = true });
 
             case "UnreachableServerLocationException": {
-                if (AppData.State.HasDiagnoseRequested)
+                if (context.HasDiagnoseRequested)
                     return new ErrorMessage(strings.UnreachableServerLocationMessage);
 
                 var isAutoLocation = data.TryGetValue("IsAutoLocation", out var auto) && ToBoolean(auto);
@@ -38,7 +38,7 @@ internal static class ErrorMessages
                     return new ErrorMessage(strings.UnreachableServerLocationMessageWithChangeToAuto,
                         new ErrorActions { ShowChangeServerToAuto = true });
 
-                if (!AppData.IsPremiumUser && AppData.CanTryPremium)
+                if (context is { IsPremiumUser: false, CanTryPremium: true })
                     return new ErrorMessage(strings.UnreachableServerLocationMessageWithTryPremium,
                         new ErrorActions { ShowTryPremium = true });
 
@@ -78,7 +78,7 @@ internal static class ErrorMessages
             case "ConnectionTimeoutException":
                 return new ErrorMessage(strings.ConnectionTimeoutMsg, new ErrorActions { ShowDiagnose = true });
             case "SessionException":
-                return Session(data, error.Message);
+                return Session(data, error.Message, context);
             case "UnreachableProxyServerException":
                 return new ErrorMessage(strings.UnreachableProxiesMessage);
             case "BillingException":
@@ -88,7 +88,7 @@ internal static class ErrorMessages
         }
     }
 
-    private static ErrorMessage Session(IReadOnlyDictionary<string, string?> data, string message)
+    private static ErrorMessage Session(IReadOnlyDictionary<string, string?> data, string message, ErrorContext context)
     {
         var strings = Strings.Current;
         if (!data.TryGetValue("ErrorCode", out var codeText) || !Enum.TryParse<SessionErrorCode>(codeText, true, out var code))
@@ -99,11 +99,11 @@ internal static class ErrorMessages
                 return new ErrorMessage(strings.SessionSuppressedByOther);
 
             case SessionErrorCode.AccessExpired:
-                if (!AppData.IsPremiumSupported)
+                if (!context.IsPremiumSupported)
                     return new ErrorMessage(strings.ServerKeyExpired);
-                if (AppData.IsPremiumByAccount)
+                if (context.IsPremiumByAccount)
                     return new ErrorMessage(strings.SubscriptionNotProvisionedMsg);
-                return new ErrorMessage(strings.PremiumAccessExpiredMsg, CodeActions());
+                return new ErrorMessage(strings.PremiumAccessExpiredMsg, CodeActions(context));
 
             case SessionErrorCode.SessionExpired:
                 return new ErrorMessage(strings.PremiumConnectionExpiredMsg);
@@ -111,9 +111,9 @@ internal static class ErrorMessages
                 return new ErrorMessage(strings.DailyLimitExceededMsg);
 
             case SessionErrorCode.AccessCodeRejected:
-                if (AppData.IsPremiumByAccount)
+                if (context.IsPremiumByAccount)
                     return new ErrorMessage(strings.SubscriptionNotProvisionedMsg);
-                return new ErrorMessage(strings.InvalidAccessCode, CodeActions());
+                return new ErrorMessage(strings.InvalidAccessCode, CodeActions(context));
 
             case SessionErrorCode.PlanRejected:
                 return new ErrorMessage(strings.PlanRejectedMsg);
@@ -131,21 +131,22 @@ internal static class ErrorMessages
     }
 
     // a refused code is kept; what is offered is what exists (keyring plan §8)
-    private static ErrorActions CodeActions()
+    private static ErrorActions CodeActions(ErrorContext context)
     {
         return new ErrorActions {
-            ShowAccessCodeActions = AppData.State.ClientProfile?.HasAccessCode == true,
-            ShowChangeAccessCode = AppData.CanImportAccessCode
+            ShowAccessCodeActions = context.HasAccessCode,
+            ShowChangeAccessCode = context.CanImportAccessCode
         };
     }
 
     private static ErrorMessage PremiumOnly(IReadOnlyDictionary<string, string?> data)
     {
         var strings = Strings.Current;
+        // the feature by its name in AppFeature, as the app writes it into the error
         data.TryGetValue("Feature", out var feature);
         return feature switch {
-            nameof(AppFeature.QuickLaunch) => new ErrorMessage(strings.QuickLaunchNotSupportedMsg),
-            nameof(AppFeature.AlwaysOn) => new ErrorMessage(strings.AlwaysOnNotSupportedMsg),
+            "QuickLaunch" => new ErrorMessage(strings.QuickLaunchNotSupportedMsg),
+            "AlwaysOn" => new ErrorMessage(strings.AlwaysOnNotSupportedMsg),
             _ => new ErrorMessage(data.TryGetValue("Message", out var message) && message != null ? message : strings.UnknownError)
         };
     }

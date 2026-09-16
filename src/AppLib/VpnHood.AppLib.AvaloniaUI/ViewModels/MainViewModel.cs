@@ -5,6 +5,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.Views;
@@ -88,7 +89,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The person's choice when there is one, the device's language otherwise - the pair
     // VpnHoodApp itself resolves at every settings change.
-    private CultureInfo AppCulture => AppData.UserSettings.CultureCode is { } code
+    private static CultureInfo AppCulture => AppData.UserSettings.CultureCode is { } code
         ? CultureInfo.GetCultureInfo(code)
         : CultureInfo.GetCultureInfo(AppData.State.SystemUiCultureInfo.Code);
 
@@ -375,7 +376,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         if (state.LastError != null && state.LastError.Message != _shownErrorMessage) {
             _shownErrorMessage = state.LastError.Message;
-            _ = host.ShowErrorMessage(ErrorMessages.For(state.LastError));
+            _ = host.ShowErrorMessage(ErrorMessages.For(state.LastError, AppData.ErrorContext));
         }
         else if (state.LastError == null) {
             _shownErrorMessage = null;
@@ -464,7 +465,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The web UI's ExpansionPanel: every server the app holds, the one it is set to marked, each
     // opened when it is that one or has a single location - nothing to open.
-    private IReadOnlyList<ProfileItem> BuildProfiles(IReadOnlyList<ClientProfileInfo> infos)
+    private static IReadOnlyList<ProfileItem> BuildProfiles(IReadOnlyList<ClientProfileInfo> infos)
     {
         var currentId = AppData.CurrentClientProfileInfo?.ClientProfileId;
         // ReSharper disable once UseCollectionExpression
@@ -529,7 +530,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // The web UI's LocationList: Free and Premium cards when the profile has both and the person is
     // not premium; only the premium rows when the person is; one card of everything otherwise.
-    private IReadOnlyList<LocationGroup> BuildGroups(ClientProfileInfo? profile, bool isNested, bool isActiveProfile)
+    private static IReadOnlyList<LocationGroup> BuildGroups(ClientProfileInfo? profile, bool isNested, bool isActiveProfile)
     {
         if (profile == null)
             return [];
@@ -743,7 +744,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (profiles.Count == 0)
             return Strings.Current.NoClientProfileAvailable;
 
-        return profiles.Count == 1 && profiles[0].LocationInfos.Length < 2
+        return profiles is [{ LocationInfos.Length: < 2 }]
             ? Strings.Current.NoAdditionalLocationAvailable
             : null;
     }

@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 
@@ -30,7 +30,7 @@ public partial class PrivacyPolicyView : UserControl, IPage, ILeaveGuard
     {
         var culture = AppData.State.CurrentUiCultureInfo.Code;
         foreach (var language in new[] { culture, culture.Split('-')[0], "en" }) {
-            if (AppAssets.ReadText($"content/{language}/{name}.md") is { } markdown)
+            if (AppContent.ReadText($"content/{language}/{name}.md") is { } markdown)
                 return Markdown.Render(markdown);
         }
         throw new InvalidOperationException($"The assets folder has no content document '{name}' for 'en'.");

@@ -6,9 +6,9 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Animation;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.ViewModels;
 using VpnHood.AppLib.AvaloniaUI.Views.Dialogs;
 using VpnHood.AppLib.Services.Updaters;
@@ -282,7 +282,7 @@ public partial class MainView : UserControl
     public async Task ProcessError(Exception exception)
     {
         VhLogger.Instance.LogError(exception, "The UI caught an error.");
-        var message = ErrorMessages.For(exception);
+        var message = ErrorMessages.For(exception, AppData.ErrorContext);
         await ShowErrorMessage(message);
     }
 

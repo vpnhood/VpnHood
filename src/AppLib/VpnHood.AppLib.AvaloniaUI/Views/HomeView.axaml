@@ -1,7 +1,8 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:VpnHood.AppLib.AvaloniaUI.ViewModels"
-             xmlns:res="using:VpnHood.AppLib.AvaloniaUI.Resources"
+             xmlns:res="using:VpnHood.AppLib.Assets"
+             xmlns:ui="using:VpnHood.AppLib.AvaloniaUI.Resources"
              xmlns:controls="using:VpnHood.AppLib.AvaloniaUI.Controls"
              x:Class="VpnHood.AppLib.AvaloniaUI.Views.HomeView"
              x:DataType="vm:MainViewModel">
@@ -39,15 +40,15 @@
          once the session is premium -->
     <Panel>
       <Panel.Background>
-        <ImageBrush Source="{res:AppImage body-bg.png}" Stretch="UniformToFill" AlignmentY="Top" />
+        <ImageBrush Source="{ui:AppImage body-bg.png}" Stretch="UniformToFill" AlignmentY="Top" />
       </Panel.Background>
     </Panel>
     <!-- on their own sides in every language: the web UI places them by background-position,
          which no direction moves -->
     <Panel FlowDirection="LeftToRight">
-      <Image Source="{res:AppImage premium-bg-left.webp}" HorizontalAlignment="Left" VerticalAlignment="Top"
+      <Image Source="{ui:AppImage premium-bg-left.webp}" HorizontalAlignment="Left" VerticalAlignment="Top"
              Stretch="Uniform" MaxWidth="260" IsVisible="{Binding IsPremiumSession}" />
-      <Image Source="{res:AppImage premium-bg-right.webp}" HorizontalAlignment="Right" VerticalAlignment="Top"
+      <Image Source="{ui:AppImage premium-bg-right.webp}" HorizontalAlignment="Right" VerticalAlignment="Top"
              Stretch="Uniform" MaxWidth="260" IsVisible="{Binding IsPremiumSession}" />
     </Panel>
 

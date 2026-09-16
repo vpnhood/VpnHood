@@ -2,7 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Media;
-using VpnHood.AppLib.AvaloniaUI.Resources;
+using VpnHood.AppLib.Assets;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 

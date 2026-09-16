@@ -1,5 +1,6 @@
 using Avalonia;
 using VpnHood.AppLib.Abstractions.Accounts;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.ClientProfiles;
 using VpnHood.AppLib.Settings;
@@ -37,14 +38,16 @@ public static class AppData
         await ReloadConfig(cancellationToken);
     }
 
-    // The head's second step, once the assets folder exists (Android's activity names it after the
-    // application has started): the folder the UI draws from, and the languages this UI has,
-    // declared to the app as the web UI's configure call declares its own, so the app's language
-    // list and its best-culture choice are made from the words that exist. The fonts are registered
-    // here when Avalonia is already up (Android), else by the application as it initializes.
-    public static async Task Configure(string assetsFolderPath, CancellationToken cancellationToken)
+    // The head's second step, once the assets folder can be read (on Android, in the activity - the
+    // application has started by then): the languages this UI has, declared to the app as the web
+    // UI's configure call declares its own, so the app's language list and its best-culture choice
+    // are made from the words that exist. The fonts are registered here when Avalonia is already up
+    // (Android), else by the application as it initializes.
+    public static async Task Configure(CancellationToken cancellationToken)
     {
-        AppAssets.FolderPath = assetsFolderPath;
+        // the folder, which on Android is a copy this call makes (AndroidAppContent): here, where a
+        // head chooses the moment, rather than under the first page that asks for a picture
+        _ = AppContent.FolderPath;
         if (Application.Current != null)
             AppAssets.RegisterFonts();
 
@@ -149,6 +152,18 @@ public static class AppData
     public static bool CanTryPremium => State.ClientProfile?.CanTryPremium == true;
     public static bool CanGoPremium => State.ClientProfile?.CanGoPremium == true;
     public static Guid? ClientProfileId => State.ClientProfile?.ClientProfileId ?? UserSettings.ClientProfileId;
+
+    // What a failure's message depends on besides the failure (ErrorMessages.For): the standing of
+    // the session and the profile, off the state as it is when the failure is shown.
+    public static ErrorContext ErrorContext => new() {
+        HasDiagnoseRequested = State.HasDiagnoseRequested,
+        IsPremiumSupported = IsPremiumSupported,
+        IsPremiumUser = IsPremiumUser,
+        IsPremiumByAccount = IsPremiumByAccount,
+        CanTryPremium = CanTryPremium,
+        HasAccessCode = State.ClientProfile?.HasAccessCode == true,
+        CanImportAccessCode = CanImportAccessCode
+    };
 
     public static bool IsPremiumFeature(AppFeature feature)
     {

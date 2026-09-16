@@ -1,5 +1,4 @@
 using Android.Content;
-using Android.Content.PM;
 
 namespace VpnHood.AppLib.Droid.Common.Utils;
 

@@ -1,5 +1,5 @@
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Helpers;
-using VpnHood.AppLib.AvaloniaUI.Resources;
 
 namespace VpnHood.AppLib.AvaloniaUI.Views;
 

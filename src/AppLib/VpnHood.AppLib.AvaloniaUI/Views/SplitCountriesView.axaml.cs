@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.AvaloniaUI.Resources;
 using VpnHood.AppLib.AvaloniaUI.ViewModels;
 using VpnHood.AppLib.Settings;

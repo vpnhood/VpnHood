@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using VpnHood.AppLib.Assets;
 using VpnHood.AppLib.Utils;
 using VpnHood.AppLib.WebServer.Api;
 using VpnHood.AppLib.WebServer.Controllers;
@@ -75,7 +76,9 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
     // documents, each under its own name (the bundle's own code and styles are hashed and live
     // beside it). The SPA loads them from here over this server; a head that shows the native UI
     // instead hands this path to it, so one copy on the device serves both.
-    public string AssetsFolderPath => Path.Combine(GetSpaPath(), "assets");
+    // The folder the UIs load their files from by name, which this server serves at /assets/: the
+    // content package's (VpnHood.AppLib.Assets), placed by the app's build.
+    public string AssetsFolderPath => AppContent.FolderPath;
     public bool UseHostName { get; set; }
     public bool IsListening => _primary.IsListening;
 
@@ -537,6 +540,10 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
     // The SPA's own files carry a hash in the name (Vite); the assets folder's names are stable
     // across versions - the native UI reads the same files by name.
+    // assets/locales/<culture>.json, the one part of the assets folder that is not a file
+    private static readonly Regex LocalePathRegex =
+        new(@"^assets/locales/([\w-]+)\.json$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     private static bool IsAssetPath(string localPath)
     {
         return localPath.StartsWith($"assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
@@ -568,13 +575,36 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
 
         // the names under the assets folder, for a UI that has to fetch them (the browser build)
         if (string.Equals(localPath, AssetsManifestName, StringComparison.OrdinalIgnoreCase)) {
-            await SendAssetsManifest(context, spaPath);
+            await SendAssetsManifest(context);
             return;
         }
 
+        // The words, which the content package carries as resources rather than files: the web UI
+        // fetches its own locale file from the same /assets/ path as everything else, and gets it
+        // from there (loadLocale in i18n.ts), so the package holds one copy for every UI.
+        if (LocalePathRegex.Match(localPath.Replace(Path.DirectorySeparatorChar, '/')) is { Success: true } locale) {
+            await using var localeStream = Strings.OpenLocaleFile(locale.Groups[1].Value);
+            if (localeStream != null) {
+                context.Response.ContentType = "application/json";
+                context.Response.Headers["Cache-Control"] = "no-cache";
+                await context.Response.Send(localeStream.Length, localeStream);
+                return;
+            }
+        }
+
+        // The assets folder - the images, flags, fonts and documents both UIs load by name - is the
+        // content package's, one folder for every UI this server serves. Named by a path a browser
+        // caches by, never fingerprinted.
+        if (IsAssetPath(localPath) && AppContent.TryGetFolderPath(out var assetsFolderPath)) {
+            var assetPath = Path.GetFullPath(Path.Combine(assetsFolderPath, localPath[(AppContent.FolderName.Length + 1)..]));
+            if (assetPath.StartsWith(assetsFolderPath, StringComparison.Ordinal) && File.Exists(assetPath)) {
+                await ServeFile(context, assetPath, isFingerprinted: false);
+                return;
+            }
+        }
+
         // A remote device gets the Avalonia UI's browser build when the head ships one; the app's
-        // own web view - and every device, when it ships none - gets the SPA. The assets are the
-        // SPA's for both, served from its folder by the same names.
+        // own web view - and every device, when it ships none - gets the SPA.
         var remoteUiPath = context.IsRemote() ? browserUiPath : null;
         var isBrowserUi = remoteUiPath != null;
         var fullPath = Path.Combine(remoteUiPath ?? spaPath, localPath);
@@ -583,24 +613,15 @@ public class VpnHoodAppWebServer : Singleton<VpnHoodAppWebServer>, IDisposable
             return;
         }
 
-        if (isBrowserUi && IsAssetPath(localPath)) {
-            var assetPath = Path.Combine(spaPath, localPath);
-            if (File.Exists(assetPath)) {
-                await ServeFile(context, assetPath, isFingerprinted: false);
-                return;
-            }
-        }
-
         context.Response.ContentType = "text/html";
         await context.Response.Send(isBrowserUi ? _browserUiIndexHtml ?? _indexHtml : _indexHtml);
     }
 
     // Every file under the assets folder by its name relative to it, the folder's separators as
     // URL segments: what a UI on the other side of the API fetches before it starts. Read once.
-    private async Task SendAssetsManifest(HttpContextBase context, string spaPath)
+    private async Task SendAssetsManifest(HttpContextBase context)
     {
-        var assetsPath = Path.Combine(spaPath, "assets");
-        _assetNames ??= Directory.Exists(assetsPath)
+        _assetNames ??= AppContent.TryGetFolderPath(out var assetsPath)
             ? [
                 .. Directory.EnumerateFiles(assetsPath, "*", SearchOption.AllDirectories)
                     .Select(x => Path.GetRelativePath(assetsPath, x).Replace(Path.DirectorySeparatorChar, '/'))
